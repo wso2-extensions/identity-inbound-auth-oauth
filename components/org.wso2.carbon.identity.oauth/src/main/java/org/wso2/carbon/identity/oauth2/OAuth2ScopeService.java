@@ -46,6 +46,13 @@ public class OAuth2ScopeService {
 
         addScopePreValidation(scope);
 
+        // check whether a scope exists with the provided scope name
+        boolean isScopeExists = isScopeExists(scope.getName());
+        if (isScopeExists) {
+            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_CONFLICT_REQUEST_EXISTING_SCOPE, scope.getName());
+        }
+
         int tenantID = Oauth2ScopeUtils.getTenantID();
         try {
             OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().addScope(scope, tenantID);
@@ -101,7 +108,6 @@ public class OAuth2ScopeService {
         Scope scope;
         int tenantID = Oauth2ScopeUtils.getTenantID();
 
-        // todo
         validateScopeName(name);
 
         scope = OAuthScopeCache.getInstance().getValueFromCache(new OAuthScopeCacheKey(name,

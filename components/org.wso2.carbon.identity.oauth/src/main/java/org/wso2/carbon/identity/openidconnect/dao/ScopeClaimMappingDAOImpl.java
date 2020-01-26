@@ -412,7 +412,6 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
      * @throws IdentityOAuth2Exception
      */
     @Override
-    // No need
     public ScopeDTO getScope(String scopeName, int tenantId) throws IdentityOAuth2Exception {
 
         ScopeDTO scope = null;
