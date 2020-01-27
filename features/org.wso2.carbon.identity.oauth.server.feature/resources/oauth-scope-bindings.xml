@@ -596,7 +596,7 @@
       <Permission>/permission/admin/manage/identity/usermgt/view</Permission>
    </Permissions>
 </Scope>
-<Scope name="internal_user_mgt_craete" displayName="Create Users">
+<Scope name="internal_user_mgt_create" displayName="Create Users">
     <Permissions>
       <Permission>/permission/admin/manage/identity/usermgt/create</Permission>
    </Permissions>

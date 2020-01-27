@@ -322,7 +322,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getOpenIDConnectSkipeUserConsentConfig()).thenReturn(skipUserConsent);
+        when(oAuthServerConfiguration.getOpenIDConnectSkipLogoutConsentConfig()).thenReturn(skipUserConsent);
 
         when(request.getParameter("id_token_hint")).thenReturn(idTokenHint);
 
