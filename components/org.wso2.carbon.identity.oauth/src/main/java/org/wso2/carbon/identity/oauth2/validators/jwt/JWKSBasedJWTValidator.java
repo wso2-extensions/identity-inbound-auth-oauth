@@ -43,8 +43,10 @@ import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
 import java.net.MalformedURLException;
@@ -63,6 +65,8 @@ public class JWKSBasedJWTValidator implements JWTValidator {
 
     private static final Log log = LogFactory.getLog(JWKSBasedJWTValidator.class);
     private ConfigurableJWTProcessor<SecurityContext> jwtProcessor;
+    private static final String ENFORCE_CERTIFICATE_VALIDITY
+            = "JWTValidatorConfigs.EnforceCertificateExpiryTimeValidity";
 
     public JWKSBasedJWTValidator() {
         /* Set up a JWT processor to parse the tokens and then check their signature and validity time window
@@ -110,6 +114,15 @@ public class JWKSBasedJWTValidator implements JWTValidator {
      */
     private void checkCertificateValidity(String jwksUri, SignedJWT jwt) throws MalformedURLException,
             CertificateNotYetValidException, CertificateExpiredException, KeySourceException, BadJOSEException {
+
+        String isEnforceCertificateValidity = IdentityUtil.getProperty(ENFORCE_CERTIFICATE_VALIDITY);
+        if (StringUtils.isNotEmpty(isEnforceCertificateValidity)
+                && !Boolean.parseBoolean(isEnforceCertificateValidity)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Check for the certificate validity is disabled.");
+            }
+            return;
+        }
 
         X509Certificate x509Certificate = null;
         List<JWK> matchingJWKs;
