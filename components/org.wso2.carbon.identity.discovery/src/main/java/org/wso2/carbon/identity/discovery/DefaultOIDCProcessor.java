@@ -77,7 +77,7 @@ public class DefaultOIDCProcessor implements OIDCProcessor {
         } else if (errorCode.equals(OIDCDiscoveryEndPointException.ERROR_CODE_JSON_EXCEPTION)) {
             log.error(OIDCDiscoveryEndPointException.ERROR_MESSAGE_JSON_EXCEPTION, error);
         } else {
-            log.error("Internal server error occurred. ", error);
+            log.error("Internal server error occurred.", error);
         }
         return HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
     }
