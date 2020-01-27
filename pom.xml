@@ -611,6 +611,11 @@
                 <version>${findbugs.annotations.version}</version>
                 <scope>compile</scope>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.utils</groupId>
+                <artifactId>org.wso2.carbon.database.utils</artifactId>
+                <version>${carbon.database.utils.version}</version>
+            </dependency>
 
         </dependencies>
     </dependencyManagement>
@@ -966,6 +971,7 @@
         <maven.findbugsplugin.version>3.0.5</maven.findbugsplugin.version>
 
         <findbugs.annotations.version>3.0.1</findbugs.annotations.version>
+        <carbon.database.utils.version>2.0.11</carbon.database.utils.version>
     </properties>
 
 </project>
