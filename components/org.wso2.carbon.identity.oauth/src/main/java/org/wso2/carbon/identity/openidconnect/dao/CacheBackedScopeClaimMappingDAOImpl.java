@@ -161,13 +161,16 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
     public ScopeDTO getScope(String scopeName, int tenantId) throws IdentityOAuth2Exception {
 
         OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = oidcScopeClaimCache.getScopeClaimMap(tenantId);
-        oidcScopeClaimCacheEntry = loadOIDCScopeClaims(tenantId, oidcScopeClaimCacheEntry);
-        ScopeDTO scopeDTO = null;
-        for (ScopeDTO scopeObj : oidcScopeClaimCacheEntry.getScopeClaimMapping()) {
-            if (scopeName.equals(scopeObj.getName())) {
-                scopeDTO = scopeObj;
+
+        if (oidcScopeClaimCacheEntry != null) {
+            if (oidcScopeClaimCacheEntry.getScopeClaimMapping().size() != 0) {
+                for (ScopeDTO scopeObj : oidcScopeClaimCacheEntry.getScopeClaimMapping()) {
+                    if (scopeName.equals(scopeObj.getName())) {
+                        return scopeObj;
+                    }
+                }
             }
         }
-        return scopeDTO;
+        return super.getScope(scopeName, tenantId);
     }
 }

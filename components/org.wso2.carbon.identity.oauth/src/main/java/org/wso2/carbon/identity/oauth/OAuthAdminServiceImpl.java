@@ -1420,8 +1420,8 @@ public class OAuthAdminServiceImpl {
         boolean foundWhiteSpace = matcher.find();
 
         if (foundWhiteSpace) {
-            throw handleClientError(INVALID_REQUEST, Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES.getMessage());
+            throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES.getMessage(), scopeName));
         }
     }
 

@@ -317,7 +317,7 @@ public class OAuth2ScopeService {
 
         if (foundWhiteSpace) {
             throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES, null);
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES, scopeName);
         }
     }
 

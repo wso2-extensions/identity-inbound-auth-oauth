@@ -462,10 +462,12 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
         try (Connection conn = IdentityDatabaseUtil.getDBConnection()) {
             try {
                 int scopeId = getScopeId(updatedScope.getName(), tenantID, conn);
-                updateScopeDetails(updatedScope, conn, scopeId);
-                deleteBindings(updatedScope.getName(), tenantID, conn);
-                addScopeBinding(updatedScope, conn, scopeId);
-                IdentityDatabaseUtil.commitTransaction(conn);
+                if (scopeId != Oauth2ScopeConstants.INVALID_SCOPE_ID) {
+                    updateScopeDetails(updatedScope, conn, scopeId);
+                    deleteBindings(scopeId, conn);
+                    addScopeBinding(updatedScope, conn, scopeId);
+                    IdentityDatabaseUtil.commitTransaction(conn);
+                }
             } catch (SQLException e1) {
                 IdentityDatabaseUtil.rollbackTransaction(conn);
                 String msg = "Error occurred while updating scope by ID ";
@@ -578,22 +580,18 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
     /**
      * Delete binding of the provided scope.
      *
-     * @param scopeName Scope name.
-     * @param tenantID  Tenant ID.
      * @param conn      Data-base connection.
      * @throws SQLException
      */
-    private void deleteBindings(String scopeName, int tenantID, Connection conn) throws SQLException {
+    private void deleteBindings(int scopeId, Connection conn) throws SQLException {
 
         // Delete only the binding part of the given scope.
         if (log.isDebugEnabled()) {
-            log.debug("OIDC claim mapping exists for the scope: " + scopeName + ", hence delete only the " +
+            log.debug("OIDC claim mapping exists for the scope ID: " + scopeId + ", hence delete only the " +
                     "bindings of the scope");
         }
         try (PreparedStatement ps = conn.prepareStatement(SQLQueries.DELETE_BINDINGS_OF_SCOPE)) {
-            ps.setString(1, scopeName);
-            ps.setInt(2, tenantID);
-            ps.setString(3, Oauth2ScopeConstants.SCOPE_TYPE_OAUTH2);
+            ps.setInt(1, scopeId);
             ps.execute();
         }
     }
