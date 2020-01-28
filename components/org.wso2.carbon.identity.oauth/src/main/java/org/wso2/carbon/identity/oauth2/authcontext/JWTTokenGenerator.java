@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.oauth2.authcontext;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
@@ -321,7 +320,7 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             throws IdentityOAuth2Exception {
         try {
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
-            JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
+            JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             signedJWT.sign(signer);
             return signedJWT;
         } catch (JOSEException e) {
