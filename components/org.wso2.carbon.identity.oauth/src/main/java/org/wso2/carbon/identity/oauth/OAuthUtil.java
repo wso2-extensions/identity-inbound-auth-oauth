@@ -30,6 +30,9 @@ import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -255,6 +258,34 @@ public final class OAuthUtil {
         } else {
             String errorCode = Error.UNEXPECTED_SERVER_ERROR.getErrorCode();
             return new IdentityOAuthAdminException(errorCode, message, exception);
+        }
+    }
+
+    /**
+     * This is used to handle the OAuthAdminService exceptions depends on the exception type, there can be client
+     * exception and server exception.This will log the error message and
+     * return an IdentityOAuthClientException/IdentityOAuthServerException/IdentityOAuthAdminException exception
+     * depends on the IdentityOAuth2Exception exception type.
+     *
+     * @param message   Error message.
+     * @param exception Exception.
+     * @return
+     */
+    public static IdentityOAuthAdminException handleErrorWithExceptionType(String message,
+                                                                           IdentityOAuth2Exception exception) {
+
+        if (exception == null) {
+            return new IdentityOAuthAdminException(message);
+        }
+        if (StringUtils.isBlank(exception.getErrorCode())) {
+            handleError(message, exception);
+        }
+        if (exception instanceof IdentityOAuth2ClientException) {
+            return new IdentityOAuthClientException(exception.getErrorCode(), message, exception);
+        } else if (exception instanceof IdentityOAuth2ServerException) {
+            return new IdentityOAuthServerException(exception.getErrorCode(), message, exception);
+        } else {
+            return new IdentityOAuthAdminException(exception.getErrorCode(), message, exception);
         }
     }
 

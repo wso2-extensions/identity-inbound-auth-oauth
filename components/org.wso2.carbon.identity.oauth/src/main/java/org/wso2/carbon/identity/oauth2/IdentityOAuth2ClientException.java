@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2020, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -18,29 +18,27 @@
 
 package org.wso2.carbon.identity.oauth2;
 
-import org.wso2.carbon.identity.base.IdentityException;
-
 /**
- * Identity OAuth 2 exception.
+ * Identity OAuth 2 Client exception.
  */
-public class IdentityOAuth2Exception extends IdentityException {
+public class IdentityOAuth2ClientException extends IdentityOAuth2Exception {
 
-    private static final long serialVersionUID = 1481059218426477598L;
+    public IdentityOAuth2ClientException(String message) {
 
-    public IdentityOAuth2Exception(String message) {
         super(message);
     }
 
-    public IdentityOAuth2Exception(String message, Throwable e) {
+    public IdentityOAuth2ClientException(String message, Throwable e) {
+
         super(message, e);
     }
 
-    public IdentityOAuth2Exception(String code, String message) {
+    public IdentityOAuth2ClientException(String code, String message) {
 
         super(code, message);
     }
 
-    public IdentityOAuth2Exception(String code, String message, Throwable e) {
+    public IdentityOAuth2ClientException(String code, String message, Throwable e) {
 
         super(code, message, e);
     }

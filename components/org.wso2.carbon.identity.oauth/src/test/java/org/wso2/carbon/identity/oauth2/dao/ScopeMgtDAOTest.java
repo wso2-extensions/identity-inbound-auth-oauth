@@ -361,7 +361,7 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
             addScopes(Collections.singletonList(scope), tenantId);
 
             Scope updatedScope = (Scope) scope;
-            updatedScope.setName("updateScopeName");
+            updatedScope.setDisplayName("updateScopeName");
 
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
@@ -369,7 +369,7 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
 
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
-            assertNotNull(oAuthScopeDAO.getScopeByName(updatedScope.getName(), tenantId), "Failed to u[date scope.");
+            assertNotNull(oAuthScopeDAO.getScopeByName(updatedScope.getName(), tenantId), "Failed to update scope.");
             // Clean after test
             deleteScopes(Collections.singletonList(scope), tenantId);
         }

@@ -1793,6 +1793,7 @@ public class OAuth2Util {
                 String configType = omElement.getAttributeValue(new QName(
                         "id"));
                 scope.setName(configType);
+                scope.setDisplayName(configType);
                 scope.setClaim(loadClaimConfig(omElement));
                 listOIDCScopesClaims.add(scope);
             }

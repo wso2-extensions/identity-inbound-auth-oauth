@@ -52,10 +52,21 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
         }
     }
 
+    @Deprecated
     public void addScope(int tenantId, String scope, String[] claimsList) throws IdentityOAuth2Exception {
 
         oidcScopeClaimCache.clearScopeClaimMap(tenantId);
         super.addScope(tenantId, scope, claimsList);
+        if (log.isDebugEnabled()) {
+            log.debug("The cache oidcScopeClaimCache is cleared for the tenant : " + tenantId);
+        }
+    }
+
+    @Override
+    public void addScope(ScopeDTO scope, int tenantId) throws IdentityOAuth2Exception {
+
+        oidcScopeClaimCache.clearScopeClaimMap(tenantId);
+        super.addScope(scope, tenantId);
         if (log.isDebugEnabled()) {
             log.debug("The cache oidcScopeClaimCache is cleared for the tenant : " + tenantId);
         }
@@ -79,11 +90,21 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
         }
     }
 
-    @Override
+    @Deprecated
     public void updateScope(String scope, int tenantId, List<String> addClaims, List<String> deleteClaims)
             throws IdentityOAuth2Exception {
 
         super.updateScope(scope, tenantId, addClaims, deleteClaims);
+        oidcScopeClaimCache.clearScopeClaimMap(tenantId);
+        if (log.isDebugEnabled()) {
+            log.debug("The cache oidcScopeClaimCache is cleared for the tenant : " + tenantId);
+        }
+    }
+
+    @Override
+    public void updateScope(ScopeDTO scope, int tenantId) throws IdentityOAuth2Exception {
+
+        super.updateScope(scope, tenantId);
         oidcScopeClaimCache.clearScopeClaimMap(tenantId);
         if (log.isDebugEnabled()) {
             log.debug("The cache oidcScopeClaimCache is cleared for the tenant : " + tenantId);
@@ -134,5 +155,22 @@ public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImp
             }
         }
         return oidcScopeClaimCacheEntry;
+    }
+
+    @Override
+    public ScopeDTO getScope(String scopeName, int tenantId) throws IdentityOAuth2Exception {
+
+        OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = oidcScopeClaimCache.getScopeClaimMap(tenantId);
+
+        if (oidcScopeClaimCacheEntry != null) {
+            if (oidcScopeClaimCacheEntry.getScopeClaimMapping().size() != 0) {
+                for (ScopeDTO scopeObj : oidcScopeClaimCacheEntry.getScopeClaimMapping()) {
+                    if (scopeName.equals(scopeObj.getName())) {
+                        return scopeObj;
+                    }
+                }
+            }
+        }
+        return super.getScope(scopeName, tenantId);
     }
 }
