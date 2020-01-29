@@ -168,24 +168,27 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
             jdbcTemplate.executeQuery(sql, (RowMapper<ScopeDTO>) (resultSet, i) -> {
 
                 String scope = resultSet.getString(1);
-                    if (!scopeClaimMap.containsKey(scope)) {
-                        ScopeDTO tempScopeDTO = new ScopeDTO();
-                        tempScopeDTO.setName(scope);
-                        tempScopeDTO.setDisplayName(resultSet.getString(2));
-                        tempScopeDTO.setDescription(resultSet.getString(3));
+                if (!scopeClaimMap.containsKey(scope)) {
+                    ScopeDTO tempScopeDTO =
+                            new ScopeDTO(scope, resultSet.getString(2), resultSet.getString(3), new String[]{});
+                    if (resultSet.getString(4) != null) {
                         tempScopeDTO.setClaim(new String[]{resultSet.getString(4)});
-                        scopeClaimMap.put(scope, tempScopeDTO);
-                    } else {
+                    }
+                    scopeClaimMap.put(scope, tempScopeDTO);
+                } else {
+                    if (resultSet.getString(4) != null) {
                         ScopeDTO tempScope = scopeClaimMap.get(scope);
                         tempScope.addNewClaimToExistingClaims(resultSet.getString(4));
                         scopeClaimMap.replace(scope, tempScope);
                     }
+                }
                 return null;
             }, preparedStatement -> {
                 preparedStatement.setInt(1, tenantId);
                 preparedStatement.setString(2, Oauth2ScopeConstants.SCOPE_TYPE_OIDC);
                 preparedStatement.setInt(3, tenantId);
-                preparedStatement.setString(4, OIDC_DIALECT_URI);
+                preparedStatement.setInt(4, tenantId);
+                preparedStatement.setString(5, OIDC_DIALECT_URI);
             });
             oidcScopeClaimList = new ArrayList<ScopeDTO>(scopeClaimMap.values());
         } catch (DataAccessException e) {
@@ -416,8 +419,7 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
 
         try {
-            ScopeDTO tempScope = jdbcTemplate.fetchSingleRecord(SQLQueries.GET_IDN_OIDC_SCOPE_DETAILS, (resultSet,
-                                                                                                        rowNumber) ->
+            scope = jdbcTemplate.fetchSingleRecord(SQLQueries.GET_IDN_OIDC_SCOPE_DETAILS, (resultSet, rowNumber) ->
                             new ScopeDTO(resultSet.getString(1), resultSet.getString(2), resultSet.getString(3),
                                     new String[]{})
                     , preparedStatement -> {
@@ -425,10 +427,10 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                         preparedStatement.setInt(2, tenantId);
                         preparedStatement.setString(3, Oauth2ScopeConstants.SCOPE_TYPE_OIDC);
                     });
-            if (tempScope != null) {
+            if (scope != null) {
                 ScopeDTO tempScopeWithClaims = getClaims(scopeName, tenantId);
                 if (tempScopeWithClaims.getClaim() != null && tempScopeWithClaims.getClaim().length != 0) {
-                    scope = new ScopeDTO(tempScope.getName(), tempScope.getDisplayName(), tempScope.getDescription(),
+                    scope = new ScopeDTO(scope.getName(), scope.getDisplayName(), scope.getDescription(),
                             tempScopeWithClaims.getClaim());
                 }
             }
