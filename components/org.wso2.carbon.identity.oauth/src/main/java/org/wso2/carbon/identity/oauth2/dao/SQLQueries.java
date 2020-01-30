@@ -953,7 +953,7 @@ public class SQLQueries {
                     "FROM IDN_OAUTH2_SCOPE SCOPES " +
                     "WHERE SCOPES.SCOPE_TYPE = :" + Oauth2ScopeConstants.SQLPlaceholders.SCOPE_TYPE +
                     "; AND SCOPES.TENANT_ID = :" + Oauth2ScopeConstants.SQLPlaceholders.TENANT_ID +
-                    "; AND ROWNUM < :limit;) FILTEREDSCOPES " +
+                    "; AND ROWNUM <= :limit;) FILTEREDSCOPES " +
                     "LEFT JOIN IDN_OAUTH2_SCOPE_BINDING SCOPEBINDINGS ON FILTEREDSCOPES.SCOPE_ID = " +
                     "SCOPEBINDINGS.SCOPE_ID";
 
