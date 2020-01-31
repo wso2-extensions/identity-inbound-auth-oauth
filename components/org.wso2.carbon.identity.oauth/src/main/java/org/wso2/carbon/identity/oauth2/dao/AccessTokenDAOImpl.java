@@ -2034,7 +2034,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             accessTokenDO, Connection connection, String userStoreDomain, int retryAttemptCounter)
             throws IdentityOAuth2Exception {
         try {
-            connection.setAutoCommit(true);
+            connection.setAutoCommit(false);
             log.warn("Retry attempt to recover 'CON_APP_KEY' constraint violation : " + retryAttemptCounter);
 
             AccessTokenDO latestNonActiveToken = getLatestAccessTokenByState(connection, consumerKey,
