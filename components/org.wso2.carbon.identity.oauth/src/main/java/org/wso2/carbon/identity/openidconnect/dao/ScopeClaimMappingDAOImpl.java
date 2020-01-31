@@ -415,30 +415,41 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
     @Override
     public ScopeDTO getScope(String scopeName, int tenantId) throws IdentityOAuth2Exception {
 
-        ScopeDTO scope = null;
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        String sql = SQLQueries.GET_IDN_OIDC_SCOPE_DETAILS;
 
         try {
-            scope = jdbcTemplate.fetchSingleRecord(SQLQueries.GET_IDN_OIDC_SCOPE_DETAILS, (resultSet, rowNumber) ->
-                            new ScopeDTO(resultSet.getString(1), resultSet.getString(2), resultSet.getString(3),
-                                    new String[]{})
-                    , preparedStatement -> {
-                        preparedStatement.setString(1, scopeName);
-                        preparedStatement.setInt(2, tenantId);
-                        preparedStatement.setString(3, Oauth2ScopeConstants.SCOPE_TYPE_OIDC);
-                    });
-            if (scope != null) {
-                ScopeDTO tempScopeWithClaims = getClaims(scopeName, tenantId);
-                if (tempScopeWithClaims.getClaim() != null && tempScopeWithClaims.getClaim().length != 0) {
-                    scope = new ScopeDTO(scope.getName(), scope.getDisplayName(), scope.getDescription(),
-                            tempScopeWithClaims.getClaim());
+            Map<String, ScopeDTO> tempScopeMap = new HashMap<>();
+            jdbcTemplate.executeQuery(sql, (RowMapper<ScopeDTO>) (resultSet, i) -> {
+
+                if (!tempScopeMap.containsKey(resultSet.getString(1))) {
+                    ScopeDTO scopeDTO = new ScopeDTO(resultSet.getString(1), resultSet.getString(2),
+                            resultSet.getString(3), new String[]{});
+                    if (resultSet.getString(4) != null) {
+                        scopeDTO.setClaim(new String[]{resultSet.getString(4)});
+                    }
+                    tempScopeMap.put(resultSet.getString(1), scopeDTO);
+                } else {
+                    if (resultSet.getString(4) != null) {
+                        ScopeDTO tempScope = tempScopeMap.get(resultSet.getString(1));
+                        tempScope.addNewClaimToExistingClaims(resultSet.getString(4));
+                        tempScopeMap.replace(resultSet.getString(1), tempScope);
+                    }
                 }
-            }
+                return null;
+            }, preparedStatement -> {
+                preparedStatement.setString(1, scopeName);
+                preparedStatement.setInt(2, tenantId);
+                preparedStatement.setString(3, Oauth2ScopeConstants.SCOPE_TYPE_OIDC);
+                preparedStatement.setInt(4, tenantId);
+                preparedStatement.setInt(5, tenantId);
+                preparedStatement.setString(6, OIDC_DIALECT_URI);
+            });
+            return tempScopeMap.get(scopeName);
         } catch (DataAccessException e) {
             String errorMessage = "Error while fetching scope details for scope: " + scopeName;
             throw new IdentityOAuth2Exception(errorMessage, e);
         }
-        return scope;
     }
 
     private int getScopeId(String scope, int tenantId) throws IdentityOAuth2Exception {
