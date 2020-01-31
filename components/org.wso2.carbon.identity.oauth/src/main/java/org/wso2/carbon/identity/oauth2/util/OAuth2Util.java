@@ -286,6 +286,8 @@ public class OAuth2Util {
     private static ThreadLocal<OAuthAuthzReqMessageContext> authzRequestContext = new ThreadLocal<>();
     //Precompile PKCE Regex pattern for performance improvement
     private static Pattern pkceCodeVerifierPattern = Pattern.compile("[\\w\\-\\._~]+");
+    // System flag to allow the weak keys (key length less than 2048) to be used for the signing.
+    private static final String ALLOW_WEAK_RSA_SIGNER_KEY = "allow_weak_rsa_signer_key";
 
     private static Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<Integer, Certificate>();
     private static Map<Integer, Key> privateKeys = new ConcurrentHashMap<Integer, Key>();
@@ -2215,6 +2217,22 @@ public class OAuth2Util {
     }
 
     /**
+     * Create JWSSigner using the server level configurations and return.
+     *
+     * @param privateKey RSA Private key.
+     * @return  JWSSigner
+     */
+    public static JWSSigner createJWSSigner(RSAPrivateKey privateKey) {
+
+        boolean allowWeakKey = Boolean.parseBoolean(System.getProperty(ALLOW_WEAK_RSA_SIGNER_KEY));
+        if (allowWeakKey && log.isDebugEnabled()) {
+            log.debug("System flag 'allow_weak_rsa_signer_key' is  enabled. So weak keys (key length less than 2048) " +
+                    " will be allowed for signing.");
+        }
+        return new RSASSASigner(privateKey, allowWeakKey);
+    }
+
+    /**
      * Generic Signing function
      *
      * @param jwtClaimsSet       contains JWT body
@@ -2269,7 +2287,7 @@ public class OAuth2Util {
 
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
-            JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
+            JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             headerBuilder.keyID(getKID(getThumbPrint(tenantDomain, tenantId), signatureAlgorithm));
             headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantId)));

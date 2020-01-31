@@ -31,6 +31,9 @@ import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 
+/**
+ * Unit test covering DefaultOIDCProviderRequestBuilder class.
+ */
 public class DefaultOIDCProviderRequestBuilderTest {
 
     @Mock
@@ -38,11 +41,13 @@ public class DefaultOIDCProviderRequestBuilderTest {
 
     @BeforeMethod
     public void setUp() throws Exception {
+
         initMocks(this);
     }
 
     @DataProvider(name = "test1")
     public static Object[][] tenant() {
+
         return new Object[][]{
                 {null, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME},
                 {"tenant", "tenant"}
@@ -51,6 +56,7 @@ public class DefaultOIDCProviderRequestBuilderTest {
 
     @Test(dataProvider = "test1")
     public void testBuildRequest(String value, String output) throws Exception {
+
         when(mockHttpServletRequest.getRequestURI()).thenReturn("https://test.com");
         DefaultOIDCProviderRequestBuilder defaultOIDCProviderRequestBuilder = new DefaultOIDCProviderRequestBuilder();
         OIDProviderRequest oidProviderRequest = defaultOIDCProviderRequestBuilder.buildRequest(mockHttpServletRequest,
@@ -59,5 +65,4 @@ public class DefaultOIDCProviderRequestBuilderTest {
                 "the expected URI");
         assertEquals(oidProviderRequest.getTenantDomain(), output, "Error in tenant domain");
     }
-
 }
