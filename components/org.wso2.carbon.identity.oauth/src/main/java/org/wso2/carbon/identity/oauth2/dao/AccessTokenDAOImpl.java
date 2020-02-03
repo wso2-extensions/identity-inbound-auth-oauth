@@ -1255,21 +1255,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     /**
      * Returns the set of access tokens issued for the user.
      *
-     * The returned set of access tokens is consumed by
-     * {@link org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener} to clear user claims cached against the
-     * tokens during a user attribute update.
-     *
-     * Unless id_token are issued for client_credentials grants there is no point in returning tokens issued with type
-     * APPLICATION since no claims are usually cached against tokens issued for client_credentials.
-     *
-     * Tokens with type APPLICATION can be associated with a particular user, if he/she is the owner of the
-     * app.
-     *
-     * @param authenticatedUser
-     * @return
-     * @throws IdentityOAuth2Exception
-     *
-     * @deprecated use {@link AccessTokenDAOImpl#getAccessTokensByUserForOpenidScope(AuthenticatedUser)} instead.
+     * @param authenticatedUser Authenticated user object.
+     * @return Access tokens as a set of Strings.
+     * @throws IdentityOAuth2Exception If any errors occurred.
      */
     @Override
     public Set<String> getAccessTokensByUser(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception {
@@ -1332,18 +1320,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     /**
      * Returns the set of access tokens issued for the user which are having openid scope.
      *
-     * The returned set of access tokens are consumed by
-     * {@link org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener} to clear user claims cached against the
-     * tokens during a user attribute update.
-     *
-     * Unless access_tokens are issued for openid scope there is no point in returning tokens since no claims are
-     * usually cached against tokens otherwise.
-     *
-     * Tokens with openid scope should not be expired eventhough in ACTIVE state, in order to clear from the cache.
-     *
-     * @param authenticatedUser
-     * @return accessTokens
-     * @throws IdentityOAuth2Exception
+     * @param authenticatedUser Authenticated user object.
+     * @return Access tokens as a set of AccessTokenDO
+     * @throws IdentityOAuth2Exception If any errors occurred.
      */
     @Override
     public Set<AccessTokenDO> getAccessTokensByUserForOpenidScope(AuthenticatedUser authenticatedUser)
@@ -1353,15 +1332,13 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             log.debug("Retrieving access tokens of user: " + authenticatedUser.toString());
         }
 
-        String accessTokenStoreTable = OAuthConstants.ACCESS_TOKEN_STORE_TABLE;
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authenticatedUser.toString());
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement ps = null;
         ResultSet rs;
-        Map<String, AccessTokenDO> tokenMap = new HashMap<>();
         Set<AccessTokenDO> accessTokens;
         try {
-            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserId(SQLQueries.GET_ACCESS_TOKEN_DATA_BY_AUTHZUSER,
+            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserId(SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER,
                     authenticatedUser.toString());
             if (!isUsernameCaseSensitive) {
                 sqlQuery = sqlQuery.replace(AUTHZ_USER, LOWER_AUTHZ_USER);
@@ -1377,40 +1354,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             ps.setString(4, authenticatedUser.getUserStoreDomain());
             ps.setString(5, OAuthConstants.Scope.OPENID);
             rs = ps.executeQuery();
-            while (rs.next()) {
-                String accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1));
-                String refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(rs.getString(2));
-                String tokenId = rs.getString(3);
-                Timestamp timeCreated = rs.getTimestamp(4, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
-                long issuedTimeInMillis = timeCreated.getTime();
-                long validityPeriodInMillis = rs.getLong(5);
-                Timestamp refreshTokenTimeCreated = rs.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
-                long refreshTokenValidityPeriodInMillis = rs.getLong(7);
-                String consumerKey = rs.getString(8);
-                String grantType = rs.getString(9);
 
-                AccessTokenDO accessTokenDO = new AccessTokenDO();
-                accessTokenDO.setAuthzUser(authenticatedUser);
-                accessTokenDO.setTenantID(OAuth2Util.getTenantId(authenticatedUser.getTenantDomain()));
-                accessTokenDO.setAccessToken(accessToken);
-                accessTokenDO.setRefreshToken(refreshToken);
-                accessTokenDO.setTokenId(tokenId);
-                accessTokenDO.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
-                accessTokenDO.setIssuedTime(timeCreated);
-                accessTokenDO.setValidityPeriodInMillis(validityPeriodInMillis);
-                accessTokenDO.setRefreshTokenIssuedTime(refreshTokenTimeCreated);
-                accessTokenDO.setRefreshTokenValidityPeriodInMillis(refreshTokenValidityPeriodInMillis);
-                accessTokenDO.setConsumerKey(consumerKey);
-                accessTokenDO.setGrantType(grantType);
+            Map<String, AccessTokenDO> tokenMap = getAccessTokenDOMapFromResultSet(authenticatedUser, rs);
 
-                // Tokens returned by this method will be used to clear claims cached against the tokens.
-                // We will only return tokens that would contain such cached clams in order to improve performance.
-                // Tokens issued for openid scope can contain cached claims against them.
-                // Tokens that are in ACTIVE state and not expired should be removed from the cache.
-                if (!isAccessTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
-                    tokenMap.put(accessToken, accessTokenDO);
-                }
-            }
             connection.commit();
             accessTokens = new HashSet<>(tokenMap.values());
         } catch (SQLException e) {
@@ -1422,6 +1368,48 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
         }
         return accessTokens;
+    }
+
+    private Map<String, AccessTokenDO> getAccessTokenDOMapFromResultSet(AuthenticatedUser authenticatedUser,
+                                                                        ResultSet rs) throws SQLException,
+            IdentityOAuth2Exception {
+
+        Map<String, AccessTokenDO> tokenMap = new HashMap<>();
+        while (rs.next()) {
+            String accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1));
+            String refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(rs.getString(2));
+            String tokenId = rs.getString(3);
+            Timestamp timeCreated = rs.getTimestamp(4, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+            long issuedTimeInMillis = timeCreated.getTime();
+            long validityPeriodInMillis = rs.getLong(5);
+            Timestamp refreshTokenTimeCreated = rs.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+            long refreshTokenValidityPeriodInMillis = rs.getLong(7);
+            String consumerKey = rs.getString(8);
+            String grantType = rs.getString(9);
+
+            AccessTokenDO accessTokenDO = new AccessTokenDO();
+            accessTokenDO.setAuthzUser(authenticatedUser);
+            accessTokenDO.setTenantID(OAuth2Util.getTenantId(authenticatedUser.getTenantDomain()));
+            accessTokenDO.setAccessToken(accessToken);
+            accessTokenDO.setRefreshToken(refreshToken);
+            accessTokenDO.setTokenId(tokenId);
+            accessTokenDO.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+            accessTokenDO.setIssuedTime(timeCreated);
+            accessTokenDO.setValidityPeriodInMillis(validityPeriodInMillis);
+            accessTokenDO.setRefreshTokenIssuedTime(refreshTokenTimeCreated);
+            accessTokenDO.setRefreshTokenValidityPeriodInMillis(refreshTokenValidityPeriodInMillis);
+            accessTokenDO.setConsumerKey(consumerKey);
+            accessTokenDO.setGrantType(grantType);
+
+            // Tokens returned by this method will be used to clear claims cached against the tokens.
+            // We will only return tokens that would contain such cached clams in order to improve performance.
+            // Tokens issued for openid scope can contain cached claims against them.
+            // Tokens that are in ACTIVE state and not expired should be removed from the cache.
+            if(!isAccessTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
+                tokenMap.put(accessToken, accessTokenDO);
+            }
+        }
+        return tokenMap;
     }
 
     /**
