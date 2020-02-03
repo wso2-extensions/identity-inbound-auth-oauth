@@ -72,7 +72,6 @@ import java.util.regex.Pattern;
 import static org.wso2.carbon.identity.oauth.Error.AUTHENTICATED_USER_NOT_FOUND;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
-import static org.wso2.carbon.identity.oauth.Error.SCOPE_NOT_FOUND;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
@@ -344,6 +343,19 @@ public class OAuthAdminServiceImpl {
         return new IdentityOAuthClientException(errorMessage.getErrorCode(), msg);
     }
 
+    /**
+     * Throw new IdentityOAuthClientException upon client side error in OIDC scope management.
+     *
+     * @param errorMessage Error message which defined under Oauth2ScopeConstants.ErrorMessages.
+     * @param msg          Message
+     * @return throw IdentityOAuthClientException.
+     */
+    private IdentityOAuthClientException handleClientError(Oauth2ScopeConstants.ErrorMessages errorMessage,
+                                                           String msg) {
+
+        return new IdentityOAuthClientException(errorMessage.getCode(), msg);
+    }
+
     private IdentityOAuthClientException handleClientError(Error errorMessage, String msg, Exception ex) {
 
         return new IdentityOAuthClientException(errorMessage.getErrorCode(), msg, ex);
@@ -545,8 +557,9 @@ public class OAuthAdminServiceImpl {
 
             // If scopeDTO is null then the requested scope is not exist.
             if (scopeDTO == null) {
-                throw handleClientError(SCOPE_NOT_FOUND, String.format(Oauth2ScopeConstants.ErrorMessages.
-                        ERROR_CODE_NOT_FOUND_SCOPE.getMessage(), scopeName));
+                throw handleClientError(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_FOUND_SCOPE,
+                        String.format(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_FOUND_SCOPE.getMessage(),
+                                scopeName));
             }
             return scopeDTO;
         } catch (IdentityOAuth2Exception e) {
@@ -1452,8 +1465,9 @@ public class OAuthAdminServiceImpl {
 
         boolean isScopeExists = isScopeExist(scopeName);
         if (!isScopeExists) {
-            throw handleClientError(SCOPE_NOT_FOUND, String.format(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_NOT_FOUND_SCOPE.getMessage(), scopeName));
+            throw handleClientError(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_FOUND_SCOPE,
+                    String.format(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_FOUND_SCOPE.getMessage(),
+                            scopeName));
         }
     }
 }
