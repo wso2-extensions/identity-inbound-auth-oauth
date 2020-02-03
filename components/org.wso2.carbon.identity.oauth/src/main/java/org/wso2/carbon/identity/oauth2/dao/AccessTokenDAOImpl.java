@@ -1338,8 +1338,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         ResultSet rs;
         Set<AccessTokenDO> accessTokens;
         try {
-            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserId(SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER,
-                    authenticatedUser.toString());
+            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserId(
+                    SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER, authenticatedUser.toString());
             if (!isUsernameCaseSensitive) {
                 sqlQuery = sqlQuery.replace(AUTHZ_USER, LOWER_AUTHZ_USER);
             }
@@ -1401,11 +1401,14 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             accessTokenDO.setConsumerKey(consumerKey);
             accessTokenDO.setGrantType(grantType);
 
-            // Tokens returned by this method will be used to clear claims cached against the tokens.
-            // We will only return tokens that would contain such cached clams in order to improve performance.
-            // Tokens issued for openid scope can contain cached claims against them.
-            // Tokens that are in ACTIVE state and not expired should be removed from the cache.
-            if(!isAccessTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
+            /*
+             * Tokens returned by this method will be used to clear claims cached against the tokens.
+             * We will only return tokens that would contain such cached clams in order to improve
+             * performance.
+             * Tokens issued for openid scope can contain cached claims against them.
+             * Tokens that are in ACTIVE state and not expired should be removed from the cache.
+             */
+            if (!isAccessTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
                 tokenMap.put(accessToken, accessTokenDO);
             }
         }
