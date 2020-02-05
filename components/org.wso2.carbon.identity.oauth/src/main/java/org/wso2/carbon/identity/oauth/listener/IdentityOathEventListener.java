@@ -372,6 +372,10 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         authenticatedUser.setTenantDomain(tenantDomain);
         authenticatedUser.setUserName(userName);
         try {
+            /*
+             Only the tokens and auth codes issued for openid scope should be removed from the cache, since no
+             claims are usually cached against tokens or auth codes, otherwise.
+             */
             accessTokenDOSet = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                     .getAccessTokensByUserForOpenidScope(authenticatedUser);
             authorizationCodeDOSet = OAuthTokenPersistenceFactory.getInstance()

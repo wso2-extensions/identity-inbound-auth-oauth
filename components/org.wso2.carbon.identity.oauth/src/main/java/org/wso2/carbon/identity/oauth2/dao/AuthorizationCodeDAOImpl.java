@@ -368,10 +368,13 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     }
 
     /**
-     * @deprecated use {@link AuthorizationCodeDAOImpl#getAuthorizationCodesByUserForOpenidScope(AuthenticatedUser)}
-     * instead.
+     * Returns a list of authorization codes issued for a given user.
+     *
+     * @param authenticatedUser Authenticated user object.
+     * @return String set of auth codes.
+     * @throws IdentityOAuth2Exception If any error occurred.
      */
-    @Deprecated
+    @Override
     public Set<String> getAuthorizationCodesByUser(AuthenticatedUser authenticatedUser) throws
             IdentityOAuth2Exception {
 
@@ -425,19 +428,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
     /**
      * Returns the set of Authorization codes issued for the user.
-     * <p>
-     * The returned set of Authorization codes is consumed by
-     * {@link org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener} to clear user claims cached against the
-     * authz codes during a user attribute update.
-     * <p>
-     * Unless authz codes are issued for openid scope there is no point in returning since no claims are usually
-     * cached against authz codes otherwise.
-     * <p>
-     * Tokens with openid scope should not be expired eventhough in ACTIVE state, in order to clear from the cache.
      *
-     * @param authenticatedUser
-     * @return authorizationCodes
-     * @throws IdentityOAuth2Exception
+     * @param authenticatedUser Authenticated user object.
+     * @return Authorization Codes as a list of AuthzCodeDO.
+     * @throws IdentityOAuth2Exception If any errors occurred.
      */
     @Override
     public List<AuthzCodeDO> getAuthorizationCodesByUserForOpenidScope(AuthenticatedUser authenticatedUser) throws
@@ -456,7 +450,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         String userStoreDomain = authenticatedUser.getUserStoreDomain();
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authenticatedUser.toString());
         try {
-            String sqlQuery = SQLQueries.GET_AUTHORIZATION_CODE_DATA_BY_AUTHZUSER;
+            String sqlQuery = SQLQueries.GET_OPEN_ID_AUTHORIZATION_CODE_DATA_BY_AUTHZUSER;
             if (!isUsernameCaseSensitive) {
                 sqlQuery = sqlQuery.replace(AUTHZ_USER, LOWER_AUTHZ_USER);
             }

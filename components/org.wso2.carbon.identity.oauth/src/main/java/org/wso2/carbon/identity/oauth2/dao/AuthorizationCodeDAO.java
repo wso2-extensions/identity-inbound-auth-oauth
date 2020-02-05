@@ -46,8 +46,7 @@ public interface AuthorizationCodeDAO {
     void deactivateAuthorizationCode(AuthzCodeDO authzCodeDO) throws
             IdentityOAuth2Exception;
 
-    Set<String> getAuthorizationCodesByUser(AuthenticatedUser authenticatedUser) throws
-            IdentityOAuth2Exception;
+    Set<String> getAuthorizationCodesByUser(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception;
 
     default List<AuthzCodeDO> getAuthorizationCodesByUserForOpenidScope(AuthenticatedUser authenticatedUser) throws
             IdentityOAuth2Exception {
