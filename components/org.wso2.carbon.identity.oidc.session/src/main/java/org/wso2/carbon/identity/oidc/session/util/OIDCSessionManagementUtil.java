@@ -21,6 +21,8 @@ package org.wso2.carbon.identity.oidc.session.util;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.core.SameSiteCookie;
+import org.wso2.carbon.core.ServletCookie;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -176,10 +178,12 @@ public class OIDCSessionManagementUtil {
         if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if (cookie.getName().equals(OIDCSessionConstants.OPBS_COOKIE_ID)) {
-                    cookie.setMaxAge(0);
-                    cookie.setSecure(true);
-                    cookie.setPath("/");
-                    response.addCookie(cookie);
+                    ServletCookie servletCookie = new ServletCookie(cookie.getName(), cookie.getValue());
+                    servletCookie.setMaxAge(0);
+                    servletCookie.setSecure(true);
+                    servletCookie.setPath("/");
+                    servletCookie.setSameSite(SameSiteCookie.None);
+                    response.addCookie(servletCookie);
                     return cookie;
                 }
             }
