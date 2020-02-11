@@ -115,16 +115,17 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     "Authorized user should be available for further execution.");
         }
 
+        String accessTokenHash = accessToken;
         try {
             OauthTokenIssuer oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
             //check for persist alias for the token type
             if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
-                accessToken = oauthTokenIssuer.getAccessTokenHash(accessToken);
+                accessTokenHash = oauthTokenIssuer.getAccessTokenHash(accessToken);
             }
         } catch (OAuthSystemException e) {
             if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 log.debug("Error while getting access token hash for token(hashed): " + DigestUtils
-                        .sha256Hex(accessToken));
+                        .sha256Hex(accessTokenHash));
             }
             throw new IdentityOAuth2Exception("Error while getting access token hash.");
         } catch (InvalidOAuthClientException e) {
@@ -134,8 +135,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                log.debug("Persisting access token(hashed): " + DigestUtils.sha256Hex(accessToken) + " for client: " +
-                        consumerKey + " user: " + accessTokenDO.getAuthzUser().toString() + " scope: "
+                log.debug("Persisting access token(hashed): " + DigestUtils.sha256Hex(accessTokenHash) + " for " +
+                        "client: " + consumerKey + " user: " + accessTokenDO.getAuthzUser().toString() + " scope: "
                         + Arrays.toString(accessTokenDO.getScope()));
             } else {
                 log.debug("Persisting access token for client: " + consumerKey + " user: " +
@@ -171,7 +172,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
         try {
             insertTokenPrepStmt = connection.prepareStatement(sql);
-            insertTokenPrepStmt.setString(1, getPersistenceProcessor().getProcessedAccessTokenIdentifier(accessToken));
+            insertTokenPrepStmt.setString(1, getPersistenceProcessor().getProcessedAccessTokenIdentifier(
+                    accessTokenHash));
 
             if (accessTokenDO.getRefreshToken() != null) {
                 insertTokenPrepStmt.setString(2,
@@ -197,7 +199,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             insertTokenPrepStmt.setString(14, accessTokenDO.getGrantType());
             insertTokenPrepStmt.setString(15, accessTokenDO.getAuthzUser().getAuthenticatedSubjectIdentifier());
             insertTokenPrepStmt
-                    .setString(16, getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(accessToken));
+                    .setString(16, getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(accessTokenHash));
             if (accessTokenDO.getRefreshToken() != null) {
                 insertTokenPrepStmt.setString(17,
                         getHashingPersistenceProcessor().getProcessedRefreshToken(accessTokenDO.getRefreshToken()));
