@@ -203,7 +203,6 @@ paths:
         "Content-Type: application/json" -d '{
           "redirect_uris":["https://client.example.org/callback"],
           "client_name": "application_1",
-          "ext_param_owner": "application_owner",
           "grant_types": ["password"] }'
         "https://localhost:9443/api/identity/oauth2/dcr/v1.1/register"
       x-wso2-response: |
