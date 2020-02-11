@@ -201,7 +201,6 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                     }
                 }
                 prepStmt.executeBatch();
-                connection.commit();
             }
             Map<Integer, String> insertedRequestObjectClaims = getInsertedRequestObjectClaims(requestObjectId);
             if (MapUtils.isNotEmpty(insertedRequestObjectClaims)) {
@@ -222,6 +221,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                     insertRequestObjectClaimValues(claimValues, connection);
                 }
             }
+            IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
             try {
                 connection.rollback();
