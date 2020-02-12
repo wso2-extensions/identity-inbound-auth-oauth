@@ -463,10 +463,12 @@ public class OIDCLogoutServlet extends HttpServlet {
      * @param stateParam  state query parameter
      * @return Redirect URL after appending state query param if exist
      */
-    private String appendStateQueryParam(String redirectURL, String stateParam) {
+    private String appendStateQueryParam(String redirectURL, String stateParam) throws UnsupportedEncodingException {
 
+        Map<String, String> paramMap = new HashMap<>();
+        paramMap.put(OIDCSessionConstants.OIDC_STATE_PARAM, stateParam);
         if (StringUtils.isNotEmpty(stateParam)) {
-            redirectURL = redirectURL + "?" + OIDCSessionConstants.OIDC_STATE_PARAM + "=" + stateParam;
+            redirectURL = FrameworkUtils.buildURLWithQueryParams(redirectURL, paramMap);
         }
         return redirectURL;
     }

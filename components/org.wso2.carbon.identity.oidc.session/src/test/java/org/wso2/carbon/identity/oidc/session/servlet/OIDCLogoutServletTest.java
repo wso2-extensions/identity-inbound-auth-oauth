@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oidc.session.servlet;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.reflect.Whitebox;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
@@ -59,6 +60,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({OIDCSessionManagementUtil.class, OIDCSessionManager.class, FrameworkUtils.class,
@@ -480,6 +482,33 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         logoutServlet.doGet(request, response);
         verify(response).sendRedirect(captor.capture());
         assertTrue(captor.getValue().contains(expected));
+    }
+
+    @DataProvider(name = "provideDataForStateParamTest")
+    public Object[][] provideDataForStateParamTest() {
+
+        String postLogoutUrlWithQueryParam = "http://localhost:8080/playground2/oauth2client?x=y";
+        String postLogoutUrlWithoutQueryParam = "http://localhost:8080/playground2/oauth2client";
+        String stateParam = "n6556";
+
+        return new Object[][]{
+                {postLogoutUrlWithQueryParam, stateParam,
+                        "http://localhost:8080/playground2/oauth2client?x=y&state=n6556"},
+                {postLogoutUrlWithQueryParam, "", "http://localhost:8080/playground2/oauth2client?x=y"},
+                {postLogoutUrlWithoutQueryParam, stateParam, "http://localhost:8080/playground2/oauth2client?state" +
+                        "=n6556"},
+                {postLogoutUrlWithoutQueryParam, "", "http://localhost:8080/playground2/oauth2client"},
+        };
+    }
+
+    @Test(dataProvider = "provideDataForStateParamTest")
+    public void testStateParam(String postLogoutUrl, String stateParam, String outputRedirectUrl) throws Exception {
+
+        TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        Object expected = Whitebox.invokeMethod(logoutServlet, "appendStateQueryParam",
+                postLogoutUrl, stateParam);
+        assertEquals(expected, outputRedirectUrl);
     }
 
     @AfterTest
