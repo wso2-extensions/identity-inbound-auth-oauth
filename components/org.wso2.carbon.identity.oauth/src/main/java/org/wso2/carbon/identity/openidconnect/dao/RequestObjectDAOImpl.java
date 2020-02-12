@@ -202,7 +202,8 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                 }
                 prepStmt.executeBatch();
             }
-            Map<Integer, String> insertedRequestObjectClaims = getInsertedRequestObjectClaims(requestObjectId);
+            Map<Integer, String> insertedRequestObjectClaims
+                    = getInsertedRequestObjectClaims(connection, requestObjectId);
             if (MapUtils.isNotEmpty(insertedRequestObjectClaims)) {
                 for (Map.Entry<Integer, String> entry : insertedRequestObjectClaims.entrySet()) {
                     for (List<RequestedClaim> list : claims) {
@@ -237,9 +238,9 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         }
     }
 
-    private Map<Integer, String> getInsertedRequestObjectClaims(int requestObjectId) throws IdentityOAuth2Exception {
+    private Map<Integer, String> getInsertedRequestObjectClaims(Connection connection, int requestObjectId)
+            throws IdentityOAuth2Exception {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         Map<Integer, String> insertedRequestObjectClaims = new HashMap<>();
 
         PreparedStatement prepStmt = null;
@@ -257,8 +258,6 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         } catch (SQLException e) {
             log.error("Error when retrieving inserted claim attributes details.", e);
             throw new IdentityOAuth2Exception("Error when storing the request object claims", e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
         }
         return insertedRequestObjectClaims;
     }
