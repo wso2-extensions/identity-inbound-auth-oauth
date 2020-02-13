@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponseProfile;
  */
 public class OIDCRegistrationResponseProfile extends RegistrationResponseProfile {
 
+    private static final long serialVersionUID = -9055024954155011631L;
     private String registrationAccessToken;
     private String registrationClientUri;
 

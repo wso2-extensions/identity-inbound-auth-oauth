@@ -753,14 +753,20 @@
                     </executions>
                 </plugin>
                 <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>findbugs-maven-plugin</artifactId>
-                    <version>${maven.findbugsplugin.version}</version>
+                    <groupId>com.github.spotbugs</groupId>
+                    <artifactId>spotbugs-maven-plugin</artifactId>
+                    <version>${spotbugs-maven-plugin.version}</version>
                     <configuration>
                         <effort>Max</effort>
                         <threshold>Low</threshold>
-                        <xmlOutput>true</xmlOutput>
-                        <findbugsXmlOutputDirectory>${project.build.directory}/findbugs</findbugsXmlOutputDirectory>
+                        <failOnError>true</failOnError>
+                        <plugins>
+                            <plugin>
+                                <groupId>com.h3xstream.findsecbugs</groupId>
+                                <artifactId>findsecbugs-plugin</artifactId>
+                                <version>${findsecbugs-plugin.version}</version>
+                            </plugin>
+                        </plugins>
                     </configuration>
                     <executions>
                         <execution>
@@ -827,8 +833,8 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
             </plugin>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>findbugs-maven-plugin</artifactId>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>
@@ -968,7 +974,8 @@
         <pax.logging.api.version>1.10.1</pax.logging.api.version>
 
         <maven.checkstyleplugin.version>3.1.0</maven.checkstyleplugin.version>
-        <maven.findbugsplugin.version>3.0.5</maven.findbugsplugin.version>
+        <spotbugs-maven-plugin.version>3.1.12</spotbugs-maven-plugin.version>
+        <findsecbugs-plugin.version>1.10.1</findsecbugs-plugin.version>
 
         <findbugs.annotations.version>3.0.1</findbugs.annotations.version>
         <carbon.database.utils.version>2.0.11</carbon.database.utils.version>

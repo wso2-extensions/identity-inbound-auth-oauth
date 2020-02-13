@@ -27,6 +27,8 @@ import java.util.Map;
  */
 public class OIDCDCRMessageContext extends DCRMessageContext {
 
+    private static final long serialVersionUID = -5300677220286769250L;
+
     public OIDCDCRMessageContext(Map parameters) {
 
         super(parameters);
