@@ -75,7 +75,7 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
         ServletCookie cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, UUID.randomUUID().toString());
         cookie.setSecure(true);
         cookie.setPath("/");
-        cookie.setSameSite(SameSiteCookie.None);
+        cookie.setSameSite(SameSiteCookie.NONE);
 
         response.addCookie(cookie);
         return cookie;
