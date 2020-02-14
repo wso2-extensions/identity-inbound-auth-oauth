@@ -182,7 +182,7 @@ public class OIDCSessionManagementUtil {
                     servletCookie.setMaxAge(0);
                     servletCookie.setSecure(true);
                     servletCookie.setPath("/");
-                    servletCookie.setSameSite(SameSiteCookie.None);
+                    servletCookie.setSameSite(SameSiteCookie.NONE);
                     response.addCookie(servletCookie);
                     return cookie;
                 }
