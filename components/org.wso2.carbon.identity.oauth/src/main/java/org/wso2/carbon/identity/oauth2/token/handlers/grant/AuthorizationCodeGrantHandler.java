@@ -353,6 +353,15 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
 
     private boolean isAuthzCodeExpired(AuthzCodeDO authzCodeBean)
             throws IdentityOAuth2Exception {
+
+        if (OAuthConstants.AuthorizationCodeState.EXPIRED.equals(authzCodeBean.getState())) {
+            if (log.isDebugEnabled()) {
+                log.debug("Invalid access token request with Client Id : " + authzCodeBean.getConsumerKey() +
+                        ", Expired authorization code : " + authzCodeBean.getAuthorizationCode());
+            }
+            return true;
+        }
+
         long issuedTime = authzCodeBean.getIssuedTime().getTime();
         long validityPeriod = authzCodeBean.getValidityPeriod();
 
