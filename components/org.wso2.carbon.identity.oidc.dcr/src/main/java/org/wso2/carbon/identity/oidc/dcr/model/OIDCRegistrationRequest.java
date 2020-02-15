@@ -30,6 +30,8 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class OIDCRegistrationRequest extends RegistrationRequest {
 
+    private static final long serialVersionUID = -2728761431889772896L;
+
     public OIDCRegistrationRequest(OIDCRegistrationRequestBuilder builder) throws FrameworkClientException {
 
         super(builder);

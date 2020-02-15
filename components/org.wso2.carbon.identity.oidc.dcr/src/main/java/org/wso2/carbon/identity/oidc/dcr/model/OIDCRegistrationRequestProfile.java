@@ -27,6 +27,7 @@ import java.util.List;
  */
 public class OIDCRegistrationRequestProfile extends RegistrationRequestProfile {
 
+    private static final long serialVersionUID = -76875661310642695L;
     private String sectorIdentifierUri;
     private String subjectType;
     private String idTokenSignedResponseAlg;

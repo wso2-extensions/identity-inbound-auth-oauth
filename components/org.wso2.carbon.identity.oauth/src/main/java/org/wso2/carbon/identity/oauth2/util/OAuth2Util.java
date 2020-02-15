@@ -40,6 +40,7 @@ import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.util.base64.Base64Utils;
@@ -670,6 +671,7 @@ public class OAuth2Util {
         }
     }
 
+    @SuppressFBWarnings("WEAK_MESSAGE_DIGEST_MD5")
     public static String getTokenBindingReference(String tokenBindingValue) {
 
         if (StringUtils.isBlank(tokenBindingValue)) {
@@ -1071,11 +1073,13 @@ public class OAuth2Util {
         return getTenantId(domainName);
     }
 
+    @SuppressFBWarnings("WEAK_MESSAGE_DIGEST_MD5")
     public static String hashScopes(String[] scope) {
 
         return DigestUtils.md5Hex(OAuth2Util.buildScopeString(scope));
     }
 
+    @SuppressFBWarnings("WEAK_MESSAGE_DIGEST_MD5")
     public static String hashScopes(String scope) {
 
         if (scope != null) {

@@ -251,6 +251,13 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <configuration>
+                    <threshold>High</threshold>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

@@ -60,11 +60,10 @@ public class CodeTokenResponseValidator extends TokenValidator {
 
         super.validateRequiredParameters(request);
 
-        String clientID = request.getParameter(CLIENT_ID);
-
         // For code token response type, the scope parameter should contain 'openid' as one of the scopes.
         String openIdScope = request.getParameter(SCOPE);
         if (StringUtils.isBlank(openIdScope) || !isContainOIDCScope(openIdScope)) {
+            String clientID = request.getParameter(CLIENT_ID);
             throw OAuthProblemException.error(OAuthError.TokenResponse.INVALID_REQUEST)
                     .description("Request with \'client_id\' = \'" + clientID + "\' has " +
                             "\'response_type\' for \'hybrid flow\'; but \'openid\' scope not found.");
