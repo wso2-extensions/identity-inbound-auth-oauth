@@ -50,7 +50,8 @@ public class Oauth2ScopeConstants {
         ERROR_CODE_FAILED_TO_UPDATE_SCOPE_BY_NAME("51005", "Error occurred while updating scope %s."),
         ERROR_CODE_FAILED_TO_GET_ALL_SCOPES_PAGINATION("51006",
                 "Error occurred while retrieving scopes with pagination."),
-        ERROR_CODE_UNEXPECTED("51007", "Unexpected error");
+        ERROR_CODE_UNEXPECTED("51007", "Unexpected error"),
+        ERROR_CODE_FAILED_TO_GET_REQUESTED_SCOPES("51008", "Error occurred while retrieving requested scopes.");
 
         private final String code;
         private final String message;

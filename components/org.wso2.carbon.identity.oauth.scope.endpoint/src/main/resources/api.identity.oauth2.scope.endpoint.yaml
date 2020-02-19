@@ -126,6 +126,16 @@ paths:
           description: Number of scopes to retrieve from the point of the start index
           required: false
           type: integer
+        - name: includeOIDCScopes
+          in: query
+          description: Retrieve OIDC scopes as well via OAuth2 scopes endpoint.
+          required: false
+          type: boolean
+        - name: requestedScopes
+          in: query
+          description: Request a set of scopes to be return.
+          required: false
+          type: string
 
       responses:
         200:

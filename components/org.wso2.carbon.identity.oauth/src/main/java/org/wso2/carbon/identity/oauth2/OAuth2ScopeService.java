@@ -16,6 +16,7 @@
 
 package org.wso2.carbon.identity.oauth2;
 
+import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,8 +47,9 @@ public class OAuth2ScopeService {
 
         addScopePreValidation(scope);
 
-        // check whether a scope exists with the provided scope name
-        boolean isScopeExists = isScopeExists(scope.getName());
+        // Check whether a scope exists with the provided scope name or not regardless of scope type. We don't allow
+        // to register same scope name across OAuth2 and OIDC scope endpoints. We keep the scope name as unique.
+        boolean isScopeExists = isScopeExists(scope.getName(), true);
         if (isScopeExists) {
             throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
                     ERROR_CODE_CONFLICT_REQUEST_EXISTING_SCOPE, scope.getName());
@@ -76,24 +78,56 @@ public class OAuth2ScopeService {
      * @param count      Number of elements in the result set to enforce pagination
      * @return Scope list
      * @throws IdentityOAuth2ScopeServerException
+     * @deprecated use {@link #getScopes(Integer, Integer, Boolean, String)} instead.
      */
     public Set<Scope> getScopes(Integer startIndex, Integer count)
             throws IdentityOAuth2ScopeServerException {
 
+        return getScopes(startIndex, count, false, null);
+    }
+
+    /**
+     * Retrieve the available scope list.
+     *
+     * @param startIndex        Start Index of the result set to enforce pagination.
+     * @param count             Number of elements in the result set to enforce pagination.
+     * @param includeOIDCScopes Include OIDC scopes as well.
+     * @param requestedScopes   Requested set of scopes to be return in the response.
+     * @return Scope list.
+     * @throws IdentityOAuth2ScopeServerException
+     */
+    public Set<Scope> getScopes(Integer startIndex, Integer count, Boolean includeOIDCScopes, String requestedScopes)
+            throws IdentityOAuth2ScopeServerException {
+
         Set<Scope> scopes;
 
-        // check for no query params.
-        if (startIndex == null && count == null) {
+        // includeOIDCScopes can be null.
+        boolean includeOIDCScopesState = BooleanUtils.isTrue(includeOIDCScopes);
+
+        // If the requested scopes are provided we won't honour pagination. Will return requested scopes only.
+        if (StringUtils.isNotBlank(requestedScopes)) {
             try {
                 scopes = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
-                        .getAllScopes(Oauth2ScopeUtils.getTenantID());
+                        .getRequestedScopesOnly(Oauth2ScopeUtils.getTenantID(), includeOIDCScopesState,
+                                requestedScopes);
             } catch (IdentityOAuth2ScopeServerException e) {
                 throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
-                        ERROR_CODE_FAILED_TO_GET_ALL_SCOPES, e);
+                        ERROR_CODE_FAILED_TO_GET_REQUESTED_SCOPES, e);
             }
         } else {
-            //check if it is a pagination request.
-            scopes = listScopesWithPagination(startIndex, count);
+            // Check for pagination query params.
+            if (startIndex == null && count == null) {
+                try {
+                    scopes = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                            .getAllScopes(Oauth2ScopeUtils.getTenantID(), includeOIDCScopesState);
+                } catch (IdentityOAuth2ScopeServerException e) {
+                    throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
+                            ERROR_CODE_FAILED_TO_GET_ALL_SCOPES, e);
+                }
+            } else {
+                // Check if it is a pagination request.
+                scopes = listScopesWithPagination(startIndex, count, includeOIDCScopesState);
+            }
         }
         return scopes;
     }
@@ -174,6 +208,42 @@ public class OAuth2ScopeService {
     }
 
     /**
+     * Check the existence of a scope depends on scope type. Type can be OAUTH2 scopes or OIDC scopes.
+     *
+     * @param name              Name of the scope.
+     * @param includeOIDCScopes Include OIDC scopes as well.
+     * @return True if scope with the given scope name exists.
+     * @throws IdentityOAuth2ScopeException
+     */
+    public boolean isScopeExists(String name, boolean includeOIDCScopes) throws IdentityOAuth2ScopeException {
+
+        boolean isScopeExists;
+        int tenantID = Oauth2ScopeUtils.getTenantID();
+
+        if (name == null) {
+            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED, null);
+        }
+
+        Scope scopeFromCache = OAuthScopeCache.getInstance()
+                .getValueFromCache(new OAuthScopeCacheKey(name, Integer.toString(tenantID)));
+
+        if (scopeFromCache != null) {
+            isScopeExists = true;
+        } else {
+            try {
+                isScopeExists = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().isScopeExists(name,
+                        tenantID, includeOIDCScopes);
+            } catch (IdentityOAuth2ScopeServerException e) {
+                throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
+                        ERROR_CODE_FAILED_TO_GET_SCOPE_BY_NAME, name, e);
+            }
+        }
+
+        return isScopeExists;
+    }
+
+    /**
      * Delete the scope for the given scope ID
      *
      * @param name Scope ID of the scope which need to get deleted
@@ -231,10 +301,11 @@ public class OAuth2ScopeService {
      *
      * @param startIndex Start Index of the result set to enforce pagination
      * @param count      Number of elements in the result set to enforce pagination
+     * @param includeOIDCScopes Include OIDC scopes as well.
      * @return List of available scopes
      * @throws IdentityOAuth2ScopeServerException
      */
-    private Set<Scope> listScopesWithPagination(Integer startIndex, Integer count)
+    private Set<Scope> listScopesWithPagination(Integer startIndex, Integer count, boolean includeOIDCScopes)
             throws IdentityOAuth2ScopeServerException {
 
         Set<Scope> scopes;
@@ -253,8 +324,8 @@ public class OAuth2ScopeService {
         }
 
         try {
-            scopes = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().getScopesWithPagination(startIndex
-                    , count, Oauth2ScopeUtils.getTenantID());
+            scopes = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                    .getScopesWithPagination(startIndex, count, Oauth2ScopeUtils.getTenantID(), includeOIDCScopes);
         } catch (IdentityOAuth2ScopeServerException e) {
             throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
                     ERROR_CODE_FAILED_TO_GET_ALL_SCOPES_PAGINATION, e);

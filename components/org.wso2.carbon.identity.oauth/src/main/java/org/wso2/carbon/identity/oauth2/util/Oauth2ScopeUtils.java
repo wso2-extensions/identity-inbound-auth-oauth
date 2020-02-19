@@ -25,11 +25,14 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
+import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -134,8 +137,10 @@ public class Oauth2ScopeUtils {
         OAuthAppDO oAuthAppDO;
 
         if (isATokenRequest(tokenReqMsgContext)) {
+            skipUnregisteredScopes(tokenReqMsgContext);
             oAuthAppDO = getOAuthAppDO(tokenReqMsgContext);
         } else {
+            skipUnregisteredScopes(authzReqMessageContext);
             oAuthAppDO = getOAuthAppDO(authzReqMessageContext);
         }
 
@@ -274,5 +279,48 @@ public class Oauth2ScopeUtils {
             }
         }
         return true;
+    }
+
+    private static void skipUnregisteredScopes(OAuthTokenReqMessageContext tokReqMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        String[] scopes = tokReqMsgCtx.getScope();
+        if (ArrayUtils.isNotEmpty(scopes)) {
+            String[] filteredScopes = filterRegisteredScopes(scopes);
+            tokReqMsgCtx.setScope(filteredScopes);
+        }
+    }
+
+    private static void skipUnregisteredScopes(OAuthAuthzReqMessageContext authzReqMessageContext)
+            throws IdentityOAuth2Exception {
+
+        String[] scopes = authzReqMessageContext.getApprovedScope();
+        if (ArrayUtils.isNotEmpty(scopes)) {
+            String[] filteredScopes = filterRegisteredScopes(scopes);
+            authzReqMessageContext.setApprovedScope(filteredScopes);
+        }
+    }
+
+    private static String[] filterRegisteredScopes(String[] scopesList) throws IdentityOAuth2Exception {
+
+        String requestedScopesAsString = "";
+        for (String scopeName : scopesList) {
+            requestedScopesAsString += scopeName + " ";
+        }
+
+        OAuth2ScopeService oAuth2ScopeService = OAuthComponentServiceHolder.getInstance().getOauth2ScopeService();
+
+        List<String> filteredScopes = new ArrayList<>();
+        try {
+            Set<Scope> scopeSet = oAuth2ScopeService.getScopes(null, null, true, requestedScopesAsString);
+
+            for (Scope scope : scopeSet) {
+                filteredScopes.add(scope.getName());
+            }
+        } catch (IdentityOAuth2ScopeServerException e) {
+            throw new IdentityOAuth2Exception("Error occurred while obtaining scope list.");
+        }
+
+        return filteredScopes.toArray(new String[0]);
     }
 }
