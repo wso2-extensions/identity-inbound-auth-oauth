@@ -13,6 +13,7 @@
         </jaxrs:serviceBeans>
         <jaxrs:providers>
             <bean class="com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider"/>
+            <bean class="org.wso2.carbon.identity.oauth.scope.endpoint.expmapper.JsonProcessingExceptionMapper"/>
         </jaxrs:providers>
     </jaxrs:server>
 </beans>
