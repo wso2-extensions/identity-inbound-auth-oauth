@@ -33,6 +33,7 @@ public class OIDProviderConfigResponse {
     private String authorizationEndpoint;
     private String tokenEndpoint;
     private String userinfoEndpoint;
+    private String revocationEndpoint;
     private String jwksUri;
     private String registrationEndpoint;
     private String[] scopesSupported;
@@ -102,6 +103,16 @@ public class OIDProviderConfigResponse {
 
     public void setUserinfoEndpoint(String userinfoEndpoint) {
         this.userinfoEndpoint = userinfoEndpoint;
+    }
+
+    public String getRevocationEndpoint() {
+
+        return revocationEndpoint;
+    }
+
+    public void setRevocationEndpoint(String revocationEndpoint) {
+
+        this.revocationEndpoint = revocationEndpoint;
     }
 
     public String getJwksUri() {
@@ -447,6 +458,7 @@ public class OIDProviderConfigResponse {
         configMap.put(DiscoveryConstants.USERINFO_ENCRYPTION_ENC_VALUES_SUPPORTED.toLowerCase(), this
                 .userinfoEncryptionEncValuesSupported);
         configMap.put(DiscoveryConstants.USERINFO_ENDPOINT.toLowerCase(), this.userinfoEndpoint);
+        configMap.put(DiscoveryConstants.REVOCATION_ENDPOINT.toLowerCase(), this.revocationEndpoint);
         configMap.put(DiscoveryConstants.CHECK_SESSION_IFRAME.toLowerCase(), this.checkSessionIframe);
         configMap.put(DiscoveryConstants.END_SESSION_ENDPOINT.toLowerCase(), this.endSessionEndpoint);
         configMap.put(DiscoveryConstants.USERINFO_SIGNING_ALG_VALUES_SUPPORTED.toLowerCase(), this

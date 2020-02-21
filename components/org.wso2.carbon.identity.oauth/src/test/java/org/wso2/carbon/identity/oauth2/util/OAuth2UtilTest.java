@@ -1005,6 +1005,14 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     }
 
     @Test(dataProvider = "OAuthURLData")
+    public void testGetOAuth2RevocationEPUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+
+        when(oauthServerConfigurationMock.getOauth2RevocationEPUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2RevocationEPUrl(), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthURLData")
     public void testGetOIDCConsentPageUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
         when(oauthServerConfigurationMock.getOIDCConsentPageUrl()).thenReturn(configUrl);
         getOAuthURL(serverUrl);

@@ -1224,6 +1224,20 @@ public class OAuth2Util {
             return oauth2UserInfoEPUrl;
         }
 
+        /**
+         * Get oauth2 revocation endpoint URL.
+         *
+         * @return Revocation Endpoint URL.
+         */
+        public static String getOAuth2RevocationEPUrl() {
+
+            String oauth2RevokeEPUrl = OAuthServerConfiguration.getInstance().getOauth2RevocationEPUrl();
+            if (StringUtils.isBlank(oauth2RevokeEPUrl)) {
+                oauth2RevokeEPUrl = IdentityUtil.getServerURL("oauth2/revoke", true, false);
+            }
+            return oauth2RevokeEPUrl;
+        }
+
         public static String getOIDCConsentPageUrl() {
 
             String oidcConsentPageUrl = OAuthServerConfiguration.getInstance().getOIDCConsentPageUrl();

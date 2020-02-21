@@ -48,6 +48,12 @@ public class DiscoveryConstants {
      */
     public static final String USERINFO_ENDPOINT = "Userinfo_endpoint";
     /**
+     * revocation_endpoint
+     * RECOMMENDED. URL of the OP's Revocation Endpoint [OpenID.Core]. This URL MUST use the https scheme and
+     * MAY contain port, path, and query parameter components.
+     */
+    public static final String REVOCATION_ENDPOINT = "Revocation_endpoint";
+    /**
      * jwks_uri
      * REQUIRED. URL of the OP's JSON Web Key Set [JWK] document. This contains the signing key(s) the RP
      * uses to validate signatures from the OP. The JWK Set MAY also contain the Server's encryption key(s),
