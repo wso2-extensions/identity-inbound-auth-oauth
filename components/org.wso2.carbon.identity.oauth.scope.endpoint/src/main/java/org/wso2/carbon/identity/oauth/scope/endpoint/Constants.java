@@ -21,4 +21,7 @@ package org.wso2.carbon.identity.oauth.scope.endpoint;
  */
 public final class Constants {
 
+    public static final String SERVER_API_PATH_COMPONENT = "/api/identity/oauth2/v1.0/scopes/name/";
+    public static final String TENANT_CONTEXT_PATH_COMPONENT = "/t/%s";
+
 }
