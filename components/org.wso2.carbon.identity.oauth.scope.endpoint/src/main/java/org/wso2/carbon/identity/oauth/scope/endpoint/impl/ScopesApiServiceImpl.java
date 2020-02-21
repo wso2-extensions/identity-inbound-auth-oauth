@@ -251,14 +251,14 @@ public class ScopesApiServiceImpl extends ScopesApiService {
      * Build the complete URI to the location of the resource.
      * Ex: https://localhost:9443/t/<tenant-domain>/identity/oauth2/v1.0/scopes/name/<scope_name>
      *
-     * @param name of the scope.
+     * @param scopeName Name of the scope.
      * @return Fully qualified and complete URI.
      */
-    private static URI buildURIForHeader(String name) {
+    private static URI buildURIForHeader(String scopeName) {
 
         String tenantQualifiedRelativePath =
                 String.format(TENANT_CONTEXT_PATH_COMPONENT, getTenantDomainFromContext()) + SERVER_API_PATH_COMPONENT;
-        String url = IdentityUtil.getEndpointURIPath(tenantQualifiedRelativePath + name, false, true);
+        String url = IdentityUtil.getEndpointURIPath(tenantQualifiedRelativePath + scopeName, false, true);
 
         URI location = URI.create(url);
         if (!location.isAbsolute()) {
