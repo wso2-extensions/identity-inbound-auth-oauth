@@ -260,8 +260,8 @@ public class ScopesApiServiceImpl extends ScopesApiService {
                 String.format(TENANT_CONTEXT_PATH_COMPONENT, getTenantDomainFromContext()) + SERVER_API_PATH_COMPONENT;
         String url = IdentityUtil.getEndpointURIPath(tenantQualifiedRelativePath + name, false, true);
 
-        URI loc = URI.create(url);
-        if (!loc.isAbsolute()) {
+        URI location = URI.create(url);
+        if (!location.isAbsolute()) {
             Message currentMessage = PhaseInterceptorChain.getCurrentMessage();
             if (currentMessage != null) {
                 UriInfo ui = new UriInfoImpl(currentMessage.getExchange().getInMessage(), null);
@@ -274,7 +274,7 @@ public class ScopesApiServiceImpl extends ScopesApiService {
                 }
             }
         }
-        return loc;
+        return location;
     }
 
     /**
