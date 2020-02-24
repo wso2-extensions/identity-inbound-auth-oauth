@@ -135,10 +135,10 @@ public class ScopesApiServiceImpl extends ScopesApiService {
     }
 
     /**
-     * Retrieve the available scope list
+     * Retrieve the available scope list.
      *
-     * @param startIndex Start Index of the result set to enforce pagination
-     * @param count      Number of elements in the result set to enforce pagination
+     * @param startIndex Start Index of the result set to enforce pagination.
+     * @param count      Number of elements in the result set to enforce pagination.
      * @return Response with the retrieved scopes/ retrieval status
      * @deprecated use {@link #getScopes(Integer, Integer, Boolean, String)} instead.
      */

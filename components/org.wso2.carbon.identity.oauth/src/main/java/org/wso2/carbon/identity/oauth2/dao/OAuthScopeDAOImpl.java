@@ -376,6 +376,16 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
         return getScopesWithPagination(offset, limit, tenantID, false);
     }
 
+    /**
+     * Get SQL statement for get OAuth2 scope with pagination.
+     *
+     * @param offset   Offset.
+     * @param limit    Limit.
+     * @param tenantID Tenet ID.
+     * @param conn     Database connection.
+     * @return
+     * @throws SQLException
+     */
     private NamedPreparedStatement getPreparedStatementForGetScopesWithPagination(Integer offset, Integer limit,
                                                                                   int tenantID, Connection conn)
             throws SQLException {
@@ -410,6 +420,16 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
         return namedPreparedStatement;
     }
 
+    /**
+     * Get SQL statement for get all scope with pagination. (including OAuth2 scopes and OIDC scopes).
+     *
+     * @param offset   Offset.
+     * @param limit    Limit.
+     * @param tenantID Tenet ID.
+     * @param conn     Database connection.
+     * @return
+     * @throws SQLException
+     */
     private NamedPreparedStatement getPreparedStatementForGetAllScopesWithPagination(Integer offset, Integer limit,
                                                                                      int tenantID, Connection conn)
             throws SQLException {
@@ -657,6 +677,14 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
         return scopeID;
     }
 
+    /**
+     * Get scope ID of the provided scope regardless of scope type.
+     *
+     * @param scopeName Scope name.
+     * @param tenantID  Tenant ID.
+     * @return
+     * @throws IdentityOAuth2ScopeServerException
+     */
     private int getScopeIDByNameWithoutScopeType(String scopeName, int tenantID)
             throws IdentityOAuth2ScopeServerException {
 
