@@ -140,6 +140,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
             if (requestedScopes == null) {
                 return new ArrayList<>();
             }
+            boolean isSystemScope = ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE);
             int tenantId = IdentityTenantUtil.getTenantId(authenticatedUser.getTenantDomain());
             startTenantFlow(authenticatedUser.getTenantDomain(), tenantId);
             AuthorizationManager authorizationManager = OAuthComponentServiceHolder.getInstance().getRealmService()
@@ -154,7 +155,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
             }
 
             for (Scope scope : allScopes) {
-                if (!ArrayUtils.contains(requestedScopes, scope.getName())) {
+                if (!isSystemScope && !ArrayUtils.contains(requestedScopes, scope.getName())) {
                     continue;
                 }
                 List<ScopeBinding> bindings = scope.getScopeBindings();
@@ -162,7 +163,14 @@ public class JDBCPermissionBasedInternalScopeValidator {
                 for (ScopeBinding scopeBinding : bindings) {
                     if (PERMISSION_BINDING_TYPE.equalsIgnoreCase(scopeBinding.getBindingType())) {
                         for (String binding : scopeBinding.getBindings()) {
-                            if (!ArrayUtils.contains(allowedUIResourcesForUser, binding)) {
+                            boolean isAllowed = false;
+                            for (String allowedScope : allowedUIResourcesForUser) {
+                                if (binding.startsWith(allowedScope)) {
+                                    isAllowed = true;
+                                    break;
+                                }
+                            }
+                            if (!isAllowed) {
                                 isScopeAllowed = false;
                                 break;
                             }
