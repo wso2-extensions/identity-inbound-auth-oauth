@@ -29,7 +29,7 @@ schemes:
 # The domain of the API.
 # This is configured by the customer during deployment.
 # The given host is just an example.
-host: localhost
+host: localhost:9443
 
 # The base path of the API.
 # Will be prefixed to all paths.
