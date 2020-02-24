@@ -66,11 +66,11 @@ public class JDBCPermissionBasedInternalScopeValidator {
 
         // filter internal scopes
         String[] requestedScopes = getRequestedScopes(tokReqMsgCtx.getScope());
-        List<Scope> userAllowedScopes = getUserAllowedScopes(tokReqMsgCtx.getAuthorizedUser(), requestedScopes);
         //If the token is not requested for specific scopes, return true
         if (ArrayUtils.isEmpty(requestedScopes)) {
             return requestedScopes;
         }
+        List<Scope> userAllowedScopes = getUserAllowedScopes(tokReqMsgCtx.getAuthorizedUser(), requestedScopes);
 
         String[] userAllowedScopesAsArray = getScopes(userAllowedScopes);
         if (ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
