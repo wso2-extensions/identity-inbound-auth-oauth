@@ -20,9 +20,14 @@ package org.wso2.carbon.identity.oauth.endpoint.device;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.cxf.interceptor.InInterceptors;
+import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.json.JSONObject;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
@@ -43,8 +48,9 @@ import javax.ws.rs.core.Response;
  * Rest implementation for device authorization flow.
  */
 @Path("/device_authorize")
+@InInterceptors(classes = OAuthClientAuthenticatorProxy.class)
 public class DeviceEndpoint {
-
+    private OAuthClientAuthnContext oAuthClientAuthnContext;
     private static final Log log = LogFactory.getLog(DeviceEndpoint.class);
     private DeviceAuthService deviceAuthService;
 
@@ -60,26 +66,37 @@ public class DeviceEndpoint {
     public Response authorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
             throws IdentityOAuth2Exception {
 
-        String clientId = request.getParameter(Constants.CLIENT_ID);
-        JSONObject errorResponse = new JSONObject();
-        if (StringUtils.isBlank(clientId)) {
-            errorResponse.put(Constants.ERROR, DeviceErrorCodes.INVALID_REQUEST)
-                    .put(Constants.ERROR_DESCRIPTION, "Request missing required parameters");
-            Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
-            return respBuilder.entity(errorResponse.toString()).build();
+        Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
+        if (oauthClientAuthnContextObj instanceof OAuthClientAuthnContext) {
+            oAuthClientAuthnContext = (OAuthClientAuthnContext) oauthClientAuthnContextObj;
+        } else {
+            oAuthClientAuthnContext = new OAuthClientAuthnContext();
+            oAuthClientAuthnContext.setAuthenticated(false);
+            oAuthClientAuthnContext.setErrorMessage("Client Authentication Failed");
+            oAuthClientAuthnContext.setErrorCode(OAuthError.TokenResponse.INVALID_REQUEST);
         }
-        if (!validateClientId(clientId)) {
-            errorResponse.put(Constants.ERROR, DeviceErrorCodes.UNAUTHORIZED_CLIENT)
-                    .put(Constants.ERROR_DESCRIPTION, "No registered client with the client id.");
-            Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED);
-            return respBuilder.entity(errorResponse.toString()).build();
-        }
+
+//        String clientId = request.getParameter(Constants.CLIENT_ID);
+//        JSONObject errorResponse = new JSONObject();
+//        if (StringUtils.isBlank(clientId)) {
+//            errorResponse.put(Constants.ERROR, DeviceErrorCodes.INVALID_REQUEST)
+//                    .put(Constants.ERROR_DESCRIPTION, "Request missing required parameters");
+//            Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
+//            return respBuilder.entity(errorResponse.toString()).build();
+//        }
+//        if (!validateClientId(clientId)) {
+//            errorResponse.put(Constants.ERROR, DeviceErrorCodes.UNAUTHORIZED_CLIENT)
+//                    .put(Constants.ERROR_DESCRIPTION, "No registered client with the client id.");
+//            Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED);
+//            return respBuilder.entity(errorResponse.toString()).build();
+//        }
+
         String userCode = GenerateKeys.getKey(Constants.KEY_LENGTH);
         String deviceCode = UUID.randomUUID().toString();
         String scopes = request.getParameter(Constants.SCOPE);
         String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do", false, false);
         String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
-        deviceAuthService.generateDeviceResponse(deviceCode, userCode, clientId, scopes);
+        deviceAuthService.generateDeviceResponse(deviceCode, userCode, oAuthClientAuthnContext.getClientId(), scopes);
         return buildResponseObject(deviceCode, userCode, redirectionUri, redirectionUriComplete);
     }
 
