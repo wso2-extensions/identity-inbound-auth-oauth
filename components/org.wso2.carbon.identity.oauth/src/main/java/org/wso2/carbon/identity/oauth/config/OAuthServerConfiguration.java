@@ -116,6 +116,8 @@ public class OAuthServerConfiguration {
     private static String oauth2AuthzEPUrl = null;
     private static String oauth2TokenEPUrl = null;
     private static String oauth2UserInfoEPUrl = null;
+    private static String oauth2RevocationEPUrl = null;
+    private static String oauth2IntrospectionEPUrl = null;
     private static String oidcConsentPageUrl = null;
     private static String oauth2DCREPUrl = null;
     private static String oauth2JWKSPageUrl = null;
@@ -490,6 +492,16 @@ public class OAuthServerConfiguration {
 
     public String getOauth2UserInfoEPUrl() {
         return oauth2UserInfoEPUrl;
+    }
+
+    public String getOauth2RevocationEPUrl() {
+
+        return oauth2RevocationEPUrl;
+    }
+
+    public String getOauth2IntrospectionEPUrl() {
+
+        return oauth2IntrospectionEPUrl;
     }
 
     /**
@@ -1701,6 +1713,20 @@ public class OAuthServerConfiguration {
             }
         }
         elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.OAUTH2_REVOCATION_EP_URL));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2RevocationEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.OAUTH2_INTROSPECTION_EP_URL));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2IntrospectionEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                 ConfigElements.OAUTH2_CONSENT_PAGE_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
@@ -2885,6 +2911,8 @@ public class OAuthServerConfiguration {
         public static final String OAUTH2_AUTHZ_EP_URL = "OAuth2AuthzEPUrl";
         public static final String OAUTH2_TOKEN_EP_URL = "OAuth2TokenEPUrl";
         public static final String OAUTH2_USERINFO_EP_URL = "OAuth2UserInfoEPUrl";
+        public static final String OAUTH2_REVOCATION_EP_URL = "OAuth2RevokeEPUrl";
+        public static final String OAUTH2_INTROSPECTION_EP_URL = "OAuth2IntrospectEPUrl";
         public static final String OAUTH2_CONSENT_PAGE_URL = "OAuth2ConsentPage";
         public static final String OAUTH2_DCR_EP_URL = "OAuth2DCREPUrl";
         public static final String OAUTH2_JWKS_PAGE_URL = "OAuth2JWKSPage";

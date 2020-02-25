@@ -100,6 +100,7 @@ public class ProviderConfigBuilderTest {
         when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
 
         when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(idTokenSignatureAlgorithm)).thenReturn(JWSAlgorithm.RS256);
+        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString())).thenReturn(JWSAlgorithm.RS256);
         assertNotNull(providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest));
     }
 
@@ -110,10 +111,11 @@ public class ProviderConfigBuilderTest {
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
 
+        mockStatic(OAuth2Util.class);
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(anyString())).thenThrow(new URISyntaxException("input",
                 "URISyntaxException"));
-
+        when(OAuth2Util.getIdTokenIssuer(anyString())).thenReturn("issuer");
         providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
     }
 
