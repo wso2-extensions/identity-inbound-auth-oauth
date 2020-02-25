@@ -219,9 +219,9 @@
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.wso2.carbon.identity.framework</groupId>
-                <artifactId>org.wso2.carbon.identity.application.authentication.endpoint</artifactId>
-                <version>${carbon.identity.framework.version}</version>
+                <groupId>org.wso2.identity.apps</groupId>
+                <artifactId>authentication-portal</artifactId>
+                <version>${authentication.portal.version}</version>
                 <type>war</type>
             </dependency>
             <dependency>
@@ -865,7 +865,7 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.15.58</carbon.identity.framework.version>
+        <carbon.identity.framework.version>5.16.102</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.15.0, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
@@ -985,6 +985,9 @@
 
         <findbugs.annotations.version>3.0.1</findbugs.annotations.version>
         <carbon.database.utils.version>2.0.11</carbon.database.utils.version>
+
+        <!--Identity Apps-->
+        <authentication.portal.version>1.0.51</authentication.portal.version>
     </properties>
 
 </project>
