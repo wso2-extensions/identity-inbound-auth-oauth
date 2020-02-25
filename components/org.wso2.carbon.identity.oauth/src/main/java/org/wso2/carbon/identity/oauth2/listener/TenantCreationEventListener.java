@@ -18,10 +18,20 @@
 
 package org.wso2.carbon.identity.oauth2.listener;
 
+import org.wso2.carbon.identity.oauth.OAuthUtil;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.stratos.common.beans.TenantInfoBean;
 import org.wso2.carbon.stratos.common.exception.StratosException;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * This is an implementation of TenantMgtListener. This uses
@@ -63,8 +73,9 @@ public class TenantCreationEventListener implements TenantMgtListener {
     }
 
     @Override
-    public void onTenantDeactivation(int i) throws StratosException {
+    public void onTenantDeactivation(int tenantId) throws StratosException {
 
+        revokeTokens(tenantId);
     }
 
     @Override
@@ -79,8 +90,58 @@ public class TenantCreationEventListener implements TenantMgtListener {
     }
 
     @Override
-    public void onPreDelete(int i) throws StratosException {
+    public void onPreDelete(int tenantId) throws StratosException {
 
+        revokeTokens(tenantId);
+    }
+
+    private void revokeTokens(int tenantId) throws StratosException {
+
+        try {
+            Set<AccessTokenDO> accessTokenDOs = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .getAccessTokensByTenant(tenantId);
+            Map<String, AccessTokenDO> latestAccessTokens = new HashMap<>();
+
+            for (AccessTokenDO accessTokenDO : accessTokenDOs) {
+                String keyString = accessTokenDO.getConsumerKey() + ":" + accessTokenDO.getAuthzUser() + ":" +
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":"
+                        + accessTokenDO.getAuthzUser().getFederatedIdPName();
+                AccessTokenDO accessTokenDOFromMap = latestAccessTokens.get(keyString);
+                if (accessTokenDOFromMap != null) {
+                    if (accessTokenDOFromMap.getIssuedTime().before(accessTokenDO.getIssuedTime())) {
+                        latestAccessTokens.put(keyString, accessTokenDO);
+                    }
+                } else {
+                    latestAccessTokens.put(keyString, accessTokenDO);
+                }
+
+                OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()));
+                OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
+                OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
+            }
+
+            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessTokens(
+                    latestAccessTokens
+                            .values()
+                            .stream()
+                            .map(AccessTokenDO::getAccessToken)
+                            .toArray(String[]::new),
+                    OAuth2Util.isHashEnabled());
+
+            List<AuthzCodeDO> latestAuthzCodes = OAuthTokenPersistenceFactory.getInstance()
+                    .getAuthorizationCodeDAO().getLatestAuthorizationCodesByTenant(tenantId);
+
+            // Remove the authorization code from the cache.
+            latestAuthzCodes.stream()
+                    .map(authzCodeDO -> authzCodeDO.getConsumerKey() + ":" + authzCodeDO.getAuthorizationCode())
+                    .forEach(OAuthUtil::clearOAuthCache);
+
+            OAuthTokenPersistenceFactory.getInstance()
+                    .getAuthorizationCodeDAO().deactivateAuthorizationCodes(latestAuthzCodes);
+        } catch (IdentityOAuth2Exception e) {
+            throw new StratosException("Error occurred while revoking Access Token of tenant: " + tenantId, e);
+        }
     }
 
 }
