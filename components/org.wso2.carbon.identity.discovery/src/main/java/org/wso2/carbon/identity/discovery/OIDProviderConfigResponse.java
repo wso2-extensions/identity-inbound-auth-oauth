@@ -33,6 +33,8 @@ public class OIDProviderConfigResponse {
     private String authorizationEndpoint;
     private String tokenEndpoint;
     private String userinfoEndpoint;
+    private String revocationEndpoint;
+    private String introspectionEndpoint;
     private String jwksUri;
     private String registrationEndpoint;
     private String[] scopesSupported;
@@ -50,6 +52,10 @@ public class OIDProviderConfigResponse {
     private String[] requestObjectSigningAlgValuesSupported;
     private String[] requestObjectEncryptionAlgValuesSupported;
     private String[] requestObjectEncryptionEncValuesSupported;
+    private String[] revocationEndpointAuthMethodsSupported;
+    private String[] revocationEndpointAuthSigningAlgValuesSupported;
+    private String[] introspectionEndpointAuthMethodsSupported;
+    private String[] introspectionEndpointAuthSigningAlgValuesSupported;
     private String[] tokenEndpointAuthMethodsSupported;
     private String[] tokenEndpointAuthSigningAlgValuesSupported;
     private String[] displayValuesSupported;
@@ -70,6 +76,7 @@ public class OIDProviderConfigResponse {
     private String endSessionEndpoint;
     private Boolean backchannelLogoutSupported;
     private Boolean backchannelLogoutSessionSupported;
+    private String[] codeChallengeMethodsSupported;
 
 
     public String getIssuer() {
@@ -102,6 +109,16 @@ public class OIDProviderConfigResponse {
 
     public void setUserinfoEndpoint(String userinfoEndpoint) {
         this.userinfoEndpoint = userinfoEndpoint;
+    }
+
+    public String getRevocationEndpoint() {
+
+        return revocationEndpoint;
+    }
+
+    public void setRevocationEndpoint(String revocationEndpoint) {
+
+        this.revocationEndpoint = revocationEndpoint;
     }
 
     public String getJwksUri() {
@@ -399,6 +416,68 @@ public class OIDProviderConfigResponse {
         this.backchannelLogoutSessionSupported = backchannelLogoutSessionSupported;
     }
 
+    public String getIntrospectionEndpoint() {
+
+        return introspectionEndpoint;
+    }
+
+    public void setIntrospectionEndpoint(String introspectionEndpoint) {
+
+        this.introspectionEndpoint = introspectionEndpoint;
+    }
+
+    public String[] getRevocationEndpointAuthMethodsSupported() {
+
+        return revocationEndpointAuthMethodsSupported;
+    }
+
+    public void setRevocationEndpointAuthMethodsSupported(String[] revocationEndpointAuthMethodsSupported) {
+
+        this.revocationEndpointAuthMethodsSupported = revocationEndpointAuthMethodsSupported;
+    }
+
+    public String[] getRevocationEndpointAuthSigningAlgValuesSupported() {
+
+        return revocationEndpointAuthSigningAlgValuesSupported;
+    }
+
+    public void setRevocationEndpointAuthSigningAlgValuesSupported(
+            String[] revocationEndpointAuthSigningAlgValuesSupported) {
+
+        this.revocationEndpointAuthSigningAlgValuesSupported = revocationEndpointAuthSigningAlgValuesSupported;
+    }
+
+    public String[] getIntrospectionEndpointAuthMethodsSupported() {
+
+        return introspectionEndpointAuthMethodsSupported;
+    }
+
+    public void setIntrospectionEndpointAuthMethodsSupported(String[] introspectionEndpointAuthMethodsSupported) {
+
+        this.introspectionEndpointAuthMethodsSupported = introspectionEndpointAuthMethodsSupported;
+    }
+
+    public String[] getIntrospectionEndpointAuthSigningAlgValuesSupported() {
+
+        return introspectionEndpointAuthSigningAlgValuesSupported;
+    }
+
+    public void setIntrospectionEndpointAuthSigningAlgValuesSupported(
+            String[] introspectionEndpointAuthSigningAlgValuesSupported) {
+
+        this.introspectionEndpointAuthSigningAlgValuesSupported = introspectionEndpointAuthSigningAlgValuesSupported;
+    }
+
+    public String[] getCodeChallengeMethodsSupported() {
+
+        return codeChallengeMethodsSupported;
+    }
+
+    public void setCodeChallengeMethodsSupported(String[] codeChallengeMethodsSupported) {
+
+        this.codeChallengeMethodsSupported = codeChallengeMethodsSupported;
+    }
+
     public Map<String, Object> getConfigMap() {
         Map<String, Object> configMap = new HashMap<String, Object>();
         configMap.put(DiscoveryConstants.ISSUER.toLowerCase(), this.issuer);
@@ -447,12 +526,20 @@ public class OIDProviderConfigResponse {
         configMap.put(DiscoveryConstants.USERINFO_ENCRYPTION_ENC_VALUES_SUPPORTED.toLowerCase(), this
                 .userinfoEncryptionEncValuesSupported);
         configMap.put(DiscoveryConstants.USERINFO_ENDPOINT.toLowerCase(), this.userinfoEndpoint);
+        configMap.put(DiscoveryConstants.REVOCATION_ENDPOINT.toLowerCase(), this.revocationEndpoint);
+        configMap.put(DiscoveryConstants.REVOCATION_ENDPOINT_AUTH_METHODS_SUPPORTED.toLowerCase(), this
+                .revocationEndpointAuthMethodsSupported);
+        configMap.put(DiscoveryConstants.INTROSPECTION_ENDPOINT.toLowerCase(), this.introspectionEndpoint);
+        configMap.put(DiscoveryConstants.INTROSPECTION_ENDPOINT_AUTH_METHODS_SUPPORTED.toLowerCase(), this
+                .introspectionEndpointAuthMethodsSupported);
         configMap.put(DiscoveryConstants.CHECK_SESSION_IFRAME.toLowerCase(), this.checkSessionIframe);
         configMap.put(DiscoveryConstants.END_SESSION_ENDPOINT.toLowerCase(), this.endSessionEndpoint);
         configMap.put(DiscoveryConstants.USERINFO_SIGNING_ALG_VALUES_SUPPORTED.toLowerCase(), this
                 .userinfoSigningAlgValuesSupported);
         configMap.put(DiscoveryConstants.BACKCHANNEL_LOGOUT_SUPPORTED, this.backchannelLogoutSupported);
         configMap.put(DiscoveryConstants.BACKCHANNEL_LOGOUT_SESSION_SUPPORTED, this.backchannelLogoutSessionSupported);
+        configMap.put(DiscoveryConstants.RESPONSE_MODES_SUPPORTED, this.responseModesSupported);
+        configMap.put(DiscoveryConstants.CODE_CHALLENGE_METHODS_SUPPORTED, this.codeChallengeMethodsSupported);
         return configMap;
     }
 }

@@ -48,6 +48,38 @@ public class DiscoveryConstants {
      */
     public static final String USERINFO_ENDPOINT = "Userinfo_endpoint";
     /**
+     * revocation_endpoint
+     * RECOMMENDED. URL of the OP's Revocation Endpoint [OpenID.Core]. This URL MUST use the https scheme and
+     * MAY contain port, path, and query parameter components.
+     */
+    public static final String REVOCATION_ENDPOINT = "Revocation_endpoint";
+    /**
+     * revocation_endpoint_auth_methods_supported
+     * OPTIONAL. JSON array containing a list of Client Authentication methods supported by this Revocation
+     * Endpoint. The options are client_secret_post, client_secret_basic, client_secret_jwt, and
+     * private_key_jwt, as described in Section 9 of OpenID Connect Core 1.0 [OpenID.Core]. Other
+     * authentication methods MAY be defined by extensions. If omitted, the default is client_secret_basic
+     * -- the HTTP Basic Authentication Scheme specified in Section 2.3.1 of OAuth 2.0 [RFC6749].
+     */
+    public static final String REVOCATION_ENDPOINT_AUTH_METHODS_SUPPORTED =
+            "Revocation_endpoint_auth_methods_supported";
+    /**
+     * introspection_endpoint
+     * OPTIONAL. URL of the OP's Introspection Endpoint [OpenID.Core]. This URL MUST use the https scheme and
+     * MAY contain port, path, and query parameter components.
+     */
+    public static final String INTROSPECTION_ENDPOINT = "Introspection_endpoint";
+    /**
+     * introspection_endpoint_auth_methods_supported
+     * OPTIONAL. JSON array containing a list of Client Authentication methods supported by this Introspection
+     * Endpoint. The options are client_secret_post, client_secret_basic, client_secret_jwt, and
+     * private_key_jwt, as described in Section 9 of OpenID Connect Core 1.0 [OpenID.Core]. Other
+     * authentication methods MAY be defined by extensions. If omitted, the default is client_secret_basic
+     * -- the HTTP Basic Authentication Scheme specified in Section 2.3.1 of OAuth 2.0 [RFC6749].
+     */
+    public static final String INTROSPECTION_ENDPOINT_AUTH_METHODS_SUPPORTED =
+            "Introspection_endpoint_auth_methods_supported";
+    /**
      * jwks_uri
      * REQUIRED. URL of the OP's JSON Web Key Set [JWK] document. This contains the signing key(s) the RP
      * uses to validate signatures from the OP. The JWK Set MAY also contain the Server's encryption key(s),
@@ -304,4 +336,13 @@ public class DiscoveryConstants {
      * If omitted, the default value is false.
      */
     public static final String BACKCHANNEL_LOGOUT_SESSION_SUPPORTED = "backchannel_logout_session_supported";
+    /**
+     * code_challenge_methods_supported
+     * OPTIONAL. JSON array containing a list of Proof Key for Code Exchange (PKCE) [RFC7636] code challenge methods
+     * supported by this authorization server.  Code challenge method values are used in the "code_challenge_method"
+     * parameter defined in Section 4.3 of [RFC7636].  The valid code challenge method values are those
+     registered in the IANA "PKCE Code Challenge Methods" registry [IANA.OAuth.Parameters].  If omitted, the
+     authorization server does not support PKCE.
+     */
+    public static final String CODE_CHALLENGE_METHODS_SUPPORTED = "code_challenge_methods_supported";
 }

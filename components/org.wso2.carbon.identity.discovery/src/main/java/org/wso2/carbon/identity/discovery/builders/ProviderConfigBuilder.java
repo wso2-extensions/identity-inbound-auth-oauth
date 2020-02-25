@@ -65,6 +65,15 @@ public class ProviderConfigBuilder {
         providerConfig.setAuthorizationEndpoint(OAuth2Util.OAuthURL.getOAuth2AuthzEPUrl());
         providerConfig.setTokenEndpoint(OAuth2Util.OAuthURL.getOAuth2TokenEPUrl());
         providerConfig.setUserinfoEndpoint(OAuth2Util.OAuthURL.getOAuth2UserInfoEPUrl());
+        providerConfig.setRevocationEndpoint(OAuth2Util.OAuthURL.getOAuth2RevocationEPUrl());
+        providerConfig.setRevocationEndpointAuthMethodsSupported(OAuth2Util.getSupportedClientAuthenticationMethods()
+                .toArray(new String[0]));
+        providerConfig.setResponseModesSupported(OAuth2Util.getSupportedResponseModes().toArray(new String[0]));
+        providerConfig.setIntrospectionEndpoint(OAuth2Util.OAuthURL.getOAuth2IntrospectionEPUrl());
+        providerConfig.setIntrospectionEndpointAuthMethodsSupported(OAuth2Util.getSupportedClientAuthenticationMethods()
+                .toArray(new String[0]));
+        providerConfig.setCodeChallengeMethodsSupported(OAuth2Util.getSupportedCodeChallengeMethods()
+                .toArray(new String[0]));
         try {
             providerConfig.setRegistrationEndpoint(OAuth2Util.OAuthURL.getOAuth2DCREPUrl(request.getTenantDomain()));
             providerConfig.setJwksUri(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(request.getTenantDomain()));
