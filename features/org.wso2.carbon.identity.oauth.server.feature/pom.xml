@@ -80,8 +80,8 @@
             <type>war</type>
         </dependency>
         <dependency>
-            <groupId>org.wso2.carbon.identity.framework</groupId>
-            <artifactId>org.wso2.carbon.identity.application.authentication.endpoint</artifactId>
+            <groupId>org.wso2.identity.apps</groupId>
+            <artifactId>authentication-portal</artifactId>
             <type>war</type>
         </dependency>
         <dependency>
