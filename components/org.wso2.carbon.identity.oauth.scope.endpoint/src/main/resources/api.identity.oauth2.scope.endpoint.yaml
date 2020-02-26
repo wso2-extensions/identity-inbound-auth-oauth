@@ -137,7 +137,7 @@ paths:
           type: boolean
         - name: requestedScopes
           in: query
-          description: Request a set of scopes to be return.
+          description: Request a set of scopes  to be returned.
           required: false
           type: string
 
@@ -298,7 +298,7 @@ paths:
       tags:
         - Scope Management
 
-    # Endpoint uses to check scope existence using scope name
+    # Endpoint used to check scope existence using scope name
     head:
       description: |
         This API is used to check a scope's existence using a given scope name.
