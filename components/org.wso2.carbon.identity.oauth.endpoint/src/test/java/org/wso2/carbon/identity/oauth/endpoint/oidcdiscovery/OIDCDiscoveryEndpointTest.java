@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
 import org.wso2.carbon.identity.discovery.OIDCDiscoveryEndPointException;
 import org.wso2.carbon.identity.discovery.OIDProviderConfigResponse;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.impl.OIDProviderJSONResponseBuilder;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
@@ -112,7 +113,7 @@ public class OIDCDiscoveryEndpointTest extends PowerMockIdentityBaseTest {
         when(oidProviderConfigResponse.getConfigMap()).thenReturn(configMap);
         when(defaultOIDCProcessor.handleError(any(OIDCDiscoveryEndPointException.class)))
                 .thenReturn(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-
+        oidcDiscoveryEndpoint.setOidProviderResponseBuilder(new OIDProviderJSONResponseBuilder());
         Response response = oidcDiscoveryEndpoint.getOIDProviderConfiguration(tokenEp, httpServletRequest);
         Assert.assertEquals(expectedResponse, response.getStatus());
         threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);

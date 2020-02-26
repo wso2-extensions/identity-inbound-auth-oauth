@@ -18,6 +18,11 @@ package org.wso2.carbon.identity.oauth.scope.endpoint.impl;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.cxf.jaxrs.impl.UriInfoImpl;
+import org.apache.cxf.message.Message;
+import org.apache.cxf.phase.PhaseInterceptorChain;
+import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.scope.endpoint.ScopesApiService;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeToUpdateDTO;
@@ -27,9 +32,16 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Set;
 
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TENANT_NAME_FROM_CONTEXT;
+import static org.wso2.carbon.identity.oauth.scope.endpoint.Constants.SERVER_API_PATH_COMPONENT;
+import static org.wso2.carbon.identity.oauth.scope.endpoint.Constants.TENANT_CONTEXT_PATH_COMPONENT;
 
 /**
  * ScopesApiServiceImpl is used to handling scope bindings
@@ -69,7 +81,8 @@ public class ScopesApiServiceImpl extends ScopesApiService {
             ScopeUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR,
                     Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase(), throwable, true, LOG);
         }
-        return Response.status(Response.Status.CREATED).entity(registeredScope).build();
+        return Response.status(Response.Status.CREATED).location(buildURIForHeader(scope.getName())).
+                entity(registeredScope).build();
     }
 
     /**
@@ -248,5 +261,49 @@ public class ScopesApiServiceImpl extends ScopesApiService {
                     Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase(), throwable, true, LOG);
         }
         return Response.status(Response.Status.OK).build();
+    }
+
+    /**
+     * Build the complete URI to the location of the resource.
+     * Ex: https://localhost:9443/t/<tenant-domain>/identity/oauth2/v1.0/scopes/name/<scope_name>
+     *
+     * @param scopeName Name of the scope.
+     * @return Fully qualified and complete URI.
+     */
+    private static URI buildURIForHeader(String scopeName) {
+
+        String tenantQualifiedRelativePath =
+                String.format(TENANT_CONTEXT_PATH_COMPONENT, getTenantDomainFromContext()) + SERVER_API_PATH_COMPONENT;
+        String url = IdentityUtil.getEndpointURIPath(tenantQualifiedRelativePath + scopeName, false, true);
+
+        URI location = URI.create(url);
+        if (!location.isAbsolute()) {
+            Message currentMessage = PhaseInterceptorChain.getCurrentMessage();
+            if (currentMessage != null) {
+                UriInfo ui = new UriInfoImpl(currentMessage.getExchange().getInMessage(), null);
+                try {
+                    return new URI(ui.getBaseUri().getScheme(), ui.getBaseUri().getAuthority(), url, null, null);
+                } catch (URISyntaxException e) {
+                    LOG.error("Server encountered an error while building the location URL with scheme: " +
+                            ui.getBaseUri().getScheme() + ", authority: " + ui.getBaseUri().getAuthority() +
+                            ", url: " + url, e);
+                }
+            }
+        }
+        return location;
+    }
+
+    /**
+     * Retrieves loaded tenant domain from carbon context.
+     *
+     * @return tenant domain of the request being served.
+     */
+    private static String getTenantDomainFromContext() {
+
+        String tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        if (IdentityUtil.threadLocalProperties.get().get(TENANT_NAME_FROM_CONTEXT) != null) {
+            tenantDomain = (String) IdentityUtil.threadLocalProperties.get().get(TENANT_NAME_FROM_CONTEXT);
+        }
+        return tenantDomain;
     }
 }

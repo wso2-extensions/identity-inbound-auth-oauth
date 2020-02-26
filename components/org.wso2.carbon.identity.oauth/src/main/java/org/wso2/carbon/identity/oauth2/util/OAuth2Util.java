@@ -314,6 +314,11 @@ public class OAuth2Util {
     private static final String CLIENT_SECRET_POST = "client_secret_post";
     private static final String PRIVATE_KEY_JWT = "private_key_jwt";
 
+    // Supported Response Modes.
+    private static final String QUERY_RESPONSE_MODE = "query";
+    private static final String FRAGMENT_RESPONSE_MODE = "fragment";
+    private static final String FORM_POST_RESPONSE_MODE = "form_post";
+
     private OAuth2Util() {
 
     }
@@ -1222,6 +1227,34 @@ public class OAuth2Util {
                 oauth2UserInfoEPUrl = IdentityUtil.getServerURL("oauth2/userinfo", true, false);
             }
             return oauth2UserInfoEPUrl;
+        }
+
+        /**
+         * Get oauth2 revocation endpoint URL.
+         *
+         * @return Revocation Endpoint URL.
+         */
+        public static String getOAuth2RevocationEPUrl() {
+
+            String oauth2RevokeEPUrl = OAuthServerConfiguration.getInstance().getOauth2RevocationEPUrl();
+            if (StringUtils.isBlank(oauth2RevokeEPUrl)) {
+                oauth2RevokeEPUrl = IdentityUtil.getServerURL("oauth2/revoke", true, false);
+            }
+            return oauth2RevokeEPUrl;
+        }
+
+        /**
+         * Get oauth2 introspection endpoint URL.
+         *
+         * @return Introspection Endpoint URL.
+         */
+        public static String getOAuth2IntrospectionEPUrl() {
+
+            String oauth2IntrospectEPUrl = OAuthServerConfiguration.getInstance().getOauth2IntrospectionEPUrl();
+            if (StringUtils.isBlank(oauth2IntrospectEPUrl)) {
+                oauth2IntrospectEPUrl = IdentityUtil.getServerURL("oauth2/introspect", true, false);
+            }
+            return oauth2IntrospectEPUrl;
         }
 
         public static String getOIDCConsentPageUrl() {
@@ -2879,6 +2912,35 @@ public class OAuth2Util {
         clientAuthenticationMethods.add(CLIENT_SECRET_POST);
 
         return clientAuthenticationMethods;
+    }
+
+    /**
+     * Get the supported code challenge methods.
+     *
+     * @return list of code challenge methods.
+     */
+    public static List<String> getSupportedCodeChallengeMethods() {
+
+        List<String> codeChallengeMethods = new ArrayList<>();
+        codeChallengeMethods.add(OAuthConstants.OAUTH_PKCE_S256_CHALLENGE);
+        codeChallengeMethods.add(OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE);
+
+        return codeChallengeMethods;
+    }
+
+    /**
+     * Get the supported response modes.
+     *
+     * @return list of response modes supported.
+     */
+    public static List<String> getSupportedResponseModes() {
+
+        List<String> responseModes = new ArrayList<>();
+        responseModes.add(QUERY_RESPONSE_MODE);
+        responseModes.add(FRAGMENT_RESPONSE_MODE);
+        responseModes.add(FORM_POST_RESPONSE_MODE);
+
+        return responseModes;
     }
 
     /**

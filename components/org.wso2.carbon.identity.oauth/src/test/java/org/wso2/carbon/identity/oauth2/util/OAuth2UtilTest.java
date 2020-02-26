@@ -1005,6 +1005,22 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     }
 
     @Test(dataProvider = "OAuthURLData")
+    public void testGetOAuth2RevocationEPUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+
+        when(oauthServerConfigurationMock.getOauth2RevocationEPUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2RevocationEPUrl(), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthURLData")
+    public void testGetOAuth2IntrospectionEPUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+
+        when(oauthServerConfigurationMock.getOauth2IntrospectionEPUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2IntrospectionEPUrl(), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthURLData")
     public void testGetOIDCConsentPageUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
         when(oauthServerConfigurationMock.getOIDCConsentPageUrl()).thenReturn(configUrl);
         getOAuthURL(serverUrl);
@@ -1206,6 +1222,27 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         clientAuthenticationMethods.add("client_secret_post");
 
         assertEquals(OAuth2Util.getSupportedClientAuthenticationMethods(), clientAuthenticationMethods);
+    }
+
+    @Test
+    public void testGetSupportedCodeChallengeMethods() {
+
+        List<String> codeChallengeMethods = new ArrayList<>();
+        codeChallengeMethods.add(OAuthConstants.OAUTH_PKCE_S256_CHALLENGE);
+        codeChallengeMethods.add(OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE);
+
+        assertEquals(OAuth2Util.getSupportedCodeChallengeMethods(), codeChallengeMethods);
+    }
+
+    @Test
+    public void testGetSupportedResponseModes() {
+
+        List<String> responseModes = new ArrayList<>();
+        responseModes.add("query");
+        responseModes.add("fragment");
+        responseModes.add("form_post");
+
+        assertEquals(OAuth2Util.getSupportedResponseModes(), responseModes);
     }
 
     @Test

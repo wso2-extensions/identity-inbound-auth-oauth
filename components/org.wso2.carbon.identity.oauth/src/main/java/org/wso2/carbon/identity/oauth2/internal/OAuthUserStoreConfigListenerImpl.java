@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.internal;
 
+import org.wso2.carbon.identity.core.util.IdentityCoreConstants.UserStoreState;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -63,6 +64,21 @@ public class OAuthUserStoreConfigListenerImpl extends AbstractUserStoreConfigLis
 
     @Override
     public void onUserStorePreDelete(int tenantId, String userStoreName) throws UserStoreException {
+
+        revokeTokens(tenantId, userStoreName);
+    }
+
+    @Override
+    public void onUserStorePreStateChange(UserStoreState state, int tenantId, String userStoreName)
+            throws UserStoreException {
+
+        if (state == UserStoreState.DISABLED) {
+            revokeTokens(tenantId, userStoreName);
+        }
+    }
+
+    private void revokeTokens(int tenantId, String userStoreName) throws UserStoreException {
+
         try {
             Set<AccessTokenDO> accessTokenDOs = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                     .getAccessTokensOfUserStore(tenantId, userStoreName);

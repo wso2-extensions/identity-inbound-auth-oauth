@@ -447,7 +447,8 @@ public class EndpointUtil {
         try {
             if (params != null) {
                 if (isNotBlank(params.getRedirectURI())) {
-                    if (OAuth2Util.isImplicitResponseType(params.getResponseType())) {
+                    if (OAuth2Util.isImplicitResponseType(params.getResponseType()) ||
+                            OAuth2Util.isHybridResponseType(params.getResponseType())) {
                         if (OAuthServerConfiguration.getInstance().isImplicitErrorFragment()) {
                             redirectURL = OAuthASResponse.errorResponse(HttpServletResponse.SC_FOUND)
                                     .error(ex).location(params.getRedirectURI())

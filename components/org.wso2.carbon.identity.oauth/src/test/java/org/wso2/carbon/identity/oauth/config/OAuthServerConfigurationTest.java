@@ -58,6 +58,12 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
     private static final String oAuth2UserInfoEPUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/oauth2/userinfo";
+    private static final String oAuth2RevocationEPUrl
+            = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
+            "/oauth2/revoke";
+    private static final String oAuth2IntrospectionEPUrl
+            = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
+            "/oauth2/introspect";
     private static final String oAuth2ConsentPage
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/authenticationendpoint/oauth2_authz.do";
@@ -212,6 +218,26 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
                 .thenReturn(oAuth2UserInfoEPUrl);
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
                         .getOauth2UserInfoEPUrl(), oAuth2UserInfoEPUrl,
+                "Expected value not returned from getter");
+    }
+
+    @Test
+    public void testGetOauth2RevocationEPUrl() throws Exception {
+
+        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2RevocationEPUrl))
+                .thenReturn(oAuth2RevocationEPUrl);
+        Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                        .getOauth2RevocationEPUrl(), oAuth2RevocationEPUrl,
+                "Expected value not returned from getter");
+    }
+
+    @Test
+    public void testGetOauth2IntrospectionEPUrl() throws Exception {
+
+        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2IntrospectionEPUrl))
+                .thenReturn(oAuth2IntrospectionEPUrl);
+        Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                        .getOauth2IntrospectionEPUrl(), oAuth2IntrospectionEPUrl,
                 "Expected value not returned from getter");
     }
 
