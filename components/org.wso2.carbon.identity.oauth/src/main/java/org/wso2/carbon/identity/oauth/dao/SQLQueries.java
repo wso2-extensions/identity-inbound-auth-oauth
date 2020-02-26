@@ -160,6 +160,9 @@ public class SQLQueries {
         public static final String UPDATE_OAUTH_SECRET_KEY = "UPDATE IDN_OAUTH_CONSUMER_APPS SET CONSUMER_SECRET=? " +
                 "WHERE CONSUMER_KEY=?";
 
+        public static final String UPDATE_OAUTH_SECRET_KEY_AND_STATE = "UPDATE IDN_OAUTH_CONSUMER_APPS SET " +
+                "CONSUMER_SECRET=?, APP_STATE=? WHERE CONSUMER_KEY=?";
+
         public static final String UPDATE_SP_OIDC_PROPERTY = "UPDATE IDN_OIDC_PROPERTY SET PROPERTY_VALUE=? WHERE " +
                 "TENANT_ID=? AND CONSUMER_KEY=? AND PROPERTY_KEY=?";
 
