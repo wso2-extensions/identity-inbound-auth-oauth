@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth.listener;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -177,6 +178,9 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
+        if (ArrayUtils.isNotEmpty(deletedRoles)) {
+            revokeTokens(userName, userStoreManager);
+        }
         return removeUserClaimsFromCache(userName, userStoreManager);
     }
 
@@ -189,6 +193,9 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         userList.addAll(Arrays.asList(newUsers));
         for (String username : userList) {
             removeTokensFromCache(username, userStoreManager);
+        }
+        for (String deletedUser : deletedUsers) {
+            revokeTokens(deletedUser, userStoreManager);
         }
         return true;
     }
