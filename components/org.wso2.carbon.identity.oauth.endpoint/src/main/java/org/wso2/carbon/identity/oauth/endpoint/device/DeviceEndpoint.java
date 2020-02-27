@@ -54,7 +54,6 @@ import javax.ws.rs.core.Response;
 @Path("/device_authorize")
 @InInterceptors(classes = OAuthClientAuthenticatorProxy.class)
 public class DeviceEndpoint {
-    private OAuthClientAuthnContext oAuthClientAuthnContext;
     private static final Log log = LogFactory.getLog(DeviceEndpoint.class);
     private DeviceAuthService deviceAuthService;
 
@@ -71,15 +70,7 @@ public class DeviceEndpoint {
                               @Context HttpServletResponse response)
             throws IdentityOAuth2Exception, OAuthSystemException {
 
-        Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
-        if (oauthClientAuthnContextObj instanceof OAuthClientAuthnContext) {
-            oAuthClientAuthnContext = (OAuthClientAuthnContext) oauthClientAuthnContextObj;
-        } else {
-            oAuthClientAuthnContext = new OAuthClientAuthnContext();
-            oAuthClientAuthnContext.setAuthenticated(false);
-            oAuthClientAuthnContext.setErrorMessage("Client Authentication Failed");
-            oAuthClientAuthnContext.setErrorCode(OAuthError.TokenResponse.INVALID_REQUEST);
-        }
+        OAuthClientAuthnContext oAuthClientAuthnContext =  validateClient(request);
 
         if (!oAuthClientAuthnContext.isAuthenticated()) {
             return handleErrorResponse(oAuthClientAuthnContext);
@@ -88,17 +79,20 @@ public class DeviceEndpoint {
         String userCode = GenerateKeys.getKey(Constants.KEY_LENGTH);
         String deviceCode = UUID.randomUUID().toString();
         String scopes = request.getParameter(Constants.SCOPE);
-        String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do", false, false);
+        String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do",
+                false, false);
         String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
         deviceAuthService.generateDeviceResponse(deviceCode, userCode, oAuthClientAuthnContext.getClientId(), scopes);
         return buildResponseObject(deviceCode, userCode, redirectionUri, redirectionUriComplete);
     }
 
     private Response handleErrorResponse(OAuthClientAuthnContext oAuthClientAuthnContext) throws OAuthSystemException {
+
         if (OAuth2ErrorCodes.INVALID_CLIENT.equals(oAuthClientAuthnContext.getErrorMessage())) {
             return handleBasicAuthFailure(oAuthClientAuthnContext.getErrorCode(),
                     oAuthClientAuthnContext.getErrorMessage());
         } else if (OAuth2ErrorCodes.SERVER_ERROR.equals(oAuthClientAuthnContext.getErrorMessage())) {
+
             return handleServerError();
         } else {
             // Otherwise send back HTTP 400 Status Code
@@ -110,6 +104,21 @@ public class DeviceEndpoint {
             Response.ResponseBuilder respBuilder = Response.status(response.getResponseStatus());
             return respBuilder.entity(response.getBody()).build();
         }
+    }
+
+    private OAuthClientAuthnContext validateClient(HttpServletRequest request) throws OAuthSystemException {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext;
+        Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
+        if (oauthClientAuthnContextObj instanceof OAuthClientAuthnContext) {
+            oAuthClientAuthnContext = (OAuthClientAuthnContext) oauthClientAuthnContextObj;
+        } else {
+            oAuthClientAuthnContext = new OAuthClientAuthnContext();
+            oAuthClientAuthnContext.setAuthenticated(false);
+            oAuthClientAuthnContext.setErrorMessage("Client Authentication Failed");
+            oAuthClientAuthnContext.setErrorCode(OAuthError.TokenResponse.INVALID_REQUEST);
+        }
+        return oAuthClientAuthnContext;
     }
 
     private Response handleServerError() throws OAuthSystemException {
