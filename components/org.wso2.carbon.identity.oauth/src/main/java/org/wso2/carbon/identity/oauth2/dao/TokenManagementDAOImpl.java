@@ -520,21 +520,31 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     throw new IdentityOAuth2Exception("New Consumer Secret is not specified.");
                 }
 
+                if (properties.containsKey(OAuthConstants.OAUTH_APP_NEW_STATE)) {
+                    // Update the consumer secret of the oauth app when the new app state is available.
+                    updateStateStatement = connection.prepareStatement
+                            (org.wso2.carbon.identity.oauth.dao.SQLQueries.OAuthAppDAOSQLQueries.
+                                    UPDATE_OAUTH_SECRET_KEY_AND_STATE);
+                    updateStateStatement.setString(1, getPersistenceProcessor().getProcessedClientSecret(newSecretKey));
+                    updateStateStatement.setString(2, properties.getProperty(OAuthConstants.OAUTH_APP_NEW_STATE));
+                    updateStateStatement.setString(3, consumerKey);
+                } else {
+                    // Update the consumer secret of the oauth app when the new app state is not available.
+                    updateStateStatement = connection.prepareStatement
+                            (org.wso2.carbon.identity.oauth.dao.SQLQueries.OAuthAppDAOSQLQueries.
+                                    UPDATE_OAUTH_SECRET_KEY);
+                    updateStateStatement.setString(1, getPersistenceProcessor().getProcessedClientSecret(newSecretKey));
+                    updateStateStatement.setString(2, consumerKey);
+                }
+                updateStateStatement.execute();
+
                 if (log.isDebugEnabled()) {
                     log.debug("Regenerating the client secret of: " + consumerKey);
                 }
-
-                // update consumer secret of the oauth app
-                updateStateStatement = connection.prepareStatement
-                        (org.wso2.carbon.identity.oauth.dao.SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_SECRET_KEY);
-                updateStateStatement.setString(1, getPersistenceProcessor().getProcessedClientSecret(newSecretKey));
-                updateStateStatement.setString(2, consumerKey);
-                updateStateStatement.execute();
             }
 
             //Revoke all active access tokens
             if (ArrayUtils.isNotEmpty(accessTokens)) {
-                String accessTokenStoreTable = OAuthConstants.ACCESS_TOKEN_STORE_TABLE;
                 if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
                     for (String token : accessTokens) {
                         String sqlQuery = OAuth2Util.getTokenPartitionedSqlByToken(SQLQueries.REVOKE_APP_ACCESS_TOKEN,
@@ -550,9 +560,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                         }
                     }
                 } else {
-                    String sqlQuery = SQLQueries.REVOKE_APP_ACCESS_TOKEN
-                            .replace(IDN_OAUTH2_ACCESS_TOKEN, accessTokenStoreTable);
-                    revokeActiveTokensStatement = connection.prepareStatement(sqlQuery);
+                    revokeActiveTokensStatement = connection.prepareStatement(SQLQueries.REVOKE_APP_ACCESS_TOKEN);
                     revokeActiveTokensStatement.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
                     revokeActiveTokensStatement.setString(2, UUID.randomUUID().toString());
                     revokeActiveTokensStatement.setString(3, consumerKey);
