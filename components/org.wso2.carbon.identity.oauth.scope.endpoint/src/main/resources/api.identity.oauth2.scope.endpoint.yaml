@@ -137,7 +137,7 @@ paths:
           type: boolean
         - name: requestedScopes
           in: query
-          description: Request a set of scopes  to be returned.
+          description: If specified, requested set of scopes will be return.
           required: false
           type: string
 
