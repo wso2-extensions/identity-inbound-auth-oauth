@@ -124,6 +124,7 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
 
     @DataProvider(name = "dataValues")
     public Object[][] dataValues() {
+
         MultivaluedMap<String, String> mapWithClientId = new MultivaluedHashMap<>();
         List<String> clientId = new ArrayList<>();
         clientId.add(CLIENT_ID_VALUE);

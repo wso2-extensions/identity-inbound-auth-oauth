@@ -70,7 +70,7 @@ public class DeviceEndpoint {
                               @Context HttpServletResponse response)
             throws IdentityOAuth2Exception, OAuthSystemException {
 
-        OAuthClientAuthnContext oAuthClientAuthnContext =  validateClient(request);
+        OAuthClientAuthnContext oAuthClientAuthnContext =  getValidationObject(request);
 
         if (!oAuthClientAuthnContext.isAuthenticated()) {
             return handleErrorResponse(oAuthClientAuthnContext);
@@ -95,7 +95,7 @@ public class DeviceEndpoint {
 
             return handleServerError();
         } else {
-            // Otherwise send back HTTP 400 Status Code
+            // Otherwise send back HTTP 400 Status Code.
             OAuthResponse response = OAuthASResponse
                     .errorResponse(HttpServletResponse.SC_BAD_REQUEST)
                     .setError(oAuthClientAuthnContext.getErrorCode())
@@ -106,7 +106,7 @@ public class DeviceEndpoint {
         }
     }
 
-    private OAuthClientAuthnContext validateClient(HttpServletRequest request) throws OAuthSystemException {
+    private OAuthClientAuthnContext getValidationObject(HttpServletRequest request) throws OAuthSystemException {
 
         OAuthClientAuthnContext oAuthClientAuthnContext;
         Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
@@ -129,7 +129,6 @@ public class DeviceEndpoint {
 
         return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
                 EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
-
     }
 
     private Response handleBasicAuthFailure(String errorCode, String errorMessage) throws OAuthSystemException {
@@ -141,6 +140,7 @@ public class DeviceEndpoint {
                 .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, EndpointUtil.getRealmInfo())
                 .entity(response.getBody()).build();
     }
+
     /**
      * This method converts time in milliseconds to seconds.
      *
