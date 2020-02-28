@@ -1317,6 +1317,7 @@ public class OAuthAdminServiceImpl {
      * @throws IdentityOAuthAdminException Identity OAuthAdmin exception.
      */
     String filterIdTokenEncryptionMethod(OAuthConsumerAppDTO application) throws IdentityOAuthAdminException {
+
         List<String> supportedIdTokenEncryptionMethods = OAuthServerConfiguration.getInstance()
                 .getSupportedIdTokenEncryptionMethods();
         String idTokenEncryptionMethod = application.getIdTokenEncryptionMethod();
@@ -1335,6 +1336,7 @@ public class OAuthAdminServiceImpl {
      * @throws IdentityOAuthAdminException Identity OAuthAdmin exception.
      */
     String filterIdTokenEncryptionAlgorithm(OAuthConsumerAppDTO application) throws IdentityOAuthAdminException {
+
         List<String> supportedIdTokenEncryptionAlgorithms = OAuthServerConfiguration.getInstance()
                 .getSupportedIdTokenEncryptionAlgorithm();
         String idTokenEncryptionAlgorithm = application.getIdTokenEncryptionAlgorithm();
@@ -1344,7 +1346,6 @@ public class OAuthAdminServiceImpl {
         }
         return idTokenEncryptionAlgorithm;
     }
-
 
     /**
      * Get supported algorithms from OAuthServerConfiguration and construct an OAuthIDTokenAlgorithmDTO object.
