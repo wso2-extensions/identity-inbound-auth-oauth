@@ -128,7 +128,7 @@ public interface ScopeClaimMappingDAO {
     boolean hasScopesPopulated(int tenantId) throws IdentityOAuth2Exception;
 
     /**
-     * To check whether the scope is existing.
+     * To check whether the OIDC scope is existing.
      *
      * @param scope    scope name
      * @param tenantId tenant id

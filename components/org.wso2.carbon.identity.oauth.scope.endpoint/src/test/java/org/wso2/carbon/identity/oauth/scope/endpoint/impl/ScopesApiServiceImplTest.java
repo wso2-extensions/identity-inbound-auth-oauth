@@ -235,7 +235,8 @@ public class ScopesApiServiceImplTest extends PowerMockIdentityBaseTest {
         int count = 1;
 
         if (Response.Status.OK.equals(expectation)) {
-            when(oAuth2ScopeService.getScopes(any(Integer.class), any(Integer.class))).thenReturn(scopes);
+            when(oAuth2ScopeService.getScopes(any(Integer.class), any(Integer.class), any(Boolean.class),
+                    any(String.class))).thenReturn(scopes);
             when(ScopeUtils.class, "getScopeDTOs", any(Set.class)).thenCallRealMethod();
             Response response = scopesApiService.getScopes(startIndex, count);
             assertEquals(response.getStatus(), Response.Status.OK.getStatusCode(),

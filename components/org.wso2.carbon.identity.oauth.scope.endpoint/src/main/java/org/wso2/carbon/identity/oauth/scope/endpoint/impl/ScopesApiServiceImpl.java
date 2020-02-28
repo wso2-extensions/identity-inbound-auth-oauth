@@ -121,19 +121,22 @@ public class ScopesApiServiceImpl extends ScopesApiService {
     }
 
     /**
-     * Retrieve the available scope list
+     * Retrieve the available scope list.
      *
-     * @param startIndex Start Index of the result set to enforce pagination
-     * @param count      Number of elements in the result set to enforce pagination
-     * @return Response with the retrieved scopes/ retrieval status
+     * @param startIndex        Start Index of the result set to enforce pagination.
+     * @param count             Number of elements in the result set to enforce pagination
+     * @param includeOIDCScopes Include OIDC scopes as well.
+     * @param requestedScopes   Requested set of scopes to be return in the response.
+     * @return Response with the retrieved scopes retrieval status.
      */
     @Override
-    public Response getScopes(Integer startIndex, Integer count) {
+    public Response getScopes(Integer startIndex, Integer count, Boolean includeOIDCScopes, String requestedScopes) {
 
         Set<Scope> scopes = null;
 
         try {
-            scopes = ScopeUtils.getOAuth2ScopeService().getScopes(startIndex, count);
+            scopes =
+                    ScopeUtils.getOAuth2ScopeService().getScopes(startIndex, count, includeOIDCScopes, requestedScopes);
         } catch (IdentityOAuth2ScopeException e) {
             ScopeUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR,
                     Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase(), e, true, LOG);
@@ -142,6 +145,19 @@ public class ScopesApiServiceImpl extends ScopesApiService {
                     Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase(), throwable, true, LOG);
         }
         return Response.status(Response.Status.OK).entity(ScopeUtils.getScopeDTOs(scopes)).build();
+    }
+
+    /**
+     * Retrieve the available scope list.
+     *
+     * @param startIndex Start Index of the result set to enforce pagination.
+     * @param count      Number of elements in the result set to enforce pagination.
+     * @return Response with the retrieved scopes/ retrieval status
+     * @deprecated use {@link #getScopes(Integer, Integer, Boolean, String)} instead.
+     */
+    public Response getScopes(Integer startIndex, Integer count) {
+
+        return getScopes(startIndex, count, false, null);
     }
 
     /**

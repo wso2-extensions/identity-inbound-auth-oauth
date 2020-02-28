@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -40,6 +41,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ResourceScopeCacheEntry;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -205,6 +207,18 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
         // Remove openid scope from the list if available
         requestedScopes = (String[]) ArrayUtils.removeElement(requestedScopes, OPENID);
 
+        // Remove OIDC scopes from the list if exists.
+        try {
+            String[] oidcScopes = OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().getScopeNames();
+            for (String oidcScope : oidcScopes) {
+                requestedScopes = (String[]) ArrayUtils.removeElement(requestedScopes, oidcScope);
+            }
+
+        } catch (IdentityOAuthAdminException e) {
+            log.error("Unable to obtain OIDC scopes list.");
+            return false;
+        }
+
         //If the token is not requested for specific scopes, return true
         if (ArrayUtils.isEmpty(requestedScopes)) {
             return true;
@@ -360,5 +374,4 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
 
         return tenantId;
     }
-
 }

@@ -17,7 +17,7 @@ import javax.ws.rs.core.Response;
 public abstract class ScopesApiService {
     public abstract Response deleteScope(String name);
     public abstract Response getScope(String name);
-    public abstract Response getScopes(Integer startIndex,Integer count);
+    public abstract Response getScopes(Integer startIndex,Integer count,Boolean includeOIDCScopes,String requestedScopes);
     public abstract Response isScopeExists(String name);
     public abstract Response registerScope(ScopeDTO scope);
     public abstract Response updateScope(ScopeToUpdateDTO scope,String name);

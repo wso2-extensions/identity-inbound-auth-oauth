@@ -40,11 +40,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.DEFAULT_SCOPE_BINDING;
 
@@ -94,7 +96,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
     }
 
     /**
-     * Get all available scopes
+     * Get all available OAuth2 scopes.
      *
      * @param tenantID tenant ID
      * @return available scope list
@@ -113,9 +115,9 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
 
         try (Connection conn = IdentityDatabaseUtil.getDBConnection(false)) {
             if (conn.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
-                sql = SQLQueries.RETRIEVE_ALL_SCOPES_ORACLE;
+                sql = SQLQueries.RETRIEVE_ALL_OAUTH2_SCOPES_ORACLE;
             } else {
-                sql = SQLQueries.RETRIEVE_ALL_SCOPES;
+                sql = SQLQueries.RETRIEVE_ALL_OAUTH2_SCOPES;
             }
 
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -151,7 +153,159 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
             }
             return scopes;
         } catch (SQLException e) {
+            String msg = "Error occurred while getting all OAUTH2 scopes in tenant :" + tenantID;
+            throw new IdentityOAuth2ScopeServerException(msg, e);
+        }
+    }
+
+    /**
+     * Get all available scopes depends on scope type.
+     *
+     * @param tenantID          Tenant ID.
+     * @param includeOIDCScopes Include OIDC scopes in the scope list.
+     * @return List of scopes.
+     * @throws IdentityOAuth2ScopeServerException
+     */
+    @Override
+    public Set<Scope> getAllScopes(int tenantID, Boolean includeOIDCScopes) throws IdentityOAuth2ScopeServerException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Get all scopes for tenantId  :" + tenantID + " including OIDC scope: " + includeOIDCScopes);
+        }
+
+        if (includeOIDCScopes) {
+            // Get all scopes including OIDC scopes as well.
+            return getAllScopesIncludingOIDCScopes(tenantID);
+        } else {
+            // Return all OAuth2 scopes only.
+            return getAllScopes(tenantID);
+        }
+    }
+
+    /**
+     * Get all scopes including OAuth2 scopes and OIDC scopes as well.
+     *
+     * @param tenantID Tenant ID.
+     * @return List of scopes.
+     * @throws IdentityOAuth2ScopeServerException
+     */
+    private Set<Scope> getAllScopesIncludingOIDCScopes(int tenantID)
+            throws IdentityOAuth2ScopeServerException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Get all scopes including OAUTH2 and OIDC scopes for tenantId  :" + tenantID);
+        }
+
+        Set<Scope> scopes = new HashSet<>();
+        Map<Integer, Scope> scopeMap = new HashMap<>();
+        String sql;
+
+        try (Connection conn = IdentityDatabaseUtil.getDBConnection(false)) {
+            if (conn.getMetaData().getDriverName().contains(Oauth2ScopeConstants.DataBaseType.ORACLE)) {
+                sql = SQLQueries.RETRIEVE_ALL_SCOPES_ORACLE;
+            } else {
+                sql = SQLQueries.RETRIEVE_ALL_SCOPES;
+            }
+
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, tenantID);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        int scopeID = rs.getInt(1);
+                        String name = rs.getString(2);
+                        String displayName = rs.getString(3);
+                        String description = rs.getString(4);
+                        final String binding = rs.getString(5);
+                        String bindingType = rs.getString(6);
+                        if (scopeMap.containsKey(scopeID) && scopeMap.get(scopeID) != null) {
+                            scopeMap.get(scopeID).setName(name);
+                            scopeMap.get(scopeID).setDescription(description);
+                            scopeMap.get(scopeID).setDisplayName(displayName);
+                            if (binding != null) {
+                                scopeMap.get(scopeID).addScopeBinding(bindingType, binding);
+                            }
+                        } else {
+                            scopeMap.put(scopeID, new Scope(name, displayName, new ArrayList<>(), description));
+                            if (binding != null) {
+                                scopeMap.get(scopeID).addScopeBinding(bindingType, binding);
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (Map.Entry<Integer, Scope> entry : scopeMap.entrySet()) {
+                scopes.add(entry.getValue());
+            }
+            return scopes;
+        } catch (SQLException e) {
             String msg = "Error occurred while getting all scopes in tenant :" + tenantID;
+            throw new IdentityOAuth2ScopeServerException(msg, e);
+        }
+    }
+
+    @Override
+    public Set<Scope> getRequestedScopesOnly(int tenantID, Boolean includeOIDCScopes, String requestedScopes)
+            throws IdentityOAuth2ScopeServerException {
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Get requested scopes for scopes: %s for tenantId: %s with includeOIDCScopes: %s",
+                    requestedScopes, tenantID, includeOIDCScopes));
+        }
+
+        String sql;
+        if (includeOIDCScopes) {
+            sql = String.format(SQLQueries.RETRIEVE_REQUESTED_ALL_SCOPES_WITHOUT_SCOPE_TYPE);
+        } else {
+            sql = String.format(SQLQueries.RETRIEVE_REQUESTED_OAUTH2_SCOPES);
+        }
+
+        List<String> requestedScopeList = Arrays.asList(requestedScopes.split("\\s+"));
+        String sqlIN = requestedScopeList.stream().map(x -> String.valueOf(x))
+                .collect(Collectors.joining("\', \'", "(\'", "\')"));
+
+        sql = sql.replace("(?)", sqlIN);
+
+        Set<Scope> scopes = new HashSet<>();
+        Map<Integer, Scope> scopeMap = new HashMap<>();
+
+        try (Connection conn = IdentityDatabaseUtil.getDBConnection(false)) {
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, tenantID);
+                if (!includeOIDCScopes) {
+                    ps.setString(2, Oauth2ScopeConstants.SCOPE_TYPE_OAUTH2);
+                }
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        int scopeID = rs.getInt(1);
+                        String name = rs.getString(2);
+                        String displayName = rs.getString(3);
+                        String description = rs.getString(4);
+                        final String binding = rs.getString(5);
+                        String bindingType = rs.getString(6);
+                        if (scopeMap.containsKey(scopeID) && scopeMap.get(scopeID) != null) {
+                            scopeMap.get(scopeID).setName(name);
+                            scopeMap.get(scopeID).setDescription(description);
+                            scopeMap.get(scopeID).setDisplayName(displayName);
+                            if (binding != null) {
+                                scopeMap.get(scopeID).addScopeBinding(bindingType, binding);
+                            }
+                        } else {
+                            scopeMap.put(scopeID, new Scope(name, displayName, new ArrayList<>(), description));
+                            if (binding != null) {
+                                scopeMap.get(scopeID).addScopeBinding(bindingType, binding);
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (Map.Entry<Integer, Scope> entry : scopeMap.entrySet()) {
+                scopes.add(entry.getValue());
+            }
+            return scopes;
+        } catch (SQLException e) {
+            String msg = "Error occurred while getting requested scopes in tenant :" + tenantID;
             throw new IdentityOAuth2ScopeServerException(msg, e);
         }
     }
@@ -206,7 +360,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
     }
 
     /**
-     * Get Scopes with pagination
+     * Get only OAUTH2 Scopes with pagination.
      *
      * @param offset   start index of the result set
      * @param limit    number of elements of the result set
@@ -218,8 +372,103 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
     public Set<Scope> getScopesWithPagination(Integer offset, Integer limit, int tenantID)
             throws IdentityOAuth2ScopeServerException {
 
+        // Default we won't reterive OIDC scopes via OAUTH2 endpoint. Hence includeOIDCScopes set to false.
+        return getScopesWithPagination(offset, limit, tenantID, false);
+    }
+
+    /**
+     * Get SQL statement for get OAuth2 scope with pagination.
+     *
+     * @param offset   Offset.
+     * @param limit    Limit.
+     * @param tenantID Tenet ID.
+     * @param conn     Database connection.
+     * @return
+     * @throws SQLException
+     */
+    private NamedPreparedStatement getPreparedStatementForGetScopesWithPagination(Integer offset, Integer limit,
+                                                                                  int tenantID, Connection conn)
+            throws SQLException {
+
+        String query;
+        if (conn.getMetaData().getDriverName().contains("MySQL")
+                || conn.getMetaData().getDriverName().contains("H2")) {
+            query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_MYSQL;
+        } else if (conn.getMetaData().getDatabaseProductName().contains("DB2")) {
+            query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_DB2SQL;
+        } else if (conn.getMetaData().getDriverName().contains("MS SQL")) {
+            query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_MSSQL;
+        } else if (conn.getMetaData().getDriverName().contains("Microsoft") || conn.getMetaData()
+                .getDriverName().contains("microsoft")) {
+            query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_MSSQL;
+        } else if (conn.getMetaData().getDriverName().contains("PostgreSQL")) {
+            query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_POSTGRESQL;
+        } else if (conn.getMetaData().getDriverName().contains("Informix")) {
+            // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
+            query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_INFORMIX;
+        } else {
+            query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_ORACLE;
+        }
+
+        NamedPreparedStatement namedPreparedStatement = new NamedPreparedStatement(conn, query);
+        namedPreparedStatement
+                .setString(Oauth2ScopeConstants.SQLPlaceholders.SCOPE_TYPE, Oauth2ScopeConstants.SCOPE_TYPE_OAUTH2);
+        namedPreparedStatement.setInt(Oauth2ScopeConstants.SQLPlaceholders.TENANT_ID, tenantID);
+        namedPreparedStatement.setInt(Oauth2ScopeConstants.SQLPlaceholders.OFFSET, offset);
+        namedPreparedStatement.setInt(Oauth2ScopeConstants.SQLPlaceholders.LIMIT, limit);
+
+        return namedPreparedStatement;
+    }
+
+    /**
+     * Get SQL statement for get all scope with pagination. (including OAuth2 scopes and OIDC scopes).
+     *
+     * @param offset   Offset.
+     * @param limit    Limit.
+     * @param tenantID Tenet ID.
+     * @param conn     Database connection.
+     * @return
+     * @throws SQLException
+     */
+    private NamedPreparedStatement getPreparedStatementForGetAllScopesWithPagination(Integer offset, Integer limit,
+                                                                                     int tenantID, Connection conn)
+            throws SQLException {
+
+        String query;
+        if (conn.getMetaData().getDriverName().contains("MySQL")
+                || conn.getMetaData().getDriverName().contains("H2")) {
+            query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_MYSQL;
+        } else if (conn.getMetaData().getDatabaseProductName().contains("DB2")) {
+            query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_DB2SQL;
+        } else if (conn.getMetaData().getDriverName().contains("MS SQL")) {
+            query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_MSSQL;
+        } else if (conn.getMetaData().getDriverName().contains("Microsoft") || conn.getMetaData()
+                .getDriverName().contains("microsoft")) {
+            query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_MSSQL;
+        } else if (conn.getMetaData().getDriverName().contains("PostgreSQL")) {
+            query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_POSTGRESQL;
+        } else if (conn.getMetaData().getDriverName().contains("Informix")) {
+            // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
+            query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_INFORMIX;
+        } else {
+            query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_ORACLE;
+        }
+
+        NamedPreparedStatement namedPreparedStatement = new NamedPreparedStatement(conn, query);
+        namedPreparedStatement.setInt(Oauth2ScopeConstants.SQLPlaceholders.TENANT_ID, tenantID);
+        namedPreparedStatement.setInt(Oauth2ScopeConstants.SQLPlaceholders.OFFSET, offset);
+        namedPreparedStatement.setInt(Oauth2ScopeConstants.SQLPlaceholders.LIMIT, limit);
+
+        return namedPreparedStatement;
+    }
+
+    @Override
+    public Set<Scope> getScopesWithPagination(Integer offset, Integer limit, int tenantID, Boolean includeOIDCScopes)
+            throws IdentityOAuth2ScopeServerException {
+
         if (log.isDebugEnabled()) {
-            log.debug("Get scopes with pagination for tenantId  :" + tenantID);
+            log.debug("Get all scopes with pagination for tenantId  :" + tenantID + " including OIDC scope: " +
+                    includeOIDCScopes);
         }
 
         Set<Scope> scopes = new HashSet<>();
@@ -227,32 +476,15 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
 
         try (Connection conn = IdentityDatabaseUtil.getDBConnection(false)) {
 
-            String query;
-            if (conn.getMetaData().getDriverName().contains("MySQL")
-                    || conn.getMetaData().getDriverName().contains("H2")) {
-                query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_MYSQL;
-            } else if (conn.getMetaData().getDatabaseProductName().contains("DB2")) {
-                query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_DB2SQL;
-            } else if (conn.getMetaData().getDriverName().contains("MS SQL")) {
-                query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_MSSQL;
-            } else if (conn.getMetaData().getDriverName().contains("Microsoft") || conn.getMetaData()
-                    .getDriverName().contains("microsoft")) {
-                query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_MSSQL;
-            } else if (conn.getMetaData().getDriverName().contains("PostgreSQL")) {
-                query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_POSTGRESQL;
-            } else if (conn.getMetaData().getDriverName().contains("Informix")) {
-                // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
-                query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_INFORMIX;
+            NamedPreparedStatement namedPreparedStatement;
+            if (includeOIDCScopes) {
+                namedPreparedStatement = getPreparedStatementForGetAllScopesWithPagination(offset, limit, tenantID,
+                        conn);
             } else {
-                query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_ORACLE;
+                namedPreparedStatement =
+                        getPreparedStatementForGetScopesWithPagination(offset, limit, tenantID, conn);
             }
 
-            NamedPreparedStatement namedPreparedStatement = new NamedPreparedStatement(conn, query);
-            namedPreparedStatement
-                    .setString(Oauth2ScopeConstants.SQLPlaceholders.SCOPE_TYPE, Oauth2ScopeConstants.SCOPE_TYPE_OAUTH2);
-            namedPreparedStatement.setInt(Oauth2ScopeConstants.SQLPlaceholders.TENANT_ID, tenantID);
-            namedPreparedStatement.setInt(Oauth2ScopeConstants.SQLPlaceholders.OFFSET, offset);
-            namedPreparedStatement.setInt(Oauth2ScopeConstants.SQLPlaceholders.LIMIT, limit);
             try (PreparedStatement preparedStatement = namedPreparedStatement.getPreparedStatement();) {
                 try (ResultSet rs = preparedStatement.executeQuery()) {
                     while (rs.next()) {
@@ -355,7 +587,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
     }
 
     /**
-     * Get existence of scope for the provided scope name
+     * Get existence of OAuth2 scope for the provided scope name.
      *
      * @param scopeName name of the scope
      * @param tenantID  tenant ID
@@ -375,6 +607,35 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
             isScopeExists = true;
         }
         return isScopeExists;
+    }
+
+    /**
+     * Get existence of scope for the provided scope name depends on the scope type.
+     *
+     * @param scopeName         Name of the scope.
+     * @param tenantID          Tenant ID.
+     * @param includeOIDCScopes Whether to include OIDC scopes in the search.
+     * @return True if scope is exists.
+     * @throws IdentityOAuth2ScopeServerException
+     */
+    @Override
+    public boolean isScopeExists(String scopeName, int tenantID, Boolean includeOIDCScopes)
+            throws IdentityOAuth2ScopeServerException {
+
+        if (includeOIDCScopes) {
+            if (log.isDebugEnabled()) {
+                log.debug("Check scope exists regardless of scope type for scope:" + scopeName);
+            }
+
+            boolean isScopeExists = false;
+            int scopeID = getScopeIDByNameWithoutScopeType(scopeName, tenantID);
+            if (scopeID != Oauth2ScopeConstants.INVALID_SCOPE_ID) {
+                isScopeExists = true;
+            }
+            return isScopeExists;
+        } else {
+            return isScopeExists(scopeName, tenantID);
+        }
     }
 
     /**
@@ -414,6 +675,41 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
             }
         }
         return scopeID;
+    }
+
+    /**
+     * Get scope ID of the provided scope regardless of scope type.
+     *
+     * @param scopeName Scope name.
+     * @param tenantID  Tenant ID.
+     * @return
+     * @throws IdentityOAuth2ScopeServerException
+     */
+    private int getScopeIDByNameWithoutScopeType(String scopeName, int tenantID)
+            throws IdentityOAuth2ScopeServerException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Get scope ID regardless of scope type, for scope name: " + scopeName);
+        }
+
+        int scopeID = Oauth2ScopeConstants.INVALID_SCOPE_ID;
+        try (Connection conn = IdentityDatabaseUtil.getDBConnection(false)) {
+
+            try (PreparedStatement ps = conn
+                    .prepareStatement(SQLQueries.RETRIEVE_SCOPE_ID_BY_NAME_WITHOUT_SCOPE_TYPE)) {
+                ps.setString(1, scopeName);
+                ps.setInt(2, tenantID);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        scopeID = rs.getInt(1);
+                    }
+                }
+            }
+            return scopeID;
+        } catch (SQLException e) {
+            String msg = "Error occurred while getting scope ID by name.";
+            throw new IdentityOAuth2ScopeServerException(msg, e);
+        }
     }
 
     /**

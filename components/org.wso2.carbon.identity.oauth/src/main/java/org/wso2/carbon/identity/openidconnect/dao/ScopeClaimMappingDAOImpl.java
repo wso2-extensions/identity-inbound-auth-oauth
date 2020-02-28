@@ -61,7 +61,10 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
         scopeClaimsList.forEach(rethrowConsumer(scopeDTO -> {
             String scope = scopeDTO.getName();
             String[] claims = scopeDTO.getClaim();
-            if (!isScopeExist(scope, tenantId)) {
+            // We maintain the scope name as unique. We won't allow registering same scope name across OAuth2 and OIDC
+            // scope endpoints. Hence we need to validate scope name exists or not across these two endpoints. If scope
+            // name is exist will throw conflict error.
+            if (!isScopeExist(scope, tenantId, true)) {
                 try {
                     int scopeClaimMappingId = jdbcTemplate.executeInsert(SQLQueries.STORE_IDN_OAUTH2_SCOPE,
                             (preparedStatement -> {
@@ -121,10 +124,10 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
     @Override
     public void addScope(ScopeDTO scope, int tenantId) throws IdentityOAuth2Exception {
 
-        int scopeID = getScopeId(scope.getName(), tenantId);
-
-        // If the scope ID is -1, then scope is not exist. Hence register a new scope. Else throw conflict error.
-        if (scopeID == Oauth2ScopeConstants.INVALID_SCOPE_ID) {
+        // We maintain the scope name as unique. We won't allow registering same scope name across OAuth2 and OIDC
+        // scope endpoints. Hence we need to validate scope name exists or not across these two endpoints. If scope
+        // name is exist will throw conflict error.
+        if (!isScopeExist(scope.getName(), tenantId, true)) {
             JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
             try {
                 int scopeClaimMappingId = jdbcTemplate.executeInsert(SQLQueries.STORE_IDN_OAUTH2_SCOPE,
@@ -475,6 +478,62 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
             throw new IdentityOAuth2Exception(errorMessage, e);
         }
         return scopeId;
+    }
+
+    /**
+     * To check whether the scope is existing depends on the scope type.
+     *
+     * @param scope               Scope name.
+     * @param tenantId            Tenant ID.
+     * @param includeOAuth2Scopes Include OAUTH2 scopes as well in search.
+     * @return True if the scope is already existing.
+     * @throws IdentityOAuth2Exception
+     */
+    private boolean isScopeExist(String scope, int tenantId, boolean includeOAuth2Scopes)
+            throws IdentityOAuth2Exception {
+
+        int scopeId;
+
+        if (includeOAuth2Scopes) {
+            scopeId = getScopeIdWithoutScopeType(scope, tenantId);
+        } else {
+            scopeId = getScopeId(scope, tenantId);
+        }
+        return scopeId != Oauth2ScopeConstants.INVALID_SCOPE_ID;
+    }
+
+    /**
+     * Obtain scope ID for proivded scope name regardless of scope type.
+     *
+     * @param scope    Scope name.
+     * @param tenantId Tenant ID.
+     * @return Scope ID.
+     * @throws IdentityOAuth2Exception
+     */
+    private int getScopeIdWithoutScopeType(String scope, int tenantId) throws IdentityOAuth2Exception {
+
+        Integer scopeId;
+
+        try {
+            JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+            scopeId = jdbcTemplate.withTransaction(template -> template.fetchSingleRecord
+                    (SQLQueries.GET_IDN_OIDC_SCOPE_ID_WITHOUT_SCOPE_TYPE, (resultSet, rowNumber) ->
+                            resultSet.getInt(1), preparedStatement -> {
+                        preparedStatement.setString(1, scope);
+                        preparedStatement.setInt(2, tenantId);
+                    }));
+            if (scopeId == null) {
+                scopeId = Oauth2ScopeConstants.INVALID_SCOPE_ID;
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("Scope id: " + scopeId + "is returned for the tenant: " + tenantId + "and scope: " + scope);
+            }
+        } catch (TransactionException e) {
+            String errorMessage = "Error while obtaining ID of scope: " + scope;
+            throw new IdentityOAuth2Exception(errorMessage, e);
+        }
+        return scopeId;
+
     }
 
     private int loadOIDCClaimId(String claim, int tenantId) throws IdentityOAuth2Exception {

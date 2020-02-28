@@ -29,7 +29,7 @@ schemes:
 # The domain of the API.
 # This is configured by the customer during deployment.
 # The given host is just an example.
-host: localhost
+host: localhost:9443
 
 # The base path of the API.
 # Will be prefixed to all paths.
@@ -130,6 +130,16 @@ paths:
           description: Number of scopes to retrieve from the point of the start index
           required: false
           type: integer
+        - name: includeOIDCScopes
+          in: query
+          description: Retrieve OIDC scopes as well via OAuth2 scopes endpoint.
+          required: false
+          type: boolean
+        - name: requestedScopes
+          in: query
+          description: If specified, requested set of scopes will be return.
+          required: false
+          type: string
 
       responses:
         200:
@@ -288,7 +298,7 @@ paths:
       tags:
         - Scope Management
 
-    # Endpoint uses to check scope existence using scope name
+    # Endpoint used to check scope existence using scope name
     head:
       description: |
         This API is used to check a scope's existence using a given scope name.

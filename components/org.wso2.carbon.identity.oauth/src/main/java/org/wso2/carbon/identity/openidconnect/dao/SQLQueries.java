@@ -119,6 +119,9 @@ public class SQLQueries {
     public static final String GET_IDN_OIDC_SCOPE_ID = "SELECT SCOPE_ID FROM IDN_OAUTH2_SCOPE WHERE NAME=? " +
             "AND TENANT_ID=? AND SCOPE_TYPE=?";
 
+    public static final String GET_IDN_OIDC_SCOPE_ID_WITHOUT_SCOPE_TYPE = "SELECT SCOPE_ID FROM IDN_OAUTH2_SCOPE " +
+            "WHERE NAME=? AND TENANT_ID=?";
+
     public static final String GET_OIDC_CLAIM_ID =
             "SELECT ID " +
             "FROM IDN_CLAIM " +

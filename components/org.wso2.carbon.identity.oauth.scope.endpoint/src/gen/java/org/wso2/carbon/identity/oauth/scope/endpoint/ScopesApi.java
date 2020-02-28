@@ -70,9 +70,11 @@ public class ScopesApi  {
         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
     public Response getScopes(@ApiParam(value = "The start index of the list of scopes to be retrieved") @QueryParam("startIndex")  Integer startIndex,
-    @ApiParam(value = "Number of scopes to retrieve from the point of the start index") @QueryParam("count")  Integer count)
+    @ApiParam(value = "Number of scopes to retrieve from the point of the start index") @QueryParam("count")  Integer count,
+    @ApiParam(value = "Retrieve OIDC scopes as well via OAuth2 scopes endpoint.") @QueryParam("includeOIDCScopes")  Boolean includeOIDCScopes,
+    @ApiParam(value = "Request a set of scopes to be return.") @QueryParam("requestedScopes")  String requestedScopes)
     {
-    return delegate.getScopes(startIndex,count);
+    return delegate.getScopes(startIndex,count,includeOIDCScopes,requestedScopes);
     }
     @HEAD
     @Path("/name/{name}")
