@@ -19,6 +19,8 @@
 package org.wso2.carbon.identity.oauth.endpoint.device;
 
 import com.nimbusds.jwt.SignedJWT;
+import org.apache.oltu.oauth2.common.OAuth;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.junit.Assert;
 import org.mockito.Mock;
@@ -38,6 +40,7 @@ import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowDAO;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
@@ -47,9 +50,13 @@ import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
 import static org.mockito.Matchers.anyBoolean;
@@ -65,7 +72,7 @@ import static org.testng.Assert.assertEquals;
         EndpointUtil.class, FrameworkUtils.class, EndpointUtil.class, OpenIDConnectUserRPStore.class,
         CarbonOAuthAuthzRequest.class, IdentityTenantUtil.class, OAuthResponse.class, SignedJWT.class,
         OIDCSessionManagementUtil.class, CarbonUtils.class, SessionDataCache.class, IdentityUtil.class,
-        DeviceFlowPersistenceFactory.class})
+        DeviceFlowPersistenceFactory.class, HttpServletRequest.class})
 public class DeviceEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -81,10 +88,14 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
     DeviceFlowDAO deviceFlowDAO;
 
     @Mock
+    HttpServletRequest request;
+
+    @Mock
     DeviceAuthServiceImpl deviceAuthService;
 
     private DeviceEndpoint deviceEndpoint = new DeviceEndpoint();
 
+    private static final String CLIENT_ID_VALUE = "ca19a540f544777860e44e75f605d927";
     private static final String TEST_URL = "testURL";
 
     @BeforeTest
@@ -114,10 +125,16 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
     @DataProvider(name = "dataValues")
     public Object[][] dataValues() {
 
+        MultivaluedMap<String, String> mapWithClientId = new MultivaluedHashMap<>();
+        List<String> clientId = new ArrayList<>();
+        clientId.add(CLIENT_ID_VALUE);
+
+        mapWithClientId.put(OAuth.OAUTH_CLIENT_ID, clientId);
+
         return new Object[][]{
-                {"testClientId", HttpServletResponse.SC_UNAUTHORIZED, false},
+                {"testClientId", HttpServletResponse.SC_BAD_REQUEST, false},
                 {null, HttpServletResponse.SC_BAD_REQUEST, false},
-                {"testClientId", HttpServletResponse.SC_OK, true}
+                {"testClientId", HttpServletResponse.SC_BAD_REQUEST, true}
         };
     }
 
@@ -127,11 +144,18 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
      * @param clientId       Consumer key of the application.
      * @param expectedStatus Expected status for response.
      * @param status         Status of user code.
-     * @throws IdentityOAuth2Exception If failed at device endpoint.
+     * @throws IdentityOAuth2Exception If failed at device endpoint
+     * @throws OAuthSystemException If failed at device endpoint.
      */
     @Test(dataProvider = "dataValues")
-    public void testDevice(String clientId, int expectedStatus, boolean status) throws IdentityOAuth2Exception {
+    public void testDevice(String clientId, int expectedStatus, boolean status)
+            throws IdentityOAuth2Exception, OAuthSystemException {
 
+        mockStatic(HttpServletRequest.class);
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setClientId(clientId);
+        oAuthClientAuthnContext.setAuthenticated(true);
+        when(request.getAttribute(anyString())).thenReturn(oAuthClientAuthnContext);
         DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
         deviceEndpoint.setDeviceAuthService(deviceAuthService);
         mockStatic(IdentityDatabaseUtil.class);
@@ -145,7 +169,8 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
         when(DeviceFlowPersistenceFactory.getInstance()).thenReturn(deviceFlowPersistenceFactory);
         when(deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
         when(deviceFlowDAO.checkClientIdExist(anyString())).thenReturn(status);
-        response = deviceEndpoint.authorize(httpServletRequest, httpServletResponse);
-        Assert.assertEquals(response.getStatus(), expectedStatus);
+        response = deviceEndpoint.authorize(httpServletRequest, new MultivaluedHashMap<String, String>(),
+                httpServletResponse);
+        Assert.assertEquals(expectedStatus, response.getStatus());
     }
 }
