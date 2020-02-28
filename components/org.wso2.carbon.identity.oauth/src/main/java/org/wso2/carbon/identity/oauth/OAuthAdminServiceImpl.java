@@ -279,9 +279,16 @@ public class OAuthAdminServiceImpl {
                     // Set OIDC Config Properties.
                     app.setRequestObjectSignatureValidationEnabled(
                             application.isRequestObjectSignatureValidationEnabled());
-                    app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
-                    app.setIdTokenEncryptionAlgorithm(application.getIdTokenEncryptionAlgorithm());
-                    app.setIdTokenEncryptionMethod(application.getIdTokenEncryptionMethod());
+
+                    // Validate IdToken Encryption configurations.
+                    if (application.isIdTokenEncryptionEnabled()) {
+                        app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
+                        if (application.isIdTokenEncryptionEnabled()) {
+                            app.setIdTokenEncryptionAlgorithm(filterIdTokenEncryptionAlgorithm(application));
+                            app.setIdTokenEncryptionMethod(filterIdTokenEncryptionMethod((application)));
+                        }
+                    }
+
                     app.setBackChannelLogoutUrl(application.getBackChannelLogoutUrl());
                     app.setFrontchannelLogoutUrl(application.getFrontchannelLogoutUrl());
                     if (application.getTokenType() != null) {
@@ -449,9 +456,15 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setScopeValidators(filterScopeValidators(consumerAppDTO));
             oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
                     .isRequestObjectSignatureValidationEnabled());
-            oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
-            oauthappdo.setIdTokenEncryptionAlgorithm(consumerAppDTO.getIdTokenEncryptionAlgorithm());
-            oauthappdo.setIdTokenEncryptionMethod(consumerAppDTO.getIdTokenEncryptionMethod());
+            // Validate IdToken Encryption configurations.
+            if (consumerAppDTO.isIdTokenEncryptionEnabled()) {
+                oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
+                if (consumerAppDTO.isIdTokenEncryptionEnabled()) {
+                    oauthappdo.setIdTokenEncryptionAlgorithm(filterIdTokenEncryptionAlgorithm(consumerAppDTO));
+                    oauthappdo.setIdTokenEncryptionMethod(filterIdTokenEncryptionMethod((consumerAppDTO)));
+                }
+            }
+
             oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
             oauthappdo.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
             oauthappdo.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
@@ -1294,6 +1307,44 @@ public class OAuthAdminServiceImpl {
         }
         return requestedScopeValidators;
     }
+
+
+    /**
+     * Get the IdToken Encryption Method registered by the user and filter the allowed one.
+     *
+     * @param application Application user have registered
+     * @return idTokenEncryptionMethod
+     * @throws IdentityOAuthAdminException Identity OAuthAdmin exception.
+     */
+    String filterIdTokenEncryptionMethod(OAuthConsumerAppDTO application) throws IdentityOAuthAdminException {
+        List<String> supportedIdTokenEncryptionMethods = OAuthServerConfiguration.getInstance()
+                .getSupportedIdTokenEncryptionMethods();
+        String idTokenEncryptionMethod = application.getIdTokenEncryptionMethod();
+        if (!supportedIdTokenEncryptionMethods.contains(idTokenEncryptionMethod)) {
+            String msg = String.format("'%s' IdToken Encryption Method is not allowed.", idTokenEncryptionMethod);
+            throw handleClientError(INVALID_REQUEST, msg);
+        }
+        return idTokenEncryptionMethod;
+    }
+
+    /**
+     * Get the IdToken Encryption Algorithm registered by the user and filter the allowed one.
+     *
+     * @param application Application user have registered
+     * @return idTokenEncryptionAlgorithm
+     * @throws IdentityOAuthAdminException Identity OAuthAdmin exception.
+     */
+    String filterIdTokenEncryptionAlgorithm(OAuthConsumerAppDTO application) throws IdentityOAuthAdminException {
+        List<String> supportedIdTokenEncryptionAlgorithms = OAuthServerConfiguration.getInstance()
+                .getSupportedIdTokenEncryptionAlgorithm();
+        String idTokenEncryptionAlgorithm = application.getIdTokenEncryptionAlgorithm();
+        if (!supportedIdTokenEncryptionAlgorithms.contains(idTokenEncryptionAlgorithm)) {
+            String msg = String.format("'%s' IdToken Encryption Method is not allowed.", idTokenEncryptionAlgorithm);
+            throw handleClientError(INVALID_REQUEST, msg);
+        }
+        return idTokenEncryptionAlgorithm;
+    }
+
 
     /**
      * Get supported algorithms from OAuthServerConfiguration and construct an OAuthIDTokenAlgorithmDTO object.
