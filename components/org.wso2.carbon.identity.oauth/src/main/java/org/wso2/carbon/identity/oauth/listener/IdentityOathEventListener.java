@@ -194,9 +194,6 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         for (String username : userList) {
             removeTokensFromCache(username, userStoreManager);
         }
-        for (String deletedUser : deletedUsers) {
-            revokeTokens(deletedUser, userStoreManager);
-        }
         return true;
     }
 
@@ -212,6 +209,9 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         userList.addAll(Arrays.asList(newUsers));
         for (String username : userList) {
             removeUserClaimsFromCache(username, userStoreManager);
+        }
+        for (String deletedUser : deletedUsers) {
+            revokeTokens(deletedUser, userStoreManager);
         }
         return true;
     }
