@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -852,17 +853,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                                              AccessTokenDO existingTokenBean) {
 
         if (cacheEnabled) {
-            OAuth2AccessTokenReqDTO tokenReq = tokenMsgCtx.getOauth2AccessTokenReqDTO();
-
-            String scope = OAuth2Util.buildScopeString(tokenMsgCtx.getScope());
-            String consumerKey = tokenMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
-            String authorizedUser = tokenMsgCtx.getAuthorizedUser().toString();
-            String authenticatedIDP = tokenMsgCtx.getAuthorizedUser().getFederatedIdPName();
             String tokenBindingReference = getTokenBindingReference(tokenMsgCtx);
 
-            OAuthCacheKey cacheKey =
-                    getOAuthCacheKey(scope, consumerKey, authorizedUser, authenticatedIDP, tokenBindingReference);
-            removeFromCache(cacheKey, tokenReq.getClientId(), existingTokenBean);
+            OAuthUtil.clearOAuthCache(existingTokenBean.getConsumerKey(), existingTokenBean.getAuthzUser(),
+                    OAuth2Util.buildScopeString(existingTokenBean.getScope()), tokenBindingReference);
+            OAuthUtil.clearOAuthCache(existingTokenBean.getConsumerKey(), existingTokenBean.getAuthzUser(),
+                    OAuth2Util.buildScopeString(existingTokenBean.getScope()));
+            OAuthUtil.clearOAuthCache(existingTokenBean.getConsumerKey(), existingTokenBean.getAuthzUser());
+            OAuthUtil.clearOAuthCache(existingTokenBean.getAccessToken());
         }
     }
 
