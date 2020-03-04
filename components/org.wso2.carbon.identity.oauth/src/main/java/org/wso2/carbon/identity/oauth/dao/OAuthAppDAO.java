@@ -234,7 +234,12 @@ public class OAuthAppDAO {
                 sql = sql.replace(USERNAME, LOWER_USERNAME);
             }
             try (PreparedStatement prepStmt = connection.prepareStatement(sql)) {
-                prepStmt.setString(1, UserCoreUtil.removeDomainFromName(tenantAwareUserName));
+                if (isUsernameCaseSensitive) {
+                    prepStmt.setString(1, UserCoreUtil.removeDomainFromName(tenantAwareUserName));
+                } else {
+                    prepStmt.setString(1,
+                            UserCoreUtil.removeDomainFromName(tenantAwareUserName).toLowerCase());
+                }
                 prepStmt.setString(2, IdentityUtil.extractDomainFromName(tenantAwareUserName));
                 prepStmt.setInt(3, tenantId);
 
