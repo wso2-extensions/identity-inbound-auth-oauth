@@ -439,13 +439,13 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             // method is set as the token.
             if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
                 try {
-                    String jti = oauthTokenIssuer.getAccessTokenHash(newTokenBean.getAccessToken());
-                    tokenToCache.setAccessToken(jti);
+                    String persistedTokenIdentifier = oauthTokenIssuer.getAccessTokenHash(newTokenBean.getAccessToken());
+                    tokenToCache.setAccessToken(persistedTokenIdentifier);
                 } catch (OAuthSystemException e) {
                     if (log.isDebugEnabled()) {
                         if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                             log.debug("Token issuer: " + oauthTokenIssuer.getClass() + " was tried and" +
-                                    " failed to parse the received token: " + newTokenBean.getAccessToken(), e);
+                                    " failed to parse the received token: " + tokenToCache.getAccessToken(), e);
                         } else {
                             log.debug("Token issuer: " + oauthTokenIssuer.getClass() + " was tried and" +
                                     " failed to parse the received token.", e);
