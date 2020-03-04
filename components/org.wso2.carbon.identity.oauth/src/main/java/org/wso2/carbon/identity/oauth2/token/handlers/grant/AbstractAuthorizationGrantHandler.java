@@ -439,7 +439,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             // method is set as the token.
             if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
                 try {
-                    String persistedTokenIdentifier = oauthTokenIssuer.getAccessTokenHash(newTokenBean.getAccessToken());
+                    String persistedTokenIdentifier =
+                            oauthTokenIssuer.getAccessTokenHash(newTokenBean.getAccessToken());
                     tokenToCache.setAccessToken(persistedTokenIdentifier);
                 } catch (OAuthSystemException e) {
                     if (log.isDebugEnabled()) {
