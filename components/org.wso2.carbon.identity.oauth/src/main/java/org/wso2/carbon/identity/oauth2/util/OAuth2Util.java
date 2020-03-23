@@ -1159,7 +1159,7 @@ public class OAuth2Util {
             if (StringUtils.isBlank(oauth2AuthzEPUrl)) {
                 oauth2AuthzEPUrl = IdentityUtil.getServerURL("oauth2/authorize", true, false);
             }
-            return oauth2AuthzEPUrl;
+            return IdentityUtil.resolveURL(oauth2AuthzEPUrl, true, false);
         }
 
         public static String getOAuth2TokenEPUrl() {
@@ -1168,33 +1168,25 @@ public class OAuth2Util {
             if (StringUtils.isBlank(oauth2TokenEPUrl)) {
                 oauth2TokenEPUrl = IdentityUtil.getServerURL("oauth2/token", true, false);
             }
-            return oauth2TokenEPUrl;
+            return IdentityUtil.resolveURL(oauth2TokenEPUrl, true, false);
         }
 
-        public static String getOAuth2DCREPUrl(String tenantDomain) throws URISyntaxException {
+        public static String getOAuth2DCREPUrl() throws URISyntaxException {
 
             String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOAuth2DCREPUrl();
             if (StringUtils.isBlank(oauth2TokenEPUrl)) {
                 oauth2TokenEPUrl = IdentityUtil.getServerURL("/api/identity/oauth2/dcr/v1.0/register", true, false);
             }
-            if (StringUtils.isNotBlank(tenantDomain) && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
-                    (tenantDomain)) {
-                oauth2TokenEPUrl = getTenantUrl(oauth2TokenEPUrl, tenantDomain);
-            }
-            return oauth2TokenEPUrl;
+            return IdentityUtil.resolveURL(oauth2TokenEPUrl, true, false, false, true);
         }
 
-        public static String getOAuth2JWKSPageUrl(String tenantDomain) throws URISyntaxException {
+        public static String getOAuth2JWKSPageUrl() throws URISyntaxException {
 
             String auth2JWKSPageUrl = OAuthServerConfiguration.getInstance().getOAuth2JWKSPageUrl();
             if (StringUtils.isBlank(auth2JWKSPageUrl)) {
                 auth2JWKSPageUrl = IdentityUtil.getServerURL("/oauth2/jwks", true, false);
             }
-            if (StringUtils.isNotBlank(tenantDomain) && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
-                    (tenantDomain)) {
-                auth2JWKSPageUrl = getTenantUrl(auth2JWKSPageUrl, tenantDomain);
-            }
-            return auth2JWKSPageUrl;
+            return IdentityUtil.resolveURL(auth2JWKSPageUrl, true, false, false, true);
         }
 
         public static String getOidcWebFingerEPUrl() {
@@ -1203,7 +1195,7 @@ public class OAuth2Util {
             if (StringUtils.isBlank(oauth2TokenEPUrl)) {
                 oauth2TokenEPUrl = IdentityUtil.getServerURL(".well-know/webfinger", true, false);
             }
-            return oauth2TokenEPUrl;
+            return IdentityUtil.resolveURL(oauth2TokenEPUrl, true, true);
         }
 
         public static String getOidcDiscoveryEPUrl(String tenantDomain) throws URISyntaxException {
@@ -1226,7 +1218,7 @@ public class OAuth2Util {
             if (StringUtils.isBlank(oauth2UserInfoEPUrl)) {
                 oauth2UserInfoEPUrl = IdentityUtil.getServerURL("oauth2/userinfo", true, false);
             }
-            return oauth2UserInfoEPUrl;
+            return IdentityUtil.resolveURL(oauth2UserInfoEPUrl, true, false);
         }
 
         /**
@@ -1240,7 +1232,7 @@ public class OAuth2Util {
             if (StringUtils.isBlank(oauth2RevokeEPUrl)) {
                 oauth2RevokeEPUrl = IdentityUtil.getServerURL("oauth2/revoke", true, false);
             }
-            return oauth2RevokeEPUrl;
+            return IdentityUtil.resolveURL(oauth2RevokeEPUrl, true, false);
         }
 
         /**
@@ -1254,7 +1246,7 @@ public class OAuth2Util {
             if (StringUtils.isBlank(oauth2IntrospectEPUrl)) {
                 oauth2IntrospectEPUrl = IdentityUtil.getServerURL("oauth2/introspect", true, false);
             }
-            return oauth2IntrospectEPUrl;
+            return IdentityUtil.resolveURL(oauth2IntrospectEPUrl, true, false);
         }
 
         public static String getOIDCConsentPageUrl() {
@@ -3086,8 +3078,8 @@ public class OAuth2Util {
         FederatedAuthenticatorConfig oidcAuthenticatorConfig =
                 IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
                         IdentityApplicationConstants.Authenticator.OIDC.NAME);
-        return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
-                IDP_ENTITY_ID).getValue();
+        return IdentityUtil.resolveURL(IdentityApplicationManagementUtil
+                .getProperty(oidcAuthenticatorConfig.getProperties(), IDP_ENTITY_ID).getValue(), true, false);
     }
 
     private static IdentityProvider getResidentIdp(String tenantDomain) throws IdentityOAuth2Exception {

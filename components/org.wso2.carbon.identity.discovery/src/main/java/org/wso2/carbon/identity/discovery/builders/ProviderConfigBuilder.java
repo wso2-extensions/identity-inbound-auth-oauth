@@ -75,8 +75,8 @@ public class ProviderConfigBuilder {
         providerConfig.setCodeChallengeMethodsSupported(OAuth2Util.getSupportedCodeChallengeMethods()
                 .toArray(new String[0]));
         try {
-            providerConfig.setRegistrationEndpoint(OAuth2Util.OAuthURL.getOAuth2DCREPUrl(request.getTenantDomain()));
-            providerConfig.setJwksUri(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(request.getTenantDomain()));
+            providerConfig.setRegistrationEndpoint(OAuth2Util.OAuthURL.getOAuth2DCREPUrl());
+            providerConfig.setJwksUri(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl());
         } catch (URISyntaxException e) {
             throw new ServerConfigurationException("Error while building tenant specific url", e);
         }
@@ -110,10 +110,10 @@ public class ProviderConfigBuilder {
 
         providerConfig.setSubjectTypesSupported(new String[]{"pairwise"});
 
-        providerConfig.setCheckSessionIframe(IdentityUtil.getProperty(
-                IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL));
-        providerConfig.setEndSessionEndpoint(IdentityUtil.getProperty(
-                IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL));
+        providerConfig.setCheckSessionIframe(IdentityUtil.resolveURL(IdentityUtil.getProperty(
+                IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL), true, false));
+        providerConfig.setEndSessionEndpoint(IdentityUtil.resolveURL(IdentityUtil.getProperty(
+                IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL), true, false));
 
         try {
             providerConfig.setUserinfoSigningAlgValuesSupported(new String[] {
