@@ -172,6 +172,21 @@ import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_TOKEN_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_AUTHZ_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_CONSENT_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_DCR_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_DISCOVERY_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_ERROR_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_INTROSPECT_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_JWKS_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_REVOKE_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_TOKEN_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_USER_INFO_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_CONSENT_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_WEB_FINGER_EP_URL;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 
 /**
@@ -1130,7 +1145,7 @@ public class OAuth2Util {
 
             String oauth1RequestTokenUrl = OAuthServerConfiguration.getInstance().getOAuth1RequestTokenUrl();
             if (StringUtils.isBlank(oauth1RequestTokenUrl)) {
-                oauth1RequestTokenUrl = IdentityUtil.getServerURL("oauth/request-token", true, true);
+                oauth1RequestTokenUrl = IdentityUtil.getServerURL(OAUTH_REQUEST_TOKEN_EP_URL, true, true);
             }
             return oauth1RequestTokenUrl;
         }
@@ -1139,7 +1154,7 @@ public class OAuth2Util {
 
             String oauth1AuthorizeUrl = OAuthServerConfiguration.getInstance().getOAuth1AuthorizeUrl();
             if (StringUtils.isBlank(oauth1AuthorizeUrl)) {
-                oauth1AuthorizeUrl = IdentityUtil.getServerURL("oauth/authorize-url", true, true);
+                oauth1AuthorizeUrl = IdentityUtil.getServerURL(OAUTH_AUTHZ_EP_URL, true, true);
             }
             return oauth1AuthorizeUrl;
         }
@@ -1148,7 +1163,7 @@ public class OAuth2Util {
 
             String oauth1AccessTokenUrl = OAuthServerConfiguration.getInstance().getOAuth1AccessTokenUrl();
             if (StringUtils.isBlank(oauth1AccessTokenUrl)) {
-                oauth1AccessTokenUrl = IdentityUtil.getServerURL("oauth/access-token", true, true);
+                oauth1AccessTokenUrl = IdentityUtil.getServerURL(OAUTH_TOKEN_EP_URL, true, true);
             }
             return oauth1AccessTokenUrl;
         }
@@ -1157,7 +1172,7 @@ public class OAuth2Util {
 
             String oauth2AuthzEPUrl = OAuthServerConfiguration.getInstance().getOAuth2AuthzEPUrl();
             if (StringUtils.isBlank(oauth2AuthzEPUrl)) {
-                oauth2AuthzEPUrl = IdentityUtil.getServerURL("oauth2/authorize", true, false);
+                oauth2AuthzEPUrl = IdentityUtil.getServerURL(OAUTH2_AUTHZ_EP_URL, true, false);
             }
             return IdentityUtil.resolveURL(oauth2AuthzEPUrl, true, false);
         }
@@ -1166,7 +1181,7 @@ public class OAuth2Util {
 
             String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOAuth2TokenEPUrl();
             if (StringUtils.isBlank(oauth2TokenEPUrl)) {
-                oauth2TokenEPUrl = IdentityUtil.getServerURL("oauth2/token", true, false);
+                oauth2TokenEPUrl = IdentityUtil.getServerURL(OAUTH2_TOKEN_EP_URL, true, false);
             }
             return IdentityUtil.resolveURL(oauth2TokenEPUrl, true, false);
         }
@@ -1175,7 +1190,7 @@ public class OAuth2Util {
 
             String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOAuth2DCREPUrl();
             if (StringUtils.isBlank(oauth2TokenEPUrl)) {
-                oauth2TokenEPUrl = IdentityUtil.getServerURL("/api/identity/oauth2/dcr/v1.0/register", true, false);
+                oauth2TokenEPUrl = IdentityUtil.getServerURL(OAUTH2_DCR_EP_URL, true, false);
             }
             if (StringUtils.isNotBlank(tenantDomain) && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
                     (tenantDomain)) {
@@ -1188,7 +1203,7 @@ public class OAuth2Util {
 
             String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOAuth2DCREPUrl();
             if (StringUtils.isBlank(oauth2TokenEPUrl)) {
-                oauth2TokenEPUrl = IdentityUtil.getServerURL("/api/identity/oauth2/dcr/v1.0/register", true, false);
+                oauth2TokenEPUrl = IdentityUtil.getServerURL(OAUTH2_DCR_EP_URL, true, false);
             }
             return IdentityUtil.resolveURL(oauth2TokenEPUrl, true, true);
         }
@@ -1197,7 +1212,7 @@ public class OAuth2Util {
 
             String auth2JWKSPageUrl = OAuthServerConfiguration.getInstance().getOAuth2JWKSPageUrl();
             if (StringUtils.isBlank(auth2JWKSPageUrl)) {
-                auth2JWKSPageUrl = IdentityUtil.getServerURL("/oauth2/jwks", true, false);
+                auth2JWKSPageUrl = IdentityUtil.getServerURL(OAUTH2_JWKS_EP_URL, true, false);
             }
             if (StringUtils.isNotBlank(tenantDomain) && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
                     (tenantDomain)) {
@@ -1210,7 +1225,7 @@ public class OAuth2Util {
 
             String auth2JWKSPageUrl = OAuthServerConfiguration.getInstance().getOAuth2JWKSPageUrl();
             if (StringUtils.isBlank(auth2JWKSPageUrl)) {
-                auth2JWKSPageUrl = IdentityUtil.getServerURL("/oauth2/jwks", true, false);
+                auth2JWKSPageUrl = IdentityUtil.getServerURL(OAUTH2_JWKS_EP_URL, true, false);
             }
             return IdentityUtil.resolveURL(auth2JWKSPageUrl, true, true);
         }
@@ -1219,7 +1234,7 @@ public class OAuth2Util {
 
             String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOidcWebFingerEPUrl();
             if (StringUtils.isBlank(oauth2TokenEPUrl)) {
-                oauth2TokenEPUrl = IdentityUtil.getServerURL(".well-know/webfinger", true, false);
+                oauth2TokenEPUrl = IdentityUtil.getServerURL(OIDC_WEB_FINGER_EP_URL, true, false);
             }
             return IdentityUtil.resolveURL(oauth2TokenEPUrl, true, true);
         }
@@ -1228,7 +1243,7 @@ public class OAuth2Util {
 
             String oidcDiscoveryEPUrl = OAuthServerConfiguration.getInstance().getOidcDiscoveryUrl();
             if (StringUtils.isBlank(oidcDiscoveryEPUrl)) {
-                oidcDiscoveryEPUrl = IdentityUtil.getServerURL("/oauth2/oidcdiscovery", true, false);
+                oidcDiscoveryEPUrl = IdentityUtil.getServerURL(OAUTH2_DISCOVERY_EP_URL, true, false);
             }
             if (StringUtils.isNotBlank(tenantDomain) && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
                     (tenantDomain)) {
@@ -1242,7 +1257,7 @@ public class OAuth2Util {
 
             String oauth2UserInfoEPUrl = OAuthServerConfiguration.getInstance().getOauth2UserInfoEPUrl();
             if (StringUtils.isBlank(oauth2UserInfoEPUrl)) {
-                oauth2UserInfoEPUrl = IdentityUtil.getServerURL("oauth2/userinfo", true, false);
+                oauth2UserInfoEPUrl = IdentityUtil.getServerURL(OAUTH2_USER_INFO_EP_URL, true, false);
             }
             return IdentityUtil.resolveURL(oauth2UserInfoEPUrl, true, false);
         }
@@ -1256,7 +1271,7 @@ public class OAuth2Util {
 
             String oauth2RevokeEPUrl = OAuthServerConfiguration.getInstance().getOauth2RevocationEPUrl();
             if (StringUtils.isBlank(oauth2RevokeEPUrl)) {
-                oauth2RevokeEPUrl = IdentityUtil.getServerURL("oauth2/revoke", true, false);
+                oauth2RevokeEPUrl = IdentityUtil.getServerURL(OAUTH2_REVOKE_EP_URL, true, false);
             }
             return IdentityUtil.resolveURL(oauth2RevokeEPUrl, true, false);
         }
@@ -1270,7 +1285,7 @@ public class OAuth2Util {
 
             String oauth2IntrospectEPUrl = OAuthServerConfiguration.getInstance().getOauth2IntrospectionEPUrl();
             if (StringUtils.isBlank(oauth2IntrospectEPUrl)) {
-                oauth2IntrospectEPUrl = IdentityUtil.getServerURL("oauth2/introspect", true, false);
+                oauth2IntrospectEPUrl = IdentityUtil.getServerURL(OAUTH2_INTROSPECT_EP_URL, true, false);
             }
             return IdentityUtil.resolveURL(oauth2IntrospectEPUrl, true, false);
         }
@@ -1279,7 +1294,7 @@ public class OAuth2Util {
 
             String oidcConsentPageUrl = OAuthServerConfiguration.getInstance().getOIDCConsentPageUrl();
             if (StringUtils.isBlank(oidcConsentPageUrl)) {
-                oidcConsentPageUrl = IdentityUtil.getServerURL("/authenticationendpoint/oauth2_consent.do", false,
+                oidcConsentPageUrl = IdentityUtil.getServerURL(OIDC_CONSENT_EP_URL, false,
                         false);
             }
             return oidcConsentPageUrl;
@@ -1289,7 +1304,7 @@ public class OAuth2Util {
 
             String oAuth2ConsentPageUrl = OAuthServerConfiguration.getInstance().getOauth2ConsentPageUrl();
             if (StringUtils.isBlank(oAuth2ConsentPageUrl)) {
-                oAuth2ConsentPageUrl = IdentityUtil.getServerURL("/authenticationendpoint/oauth2_authz.do", false,
+                oAuth2ConsentPageUrl = IdentityUtil.getServerURL(OAUTH2_CONSENT_EP_URL, false,
                         false);
             }
             return oAuth2ConsentPageUrl;
@@ -1299,7 +1314,7 @@ public class OAuth2Util {
 
             String oAuth2ErrorPageUrl = OAuthServerConfiguration.getInstance().getOauth2ErrorPageUrl();
             if (StringUtils.isBlank(oAuth2ErrorPageUrl)) {
-                oAuth2ErrorPageUrl = IdentityUtil.getServerURL("/authenticationendpoint/oauth2_error.do", false, false);
+                oAuth2ErrorPageUrl = IdentityUtil.getServerURL(OAUTH2_ERROR_EP_URL, false, false);
             }
             return oAuth2ErrorPageUrl;
         }

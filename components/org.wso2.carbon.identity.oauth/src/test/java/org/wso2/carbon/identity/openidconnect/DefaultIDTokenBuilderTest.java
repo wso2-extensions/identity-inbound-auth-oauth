@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import org.mockito.Mockito;
+import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -34,6 +35,7 @@ import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithKeyStore;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
@@ -100,6 +102,12 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
         idp.setIdentityProviderName("LOCAL");
         idp.setEnable(true);
 
+        Map<String, Object> configuration = new HashMap<>();
+        configuration.put("SSOService.EntityId", "LOCAL");
+        configuration.put("SSOService.SAMLECPEndpoint", "https://localhost:9443/samlecp");
+        configuration.put("SSOService.ArtifactResolutionEndpoint", "https://localhost:9443/samlartresolve");
+        configuration.put("OAuth.OpenIDConnect.IDTokenIssuerID", "https://localhost:9443/oauth2/token");
+        WhiteboxImpl.setInternalState(IdentityUtil.class, "configuration", configuration);
         IdentityProviderManager.getInstance().addResidentIdP(idp, SUPER_TENANT_DOMAIN_NAME);
         defaultIDTokenBuilder =  new DefaultIDTokenBuilder();
 
