@@ -165,7 +165,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
                         for (String binding : scopeBinding.getBindings()) {
                             boolean isAllowed = false;
                             for (String allowedScope : allowedUIResourcesForUser) {
-                                if (binding.startsWith(allowedScope)) {
+                                if ((binding + "/").startsWith(allowedScope + "/")) {
                                     isAllowed = true;
                                     break;
                                 }
