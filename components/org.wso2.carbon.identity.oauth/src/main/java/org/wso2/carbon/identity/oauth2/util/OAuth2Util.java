@@ -3119,8 +3119,13 @@ public class OAuth2Util {
         FederatedAuthenticatorConfig oidcAuthenticatorConfig =
                 IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
                         IdentityApplicationConstants.Authenticator.OIDC.NAME);
-        return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
+        String idpEntityId = IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
                 IDP_ENTITY_ID).getValue();
+        if (idpEntityId.equals(IdentityUtil.getProperty("OAuth.OpenIDConnect.IDTokenIssuerID"))) {
+            return IdentityUtil.resolveURL(idpEntityId, tenantDomain, true, false, false, false);
+        } else {
+            return idpEntityId;
+        }
     }
 
     private static IdentityProvider getResidentIdp(String tenantDomain) throws IdentityOAuth2Exception {
