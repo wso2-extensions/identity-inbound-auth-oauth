@@ -1186,6 +1186,13 @@ public class OAuth2Util {
             return IdentityUtil.resolveURL(oauth2TokenEPUrl, true, false);
         }
 
+        /**
+         * This method is used to get the resolved URL for the OAuth2 Registration Endpoint.
+         *
+         * @param tenantDomain Tenant Domain.
+         * @return String of the resolved URL for the Registration endpoint.
+         * @throws URISyntaxException URI Syntax Exception.
+         */
         public static String getOAuth2DCREPUrl(String tenantDomain) throws URISyntaxException {
 
             String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOAuth2DCREPUrl();
@@ -1199,6 +1206,12 @@ public class OAuth2Util {
             return oauth2TokenEPUrl;
         }
 
+        /**
+         * This method is used to get the resolved URL for the OAuth2 Registration Endpoint.
+         *
+         * @return String of the resolved URL for the Registration endpoint.
+         * @throws URISyntaxException URI Syntax Exception.
+         */
         public static String getOAuth2DCREPUrl() throws URISyntaxException {
 
             String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOAuth2DCREPUrl();
@@ -1208,6 +1221,13 @@ public class OAuth2Util {
             return IdentityUtil.resolveURL(oauth2TokenEPUrl, true, true, false, true);
         }
 
+        /**
+         * This method is used to get the resolved URL for the JWKS Page.
+         *
+         * @param tenantDomain Tenant Domain.
+         * @return String of the resolved URL for the JWKS page.
+         * @throws URISyntaxException URI Syntax Exception.
+         */
         public static String getOAuth2JWKSPageUrl(String tenantDomain) throws URISyntaxException {
 
             String auth2JWKSPageUrl = OAuthServerConfiguration.getInstance().getOAuth2JWKSPageUrl();
@@ -1221,6 +1241,12 @@ public class OAuth2Util {
             return auth2JWKSPageUrl;
         }
 
+        /**
+         * This method is used to get the resolved URL for the JWKS Page.
+         *
+         * @return String of the resolved URL for the JWKS page.
+         * @throws URISyntaxException URI Syntax Exception.
+         */
         public static String getOAuth2JWKSPageUrl() throws URISyntaxException {
 
             String auth2JWKSPageUrl = OAuthServerConfiguration.getInstance().getOAuth2JWKSPageUrl();
