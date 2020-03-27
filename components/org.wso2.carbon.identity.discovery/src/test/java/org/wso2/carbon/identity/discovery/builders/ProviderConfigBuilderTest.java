@@ -109,21 +109,6 @@ public class ProviderConfigBuilderTest {
     }
 
     @Test(expectedExceptions = ServerConfigurationException.class)
-    public void testBuildOIDProviderConfig1Legacy() throws Exception {
-
-        OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
-
-        mockStatic(OAuth2Util.class);
-        mockStatic(OAuth2Util.OAuthURL.class);
-        when(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(anyString())).thenThrow(new URISyntaxException("input",
-                "URISyntaxException"));
-        when(OAuth2Util.getIdTokenIssuer(anyString())).thenReturn("issuer");
-        providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
-    }
-
-    @Test(expectedExceptions = ServerConfigurationException.class)
     public void testBuildOIDProviderConfig1() throws Exception {
 
         OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
