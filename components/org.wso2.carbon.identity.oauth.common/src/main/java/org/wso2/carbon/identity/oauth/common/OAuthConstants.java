@@ -244,6 +244,9 @@ public final class OAuthConstants {
         public static final String ACCESS_TOKEN_URL = "/access-token";
         public static final String REQUEST_TOKEN_URL = "/request-token";
         public static final String AUTHORIZE_TOKEN_URL = "/authorize-token";
+        public static final String OAUTH_TOKEN_EP_URL = "oauth/access-token";
+        public static final String OAUTH_AUTHZ_EP_URL = "oauth/authorize-url";
+        public static final String OAUTH_REQUEST_TOKEN_EP_URL = "oauth/request-token";
 
         private OAuth10AEndpoints() {
 
@@ -257,6 +260,18 @@ public final class OAuthConstants {
 
         public static final String OAUTH20_ACCESS_TOKEN_URL = "/token";
         public static final String OAUTH20_AUTHORIZE_TOKEN_URL = "/authorize";
+        public static final String OAUTH2_AUTHZ_EP_URL = "oauth2/authorize";
+        public static final String OAUTH2_TOKEN_EP_URL = "oauth2/token";
+        public static final String OAUTH2_DCR_EP_URL = "/api/identity/oauth2/dcr/v1.0/register";
+        public static final String OAUTH2_JWKS_EP_URL = "/oauth2/jwks";
+        public static final String  OAUTH2_DISCOVERY_EP_URL = "/oauth2/oidcdiscovery";
+        public static final String OAUTH2_USER_INFO_EP_URL = "oauth2/userinfo";
+        public static final String OAUTH2_REVOKE_EP_URL = "oauth2/revoke";
+        public static final String OIDC_WEB_FINGER_EP_URL = ".well-know/webfinger";
+        public static final String OAUTH2_INTROSPECT_EP_URL = "oauth2/introspect";
+        public static final String OIDC_CONSENT_EP_URL = "/authenticationendpoint/oauth2_consent.do";
+        public static final String OAUTH2_CONSENT_EP_URL = "/authenticationendpoint/oauth2_authz.do";
+        public static final String OAUTH2_ERROR_EP_URL = "/authenticationendpoint/oauth2_error.do";
 
         private OAuth20Endpoints() {
 

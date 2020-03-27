@@ -22,6 +22,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
@@ -31,8 +32,11 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -84,7 +88,8 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({OAuthServerConfiguration.class, OAuthCache.class, IdentityUtil.class, OAuthConsumerDAO.class,
-        OAuth2Util.class, OAuthComponentServiceHolder.class, AppInfoCache.class, IdentityConfigParser.class})
+        OAuth2Util.class, OAuthComponentServiceHolder.class, AppInfoCache.class, IdentityConfigParser.class,
+        PrivilegedCarbonContext.class, IdentityTenantUtil.class, IdentityCoreServiceComponent.class})
 public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
@@ -151,6 +156,10 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         when(oauthServerConfigurationMock.getTimeStampSkewInSeconds()).thenReturn(timestampSkew);
         mockStatic(OAuthComponentServiceHolder.class);
         when(OAuthComponentServiceHolder.getInstance()).thenReturn(oAuthComponentServiceHolderMock);
+        mockStatic(PrivilegedCarbonContext.class);
+        mockStatic(IdentityTenantUtil.class);
+        PrivilegedCarbonContext privilegedCarbonContext = Mockito.mock(PrivilegedCarbonContext.class);
+        when(PrivilegedCarbonContext.getThreadLocalCarbonContext()).thenReturn(privilegedCarbonContext);
     }
 
     @AfterMethod
@@ -889,19 +898,19 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 // oidcIDTokenIssuer
                 // oauth2TokenEPUrl
                 // issuer
-                {"testIssuer", "", "testIssuer"},
-                {"", "testIssuer", "testIssuer"},
+                {"https://localhost:9443/testIssuer", "", "https://localhost:9443/testIssuer"},
+                {"", "https://localhost:9443/testIssuer", "https://localhost:9443/testIssuer"},
                 {"", "", "https://localhost:9443/oauth2/token"}
         };
     }
 
     @Test(dataProvider = "IDTokenIssuerData")
     public void testGetIDTokenIssuer(String oidcIDTokenIssuer, String oauth2TokenEPUrl, String issuer) {
+
+        String serverUrl = "https://localhost:9443/oauth2/token";
         when(oauthServerConfigurationMock.getOpenIDConnectIDTokenIssuerIdentifier()).thenReturn(oidcIDTokenIssuer);
         when(oauthServerConfigurationMock.getOAuth2TokenEPUrl()).thenReturn(oauth2TokenEPUrl);
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).
-                thenReturn("https://localhost:9443/oauth2/token");
+        getOAuthURL(serverUrl);
 
         assertEquals(OAuth2Util.getIDTokenIssuer(), issuer);
     }
@@ -912,8 +921,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 // configUrl
                 // serverUrl
                 // oauthUrl
-                {"/testUrl", "https://localhost:9443/testUrl", "/testUrl"},
-                {"", "https://localhost:9443/testUrl", "https://localhost:9443/testUrl"}
+                {"https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "https://localhost:9443/testUrl"},
+                {"" , "https://localhost:9443/testUrl", "https://localhost:9443/testUrl"}
         };
     }
 
@@ -959,69 +968,195 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 // serverUrl
                 // tenantDomain
                 // oauthUrl
-                {"/testUrl", "https://localhost:9443/testUrl", "testDomain", "/t/testDomain/testUrl"},
-                {"/testUrl", "https://localhost:9443/testUrl", MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
-                        "/testUrl"},
-                {"", "https://localhost:9443/testUrl", "testDomain", "https://localhost:9443/t/testDomain/testUrl"}
+                {"https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain", "https://localhost" +
+                        ":9443/t/testDomain/testUrl"},
+                {"", "https://localhost:9443/testUrl", "",
+                        "https://localhost:9443/testUrl"},
+                {"", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/t/testDomain/testUrl"}
         };
     }
 
-    @Test(dataProvider = "OAuthURLData2")
-    public void testGetOAuth2DCREPUrl(String configUrl, String serverUrl, String tenantDomain, String oauthUrl)
-            throws Exception {
-        when(oauthServerConfigurationMock.getOAuth2DCREPUrl()).thenReturn(configUrl);
+    @DataProvider(name = "OAuthTenantSupportURLData1")
+    public Object[][] oAuthTenantSupportURLData1() {
+
+        return new Object[][]{
+                // enableTenantURLSupport
+                // configUrl
+                // serverUrl
+                // tenantDomain
+                // oauthUrl
+                {true, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain", "https" +
+                        "://localhost:9443/t/testDomain/testUrl"},
+                {true, "", "https://localhost:9443/testUrl", "",
+                        "https://localhost:9443/t/carbon.super/testUrl"},
+                {true, "", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/t/testDomain/testUrl"},
+                {false, "", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/t/testDomain/testUrl"},
+                {false, "", "https://localhost:9443/testUrl", "",
+                        "https://localhost:9443/testUrl"},
+        };
+    }
+
+    @Test(dataProvider = "OAuthTenantSupportURLData1")
+    public void testGetOAuth2JWKSPageUrl(Boolean enableTenantURLSupport, String configUrl, String serverUrl,
+                                         String tenantDomain, String oauthUrl) throws Exception {
+
+        when(oauthServerConfigurationMock.getOAuth2JWKSPageUrl()).thenReturn(configUrl);
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(enableTenantURLSupport);
+        when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantDomain);
+        when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain()).thenReturn("carbon.super");
         getOAuthURL(serverUrl);
-        assertEquals(OAuth2Util.OAuthURL.getOAuth2DCREPUrl(tenantDomain), oauthUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthTenantSupportURLData1")
+    public void testGetOAuth2DCREPUrl(Boolean enableTenantURLSupport, String configUrl, String serverUrl,
+                                      String tenantDomain, String oauthUrl) throws Exception {
+
+        when(oauthServerConfigurationMock.getOAuth2DCREPUrl()).thenReturn(configUrl);
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(enableTenantURLSupport);
+        when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantDomain);
+        when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain()).thenReturn("carbon.super");
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2DCREPUrl(), oauthUrl);
     }
 
     @Test(dataProvider = "OAuthURLData2")
-    public void testGetOAuth2JWKSPageUrl(String configUrl, String serverUrl, String tenantDomain, String oauthUrl)
-            throws Exception {
+    public void testGetOAuth2JWKSPageUrlLegacy(String configUrl, String serverUrl,
+                                         String tenantDomain, String oauthUrl) throws Exception {
+
         when(oauthServerConfigurationMock.getOAuth2JWKSPageUrl()).thenReturn(configUrl);
         getOAuthURL(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(tenantDomain), oauthUrl);
     }
 
+    @Test(dataProvider = "OAuthURLData2")
+    public void testGetOAuth2DCREPUrlLegacy(String configUrl, String serverUrl,
+                                      String tenantDomain, String oauthUrl) throws Exception {
+
+        when(oauthServerConfigurationMock.getOAuth2DCREPUrl()).thenReturn(configUrl);
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2DCREPUrl(tenantDomain), oauthUrl);
+    }
+
     @Test(dataProvider = "OAuthURLData")
-    public void testGetOidcWebFingerEPUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+    public void testGetOidcWebFingerEPUrlLegacy(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+
         when(oauthServerConfigurationMock.getOidcWebFingerEPUrl()).thenReturn(configUrl);
         getOAuthURL(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOidcWebFingerEPUrl(), oauthUrl);
     }
 
+    @DataProvider(name = "OAuthTenantSupportURLData2")
+    public Object[][] oAuthTenantSupportURLData2() {
+
+        return new Object[][]{
+                // enableTenantURLSupport
+                // configUrl
+                // serverUrl
+                // tenantDomain
+                // oauthUrl
+                {true, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain", "https" +
+                        "://localhost:9443/t/testDomain/testUrl"},
+                {true, "", "https://localhost:9443/testUrl", "",
+                        "https://localhost:9443/t/carbon.super/testUrl"},
+                {true, "", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/t/testDomain/testUrl"},
+                {false, "", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/testUrl"},
+                {false, "", "https://localhost:9443/testUrl", "",
+                        "https://localhost:9443/testUrl"},
+        };
+    }
+
+    @Test(dataProvider = "OAuthTenantSupportURLData2")
+    public void testGetOidcWebFingerEPUrl(boolean enableTenantURLSupport, String configUrl, String serverUrl,
+                                          String tenantDomain, String oauthUrl) throws Exception {
+
+        when(oauthServerConfigurationMock.getOidcWebFingerEPUrl()).thenReturn(configUrl);
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(enableTenantURLSupport);
+        when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantDomain);
+        when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain()).thenReturn("carbon.super");
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOidcWebFingerEPUrl(), oauthUrl);
+    }
+
     @Test(dataProvider = "OAuthURLData2")
-    public void testGetOidcDiscoveryEPUrl(String configUrl, String serverUrl, String tenantDomain, String oauthUrl)
-            throws Exception {
+    public void testGetOidcDiscoveryEPUrl(String configUrl, String serverUrl,
+                                          String tenantDomain, String oauthUrl) throws Exception {
+
         when(oauthServerConfigurationMock.getOidcDiscoveryUrl()).thenReturn(configUrl);
         getOAuthURL(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOidcDiscoveryEPUrl(tenantDomain), oauthUrl);
     }
 
     @Test(dataProvider = "OAuthURLData")
-    public void testGetOAuth2UserInfoEPUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+    public void testGetOAuth2UserInfoEPUrlLegacy(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+
         when(oauthServerConfigurationMock.getOauth2UserInfoEPUrl()).thenReturn(configUrl);
         getOAuthURL(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2UserInfoEPUrl(), oauthUrl);
     }
 
+    @Test(dataProvider = "OAuthTenantSupportURLData2")
+    public void testGetOAuth2UserInfoEPUrl(boolean enableTenantURLSupport, String configUrl, String serverUrl,
+                                           String tenantDomain, String oauthUrl) throws Exception {
+
+        when(oauthServerConfigurationMock.getOauth2UserInfoEPUrl()).thenReturn(configUrl);
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(enableTenantURLSupport);
+        when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantDomain);
+        when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain()).thenReturn("carbon.super");
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2UserInfoEPUrl(), oauthUrl);
+    }
+
     @Test(dataProvider = "OAuthURLData")
-    public void testGetOAuth2RevocationEPUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+    public void testGetOAuth2RevocationEPUrlLegacy(String configUrl, String serverUrl, String oauthUrl)
+            throws Exception {
 
         when(oauthServerConfigurationMock.getOauth2RevocationEPUrl()).thenReturn(configUrl);
         getOAuthURL(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2RevocationEPUrl(), oauthUrl);
     }
 
+    @Test(dataProvider = "OAuthTenantSupportURLData2")
+    public void testGetOAuth2RevocationEPUrl(boolean enableTenantURLSupport, String configUrl, String serverUrl,
+                                             String tenantDomain, String oauthUrl) throws Exception {
+
+        when(oauthServerConfigurationMock.getOauth2RevocationEPUrl()).thenReturn(configUrl);
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(enableTenantURLSupport);
+        when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantDomain);
+        when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain()).thenReturn("carbon.super");
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2RevocationEPUrl(), oauthUrl);
+    }
+
     @Test(dataProvider = "OAuthURLData")
-    public void testGetOAuth2IntrospectionEPUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+    public void testGetOAuth2IntrospectionEPUrlLegacy(String configUrl, String serverUrl, String oauthUrl)
+            throws Exception {
 
         when(oauthServerConfigurationMock.getOauth2IntrospectionEPUrl()).thenReturn(configUrl);
         getOAuthURL(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2IntrospectionEPUrl(), oauthUrl);
     }
 
+    @Test(dataProvider = "OAuthTenantSupportURLData2")
+    public void testGetOAuth2IntrospectionEPUrl(boolean enableTenantURLSupport, String configUrl, String serverUrl,
+                                                String tenantDomain, String oauthUrl) throws Exception {
+
+        when(oauthServerConfigurationMock.getOauth2IntrospectionEPUrl()).thenReturn(configUrl);
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(enableTenantURLSupport);
+        when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantDomain);
+        when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain()).thenReturn("carbon.super");
+        getOAuthURL(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2IntrospectionEPUrl(), oauthUrl);
+    }
+
     @Test(dataProvider = "OAuthURLData")
     public void testGetOIDCConsentPageUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+
         when(oauthServerConfigurationMock.getOIDCConsentPageUrl()).thenReturn(configUrl);
         getOAuthURL(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOIDCConsentPageUrl(), oauthUrl);
@@ -1042,8 +1177,12 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     }
 
     private void getOAuthURL(String serverUrl) {
+
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(serverUrl);
+        when(IdentityUtil.resolveURL(anyString(), anyBoolean(), anyBoolean())).thenCallRealMethod();
+        when(IdentityUtil.resolveURL(anyString(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean()))
+                .thenCallRealMethod();
     }
 
     @DataProvider(name = "ScopesSet")

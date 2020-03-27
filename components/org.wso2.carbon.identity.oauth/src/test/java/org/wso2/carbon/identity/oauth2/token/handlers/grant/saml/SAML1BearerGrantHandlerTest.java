@@ -204,6 +204,9 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(keyStoreManager.getDefaultPrimaryCertificate()).thenReturn(cert);
         Map<String, Object> configuration = new HashMap<>();
         configuration.put("SSOService.EntityId", "LOCAL");
+        configuration.put("SSOService.SAMLECPEndpoint", "https://localhost:9443/samlecp");
+        configuration.put("SSOService.ArtifactResolutionEndpoint", "https://localhost:9443/samlartresolve");
+        configuration.put("OAuth.OpenIDConnect.IDTokenIssuerID", "https://localhost:9443/oauth2/token");
         WhiteboxImpl.setInternalState(IdentityUtil.class, "configuration", configuration);
         saml1BearerGrantHandler.profileValidator = new SAMLSignatureProfileValidator();
         assertEquals(saml1BearerGrantHandler.validateGrant(oAuthTokenReqMessageContext), expectedResult);
