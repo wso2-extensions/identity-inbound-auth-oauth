@@ -1205,7 +1205,7 @@ public class OAuth2Util {
             if (StringUtils.isBlank(oauth2TokenEPUrl)) {
                 oauth2TokenEPUrl = IdentityUtil.getServerURL(OAUTH2_DCR_EP_URL, true, false);
             }
-            return IdentityUtil.resolveURL(oauth2TokenEPUrl, true, true);
+            return IdentityUtil.resolveURL(oauth2TokenEPUrl, true, true, false, true);
         }
 
         public static String getOAuth2JWKSPageUrl(String tenantDomain) throws URISyntaxException {
@@ -1227,7 +1227,7 @@ public class OAuth2Util {
             if (StringUtils.isBlank(auth2JWKSPageUrl)) {
                 auth2JWKSPageUrl = IdentityUtil.getServerURL(OAUTH2_JWKS_EP_URL, true, false);
             }
-            return IdentityUtil.resolveURL(auth2JWKSPageUrl, true, true);
+            return IdentityUtil.resolveURL(auth2JWKSPageUrl, true, true, false, true);
         }
 
         public static String getOidcWebFingerEPUrl() {
@@ -3121,7 +3121,8 @@ public class OAuth2Util {
                         IdentityApplicationConstants.Authenticator.OIDC.NAME);
         String idpEntityId = IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
                 IDP_ENTITY_ID).getValue();
-        if (idpEntityId.equals(IdentityUtil.getProperty("OAuth.OpenIDConnect.IDTokenIssuerID"))) {
+        if (StringUtils.isNotBlank(idpEntityId) && idpEntityId.equals(IdentityUtil.getProperty("OAuth.OpenIDConnect" +
+                ".IDTokenIssuerID"))) {
             return IdentityUtil.resolveURL(idpEntityId, tenantDomain, true, false, false, false);
         } else {
             return idpEntityId;
