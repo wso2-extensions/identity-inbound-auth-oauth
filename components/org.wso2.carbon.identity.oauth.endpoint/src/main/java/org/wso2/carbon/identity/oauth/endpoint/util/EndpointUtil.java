@@ -610,9 +610,9 @@ public class EndpointUtil {
             }
 
             if (isOIDC) {
-                consentPage = OAuth2Util.OAuthURL.getOIDCConsentPageUrl();
+                consentPage = IdentityUtil.resolveURL(OAuth2Util.OAuthURL.getOIDCConsentPageUrl(), true, true);
             } else {
-                consentPage = OAuth2Util.OAuthURL.getOAuth2ConsentPageUrl();
+                consentPage = IdentityUtil.resolveURL(OAuth2Util.OAuthURL.getOAuth2ConsentPageUrl(), true, true);
             }
             if (params != null) {
                 consentPage += "?" + OAuthConstants.OIDC_LOGGED_IN_USER + "=" + URLEncoder.encode(loggedInUser,
