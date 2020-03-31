@@ -2483,7 +2483,8 @@ public class OAuth2AuthzEndpoint {
                 if (attribute == AuthenticatorFlowStatus.INCOMPLETE) {
 
                     if (responseWrapper.isRedirect()) {
-                        oAuthMessage.getResponse().sendRedirect(responseWrapper.getRedirectURL());
+                        return Response.status(HttpServletResponse.SC_FOUND).location(
+                                new URI(responseWrapper.getRedirectURL())).build();
                     } else {
                         return Response.status(HttpServletResponse.SC_OK).entity(responseWrapper.getContent()).build();
                     }
@@ -2499,7 +2500,6 @@ public class OAuth2AuthzEndpoint {
             log.error("Error occurred while sending request to authentication framework.");
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
-        return null;
     }
 
     private String manageOIDCSessionState(HttpServletRequest request, HttpServletResponse response,
