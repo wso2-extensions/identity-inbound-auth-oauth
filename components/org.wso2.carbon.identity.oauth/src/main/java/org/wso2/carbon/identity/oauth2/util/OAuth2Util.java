@@ -1323,7 +1323,7 @@ public class OAuth2Util {
                 oidcConsentPageUrl = IdentityUtil.getServerURL(OIDC_CONSENT_EP_URL, false,
                         false);
             }
-            return oidcConsentPageUrl;
+            return IdentityUtil.resolveURL(oidcConsentPageUrl, false, false);
         }
 
         public static String getOAuth2ConsentPageUrl() {
@@ -1333,7 +1333,7 @@ public class OAuth2Util {
                 oAuth2ConsentPageUrl = IdentityUtil.getServerURL(OAUTH2_CONSENT_EP_URL, false,
                         false);
             }
-            return oAuth2ConsentPageUrl;
+            return IdentityUtil.resolveURL(oAuth2ConsentPageUrl, false, false);
         }
 
         public static String getOAuth2ErrorPageUrl() {
@@ -1342,7 +1342,7 @@ public class OAuth2Util {
             if (StringUtils.isBlank(oAuth2ErrorPageUrl)) {
                 oAuth2ErrorPageUrl = IdentityUtil.getServerURL(OAUTH2_ERROR_EP_URL, false, false);
             }
-            return oAuth2ErrorPageUrl;
+            return IdentityUtil.resolveURL(oAuth2ErrorPageUrl, false, false);
         }
 
         private static String getTenantUrl(String url, String tenantDomain) throws URISyntaxException {
