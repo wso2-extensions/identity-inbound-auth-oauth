@@ -224,7 +224,7 @@ public class OIDCSessionManagementUtil {
             oidcLogoutConsentPageUrl =
                     IdentityUtil.getServerURL("/authenticationendpoint/oauth2_logout_consent.do", false, false);
         }
-        return oidcLogoutConsentPageUrl;
+        return IdentityUtil.resolveURL(oidcLogoutConsentPageUrl, false, false);
     }
 
     /**
@@ -239,7 +239,7 @@ public class OIDCSessionManagementUtil {
             oidcLogoutPageUrl =
                     IdentityUtil.getServerURL("/authenticationendpoint/oauth2_logout.do", false, false);
         }
-        return oidcLogoutPageUrl;
+        return IdentityUtil.resolveURL(oidcLogoutPageUrl, false, false);
     }
 
     /**
@@ -266,7 +266,7 @@ public class OIDCSessionManagementUtil {
             }
         }
 
-        return errorPageUrl;
+        return IdentityUtil.resolveURL(errorPageUrl, false, false);
     }
 
     /**
