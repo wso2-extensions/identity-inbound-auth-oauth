@@ -406,7 +406,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             // no valid refresh token found in existing Token
             newTokenBean.setRefreshTokenIssuedTime(timestamp);
             newTokenBean.setRefreshTokenValidityPeriodInMillis(
-                    getRefreshTokenValidityPeriod(tokenReq.getClientId(), oAuthAppBean));
+                    getRefreshTokenValidityPeriod(tokenReq.getClientId(), oAuthAppBean, tokReqMsgCtx));
             newTokenBean.setRefreshToken(getRefreshToken(tokReqMsgCtx, oauthTokenIssuer));
         }
     }
@@ -525,9 +525,21 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
     }
 
-    private long getRefreshTokenValidityPeriod(String consumerKey, OAuthAppDO oAuthAppBean) {
+    private long getRefreshTokenValidityPeriod(String consumerKey, OAuthAppDO oAuthAppBean,
+                                               OAuthTokenReqMessageContext tokReqMsgCtx) {
         long refreshTokenValidityPeriodInMillis;
-        if (oAuthAppBean.getRefreshTokenExpiryTime() != 0) {
+        long validityPeriodFromMsgContext = tokReqMsgCtx.getRefreshTokenvalidityPeriod();
+
+        if (validityPeriodFromMsgContext != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD
+                && validityPeriodFromMsgContext > 0) {
+            refreshTokenValidityPeriodInMillis = validityPeriodFromMsgContext *
+                    SECONDS_TO_MILISECONDS_FACTOR;
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth application id : " + oAuthAppBean.getOauthConsumerKey() + ", using refresh token " +
+                        "validity period configured from OAuthTokenReqMessageContext: " +
+                        refreshTokenValidityPeriodInMillis + " ms");
+            }
+        } else if (oAuthAppBean.getRefreshTokenExpiryTime() != 0) {
             refreshTokenValidityPeriodInMillis =
                     oAuthAppBean.getRefreshTokenExpiryTime() * SECONDS_TO_MILISECONDS_FACTOR;
             if (log.isDebugEnabled()) {
