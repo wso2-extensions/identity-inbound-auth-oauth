@@ -68,6 +68,9 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationManag
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.base.IdentityRuntimeException;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityIOStreamUtils;
@@ -162,6 +165,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -1174,16 +1178,14 @@ public class OAuth2Util {
             if (StringUtils.isBlank(oauth2AuthzEPUrl)) {
                 oauth2AuthzEPUrl = IdentityUtil.getServerURL(OAUTH2_AUTHZ_EP_URL, true, false);
             }
-            return IdentityUtil.resolveURL(oauth2AuthzEPUrl, true, false);
+            return buildUrl(OAUTH2_AUTHZ_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2AuthzEPUrl, true,
+                    false);
         }
 
         public static String getOAuth2TokenEPUrl() {
 
-            String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOAuth2TokenEPUrl();
-            if (StringUtils.isBlank(oauth2TokenEPUrl)) {
-                oauth2TokenEPUrl = IdentityUtil.getServerURL(OAUTH2_TOKEN_EP_URL, true, false);
-            }
-            return IdentityUtil.resolveURL(oauth2TokenEPUrl, true, false);
+            return buildUrl(OAUTH2_TOKEN_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2TokenEPUrl, true,
+                    false);
         }
 
         /**
@@ -1258,11 +1260,8 @@ public class OAuth2Util {
 
         public static String getOidcWebFingerEPUrl() {
 
-            String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOidcWebFingerEPUrl();
-            if (StringUtils.isBlank(oauth2TokenEPUrl)) {
-                oauth2TokenEPUrl = IdentityUtil.getServerURL(OIDC_WEB_FINGER_EP_URL, true, false);
-            }
-            return IdentityUtil.resolveURL(oauth2TokenEPUrl, true, true);
+            return buildUrl(OIDC_WEB_FINGER_EP_URL, OAuthServerConfiguration.getInstance()::getOidcWebFingerEPUrl,
+                    true, false);
         }
 
         public static String getOidcDiscoveryEPUrl(String tenantDomain) throws URISyntaxException {
@@ -1281,11 +1280,8 @@ public class OAuth2Util {
 
         public static String getOAuth2UserInfoEPUrl() {
 
-            String oauth2UserInfoEPUrl = OAuthServerConfiguration.getInstance().getOauth2UserInfoEPUrl();
-            if (StringUtils.isBlank(oauth2UserInfoEPUrl)) {
-                oauth2UserInfoEPUrl = IdentityUtil.getServerURL(OAUTH2_USER_INFO_EP_URL, true, false);
-            }
-            return IdentityUtil.resolveURL(oauth2UserInfoEPUrl, true, false);
+            return buildUrl(OAUTH2_USER_INFO_EP_URL, OAuthServerConfiguration.getInstance()::getOauth2UserInfoEPUrl,
+                    true, false);
         }
 
         /**
@@ -1295,11 +1291,8 @@ public class OAuth2Util {
          */
         public static String getOAuth2RevocationEPUrl() {
 
-            String oauth2RevokeEPUrl = OAuthServerConfiguration.getInstance().getOauth2RevocationEPUrl();
-            if (StringUtils.isBlank(oauth2RevokeEPUrl)) {
-                oauth2RevokeEPUrl = IdentityUtil.getServerURL(OAUTH2_REVOKE_EP_URL, true, false);
-            }
-            return IdentityUtil.resolveURL(oauth2RevokeEPUrl, true, false);
+            return buildUrl(OAUTH2_REVOKE_EP_URL, OAuthServerConfiguration.getInstance()::getOauth2RevocationEPUrl,
+                    true, false);
         }
 
         /**
@@ -1309,11 +1302,8 @@ public class OAuth2Util {
          */
         public static String getOAuth2IntrospectionEPUrl() {
 
-            String oauth2IntrospectEPUrl = OAuthServerConfiguration.getInstance().getOauth2IntrospectionEPUrl();
-            if (StringUtils.isBlank(oauth2IntrospectEPUrl)) {
-                oauth2IntrospectEPUrl = IdentityUtil.getServerURL(OAUTH2_INTROSPECT_EP_URL, true, false);
-            }
-            return IdentityUtil.resolveURL(oauth2IntrospectEPUrl, true, false);
+            return buildUrl(OAUTH2_INTROSPECT_EP_URL,
+                    OAuthServerConfiguration.getInstance()::getOauth2IntrospectionEPUrl, true, false);
         }
 
         public static String getOIDCConsentPageUrl() {
@@ -1351,6 +1341,35 @@ public class OAuth2Util {
             URI uriModified = new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(), ("/t/" +
                     tenantDomain + uri.getPath()), uri.getQuery(), uri.getFragment());
             return uriModified.toString();
+        }
+    }
+
+    private static String buildUrl(String defaultContext, Supplier<String> getValueFromFileBasedConfig,
+                                   boolean addProxyContextPathInLegacyMode, boolean addWebContextRootInLegacyMode) {
+
+        String url;
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            url = buildTenantQualifiedUrl(defaultContext);
+        } else {
+            String oauth2EndpointURLInFile = getValueFromFileBasedConfig.get();
+            if (StringUtils.isNotBlank(oauth2EndpointURLInFile)) {
+                // Use the value configured in the file.
+                url = oauth2EndpointURLInFile;
+            } else {
+                // Use the default context.
+                url = IdentityUtil
+                        .getServerURL(defaultContext, addProxyContextPathInLegacyMode, addWebContextRootInLegacyMode);
+            }
+        }
+        return url;
+    }
+
+    private static String buildTenantQualifiedUrl(String context) {
+
+        try {
+            return ServiceURLBuilder.create().addPath(context).build().getAbsoluteURL();
+        } catch (URLBuilderException e) {
+            throw new IdentityRuntimeException("Error while building url for context: " + context);
         }
     }
 
