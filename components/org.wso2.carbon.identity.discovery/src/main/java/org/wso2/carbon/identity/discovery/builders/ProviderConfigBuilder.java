@@ -18,14 +18,12 @@
 
 package org.wso2.carbon.identity.discovery.builders;
 
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.ServerConfigurationException;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.discovery.OIDCDiscoveryEndPointException;
 import org.wso2.carbon.identity.discovery.OIDProviderConfigResponse;
 import org.wso2.carbon.identity.discovery.OIDProviderRequest;
@@ -39,6 +37,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.discovery.DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildUrl;
 
 /**
  * ProviderConfigBuilder builds the OIDProviderConfigResponse
@@ -75,8 +74,8 @@ public class ProviderConfigBuilder {
         providerConfig.setCodeChallengeMethodsSupported(OAuth2Util.getSupportedCodeChallengeMethods()
                 .toArray(new String[0]));
         try {
-            providerConfig.setRegistrationEndpoint(OAuth2Util.OAuthURL.getOAuth2DCREPUrl());
-            providerConfig.setJwksUri(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl());
+            providerConfig.setRegistrationEndpoint(OAuth2Util.OAuthURL.getOAuth2DCREPUrl(request.getTenantDomain()));
+            providerConfig.setJwksUri(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(request.getTenantDomain()));
         } catch (URISyntaxException e) {
             throw new ServerConfigurationException("Error while building tenant specific url", e);
         }
@@ -110,10 +109,9 @@ public class ProviderConfigBuilder {
 
         providerConfig.setSubjectTypesSupported(new String[]{"pairwise"});
 
-        providerConfig.setCheckSessionIframe(IdentityUtil.resolveURL(IdentityUtil.getProperty(
-                IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL), true, false));
-        providerConfig.setEndSessionEndpoint(IdentityUtil.resolveURL(IdentityUtil.getProperty(
-                IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL), true, false));
+        providerConfig.setCheckSessionIframe(buildUrl(IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL, null, true,
+                false));
+        providerConfig.setEndSessionEndpoint(buildUrl(IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL, null, true, false));
 
         try {
             providerConfig.setUserinfoSigningAlgValuesSupported(new String[] {

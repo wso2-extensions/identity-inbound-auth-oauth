@@ -1174,10 +1174,6 @@ public class OAuth2Util {
 
         public static String getOAuth2AuthzEPUrl() {
 
-            String oauth2AuthzEPUrl = OAuthServerConfiguration.getInstance().getOAuth2AuthzEPUrl();
-            if (StringUtils.isBlank(oauth2AuthzEPUrl)) {
-                oauth2AuthzEPUrl = IdentityUtil.getServerURL(OAUTH2_AUTHZ_EP_URL, true, false);
-            }
             return buildUrl(OAUTH2_AUTHZ_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2AuthzEPUrl, true,
                     false);
         }
@@ -1197,12 +1193,11 @@ public class OAuth2Util {
          */
         public static String getOAuth2DCREPUrl(String tenantDomain) throws URISyntaxException {
 
-            String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOAuth2DCREPUrl();
-            if (StringUtils.isBlank(oauth2TokenEPUrl)) {
-                oauth2TokenEPUrl = IdentityUtil.getServerURL(OAUTH2_DCR_EP_URL, true, false);
-            }
-            if (StringUtils.isNotBlank(tenantDomain) && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
-                    (tenantDomain)) {
+            String oauth2TokenEPUrl =
+                    buildUrl(OAUTH2_DCR_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2DCREPUrl, true, false);
+
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && StringUtils.isNotBlank(tenantDomain) &&
+                    !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
                 oauth2TokenEPUrl = getTenantUrl(oauth2TokenEPUrl, tenantDomain);
             }
             return oauth2TokenEPUrl;
@@ -1232,12 +1227,12 @@ public class OAuth2Util {
          */
         public static String getOAuth2JWKSPageUrl(String tenantDomain) throws URISyntaxException {
 
-            String auth2JWKSPageUrl = OAuthServerConfiguration.getInstance().getOAuth2JWKSPageUrl();
-            if (StringUtils.isBlank(auth2JWKSPageUrl)) {
-                auth2JWKSPageUrl = IdentityUtil.getServerURL(OAUTH2_JWKS_EP_URL, true, false);
-            }
-            if (StringUtils.isNotBlank(tenantDomain) && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
-                    (tenantDomain)) {
+            String auth2JWKSPageUrl = buildUrl(OAUTH2_JWKS_EP_URL,
+                    OAuthServerConfiguration.getInstance()::getOAuth2JWKSPageUrl, true, false);
+
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && StringUtils.isNotBlank(tenantDomain) &&
+                    !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
+                            (tenantDomain)) {
                 auth2JWKSPageUrl = getTenantUrl(auth2JWKSPageUrl, tenantDomain);
             }
             return auth2JWKSPageUrl;
@@ -1266,12 +1261,12 @@ public class OAuth2Util {
 
         public static String getOidcDiscoveryEPUrl(String tenantDomain) throws URISyntaxException {
 
-            String oidcDiscoveryEPUrl = OAuthServerConfiguration.getInstance().getOidcDiscoveryUrl();
-            if (StringUtils.isBlank(oidcDiscoveryEPUrl)) {
-                oidcDiscoveryEPUrl = IdentityUtil.getServerURL(OAUTH2_DISCOVERY_EP_URL, true, false);
-            }
-            if (StringUtils.isNotBlank(tenantDomain) && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
-                    (tenantDomain)) {
+            String oidcDiscoveryEPUrl = buildUrl(OAUTH2_DISCOVERY_EP_URL,
+                    OAuthServerConfiguration.getInstance()::getOidcDiscoveryUrl, true, false);
+
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && StringUtils.isNotBlank(tenantDomain) &&
+                    !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
+                            (tenantDomain)) {
                 oidcDiscoveryEPUrl = getTenantUrl(oidcDiscoveryEPUrl, tenantDomain);
             }
 
@@ -1344,7 +1339,7 @@ public class OAuth2Util {
         }
     }
 
-    private static String buildUrl(String defaultContext, Supplier<String> getValueFromFileBasedConfig,
+    public static String buildUrl(String defaultContext, Supplier<String> getValueFromFileBasedConfig,
                                    boolean addProxyContextPathInLegacyMode, boolean addWebContextRootInLegacyMode) {
 
         String url;
