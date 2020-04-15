@@ -318,6 +318,18 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
+            <xs:element name="getAuthorizationCodeValidityPeriod">
+                <xs:complexType>
+                    <xs:sequence/>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getAuthorizationCodeValidityPeriodResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="return" type="xs:long"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
             <xs:element name="getTokenExpiryTimes">
                 <xs:complexType>
                     <xs:sequence/>
@@ -397,6 +409,7 @@
                     <xs:element minOccurs="0" name="applicationAccessTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="applicationName" nillable="true" type="xs:string"/>
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="audiences" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="authorizationCodeValidityPeriod" type="xs:long"/>
                     <xs:element minOccurs="0" name="backChannelLogoutUrl" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="bypassClientCredentials" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="callbackUrl" nillable="true" type="xs:string"/>
@@ -524,6 +537,12 @@
     </wsdl:message>
     <wsdl:message name="isPKCESupportEnabledResponse">
         <wsdl:part name="parameters" element="ns1:isPKCESupportEnabledResponse"/>
+    </wsdl:message>
+    <wsdl:message name="getAuthorizationCodeValidityPeriodRequest">
+        <wsdl:part name="parameters" element="ns1:getAuthorizationCodeValidityPeriod"/>
+    </wsdl:message>
+    <wsdl:message name="getAuthorizationCodeValidityPeriodResponse">
+        <wsdl:part name="parameters" element="ns1:getAuthorizationCodeValidityPeriodResponse"/>
     </wsdl:message>
     <wsdl:message name="isRefreshTokenRenewalEnabledRequest">
         <wsdl:part name="parameters" element="ns1:isRefreshTokenRenewalEnabled"/>
@@ -688,6 +707,10 @@
         <wsdl:operation name="isPKCESupportEnabled">
             <wsdl:input message="tns:isPKCESupportEnabledRequest" wsaw:Action="urn:isPKCESupportEnabled"/>
             <wsdl:output message="tns:isPKCESupportEnabledResponse" wsaw:Action="urn:isPKCESupportEnabledResponse"/>
+        </wsdl:operation>
+        <wsdl:operation name="getAuthorizationCodeValidityPeriod">
+            <wsdl:input message="tns:getAuthorizationCodeValidityPeriodRequest" wsaw:Action="urn:getAuthorizationCodeValidityPeriod"/>
+            <wsdl:output message="tns:getAuthorizationCodeValidityPeriodResponse" wsaw:Action="urn:getAuthorizationCodeValidityPeriodResponse"/>
         </wsdl:operation>
         <wsdl:operation name="isRefreshTokenRenewalEnabled">
             <wsdl:input message="tns:isRefreshTokenRenewalEnabledRequest" wsaw:Action="urn:isRefreshTokenRenewalEnabled"/>
@@ -905,6 +928,15 @@
         </wsdl:operation>
         <wsdl:operation name="isPKCESupportEnabled">
             <soap:operation soapAction="urn:isPKCESupportEnabled" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="getAuthorizationCodeValidityPeriod">
+            <soap:operation soapAction="urn:getAuthorizationCodeValidityPeriod" style="document"/>
             <wsdl:input>
                 <soap:body use="literal"/>
             </wsdl:input>
@@ -1266,6 +1298,15 @@
                 <soap12:body use="literal"/>
             </wsdl:output>
         </wsdl:operation>
+        <wsdl:operation name="getAuthorizationCodeValidityPeriod">
+            <soap12:operation soapAction="urn:getAuthorizationCodeValidityPeriod" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
         <wsdl:operation name="isRefreshTokenRenewalEnabled">
             <soap12:operation soapAction="urn:isRefreshTokenRenewalEnabled" style="document"/>
             <wsdl:input>
@@ -1589,6 +1630,15 @@
         </wsdl:operation>
         <wsdl:operation name="isPKCESupportEnabled">
             <http:operation location="isPKCESupportEnabled"/>
+            <wsdl:input>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:input>
+            <wsdl:output>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="getAuthorizationCodeValidityPeriod">
+            <http:operation location="getAuthorizationCodeValidityPeriod"/>
             <wsdl:input>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:input>

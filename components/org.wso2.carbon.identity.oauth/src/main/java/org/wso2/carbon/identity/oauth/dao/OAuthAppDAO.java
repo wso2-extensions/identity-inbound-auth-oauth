@@ -61,6 +61,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHORIZATION_CODE_VALIDITY_PERIOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_URL;
@@ -613,6 +614,10 @@ public class OAuthAppDAO {
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, TOKEN_BINDING_TYPE,
                 oauthAppDO.getTokenBindingType(), prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                AUTHORIZATION_CODE_VALIDITY_PERIOD, String.valueOf(oauthAppDO.getAuthorizationCodeValidityPeriod()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
         preparedStatementForPropertyUpdate.executeBatch();
@@ -1050,6 +1055,10 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty, TOKEN_BINDING_TYPE,
                     consumerAppDO.getTokenBindingType());
 
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    AUTHORIZATION_CODE_VALIDITY_PERIOD,
+                    String.valueOf(consumerAppDO.getAuthorizationCodeValidityPeriod()));
+
             prepStmtAddOIDCProperty.executeBatch();
         }
     }
@@ -1135,6 +1144,17 @@ public class OAuthAppDAO {
 
         String renewRefreshToken = getFirstPropertyValue(spOIDCProperties, RENEW_REFRESH_TOKEN);
         oauthApp.setRenewRefreshTokenEnabled(renewRefreshToken);
+
+        long authorizationCodeValidityPeriod;
+        String authorizationCodeValidityPeriodProperty = getFirstPropertyValue(spOIDCProperties,
+                AUTHORIZATION_CODE_VALIDITY_PERIOD);
+        if (StringUtils.isNotBlank(authorizationCodeValidityPeriodProperty)) {
+            authorizationCodeValidityPeriod = Long.parseLong(authorizationCodeValidityPeriodProperty);
+        } else {
+            authorizationCodeValidityPeriod = OAuthServerConfiguration.getInstance()
+                    .getAuthorizationCodeValidityPeriodInSeconds();
+        }
+        oauthApp.setAuthorizationCodeValidityPeriod(authorizationCodeValidityPeriod);
 
     }
 

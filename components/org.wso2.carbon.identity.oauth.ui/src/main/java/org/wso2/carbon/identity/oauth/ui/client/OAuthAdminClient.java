@@ -186,6 +186,11 @@ public class OAuthAdminClient {
         stub.updateConsumerAppState(consumerKey, newState);
     }
 
+    public long getAuthorizationCodeValidityPeriod() throws RemoteException {
+
+        return stub.getAuthorizationCodeValidityPeriod();
+    }
+
     public OAuthTokenExpiryTimeDTO getOAuthTokenExpiryTimeDTO() throws RemoteException {
 
         return stub.getTokenExpiryTimes();

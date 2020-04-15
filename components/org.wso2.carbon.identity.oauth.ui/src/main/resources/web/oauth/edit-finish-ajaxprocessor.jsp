@@ -56,6 +56,7 @@
     String applicationName = request.getParameter("application");
     String consumersecret = request.getParameter("consumersecret");
     String oauthVersion = request.getParameter("oauthVersion");
+    String authorizationCodeValidityPeriod = request.getParameter("authorizationCodeValidityPeriod");
     String userAccessTokenExpiryTime = request.getParameter("userAccessTokenExpiryTime");
     String applicationAccessTokenExpiryTime = request.getParameter("applicationAccessTokenExpiryTime");
     String refreshTokenExpiryTime = request.getParameter("refreshTokenExpiryTime");
@@ -116,6 +117,7 @@
             app.setOAuthVersion(oauthVersion);
             app.setPkceMandatory(pkceMandatory);
             app.setPkceSupportPlain(pkceSupportPlain);
+            app.setAuthorizationCodeValidityPeriod(Long.parseLong(authorizationCodeValidityPeriod));
             app.setUserAccessTokenExpiryTime(Long.parseLong(userAccessTokenExpiryTime));
             app.setApplicationAccessTokenExpiryTime(Long.parseLong(applicationAccessTokenExpiryTime));
             app.setRefreshTokenExpiryTime(Long.parseLong(refreshTokenExpiryTime));

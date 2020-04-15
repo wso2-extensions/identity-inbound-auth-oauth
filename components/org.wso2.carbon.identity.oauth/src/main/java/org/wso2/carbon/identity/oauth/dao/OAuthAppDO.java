@@ -51,6 +51,7 @@ public class OAuthAppDO implements Serializable {
     private boolean pkceSupportPlain;
     private boolean pkceMandatory;
     private String state;
+    private long authorizationCodeValidityPeriod;
     private long userAccessTokenExpiryTime;
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
@@ -183,6 +184,16 @@ public class OAuthAppDO implements Serializable {
 
     public String getState() {
         return state;
+    }
+
+    public long getAuthorizationCodeValidityPeriod() {
+
+        return authorizationCodeValidityPeriod;
+    }
+
+    public void setAuthorizationCodeValidityPeriod(long authorizationCodeValidityPeriod) {
+
+        this.authorizationCodeValidityPeriod = authorizationCodeValidityPeriod;
     }
 
     public long getUserAccessTokenExpiryTime() {

@@ -351,6 +351,7 @@
                         $(jQuery('#access_token_type_row')).hide();
                         $(jQuery("#pkce_enable").hide());
                         $(jQuery("#pkce_support_plain").hide());
+                        $(jQuery('#authorizationCodePlain').hide());
                         $(jQuery('#userAccessTokenPlain').hide());
                         $(jQuery('#applicationAccessTokenPlain').hide());
                         $(jQuery('#refreshTokenPlain').hide());
@@ -374,6 +375,7 @@
                         $(jQuery('#grant_row')).show();
                         $(jQuery('#scope_validator_row')).show();
                         $(jQuery('#access_token_type_row')).show();
+                        $(jQuery('#authorizationCodePlain').show());
                         $(jQuery('#userAccessTokenPlain').show());
                         $(jQuery('#applicationAccessTokenPlain').show());
                         $(jQuery('#refreshTokenPlain').show());
@@ -830,6 +832,14 @@
                                                 }
                                             %>
                                         </table>
+                                    </td>
+                                </tr>
+                                <tr id="authorizationCodePlain">
+                                    <td class="leftCol-med"><fmt:message key='authorization.code.validity.period'/></td>
+                                    <td><input id="authorizationCodeValidityPeriod" name="authorizationCodeValidityPeriod"
+                                               type="text"
+                                               value="<%=Encode.forHtmlAttribute(Long.toString(app.getAuthorizationCodeValidityPeriod()))%>"/>
+                                        <fmt:message key='seconds'/>
                                     </td>
                                 </tr>
                                 <tr id="userAccessTokenPlain">

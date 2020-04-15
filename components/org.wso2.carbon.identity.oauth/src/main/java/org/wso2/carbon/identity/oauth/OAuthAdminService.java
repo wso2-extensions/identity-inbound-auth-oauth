@@ -425,6 +425,16 @@ public class OAuthAdminService extends AbstractAdmin {
         return oAuthAdminServiceImpl.isPKCESupportEnabled();
     }
 
+    /**
+     * Get the authorization code validity period property value from identity.xml file.
+     *
+     * @return authorization code validity period property value
+     */
+    public long getAuthorizationCodeValidityPeriod() {
+
+        return oAuthAdminServiceImpl.getAuthorizationCodeValidityPeriod();
+    }
+
     public OAuthTokenExpiryTimeDTO getTokenExpiryTimes() {
 
         return oAuthAdminServiceImpl.getTokenExpiryTimes();

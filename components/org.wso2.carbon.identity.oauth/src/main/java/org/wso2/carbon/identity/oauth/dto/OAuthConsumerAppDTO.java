@@ -34,6 +34,7 @@ public class OAuthConsumerAppDTO {
     private boolean pkceSupportPlain;
     private boolean pkceMandatory;
     private String state;
+    private long authorizationCodeValidityPeriod;
     private long userAccessTokenExpiryTime;
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
@@ -50,6 +51,16 @@ public class OAuthConsumerAppDTO {
     private long idTokenExpiryTime;
     private String tokenType;
     private String tokenBindingType;
+
+    public long getAuthorizationCodeValidityPeriod() {
+
+        return authorizationCodeValidityPeriod;
+    }
+
+    public void setAuthorizationCodeValidityPeriod(long authorizationCodeValidityPeriod) {
+        
+        this.authorizationCodeValidityPeriod = authorizationCodeValidityPeriod;
+    }
 
     public long getUserAccessTokenExpiryTime() {
         return userAccessTokenExpiryTime;

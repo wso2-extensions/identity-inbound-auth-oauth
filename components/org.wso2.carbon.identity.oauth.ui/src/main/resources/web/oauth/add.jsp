@@ -149,6 +149,7 @@
                     var callbackUrl = document.getElementById('callback').value;
                     var oidcLogoutType = $('input[name=logoutMechanism]:checked').val();
                     var oidcLogoutUrl = document.getElementById('logout_url').value;
+                    var authorizationCodeValidityPeriod = document.getElementById("authorizationCodeValidityPeriod").value;
                     var userTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var applicationTokenExpiryTime = document.getElementById("userAccessTokenExpiryTime").value;
                     var refreshTokenExpiryTime = document.getElementById("refreshTokenExpiryTime").value;
@@ -199,6 +200,10 @@
                                 }
                             }
                         }
+                        if (!isWhiteListed(authorizationCodeValidityPeriod, ["digits-only"])) {
+                            CARBON.showWarningDialog('<fmt:message key="invalid.authorization.code.validity.period"/>');
+                            return false;
+                        }
                         if (!isWhiteListed(userTokenExpiryTime, ["digits-only"])) {
                             CARBON.showWarningDialog('<fmt:message key="invalid.user.access.token.expiry.time"/>');
                             return false;
@@ -236,6 +241,7 @@
                         $(jQuery('#access_token_type_row')).hide();
                         $(jQuery("#pkce_enable").hide());
                         $(jQuery("#pkce_support_plain").hide());
+                        $(jQuery('#authorizationCodePlain').hide());
                         $(jQuery('#userAccessTokenPlain').hide());
                         $(jQuery('#applicationAccessTokenPlain').hide());
                         $(jQuery('#refreshTokenPlain').hide());
@@ -261,6 +267,7 @@
                         $(jQuery('#access_token_type_row')).show();
                         $(jQuery("#pkce_enable").show());
                         $(jQuery("#pkce_support_plain").show());
+                        $(jQuery('#authorizationCodePlain').show());
                         $(jQuery('#userAccessTokenPlain').show());
                         $(jQuery('#applicationAccessTokenPlain').show());
                         $(jQuery('#refreshTokenPlain').show());
@@ -683,6 +690,14 @@
                                                 }
                                             %>
                                         </table>
+                                    </td>
+                                </tr>
+                                <tr id="authorizationCodePlain">
+                                    <td class="leftCol-med"><fmt:message key='authorization.code.validity.period'/></td>
+                                    <td><input id="authorizationCodeValidityPeriod" name="authorizationCodeValidityPeriod"
+                                               type="text"
+                                               value="<%=client.getAuthorizationCodeValidityPeriod()%>"/>
+                                        <fmt:message key='seconds'/>
                                     </td>
                                 </tr>
                                 <tr id="userAccessTokenPlain">

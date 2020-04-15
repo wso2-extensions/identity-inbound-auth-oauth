@@ -54,6 +54,7 @@
     String applicationName = request.getParameter("application");
     String callback = request.getParameter("callback");
     String oauthVersion = request.getParameter("oauthVersion");
+    String authorizationCodeValidityPeriod = request.getParameter("authorizationCodeValidityPeriod");
     String userAccessTokenExpiryTime = request.getParameter("userAccessTokenExpiryTime");
     String applicationAccessTokenExpiryTime = request.getParameter("applicationAccessTokenExpiryTime");
     String refreshTokenExpiryTime = request.getParameter("refreshTokenExpiryTime");
@@ -109,6 +110,7 @@
             app.setApplicationName(applicationName);
             app.setCallbackUrl(callback);
             app.setOAuthVersion(oauthVersion);
+            app.setAuthorizationCodeValidityPeriod(Long.parseLong(authorizationCodeValidityPeriod));
             app.setUserAccessTokenExpiryTime(Long.parseLong(userAccessTokenExpiryTime));
             app.setApplicationAccessTokenExpiryTime(Long.parseLong(applicationAccessTokenExpiryTime));
             app.setRefreshTokenExpiryTime(Long.parseLong(refreshTokenExpiryTime));

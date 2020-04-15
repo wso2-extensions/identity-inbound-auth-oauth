@@ -269,6 +269,9 @@ public class OAuthAdminServiceImpl {
                     app.setAudiences(application.getAudiences());
                     app.setPkceMandatory(application.getPkceMandatory());
                     app.setPkceSupportPlain(application.getPkceSupportPlain());
+                    // Validate authorization code validity period configuration.
+                    validateAuthorizationCodeValidityPeriodConfiguration(application);
+                    app.setAuthorizationCodeValidityPeriod(application.getAuthorizationCodeValidityPeriod());
                     // Validate access token expiry configurations.
                     validateTokenExpiryConfigurations(application);
                     app.setUserAccessTokenExpiryTime(application.getUserAccessTokenExpiryTime());
@@ -1223,6 +1226,16 @@ public class OAuthAdminServiceImpl {
         return OAuthComponentServiceHolder.getInstance().getTokenBindingMetaDataDTOs();
     }
 
+    /**
+     * Get the authorization code validity period property value from identity.xml file.
+     *
+     * @return authorization code validity period property value
+     */
+    public long getAuthorizationCodeValidityPeriod() {
+
+        return OAuthServerConfiguration.getInstance().getAuthorizationCodeValidityPeriodInSeconds();
+    }
+
     public OAuthTokenExpiryTimeDTO getTokenExpiryTimes() {
 
         OAuthTokenExpiryTimeDTO tokenExpiryTime = new OAuthTokenExpiryTimeDTO();
@@ -1246,38 +1259,51 @@ public class OAuthAdminServiceImpl {
         return user;
     }
 
+    void validateAuthorizationCodeValidityPeriodConfiguration(OAuthConsumerAppDTO oAuthConsumerAppDTO) {
+
+        if (oAuthConsumerAppDTO.getAuthorizationCodeValidityPeriod() == 0) {
+            oAuthConsumerAppDTO.setAuthorizationCodeValidityPeriod(
+                    OAuthServerConfiguration.getInstance().getAuthorizationCodeValidityPeriodInSeconds());
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Invalid value '0' set for authorization code validity period in ServiceProvider: "
+                        + oAuthConsumerAppDTO.getApplicationName() + ". Defaulting to expiry value: "
+                        + oAuthConsumerAppDTO.getAuthorizationCodeValidityPeriod() + " seconds.");
+            }
+        }
+    }
+
     void validateTokenExpiryConfigurations(OAuthConsumerAppDTO oAuthConsumerAppDTO) {
 
         if (oAuthConsumerAppDTO.getUserAccessTokenExpiryTime() == 0) {
             oAuthConsumerAppDTO.setUserAccessTokenExpiryTime(
                     OAuthServerConfiguration.getInstance().getUserAccessTokenValidityPeriodInSeconds());
-            logOnInvalidConfig(oAuthConsumerAppDTO.getApplicationName(), "user access token",
+            logOnInvalidTokenExpiryConfig(oAuthConsumerAppDTO.getApplicationName(), "user access token",
                     oAuthConsumerAppDTO.getUserAccessTokenExpiryTime());
         }
 
         if (oAuthConsumerAppDTO.getApplicationAccessTokenExpiryTime() == 0) {
             oAuthConsumerAppDTO.setApplicationAccessTokenExpiryTime(
                     OAuthServerConfiguration.getInstance().getApplicationAccessTokenValidityPeriodInSeconds());
-            logOnInvalidConfig(oAuthConsumerAppDTO.getApplicationName(), "application access token",
+            logOnInvalidTokenExpiryConfig(oAuthConsumerAppDTO.getApplicationName(), "application access token",
                     oAuthConsumerAppDTO.getApplicationAccessTokenExpiryTime());
         }
 
         if (oAuthConsumerAppDTO.getRefreshTokenExpiryTime() == 0) {
             oAuthConsumerAppDTO.setRefreshTokenExpiryTime(
                     OAuthServerConfiguration.getInstance().getRefreshTokenValidityPeriodInSeconds());
-            logOnInvalidConfig(oAuthConsumerAppDTO.getApplicationName(), "refresh token",
+            logOnInvalidTokenExpiryConfig(oAuthConsumerAppDTO.getApplicationName(), "refresh token",
                     oAuthConsumerAppDTO.getRefreshTokenExpiryTime());
         }
 
         if (oAuthConsumerAppDTO.getIdTokenExpiryTime() == 0) {
             oAuthConsumerAppDTO.setIdTokenExpiryTime(
                     OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenExpiryTimeInSeconds());
-            logOnInvalidConfig(oAuthConsumerAppDTO.getApplicationName(), "id token",
+            logOnInvalidTokenExpiryConfig(oAuthConsumerAppDTO.getApplicationName(), "id token",
                     oAuthConsumerAppDTO.getIdTokenExpiryTime());
         }
     }
 
-    void logOnInvalidConfig(String appName, String tokenType, long defaultValue) {
+    void logOnInvalidTokenExpiryConfig(String appName, String tokenType, long defaultValue) {
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("Invalid expiry time value '0' set for token type: " + tokenType + " in ServiceProvider: " +

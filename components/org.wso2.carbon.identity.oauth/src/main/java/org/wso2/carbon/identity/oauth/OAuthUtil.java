@@ -309,6 +309,7 @@ public final class OAuthUtil {
         dto.setState(appDO.getState());
         dto.setPkceMandatory(appDO.isPkceMandatory());
         dto.setPkceSupportPlain(appDO.isPkceSupportPlain());
+        dto.setAuthorizationCodeValidityPeriod(appDO.getAuthorizationCodeValidityPeriod());
         dto.setUserAccessTokenExpiryTime(appDO.getUserAccessTokenExpiryTime());
         dto.setApplicationAccessTokenExpiryTime(appDO.getApplicationAccessTokenExpiryTime());
         dto.setRefreshTokenExpiryTime(appDO.getRefreshTokenExpiryTime());

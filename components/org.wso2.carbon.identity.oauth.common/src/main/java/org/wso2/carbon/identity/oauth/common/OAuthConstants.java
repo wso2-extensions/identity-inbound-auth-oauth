@@ -118,6 +118,7 @@ public final class OAuthConstants {
     //Constants used for OAuth/OpenID Connect Configuration UI
     public static final String CALLBACK_URL_REGEXP_PREFIX = "regexp=";
 
+    public static final String AUTHORIZATION_CODE_VALIDITY_PERIOD = "authorizationCodeValidityPeriod";
     public static final String AUTHORIZATION_CODE_STORE_TABLE = "IDN_OAUTH2_AUTHORIZATION_CODE";
 
     //Constants used for OAuth Secret Revoke and Regeneration
