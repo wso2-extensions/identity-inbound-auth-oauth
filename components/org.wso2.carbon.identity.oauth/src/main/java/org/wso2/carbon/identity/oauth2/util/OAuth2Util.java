@@ -1204,21 +1204,6 @@ public class OAuth2Util {
         }
 
         /**
-         * This method is used to get the resolved URL for the OAuth2 Registration Endpoint.
-         *
-         * @return String of the resolved URL for the Registration endpoint.
-         * @throws URISyntaxException URI Syntax Exception.
-         */
-        public static String getOAuth2DCREPUrl() throws URISyntaxException {
-
-            String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOAuth2DCREPUrl();
-            if (StringUtils.isBlank(oauth2TokenEPUrl)) {
-                oauth2TokenEPUrl = IdentityUtil.getServerURL(OAUTH2_DCR_EP_URL, true, false);
-            }
-            return IdentityUtil.resolveURL(oauth2TokenEPUrl, true, true, false, true);
-        }
-
-        /**
          * This method is used to get the resolved URL for the JWKS Page.
          *
          * @param tenantDomain Tenant Domain.
@@ -1339,14 +1324,28 @@ public class OAuth2Util {
         }
     }
 
+    /**
+     * Builds a URL with a given context in both the tenant-qualified url supported mode and the legacy mode. Returns
+     * the absolute URL build from the default context in the tenant-qualified url supported mode and returns the
+     * absolute url build from file configuration context, proxy context path and web context path.
+     *
+     * @param defaultContext                  Default URL context.
+     * @param getValueFromFileBasedConfig     File-based Configuration.
+     * @param addProxyContextPathInLegacyMode Add proxy context path to the URL.
+     * @param addWebContextRootInLegacyMode   Add web context path to the URL.
+     * @return Absolute URL.
+     */
     public static String buildUrl(String defaultContext, Supplier<String> getValueFromFileBasedConfig,
-                                   boolean addProxyContextPathInLegacyMode, boolean addWebContextRootInLegacyMode) {
+                                  boolean addProxyContextPathInLegacyMode, boolean addWebContextRootInLegacyMode) {
 
         String url;
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
             url = buildTenantQualifiedUrl(defaultContext);
         } else {
-            String oauth2EndpointURLInFile = getValueFromFileBasedConfig.get();
+            String oauth2EndpointURLInFile = null;
+            if (getValueFromFileBasedConfig != null) {
+                oauth2EndpointURLInFile = getValueFromFileBasedConfig.get();
+            }
             if (StringUtils.isNotBlank(oauth2EndpointURLInFile)) {
                 // Use the value configured in the file.
                 url = oauth2EndpointURLInFile;
@@ -1362,7 +1361,7 @@ public class OAuth2Util {
     private static String buildTenantQualifiedUrl(String context) {
 
         try {
-            return ServiceURLBuilder.create().addPath(context).build().getAbsoluteURL();
+            return ServiceURLBuilder.create().addPath(context).build().getAbsolutePublicURL();
         } catch (URLBuilderException e) {
             throw new IdentityRuntimeException("Error while building url for context: " + context);
         }
@@ -3159,14 +3158,8 @@ public class OAuth2Util {
         FederatedAuthenticatorConfig oidcAuthenticatorConfig =
                 IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
                         IdentityApplicationConstants.Authenticator.OIDC.NAME);
-        String idpEntityId = IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
+        return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
                 IDP_ENTITY_ID).getValue();
-        if (StringUtils.isNotBlank(idpEntityId) && idpEntityId.equals(IdentityUtil.getProperty("OAuth.OpenIDConnect" +
-                ".IDTokenIssuerID"))) {
-            return IdentityUtil.resolveURL(idpEntityId, tenantDomain, true, false, false, false);
-        } else {
-            return idpEntityId;
-        }
     }
 
     private static IdentityProvider getResidentIdp(String tenantDomain) throws IdentityOAuth2Exception {
