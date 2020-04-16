@@ -94,6 +94,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     private static final String CALLBACK = "http://localhost:8080/redirect";
     private static final String[] SCOPE_VALIDATORS = {"org.wso2.carbon.identity.oauth2.validators.JDBCScopeValidator",
             "org.wso2.carbon.identity.oauth2.validators.XACMLScopeValidator"};
+    private static final int AUTHORIZATION_CODE_VALIDITY_PERIOD = 300;
     private static final int USER_ACCESS_TOKEN_EXPIRY_TIME = 3000;
     private static final int APPLICATION_ACCESS_TOKEN_EXPIRY_TIME = 2000;
     private static final int REFRESH_TOKEN_EXPIRY_TIME = 10000;
@@ -548,6 +549,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             defaultOAuthAppDO.setRequestObjectSignatureValidationEnabled(true);
             defaultOAuthAppDO.setBackChannelLogoutUrl(backChannelLogoutUrl);
             defaultOAuthAppDO.setRenewRefreshTokenEnabled(String.valueOf(isRenewRefreshEnabled));
+            defaultOAuthAppDO.setAuthorizationCodeValidityPeriod(AUTHORIZATION_CODE_VALIDITY_PERIOD);
 
             addOAuthApplication(defaultOAuthAppDO);
 
@@ -558,6 +560,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             assertEquals(oAuthAppDO.isRequestObjectSignatureValidationEnabled(), true);
             assertEquals(oAuthAppDO.getBackChannelLogoutUrl(), backChannelLogoutUrl);
             assertEquals(oAuthAppDO.getRenewRefreshTokenEnabled(), String.valueOf(isRenewRefreshEnabled));
+            assertEquals(oAuthAppDO.getAuthorizationCodeValidityPeriod(),  AUTHORIZATION_CODE_VALIDITY_PERIOD);
         }
     }
 
