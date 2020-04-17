@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.internal;
 
+import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
@@ -47,6 +48,7 @@ public class OAuth2ServiceComponentHolder {
     private static boolean idpIdColumnEnabled = false;
     private List<TokenBinder> tokenBinders = new ArrayList<>();
     private OAuthAdminServiceImpl oauthAdminService;
+    private static AuthenticationDataPublisher authenticationDataPublisherProxy;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -197,5 +199,26 @@ public class OAuth2ServiceComponentHolder {
     public void setOAuthAdminService(OAuthAdminServiceImpl oauthAdminService) {
 
         this.oauthAdminService = oauthAdminService;
+    }
+
+    /**
+     * Set Authentication Data Publisher Proxy instance.
+     *
+     * @param authenticationDataPublisherProxy
+     */
+    public static void setAuthenticationDataPublisherProxy(AuthenticationDataPublisher
+                                                                   authenticationDataPublisherProxy) {
+
+        OAuth2ServiceComponentHolder.authenticationDataPublisherProxy = authenticationDataPublisherProxy;
+    }
+
+    /**
+     * Get the Authentication Data Publisher Proxy instance.
+     *
+     * @return authenticationDataPublisherProxy instance.
+     */
+    public static AuthenticationDataPublisher getAuthenticationDataPublisherProxy() {
+
+        return OAuth2ServiceComponentHolder.authenticationDataPublisherProxy;
     }
 }

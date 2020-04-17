@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthent
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -51,6 +52,7 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static org.wso2.carbon.user.core.UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
 
 @PrepareForTest(
         {
@@ -59,7 +61,8 @@ import static org.testng.Assert.fail;
                 IdentityTenantUtil.class,
                 UserCoreUtil.class,
                 OAuthComponentServiceHolder.class,
-                OAuthServerConfiguration.class
+                OAuthServerConfiguration.class,
+                IdentityUtil.class
         }
 )
 public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
@@ -176,6 +179,11 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(CLIENT_ID);
         when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn("carbon.super");
         when(oAuth2AccessTokenReqDTO.getResourceOwnerPassword()).thenReturn("password");
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.extractDomainFromName(anyString())).thenReturn(PRIMARY_DEFAULT_DOMAIN_NAME);
+
+        when(MultitenantUtils.getTenantAwareUsername(anyString())).thenReturn("username");
 
         mockStatic(OAuth2ServiceComponentHolder.class);
         when(OAuth2ServiceComponentHolder.getApplicationMgtService()).thenReturn(applicationManagementService);
