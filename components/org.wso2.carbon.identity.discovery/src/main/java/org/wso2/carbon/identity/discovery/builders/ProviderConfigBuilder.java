@@ -52,9 +52,10 @@ public class ProviderConfigBuilder {
     public OIDProviderConfigResponse buildOIDProviderConfig(OIDProviderRequest request) throws
             OIDCDiscoveryEndPointException, ServerConfigurationException {
         OIDProviderConfigResponse providerConfig = new OIDProviderConfigResponse();
+        String tenantDomain = request.getTenantDomain();
         if (isUseEntityIdAsIssuerInOidcDiscovery()) {
             try {
-                providerConfig.setIssuer(OAuth2Util.getIdTokenIssuer(request.getTenantDomain()));
+                providerConfig.setIssuer(OAuth2Util.getIdTokenIssuer(tenantDomain));
             } catch (IdentityOAuth2Exception e) {
                 throw new ServerConfigurationException("Error while retrieving OIDC Id token issue", e);
             }
@@ -74,16 +75,16 @@ public class ProviderConfigBuilder {
         providerConfig.setCodeChallengeMethodsSupported(OAuth2Util.getSupportedCodeChallengeMethods()
                 .toArray(new String[0]));
         try {
-            providerConfig.setRegistrationEndpoint(OAuth2Util.OAuthURL.getOAuth2DCREPUrl(request.getTenantDomain()));
-            providerConfig.setJwksUri(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(request.getTenantDomain()));
+            providerConfig.setRegistrationEndpoint(OAuth2Util.OAuthURL.getOAuth2DCREPUrl(tenantDomain));
+            providerConfig.setJwksUri(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(tenantDomain));
         } catch (URISyntaxException e) {
             throw new ServerConfigurationException("Error while building tenant specific url", e);
         }
-        List<String> scopes = OAuth2Util.getOIDCScopes(request.getTenantDomain());
+        List<String> scopes = OAuth2Util.getOIDCScopes(tenantDomain);
         providerConfig.setScopesSupported(scopes.toArray(new String[scopes.size()]));
         try {
             List<ExternalClaim> claims = OIDCDiscoveryDataHolder.getInstance().getClaimManagementService()
-                    .getExternalClaims(OIDC_CLAIM_DIALECT, request.getTenantDomain());
+                    .getExternalClaims(OIDC_CLAIM_DIALECT, tenantDomain);
             String[] claimArray = new String[claims.size() + 2];
             int i;
             for (i = 0; i < claims.size(); i++) {
@@ -109,8 +110,8 @@ public class ProviderConfigBuilder {
 
         providerConfig.setSubjectTypesSupported(new String[]{"pairwise"});
 
-        providerConfig.setCheckSessionIframe(buildUrl(IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL, null));
-        providerConfig.setEndSessionEndpoint(buildUrl(IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL, null));
+        providerConfig.setCheckSessionIframe(buildUrl(IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL));
+        providerConfig.setEndSessionEndpoint(buildUrl(IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL));
 
         try {
             providerConfig.setUserinfoSigningAlgValuesSupported(new String[] {
