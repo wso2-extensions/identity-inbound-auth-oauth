@@ -109,9 +109,8 @@ public class ProviderConfigBuilder {
 
         providerConfig.setSubjectTypesSupported(new String[]{"pairwise"});
 
-        providerConfig.setCheckSessionIframe(buildUrl(IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL, null, true,
-                false));
-        providerConfig.setEndSessionEndpoint(buildUrl(IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL, null, true, false));
+        providerConfig.setCheckSessionIframe(buildUrl(IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL, null));
+        providerConfig.setEndSessionEndpoint(buildUrl(IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL, null));
 
         try {
             providerConfig.setUserinfoSigningAlgValuesSupported(new String[] {

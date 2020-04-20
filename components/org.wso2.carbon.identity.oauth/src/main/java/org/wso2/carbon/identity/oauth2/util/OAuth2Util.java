@@ -1330,9 +1330,13 @@ public class OAuth2Util {
      */
     public static String buildUrl(String defaultContext, Supplier<String> getValueFromFileBasedConfig) {
 
-        String url;
+        String url = null;
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            url = buildServiceUrl(defaultContext);
+            try {
+                url = buildServiceUrl(defaultContext);
+            } catch (URLBuilderException e) {
+                throw new IdentityRuntimeException("Error while building url for context: " + defaultContext);
+            }
         } else {
             String oauth2EndpointURLInFile = null;
             if (getValueFromFileBasedConfig != null) {
@@ -1343,19 +1347,19 @@ public class OAuth2Util {
                 url = oauth2EndpointURLInFile;
             } else {
                 // Use the default context.
-                url = buildServiceUrl(defaultContext);
+                try {
+                    url = buildServiceUrl(defaultContext);
+                } catch (URLBuilderException e) {
+                    throw new IdentityRuntimeException("Error while building url for context: " + defaultContext);
+                }
             }
         }
         return url;
     }
 
-    private static String buildServiceUrl(String context) {
+    private static String buildServiceUrl(String context) throws URLBuilderException {
 
-        try {
-            return ServiceURLBuilder.create().addPath(context).build().getAbsolutePublicURL();
-        } catch (URLBuilderException e) {
-            throw new IdentityRuntimeException("Error while building url for context: " + context);
-        }
+        return ServiceURLBuilder.create().addPath(context).build().getAbsolutePublicURL();
     }
 
     public static boolean isOIDCAuthzRequest(Set<String> scope) {
