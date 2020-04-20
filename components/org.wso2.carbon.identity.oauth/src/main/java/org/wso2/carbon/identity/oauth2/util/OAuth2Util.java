@@ -1174,14 +1174,12 @@ public class OAuth2Util {
 
         public static String getOAuth2AuthzEPUrl() {
 
-            return buildUrl(OAUTH2_AUTHZ_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2AuthzEPUrl, true,
-                    false);
+            return buildUrl(OAUTH2_AUTHZ_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2AuthzEPUrl);
         }
 
         public static String getOAuth2TokenEPUrl() {
 
-            return buildUrl(OAUTH2_TOKEN_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2TokenEPUrl, true,
-                    false);
+            return buildUrl(OAUTH2_TOKEN_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2TokenEPUrl);
         }
 
         /**
@@ -1194,7 +1192,7 @@ public class OAuth2Util {
         public static String getOAuth2DCREPUrl(String tenantDomain) throws URISyntaxException {
 
             String oauth2TokenEPUrl =
-                    buildUrl(OAUTH2_DCR_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2DCREPUrl, true, false);
+                    buildUrl(OAUTH2_DCR_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2DCREPUrl);
 
             if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && StringUtils.isNotBlank(tenantDomain) &&
                     !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
@@ -1213,7 +1211,7 @@ public class OAuth2Util {
         public static String getOAuth2JWKSPageUrl(String tenantDomain) throws URISyntaxException {
 
             String auth2JWKSPageUrl = buildUrl(OAUTH2_JWKS_EP_URL,
-                    OAuthServerConfiguration.getInstance()::getOAuth2JWKSPageUrl, true, false);
+                    OAuthServerConfiguration.getInstance()::getOAuth2JWKSPageUrl);
 
             if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && StringUtils.isNotBlank(tenantDomain) &&
                     !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
@@ -1240,14 +1238,13 @@ public class OAuth2Util {
 
         public static String getOidcWebFingerEPUrl() {
 
-            return buildUrl(OIDC_WEB_FINGER_EP_URL, OAuthServerConfiguration.getInstance()::getOidcWebFingerEPUrl,
-                    true, false);
+            return buildUrl(OIDC_WEB_FINGER_EP_URL, OAuthServerConfiguration.getInstance()::getOidcWebFingerEPUrl);
         }
 
         public static String getOidcDiscoveryEPUrl(String tenantDomain) throws URISyntaxException {
 
             String oidcDiscoveryEPUrl = buildUrl(OAUTH2_DISCOVERY_EP_URL,
-                    OAuthServerConfiguration.getInstance()::getOidcDiscoveryUrl, true, false);
+                    OAuthServerConfiguration.getInstance()::getOidcDiscoveryUrl);
 
             if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && StringUtils.isNotBlank(tenantDomain) &&
                     !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
@@ -1260,8 +1257,7 @@ public class OAuth2Util {
 
         public static String getOAuth2UserInfoEPUrl() {
 
-            return buildUrl(OAUTH2_USER_INFO_EP_URL, OAuthServerConfiguration.getInstance()::getOauth2UserInfoEPUrl,
-                    true, false);
+            return buildUrl(OAUTH2_USER_INFO_EP_URL, OAuthServerConfiguration.getInstance()::getOauth2UserInfoEPUrl);
         }
 
         /**
@@ -1271,8 +1267,7 @@ public class OAuth2Util {
          */
         public static String getOAuth2RevocationEPUrl() {
 
-            return buildUrl(OAUTH2_REVOKE_EP_URL, OAuthServerConfiguration.getInstance()::getOauth2RevocationEPUrl,
-                    true, false);
+            return buildUrl(OAUTH2_REVOKE_EP_URL, OAuthServerConfiguration.getInstance()::getOauth2RevocationEPUrl);
         }
 
         /**
@@ -1283,7 +1278,7 @@ public class OAuth2Util {
         public static String getOAuth2IntrospectionEPUrl() {
 
             return buildUrl(OAUTH2_INTROSPECT_EP_URL,
-                    OAuthServerConfiguration.getInstance()::getOauth2IntrospectionEPUrl, true, false);
+                    OAuthServerConfiguration.getInstance()::getOauth2IntrospectionEPUrl);
         }
 
         public static String getOIDCConsentPageUrl() {
@@ -1327,20 +1322,17 @@ public class OAuth2Util {
     /**
      * Builds a URL with a given context in both the tenant-qualified url supported mode and the legacy mode. Returns
      * the absolute URL build from the default context in the tenant-qualified url supported mode and returns the
-     * absolute url build from file configuration context, proxy context path and web context path.
+     * absolute url build from file configuration context.
      *
-     * @param defaultContext                  Default URL context.
-     * @param getValueFromFileBasedConfig     File-based Configuration.
-     * @param addProxyContextPathInLegacyMode Add proxy context path to the URL.
-     * @param addWebContextRootInLegacyMode   Add web context path to the URL.
+     * @param defaultContext              Default URL context.
+     * @param getValueFromFileBasedConfig File-based Configuration.
      * @return Absolute URL.
      */
-    public static String buildUrl(String defaultContext, Supplier<String> getValueFromFileBasedConfig,
-                                  boolean addProxyContextPathInLegacyMode, boolean addWebContextRootInLegacyMode) {
+    public static String buildUrl(String defaultContext, Supplier<String> getValueFromFileBasedConfig) {
 
         String url;
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            url = buildTenantQualifiedUrl(defaultContext);
+            url = buildServiceUrl(defaultContext);
         } else {
             String oauth2EndpointURLInFile = null;
             if (getValueFromFileBasedConfig != null) {
@@ -1351,14 +1343,13 @@ public class OAuth2Util {
                 url = oauth2EndpointURLInFile;
             } else {
                 // Use the default context.
-                url = IdentityUtil
-                        .getServerURL(defaultContext, addProxyContextPathInLegacyMode, addWebContextRootInLegacyMode);
+                url = buildServiceUrl(defaultContext);
             }
         }
         return url;
     }
 
-    private static String buildTenantQualifiedUrl(String context) {
+    private static String buildServiceUrl(String context) {
 
         try {
             return ServiceURLBuilder.create().addPath(context).build().getAbsolutePublicURL();

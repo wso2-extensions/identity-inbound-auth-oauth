@@ -34,12 +34,8 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.core.ServiceURLBuilder;
-import org.wso2.carbon.identity.core.ServiceURLBuilderFactory;
-import org.wso2.carbon.identity.core.internal.DefaultServiceURLBuilder;
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -72,6 +68,7 @@ import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.ConfigurationContextService;
 import org.wso2.carbon.utils.NetworkUtils;
 
+import java.net.SocketException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -81,6 +78,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -98,9 +96,8 @@ import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({OAuthServerConfiguration.class, OAuthCache.class, IdentityUtil.class, OAuthConsumerDAO.class,
         OAuth2Util.class, OAuthComponentServiceHolder.class, AppInfoCache.class, IdentityConfigParser.class,
-        PrivilegedCarbonContext.class, IdentityTenantUtil.class, ServerConfiguration.class, CarbonUtils.class,
-        IdentityCoreServiceComponent.class, NetworkUtils.class, ServiceURLBuilderFactory.class,
-        ServiceURLBuilder.class})
+        PrivilegedCarbonContext.class, IdentityTenantUtil.class, CarbonUtils.class,
+        IdentityCoreServiceComponent.class, NetworkUtils.class})
 public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
@@ -155,9 +152,6 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     private AuthorizationGrantHandler authorizationGrantHandlerMock;
 
     @Mock
-    private ServerConfiguration mockServerConfiguration;
-
-    @Mock
     private ConfigurationContextService mockConfigurationContextService;
 
     @Mock
@@ -165,12 +159,6 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private AxisConfiguration mockAxisConfiguration;
-
-    @Mock
-    private ServiceURLBuilderFactory mockServiceURLBuilderFactory = new ServiceURLBuilderFactory();
-
-    @Mock
-    private ServiceURLBuilder mockServiceURLBuilder = new DefaultServiceURLBuilder();
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -186,25 +174,27 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         when(oauthServerConfigurationMock.getTimeStampSkewInSeconds()).thenReturn(timestampSkew);
         mockStatic(OAuthComponentServiceHolder.class);
         when(OAuthComponentServiceHolder.getInstance()).thenReturn(oAuthComponentServiceHolderMock);
-        mockStatic(CarbonUtils.class);
-        mockStatic(ServerConfiguration.class);
-        mockStatic(NetworkUtils.class);
-        mockStatic(IdentityCoreServiceComponent.class);
         mockStatic(PrivilegedCarbonContext.class);
         mockStatic(IdentityTenantUtil.class);
-        mockStatic(ServiceURLBuilder.class);
         PrivilegedCarbonContext privilegedCarbonContext = Mockito.mock(PrivilegedCarbonContext.class);
-
         when(PrivilegedCarbonContext.getThreadLocalCarbonContext()).thenReturn(privilegedCarbonContext);
-        when(ServerConfiguration.getInstance()).thenReturn(mockServerConfiguration);
+
+        mockStatic(CarbonUtils.class);
+        mockStatic(IdentityCoreServiceComponent.class);
+        mockStatic(NetworkUtils.class);
+
         when(IdentityCoreServiceComponent.getConfigurationContextService()).thenReturn(mockConfigurationContextService);
         when(mockConfigurationContextService.getServerConfigContext()).thenReturn(mockConfigurationContext);
         when(mockConfigurationContext.getAxisConfiguration()).thenReturn(mockAxisConfiguration);
-        when(IdentityCoreServiceComponent.getServiceURLBuilderFactory()).thenReturn(mockServiceURLBuilderFactory);
-        when(ServiceURLBuilder.create()).thenReturn(mockServiceURLBuilder);
-
+        when(CarbonUtils.getTransportPort(any(AxisConfiguration.class), anyString())).thenReturn(9443);
+        when(CarbonUtils.getTransportProxyPort(any(AxisConfiguration.class), anyString())).thenReturn(9443);
         when(CarbonUtils.getManagementTransport()).thenReturn("https");
-        when(CarbonUtils.getTransportProxyPort(mockAxisConfiguration, "https")).thenReturn(9443);
+
+        try {
+            when(NetworkUtils.getLocalHostname()).thenReturn("localhost");
+        } catch (SocketException e) {
+            // Mock behaviour, hence ignored
+        }
     }
 
     @AfterMethod
@@ -955,7 +945,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         String serverUrl = "https://localhost:9443/oauth2/token";
         when(oauthServerConfigurationMock.getOpenIDConnectIDTokenIssuerIdentifier()).thenReturn(oidcIDTokenIssuer);
         when(oauthServerConfigurationMock.getOAuth2TokenEPUrl()).thenReturn(oauth2TokenEPUrl);
-        getOAuthURL(serverUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOAuth2TokenEPUrl).get())
+                .thenReturn(serverUrl);
 
         assertEquals(OAuth2Util.getIDTokenIssuer(), issuer);
     }
@@ -995,14 +986,16 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "OAuthURLData")
     public void testGetOAuth2AuthzEPUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
         when(oauthServerConfigurationMock.getOAuth2AuthzEPUrl()).thenReturn(configUrl);
-        getOAuthURL(serverUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOAuth2AuthzEPUrl).get())
+                .thenReturn(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2AuthzEPUrl(), oauthUrl);
     }
 
     @Test(dataProvider = "OAuthURLData")
     public void testGetOAuth2TokenEPUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
         when(oauthServerConfigurationMock.getOAuth2TokenEPUrl()).thenReturn(configUrl);
-        getOAuthURL(serverUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOAuth2TokenEPUrl).get())
+                .thenReturn(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2TokenEPUrl(), oauthUrl);
     }
 
@@ -1052,7 +1045,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(enableTenantURLSupport);
         when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantDomain);
         when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain()).thenReturn("carbon.super");
-        getOAuthURL(serverUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOAuth2JWKSPageUrl).get())
+                .thenReturn(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(tenantDomain), oauthUrl);
     }
 
@@ -1064,7 +1058,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(enableTenantURLSupport);
         when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantDomain);
         when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain()).thenReturn("carbon.super");
-        getOAuthURL(serverUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOAuth2DCREPUrl).get())
+                .thenReturn(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2DCREPUrl(tenantDomain), oauthUrl);
     }
 
@@ -1073,7 +1068,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                                          String tenantDomain, String oauthUrl) throws Exception {
 
         when(oauthServerConfigurationMock.getOAuth2JWKSPageUrl()).thenReturn(configUrl);
-        getOAuthURL(serverUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOAuth2JWKSPageUrl).get())
+                .thenReturn(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(tenantDomain), oauthUrl);
     }
 
@@ -1082,7 +1078,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                                       String tenantDomain, String oauthUrl) throws Exception {
 
         when(oauthServerConfigurationMock.getOAuth2DCREPUrl()).thenReturn(configUrl);
-        getOAuthURL(serverUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOAuth2DCREPUrl).get())
+                .thenReturn(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2DCREPUrl(tenantDomain), oauthUrl);
     }
 
@@ -1090,7 +1087,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     public void testGetOidcWebFingerEPUrlLegacy(String configUrl, String serverUrl, String oauthUrl) throws Exception {
 
         when(oauthServerConfigurationMock.getOidcWebFingerEPUrl()).thenReturn(configUrl);
-        getOAuthURL(serverUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOidcWebFingerEPUrl).get())
+                .thenReturn(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOidcWebFingerEPUrl(), oauthUrl);
     }
 
@@ -1124,7 +1122,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(enableTenantURLSupport);
         when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantDomain);
         when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain()).thenReturn("carbon.super");
-        getOAuthURL(serverUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOidcWebFingerEPUrl).get())
+                .thenReturn(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOidcWebFingerEPUrl(), oauthUrl);
     }
 
@@ -1133,7 +1132,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                                           String tenantDomain, String oauthUrl) throws Exception {
 
         when(oauthServerConfigurationMock.getOidcDiscoveryUrl()).thenReturn(configUrl);
-        getOAuthURL(serverUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOidcDiscoveryUrl).get())
+                .thenReturn(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOidcDiscoveryEPUrl(tenantDomain), oauthUrl);
     }
 
@@ -1141,7 +1141,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     public void testGetOAuth2UserInfoEPUrlLegacy(String configUrl, String serverUrl, String oauthUrl) throws Exception {
 
         when(oauthServerConfigurationMock.getOauth2UserInfoEPUrl()).thenReturn(configUrl);
-        getOAuthURL(serverUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOauth2UserInfoEPUrl).get())
+                .thenReturn(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2UserInfoEPUrl(), oauthUrl);
     }
 
@@ -1153,7 +1154,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(enableTenantURLSupport);
         when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantDomain);
         when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain()).thenReturn("carbon.super");
-        getOAuthURL(serverUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOauth2UserInfoEPUrl).get())
+                .thenReturn(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2UserInfoEPUrl(), oauthUrl);
     }
 
@@ -1162,7 +1164,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
             throws Exception {
 
         when(oauthServerConfigurationMock.getOauth2RevocationEPUrl()).thenReturn(configUrl);
-        getOAuthURL(serverUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOauth2RevocationEPUrl).get())
+                .thenReturn(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2RevocationEPUrl(), oauthUrl);
     }
 
@@ -1174,7 +1177,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(enableTenantURLSupport);
         when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantDomain);
         when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain()).thenReturn("carbon.super");
-        getOAuthURL(serverUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOauth2RevocationEPUrl).get())
+                .thenReturn(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2RevocationEPUrl(), oauthUrl);
     }
 
@@ -1183,7 +1187,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
             throws Exception {
 
         when(oauthServerConfigurationMock.getOauth2IntrospectionEPUrl()).thenReturn(configUrl);
-        getOAuthURL(serverUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOauth2IntrospectionEPUrl).get())
+                .thenReturn(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2IntrospectionEPUrl(), oauthUrl);
     }
 
@@ -1191,14 +1196,12 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     public void testGetOAuth2IntrospectionEPUrl(boolean enableTenantURLSupport, String configUrl, String serverUrl,
                                                 String tenantDomain, String oauthUrl) throws Exception {
 
-        when(CarbonUtils.getManagementTransport()).thenReturn("https");
-        when(CarbonUtils.getTransportProxyPort(mockAxisConfiguration, "https")).thenReturn(9443);
-
         when(oauthServerConfigurationMock.getOauth2IntrospectionEPUrl()).thenReturn(configUrl);
         when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(enableTenantURLSupport);
         when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantDomain);
         when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain()).thenReturn("carbon.super");
-        getOAuthURL(serverUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOauth2IntrospectionEPUrl).get())
+                .thenReturn(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2IntrospectionEPUrl(), oauthUrl);
     }
 
