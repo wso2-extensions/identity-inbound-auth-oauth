@@ -934,7 +934,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 // oauth2TokenEPUrl
                 // issuer
                 {"https://localhost:9443/testIssuer", "", "https://localhost:9443/testIssuer"},
-                {"", "https://localhost:9443/testIssuer", "https://localhost:9443/testIssuer"},
+                {"", "https://localhost:9443/testIssuer", "https://localhost:9443/oauth2/token"},
                 {"", "", "https://localhost:9443/oauth2/token"}
         };
     }
@@ -1015,8 +1015,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         };
     }
 
-    @DataProvider(name = "OAuthTenantSupportURLData1")
-    public Object[][] oAuthTenantSupportURLData1() {
+    @DataProvider(name = "OAuthJWKSPageUrlData")
+    public Object[][] oAuthJWKSPageUrlData() {
 
         return new Object[][]{
                 // enableTenantURLSupport
@@ -1024,10 +1024,10 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 // serverUrl
                 // tenantDomain
                 // oauthUrl
-                {true, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain", "https" +
-                        "://localhost:9443/t/testDomain/testUrl"},
+                {true, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/t/testDomain/oauth2/jwks"},
                 {true, "", "https://localhost:9443/testUrl", "",
-                        "https://localhost:9443/t/carbon.super/testUrl"},
+                        "https://localhost:9443/t/carbon.super/oauth2/jwks"},
                 {false, "", "https://localhost:9443/testUrl", "testDomain",
                         "https://localhost:9443/t/testDomain/testUrl"},
                 {false, "", "https://localhost:9443/testUrl", "testDomain",
@@ -1050,7 +1050,29 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         assertEquals(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(tenantDomain), oauthUrl);
     }
 
-    @Test(dataProvider = "OAuthTenantSupportURLData1")
+    @DataProvider(name = "OAuthDCREPData")
+    public Object[][] oAuthDCREPData() {
+
+        return new Object[][]{
+                // enableTenantURLSupport
+                // configUrl
+                // serverUrl
+                // tenantDomain
+                // oauthUrl
+                {true, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/t/testDomain/api/identity/oauth2/dcr/v1.0/register"},
+                {true, "", "https://localhost:9443/testUrl", "",
+                        "https://localhost:9443/t/carbon.super/api/identity/oauth2/dcr/v1.0/register"},
+                {true, "", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/t/testDomain/api/identity/oauth2/dcr/v1.0/register"},
+                {false, "", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/t/testDomain/testUrl"},
+                {false, "", "https://localhost:9443/testUrl", "",
+                        "https://localhost:9443/testUrl"},
+        };
+    }
+
+    @Test(dataProvider = "OAuthDCREPData")
     public void testGetOAuth2DCREPUrl(Boolean enableTenantURLSupport, String configUrl, String serverUrl,
                                       String tenantDomain, String oauthUrl) throws Exception {
 
@@ -1092,8 +1114,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         assertEquals(OAuth2Util.OAuthURL.getOidcWebFingerEPUrl(), oauthUrl);
     }
 
-    @DataProvider(name = "OAuthTenantSupportURLData2")
-    public Object[][] oAuthTenantSupportURLData2() {
+    @DataProvider(name = "OAuthWebFingerEPData")
+    public Object[][] oAuthWebFingerEPData() {
 
         return new Object[][]{
                 // enableTenantURLSupport
@@ -1101,20 +1123,20 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 // serverUrl
                 // tenantDomain
                 // oauthUrl
-                {true, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain", "https" +
-                        "://localhost:9443/t/testDomain/testUrl"},
+                {true, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/t/testDomain/.well-know/webfinger"},
                 {true, "", "https://localhost:9443/testUrl", "",
-                        "https://localhost:9443/t/carbon.super/testUrl"},
+                        "https://localhost:9443/t/carbon.super/.well-know/webfinger"},
                 {true, "", "https://localhost:9443/testUrl", "testDomain",
-                        "https://localhost:9443/t/testDomain/testUrl"},
-                {false, "", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/t/testDomain/.well-know/webfinger"},
+                {false, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain",
                         "https://localhost:9443/testUrl"},
                 {false, "", "https://localhost:9443/testUrl", "",
                         "https://localhost:9443/testUrl"},
         };
     }
 
-    @Test(dataProvider = "OAuthTenantSupportURLData2")
+    @Test(dataProvider = "OAuthWebFingerEPData")
     public void testGetOidcWebFingerEPUrl(boolean enableTenantURLSupport, String configUrl, String serverUrl,
                                           String tenantDomain, String oauthUrl) throws Exception {
 
@@ -1146,7 +1168,29 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         assertEquals(OAuth2Util.OAuthURL.getOAuth2UserInfoEPUrl(), oauthUrl);
     }
 
-    @Test(dataProvider = "OAuthTenantSupportURLData2")
+    @DataProvider(name = "OAuthUserInfoEPData")
+    public Object[][] oAuthUserInfoEPData() {
+
+        return new Object[][]{
+                // enableTenantURLSupport
+                // configUrl
+                // serverUrl
+                // tenantDomain
+                // oauthUrl
+                {true, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/t/testDomain/oauth2/userinfo"},
+                {true, "", "https://localhost:9443/testUrl", "",
+                        "https://localhost:9443/t/carbon.super/oauth2/userinfo"},
+                {true, "", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/t/testDomain/oauth2/userinfo"},
+                {false, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/testUrl"},
+                {false, "", "https://localhost:9443/testUrl", "",
+                        "https://localhost:9443/testUrl"},
+        };
+    }
+
+    @Test(dataProvider = "OAuthUserInfoEPData")
     public void testGetOAuth2UserInfoEPUrl(boolean enableTenantURLSupport, String configUrl, String serverUrl,
                                            String tenantDomain, String oauthUrl) throws Exception {
 
@@ -1169,7 +1213,29 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         assertEquals(OAuth2Util.OAuthURL.getOAuth2RevocationEPUrl(), oauthUrl);
     }
 
-    @Test(dataProvider = "OAuthTenantSupportURLData2")
+    @DataProvider(name = "OAuthRevocationEPData")
+    public Object[][] oAuthRevocationEPData() {
+
+        return new Object[][]{
+                // enableTenantURLSupport
+                // configUrl
+                // serverUrl
+                // tenantDomain
+                // oauthUrl
+                {true, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/t/testDomain/oauth2/revoke"},
+                {true, "", "https://localhost:9443/testUrl", "",
+                        "https://localhost:9443/t/carbon.super/oauth2/revoke"},
+                {true, "", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/t/testDomain/oauth2/revoke"},
+                {false, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/testUrl"},
+                {false, "", "https://localhost:9443/testUrl", "",
+                        "https://localhost:9443/testUrl"},
+        };
+    }
+
+    @Test(dataProvider = "OAuthRevocationEPData")
     public void testGetOAuth2RevocationEPUrl(boolean enableTenantURLSupport, String configUrl, String serverUrl,
                                              String tenantDomain, String oauthUrl) throws Exception {
 
@@ -1192,7 +1258,29 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         assertEquals(OAuth2Util.OAuthURL.getOAuth2IntrospectionEPUrl(), oauthUrl);
     }
 
-    @Test(dataProvider = "OAuthTenantSupportURLData2")
+    @DataProvider(name = "OAuthIntrospectionEPData")
+    public Object[][] oAuthIntrospectionEPData() {
+
+        return new Object[][]{
+                // enableTenantURLSupport
+                // configUrl
+                // serverUrl
+                // tenantDomain
+                // oauthUrl
+                {true, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/t/testDomain/oauth2/introspect"},
+                {true, "", "https://localhost:9443/testUrl", "",
+                        "https://localhost:9443/t/carbon.super/oauth2/introspect"},
+                {true, "", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/t/testDomain/oauth2/introspect"},
+                {false, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain",
+                        "https://localhost:9443/testUrl"},
+                {false, "", "https://localhost:9443/testUrl", "",
+                        "https://localhost:9443/testUrl"},
+        };
+    }
+
+    @Test(dataProvider = "OAuthIntrospectionEPData")
     public void testGetOAuth2IntrospectionEPUrl(boolean enableTenantURLSupport, String configUrl, String serverUrl,
                                                 String tenantDomain, String oauthUrl) throws Exception {
 
