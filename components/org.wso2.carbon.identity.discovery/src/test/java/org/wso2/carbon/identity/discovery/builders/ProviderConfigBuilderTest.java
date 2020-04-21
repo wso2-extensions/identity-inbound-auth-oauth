@@ -29,7 +29,6 @@ import org.wso2.carbon.base.ServerConfigurationException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.discovery.OIDProviderRequest;
 import org.wso2.carbon.identity.discovery.internal.OIDCDiscoveryDataHolder;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -40,7 +39,6 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.mock;
@@ -50,7 +48,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertNotNull;
 
 @PrepareForTest({OAuth2Util.class, OAuthServerConfiguration.class, OIDCDiscoveryDataHolder.class,
-        ClaimMetadataManagementService.class, IdentityUtil.class})
+        ClaimMetadataManagementService.class})
 /**
  * Unit test covering ProviderConfigBuilder class.
  */
@@ -92,7 +90,6 @@ public class ProviderConfigBuilderTest {
 
         mockStatic(OAuth2Util.class);
         mockStatic(OAuth2Util.OAuthURL.class);
-        mockStatic(IdentityUtil.class);
 
         List<ExternalClaim> claims = new ArrayList<>();
         ExternalClaim externalClaim = new ExternalClaim("aaa", "bbb", "ccc");
@@ -104,7 +101,6 @@ public class ProviderConfigBuilderTest {
 
         when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(idTokenSignatureAlgorithm)).thenReturn(JWSAlgorithm.RS256);
         when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString())).thenReturn(JWSAlgorithm.RS256);
-        when(IdentityUtil.resolveURL(anyString(), anyBoolean(), anyBoolean())).thenReturn("/testUrl");
         assertNotNull(providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest));
     }
 
@@ -117,7 +113,7 @@ public class ProviderConfigBuilderTest {
 
         mockStatic(OAuth2Util.class);
         mockStatic(OAuth2Util.OAuthURL.class);
-        when(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl()).thenThrow(new URISyntaxException("input",
+        when(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(anyString())).thenThrow(new URISyntaxException("input",
                 "URISyntaxException"));
         when(OAuth2Util.getIdTokenIssuer(anyString())).thenReturn("issuer");
         providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);

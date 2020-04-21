@@ -393,8 +393,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         requestAttributes.put(FrameworkConstants.SESSION_DATA_KEY, sessionDataKey);
 
         if (e instanceof OAuthProblemException) {
+            HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
             mockStatic(CarbonOAuthAuthzRequest.class);
-            whenNew(CarbonOAuthAuthzRequest.class).withAnyArguments().thenThrow(e);
+            whenNew(CarbonOAuthAuthzRequest.class).withArguments(httpServletRequest).thenThrow(e);
             requestParams.put(REDIRECT_URI, new String[]{APP_REDIRECT_URL});
         }
 
