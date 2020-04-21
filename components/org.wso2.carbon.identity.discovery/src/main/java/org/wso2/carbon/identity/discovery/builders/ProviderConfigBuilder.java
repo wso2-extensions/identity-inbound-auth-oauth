@@ -24,6 +24,7 @@ import org.wso2.carbon.base.ServerConfigurationException;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.discovery.OIDCDiscoveryEndPointException;
 import org.wso2.carbon.identity.discovery.OIDProviderConfigResponse;
 import org.wso2.carbon.identity.discovery.OIDProviderRequest;
@@ -37,7 +38,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.discovery.DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildUrl;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildServiceUrl;
 
 /**
  * ProviderConfigBuilder builds the OIDProviderConfigResponse
@@ -110,8 +111,10 @@ public class ProviderConfigBuilder {
 
         providerConfig.setSubjectTypesSupported(new String[]{"pairwise"});
 
-        providerConfig.setCheckSessionIframe(buildUrl(IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL));
-        providerConfig.setEndSessionEndpoint(buildUrl(IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL));
+        providerConfig.setCheckSessionIframe(buildServiceUrl(IdentityConstants.OAuth.CHECK_SESSION,
+                IdentityUtil.getProperty(IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL)));
+        providerConfig.setEndSessionEndpoint(buildServiceUrl(IdentityConstants.OAuth.LOGOUT,
+                IdentityUtil.getProperty(IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL)));
 
         try {
             providerConfig.setUserinfoSigningAlgValuesSupported(new String[] {

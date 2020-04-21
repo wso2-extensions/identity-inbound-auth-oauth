@@ -1333,36 +1333,35 @@ public class OAuth2Util {
         if (getValueFromFileBasedConfig != null) {
             oauth2EndpointURLInFile = getValueFromFileBasedConfig.get();
         }
-        try {
-            return buildServiceUrl(defaultContext, oauth2EndpointURLInFile);
-        } catch (URLBuilderException e) {
-            throw new OAuthRuntimeException("Error while building url for context: " + defaultContext);
-        }
+        return buildServiceUrl(defaultContext, oauth2EndpointURLInFile);
     }
 
     /**
-     * Builds a URL with a given context in both the tenant-qualified url supported mode and the legacy mode. Returns
-     * the absolute URL build from the default context.
+     * Returns the public service url given the default context and the url picked from the configuration based on
+     * the 'tenant_context.enable_tenant_qualified_urls' mode set in deployment.toml.
      *
-     * @param defaultContext Default URL context.
-     * @return Absolute URL.
+     * @param defaultContext default url context path
+     * @param oauth2EndpointURLInFile  url picked from the file configuration
+     * @return absolute public url of the service if 'enable_tenant_qualified_urls' is 'true', else returns the url
+     * from the file config
      */
-    public static String buildUrl(String defaultContext) {
-
-        return buildUrl(defaultContext, null);
-    }
-
-    private static String buildServiceUrl(String defaultContext, String oauth2EndpointURLInFile)
-            throws URLBuilderException {
+    public static String buildServiceUrl(String defaultContext, String oauth2EndpointURLInFile) {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            return ServiceURLBuilder.create().addPath(defaultContext).build().getAbsolutePublicURL();
+            try {
+                return ServiceURLBuilder.create().addPath(defaultContext).build().getAbsolutePublicURL();
+            } catch (URLBuilderException e) {
+                throw new OAuthRuntimeException("Error while building url for context: " + defaultContext);
+            }
         } else if (StringUtils.isNotBlank(oauth2EndpointURLInFile)) {
             // Use the value configured in the file.
             return oauth2EndpointURLInFile;
-        } else {
-            // Use the default context.
+        }
+        // Use the default context.
+        try {
             return ServiceURLBuilder.create().addPath(defaultContext).build().getAbsolutePublicURL();
+        } catch (URLBuilderException e) {
+            throw new OAuthRuntimeException("Error while building url for context: " + defaultContext);
         }
     }
 
