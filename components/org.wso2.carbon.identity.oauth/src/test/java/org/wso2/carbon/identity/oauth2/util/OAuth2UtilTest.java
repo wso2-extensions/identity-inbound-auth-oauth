@@ -36,6 +36,7 @@ import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -94,6 +95,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
+@WithCarbonHome
 @PrepareForTest({OAuthServerConfiguration.class, OAuthCache.class, IdentityUtil.class, OAuthConsumerDAO.class,
         OAuth2Util.class, OAuthComponentServiceHolder.class, AppInfoCache.class, IdentityConfigParser.class,
         PrivilegedCarbonContext.class, IdentityTenantUtil.class, CarbonUtils.class,
@@ -1027,7 +1029,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 {true, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain",
                         "https://localhost:9443/t/testDomain/oauth2/jwks"},
                 {true, "", "https://localhost:9443/testUrl", "",
-                        "https://localhost:9443/t/carbon.super/oauth2/jwks"},
+                        "https://localhost:9443/oauth2/jwks"},
                 {false, "", "https://localhost:9443/testUrl", "testDomain",
                         "https://localhost:9443/t/testDomain/testUrl"},
                 {false, "", "https://localhost:9443/testUrl", "testDomain",
@@ -1037,7 +1039,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         };
     }
 
-    @Test(dataProvider = "OAuthTenantSupportURLData1")
+    @Test(dataProvider = "OAuthJWKSPageUrlData")
     public void testGetOAuth2JWKSPageUrl(Boolean enableTenantURLSupport, String configUrl, String serverUrl,
                                          String tenantDomain, String oauthUrl) throws Exception {
 
