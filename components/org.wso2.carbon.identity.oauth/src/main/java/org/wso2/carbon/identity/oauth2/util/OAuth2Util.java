@@ -1220,21 +1220,6 @@ public class OAuth2Util {
             return auth2JWKSPageUrl;
         }
 
-        /**
-         * This method is used to get the resolved URL for the JWKS Page.
-         *
-         * @return String of the resolved URL for the JWKS page.
-         * @throws URISyntaxException URI Syntax Exception.
-         */
-        public static String getOAuth2JWKSPageUrl() throws URISyntaxException {
-
-            String auth2JWKSPageUrl = OAuthServerConfiguration.getInstance().getOAuth2JWKSPageUrl();
-            if (StringUtils.isBlank(auth2JWKSPageUrl)) {
-                auth2JWKSPageUrl = IdentityUtil.getServerURL(OAUTH2_JWKS_EP_URL, true, false);
-            }
-            return IdentityUtil.resolveURL(auth2JWKSPageUrl, true, true, false, true);
-        }
-
         public static String getOidcWebFingerEPUrl() {
 
             return buildUrl(OIDC_WEB_FINGER_EP_URL, OAuthServerConfiguration.getInstance()::getOidcWebFingerEPUrl);
