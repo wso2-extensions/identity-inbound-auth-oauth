@@ -23,13 +23,21 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.ApplicationConfig;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.AuthenticatorConfig;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.SequenceConfig;
+import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedIdPData;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -38,6 +46,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -47,7 +56,10 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Handles the Password Grant Type of the OAuth 2.0 specification. Resource owner sends his
@@ -57,6 +69,10 @@ import java.util.List;
 public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
 
     private static final Log log = LogFactory.getLog(PasswordGrantHandler.class);
+    private static final String OAUTH2 = "oauth2";
+    private static final String IS_INITIAL_LOGIN = "isInitialLogin";
+    private static final String PASSWORD_GRANT_AUTHENTICATOR_NAME = "BASIC";
+    private static final String PUBLISH_PASSWORD_GRANT_LOGIN = "OAuth.PublishPasswordGrantLogin";
 
     @Override
     public boolean issueRefreshToken() throws IdentityOAuth2Exception {
@@ -129,6 +145,8 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             IdentityOAuth2Exception {
 
         boolean authenticated;
+        boolean isPublishPasswordGrantLoginEnabled = Boolean.parseBoolean(
+                IdentityUtil.getProperty(PUBLISH_PASSWORD_GRANT_LOGIN));
         try {
             // Get the user store preference order supplier.
             UserStorePreferenceOrderSupplier<List<String>> userStorePreferenceOrderSupplier =
@@ -148,13 +166,21 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: " + authenticated);
             }
             if (!authenticated) {
+                if (isPublishPasswordGrantLoginEnabled) {
+                    publishAuthenticationData(tokenReq, false, serviceProvider);
+                }
                 if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(MultitenantUtils.getTenantDomain
                         (tokenReq.getResourceOwnerUsername()))) {
                     throw new IdentityOAuth2Exception("Authentication failed for " + tenantAwareUserName);
                 }
                 throw new IdentityOAuth2Exception("Authentication failed for " + tokenReq.getResourceOwnerUsername());
+            } else if (isPublishPasswordGrantLoginEnabled) {
+                publishAuthenticationData(tokenReq, true, serviceProvider);
             }
         } catch (UserStoreException e) {
+            if (isPublishPasswordGrantLoginEnabled) {
+                publishAuthenticationData(tokenReq, false, serviceProvider);
+            }
             String message = e.getMessage();
             if (!(e.getCause() instanceof IdentityException)) {
                 throw new IdentityOAuth2Exception(message, e);
@@ -172,6 +198,86 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             }
         }
         return true;
+    }
+
+    /**
+     * This method will publish the Password Grant Authentication data.
+     *
+     * @param tokenReq Token request which contains all the details of the request.
+     * @param authenticated Boolean value which determines whether the user is authenticated or not.
+     * @param serviceProvider Service provider which contains the details of the application.
+     */
+    protected void publishAuthenticationData(OAuth2AccessTokenReqDTO tokenReq, boolean authenticated,
+                                           ServiceProvider serviceProvider) {
+
+        AuthenticatedUser authenticatedUser = getAuthenticatedUser(tokenReq, serviceProvider);
+        AuthenticationContext authenticationContext = initializeAuthContext(authenticatedUser, serviceProvider);
+        AuthenticationDataPublisher authnDataPublisherProxy =
+                OAuth2ServiceComponentHolder.getAuthenticationDataPublisherProxy();
+        if (authnDataPublisherProxy != null && authnDataPublisherProxy.isEnabled(authenticationContext)) {
+            Map<String, Object> paramMap = new HashMap<>();
+            paramMap.put(FrameworkConstants.AnalyticsAttributes.USER, authenticatedUser);
+            Map<String, Object> unmodifiableParamMap = Collections.unmodifiableMap(paramMap);
+            if (authenticated) {
+                authnDataPublisherProxy
+                        .publishAuthenticationStepSuccess(null, authenticationContext, unmodifiableParamMap);
+                authnDataPublisherProxy.publishAuthenticationSuccess(null, authenticationContext, unmodifiableParamMap);
+            } else {
+                authnDataPublisherProxy.
+                        publishAuthenticationStepFailure(null, authenticationContext, unmodifiableParamMap);
+                authnDataPublisherProxy.publishAuthenticationFailure(null, authenticationContext,
+                        unmodifiableParamMap);
+            }
+        }
+    }
+
+    /**
+     * This method will create an AuthenticationContext object which needs to be passed to the publish methods.
+     *
+     * @param authenticatedUser User which tries to be authenticate.
+     * @param serviceProvider Service provider which contains the details of the application.
+     * @return An AuthenticationContest object with relevant details.
+     */
+    private AuthenticationContext initializeAuthContext(AuthenticatedUser authenticatedUser,
+                                                        ServiceProvider serviceProvider) {
+
+        AuthenticationContext authenticationContext = new AuthenticationContext();
+        String contextId = UUIDGenerator.generateUUID();
+        authenticationContext.setContextIdentifier(contextId);
+        authenticationContext.setTenantDomain(authenticatedUser.getTenantDomain());
+        authenticationContext.setRequestType(OAUTH2);
+        authenticationContext.setRememberMe(false);
+        authenticationContext.setForceAuthenticate(true);
+        authenticationContext.setPassiveAuthenticate(false);
+        authenticationContext.setProperty(IS_INITIAL_LOGIN, true);
+
+        // Setting sequenceConfig with authenticatedUser, serviceProvider.
+        SequenceConfig sequenceConfig = new SequenceConfig();
+        sequenceConfig.setAuthenticatedUser(authenticatedUser);
+
+        // Setting applicationConfig with serviceProvider.
+        ApplicationConfig applicationConfig = new ApplicationConfig(serviceProvider);
+        sequenceConfig.setApplicationConfig(applicationConfig);
+
+        sequenceConfig.setAuthenticatedIdPs(FrameworkConstants.LOCAL_IDP_NAME);
+        authenticationContext.setSequenceConfig(sequenceConfig);
+
+         /* Setting the authenticated IDP for currentAuthenticatedIDPs to get
+         the tenant domain and other parameters when the login is a success. */
+        AuthenticatedIdPData authenticatedIdPData = new AuthenticatedIdPData();
+        authenticatedIdPData.setUser(authenticatedUser);
+        authenticatedIdPData.setIdpName(FrameworkConstants.LOCAL_IDP_NAME);
+
+        AuthenticatorConfig authenticatorConfig = new AuthenticatorConfig();
+        authenticatorConfig.setName(PASSWORD_GRANT_AUTHENTICATOR_NAME);
+        authenticatedIdPData.addAuthenticator(authenticatorConfig);
+        authenticationContext.getCurrentAuthenticatedIdPs().put(FrameworkConstants.LOCAL_IDP_NAME,
+                authenticatedIdPData);
+
+        // Setting serviceProviderName from applicationConfig.
+        authenticationContext.setServiceProviderName(sequenceConfig.getApplicationConfig().getApplicationName());
+
+        return authenticationContext;
     }
 
     private UserStoreManager getUserStoreManager(OAuth2AccessTokenReqDTO tokenReq)
