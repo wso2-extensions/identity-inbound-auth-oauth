@@ -401,6 +401,18 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-api</artifactId>
+                <version>${log4j.api.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-core</artifactId>
+                <scope>test</scope>
+                <version>${log4j.core.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
                 <artifactId>org.wso2.carbon.identity.oauth.endpoint</artifactId>
                 <version>${project.version}</version>
@@ -978,6 +990,10 @@
 
         <!-- Pax Logging Version -->
         <pax.logging.api.version>1.10.1</pax.logging.api.version>
+
+        <!-- Log4j -->
+        <log4j.api.version>2.12.0</log4j.api.version>
+        <log4j.core.version>2.12.0</log4j.core.version>
 
         <maven.checkstyleplugin.version>3.1.0</maven.checkstyleplugin.version>
         <spotbugs-maven-plugin.version>3.1.12</spotbugs-maven-plugin.version>
