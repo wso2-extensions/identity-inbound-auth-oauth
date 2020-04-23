@@ -1295,26 +1295,58 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         assertEquals(OAuth2Util.OAuthURL.getOAuth2IntrospectionEPUrl(), oauthUrl);
     }
 
-    @Test(dataProvider = "OAuthURLData")
-    public void testGetOIDCConsentPageUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+    @DataProvider(name = "OIDCConsentPageURLData")
+    public Object[][] getOIDCConsentUrlData() {
+
+        return new Object[][]{
+                // URL from file based config , Expected error page URL
+                {"https://localhost:9443/authenticationendpoint/custom_oidc_consent.do",
+                        "https://localhost:9443/authenticationendpoint/custom_oidc_consent.do"},
+                {"", "https://localhost:9443/authenticationendpoint/oauth2_consent.do"}
+        };
+    }
+
+    @Test(dataProvider = "OIDCConsentPageURLData")
+    public void testGetOIDCConsentPageUrl(String configUrl, String expectedUrl) throws Exception {
 
         when(oauthServerConfigurationMock.getOIDCConsentPageUrl()).thenReturn(configUrl);
-        getOAuthURL(serverUrl);
-        assertEquals(OAuth2Util.OAuthURL.getOIDCConsentPageUrl(), oauthUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOIDCConsentPageUrl(), expectedUrl);
     }
 
-    @Test(dataProvider = "OAuthURLData")
-    public void testGetOAuth2ConsentPageUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+    @DataProvider(name = "OAuthConsentPageURLData")
+    public Object[][] getOAuthConsentUrlData() {
+
+        return new Object[][]{
+                // URL from file based config , Expected error page URL
+                {"https://localhost:9443/authenticationendpoint/custom_consent.do",
+                        "https://localhost:9443/authenticationendpoint/custom_consent.do"},
+                {"", "https://localhost:9443/authenticationendpoint/oauth2_authz.do"}
+        };
+    }
+
+    @Test(dataProvider = "OAuthConsentPageURLData")
+    public void testGetOAuth2ConsentPageUrl(String configUrl, String expectedUrl) throws Exception {
+
         when(oauthServerConfigurationMock.getOauth2ConsentPageUrl()).thenReturn(configUrl);
-        getOAuthURL(serverUrl);
-        assertEquals(OAuth2Util.OAuthURL.getOAuth2ConsentPageUrl(), oauthUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2ConsentPageUrl(), expectedUrl);
     }
 
-    @Test(dataProvider = "OAuthURLData")
-    public void testGetOAuth2ErrorPageUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
-        when(oauthServerConfigurationMock.getOauth2ErrorPageUrl()).thenReturn(configUrl);
-        getOAuthURL(serverUrl);
-        assertEquals(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl(), oauthUrl);
+    @DataProvider(name = "OAuthErrorPageData")
+    public Object[][] getOAuthErrorPageUrlData() {
+
+        return new Object[][]{
+                // URL from file based config , Expected error page URL
+                {"https://localhost:9443/authenticationendpoint/custom_oauth_error.do",
+                        "https://localhost:9443/authenticationendpoint/custom_oauth_error.do"},
+                {"", "https://localhost:9443/authenticationendpoint/oauth2_error.do"}
+        };
+    }
+
+    @Test(dataProvider = "OAuthErrorPageData")
+    public void testGetOAuth2ErrorPageUrl(String configUrl, String expectedUrl) throws Exception {
+
+        when(OAuthServerConfiguration.getInstance().getOauth2ErrorPageUrl()).thenReturn(configUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl(), expectedUrl);
     }
 
     private void getOAuthURL(String serverUrl) {
