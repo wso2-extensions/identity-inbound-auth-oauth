@@ -19,17 +19,19 @@ package org.wso2.carbon.identity.oidc.session.handler;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.event.IdentityEventConstants.EventName;
 import org.wso2.carbon.identity.event.IdentityEventConstants.EventProperty;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
-import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.backchannellogout.LogoutRequestSender;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TYPE;
 
 /**
  * Event handler to support cross protocol logout.
@@ -51,8 +53,7 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
             Cookie opbsCookie = null;
 
             if (request != null) {
-                if (StringUtils.equals(request.getParameter(COMMON_AUTH_CALLER_PATH),
-                        OIDCSessionConstants.OIDCEndpoints.OIDC_LOGOUT_ENDPOINT)) {
+                if (StringUtils.equals(request.getParameter(TYPE), FrameworkConstants.RequestType.CLAIM_TYPE_OIDC)) {
                     // If a logout request is triggered from an OIDC app then the OIDCLogoutServlet
                     // and OIDCLogoutEventHandler both are triggered and the logout request is handled in both
                     // places.
