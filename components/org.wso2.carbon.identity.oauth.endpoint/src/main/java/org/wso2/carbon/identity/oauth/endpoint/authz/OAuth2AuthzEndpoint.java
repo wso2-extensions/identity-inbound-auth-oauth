@@ -59,6 +59,8 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -2390,14 +2392,15 @@ public class OAuth2AuthzEndpoint {
             CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(oAuthMessage.getResponse());
             invokeCommonauthFlow(oAuthMessage, responseWrapper);
             return processAuthResponseFromFramework(oAuthMessage, responseWrapper);
-        } catch (ServletException | IOException e) {
+        } catch (ServletException | IOException | URLBuilderException e) {
             log.error("Error occurred while sending request to authentication framework.");
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
     }
 
-    private Response processAuthResponseFromFramework(OAuthMessage oAuthMessage, CommonAuthResponseWrapper
-            responseWrapper) throws IOException, InvalidRequestParentException, URISyntaxException {
+    private Response processAuthResponseFromFramework(OAuthMessage oAuthMessage,
+                                                      CommonAuthResponseWrapper responseWrapper)
+            throws IOException, InvalidRequestParentException, URISyntaxException, URLBuilderException {
 
         if (isAuthFlowStateExists(oAuthMessage)) {
             if (isFlowStateIncomplete(oAuthMessage)) {
@@ -2430,11 +2433,11 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response handleIncompleteFlow(OAuthMessage oAuthMessage, CommonAuthResponseWrapper responseWrapper)
-            throws IOException {
+            throws IOException, URISyntaxException, URLBuilderException {
 
         if (responseWrapper.isRedirect()) {
-            oAuthMessage.getResponse().sendRedirect(responseWrapper.getRedirectURL());
-            return null;
+            return Response.status(HttpServletResponse.SC_FOUND)
+                    .location(buildURI(responseWrapper.getRedirectURL())).build();
         } else {
             return Response.status(HttpServletResponse.SC_OK).entity(responseWrapper.getContent()).build();
         }
@@ -2483,7 +2486,8 @@ public class OAuth2AuthzEndpoint {
                 if (attribute == AuthenticatorFlowStatus.INCOMPLETE) {
 
                     if (responseWrapper.isRedirect()) {
-                        oAuthMessage.getResponse().sendRedirect(responseWrapper.getRedirectURL());
+                        return Response.status(HttpServletResponse.SC_FOUND)
+                                .location(buildURI(responseWrapper.getRedirectURL())).build();
                     } else {
                         return Response.status(HttpServletResponse.SC_OK).entity(responseWrapper.getContent()).build();
                     }
@@ -2495,11 +2499,20 @@ public class OAuth2AuthzEndpoint {
                         .setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus.UNKNOWN);
                 return authorize(requestWrapper, responseWrapper);
             }
-        } catch (ServletException | IOException e) {
+        } catch (ServletException | IOException | URLBuilderException e) {
             log.error("Error occurred while sending request to authentication framework.");
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
-        return null;
+    }
+
+    private URI buildURI(String redirectUrl) throws URISyntaxException, URLBuilderException {
+
+        URI uri = new URI(redirectUrl);
+        if (uri.isAbsolute()) {
+            return uri;
+        } else {
+            return new URI(ServiceURLBuilder.create().addPath(redirectUrl).build().getAbsolutePublicURL());
+        }
     }
 
     private String manageOIDCSessionState(HttpServletRequest request, HttpServletResponse response,

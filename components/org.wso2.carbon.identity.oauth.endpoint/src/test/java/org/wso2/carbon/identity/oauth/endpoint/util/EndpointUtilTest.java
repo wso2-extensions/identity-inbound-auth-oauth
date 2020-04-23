@@ -37,6 +37,10 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.core.ServiceURL;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
 import org.wso2.carbon.identity.discovery.OIDCProcessor;
@@ -73,19 +77,20 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.doAnswer;
+import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
+@WithCarbonHome
 @PrepareForTest({SessionDataCache.class, OAuthServerConfiguration.class, OAuth2Util.class, IdentityUtil.class,
         FrameworkUtils.class, OAuthASResponse.class, OAuthResponse.class, PrivilegedCarbonContext.class,
-        ServerConfiguration.class})
+        ServerConfiguration.class, ServiceURLBuilder.class})
 public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
@@ -292,8 +297,6 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getClientTenatId()).thenReturn(-1234);
 
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(COMMONAUTH_URL);
 
         mockStatic(FrameworkUtils.class);
         doAnswer(new Answer<Object>() {
@@ -305,8 +308,22 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         }).when(FrameworkUtils.class, "addAuthenticationRequestToCache", anyString(),
                 any(AuthenticationRequestCacheEntry.class));
 
+        mockServiceURLBuilder(COMMONAUTH_URL);
+
         String url = EndpointUtil.getLoginPageURL(clientId, sessionDataKey, true, true, scopes, reqParams);
         Assert.assertTrue(url.contains("type=" + queryParam), "type parameter is not set according to the scope");
+    }
+
+    private void mockServiceURLBuilder(String url) throws URLBuilderException {
+
+        mockStatic(ServiceURLBuilder.class);
+        ServiceURLBuilder serviceURLBuilder = mock(ServiceURLBuilder.class);
+        when(ServiceURLBuilder.create()).thenReturn(serviceURLBuilder);
+        when(serviceURLBuilder.addPath(any())).thenReturn(serviceURLBuilder);
+
+        ServiceURL serviceURL = mock(ServiceURL.class);
+        when(serviceURL.getAbsolutePublicURL()).thenReturn(url);
+        when(serviceURLBuilder.build()).thenReturn(serviceURL);
     }
 
     //commenting method to recover sonar test failure
@@ -474,8 +491,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
             }
         }).when(OAuth2Util.class, "clearClientTenantId");
 
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(COMMONAUTH_URL);
+        mockServiceURLBuilder(COMMONAUTH_URL);
 
         mockStatic(FrameworkUtils.class);
         doAnswer(new Answer<Object>() {

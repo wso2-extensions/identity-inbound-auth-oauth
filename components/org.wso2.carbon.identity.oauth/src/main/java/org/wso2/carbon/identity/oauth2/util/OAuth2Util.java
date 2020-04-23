@@ -1265,31 +1265,17 @@ public class OAuth2Util {
 
         public static String getOIDCConsentPageUrl() {
 
-            String oidcConsentPageUrl = OAuthServerConfiguration.getInstance().getOIDCConsentPageUrl();
-            if (StringUtils.isBlank(oidcConsentPageUrl)) {
-                oidcConsentPageUrl = IdentityUtil.getServerURL(OIDC_CONSENT_EP_URL, false,
-                        false);
-            }
-            return oidcConsentPageUrl;
+            return buildUrl(OIDC_CONSENT_EP_URL, OAuthServerConfiguration.getInstance()::getOIDCConsentPageUrl);
         }
 
         public static String getOAuth2ConsentPageUrl() {
 
-            String oAuth2ConsentPageUrl = OAuthServerConfiguration.getInstance().getOauth2ConsentPageUrl();
-            if (StringUtils.isBlank(oAuth2ConsentPageUrl)) {
-                oAuth2ConsentPageUrl = IdentityUtil.getServerURL(OAUTH2_CONSENT_EP_URL, false,
-                        false);
-            }
-            return oAuth2ConsentPageUrl;
+            return buildUrl(OAUTH2_CONSENT_EP_URL, OAuthServerConfiguration.getInstance()::getOauth2ConsentPageUrl);
         }
 
         public static String getOAuth2ErrorPageUrl() {
 
-            String oAuth2ErrorPageUrl = OAuthServerConfiguration.getInstance().getOauth2ErrorPageUrl();
-            if (StringUtils.isBlank(oAuth2ErrorPageUrl)) {
-                oAuth2ErrorPageUrl = IdentityUtil.getServerURL(OAUTH2_ERROR_EP_URL, false, false);
-            }
-            return oAuth2ErrorPageUrl;
+            return buildUrl(OAUTH2_ERROR_EP_URL, OAuthServerConfiguration.getInstance()::getOauth2ErrorPageUrl);
         }
 
         private static String appendTenantDomainAsPathParamInLegacyMode(String url, String tenantDomain)

@@ -35,6 +35,8 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
 import org.wso2.carbon.identity.discovery.OIDCProcessor;
@@ -523,18 +525,19 @@ public class EndpointUtil {
             FrameworkUtils.addAuthenticationRequestToCache(sessionDataKey, authRequest);
             // Build new query param with only type and session data key
             return buildQueryString(sessionDataKey, scopes);
-        } catch (UnsupportedEncodingException e) {
-            throw new IdentityOAuth2Exception("Error encoding the session key : ", e);
+        } catch (UnsupportedEncodingException | URLBuilderException e) {
+            throw new IdentityOAuth2Exception("Error building query string for login.", e);
         } finally {
             OAuth2Util.clearClientTenantId();
         }
     }
 
     private static String buildQueryString(String sessionDataKey, Set<String> scopes)
-            throws UnsupportedEncodingException {
+            throws UnsupportedEncodingException, URLBuilderException {
 
         String type = getProtocolType(scopes);
-        String commonAuthURL = IdentityUtil.getServerURL(FrameworkConstants.COMMONAUTH, false, true);
+        String commonAuthURL = ServiceURLBuilder.create().addPath(FrameworkConstants.COMMONAUTH).build()
+                .getAbsolutePublicURL();
 
         StringBuilder queryStringBuilder = new StringBuilder();
         queryStringBuilder.append(commonAuthURL).
@@ -554,15 +557,15 @@ public class EndpointUtil {
                                                                                         boolean forceAuthenticate,
                                                                                         boolean checkAuthentication,
                                                                                         Map<String, String[]> reqParams)
-            throws IdentityOAuth2Exception {
+            throws IdentityOAuth2Exception, URLBuilderException {
 
-        String selfPath = OAUTH2_AUTHORIZE;
         AuthenticationRequest authenticationRequest = new AuthenticationRequest();
 
         int tenantId = OAuth2Util.getClientTenatId();
 
         //Build the authentication request context.
-        authenticationRequest.setCommonAuthCallerPath(selfPath);
+        String commonAuthCallerPath = ServiceURLBuilder.create().addPath(OAUTH2_AUTHORIZE).build().getRelativeURL();
+        authenticationRequest.setCommonAuthCallerPath(commonAuthCallerPath);
         authenticationRequest.setForceAuth(forceAuthenticate);
         authenticationRequest.setPassiveAuth(checkAuthentication);
         authenticationRequest.setRelyingParty(clientId);

@@ -218,13 +218,8 @@ public class OIDCSessionManagementUtil {
      */
     public static String getOIDCLogoutConsentURL() {
 
-        String oidcLogoutConsentPageUrl = OIDCSessionManagementConfiguration.getInstance()
-                .getOIDCLogoutConsentPageUrl();
-        if (StringUtils.isBlank(oidcLogoutConsentPageUrl)) {
-            oidcLogoutConsentPageUrl =
-                    IdentityUtil.getServerURL("/authenticationendpoint/oauth2_logout_consent.do", false, false);
-        }
-        return oidcLogoutConsentPageUrl;
+        return OAuth2Util.buildServiceUrl(OAuthConstants.OAuth20Endpoints.OIDC_LOGOUT_CONSENT_EP_URL,
+                OIDCSessionManagementConfiguration.getInstance().getOIDCLogoutConsentPageUrl());
     }
 
     /**
@@ -234,12 +229,8 @@ public class OIDCSessionManagementUtil {
      */
     public static String getOIDCLogoutURL() {
 
-        String oidcLogoutPageUrl = OIDCSessionManagementConfiguration.getInstance().getOIDCLogoutPageUrl();
-        if (StringUtils.isBlank(oidcLogoutPageUrl)) {
-            oidcLogoutPageUrl =
-                    IdentityUtil.getServerURL("/authenticationendpoint/oauth2_logout.do", false, false);
-        }
-        return oidcLogoutPageUrl;
+        return OAuth2Util.buildServiceUrl(OAuthConstants.OAuth20Endpoints.OIDC_DEFAULT_LOGOUT_RESPONSE_URL,
+                OIDCSessionManagementConfiguration.getInstance().getOIDCLogoutPageUrl());
     }
 
     /**
@@ -251,11 +242,7 @@ public class OIDCSessionManagementUtil {
      */
     public static String getErrorPageURL(String errorCode, String errorMessage) {
 
-        String errorPageUrl = OAuthServerConfiguration.getInstance().getOauth2ErrorPageUrl();
-        if (StringUtils.isBlank(errorPageUrl)) {
-            errorPageUrl = IdentityUtil.getServerURL("/authenticationendpoint/oauth2_error.do", false, false);
-        }
-
+        String errorPageUrl = OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl();
         try {
             errorPageUrl += "?" + OAuthConstants.OAUTH_ERROR_CODE + "=" + URLEncoder.encode(errorCode, "UTF-8") + "&"
                     + OAuthConstants.OAUTH_ERROR_MESSAGE + "=" + URLEncoder.encode(errorMessage, "UTF-8");
