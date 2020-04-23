@@ -33,6 +33,9 @@ import org.wso2.carbon.identity.application.authentication.framework.CommonAuthe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.core.ServiceURL;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -40,6 +43,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
 import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementComponentServiceHolder;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
@@ -58,6 +62,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
@@ -66,9 +71,9 @@ import static org.testng.Assert.assertTrue;
 @PrepareForTest({OIDCSessionManagementUtil.class, OIDCSessionManager.class, FrameworkUtils.class,
         IdentityConfigParser.class, OAuthServerConfiguration.class, IdentityTenantUtil.class, KeyStoreManager.class,
         CarbonCoreDataHolder.class, IdentityDatabaseUtil.class, OAuth2Util.class,
-        OIDCSessionManagementComponentServiceHolder.class})
-/**
- * Unit test coverage for OIDCLogoutServlet class.
+        OIDCSessionManagementComponentServiceHolder.class, ServiceURLBuilder.class})
+/*
+  Unit test coverage for OIDCLogoutServlet class.
  */
 public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
@@ -369,6 +374,8 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         when(keyStoreManager.getKeyStore(anyString())).thenReturn(TestUtil.loadKeyStoreFromFileSystem(TestUtil
                 .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"));
 
+        mockServiceURLBuilder(OIDCSessionConstants.OIDCEndpoints.OIDC_LOGOUT_ENDPOINT);
+
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         logoutServlet.doGet(request, response);
         verify(response).sendRedirect(captor.capture());
@@ -515,5 +522,17 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
     public void cleanData() throws Exception {
 
         super.cleanData();
+    }
+
+    private void mockServiceURLBuilder(String context) throws URLBuilderException {
+
+        mockStatic(ServiceURLBuilder.class);
+        ServiceURLBuilder serviceURLBuilder = mock(ServiceURLBuilder.class);
+        when(ServiceURLBuilder.create()).thenReturn(serviceURLBuilder);
+        when(serviceURLBuilder.addPath(any())).thenReturn(serviceURLBuilder);
+
+        ServiceURL serviceURL = mock(ServiceURL.class);
+        when(serviceURL.getRelativeURL()).thenReturn(context);
+        when(serviceURLBuilder.build()).thenReturn(serviceURL);
     }
 }
