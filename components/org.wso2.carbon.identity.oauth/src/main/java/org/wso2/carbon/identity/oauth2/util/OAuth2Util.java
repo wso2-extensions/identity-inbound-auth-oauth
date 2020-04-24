@@ -3131,7 +3131,8 @@ public class OAuth2Util {
             try {
                 return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
             } catch (URLBuilderException e) {
-                String errorMsg = String.format("Error while building url for '%s' context", OAUTH2_TOKEN_EP_URL);
+                String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
+                        " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
                 throw new IdentityOAuth2Exception(errorMsg, e);
             }
         } else {
