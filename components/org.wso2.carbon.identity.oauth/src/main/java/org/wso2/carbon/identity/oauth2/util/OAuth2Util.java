@@ -3127,14 +3127,23 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
 
-        IdentityProvider identityProvider = getResidentIdp(tenantDomain);
-        FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
-        // Get OIDC authenticator
-        FederatedAuthenticatorConfig oidcAuthenticatorConfig =
-                IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
-                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
-        return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
-                IDP_ENTITY_ID).getValue();
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            try {
+                return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
+            } catch (URLBuilderException e) {
+                String errorMsg = String.format("Error while building url for '%s' context", OAUTH2_TOKEN_EP_URL);
+                throw new IdentityOAuth2Exception(errorMsg, e);
+            }
+        } else {
+            IdentityProvider identityProvider = getResidentIdp(tenantDomain);
+            FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
+            // Get OIDC authenticator
+            FederatedAuthenticatorConfig oidcAuthenticatorConfig =
+                    IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
+                            IdentityApplicationConstants.Authenticator.OIDC.NAME);
+            return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
+                    IDP_ENTITY_ID).getValue();
+        }
     }
 
     private static IdentityProvider getResidentIdp(String tenantDomain) throws IdentityOAuth2Exception {
