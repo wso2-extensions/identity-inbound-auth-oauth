@@ -58,7 +58,8 @@ public class ProviderConfigBuilder {
             try {
                 providerConfig.setIssuer(OAuth2Util.getIdTokenIssuer(tenantDomain));
             } catch (IdentityOAuth2Exception e) {
-                throw new ServerConfigurationException("Error while retrieving OIDC Id token issue", e);
+                throw new ServerConfigurationException(String.format("Error while retrieving OIDC Id token issuer " +
+                        "value for tenant domain: %s", tenantDomain), e);
             }
         } else {
             providerConfig.setIssuer(OAuth2Util.getIDTokenIssuer());
