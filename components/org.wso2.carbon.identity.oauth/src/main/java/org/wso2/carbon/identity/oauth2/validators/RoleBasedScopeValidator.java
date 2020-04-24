@@ -236,8 +236,6 @@ public class RoleBasedScopeValidator extends OAuth2ScopeValidator {
             Map<String, String> scopeToRoles) {
 
         List<String> defaultScope = new ArrayList<>();
-        // TODO check if we need to send the default scope if no scopes are there.
-        // defaultScope.add(DEFAULT_SCOPE_NAME);
 
         if (userRoles == null || userRoles.length == 0) {
             userRoles = new String[0];
