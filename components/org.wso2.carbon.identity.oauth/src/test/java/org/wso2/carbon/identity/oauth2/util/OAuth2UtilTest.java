@@ -36,6 +36,10 @@ import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
+import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.model.Property;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
@@ -61,6 +65,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
+import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
@@ -94,12 +99,14 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
 
 @WithCarbonHome
 @PrepareForTest({OAuthServerConfiguration.class, OAuthCache.class, IdentityUtil.class, OAuthConsumerDAO.class,
         OAuth2Util.class, OAuthComponentServiceHolder.class, AppInfoCache.class, IdentityConfigParser.class,
         PrivilegedCarbonContext.class, IdentityTenantUtil.class, CarbonUtils.class,
-        IdentityCoreServiceComponent.class, NetworkUtils.class})
+        IdentityCoreServiceComponent.class, NetworkUtils.class, IdentityApplicationManagementUtil.class,
+        IdentityProviderManager.class, FederatedAuthenticatorConfig.class})
 public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
@@ -162,6 +169,15 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     @Mock
     private AxisConfiguration mockAxisConfiguration;
 
+    @Mock
+    FederatedAuthenticatorConfig mockFederatedAuthenticatorConfig = new FederatedAuthenticatorConfig();
+
+    @Mock
+    private IdentityProviderManager mockIdentityProviderManager;
+
+    @Mock
+    private IdentityProvider mockIdentityProvider;
+
     @BeforeMethod
     public void setUp() throws Exception {
 
@@ -192,6 +208,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         when(CarbonUtils.getTransportProxyPort(any(AxisConfiguration.class), anyString())).thenReturn(9443);
         when(CarbonUtils.getManagementTransport()).thenReturn("https");
 
+        mockStatic(IdentityProviderManager.class);
+        when(IdentityProviderManager.getInstance()).thenReturn(mockIdentityProviderManager);
+        when(mockIdentityProviderManager.getResidentIdP(anyString())).thenReturn(mockIdentityProvider);
         try {
             when(NetworkUtils.getLocalHostname()).thenReturn("localhost");
         } catch (SocketException e) {
@@ -953,14 +972,59 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         assertEquals(OAuth2Util.getIDTokenIssuer(), issuer);
     }
 
+    @DataProvider(name = "IDTokenIssuerData2")
+    public Object[][] idTokenIssuerData2() {
+
+        return new Object[][]{
+                // tenant-qualified URL support
+                // OIDC Config url
+                // tenant domain
+                // expected
+                {false, "https://localhost:9443/testIssuer", "wso2.com", "https://localhost:9443/testIssuer"},
+                {false, "https://localhost:9443/testIssuer", "", "https://localhost:9443/testIssuer"},
+                {true, "https://localhost:9443/testIssuer", "", "https://localhost:9443/oauth2/token"},
+                {true, "https://localhost:9443/testIssuer", "wso2.com", "https://localhost:9443/t/wso2" +
+                        ".com/oauth2/token"}
+
+        };
+    }
+
+    @Test(dataProvider = "IDTokenIssuerData2")
+    public void testGetIDTokenIssuer2(boolean enableTenantURLSupport, String oidcConfigUrl, String tenantDomain,
+                                      String expected) {
+
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(enableTenantURLSupport);
+        when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantDomain);
+        when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain()).thenReturn("carbon.super");
+
+        FederatedAuthenticatorConfig[] federatedAuthenticatorConfigs = new FederatedAuthenticatorConfig[0];
+        when(mockIdentityProvider.getFederatedAuthenticatorConfigs()).thenReturn(federatedAuthenticatorConfigs);
+
+        mockStatic(IdentityApplicationManagementUtil.class);
+        mockStatic(FederatedAuthenticatorConfig.class);
+        Property property = mock(Property.class);
+        Property[] properties = new Property[0];
+        when(IdentityApplicationManagementUtil.getFederatedAuthenticator(federatedAuthenticatorConfigs,
+                "openidconnect")).thenReturn(mockFederatedAuthenticatorConfig);
+        when(mockFederatedAuthenticatorConfig.getProperties()).thenReturn(properties);
+        when(IdentityApplicationManagementUtil.getProperty(properties, "IdPEntityId")).thenReturn(property);
+        when(property.getValue()).thenReturn(oidcConfigUrl);
+        try {
+            assertEquals(getIdTokenIssuer(tenantDomain), expected);
+        } catch (IdentityOAuth2Exception e) {
+            //mock request, hence ignored.
+        }
+    }
+
     @DataProvider(name = "OAuthURLData")
     public Object[][] oauthURLData() {
+
         return new Object[][]{
                 // configUrl
                 // serverUrl
                 // oauthUrl
                 {"https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "https://localhost:9443/testUrl"},
-                {"" , "https://localhost:9443/testUrl", "https://localhost:9443/testUrl"}
+                {"", "https://localhost:9443/testUrl", "https://localhost:9443/testUrl"}
         };
     }
 
