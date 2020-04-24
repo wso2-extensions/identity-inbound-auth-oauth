@@ -190,6 +190,8 @@ public class OAuthServerConfiguration {
     private boolean useMultiValueSeparatorForAuthContextToken = true;
     private boolean addTenantDomainToIdTokenEnabled = false;
     private boolean addUserstoreDomainToIdTokenEnabled = false;
+    
+    private boolean isRoleBasedScopeValidatorEnabled = false;
 
     //default token types
     public static final String DEFAULT_TOKEN_TYPE = "Default";
@@ -416,6 +418,9 @@ public class OAuthServerConfiguration {
 
         // Read the property for error redirection URI
         parseRedirectToOAuthErrorPageConfig(oauthElem);
+        
+        // Read config for role based scope validator.
+        parseEnableRoleBasedScopeValidatorConfiguration(oauthElem);
     }
 
     private void parseTokenIntrospectionConfig(OMElement oauthElem) {
@@ -502,6 +507,10 @@ public class OAuthServerConfiguration {
     public String getOauth2IntrospectionEPUrl() {
 
         return oauth2IntrospectionEPUrl;
+    }
+    
+    public boolean isRoleBasedScopeValidatorEnabled() {
+        return isRoleBasedScopeValidatorEnabled;
     }
 
     /**
@@ -2863,6 +2872,22 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * Parses role-based scope validation configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseEnableRoleBasedScopeValidatorConfiguration(OMElement oauthConfigElem) {
+
+        OMElement enableRoleBasedScopeElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.ENABLE_ROLE_BASED_SCOPE_VALIDATOR));
+        if (enableRoleBasedScopeElem != null) {
+            isRoleBasedScopeValidatorEnabled = Boolean.parseBoolean(enableRoleBasedScopeElem.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("EnableRoleBasedScopeValidator was set to : " + isRoleBasedScopeValidatorEnabled);
+        }
+    }
+    /**
      * This method populates oauthTokenIssuerMap by reading the supportedTokenIssuers map. Earlier we only
      * populated the oauthTokenIssuerMap when a token is issued but now we use this map for token validation
      * calls as well.
@@ -3100,6 +3125,9 @@ public class OAuthServerConfiguration {
 
         // Enable/Disable token renewal on each request to the token endpoint
         private static final String RENEW_TOKEN_PER_REQUEST = "RenewTokenPerRequest";
+        
+        // Enable/Disable rolebased scope validation
+        private static final String ENABLE_ROLE_BASED_SCOPE_VALIDATOR = "EnableRoleBasedScopeValidator";
     }
 
 }

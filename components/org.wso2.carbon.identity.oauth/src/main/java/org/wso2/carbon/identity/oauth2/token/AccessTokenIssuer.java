@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
+import org.wso2.carbon.identity.oauth2.validators.RoleBasedScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import org.wso2.carbon.utils.CarbonUtils;
 
@@ -273,6 +274,12 @@ public class AccessTokenIssuer {
         // Thus remove the scopes from the tokReqMsgCtx. Will be added to the response after executing
         // the other scope validators.
         removeInternalScopes(tokReqMsgCtx);
+        
+        // validate scopes based on roles if enabled.
+        if (OAuthServerConfiguration.getInstance().isRoleBasedScopeValidatorEnabled()) {
+            RoleBasedScopeValidator validator = new RoleBasedScopeValidator();
+            validator.validateScope(tokReqMsgCtx);
+        }
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
         if (isValidScope) {
             //Add authorized internal scopes to the request for sending in the response.
