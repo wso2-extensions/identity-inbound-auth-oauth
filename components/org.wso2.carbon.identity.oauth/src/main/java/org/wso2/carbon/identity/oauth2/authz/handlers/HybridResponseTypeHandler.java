@@ -55,20 +55,21 @@ public class HybridResponseTypeHandler extends AbstractResponseTypeHandler {
             ResponseTypeHandlerUtil.buildAuthorizationCodeResponseDTO(respDTO, authzCodeDO);
         }
 
-        // Generating access token and generating response for access token flow.
-        if (isAccessTokenIssued(responseType)) {
+        // Generating a single access token if id_token and/or token is in response_type
+        if (isAccessTokenIssued(responseType) || isIDTokenIssued(responseType)) {
             AccessTokenDO accessTokenDO = ResponseTypeHandlerUtil.generateAccessToken(oauthAuthzMsgCtx, cacheEnabled);
             // Starting to trigger post listeners.
             ResponseTypeHandlerUtil.triggerPostListeners(oauthAuthzMsgCtx, accessTokenDO, respDTO);
-            ResponseTypeHandlerUtil.buildAccessTokenResponseDTO(respDTO, accessTokenDO);
-        }
 
-        // Generating id_token and generating response for id_token flow.
-        if (isIDTokenIssued(responseType)) {
-            AccessTokenDO accessTokenDO = ResponseTypeHandlerUtil.generateAccessToken(oauthAuthzMsgCtx, cacheEnabled);
-            // Starting to trigger post listeners.
-            ResponseTypeHandlerUtil.triggerPostListeners(oauthAuthzMsgCtx, accessTokenDO, respDTO);
-            ResponseTypeHandlerUtil.buildIDTokenResponseDTO(respDTO, accessTokenDO, oauthAuthzMsgCtx);
+            // Generating response for access token flow.
+            if (isAccessTokenIssued(responseType)) {
+                ResponseTypeHandlerUtil.buildAccessTokenResponseDTO(respDTO, accessTokenDO);
+            }
+
+            // Generating id_token and generating response for id_token flow.
+            if (isIDTokenIssued(responseType)) {
+                ResponseTypeHandlerUtil.buildIDTokenResponseDTO(respDTO, accessTokenDO, oauthAuthzMsgCtx);
+            }
         }
         return respDTO;
     }
