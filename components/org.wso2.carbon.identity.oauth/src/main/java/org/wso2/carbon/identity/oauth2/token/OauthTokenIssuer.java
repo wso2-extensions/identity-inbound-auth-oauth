@@ -70,7 +70,7 @@ public interface OauthTokenIssuer {
      * @return true if new access token per each request
      */
     default boolean renewAccessTokenPerRequest(OAuthTokenReqMessageContext tokReqMsgCtx) {
-        return false;
+        return renewAccessTokenPerRequest();
     }
 
     /**

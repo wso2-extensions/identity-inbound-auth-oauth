@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
@@ -2040,9 +2041,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             OauthTokenIssuer oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
 
                 if (latestActiveToken != null) {
-
+                    OAuthTokenReqMessageContext tokReqMsgCtx = OAuth2Util.getTokenRequestContext();
                     // For JWT tokens, always issue a new token expiring the existing token.
-                    if (oauthTokenIssuer.renewAccessTokenPerRequest()) {
+                    if (oauthTokenIssuer.renewAccessTokenPerRequest(tokReqMsgCtx)) {
                         updateAccessTokenState(connection, latestActiveToken.getTokenId(), OAuthConstants.TokenStates
                                 .TOKEN_STATE_EXPIRED, UUID.randomUUID().toString(), userStoreDomain);
                         // Update token issued time make this token as latest token & try to store it again.
