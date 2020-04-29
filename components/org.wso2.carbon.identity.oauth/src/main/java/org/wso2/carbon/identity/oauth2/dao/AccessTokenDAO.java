@@ -179,4 +179,14 @@ public interface AccessTokenDAO {
 
         return Collections.emptySet();
     }
+
+    /**
+     * Delete access tokens of a given tenant id.
+     *
+     * @param tenantId Id of the tenant.
+     * @throws IdentityOAuth2Exception
+     */
+    default void deleteAccessTokensByTenantId(int tenantId) throws IdentityOAuth2Exception {
+
+    }
 }

@@ -2330,6 +2330,32 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         }
     }
 
+    /**
+     * Delete access tokens of a given tenant id.
+     *
+     * @param tenantId Id of the tenant.
+     * @throws IdentityOAuth2Exception
+     */
+    public void deleteAccessTokensByTenantId(int tenantId) throws IdentityOAuth2Exception {
+        if (log.isDebugEnabled()) {
+            log.info("Deleting all access tokens of the tenant: " + tenantId);
+        }
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+
+        PreparedStatement prepStmt = null;
+        try {
+            String updateNewTokenAgaintAuthzCodeSql = SQLQueries.DELETE_ACCESS_TOKENS_BY_TENANT_ID;
+            prepStmt = connection.prepareStatement(updateNewTokenAgaintAuthzCodeSql);
+            prepStmt.setInt(1, tenantId);
+            prepStmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error in deleting all tokens of the tenant: " + tenantId, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+        }
+    }
+
     private boolean isFederatedUser(AccessTokenDO accessTokenDO) {
 
         return !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() &&

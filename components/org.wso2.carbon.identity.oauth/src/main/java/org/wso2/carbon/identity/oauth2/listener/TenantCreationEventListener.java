@@ -91,8 +91,11 @@ public class TenantCreationEventListener implements TenantMgtListener {
 
     @Override
     public void onPreDelete(int tenantId) throws StratosException {
-
-        revokeTokens(tenantId);
+        try {
+            OAuth2Util.deleteAllAccessTokens(tenantId);
+        } catch (IdentityOAuth2Exception e) {
+            throw new StratosException("Error occurred while deleting Access Token of tenant: " + tenantId, e);
+        }
     }
 
     private void revokeTokens(int tenantId) throws StratosException {

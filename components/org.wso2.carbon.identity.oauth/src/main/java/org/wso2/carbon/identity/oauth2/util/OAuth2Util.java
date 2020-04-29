@@ -3700,4 +3700,20 @@ public class OAuth2Util {
             throw new IdentityOAuth2Exception("Error occurred while generating SHA-1 JWK thumbprint", e);
         }
     }
+
+    /**
+     * Delete all access tokens of a given tenant id.
+     *
+     * @param tenantId Id of the tenant
+     * @throws IdentityOAuth2Exception
+     */
+    public static void deleteAllAccessTokens(int tenantId) throws IdentityOAuth2Exception {
+
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().deleteAccessTokensByTenantId(tenantId);
+
+        OAuthCache.getInstance().clear();
+        if (log.isDebugEnabled()) {
+            log.info("OAuth cache is cleared after deleting the tokens of tenant: " + tenantId);
+        }
+    }
 }
