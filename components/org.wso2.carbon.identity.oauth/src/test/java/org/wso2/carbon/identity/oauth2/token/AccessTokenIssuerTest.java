@@ -36,6 +36,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -84,7 +85,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppState
         OAuth2Util.class,
         AppInfoCache.class,
         JDBCPermissionBasedInternalScopeValidator.class,
-        CarbonUtils.class
+        CarbonUtils.class,
+        IdentityTenantUtil.class
 })
 public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
@@ -102,9 +104,6 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
     private OAuth2AccessTokenRespDTO mockOAuth2AccessTokenRespDTO;
 
     @Mock
-    private OAuth2AccessTokenReqDTO tokenReqDTO;
-
-    @Mock
     private JDBCPermissionBasedInternalScopeValidator scopeValidator;
 
     private static final String DUMMY_GRANT_TYPE = "dummy_grant_type";
@@ -119,6 +118,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+        when(oAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn(3600L);
 
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(mockOAuthAppDO);
@@ -160,55 +160,41 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         // isAuthorizedAccessDelegation,
         // isValidScope,
         // isAuthenticatedClient,
-        // canAuthenticate,
         // isTokenIssuingSuccess
         return new Object[][]{
-                {true, true, true, true, true, true, true, false},
-                {true, true, false, true, true, true, true, false},
-                {true, true, true, false, true, true, true, false},
-                {true, true, true, true, false, true, true, false},
-                {true, true, true, true, true, false, true, false},
-                {true, true, false, true, true, true, true, false},
-                {true, true, true, false, true, true, true, false},
-                {true, true, true, true, false, true, true, false},
-                {true, true, true, true, true, false, true, false}
+                {true, true, true, true, true, true},
+                {false, true, true, true, true, false},
+                {true, false, true, true, true, false},
+                {true, true, false, true, true, false},
+                {true, true, true, false, true, false},
+                {true, true, true, true, false, false},
         };
     }
 
     @Test(dataProvider = "AccessTokenIssue")
-    public void testIssue(boolean isOfTypeApplicationUser,
-                          boolean isAuthorizedClient,
+    public void testIssue(boolean isAuthorizedClient,
                           boolean isValidGrant,
                           boolean isAuthorizedAccessDelegation,
                           boolean isValidScope,
                           boolean isAuthenticatedClient,
-                          boolean canAuthenticate,
-                          boolean success) throws IdentityException {
+                          boolean isTokenIssueSuccess) throws IdentityException {
 
-        when(oAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn(3600L);
+        mockPasswordGrantHandler(isAuthorizedClient, isValidGrant, isAuthorizedAccessDelegation, isValidScope);
 
-        Map<String, AuthorizationGrantHandler> authzGrantHandlers = new Hashtable<>();
+        OAuth2AccessTokenReqDTO reqDTO = new OAuth2AccessTokenReqDTO();
+        reqDTO.setGrantType(OAuthConstants.GrantTypes.PASSWORD);
+        reqDTO.setClientId(SOME_CLIENT_ID);
 
-        when(passwordGrantHandler.isOfTypeApplicationUser()).thenReturn(isOfTypeApplicationUser);
-        when(passwordGrantHandler.isAuthorizedClient(any(OAuthTokenReqMessageContext.class)))
-                .thenReturn(isAuthorizedClient);
-        when(passwordGrantHandler.validateGrant(any(OAuthTokenReqMessageContext.class))).thenReturn(isValidGrant);
-        when(passwordGrantHandler.authorizeAccessDelegation(any(OAuthTokenReqMessageContext.class)))
-                .thenReturn(isAuthorizedAccessDelegation);
-        when(passwordGrantHandler.validateScope(any(OAuthTokenReqMessageContext.class))).thenReturn(isValidScope);
-        when(passwordGrantHandler.issue(any(OAuthTokenReqMessageContext.class)))
-                .thenReturn(mockOAuth2AccessTokenRespDTO);
-        authzGrantHandlers.put("password", passwordGrantHandler);
-        when(passwordGrantHandler.isConfidentialClient()).thenReturn(true);
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(isAuthenticatedClient);
+        reqDTO.setoAuthClientAuthnContext(oAuthClientAuthnContext);
 
-        when(oAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(authzGrantHandlers);
         AccessTokenIssuer tokenIssuer = AccessTokenIssuer.getInstance();
+        OAuth2AccessTokenRespDTO tokenRespDTO = tokenIssuer.issue(reqDTO);
 
-        when(tokenReqDTO.getGrantType()).thenReturn("password");
-        when(tokenReqDTO.getClientId()).thenReturn(SOME_CLIENT_ID);
-
-        OAuth2AccessTokenRespDTO tokenRespDTO = tokenIssuer.issue(tokenReqDTO);
-        Assert.assertEquals(tokenRespDTO.isError(), !success);
+        if (isTokenIssueSuccess) {
+            Assert.assertFalse(tokenRespDTO.isError());
+        }
     }
 
     /**
@@ -230,6 +216,39 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         assertTrue(tokenRespDTO.isError());
         assertEquals(tokenRespDTO.getErrorCode(), OAuthError.TokenResponse.INVALID_REQUEST, "Error Code has been " +
                 "changed. Previously it was: " + OAuthError.TokenResponse.INVALID_REQUEST);
+    }
+
+    @DataProvider(name = "tenantDataProvider")
+    public Object[][] getTenantDomainData() {
+
+        return new Object[][]{
+                {"non_super_tenant.com"},
+                {null}
+        };
+    }
+
+    /**
+     * Tests whether cross tenant token requests fail in tenant qualified URL mode.
+     *
+     * @throws Exception
+     */
+    @Test (dataProvider = "tenantDataProvider" , expectedExceptions = InvalidOAuthClientException.class)
+    public void testCrossTenantTokenRequestError(String tenantInContext) throws Exception {
+
+        OAuth2AccessTokenReqDTO reqDTO = new OAuth2AccessTokenReqDTO();
+        reqDTO.setGrantType("password");
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+        reqDTO.setoAuthClientAuthnContext(oAuthClientAuthnContext);
+
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(true);
+        when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantInContext);
+
+        mockPasswordGrantHandler(true, true, true, true);
+
+        AccessTokenIssuer.getInstance().issue(reqDTO);
     }
 
     /**
@@ -740,6 +759,27 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(idTokenBuilder.buildIDToken(any(OAuthTokenReqMessageContext.class), any(OAuth2AccessTokenRespDTO.class)))
                 .thenThrow(new IDTokenValidationFailureException("ID Token Validation failed"));
         return idTokenBuilder;
+    }
+
+    private void mockPasswordGrantHandler(boolean isAuthorizedClient, boolean isValidGrant,
+                                          boolean isAuthorizedAccessDelegation, boolean isValidScope)
+            throws IdentityOAuth2Exception {
+
+        Map<String, AuthorizationGrantHandler> authzGrantHandlers = new Hashtable<>();
+
+        when(passwordGrantHandler.isOfTypeApplicationUser()).thenReturn(true);
+        when(passwordGrantHandler.isAuthorizedClient(any(OAuthTokenReqMessageContext.class)))
+                .thenReturn(isAuthorizedClient);
+        when(passwordGrantHandler.validateGrant(any(OAuthTokenReqMessageContext.class))).thenReturn(isValidGrant);
+        when(passwordGrantHandler.authorizeAccessDelegation(any(OAuthTokenReqMessageContext.class)))
+                .thenReturn(isAuthorizedAccessDelegation);
+        when(passwordGrantHandler.validateScope(any(OAuthTokenReqMessageContext.class))).thenReturn(isValidScope);
+        when(passwordGrantHandler.issue(any(OAuthTokenReqMessageContext.class)))
+                .thenReturn(new OAuth2AccessTokenRespDTO());
+        authzGrantHandlers.put("password", passwordGrantHandler);
+        when(passwordGrantHandler.isConfidentialClient()).thenReturn(true);
+
+        when(oAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(authzGrantHandlers);
     }
 
     @ObjectFactory
