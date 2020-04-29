@@ -228,7 +228,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
     }
 
     /**
-     * Tests whether cross tenant token requests fail.
+     * Tests whether cross tenant token requests fail in tenant qualified URL mode.
      *
      * @throws Exception
      */
