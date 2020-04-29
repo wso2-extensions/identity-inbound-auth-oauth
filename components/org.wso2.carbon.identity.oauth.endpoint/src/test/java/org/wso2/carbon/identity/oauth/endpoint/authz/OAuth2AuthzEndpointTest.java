@@ -1902,7 +1902,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
                 ServiceURL serviceURL = mock(ServiceURL.class);
                 when(serviceURL.getAbsolutePublicURL()).thenReturn("https://localhost:9443" + path);
-                when(serviceURL.getRelativeURL()).thenReturn(path);
+                when(serviceURL.getRelativeInternalURL()).thenReturn(path);
                 return serviceURL;
             }
         };

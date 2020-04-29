@@ -532,7 +532,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         when(serviceURLBuilder.addPath(any())).thenReturn(serviceURLBuilder);
 
         ServiceURL serviceURL = mock(ServiceURL.class);
-        when(serviceURL.getRelativeURL()).thenReturn(context);
+        when(serviceURL.getRelativeInternalURL()).thenReturn(context);
         when(serviceURLBuilder.build()).thenReturn(serviceURL);
     }
 }

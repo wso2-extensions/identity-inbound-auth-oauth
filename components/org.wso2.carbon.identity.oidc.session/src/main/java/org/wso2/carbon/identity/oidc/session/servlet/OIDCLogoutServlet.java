@@ -591,7 +591,7 @@ public class OIDCLogoutServlet extends HttpServlet {
         authenticationRequest.addRequestQueryParam(FrameworkConstants.RequestParams.LOGOUT, new String[]{"true"});
         try {
             authenticationRequest.setCommonAuthCallerPath(
-                    ServiceURLBuilder.create().addPath(OIDC_LOGOUT_ENDPOINT).build().getRelativeURL());
+                    ServiceURLBuilder.create().addPath(OIDC_LOGOUT_ENDPOINT).build().getRelativeInternalURL());
         } catch (URLBuilderException e) {
             log.error("Error building commonauth caller path to send logout request to framework.", e);
             response.sendRedirect(

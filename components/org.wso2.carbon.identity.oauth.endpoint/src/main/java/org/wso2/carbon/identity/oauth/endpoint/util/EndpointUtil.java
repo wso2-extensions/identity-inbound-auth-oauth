@@ -564,7 +564,8 @@ public class EndpointUtil {
         int tenantId = OAuth2Util.getClientTenatId();
 
         //Build the authentication request context.
-        String commonAuthCallerPath = ServiceURLBuilder.create().addPath(OAUTH2_AUTHORIZE).build().getRelativeURL();
+        String commonAuthCallerPath =
+                ServiceURLBuilder.create().addPath(OAUTH2_AUTHORIZE).build().getRelativeInternalURL();
         authenticationRequest.setCommonAuthCallerPath(commonAuthCallerPath);
         authenticationRequest.setForceAuth(forceAuthenticate);
         authenticationRequest.setPassiveAuth(checkAuthentication);
