@@ -87,6 +87,9 @@ public class RoleBasedScopeValidator extends OAuth2ScopeValidator {
     public static final String DEFAULT_SCOPE_NAME = "default";
     public static final String PRESERVED_CASE_SENSITIVE_VARIABLE = "preservedCaseSensitive";
     public static final String CHECK_ROLES_FROM_SAML_ASSERTION = "checkRolesFromSamlAssertion";
+    
+    public static final String DEFAULT_SCOPE_ENABLED = "defaultScopeEnabled";
+    public static final String CHECK_ALL_SCOPES = "validateAllScopes";
 
     public static final String RETRIEVE_ROLES_FROM_USERSTORE_FOR_SCOPE_VALIDATION = 
             "retrieveRolesFromUserStoreForScopeValidation";
@@ -236,6 +239,11 @@ public class RoleBasedScopeValidator extends OAuth2ScopeValidator {
             Map<String, String> scopeToRoles) {
 
         List<String> defaultScope = new ArrayList<>();
+        // set a default scope if no scope is requested if configured.
+        String isDefaultScopeEnabled = System.getProperty(DEFAULT_SCOPE_ENABLED);
+        if (Boolean.parseBoolean(isDefaultScopeEnabled)) {
+            defaultScope.add(DEFAULT_SCOPE_NAME);
+        }
 
         if (userRoles == null || userRoles.length == 0) {
             userRoles = new String[0];
@@ -244,6 +252,11 @@ public class RoleBasedScopeValidator extends OAuth2ScopeValidator {
         List<String> authorizedScopes = new ArrayList<>();
         String preservedCaseSensitiveValue = System.getProperty(PRESERVED_CASE_SENSITIVE_VARIABLE);
         boolean preservedCaseSensitive = JavaUtils.isTrueExplicitly(preservedCaseSensitiveValue);
+        
+        //skip validating the roles which are not registered if configured.
+        String checkAllScopes = System.getProperty(CHECK_ALL_SCOPES);
+        boolean skipUnregisteredScopes = !Boolean.parseBoolean(checkAllScopes);
+        
         List<String> userRoleList;
         if (preservedCaseSensitive) {
             userRoleList = Arrays.asList(userRoles);
@@ -259,7 +272,7 @@ public class RoleBasedScopeValidator extends OAuth2ScopeValidator {
 
             // If requested scope is not in the binding scope list, we ignore validation for this and set it as a valid
             // scope. This is done to keep the IS default behavior of sending back the requested scope.
-            if (!scopeToRoles.containsKey(scope)) {
+            if (skipUnregisteredScopes && !scopeToRoles.containsKey(scope)) {
                 authorizedScopes.add(scope);
             }
 
