@@ -2004,7 +2004,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             connection) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.info("Updating access token reference of authorization code issued for access token id: " +
+            log.debug("Updating access token reference of authorization code issued for access token id: " +
                     oldAccessTokenId + " by new access token id:" + newAccessTokenId);
         }
 
@@ -2337,8 +2337,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
      * @throws IdentityOAuth2Exception
      */
     public void deleteAccessTokensByTenantId(int tenantId) throws IdentityOAuth2Exception {
+
         if (log.isDebugEnabled()) {
-            log.info("Deleting all access tokens of the tenant: " + tenantId);
+            log.debug("Deleting all access tokens of the tenant: " + tenantId);
         }
 
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
