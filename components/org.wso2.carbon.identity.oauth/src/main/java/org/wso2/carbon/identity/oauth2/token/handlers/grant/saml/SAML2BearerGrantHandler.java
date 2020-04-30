@@ -48,6 +48,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.CertificateInfo;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
@@ -550,10 +551,24 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
     protected void validateSignatureAgainstIdpCertificate(Assertion assertion, String tenantDomain,
                                                           IdentityProvider identityProvider)
             throws IdentityOAuth2Exception {
-        X509Certificate x509Certificate = getIdpCertificate(tenantDomain, identityProvider);
-        try {
-            X509Credential x509Credential = new X509CredentialImpl(x509Certificate);
 
+        boolean isExceptionThrown = false;
+        SignatureException signatureException = null;
+
+        CertificateInfo[] certificateInfos = identityProvider.getCertificateInfoArray();
+        if (log.isDebugEnabled()) {
+            log.debug(certificateInfos.length + " certificates found for Identity Provider " +
+                    identityProvider.getIdentityProviderName());
+        }
+
+        if (ArrayUtils.isEmpty(certificateInfos)) {
+            // Preserving the old behaviour of throwing an exception if there was no certificate available
+            // when signature validation was done only for one certificate.
+            throw new IdentityOAuth2Exception("No certificates found for Identity Provider "
+                    + identityProvider.getIdentityProviderName() + " of tenant domain " + tenantDomain);
+        }
+
+        try {
             /*
               The process mentioned below is done because OpenSAML3 does not support OSGi refer
               https://shibboleth.1660669.n2.nabble.com/Null-Pointer-Exception-from-UnmarshallerFactory-while-migrating
@@ -567,7 +582,39 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             thread.setContextClassLoader(SignatureValidationProvider.class.getClassLoader());
 
             try {
-                SignatureValidator.validate(assertion.getSignature(), x509Credential);
+                int index = 0;
+                for (CertificateInfo certificateInfo : certificateInfos) {
+                    X509Certificate x509Certificate = getIdpCertificate(tenantDomain, identityProvider,
+                            certificateInfo);
+                    X509Credential x509Credential = new X509CredentialImpl(x509Certificate);
+
+                    try {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Validating the signature with certificate " + certificateInfo.getThumbPrint()
+                                    + " at index: " + index);
+                        }
+                        SignatureValidator.validate(assertion.getSignature(), x509Credential);
+                        isExceptionThrown = false;
+                        break;
+                    } catch (SignatureException e) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Signature validation failed with certificate " + certificateInfo.getThumbPrint()
+                                    + " at index: " + index);
+                        }
+                        isExceptionThrown = true;
+                        if (signatureException == null) {
+                            signatureException = e;
+                        } else {
+                            signatureException.addSuppressed(e);
+                        }
+                    }
+                    index++;
+                }
+                // If all the certification validation fails, then throw the exception.
+                if (isExceptionThrown) {
+                    throw signatureException;
+                }
+
             } finally {
                 thread.setContextClassLoader(originalClassLoader);
             }
@@ -576,15 +623,17 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         }
     }
 
-    private X509Certificate getIdpCertificate(String tenantDomain, IdentityProvider identityProvider)
-            throws IdentityOAuth2Exception {
+    private X509Certificate getIdpCertificate(String tenantDomain, IdentityProvider identityProvider,
+                                              CertificateInfo certificateInfo) throws IdentityOAuth2Exception {
+
         X509Certificate x509Certificate;
         try {
             x509Certificate = (X509Certificate) IdentityApplicationManagementUtil
-                    .decodeCertificate(identityProvider.getCertificate());
+                    .decodeCertificate(certificateInfo.getCertValue());
         } catch (CertificateException e) {
-            throw new IdentityOAuth2Exception("Error occurred while decoding public certificate of Identity Provider "
-                    + identityProvider.getIdentityProviderName() + " for tenant domain " + tenantDomain, e);
+            throw new IdentityOAuth2Exception("Error occurred while decoding public certificate with thumbprint " +
+                    certificateInfo.getThumbPrint() + " of Identity Provider " +
+                    identityProvider.getIdentityProviderName() + " for tenant domain " + tenantDomain, e);
         }
         return x509Certificate;
     }
