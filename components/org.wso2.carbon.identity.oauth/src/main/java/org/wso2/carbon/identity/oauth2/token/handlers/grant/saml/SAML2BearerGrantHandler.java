@@ -597,6 +597,10 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                         isExceptionThrown = false;
                         break;
                     } catch (SignatureException e) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Signature validation failed with certificate " + certificateInfo.getThumbPrint()
+                                    + " at index: " + index);
+                        }
                         isExceptionThrown = true;
                         if (signatureException == null) {
                             signatureException = e;
