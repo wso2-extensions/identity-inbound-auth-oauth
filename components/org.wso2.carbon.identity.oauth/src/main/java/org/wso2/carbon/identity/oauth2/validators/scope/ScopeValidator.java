@@ -36,7 +36,7 @@ public interface ScopeValidator {
     boolean canHandle();
 
     /**
-     * Validates scopes in the authorization  request and manipulate the permitted scopes within the request. Engage
+     * Validates scopes in the authorization request and manipulate the permitted scopes within the request. Engage
      * it after application-level validators at ResponseTypeHandler level.
      *
      * @param authzReqMessageContext Authorization request.
