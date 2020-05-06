@@ -214,7 +214,7 @@ public class ClaimUtil {
                     if (e.getMessage().contains("UserNotFound")) {
                         if (log.isDebugEnabled()) {
                             log.debug(StringUtils.isNotEmpty(authorizedUserName) ? "User with username: "
-                                    + authorizedUserName + ", cannot be found in " + "user store" : "User cannot " +
+                                    + authorizedUserName + ", cannot be found in user store" : "User cannot " +
                                     "found in user store");
                         }
                     }
