@@ -253,7 +253,8 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
 
         mockOAuth2Util();
 
-        AccessTokenDO accessTokenDO = getAccessTokenDO(clientId, userStoreDomain, isFederated);
+        AccessTokenDO accessTokenDO = getAccessTokenDO(clientId, getAuthenticatedUser("carbon.super", userStoreDomain,
+                "test-user", isFederated));
         if (mockAccessTokenDO) {
             when(OAuth2Util.getAccessTokenDOfromTokenIdentifier(anyString())).thenReturn(accessTokenDO);
         }
@@ -330,10 +331,29 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
         return accessTokenDO;
     }
 
+    private AccessTokenDO getAccessTokenDO(String clientId, AuthenticatedUser authenticatedUser) {
+    
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        accessTokenDO.setConsumerKey(clientId);
+        accessTokenDO.setAuthzUser(authenticatedUser);
+        return accessTokenDO;
+    }
+
     private AuthenticatedUser getAuthenticatedUser(String userStoreDomain, boolean isFederated) {
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserStoreDomain(userStoreDomain);
+        authenticatedUser.setFederatedUser(isFederated);
+        return authenticatedUser;
+    }
+
+    private AuthenticatedUser getAuthenticatedUser(String tenantDomain, String userStoreDomain, String username,
+                                                   boolean isFederated) {
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setTenantDomain(tenantDomain);
+        authenticatedUser.setUserStoreDomain(userStoreDomain);
+        authenticatedUser.setUserName(username);
         authenticatedUser.setFederatedUser(isFederated);
         return authenticatedUser;
     }

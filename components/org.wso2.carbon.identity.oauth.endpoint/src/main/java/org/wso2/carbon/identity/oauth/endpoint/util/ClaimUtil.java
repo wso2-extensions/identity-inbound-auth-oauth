@@ -107,8 +107,8 @@ public class ClaimUtil {
             throws UserInfoEndpointException {
 
         try {
-            String username = tokenResponse.getAuthorizedUser();
-            String userTenantDomain = MultitenantUtils.getTenantDomain(tokenResponse.getAuthorizedUser());
+            String username;
+            String userTenantDomain;
             UserRealm realm;
             List<String> claimURIList = new ArrayList<>();
             Map<String, Object> mappedAppClaims = new HashMap<>();
@@ -117,6 +117,9 @@ public class ClaimUtil {
             try {
                 AccessTokenDO accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(
                         OAuth2Util.getAccessTokenIdentifier(tokenResponse));
+                username = accessTokenDO.getAuthzUser().getUserName();
+                userTenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
+
                 // If the authenticated user is a federated user and had not mapped to local users, no requirement to
                 // retrieve claims from local userstore.
                 if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && accessTokenDO != null) {
@@ -161,7 +164,7 @@ public class ClaimUtil {
                     spToLocalClaimMappings = ClaimMetadataHandler.getInstance().getMappingsMapFromOtherDialectToCarbon
                             (SP_DIALECT, null, userTenantDomain, true);
 
-                    realm = getUserRealm(username, userTenantDomain);
+                    realm = getUserRealm(null, userTenantDomain);
                     Map<String, String> userClaims = getUserClaimsFromUserStore(username, realm, claimURIList);
 
                     if (isNotEmpty(userClaims)) {
@@ -206,16 +209,21 @@ public class ClaimUtil {
                 }
                 mappedAppClaims.put(OAuth2Util.SUB, subjectClaimValue);
             } catch (Exception e) {
+                String authorizedUserName = tokenResponse.getAuthorizedUser();
                 if (e instanceof UserStoreException) {
                     if (e.getMessage().contains("UserNotFound")) {
                         if (log.isDebugEnabled()) {
-                            log.debug("User " + username + " not found in user store");
+                            log.debug(StringUtils.isNotEmpty(authorizedUserName) ? "User with username: "
+                                    + authorizedUserName + ", cannot be found in user store" : "User cannot " +
+                                    "found in user store");
                         }
                     }
                 } else {
-                    log.error("Error while retrieving the claims from user store for " + username, e);
-                    throw new IdentityOAuth2Exception("Error while retrieving the claims from user store for "
-                            + username);
+                    String errMsg = StringUtils.isNotEmpty(authorizedUserName) ? "Error while retrieving the claims " +
+                            "from user store for the username: " + authorizedUserName : "Error while retrieving the " +
+                            "claims from user store";
+                    log.error(errMsg, e);
+                    throw new IdentityOAuth2Exception(errMsg);
                 }
             }
             return mappedAppClaims;
