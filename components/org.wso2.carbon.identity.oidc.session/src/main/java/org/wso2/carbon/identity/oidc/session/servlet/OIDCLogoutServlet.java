@@ -83,6 +83,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TENANT_DOMAIN;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils.getRedirectURL;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 import static org.wso2.carbon.identity.oidc.session.OIDCSessionConstants.OIDCEndpoints.OIDC_LOGOUT_ENDPOINT;
 import static org.wso2.carbon.identity.oidc.session.OIDCSessionConstants.OIDC_LOGOUT_CONSENT_DENIAL_REDIRECT_URL;
 import static org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil.getErrorPageURL;
@@ -284,7 +285,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 .getParameter(OIDCSessionConstants.OIDC_STATE_PARAM);
 
         String clientId;
-        String appTenantDomain;
+        String appTenantDomain = null;
         try {
             if (!validateIdToken(idTokenHint)) {
                 String msg = "ID token signature validation failed.";
@@ -297,10 +298,8 @@ public class OIDCLogoutServlet extends HttpServlet {
             OAuthAppDAO appDAO = new OAuthAppDAO();
             OAuthAppDO oAuthAppDO = appDAO.getAppInformation(clientId);
 
-            appTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-            if (oAuthAppDO.getUser() != null && oAuthAppDO.getUser().getTenantDomain() != null) {
-                appTenantDomain = oAuthAppDO.getUser().getTenantDomain();
-            }
+            appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
+            validateRequestTenantDomain(appTenantDomain);
 
             String spName = getServiceProviderName(clientId, appTenantDomain);
             setSPAttributeToRequest(request, spName, appTenantDomain);
@@ -312,12 +311,16 @@ public class OIDCLogoutServlet extends HttpServlet {
             }
         } catch (ParseException e) {
             String msg = "No valid session found for the received session state.";
-            log.error(msg, e);
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
             redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
             return getRedirectURL(redirectURL, request);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            String msg = "Error occurred while getting application information. Client id not found";
-            log.error(msg, e);
+            String msg = "Error occurred while getting application information. Client id not found.";
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
             redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
             return getRedirectURL(redirectURL, request);
         }

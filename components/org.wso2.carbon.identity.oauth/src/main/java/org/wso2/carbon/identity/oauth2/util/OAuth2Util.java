@@ -3700,4 +3700,24 @@ public class OAuth2Util {
             throw new IdentityOAuth2Exception("Error occurred while generating SHA-1 JWK thumbprint", e);
         }
     }
+
+    /**
+     * Validates whether the tenant domain set in context matches with the app's tenant domain in tenant qualified
+     * URL mode.
+     *
+     * @param tenantDomainOfApp Tenant domain of the app.
+     * @throws InvalidOAuthClientException
+     */
+    public static void validateRequestTenantDomain(String tenantDomainOfApp) throws InvalidOAuthClientException {
+
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            // In tenant qualified URL mode we would always have the tenant domain in the context.
+            String tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
+            if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
+                // This means the tenant domain sent in the request and app's tenant domain do not match.
+                throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in " +
+                        "tenantDomain: " + tenantDomainFromContext);
+            }
+        }
+    }
 }

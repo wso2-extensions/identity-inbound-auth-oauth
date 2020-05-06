@@ -28,7 +28,6 @@ import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.owasp.encoder.Encode;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -66,6 +65,7 @@ import java.util.concurrent.TimeUnit;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 
 /**
  * This class is used to issue access tokens and refresh tokens.
@@ -198,7 +198,7 @@ public class AccessTokenIssuer {
         // Indirectly we can say that the tenantDomain of the SP is the tenantDomain of the user who created SP.
         // This is done to avoid having to send the tenantDomain as a query param to the token endpoint
         String tenantDomainOfApp = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-        validateTenantDomain(tenantDomainOfApp);
+        validateRequestTenantDomain(tenantDomainOfApp);
 
         tokenReqDTO.setTenantDomain(tenantDomainOfApp);
 
@@ -350,26 +350,6 @@ public class AccessTokenIssuer {
         }
 
         return tokenRespDTO;
-    }
-
-    /**
-     * Validates whether the tenant domain set in context matches with the app's tenant domain in tenant qualified
-     * URL mode.
-     *
-     * @param tenantDomainOfApp Tenant domain of the app.
-     * @throws InvalidOAuthClientException
-     */
-    private void validateTenantDomain(String tenantDomainOfApp) throws InvalidOAuthClientException {
-        
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            // In tenant qualified URL mode we would always have the tenant domain in the context.
-            String tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
-            if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
-                // This means the tenant domain sent in the request and app's tenant domain do not match.
-                throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in " +
-                        "tenantDomain: " + tenantDomainFromContext);
-            }
-        }
     }
 
     private void addAuthorizedInternalScopes(OAuthTokenReqMessageContext tokReqMsgCtx,

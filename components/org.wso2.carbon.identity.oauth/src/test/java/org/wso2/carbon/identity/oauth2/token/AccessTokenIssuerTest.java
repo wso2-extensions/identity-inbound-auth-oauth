@@ -245,6 +245,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(true);
         when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantInContext);
+        when(OAuth2Util.class, "validateRequestTenantDomain", anyString()).thenCallRealMethod();
 
         mockPasswordGrantHandler(true, true, true, true);
 
