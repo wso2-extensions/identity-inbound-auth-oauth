@@ -332,6 +332,7 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
     }
 
     private AccessTokenDO getAccessTokenDO(String clientId, AuthenticatedUser authenticatedUser) {
+    
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setConsumerKey(clientId);
         accessTokenDO.setAuthzUser(authenticatedUser);
