@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -1699,5 +1700,42 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 assertTrue(oidcAudience.contains(configuredAudience));
             }
         }
+    }
+
+
+    @DataProvider(name = "tenantDomainProvider")
+    public Object[][] getTenantDomains() {
+
+        return new Object[][]{
+                // Tenant qualified URLs disable, we do not do any validation.
+                { false, null, "wso2.com", false},
+                { false, "carbon.super", "wso2.com", false},
+                { false, "carbon.super", "carbon.super", false},
+
+                // Tenant qualified URLs enabled but tenant domains do not match.
+                { true, null, "wso2.com", true},
+                { true, "carbon.super", "wso2.com", true},
+
+                // Tenant qualified URLs enabled and tenant domains match.
+                { true, "wso2.com", "wso2.com", false},
+        };
+    }
+
+    @Test (dataProvider = "tenantDomainProvider")
+    public void testValidateRequestTenantDomain(boolean isTenantQualifiedURLsEnabled, String requestTenantDomain,
+                                                String appTenantDomain, boolean isExceptionExpected) {
+
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifiedURLsEnabled);
+        when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(requestTenantDomain);
+
+        boolean isInvalidClientExceptionThrown = false;
+        try {
+            OAuth2Util.validateRequestTenantDomain(appTenantDomain);
+        } catch (InvalidOAuthClientException e) {
+            isInvalidClientExceptionThrown = true;
+        }
+
+        assertEquals(isInvalidClientExceptionThrown, isExceptionExpected);
     }
 }

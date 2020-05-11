@@ -67,6 +67,7 @@ import java.util.Map;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isValidTokenBinding;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 
 /**
  * OAuth2 Service which is used to issue authorization codes or access tokens upon authorizing by the
@@ -133,6 +134,9 @@ public class OAuth2Service extends AbstractAdmin {
         }
 
         try {
+            String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
+            validateRequestTenantDomain(appTenantDomain);
+
             if (StringUtils.isBlank(clientId)) {
                 throw new InvalidOAuthClientException("Invalid client_id. No OAuth application has been registered " +
                         "with the given client_id");
