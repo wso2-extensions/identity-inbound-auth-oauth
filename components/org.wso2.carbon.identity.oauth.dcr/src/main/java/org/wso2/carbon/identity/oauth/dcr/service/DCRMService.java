@@ -74,7 +74,8 @@ public class DCRMService {
      */
     public Application getApplication(String clientId) throws DCRMException {
 
-        return buildResponse(getApplicationById(clientId));
+        boolean isApplicationRolePermissionRequired = DCRMUtils.isApplicationRolePermissionRequired();
+        return buildResponse(getApplicationById(clientId, isApplicationRolePermissionRequired));
     }
 
     /**
@@ -223,6 +224,12 @@ public class DCRMService {
 
     private OAuthConsumerAppDTO getApplicationById(String clientId) throws DCRMException {
 
+        return getApplicationById(clientId, true);
+    }
+
+    private OAuthConsumerAppDTO getApplicationById(String clientId, boolean isApplicationRolePermissionRequired)
+            throws DCRMException {
+
         if (StringUtils.isEmpty(clientId)) {
             String errorMessage = "Invalid client_id";
             throw DCRMUtils.generateClientException(
@@ -234,7 +241,7 @@ public class DCRMService {
             if (dto == null || StringUtils.isEmpty(dto.getApplicationName())) {
                 throw DCRMUtils.generateClientException(
                         DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID, clientId);
-            } else if (!isUserAuthorized(clientId)) {
+            } else if (isApplicationRolePermissionRequired && !isUserAuthorized(clientId)) {
                 throw DCRMUtils.generateClientException(
                         DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER, clientId);
             }
