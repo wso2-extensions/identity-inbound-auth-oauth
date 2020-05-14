@@ -112,6 +112,7 @@ public class EndpointUtil {
     private static OAuthServerConfiguration oauthServerConfiguration;
     private static RequestObjectService requestObjectService;
     private static CibaAuthServiceImpl cibaAuthService;
+    private static final String ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL = "OAuth.AllowAdditionalParamsFromErrorUrl";
 
     public static void setOAuth2Service(OAuth2Service oAuth2Service) {
 
@@ -440,7 +441,13 @@ public class EndpointUtil {
         if (request == null) {
             return redirectURL;
         }
-        return getRedirectURL(redirectURL, request);
+        if (isAllowAdditionalParamsFromErrorUrlEnabled() || isRedirectToCommonErrorPage(params, redirectURL)) {
+            // Appending additional parameters if the <AllowAdditionalParamsFromErrorUrl> config is enabled or
+            // the error is redirected to the common error page.
+            return getRedirectURL(redirectURL, request);
+        } else {
+            return redirectURL;
+        }
     }
 
     public static String getErrorRedirectURL(OAuthProblemException ex, OAuth2Parameters params) {
@@ -909,5 +916,30 @@ public class EndpointUtil {
     public static void setCibaAuthService(CibaAuthServiceImpl cibaAuthService) {
 
         EndpointUtil.cibaAuthService = cibaAuthService;
+    }
+
+    /**
+     * Method to retrieve the <AllowAdditionalParamsFromErrorUrl> config from the OAuth Configuration.
+     * @return Retrieved config (true or false)
+     */
+    private static boolean isAllowAdditionalParamsFromErrorUrlEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL));
+    }
+
+    /**
+     * Method to check whether the error is redirected to the common error page.
+     *
+     * @param params       OAuth2Parameters
+     * @param redirectURL  Constructed redirect URL
+     * @return Whether the error is redirected to the common error page (true or false)
+     */
+    private static boolean isRedirectToCommonErrorPage(OAuth2Parameters params, String redirectURL) {
+
+        // Verifying whether the error is redirecting to the redirect url by checking whether the constructed redirect
+        // url contains the redirect url from the request if the params from request is not null and params from
+        // request contains redirect url.
+        return !(params != null && StringUtils.isNotBlank(params.getRedirectURI()) &&
+                StringUtils.startsWith(redirectURL, params.getRedirectURI()));
     }
 }
