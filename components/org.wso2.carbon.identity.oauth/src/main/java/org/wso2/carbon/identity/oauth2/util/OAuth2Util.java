@@ -2830,7 +2830,8 @@ public class OAuth2Util {
      * @return true for a JWT token.
      */
     public static boolean isParsableJWT(String tokenIdentifier) {
-        if (StringUtils.isEmpty(tokenIdentifier)){
+
+        if (StringUtils.isEmpty(tokenIdentifier)) {
             return false;
         }
         try {
