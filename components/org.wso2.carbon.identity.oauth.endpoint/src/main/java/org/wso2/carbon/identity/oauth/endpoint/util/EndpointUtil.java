@@ -17,7 +17,6 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.util;
 
-import com.google.gdata.model.atom.Author;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.axiom.util.base64.Base64Utils;
@@ -952,7 +951,8 @@ public class EndpointUtil {
      * This method retrieve the state to append to the error page URL.
      * If the state is available in OAuth2Parameters it will retrieve state from OAuth2Parameters.
      * If the state is not available in OAuth2Parameters, then the state will be retrieved from request object.
-     * If the state is not available in OAuth2Parameters and request object then state will be retrieved from query params
+     * If the state is not available in OAuth2Parameters and request object then state will be retrieved
+     * from query params.
      *
      * @param request
      * @param oAuth2Parameters
