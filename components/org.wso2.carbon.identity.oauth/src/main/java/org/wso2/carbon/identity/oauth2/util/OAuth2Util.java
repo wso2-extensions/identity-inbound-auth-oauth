@@ -39,6 +39,7 @@ import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.JWTParser;
 import com.nimbusds.jwt.SignedJWT;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.axiom.om.OMElement;
@@ -2819,6 +2820,24 @@ public class OAuth2Util {
         } catch (CertificateException e) {
             throw new IdentityOAuth2Exception("Error while building X509 cert of oauth app with client_id: "
                     + clientId + " of tenantDomain: " + tenantDomain, e);
+        }
+    }
+
+    /**
+     * Return true if the token identifier is a parsable JWT.
+     *
+     * @param tokenIdentifier String JWT token identifier.
+     * @return true for a JWT token.
+     */
+    public static boolean isParsableJWT(String tokenIdentifier) {
+        if (StringUtils.isEmpty(tokenIdentifier)){
+            return false;
+        }
+        try {
+            JWTParser.parse(tokenIdentifier);
+            return true;
+        } catch (ParseException e) {
+            return false;
         }
     }
 
