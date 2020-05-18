@@ -645,6 +645,7 @@ public class TokenValidationHandler {
     }
 
     private boolean isJWTTokenValidation(String tokenIdentifier) {
+
         return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_JWT_TOKEN_VALIDATION)) && isParsableJWT(
                 tokenIdentifier);
     }
