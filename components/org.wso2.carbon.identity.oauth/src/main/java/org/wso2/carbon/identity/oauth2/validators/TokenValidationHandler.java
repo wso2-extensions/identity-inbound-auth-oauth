@@ -56,6 +56,7 @@ public class TokenValidationHandler {
     AuthorizationContextTokenGenerator tokenGenerator = null;
     private static final Log log = LogFactory.getLog(TokenValidationHandler.class);
     private Map<String, OAuth2TokenValidator> tokenValidators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    private static final String BEARER_TOKEN_TYPE = "Bearer";
     private static final String BUILD_FQU_FROM_SP_CONFIG = "OAuth.BuildSubjectIdentifierFromSPConfig";
     private static final String ENABLE_JWT_TOKEN_VALIDATION = "OAuth.EnableJWTTokenValidationDuringIntrospection";
 
@@ -239,8 +240,7 @@ public class TokenValidationHandler {
         if (oAuth2Token.getTokenType() != null) {
             if (tokenValidators.get(oAuth2Token.getTokenType()) != null) {
                 // Ignore bearer token validators if the token is JWT.
-                if (!(isJWTTokenValidation && tokenValidators.get(oAuth2Token.getTokenType()) instanceof
-                        DefaultOAuth2TokenValidator)) {
+                if (!isSkipValidatorForJWT(tokenValidators.get(oAuth2Token.getTokenType()), isJWTTokenValidation)) {
                     applicableValidators.add(tokenValidators.get(oAuth2Token.getTokenType()));
                 }
             }
@@ -254,7 +254,7 @@ public class TokenValidationHandler {
             }
 
             // Ignore bearer token validators if the token is JWT.
-            if (isJWTTokenValidation && oAuth2TokenValidator instanceof DefaultOAuth2TokenValidator) {
+            if (isSkipValidatorForJWT(oAuth2TokenValidator.getValue(), isJWTTokenValidation)) {
                 continue;
             }
 
@@ -647,5 +647,10 @@ public class TokenValidationHandler {
     private boolean isJWTTokenValidation(String tokenIdentifier) {
         return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_JWT_TOKEN_VALIDATION)) && isParsableJWT(
                 tokenIdentifier);
+    }
+
+    private boolean isSkipValidatorForJWT(OAuth2TokenValidator tokenValidator, boolean isJWTTokenValidation) {
+
+        return isJWTTokenValidation && BEARER_TOKEN_TYPE.equals(tokenValidator.getTokenType());
     }
 }

@@ -2838,6 +2838,9 @@ public class OAuth2Util {
             JWTParser.parse(tokenIdentifier);
             return true;
         } catch (ParseException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Provided token identifier is not a parsable JWT", e);
+            }
             return false;
         }
     }
