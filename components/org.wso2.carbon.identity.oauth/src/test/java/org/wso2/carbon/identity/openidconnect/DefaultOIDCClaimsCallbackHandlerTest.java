@@ -61,6 +61,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -971,7 +972,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     }
 
     private JWTClaimsSet getJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                        OAuthTokenReqMessageContext requestMsgCtx) {
+                                        OAuthTokenReqMessageContext requestMsgCtx) throws IdentityOAuth2Exception {
 
         OAuthServerConfiguration mockOAuthServerConfiguration = PowerMockito.mock(OAuthServerConfiguration.class);
         DataSource dataSource = mock(DataSource.class);
@@ -1012,7 +1013,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     }
 
     private JWTClaimsSet getJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                        OAuthAuthzReqMessageContext requestMsgCtx) {
+                                        OAuthAuthzReqMessageContext requestMsgCtx) throws IdentityOAuth2Exception {
 
         OAuthServerConfiguration mockOAuthServerConfiguration = PowerMockito.mock(OAuthServerConfiguration.class);
         DataSource dataSource = mock(DataSource.class);
