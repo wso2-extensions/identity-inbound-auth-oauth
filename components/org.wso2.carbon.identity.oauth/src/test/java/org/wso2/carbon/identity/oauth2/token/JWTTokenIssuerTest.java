@@ -499,7 +499,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         assertNotNull(jwtClaimsSet.getClaim("TOKEN_CONTEXT_CLAIM"));
     }
 
-    private void mockCustomClaimsCallbackHandler() {
+    private void mockCustomClaimsCallbackHandler() throws IdentityOAuth2Exception {
         CustomClaimsCallbackHandler claimsCallBackHandler = mock(CustomClaimsCallbackHandler.class);
 
         doAnswer(new Answer<JWTClaimsSet>() {
