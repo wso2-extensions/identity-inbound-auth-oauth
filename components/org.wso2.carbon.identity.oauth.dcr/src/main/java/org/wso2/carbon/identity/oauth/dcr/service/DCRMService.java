@@ -319,7 +319,11 @@ public class DCRMService {
         redirectUrisList.add(createdApp.getCallbackUrl());
         application.setRedirectUris(redirectUrisList);
 
-        application.setGrantTypes(Arrays.asList(createdApp.getGrantTypes().split(" ")));
+        List<String> grantTypesList = new ArrayList<>();
+        if (StringUtils.isNotEmpty(createdApp.getGrantTypes())) {
+            grantTypesList = Arrays.asList(createdApp.getGrantTypes().split(" "));
+        }
+        application.setGrantTypes(grantTypesList);
 
         return application;
     }
