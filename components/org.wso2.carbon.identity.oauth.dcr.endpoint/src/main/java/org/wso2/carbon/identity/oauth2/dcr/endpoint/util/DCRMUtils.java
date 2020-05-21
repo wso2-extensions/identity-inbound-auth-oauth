@@ -149,6 +149,7 @@ public class DCRMUtils {
         applicationDTO.setClientName(application.getClientName());
         applicationDTO.setClientSecret(application.getClientSecret());
         applicationDTO.setRedirectUris(application.getRedirectUris());
+        applicationDTO.setGrantTypes(application.getGrantTypes());
 
         return applicationDTO;
     }

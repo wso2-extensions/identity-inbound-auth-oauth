@@ -43,6 +43,7 @@ paths:
         "client_secret":"ZJYCqe3GGRvdrudKyZS0XhGv_Z45DuKhCUk0gBR1vZk",
         "client_secret_expires_at": 1577858400,
         "redirect_uris":[""],
+        "grant_types": ["password"],
         "client_name":"application_1" }
       description: |
         If you want to register an OAuth2 application with a specified client_id and secret, check the sample request given below.
@@ -59,7 +60,8 @@ paths:
         {"client_name”:"application_test",
         "client_id":"provided_client_id0001",
         "client_secret":"provided_client_secret0001",
-        "redirect_uris":[""]}
+        "redirect_uris":[""],
+        "grant_types": ["password"]}
       summary: |
         Registers an OAuth2 application
       operationId: registerApplication
@@ -103,7 +105,8 @@ paths:
         "client_secret":"ZJYCqe3GGRvdrudKyZS0XhGv_Z45DuKhCUk0gBR1vZk",
         "client_secret_expires_at": 1577858400,
         "redirect_uris":["https://client.example.org/callback"],
-        "client_name":"application_owner_application_1" }
+        "client_name":"application_owner_application_1",
+        "grant_types": ["password"]}
       operationId: getApplicationByName
       parameters:
         - name: client_name
@@ -141,6 +144,7 @@ paths:
         "client_secret":"ZJYCqe3GGRvdrudKyZS0XhGv_Z45DuKhCUk0gBR1vZk",
         "client_secret_expires_at": 1577858400,
         "redirect_uris":["https://client.example.org/callback"],
+        "grant_types": ["password"],
         "client_name":"application_owner_application_1" }
       operationId: getApplication
       parameters:
@@ -211,6 +215,7 @@ paths:
         "client_secret":"ZJYCqe3GGRvdrudKyZS0XhGv_Z45DuKhCUk0gBR1vZk",
         "client_secret_expires_at": 1577858400,
         "redirect_uris":["https://client.example.org/callback"],
+        "grant_types": ["password"],
         "client_name":"application_owner_application_1" }
       summary: |
         Updates an OAuth2 application
@@ -340,6 +345,10 @@ definitions:
       client_secret_expires_at:
         type: string
       redirect_uris:
+        type: array
+        items:
+          type: string
+      grant_types:
         type: array
         items:
           type: string

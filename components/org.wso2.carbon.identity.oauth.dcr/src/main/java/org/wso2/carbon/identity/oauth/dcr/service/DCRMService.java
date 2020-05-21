@@ -49,6 +49,7 @@ import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -317,6 +318,12 @@ public class DCRMService {
         List<String> redirectUrisList = new ArrayList<>();
         redirectUrisList.add(createdApp.getCallbackUrl());
         application.setRedirectUris(redirectUrisList);
+
+        List<String> grantTypesList = new ArrayList<>();
+        if (StringUtils.isNotEmpty(createdApp.getGrantTypes())) {
+            grantTypesList = Arrays.asList(createdApp.getGrantTypes().split(" "));
+        }
+        application.setGrantTypes(grantTypesList);
 
         return application;
     }

@@ -32,6 +32,7 @@ public class Application implements Serializable {
     private String clientId = null;
     private String clientSecret = null;
     private List<String> redirectUris = null;
+    private List<String> grantTypes = null;
 
     public String getClientName() {
 
@@ -73,6 +74,16 @@ public class Application implements Serializable {
         this.redirectUris = redirectUris;
     }
 
+    public List<String> getGrantTypes() {
+
+        return grantTypes;
+    }
+
+    public void setGrantTypes(List<String> grantTypes) {
+
+        this.grantTypes = grantTypes;
+    }
+
     @Override
     public String toString() {
 
@@ -81,6 +92,7 @@ public class Application implements Serializable {
                 "  clientId: " + this.clientId + "\n" +
                 "  clientSecret: " + this.clientSecret + "\n" +
                 "  redirectUris: " + this.redirectUris + "\n" +
+                "  grantTypes: " + this.grantTypes + "\n" +
                 "}\n";
     }
 }
