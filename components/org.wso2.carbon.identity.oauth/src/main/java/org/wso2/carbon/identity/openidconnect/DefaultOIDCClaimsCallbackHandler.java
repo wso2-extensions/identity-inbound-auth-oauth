@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -333,17 +334,55 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         Map<String, Object> userClaimsInOIDCDialect;
         Map<ClaimMapping, String> userAttributes =
                 getUserAttributesCachedAgainstToken(getAccessToken(authzReqMessageContext));
-        if (isEmpty(userAttributes) && isLocalUser(authzReqMessageContext)) {
-            if (log.isDebugEnabled()) {
-                log.debug("User attributes not found in cache. Trying to retrieve attribute for local user: " +
-                        authzReqMessageContext.getAuthorizationReqDTO().getUser());
+
+        if (isEmpty(userAttributes)) {
+            if (isLocalUser(authzReqMessageContext)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("User attributes not found in cache. Trying to retrieve attribute for local user: " +
+                            authzReqMessageContext.getAuthorizationReqDTO().getUser());
+                }
+                userClaimsInOIDCDialect = retrieveClaimsForLocalUser(authzReqMessageContext);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("User attributes not found in cache. Trying to retrieve attribute for federated " +
+                            "user: " + authzReqMessageContext.getAuthorizationReqDTO().getUser());
+                }
+                userClaimsInOIDCDialect = retrieveClaimsForFederatedUser(authzReqMessageContext);
             }
-            userClaimsInOIDCDialect = retrieveClaimsForLocalUser(authzReqMessageContext);
         } else {
             userClaimsInOIDCDialect = getOIDCClaimMapFromUserAttributes(userAttributes);
         }
 
         return filterOIDCClaims(authzReqMessageContext, userClaimsInOIDCDialect);
+    }
+
+    /**
+     * Retrieve the claim set of the AuthenticatedUser from the OAuthAuthzReqMessageContext.
+     *
+     * @param authzReqMessageContext OAuthAuthzReqMessageContext.
+     * @return Map of user attributes.
+     */
+    private Map<String, Object> retrieveClaimsForFederatedUser(OAuthAuthzReqMessageContext authzReqMessageContext) {
+
+        OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO = authzReqMessageContext.getAuthorizationReqDTO();
+        Map<String, Object> userClaimsMappedToOIDCDialect = new HashMap<>();
+
+        if (oAuth2AuthorizeReqDTO == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth2AuthorizeReqDTO is NULL for federated user: " +
+                        authzReqMessageContext.getAuthorizationReqDTO().getUser());
+            }
+            return userClaimsMappedToOIDCDialect;
+        }
+        AuthenticatedUser authenticatedUser = oAuth2AuthorizeReqDTO.getUser();
+        if (authenticatedUser == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Authenticated User is not available in the request");
+            }
+            return userClaimsMappedToOIDCDialect;
+        }
+        userClaimsMappedToOIDCDialect = getOIDCClaimMapFromUserAttributes(authenticatedUser.getUserAttributes());
+        return userClaimsMappedToOIDCDialect;
     }
 
     private Map<String, Object> filterOIDCClaims(OAuthAuthzReqMessageContext authzReqMessageContext,
