@@ -127,7 +127,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     /**
-     * Get response map
+     * Get response map.
      *
      * @param requestMsgCtx Token request message context
      * @return Mapped claimed
@@ -421,7 +421,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     /**
-     * Get claims map
+     * Get claims map.
      *
      * @param userAttributes User Attributes
      * @return User attribute map
@@ -574,7 +574,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     /**
-     * Get user claims in OIDC claim dialect
+     * Get user claims in OIDC claim dialect.
      *
      * @param oidcToLocalClaimMappings OIDC dialect to Local dialect claim mappings
      * @param userClaims               User claims in local dialect
@@ -624,7 +624,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     /**
-     * Get user attribute cached against the access token
+     * Get user attribute cached against the access token.
      *
      * @param accessToken Access token
      * @return User attributes cached against the access token
@@ -646,7 +646,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     /**
-     * Get user attributes cached against the authorization code
+     * Get user attributes cached against the authorization code.
      *
      * @param authorizationCode Authorization Code
      * @return User attributes cached against the authorization code
