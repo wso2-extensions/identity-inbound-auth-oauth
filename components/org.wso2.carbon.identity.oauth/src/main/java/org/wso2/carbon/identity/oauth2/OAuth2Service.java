@@ -197,7 +197,7 @@ public class OAuth2Service extends AbstractAdmin {
                 regexp = registeredCallbackUrl.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
             }
 
-            if (regexp != null && callbackURI.matches(regexp) || appDO.getCallbackUrl().equals(callbackURI)) {
+            if (validateCallbackURI(regexp, callbackURI, appDO)) {
                 validationResponseDTO.setValidClient(true);
                 validationResponseDTO.setApplicationName(appDO.getApplicationName());
                 validationResponseDTO.setCallbackURL(callbackURI);
@@ -227,6 +227,10 @@ public class OAuth2Service extends AbstractAdmin {
             validationResponseDTO.setErrorMsg("Error when processing the authorization request.");
             return validationResponseDTO;
         }
+    }
+
+    private boolean validateCallbackURI(String regexp, String callbackURI, OAuthAppDO oauth) {
+        return regexp != null && callbackURI.matches(regexp) || oauth.getCallbackUrl().equals(callbackURI);
     }
 
     /**
