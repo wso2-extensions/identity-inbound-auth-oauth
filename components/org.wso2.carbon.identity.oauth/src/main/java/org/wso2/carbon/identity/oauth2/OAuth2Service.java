@@ -188,16 +188,7 @@ public class OAuth2Service extends AbstractAdmin {
                         .getApplicationName() + ", Callback URL : " + appDO.getCallbackUrl());
             }
 
-            // Valid Client with a callback url in the request.
-            // If application callback url is defined as a regexp check weather it matches the given url
-            // Or else check weather they are equal
-            String regexp = null;
-            String registeredCallbackUrl = appDO.getCallbackUrl();
-            if (registeredCallbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
-                regexp = registeredCallbackUrl.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
-            }
-
-            if (validateCallbackURI(regexp, callbackURI, appDO)) {
+            if (validateCallbackURI(callbackURI, appDO)) {
                 validationResponseDTO.setValidClient(true);
                 validationResponseDTO.setApplicationName(appDO.getApplicationName());
                 validationResponseDTO.setCallbackURL(callbackURI);
@@ -229,8 +220,16 @@ public class OAuth2Service extends AbstractAdmin {
         }
     }
 
-    private boolean validateCallbackURI(String regexp, String callbackURI, OAuthAppDO oauth) {
-        return regexp != null && callbackURI.matches(regexp) || oauth.getCallbackUrl().equals(callbackURI);
+    // Validate Client with a callback url in the request.
+    // If application callback url is defined as a regexp check weather it matches the given url
+    // Or check weather they are equal
+    private boolean validateCallbackURI(String callbackURI, OAuthAppDO oauth) {
+        String regexp = null;
+        String registeredCallbackUrl = oauth.getCallbackUrl();
+        if (registeredCallbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+            regexp = registeredCallbackUrl.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
+        }
+        return regexp != null && callbackURI.matches(regexp) || registeredCallbackUrl.equals(callbackURI);
     }
 
     /**
