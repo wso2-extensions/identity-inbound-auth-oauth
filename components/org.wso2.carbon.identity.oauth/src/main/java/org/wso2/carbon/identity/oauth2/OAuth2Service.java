@@ -197,12 +197,7 @@ public class OAuth2Service extends AbstractAdmin {
                 regexp = registeredCallbackUrl.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
             }
 
-            if (regexp != null && callbackURI.matches(regexp)) {
-                validationResponseDTO.setValidClient(true);
-                validationResponseDTO.setApplicationName(appDO.getApplicationName());
-                validationResponseDTO.setCallbackURL(callbackURI);
-                return validationResponseDTO;
-            } else if (appDO.getCallbackUrl().equals(callbackURI)) {
+            if (regexp != null && callbackURI.matches(regexp) || appDO.getCallbackUrl().equals(callbackURI)) {
                 validationResponseDTO.setValidClient(true);
                 validationResponseDTO.setApplicationName(appDO.getApplicationName());
                 validationResponseDTO.setCallbackURL(callbackURI);
