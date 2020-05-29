@@ -222,8 +222,11 @@ public class OAuth2Service extends AbstractAdmin {
 
     /**
      * Validate Client with a callback url in the request.
-     * If application callback url is defined as a regexp check weather it matches the given url
-     * Or check weather they are equal
+     *
+     * @param callbackURI callback url in the request.
+     * @param oauthApp OAuth application data object
+     * @return boolean If application callback url is defined as a regexp check weather it matches the given url
+     * Or check weather callback urls are equal
      */
     private boolean validateCallbackURI(String callbackURI, OAuthAppDO oauthApp) {
         String regexp = null;
@@ -231,7 +234,7 @@ public class OAuth2Service extends AbstractAdmin {
         if (registeredCallbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
             regexp = registeredCallbackUrl.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
         }
-        return regexp != null && callbackURI.matches(regexp) || registeredCallbackUrl.equals(callbackURI);
+        return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
     }
 
     /**
