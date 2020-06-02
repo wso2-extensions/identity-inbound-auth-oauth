@@ -52,6 +52,10 @@
             <groupId>commons-lang.wso2</groupId>
             <artifactId>commons-lang</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon</groupId>
+            <artifactId>org.wso2.carbon.user.core</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.felix</groupId>
@@ -134,6 +138,7 @@
 
                             org.wso2.carbon.registry.api;version="${carbon.kernel.registry.imp.pkg.version.range}",
                             org.wso2.carbon.registry.core.*;version="${carbon.kernel.registry.imp.pkg.version.range}",
+                            org.wso2.carbon.user.core.*; version="${carbon.kernel.imp.pkg.version.range}",
 
                             org.wso2.carbon.identity.core.*; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.base; version="${carbon.identity.framework.imp.pkg.version.range}",
