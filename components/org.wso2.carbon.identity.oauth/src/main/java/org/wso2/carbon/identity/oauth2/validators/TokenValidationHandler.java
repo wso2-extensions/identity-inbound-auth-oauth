@@ -44,6 +44,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isParsableJWT;
+
 /**
  * Handles the token validation by invoking the proper validation handler by looking at the token
  * type.
@@ -54,7 +56,9 @@ public class TokenValidationHandler {
     AuthorizationContextTokenGenerator tokenGenerator = null;
     private static final Log log = LogFactory.getLog(TokenValidationHandler.class);
     private Map<String, OAuth2TokenValidator> tokenValidators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    private static final String BEARER_TOKEN_TYPE = "Bearer";
     private static final String BUILD_FQU_FROM_SP_CONFIG = "OAuth.BuildSubjectIdentifierFromSPConfig";
+    private static final String ENABLE_JWT_TOKEN_VALIDATION = "OAuth.EnableJWTTokenValidationDuringIntrospection";
 
     private TokenValidationHandler() {
 
@@ -230,11 +234,15 @@ public class TokenValidationHandler {
         // To hold the applicable validators list from all the available validators. This list will be prioritized if we
         // have a token_type_hint.
         List<OAuth2TokenValidator> applicableValidators = new ArrayList<>();
+        boolean isJWTTokenValidation = isJWTTokenValidation(oAuth2Token.getIdentifier());
 
         // If we have a token type hint, we have to prioritize our list.
         if (oAuth2Token.getTokenType() != null) {
             if (tokenValidators.get(oAuth2Token.getTokenType()) != null) {
-                applicableValidators.add(tokenValidators.get(oAuth2Token.getTokenType()));
+                // Ignore bearer token validators if the token is JWT.
+                if (!isSkipValidatorForJWT(tokenValidators.get(oAuth2Token.getTokenType()), isJWTTokenValidation)) {
+                    applicableValidators.add(tokenValidators.get(oAuth2Token.getTokenType()));
+                }
             }
         }
 
@@ -244,6 +252,12 @@ public class TokenValidationHandler {
             if (StringUtils.equals(oAuth2TokenValidator.getKey(), oAuth2Token.getTokenType())) {
                 continue;
             }
+
+            // Ignore bearer token validators if the token is JWT.
+            if (isSkipValidatorForJWT(oAuth2TokenValidator.getValue(), isJWTTokenValidation)) {
+                continue;
+            }
+
             if (oAuth2TokenValidator.getValue() != null) {
                 applicableValidators.add(oAuth2TokenValidator.getValue());
             }
@@ -628,5 +642,16 @@ public class TokenValidationHandler {
     private AccessTokenDO findRefreshToken(String refreshToken) throws IdentityOAuth2Exception {
 
         return OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO().getRefreshToken(refreshToken);
+    }
+
+    private boolean isJWTTokenValidation(String tokenIdentifier) {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_JWT_TOKEN_VALIDATION)) && isParsableJWT(
+                tokenIdentifier);
+    }
+
+    private boolean isSkipValidatorForJWT(OAuth2TokenValidator tokenValidator, boolean isJWTTokenValidation) {
+
+        return isJWTTokenValidation && BEARER_TOKEN_TYPE.equals(tokenValidator.getTokenType());
     }
 }

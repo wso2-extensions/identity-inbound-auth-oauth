@@ -29,6 +29,9 @@ public class ApplicationDTO  {
   private List<String> redirectUris = new ArrayList<String>();
   
   
+  private List<String> grantTypes = new ArrayList<String>();
+  
+  
   private String clientName = null;
 
   
@@ -83,6 +86,18 @@ public class ApplicationDTO  {
   /**
    **/
   @ApiModelProperty(value = "")
+  @JsonProperty("grant_types")
+  public List<String> getGrantTypes() {
+    return grantTypes;
+  }
+  public void setGrantTypes(List<String> grantTypes) {
+    this.grantTypes = grantTypes;
+  }
+
+  
+  /**
+   **/
+  @ApiModelProperty(value = "")
   @JsonProperty("client_name")
   public String getClientName() {
     return clientName;
@@ -102,6 +117,7 @@ public class ApplicationDTO  {
     sb.append("  client_secret: ").append(clientSecret).append("\n");
     sb.append("  client_secret_expires_at: ").append(clientSecretExpiresAt).append("\n");
     sb.append("  redirect_uris: ").append(redirectUris).append("\n");
+    sb.append("  grant_types: ").append(grantTypes).append("\n");
     sb.append("  client_name: ").append(clientName).append("\n");
     sb.append("}\n");
     return sb.toString();

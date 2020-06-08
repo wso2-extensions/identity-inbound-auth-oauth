@@ -415,7 +415,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     }
 
     private JWTClaimsSet handleOIDCCustomClaims(OAuthTokenReqMessageContext tokReqMsgCtx, JWTClaimsSet.Builder
-            jwtClaimsSetBuilder) {
+            jwtClaimsSetBuilder) throws IdentityOAuth2Exception {
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokReqMsgCtx);
@@ -586,7 +586,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     }
 
     private JWTClaimsSet handleCustomOIDCClaims(OAuthAuthzReqMessageContext request,
-                                                JWTClaimsSet.Builder jwtClaimsSetBuilder) {
+                                                JWTClaimsSet.Builder jwtClaimsSetBuilder)
+            throws IdentityOAuth2Exception {
 
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
