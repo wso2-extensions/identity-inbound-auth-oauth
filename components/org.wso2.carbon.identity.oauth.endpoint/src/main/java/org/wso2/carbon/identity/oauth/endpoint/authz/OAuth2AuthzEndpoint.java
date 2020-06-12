@@ -621,8 +621,7 @@ public class OAuth2AuthzEndpoint {
                                                      OAuthProblemException oauthProblemException) {
 
         OAuth2Parameters oauth2Params = oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters();
-
-        return Response.ok(createErrorFormPage(oauth2Params.getRedirectURI(), oauthProblemException, null)).build();
+        return Response.ok(createErrorFormPage(oauth2Params.getRedirectURI(), oauthProblemException)).build();
     }
 
     private Response handleDenyConsent(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
@@ -880,10 +879,9 @@ public class OAuth2AuthzEndpoint {
         return createBaseFormPage(params, redirectURI);
     }
 
-    private String createErrorFormPage(String redirectURI, OAuthProblemException oauthProblemException,
-                                       String sessionStateValue) {
+    private String createErrorFormPage(String redirectURI, OAuthProblemException oauthProblemException) {
 
-        String params = buildErrorParams(oauthProblemException, sessionStateValue);
+        String params = buildErrorParams(oauthProblemException);
         return createBaseFormPage(params, redirectURI);
     }
 
@@ -914,7 +912,7 @@ public class OAuth2AuthzEndpoint {
         return paramStringBuilder.toString();
     }
 
-    private String buildErrorParams(OAuthProblemException oauthProblemException, String sessionStateValue) {
+    private String buildErrorParams(OAuthProblemException oauthProblemException) {
 
         StringBuilder paramStringBuilder = new StringBuilder();
 
@@ -930,11 +928,6 @@ public class OAuth2AuthzEndpoint {
                     .append("\"/>\n");
         }
 
-        if (StringUtils.isNotEmpty(sessionStateValue)) {
-            paramStringBuilder.append("<input type=\"hidden\" name=\"session_state\" value=\"")
-                    .append(sessionStateValue)
-                    .append("\"/>\n");
-        }
         return paramStringBuilder.toString();
     }
 
