@@ -34,6 +34,7 @@
             <class name="org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManagerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.handlers.AbstractResponseTypeHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.handlers.TokenResponseTypeHandlerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.authz.handlers.NoneResponseTypeHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authcontext.JWTTokenGeneratorTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.RememberMeStoreTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImplTest"/>

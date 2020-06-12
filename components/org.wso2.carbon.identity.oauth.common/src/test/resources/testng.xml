@@ -25,6 +25,7 @@
             <class name="org.wso2.carbon.identity.oauth.common.CodeTokenResponseValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth.common.NTLMAuthenticationValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth.common.SAML2GrantValidatorTest"/>
+            <class name="org.wso2.carbon.identity.oauth.common.NoneResponseTypeValidatorTest"/>
         </classes>
     </test>
 </suite>
