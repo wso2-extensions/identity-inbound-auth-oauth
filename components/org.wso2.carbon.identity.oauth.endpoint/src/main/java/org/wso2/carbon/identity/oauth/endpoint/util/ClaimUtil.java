@@ -165,7 +165,8 @@ public class ClaimUtil {
                             (SP_DIALECT, null, userTenantDomain, true);
 
                     realm = getUserRealm(null, userTenantDomain);
-                    Map<String, String> userClaims = getUserClaimsFromUserStore(username, realm, claimURIList);
+                    Map<String, String> userClaims = getUserClaimsFromUserStore(username, accessTokenDO.getAuthzUser
+                            ().getUserStoreDomain(), realm, claimURIList);
 
                     if (isNotEmpty(userClaims)) {
                         for (Map.Entry<String, String> entry : userClaims.entrySet()) {
@@ -271,11 +272,15 @@ public class ClaimUtil {
         return claimSeparator;
     }
 
-    private static Map<String, String> getUserClaimsFromUserStore(String username,
+    private static Map<String, String> getUserClaimsFromUserStore(String username, String userStoreDomain,
                                                                   UserRealm realm,
                                                                   List<String> claimURIList) throws UserStoreException {
 
-        UserStoreManager userstore = realm.getUserStoreManager();
+        //Retrieve the UserStoreManager for the authenticated user's user-store domain
+        UserStoreManager userstore = realm.getUserStoreManager().getSecondaryUserStoreManager(userStoreDomain);
+        if (userstore == null) {
+            throw new UserStoreException("Unable to retrieve UserStoreManager for the domain name: " + userStoreDomain);
+        }
         Map<String, String> userClaims = userstore.getUserClaimValues(MultitenantUtils.getTenantAwareUsername
                 (username), claimURIList.toArray(new String[claimURIList.size()]), null);
         if (log.isDebugEnabled()) {
