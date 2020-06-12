@@ -276,7 +276,7 @@ public class ClaimUtil {
                                                                   UserRealm realm,
                                                                   List<String> claimURIList) throws UserStoreException {
 
-        //Retrieve the UserStoreManager for the authenticated user's user-store domain
+        // Retrieve the UserStoreManager for the authenticated user's user-store domain.
         UserStoreManager userstore = realm.getUserStoreManager().getSecondaryUserStoreManager(userStoreDomain);
         if (userstore == null) {
             throw new UserStoreException("Unable to retrieve UserStoreManager for the domain name: " + userStoreDomain);
