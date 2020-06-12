@@ -617,13 +617,12 @@ public class OAuth2AuthzEndpoint {
                 authenticatedIdPs, sessionStateValue)).build();
     }
 
-    private Response handleFormPostResponseModeError(OAuthMessage oAuthMessage, String sessionStateParam,
-                                                     OAuthProblemException oauthProblemException, String redirectURL) {
+    private Response handleFormPostResponseModeError(OAuthMessage oAuthMessage,
+                                                     OAuthProblemException oauthProblemException) {
 
         OAuth2Parameters oauth2Params = oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters();
 
-        return Response.ok(createErrorFormPage(oauth2Params.getRedirectURI(), oauthProblemException
-                , sessionStateParam)).build();
+        return Response.ok(createErrorFormPage(oauth2Params.getRedirectURI(), oauthProblemException, null)).build();
     }
 
     private Response handleDenyConsent(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
@@ -735,19 +734,9 @@ public class OAuth2AuthzEndpoint {
     private Response handleFailedState(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
                                        OAuthProblemException oauthException) throws URISyntaxException {
 
-        boolean isOIDCRequest = OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes());
         String redirectURL = EndpointUtil.getErrorRedirectURL(oauthException, oauth2Params);
-        if (isOIDCRequest) {
-            redirectURL = handleOIDCSessionState(oAuthMessage, oauth2Params, redirectURL);
-        }
         if (StringUtils.equals(oauth2Params.getResponseMode(), RESPONSE_MODE_FORM_POST)) {
-            Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie
-                    (oAuthMessage.getRequest());
-            String sessionStateParam = OIDCSessionManagementUtil.getSessionStateParam(oauth2Params.getClientId(),
-                    oauth2Params.getRedirectURI(), opBrowserStateCookie == null ? null :
-                            opBrowserStateCookie.getValue());
-
-            return handleFormPostResponseModeError(oAuthMessage, sessionStateParam, oauthException, redirectURL);
+            return handleFormPostResponseModeError(oAuthMessage, oauthException);
         } else {
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
         }
@@ -759,16 +748,6 @@ public class OAuth2AuthzEndpoint {
         OAuthErrorDTO oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleAuthenticationFailure(oauth2Params);
         OAuthProblemException oauthException = buildOAuthProblemException(authnResult, oAuthErrorDTO);
         return handleFailedState(oAuthMessage, oauth2Params, oauthException);
-    }
-
-    private String handleOIDCSessionState(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
-                                          String redirectURL) {
-
-        Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(oAuthMessage.getRequest());
-        return OIDCSessionManagementUtil
-                .addSessionStateToURL(redirectURL, oauth2Params.getClientId(),
-                        oauth2Params.getRedirectURI(), opBrowserStateCookie,
-                        oauth2Params.getResponseType());
     }
 
     private Response handleEmptyAuthenticationResult(OAuthMessage oAuthMessage) throws URISyntaxException {
