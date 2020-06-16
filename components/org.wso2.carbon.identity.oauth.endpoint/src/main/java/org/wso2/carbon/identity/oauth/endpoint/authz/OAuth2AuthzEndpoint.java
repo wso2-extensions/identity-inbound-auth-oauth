@@ -1564,19 +1564,6 @@ public class OAuth2AuthzEndpoint {
             params.setDisplayName(spDisplayName);
         }
 
-        String pkceChallengeCode = oAuthMessage.getOauthPKCECodeChallenge();
-        String pkceChallengeMethod = oAuthMessage.getOauthPKCECodeChallengeMethod();
-
-        if (isPkceSupportEnabled()) {
-            String redirectURI = validatePKCEParameters(oAuthMessage, validationResponse, pkceChallengeCode,
-                    pkceChallengeMethod);
-            if (redirectURI != null) {
-                return redirectURI;
-            }
-        }
-        params.setPkceCodeChallenge(pkceChallengeCode);
-        params.setPkceCodeChallengeMethod(pkceChallengeMethod);
-
         // OpenID Connect specific request parameters
         params.setNonce(oauthRequest.getParam(OAuthConstants.OAuth20Params.NONCE));
         params.setDisplay(oauthRequest.getParam(OAuthConstants.OAuth20Params.DISPLAY));
@@ -1615,6 +1602,18 @@ public class OAuth2AuthzEndpoint {
                                 .OAuth2SubErrorCodes.INVALID_REQUEST_OBJECT, e.getErrorCode(), e.getErrorMessage(),
                         null, params);
             }
+        }
+
+        if (isPkceSupportEnabled()) {
+            String pkceChallengeCode = oAuthMessage.getOauthPKCECodeChallenge();
+            String pkceChallengeMethod = oAuthMessage.getOauthPKCECodeChallengeMethod();
+            String redirectURI = validatePKCEParameters(oAuthMessage, validationResponse, pkceChallengeCode,
+                    pkceChallengeMethod);
+            if (redirectURI != null) {
+                return redirectURI;
+            }
+            params.setPkceCodeChallenge(pkceChallengeCode);
+            params.setPkceCodeChallengeMethod(pkceChallengeMethod);
         }
 
         return null;
