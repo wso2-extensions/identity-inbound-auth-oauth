@@ -281,12 +281,10 @@ public class OAuthAdminServiceImpl {
                             application.isRequestObjectSignatureValidationEnabled());
 
                     // Validate IdToken Encryption configurations.
+                    app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
                     if (application.isIdTokenEncryptionEnabled()) {
-                        app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
-                        if (application.isIdTokenEncryptionEnabled()) {
-                            app.setIdTokenEncryptionAlgorithm(filterIdTokenEncryptionAlgorithm(application));
-                            app.setIdTokenEncryptionMethod(filterIdTokenEncryptionMethod((application)));
-                        }
+                        app.setIdTokenEncryptionAlgorithm(filterIdTokenEncryptionAlgorithm(application));
+                        app.setIdTokenEncryptionMethod(filterIdTokenEncryptionMethod((application)));
                     }
 
                     app.setBackChannelLogoutUrl(application.getBackChannelLogoutUrl());
@@ -456,13 +454,12 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setScopeValidators(filterScopeValidators(consumerAppDTO));
             oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
                     .isRequestObjectSignatureValidationEnabled());
+
             // Validate IdToken Encryption configurations.
+            oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
             if (consumerAppDTO.isIdTokenEncryptionEnabled()) {
-                oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
-                if (consumerAppDTO.isIdTokenEncryptionEnabled()) {
-                    oauthappdo.setIdTokenEncryptionAlgorithm(filterIdTokenEncryptionAlgorithm(consumerAppDTO));
-                    oauthappdo.setIdTokenEncryptionMethod(filterIdTokenEncryptionMethod((consumerAppDTO)));
-                }
+                oauthappdo.setIdTokenEncryptionAlgorithm(filterIdTokenEncryptionAlgorithm(consumerAppDTO));
+                oauthappdo.setIdTokenEncryptionMethod(filterIdTokenEncryptionMethod((consumerAppDTO)));
             }
 
             oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
