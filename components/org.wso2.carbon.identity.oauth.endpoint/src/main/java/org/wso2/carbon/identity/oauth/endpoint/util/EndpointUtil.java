@@ -17,8 +17,6 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.util;
 
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
@@ -73,7 +71,6 @@ import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.text.ParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -432,7 +429,7 @@ public class EndpointUtil {
             return getErrorPageURL(request, errorCode, errorMessage, appName);
         } else {
             String redirectUri = request.getParameter(OAuthConstants.OAuth20Params.REDIRECT_URI);
-            String state = retrieveStateForErrorURL(request, oAuth2Parameters);
+            String state = retrieveStateForErrorURL(oAuth2Parameters);
 
             Map<String, String> params = new HashMap<>();
             params.put(PROP_ERROR, errorCode);
@@ -954,33 +951,18 @@ public class EndpointUtil {
      * If the state is not available in OAuth2Parameters and request object then state will be retrieved
      * from query params.
      *
-     * @param request
      * @param oAuth2Parameters
      * @return state
      */
-    private static String retrieveStateForErrorURL(HttpServletRequest request, OAuth2Parameters oAuth2Parameters) {
+    private static String retrieveStateForErrorURL(OAuth2Parameters oAuth2Parameters) {
 
         String state = null;
-        try {
-            if (oAuth2Parameters.getState() != null) {
-                state = oAuth2Parameters.getState();
-                if (log.isDebugEnabled()) {
-                    log.debug("Retrieved state value " + state + " from OAuth2Parameters.");
-                }
-            } else {
-                JWTClaimsSet jwtClaimsSet = SignedJWT.parse(request.getParameter(OAuthConstants.OAuth20Params.REQUEST))
-                        .getJWTClaimsSet();
-                if (jwtClaimsSet.getStringClaim(OAuthConstants.OAuth20Params.STATE) != null) {
-                    state = jwtClaimsSet.getStringClaim(OAuthConstants.OAuth20Params.STATE);
-                    if (log.isDebugEnabled()) {
-                        log.debug("Retrieved state value " + state + " from request object.");
-                    }
-                }
+        if (oAuth2Parameters != null && oAuth2Parameters.getState() != null) {
+            state = oAuth2Parameters.getState();
+            if (log.isDebugEnabled()) {
+                log.debug("Retrieved state value " + state + " from OAuth2Parameters.");
             }
-        } catch (ParseException e) {
-            log.error("Error occurred while parsing the signed message", e);
         }
-
         return state;
     }
 
