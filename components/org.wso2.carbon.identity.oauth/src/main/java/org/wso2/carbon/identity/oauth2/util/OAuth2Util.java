@@ -1264,6 +1264,26 @@ public class OAuth2Util {
                     OAuthServerConfiguration.getInstance()::getOauth2IntrospectionEPUrl);
         }
 
+        /**
+         * This method is used to get the resolved URL for the OAuth2 introspection endpoint.
+         *
+         * @param tenantDomain Tenant Domain.
+         * @return String of the resolved URL for the introspection endpoint.
+         * @throws URISyntaxException URI Syntax Exception.
+         */
+        public static String getOAuth2IntrospectionEPUrl(String tenantDomain) throws URISyntaxException {
+
+            String getOAuth2IntrospectionEPUrl = buildUrl(OAUTH2_INTROSPECT_EP_URL,
+                    OAuthServerConfiguration.getInstance()::getOauth2IntrospectionEPUrl);
+
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && isNotSuperTenant(tenantDomain)) {
+                //Append tenant domain to path when the tenant-qualified url mode is disabled.
+                getOAuth2IntrospectionEPUrl =
+                        appendTenantDomainAsPathParamInLegacyMode(getOAuth2IntrospectionEPUrl, tenantDomain);
+            }
+            return getOAuth2IntrospectionEPUrl;
+        }
+
         public static String getOIDCConsentPageUrl() {
 
             return buildUrl(OIDC_CONSENT_EP_URL, OAuthServerConfiguration.getInstance()::getOIDCConsentPageUrl);
