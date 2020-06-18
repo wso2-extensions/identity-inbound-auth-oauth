@@ -1277,7 +1277,7 @@ public class OAuth2Util {
                     OAuthServerConfiguration.getInstance()::getOauth2IntrospectionEPUrl);
 
             if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && isNotSuperTenant(tenantDomain)) {
-                //Append tenant domain to path when the tenant-qualified url mode is disabled.
+                // Append tenant domain to path when the tenant-qualified url mode is disabled.
                 getOAuth2IntrospectionEPUrl =
                         appendTenantDomainAsPathParamInLegacyMode(getOAuth2IntrospectionEPUrl, tenantDomain);
             }
