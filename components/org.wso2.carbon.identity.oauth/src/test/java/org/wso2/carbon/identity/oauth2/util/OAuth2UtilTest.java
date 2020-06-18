@@ -1251,14 +1251,15 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         assertEquals(OAuth2Util.OAuthURL.getOAuth2RevocationEPUrl(), oauthUrl);
     }
 
-    @Test(dataProvider = "OAuthURLData")
-    public void testGetOAuth2IntrospectionEPUrlLegacy(String configUrl, String serverUrl, String oauthUrl)
+    @Test(dataProvider = "OAuthURLData2")
+    public void testGetOAuth2IntrospectionEPUrlLegacy(String configUrl, String serverUrl,
+                                                      String tenantDomain, String oauthUrl)
             throws Exception {
 
         when(oauthServerConfigurationMock.getOauth2IntrospectionEPUrl()).thenReturn(configUrl);
         when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOauth2IntrospectionEPUrl).get())
                 .thenReturn(serverUrl);
-        assertEquals(OAuth2Util.OAuthURL.getOAuth2IntrospectionEPUrl(), oauthUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2IntrospectionEPUrl(tenantDomain), oauthUrl);
     }
 
     @DataProvider(name = "OAuthIntrospectionEPData")
@@ -1277,7 +1278,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 {true, "", "https://localhost:9443/testUrl", "testDomain",
                         "https://localhost:9443/t/testDomain/oauth2/introspect"},
                 {false, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain",
-                        "https://localhost:9443/testUrl"},
+                        "https://localhost:9443/t/testDomain/testUrl"},
                 {false, "", "https://localhost:9443/testUrl", "",
                         "https://localhost:9443/testUrl"},
         };
@@ -1293,7 +1294,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain()).thenReturn("carbon.super");
         when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOauth2IntrospectionEPUrl).get())
                 .thenReturn(serverUrl);
-        assertEquals(OAuth2Util.OAuthURL.getOAuth2IntrospectionEPUrl(), oauthUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2IntrospectionEPUrl(tenantDomain), oauthUrl);
     }
 
     @DataProvider(name = "OIDCConsentPageURLData")
