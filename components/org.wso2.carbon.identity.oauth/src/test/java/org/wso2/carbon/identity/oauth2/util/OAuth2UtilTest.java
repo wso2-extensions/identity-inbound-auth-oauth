@@ -170,7 +170,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     private AxisConfiguration mockAxisConfiguration;
 
     @Mock
-    FederatedAuthenticatorConfig mockFederatedAuthenticatorConfig = new FederatedAuthenticatorConfig();
+    private FederatedAuthenticatorConfig mockFederatedAuthenticatorConfig = new FederatedAuthenticatorConfig();
 
     @Mock
     private IdentityProviderManager mockIdentityProviderManager;
@@ -972,8 +972,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         assertEquals(OAuth2Util.getIDTokenIssuer(), issuer);
     }
 
-    @DataProvider(name = "IDTokenIssuerData2")
-    public Object[][] idTokenIssuerData2() {
+    @DataProvider(name = "TenantQualifiedURLsIDTokenIssuerData")
+    public Object[][] tenantQualifiedURLsIdTokenIssuerData() {
 
         return new Object[][]{
                 // tenant-qualified URL support
@@ -985,13 +985,12 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 {true, "https://localhost:9443/testIssuer", "", "https://localhost:9443/oauth2/token"},
                 {true, "https://localhost:9443/testIssuer", "wso2.com", "https://localhost:9443/t/wso2" +
                         ".com/oauth2/token"}
-
         };
     }
 
-    @Test(dataProvider = "IDTokenIssuerData2")
-    public void testGetIDTokenIssuer2(boolean enableTenantURLSupport, String oidcConfigUrl, String tenantDomain,
-                                      String expected) {
+    @Test(dataProvider = "TenantQualifiedURLsIDTokenIssuerData")
+    public void testGetTenantQualifiedIDTokenIssuer(boolean enableTenantURLSupport, String oidcConfigUrl,
+                                                    String tenantDomain, String expected) throws Exception {
 
         when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(enableTenantURLSupport);
         when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantDomain);
@@ -1009,11 +1008,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         when(mockFederatedAuthenticatorConfig.getProperties()).thenReturn(properties);
         when(IdentityApplicationManagementUtil.getProperty(properties, "IdPEntityId")).thenReturn(property);
         when(property.getValue()).thenReturn(oidcConfigUrl);
-        try {
-            assertEquals(getIdTokenIssuer(tenantDomain), expected);
-        } catch (IdentityOAuth2Exception e) {
-            //mock request, hence ignored.
-        }
+        assertEquals(getIdTokenIssuer(tenantDomain), expected);
+
     }
 
     @DataProvider(name = "OAuthURLData")
