@@ -131,6 +131,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -739,7 +740,7 @@ public class OAuth2AuthzEndpoint {
 
     private Response handleFailedState(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
                                        OAuthProblemException oauthException) throws URISyntaxException {
-        
+
         String redirectURL = EndpointUtil.getErrorRedirectURL(oauthException, oauth2Params);
         if (StringUtils.equals(oauth2Params.getResponseMode(), RESPONSE_MODE_FORM_POST)) {
             return handleFormPostResponseModeError(oAuthMessage, oauthException);
