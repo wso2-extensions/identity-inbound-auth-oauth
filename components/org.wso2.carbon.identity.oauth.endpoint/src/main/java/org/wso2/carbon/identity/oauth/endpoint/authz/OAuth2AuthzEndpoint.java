@@ -2748,7 +2748,12 @@ public class OAuth2AuthzEndpoint {
         } else if (redirectURL.contains(ACCESS_CODE)) {
             try {
                 setSidToSessionState(sessionState);
-                code = getAuthCodeFromRedirectURL(redirectURL);
+                if (isFormPostResponseMode(oAuth2Parameters, redirectURL)) {
+                    JSONObject jsonData = new JSONObject(redirectURL);
+                    code = (String) jsonData.get(ACCESS_CODE);
+                } else {
+                    code = getAuthCodeFromRedirectURL(redirectURL);
+                }
                 if (StringUtils.isNotEmpty(code)) {
                     addToBCLogoutSessionCache(code);
                 } else {
