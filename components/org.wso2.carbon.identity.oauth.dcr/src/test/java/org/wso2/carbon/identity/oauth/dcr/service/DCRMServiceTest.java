@@ -22,8 +22,10 @@ import org.apache.commons.lang.StringUtils;
 import org.mockito.internal.util.reflection.Whitebox;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
+import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -35,12 +37,14 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
 import java.nio.file.Paths;
@@ -61,7 +65,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AParam
 /**
  * Unit test covering DCRMService
  */
-@PrepareForTest({DCRMService.class, ServiceProvider.class, IdentityProviderManager.class, ApplicationMgtUtil.class})
+@PrepareForTest({DCRMService.class, ServiceProvider.class, IdentityProviderManager.class, ApplicationMgtUtil.class,
+OAuth2Util.class, OAuthServerConfiguration.class})
 public class DCRMServiceTest extends PowerMockTestCase {
 
     private DCRMService dcrmService;
@@ -75,6 +80,13 @@ public class DCRMServiceTest extends PowerMockTestCase {
     private String dummyUserName = "dummyUserName";
     private String dummyTenantDomain = "dummyTenantDomain";
     private ApplicationManagementService mockApplicationManagementService;
+    private OAuthServerConfiguration oAuthServerConfiguration;
+
+    @ObjectFactory
+    public IObjectFactory getObjectFactory() {
+
+        return new org.powermock.modules.testng.PowerMockObjectFactory();
+    }
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -90,6 +102,10 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 .thenReturn(new ServiceProvider());
         mockStatic(ApplicationMgtUtil.class);
         when(ApplicationMgtUtil.isUserAuthorized(anyString(), anyString())).thenReturn(true);
+        oAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+        mockStatic(OAuth2Util.class);
     }
 
     @DataProvider(name = "DTOProvider")
