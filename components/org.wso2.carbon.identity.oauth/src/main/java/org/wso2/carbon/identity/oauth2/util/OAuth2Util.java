@@ -3124,12 +3124,12 @@ public class OAuth2Util {
     }
 
     /**
-     * Creates an instance on AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
+     * Creates an instance of AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
      *
      * @param username        username of the user
      * @param userStoreDomain user store domain
      * @param tenantDomain    tenent domain
-     * @param idpName    idp name
+     * @param idpName         idp name
      * @return an instance of AuthenticatedUser{@link AuthenticatedUser}
      */
     public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String
@@ -3163,6 +3163,7 @@ public class OAuth2Util {
             }
         } else {
             authenticatedUser.setUserStoreDomain(userStoreDomain);
+            authenticatedUser.setFederatedIdPName(idpName);
         }
 
         return authenticatedUser;
