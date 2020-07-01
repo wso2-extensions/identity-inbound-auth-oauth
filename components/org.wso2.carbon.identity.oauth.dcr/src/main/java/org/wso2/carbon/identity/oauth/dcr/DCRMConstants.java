@@ -48,13 +48,24 @@ public class DCRMConstants {
         CONFLICT_EXISTING_CLIENT_ID("Client id %s already exist in the system"),
         BAD_REQUEST_CLIENT_ID_VIOLATES_PATTERN("Provided client id is not adhering to the provided regex %s"),
         FORBIDDEN_UNAUTHORIZED_USER("User does not have access to the application %s"),
-        ERROR_CODE_UNEXPECTED("Unexpected error");
+        ERROR_CODE_UNEXPECTED("Unexpected error"),
+        TENANT_DOMAIN_MISMATCH("NOT_FOUND_60001", "Tenant domain in request does not match with the application " +
+                "tenant domain for consumer key: %s"),
+        FAILED_TO_VALIDATE_TENANT_DOMAIN("Error occurred during validating tenant domain for consumer key: %s");
 
         private final String message;
+        private final String errorCode;
 
         ErrorMessages(String message) {
 
             this.message = message;
+            this.errorCode = null;
+        }
+
+        ErrorMessages(String errorCode, String message) {
+
+            this.message = message;
+            this.errorCode = errorCode;
         }
 
         public String getMessage() {
@@ -62,6 +73,10 @@ public class DCRMConstants {
             return message;
         }
 
+        public String getErrorCode() {
+
+            return errorCode;
+        }
     }
 
     /**

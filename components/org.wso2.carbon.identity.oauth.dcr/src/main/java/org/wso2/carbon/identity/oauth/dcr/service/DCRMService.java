@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
+import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
@@ -47,6 +48,8 @@ import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRMUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -75,6 +78,7 @@ public class DCRMService {
      */
     public Application getApplication(String clientId) throws DCRMException {
 
+        validateRequestTenantDomain(clientId);
         boolean isApplicationRolePermissionRequired = DCRMUtils.isApplicationRolePermissionRequired();
         return buildResponse(getApplicationById(clientId, isApplicationRolePermissionRequired));
     }
@@ -134,6 +138,7 @@ public class DCRMService {
      */
     public void deleteApplication(String clientId) throws DCRMException {
 
+        validateRequestTenantDomain(clientId);
         OAuthConsumerAppDTO appDTO = getApplicationById(clientId);
         String applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
@@ -171,6 +176,7 @@ public class DCRMService {
      */
     public Application updateApplication(ApplicationUpdateRequest updateRequest, String clientId) throws DCRMException {
 
+        validateRequestTenantDomain(clientId);
         OAuthConsumerAppDTO appDTO = getApplicationById(clientId);
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
@@ -668,5 +674,25 @@ public class DCRMService {
             clientIdRegexPattern = Pattern.compile(clientIdValidatorRegex);
         }
         return clientIdRegexPattern.matcher(clientId).matches();
+    }
+
+    /**
+     * Validates whether the tenant domain in the request matches with the application tenant domain.
+     *
+     * @param clientId Consumer key of application.
+     * @throws DCRMException DCRMException
+     */
+    private void validateRequestTenantDomain(String clientId) throws DCRMException {
+
+        try {
+            String tenantDomainOfApp = OAuth2Util.getTenantDomainOfOauthApp(clientId);
+            OAuth2Util.validateRequestTenantDomain(tenantDomainOfApp);
+        } catch (InvalidOAuthClientException e) {
+            throw new DCRMClientException(DCRMConstants.ErrorMessages.TENANT_DOMAIN_MISMATCH.getErrorCode(),
+                    String.format(DCRMConstants.ErrorMessages.TENANT_DOMAIN_MISMATCH.getMessage(), clientId));
+        } catch (IdentityOAuth2Exception e) {
+            throw new DCRMServerException(String.format(DCRMConstants.ErrorMessages.FAILED_TO_VALIDATE_TENANT_DOMAIN
+                    .getMessage(), clientId));
+        }
     }
 }
