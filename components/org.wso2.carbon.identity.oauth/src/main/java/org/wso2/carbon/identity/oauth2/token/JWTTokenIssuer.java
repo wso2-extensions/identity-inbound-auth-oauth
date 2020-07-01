@@ -235,6 +235,82 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     /**
+     * Resolve the tenant domain to sign the request based on OAuthTokenReqMessageContext and
+     * OAuthAuthzReqMessageContext values.
+     *
+     * @param tokenContext         OAuthTokenReqMessageContext.
+     * @param authorizationContext OAuthAuthzReqMessageContext.
+     * @return Tenant domain to sign the request.
+     * @throws IdentityOAuth2Exception If an error occurred while resolving the tenant domain.
+     */
+    private String resolveSigningTenantDomain(OAuthTokenReqMessageContext tokenContext,
+                                              OAuthAuthzReqMessageContext authorizationContext)
+            throws IdentityOAuth2Exception {
+
+        String clientID;
+        AuthenticatedUser authenticatedUser;
+        if (authorizationContext != null) {
+            clientID = authorizationContext.getAuthorizationReqDTO().getConsumerKey();
+            authenticatedUser = authorizationContext.getAuthorizationReqDTO().getUser();
+        } else if (tokenContext != null) {
+            clientID = tokenContext.getOauth2AccessTokenReqDTO().getClientId();
+            authenticatedUser = tokenContext.getAuthorizedUser();
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Empty OAuthTokenReqMessageContext and OAuthAuthzReqMessageContext. Therefore, could " +
+                        "not determine the tenant domain to sign the request.");
+            }
+            throw new IdentityOAuth2Exception("Could not determine the authenticated user and the service provider");
+        }
+        return getSigningTenantDomain(clientID, authenticatedUser);
+    }
+
+    /**
+     * Get the tenant domain to sign the the token.
+     *
+     * @param clientID          Client Id.
+     * @param authenticatedUser Authenticated user.
+     * @return Tenant domain to sign thee token.
+     * @throws IdentityOAuth2Exception If an error occurred while getting the application information by client id.
+     */
+    private String getSigningTenantDomain(String clientID, AuthenticatedUser authenticatedUser)
+            throws IdentityOAuth2Exception {
+
+        String tenantDomain;
+        if (OAuthServerConfiguration.getInstance().getUseSPTenantDomainValue()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Using the tenant domain of the SP to sign the token");
+            }
+            if (StringUtils.isBlank(clientID)) {
+                throw new IdentityOAuth2Exception("Empty ClientId. Cannot resolve the tenant domain to sign the token");
+            }
+            try {
+                tenantDomain = OAuth2Util.getAppInformationByClientId(clientID).getAppOwner().getTenantDomain();
+            } catch (InvalidOAuthClientException e) {
+                throw new IdentityOAuth2Exception("Error occurred while getting the application information by client" +
+                        " id: " + clientID, e);
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Using the tenant domain of the user to sign the token");
+            }
+            if (authenticatedUser == null) {
+                throw new IdentityOAuth2Exception(
+                        "Authenticated user is not set. Cannot resolve the tenant domain to sign the token");
+            }
+            tenantDomain = authenticatedUser.getTenantDomain();
+        }
+        if (StringUtils.isBlank(tenantDomain)) {
+            throw new IdentityOAuth2Exception("Cannot resolve the tenant domain to sign the token");
+        }
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Tenant domain: %s will be used to sign the token for the authenticated " +
+                    "user: %s", tenantDomain, authenticatedUser.toFullQualifiedUsername()));
+        }
+        return tenantDomain;
+    }
+
+    /**
      * Sign the JWT token with RSA (SHA-256, SHA-384, SHA-512) algorithm.
      *
      * @param jwtClaimsSet         JWT claim set to be signed.
@@ -247,22 +323,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                                     OAuthAuthzReqMessageContext authorizationContext) throws IdentityOAuth2Exception {
 
         try {
-            String tenantDomain = null;
-
-            // Read the property whether we have to get the tenant domain of the SP instead of user.
-            if (OAuthServerConfiguration.getInstance().getUseSPTenantDomainValue()) {
-                tenantDomain = OAuth2Util.getAppInformationByClientId(authorizationContext.getAuthorizationReqDTO()
-                        .getConsumerKey()).getUser().getTenantDomain();
-            } else if (tokenContext != null) {
-                tenantDomain = tokenContext.getAuthorizedUser().getTenantDomain();
-            } else if (authorizationContext != null) {
-                tenantDomain = authorizationContext.getAuthorizationReqDTO().getUser().getTenantDomain();
-            }
-
-            if (tenantDomain == null) {
-                throw new IdentityOAuth2Exception("Cannot resolve the tenant domain of the user.");
-            }
-
+            String tenantDomain = resolveSigningTenantDomain(tokenContext, authorizationContext);
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
 
             Key privateKey;
@@ -303,7 +364,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
             return signedJWT.serialize();
-        } catch (JOSEException | InvalidOAuthClientException e) {
+        } catch (JOSEException e) {
             throw new IdentityOAuth2Exception("Error occurred while signing JWT", e);
         }
     }
