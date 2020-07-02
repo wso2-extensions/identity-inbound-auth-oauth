@@ -27,6 +27,7 @@ import javax.cache.event.CacheEntryRemovedListener;
 /**
  * Claim Meta Data Cache Remove Listener.
  */
+@Deprecated
 public class ClaimMetaDataCacheRemoveListener
         extends AbstractCacheListener<ClaimMetaDataCacheEntry, ClaimMetaDataCacheEntry>
         implements CacheEntryRemovedListener<ClaimMetaDataCacheEntry, ClaimMetaDataCacheEntry> {

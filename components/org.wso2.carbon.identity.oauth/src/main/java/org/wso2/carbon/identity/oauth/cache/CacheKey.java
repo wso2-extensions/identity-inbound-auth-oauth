@@ -25,6 +25,7 @@ import java.io.Serializable;
  * Cache key class. Any value that acts as a cache key must encapsulated with a class
  * overriding from this class.
  */
+@Deprecated
 public abstract class CacheKey implements Serializable {
 
     private static final long serialVersionUID = 5884270521313791351L;

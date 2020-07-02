@@ -18,6 +18,7 @@ package org.wso2.carbon.identity.oauth;
 /**
  * Container for error codes related to OAuth consumer apps management.
  */
+@Deprecated
 public enum Error {
 
     // Client errors starts with 60, server errors starts with 65.

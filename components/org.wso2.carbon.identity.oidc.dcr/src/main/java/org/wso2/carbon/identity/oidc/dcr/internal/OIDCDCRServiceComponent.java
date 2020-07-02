@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oidc.dcr.processor.OIDCDCRProcessor;
         name = "identity.oidc.dcr",
         immediate = true
 )
+@Deprecated
 public class OIDCDCRServiceComponent {
 
     private static final Log log = LogFactory.getLog(OIDCDCRServiceComponent.class);

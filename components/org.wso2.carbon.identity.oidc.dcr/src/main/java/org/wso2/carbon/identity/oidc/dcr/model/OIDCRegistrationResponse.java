@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponse;
 /**
  * OIDC DCR Response data returned for registration request.
  */
+@Deprecated
 public class OIDCRegistrationResponse extends RegistrationResponse {
 
     private static final long serialVersionUID = 4698835928698402469L;

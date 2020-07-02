@@ -21,19 +21,25 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityRequest;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityResponse;
+import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.context.DCRMessageContext;
 import org.wso2.carbon.identity.oauth.dcr.exception.RegistrationException;
 import org.wso2.carbon.identity.oauth.dcr.processor.DCRProcessor;
+import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oidc.dcr.context.OIDCDCRMessageContext;
 import org.wso2.carbon.identity.oidc.dcr.model.OIDCRegistrationRequest;
 import org.wso2.carbon.identity.oidc.dcr.util.OIDCDCRConstants;
 
 import java.util.regex.Matcher;
 
+import static org.wso2.carbon.identity.oidc.dcr.util.OIDCDCRConstants.ENABLE_OIDC_DCR_CONFIG;
+
 /**
  * OIDC DCR Processor class.
  */
+@Deprecated
 public class OIDCDCRProcessor extends DCRProcessor {
 
     private static final Log log = LogFactory.getLog(OIDCDCRProcessor.class);
@@ -44,6 +50,15 @@ public class OIDCDCRProcessor extends DCRProcessor {
         if (log.isDebugEnabled()) {
             log.debug("Request processing started by OIDCDCRProcessor.");
         }
+
+        boolean isIdentityConnectDCREnabled = Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_OIDC_DCR_CONFIG));
+        if (!isIdentityConnectDCREnabled) {
+            if (log.isDebugEnabled()) {
+                log.debug("Identity Connect DCR Endpoint is disabled.");
+            }
+            throw IdentityException.error(DCRException.class, ErrorCodes.FORBIDDEN.toString());
+        }
+
         OIDCDCRMessageContext oidcdcrMessageContext = new OIDCDCRMessageContext(identityRequest);
         IdentityResponse.IdentityResponseBuilder identityResponseBuilder = null;
         if (identityRequest instanceof OIDCRegistrationRequest) {

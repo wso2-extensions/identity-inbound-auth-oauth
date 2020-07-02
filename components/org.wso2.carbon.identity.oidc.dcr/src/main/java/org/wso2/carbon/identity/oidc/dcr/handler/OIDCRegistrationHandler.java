@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oauth.dcr.service.DCRManagementService;
 /**
  * Handler class responsible for OIDC registration.
  */
+@Deprecated
 public class OIDCRegistrationHandler extends RegistrationHandler {
 
     private static final Log log = LogFactory.getLog(OIDCRegistrationHandler.class);

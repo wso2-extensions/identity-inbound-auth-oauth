@@ -24,6 +24,7 @@ import javax.servlet.http.HttpServletRequest;
 /**
  * Validates the Access Token
  */
+@Deprecated
 public interface UserInfoAccessTokenValidator {
 
     /**
