@@ -451,7 +451,7 @@
                                             class="required">*</span></td>
                                     <%
                                     boolean isOAuth1Enabled = Boolean.parseBoolean(IdentityUtil.getProperty("LegacyFeatures.EnableOAuth1"));
-                                    if (!isOAuth1Enabled) {
+                                    if (isOAuth1Enabled) {
                                     %>
                                     <td><input id="oauthVersion10a" name="oauthVersion" type="radio"
                                                value="<%=OAuthConstants.OAuthVersions.VERSION_1A%>"/>1.0a

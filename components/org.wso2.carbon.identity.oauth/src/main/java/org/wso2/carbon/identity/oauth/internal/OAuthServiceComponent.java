@@ -59,15 +59,7 @@ public class OAuthServiceComponent {
     private ServiceRegistration serviceRegistration = null;
     public static final String ENABLE_OAUTH1_CONFIG = "LegacyFeatures.EnableOAuth1";
 
-    protected void activate(ComponentContext context) throws IdentityOAuthClientException {
-
-        boolean isOAuth1Enabled = Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_OAUTH1_CONFIG));
-        if (!isOAuth1Enabled) {
-            if (log.isDebugEnabled()) {
-                log.debug("OAuth 1.0 Endpoint is disabled.");
-            }
-            throw new IdentityOAuthClientException(FORBIDDEN.getErrorCode(), "OAuth 1.0 is not supported");
-        }
+    protected void activate(ComponentContext context) {
 
         try {
             // initialize the OAuth Server configuration
