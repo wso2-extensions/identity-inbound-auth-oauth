@@ -27,5 +27,5 @@ public final class OIDCDCRConstants {
 
     public static final Pattern OIDC_DCR_ENDPOINT_REGISTER_URL_PATTERN =
             Pattern.compile("(.*)/identity/connect/register/?");
-    public static final String ENABLE_OIDC_DCR_CONFIG = "OAuth.DCRM.EnableIdentityConnectDCREndpoint";
+    public static final String ENABLE_OIDC_DCR_CONFIG = "LegacyFeatures.EnableIdentityConnectDCR";
 }

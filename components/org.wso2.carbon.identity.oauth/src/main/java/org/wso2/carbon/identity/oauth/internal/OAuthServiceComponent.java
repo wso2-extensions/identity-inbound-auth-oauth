@@ -27,6 +27,8 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.IdentityOAuthClientException;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -41,6 +43,8 @@ import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
 import org.wso2.carbon.user.core.service.RealmService;
 
+import static org.wso2.carbon.identity.oauth.Error.FORBIDDEN;
+
 /**
  * OAuth OSGi service component.
  */
@@ -53,8 +57,18 @@ public class OAuthServiceComponent {
 
     private static final Log log = LogFactory.getLog(OAuthServiceComponent.class);
     private ServiceRegistration serviceRegistration = null;
+    public static final String ENABLE_OAUTH1_CONFIG = "LegacyFeatures.EnableOAuth1";
 
-    protected void activate(ComponentContext context) {
+    protected void activate(ComponentContext context) throws IdentityOAuthClientException {
+
+        boolean isOAuth1Enabled = Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_OAUTH1_CONFIG));
+        if (!isOAuth1Enabled) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth 1.0 Endpoint is disabled.");
+            }
+            throw new IdentityOAuthClientException(FORBIDDEN.getErrorCode(), "OAuth 1.0 is not supported");
+        }
+
         try {
             // initialize the OAuth Server configuration
             OAuthServerConfiguration oauthServerConfig = OAuthServerConfiguration.getInstance();
