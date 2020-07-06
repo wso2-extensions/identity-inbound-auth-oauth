@@ -451,18 +451,18 @@
                                             class="required">*</span></td>
                                     <td>
                                     <%
-                                    boolean OAuth1FieldDisabled = false;
+                                    String OAuth1FieldDisabled = "disabled";
                                     boolean isOAuth1Enabled = Boolean.parseBoolean(IdentityUtil.getProperty("LegacyFeatures.EnableOAuth1"));
                                     if (isOAuth1Enabled) {
-                                        OAuth1FieldDisabled = true;
+                                        OAuth1FieldDisabled = "";
                                     }
                                     %>
                                     <input id="oauthVersion10a" name="oauthVersion" type="radio"
                                                value="<%=OAuthConstants.OAuthVersions.VERSION_1A%>"
-                                               disabled="<%=OAuth1FieldDisabled%>"/>1.0a
-                                        <input id="oauthVersion20" name="oauthVersion" type="radio"
-                                               value="<%=OAuthConstants.OAuthVersions.VERSION_2%>" CHECKED/>2.0
-                                     </td>
+                                               <%=OAuth1FieldDisabled%>/>1.0a
+                                    <input id="oauthVersion20" name="oauthVersion" type="radio"
+                                           value="<%=OAuthConstants.OAuthVersions.VERSION_2%>" CHECKED/>2.0
+                                    </td>
                                 </tr>
                                 <%if (applicationSPName != null) {%>
                                 <tr style="display: none;">
