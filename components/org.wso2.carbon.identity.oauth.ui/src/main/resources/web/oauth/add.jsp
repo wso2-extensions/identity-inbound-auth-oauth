@@ -449,18 +449,20 @@
                                 <tr>
                                     <td class="leftCol-med"><fmt:message key='oauth.version'/><span
                                             class="required">*</span></td>
+                                    <td>
                                     <%
+                                    boolean OAuth1FieldDisabled = false;
                                     boolean isOAuth1Enabled = Boolean.parseBoolean(IdentityUtil.getProperty("LegacyFeatures.EnableOAuth1"));
                                     if (isOAuth1Enabled) {
+                                        OAuth1FieldDisabled = true;
+                                    }
                                     %>
-                                    <td><input id="oauthVersion10a" name="oauthVersion" type="radio"
-                                               value="<%=OAuthConstants.OAuthVersions.VERSION_1A%>"/>1.0a
+                                    <input id="oauthVersion10a" name="oauthVersion" type="radio"
+                                               value="<%=OAuthConstants.OAuthVersions.VERSION_1A%>"
+                                               disabled="<%=OAuth1FieldDisabled%>"/>1.0a
                                         <input id="oauthVersion20" name="oauthVersion" type="radio"
                                                value="<%=OAuthConstants.OAuthVersions.VERSION_2%>" CHECKED/>2.0
-                                    </td>
-                                    <% } else { %>
-                                    <td>2.0</td>
-                                    <% } %>
+                                     </td>
                                 </tr>
                                 <%if (applicationSPName != null) {%>
                                 <tr style="display: none;">
