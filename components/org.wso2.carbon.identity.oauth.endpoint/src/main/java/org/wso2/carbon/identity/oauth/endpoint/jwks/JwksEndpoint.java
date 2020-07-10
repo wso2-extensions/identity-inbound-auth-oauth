@@ -86,9 +86,13 @@ public class JwksEndpoint {
                     String errorMessage = "Invalid Tenant: " + tenantDomain;
                     return logAndReturnError(errorMessage, null);
                 }
-                FrameworkUtils.startTenantFlow(tenantDomain);
-                KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
-                keystore = keyStoreManager.getKeyStore(generateKSNameFromDomainName(tenantDomain));
+                try {
+                    FrameworkUtils.startTenantFlow(tenantDomain);
+                    KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
+                    keystore = keyStoreManager.getKeyStore(generateKSNameFromDomainName(tenantDomain));
+                } finally {
+                    FrameworkUtils.endTenantFlow();
+                }
             }
             Enumeration enumeration = keystore.aliases();
             while (enumeration.hasMoreElements()) {
@@ -102,8 +106,6 @@ public class JwksEndpoint {
         } catch (Exception e) {
             String errorMessage = "Error while generating the keyset for tenant domain: " + tenantDomain;
             return logAndReturnError(errorMessage, e);
-        } finally {
-            FrameworkUtils.endTenantFlow();
         }
     }
 
