@@ -801,6 +801,21 @@
       <Permission>/permission/admin/manage/identity/userprofile/update</Permission>
    </Permissions>
 </Scope>
+<Scope name="internal_media_mgt_create" displayName="Create Media">
+    <Permissions>
+      <Permission>/permission/admin/manage/identity/media/create</Permission>
+    </Permissions>
+</Scope>
+<Scope name="internal_media_mgt_view" displayName="View Media">
+    <Permissions>
+      <Permission>/permission/admin/manage/identity/media/view</Permission>
+    </Permissions>
+</Scope>
+<Scope name="internal_media_mgt_delete" displayName="Delete Media">
+    <Permissions>
+      <Permission>/permission/admin/manage/identity/media/delete</Permission>
+    </Permissions>
+</Scope>
 <Scope name="internal_event_publish" displayName="Publish Events">
     <Permissions>
       <Permission>/permission/admin/manage/event-publish</Permission>
