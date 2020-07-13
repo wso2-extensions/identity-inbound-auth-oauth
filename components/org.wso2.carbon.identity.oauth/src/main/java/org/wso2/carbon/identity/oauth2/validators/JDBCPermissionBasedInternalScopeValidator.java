@@ -91,12 +91,12 @@ public class JDBCPermissionBasedInternalScopeValidator {
         // Remove openid scope from the list if available
         String[] requestedScopes = getRequestedScopes(authzReqMessageContext.getAuthorizationReqDTO
                 ().getScopes());
-        List<Scope> userAllowedScopes =
-                getUserAllowedScopes(authzReqMessageContext.getAuthorizationReqDTO().getUser(), requestedScopes);
         //If the token is not requested for specific scopes, return true
         if (ArrayUtils.isEmpty(requestedScopes)) {
             return requestedScopes;
         }
+        List<Scope> userAllowedScopes =
+                getUserAllowedScopes(authzReqMessageContext.getAuthorizationReqDTO().getUser(), requestedScopes);
 
         String[] userAllowedScopesAsArray = getScopes(userAllowedScopes);
         if (ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
