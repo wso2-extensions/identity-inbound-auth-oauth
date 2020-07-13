@@ -18,9 +18,11 @@
 
 package org.wso2.carbon.identity.oauth2.listener;
 
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -93,6 +95,12 @@ public class TenantCreationEventListener implements TenantMgtListener {
     public void onPreDelete(int tenantId) throws StratosException {
 
         revokeTokens(tenantId);
+
+        try {
+            OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().removeAllOAuthApplicationData(tenantId);
+        } catch (IdentityOAuthAdminException e) {
+            throw new StratosException("Error in deleting all OAuth application data of the tenant: " + tenantId, e);
+        }
     }
 
     private void revokeTokens(int tenantId) throws StratosException {

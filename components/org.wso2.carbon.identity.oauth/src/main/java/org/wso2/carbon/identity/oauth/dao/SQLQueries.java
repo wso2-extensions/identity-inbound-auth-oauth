@@ -146,10 +146,22 @@ public class SQLQueries {
 
         public static final String GET_APP_NAME = "SELECT APP_NAME FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?";
 
+        public static final String GET_CONSUMER_KEYS_BY_TENANT_ID = "SELECT CONSUMER_KEY FROM " +
+                "IDN_OAUTH_CONSUMER_APPS WHERE TENANT_ID = ?";
+
+        public static final String REMOVE_SP_ASSOCIATIONS_BY_CONSUMER_ID = "DELETE FROM SP_INBOUND_AUTH " +
+                "WHERE INBOUND_AUTH_KEY = ?";
+
         public static final String REMOVE_APPLICATION = "DELETE FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?";
+
+        public static final String REMOVE_APPLICATIONS_BY_TENANT_ID = "DELETE FROM IDN_OAUTH_CONSUMER_APPS WHERE " +
+                "TENANT_ID = ?";
 
         public static final String REMOVE_ALL_SP_OIDC_PROPERTIES =
                 "DELETE FROM IDN_OIDC_PROPERTY WHERE TENANT_ID=? AND CONSUMER_KEY=?";
+
+        public static final String REMOVE_ALL_SP_OIDC_PROPERTIES_BY_TENANT_ID = "DELETE FROM IDN_OIDC_PROPERTY " +
+                "WHERE TENANT_ID = ?";
 
         public static final String REMOVE_SP_OIDC_PROPERTY = "DELETE FROM IDN_OIDC_PROPERTY WHERE TENANT_ID=? " +
                 "AND CONSUMER_KEY=? AND PROPERTY_KEY=? AND PROPERTY_VALUE=?";

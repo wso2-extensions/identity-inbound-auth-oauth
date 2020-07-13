@@ -863,6 +863,22 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
+     * Remove all OAuth consumer applications of a tenant.
+     *
+     * @param tenantId Id of the tenant
+     * @throws IdentityOAuthAdminException
+     */
+    public void removeAllOAuthApplicationData(int tenantId) throws IdentityOAuthAdminException {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Deleting all OAuth Application data of the tenant: " + tenantId);
+        }
+
+        OAuthAppDAO dao = new OAuthAppDAO();
+        dao.removeConsumerApplicationsByTenantId(tenantId);
+    }
+
+    /**
      * Get apps that are authorized by the given user
      *
      * @return OAuth applications authorized by the user that have tokens in ACTIVE or EXPIRED state

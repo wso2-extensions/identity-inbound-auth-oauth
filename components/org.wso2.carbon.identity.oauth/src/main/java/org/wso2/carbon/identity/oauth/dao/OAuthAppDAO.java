@@ -696,6 +696,38 @@ public class OAuthAppDAO {
     }
 
     /**
+     * Delete all consumer applications of a given tenant.
+     *
+     * @param tenantId Id of the tenant
+     * @throws IdentityOAuthAdminException
+     */
+    public void removeConsumerApplicationsByTenantId(int tenantId) throws IdentityOAuthAdminException {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+
+            // Delete SP Apps Associations
+            removeSPAssociations(tenantId, connection);
+
+            // Delete Consumer Applications
+            try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
+                     .REMOVE_APPLICATIONS_BY_TENANT_ID)) {
+                prepStmt.setInt(1, tenantId);
+                prepStmt.execute();
+            }
+
+            // Delete all OIDC Properties
+            if (isOIDCAudienceEnabled()) {
+                removeOAuthOIDCPropertiesByTenantId(connection, tenantId);
+            }
+
+            IdentityDatabaseUtil.commitTransaction(connection);
+
+        } catch (SQLException e) {
+            throw handleError("Error when deleting consumer apps of the tenant: " + tenantId, e);
+        }
+    }
+
+    /**
      * Update the OAuth service provider name.
      *
      * @param appName     Service provider name.
@@ -895,6 +927,64 @@ public class OAuthAppDAO {
     }
 
     /**
+     * Delete all OAuth OIDC Properties of a given tenant.
+     *
+     * @param connection DB connection
+     * @param tenantId Id of the tenant
+     * @throws SQLException
+     */
+    private void removeOAuthOIDCPropertiesByTenantId(Connection connection, int tenantId) throws SQLException {
+
+        try (PreparedStatement prepStmt = connection.prepareStatement(
+                SQLQueries.OAuthAppDAOSQLQueries.REMOVE_ALL_SP_OIDC_PROPERTIES_BY_TENANT_ID)) {
+            prepStmt.setInt(1, tenantId);
+            prepStmt.execute();
+        }
+    }
+
+    /**
+     * Remove all SP associations of all OAuth apps of a given tenant.
+     *
+     * @param tenantId Id of the tenant
+     * @param connection DB connection
+     * @throws SQLException
+     */
+    private void removeSPAssociations(int tenantId, Connection connection) throws SQLException {
+
+        for (String consumerKey : getOAuthConsumerKeysByTenantId(tenantId, connection)) {
+            try (PreparedStatement prepStmt = connection.prepareStatement(
+                    SQLQueries.OAuthAppDAOSQLQueries.REMOVE_SP_ASSOCIATIONS_BY_CONSUMER_ID)) {
+                prepStmt.setString(1, consumerKey);
+                prepStmt.execute();
+            }
+        }
+    }
+
+    /**
+     * Get a list of all Consumer Keys of a given tenant.
+     *
+     * @param tenantId Id of the tenant
+     * @param connection DB connection
+     * @return
+     * @throws SQLException
+     */
+    private List<String> getOAuthConsumerKeysByTenantId(int tenantId, Connection connection) throws SQLException {
+
+        List<String> oauthConsumerKeys = new ArrayList<>();
+        try (PreparedStatement prepStmt = connection.prepareStatement(
+                SQLQueries.OAuthAppDAOSQLQueries.GET_CONSUMER_KEYS_BY_TENANT_ID)) {
+            prepStmt.setInt(1, tenantId);
+
+            try (ResultSet rSet = prepStmt.executeQuery()) {
+                while (rSet.next()) {
+                    oauthConsumerKeys.add(rSet.getString(1));
+                }
+            }
+        }
+        return oauthConsumerKeys;
+    }
+
+    /**
      * Add scope validators for consumerApp using connection.
      *
      * @param connection      Same db connection used in OAuth creation.
@@ -920,7 +1010,7 @@ public class OAuthAppDAO {
     }
 
     /**
-     * Retrieve all scope validators for specific appId
+     * Retrieve all scope validators for specific appId.
      *
      * @param connection Same db connection used in retrieving OAuth App.
      * @param id         AppId of the OAuth app.
