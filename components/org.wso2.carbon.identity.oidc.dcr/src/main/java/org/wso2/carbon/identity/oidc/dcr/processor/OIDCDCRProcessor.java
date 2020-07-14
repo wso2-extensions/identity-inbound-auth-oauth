@@ -54,9 +54,14 @@ public class OIDCDCRProcessor extends DCRProcessor {
         boolean isIdentityConnectDCREnabled = Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_OIDC_DCR_CONFIG));
         if (!isIdentityConnectDCREnabled) {
             if (log.isDebugEnabled()) {
-                log.debug("Identity Connect DCR Endpoint is disabled.");
+                log.debug("Identity Connect DCR endpoint was deprecated. To enable the DCR API endpoint " +
+                        "add the following config to deployment.toml file." +
+                        "[legacy_features]" +
+                        "enable_identity_connect_dcr = true");
             }
-            throw IdentityException.error(DCRException.class, ErrorCodes.FORBIDDEN.toString());
+            String errorMessage =
+                    "/identity/connect/register API was deprecated. Refer /api/identity/oauth2/dcr endpoint";
+            throw IdentityException.error(DCRException.class, ErrorCodes.FORBIDDEN.toString(), errorMessage);
         }
 
         OIDCDCRMessageContext oidcdcrMessageContext = new OIDCDCRMessageContext(identityRequest);
