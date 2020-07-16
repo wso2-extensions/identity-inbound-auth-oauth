@@ -74,7 +74,6 @@ public class JwksEndpoint {
         String keystorePath = CarbonUtils.getServerConfiguration().getFirstProperty(SECURITY_KEY_STORE_LOCATION);
 
         try (FileInputStream file = new FileInputStream(keystorePath)) {
-            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
             final KeyStore keystore;
             Map<String, Certificate> certificatesWithAliases = new HashMap<>();
             if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(tenantDomain)) {
@@ -82,13 +81,14 @@ public class JwksEndpoint {
                 String password = CarbonUtils.getServerConfiguration().getFirstProperty(SECURITY_KEY_STORE_PW);
                 keystore.load(file, password.toCharArray());
             } else {
-                if (isInvalidTenantId(tenantId)) {
-                    String errorMessage = "Invalid Tenant: " + tenantDomain;
-                    return logAndReturnError(errorMessage, null);
+                try {
+                    int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+                    FrameworkUtils.startTenantFlow(tenantDomain);
+                    KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
+                    keystore = keyStoreManager.getKeyStore(generateKSNameFromDomainName(tenantDomain));
+                } finally {
+                    FrameworkUtils.endTenantFlow();
                 }
-                FrameworkUtils.startTenantFlow(tenantDomain);
-                KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
-                keystore = keyStoreManager.getKeyStore(generateKSNameFromDomainName(tenantDomain));
             }
             Enumeration enumeration = keystore.aliases();
             while (enumeration.hasMoreElements()) {
@@ -102,8 +102,6 @@ public class JwksEndpoint {
         } catch (Exception e) {
             String errorMessage = "Error while generating the keyset for tenant domain: " + tenantDomain;
             return logAndReturnError(errorMessage, e);
-        } finally {
-            FrameworkUtils.endTenantFlow();
         }
     }
 
@@ -159,11 +157,6 @@ public class JwksEndpoint {
             diffAlgorithms.add(userInfoSignAlgorithm);
         }
         return diffAlgorithms;
-    }
-
-    private boolean isInvalidTenantId(int tenantId) {
-
-        return tenantId < 1 && tenantId != MultitenantConstants.SUPER_TENANT_ID;
     }
 
     private String getTenantDomain() {
