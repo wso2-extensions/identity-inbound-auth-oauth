@@ -63,6 +63,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.MultivaluedHashMap;
@@ -457,14 +458,15 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         }).when(oAuth2Service).issueAccessToken(any(OAuth2AccessTokenReqDTO.class));
 
         CarbonOAuthTokenRequest oauthRequest = new CarbonOAuthTokenRequest(request);
+        HttpServletRequestWrapper httpServletRequestWrapper = new HttpServletRequestWrapper(request);
 
         Class<?> clazz = OAuth2TokenEndpoint.class;
         Object tokenEndpointObj = clazz.newInstance();
         Method getAccessToken = tokenEndpointObj.getClass().
-                getDeclaredMethod("issueAccessToken", CarbonOAuthTokenRequest.class);
+                getDeclaredMethod("issueAccessToken", CarbonOAuthTokenRequest.class, HttpServletRequestWrapper.class);
         getAccessToken.setAccessible(true);
         OAuth2AccessTokenRespDTO tokenRespDTO = (OAuth2AccessTokenRespDTO)
-                getAccessToken.invoke(tokenEndpointObj, oauthRequest);
+                getAccessToken.invoke(tokenEndpointObj, oauthRequest, httpServletRequestWrapper);
 
         assertNotNull(tokenRespDTO, "ResponseDTO is null");
         String[] paramsToCheck = additionalParameters.split(",");
