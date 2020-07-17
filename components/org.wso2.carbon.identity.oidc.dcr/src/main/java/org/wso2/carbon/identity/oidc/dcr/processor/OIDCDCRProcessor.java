@@ -34,8 +34,6 @@ import org.wso2.carbon.identity.oidc.dcr.util.OIDCDCRConstants;
 
 import java.util.regex.Matcher;
 
-import static org.wso2.carbon.identity.oidc.dcr.util.OIDCDCRConstants.ENABLE_OIDC_DCR_CONFIG;
-
 /**
  * OIDC DCR Processor class.
  */
@@ -51,7 +49,9 @@ public class OIDCDCRProcessor extends DCRProcessor {
             log.debug("Request processing started by OIDCDCRProcessor.");
         }
 
-        boolean isIdentityConnectDCREnabled = Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_OIDC_DCR_CONFIG));
+        boolean isIdentityConnectDCREnabled =
+                Boolean.parseBoolean(IdentityUtil.getProperty(OIDCDCRConstants.ENABLE_OIDC_DCR_CONFIG));
+
         if (!isIdentityConnectDCREnabled) {
             if (log.isDebugEnabled()) {
                 log.debug("Identity Connect DCR endpoint was deprecated. To enable the DCR API endpoint " +
@@ -60,8 +60,9 @@ public class OIDCDCRProcessor extends DCRProcessor {
                         "enable_identity_connect_dcr = true");
             }
             String errorMessage =
-                    "/identity/connect/register API was deprecated. Refer /api/identity/oauth2/dcr endpoint";
-            throw IdentityException.error(DCRException.class, ErrorCodes.FORBIDDEN.toString(), errorMessage);
+                    "/identity/connect/register API was deprecated. " +
+                            "Refer the WSO2 official documentation for more information (https://is.docs.wso2.com).";
+            throw IdentityException.error(RegistrationException.class, ErrorCodes.FORBIDDEN.toString(), errorMessage);
         }
 
         OIDCDCRMessageContext oidcdcrMessageContext = new OIDCDCRMessageContext(identityRequest);
