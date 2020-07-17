@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javax.servlet.http.HttpServletRequestWrapper;
+
 /**
  * OAuth 2 access token request DTO.
  */
@@ -47,6 +49,7 @@ public class OAuth2AccessTokenReqDTO {
     private String pkceCodeVerifier;
     private RequestParameter[] requestParameters;
     private HttpRequestHeader[] httpRequestHeaders;
+    private HttpServletRequestWrapper httpServletRequestWrapper;
     private List<String> authenticationMethodReferences = new ArrayList<>();
     private OAuthClientAuthnContext oAuthClientAuthnContext;
 
@@ -200,5 +203,15 @@ public class OAuth2AccessTokenReqDTO {
 
     public void setoAuthClientAuthnContext(OAuthClientAuthnContext oAuthClientAuthnContext) {
         this.oAuthClientAuthnContext = oAuthClientAuthnContext;
+    }
+
+    public HttpServletRequestWrapper getHttpServletRequestWrapper() {
+
+        return httpServletRequestWrapper;
+    }
+
+    public void setHttpServletRequestWrapper(HttpServletRequestWrapper httpServletRequestWrapper) {
+
+        this.httpServletRequestWrapper = httpServletRequestWrapper;
     }
 }

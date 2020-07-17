@@ -89,7 +89,7 @@ public class OAuth2TokenEndpoint {
 
             CarbonOAuthTokenRequest oauthRequest = buildCarbonOAuthTokenRequest(httpRequest);
             validateOAuthApplication(oauthRequest.getoAuthClientAuthnContext());
-            OAuth2AccessTokenRespDTO oauth2AccessTokenResp = issueAccessToken(oauthRequest);
+            OAuth2AccessTokenRespDTO oauth2AccessTokenResp = issueAccessToken(oauthRequest, httpRequest);
 
             if (oauth2AccessTokenResp.getErrorMsg() != null) {
                 return handleErrorResponse(oauth2AccessTokenResp);
@@ -260,13 +260,15 @@ public class OAuth2TokenEndpoint {
                 EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
     }
 
-    private OAuth2AccessTokenRespDTO issueAccessToken(CarbonOAuthTokenRequest oauthRequest) {
+    private OAuth2AccessTokenRespDTO issueAccessToken(CarbonOAuthTokenRequest oauthRequest,
+                                                      HttpServletRequestWrapper httpServletRequestWrapper) {
 
-        OAuth2AccessTokenReqDTO tokenReqDTO = buildAccessTokenReqDTO(oauthRequest);
+        OAuth2AccessTokenReqDTO tokenReqDTO = buildAccessTokenReqDTO(oauthRequest, httpServletRequestWrapper);
         return EndpointUtil.getOAuth2Service().issueAccessToken(tokenReqDTO);
     }
 
-    private OAuth2AccessTokenReqDTO buildAccessTokenReqDTO(CarbonOAuthTokenRequest oauthRequest) {
+    private OAuth2AccessTokenReqDTO buildAccessTokenReqDTO(CarbonOAuthTokenRequest oauthRequest,
+                                                           HttpServletRequestWrapper httpServletRequestWrapper) {
 
         OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
         OAuthClientAuthnContext oauthClientAuthnContext = oauthRequest.getoAuthClientAuthnContext();
@@ -283,6 +285,8 @@ public class OAuth2TokenEndpoint {
         tokenReqDTO.setRequestParameters(oauthRequest.getRequestParameters());
         // Set all request headers to the OAuth2AccessTokenReqDTO
         tokenReqDTO.setHttpRequestHeaders(oauthRequest.getHttpRequestHeaders());
+        // Set the request wrapper so we can get remote information later.
+        tokenReqDTO.setHttpServletRequestWrapper(httpServletRequestWrapper);
 
         // Check the grant type and set the corresponding parameters
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {

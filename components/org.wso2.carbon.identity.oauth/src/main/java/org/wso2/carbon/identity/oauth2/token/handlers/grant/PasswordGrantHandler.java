@@ -73,6 +73,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
     private static final String IS_INITIAL_LOGIN = "isInitialLogin";
     private static final String PASSWORD_GRANT_AUTHENTICATOR_NAME = "BASIC";
     private static final String PUBLISH_PASSWORD_GRANT_LOGIN = "OAuth.PublishPasswordGrantLogin";
+    private static final String REMOTE_IP_ADDRESS = "remote-ip-address";
 
     @Override
     public boolean issueRefreshToken() throws IdentityOAuth2Exception {
@@ -217,6 +218,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         if (authnDataPublisherProxy != null && authnDataPublisherProxy.isEnabled(authenticationContext)) {
             Map<String, Object> paramMap = new HashMap<>();
             paramMap.put(FrameworkConstants.AnalyticsAttributes.USER, authenticatedUser);
+            paramMap.put(REMOTE_IP_ADDRESS, IdentityUtil.getClientIpAddress(tokenReq.getHttpServletRequestWrapper()));
             Map<String, Object> unmodifiableParamMap = Collections.unmodifiableMap(paramMap);
             if (authenticated) {
                 authnDataPublisherProxy
