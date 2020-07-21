@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.dcr.factory;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.simple.JSONArray;
@@ -86,7 +87,8 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
         if (ErrorCodes.META_DATA_VALIDATION_FAILED.name().equals(exception.getErrorCode())) {
             errorMessage = generateErrorResponse(INVALID_CLIENT_METADATA, exception.getMessage()).toJSONString();
         } else if (ErrorCodes.FORBIDDEN.name().equals(exception.getErrorCode())) {
-            errorMessage = generateErrorResponse(FORBIDDEN, exception.getMessage()).toJSONString();
+            errorMessage = StringEscapeUtils.unescapeJava(generateErrorResponse(FORBIDDEN,
+                    exception.getMessage()).toJSONString());
             builder.setBody(errorMessage);
             builder.setStatusCode(HttpServletResponse.SC_FORBIDDEN);
             return builder;
