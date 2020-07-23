@@ -452,7 +452,7 @@
                                     <td>
                                     <%
                                     String OAuth1FieldDisabled = "disabled";
-                                    boolean isOAuth1Enabled = Boolean.parseBoolean(IdentityUtil.getProperty("LegacyFeatures.EnableOAuth1"));
+                                    boolean isOAuth1Enabled = IdentityUtil.isLegacyFeatureEnabled("oauth", "1.0");
                                     if (isOAuth1Enabled) {
                                         OAuth1FieldDisabled = "";
                                     }
