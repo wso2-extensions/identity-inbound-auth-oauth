@@ -18,14 +18,22 @@
 
 package org.wso2.carbon.identity.oidc.session.util;
 
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.crypto.RSADecrypter;
+import com.nimbusds.jwt.EncryptedJWT;
+import com.nimbusds.jwt.JWT;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
+import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.DefaultOIDCSessionStateManager;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
@@ -37,6 +45,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.security.interfaces.RSAPrivateKey;
+import java.text.ParseException;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -313,4 +323,68 @@ public class OIDCSessionManagementUtil {
 
         return OIDCSessionManagementConfiguration.getInstance().handleAlreadyLoggedOutSessionsGracefully();
     }
+
+    /**
+     * Decrypt the encrypted id token (JWE) using RSA algorithm.
+     *
+     * @param tenantDomain Tenant domain.
+     * @param idToken      Id token.
+     * @return Decrypted JWT.
+     */
+    public static JWT decryptWithRSA(String tenantDomain, String idToken) throws IdentityOAuth2Exception {
+
+        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+        RSAPrivateKey privateKey;
+        KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
+
+        try {
+            if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
+                String ksName = tenantDomain.trim().replace(".", "-");
+                String jksName = ksName + ".jks";
+                privateKey = (RSAPrivateKey) keyStoreManager.getPrivateKey(jksName, tenantDomain);
+            } else {
+                privateKey = (RSAPrivateKey) keyStoreManager.getDefaultPrivateKey();
+            }
+            EncryptedJWT encryptedJWT = EncryptedJWT.parse(idToken);
+            RSADecrypter decrypter = new RSADecrypter(privateKey);
+            encryptedJWT.decrypt(decrypter);
+            return encryptedJWT;
+        } catch (ParseException | JOSEException e) {
+            throw new IdentityOAuth2Exception("Error occurred while decrypting the JWE.", e);
+        } catch (Exception e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving private key for decryption.", e);
+        }
+    }
+
+    /**
+     * Extract client ID from the decrypted ID token.
+     *
+     * @param decryptedIDToken Decrypted ID token.
+     * @return Client ID.
+     * @throws ParseException Error in retrieving the JWT claim set.
+     */
+    public static String extractClientIDFromDecryptedIDToken(JWT decryptedIDToken) throws ParseException {
+
+        String clientId = (String) decryptedIDToken.getJWTClaimsSet().getClaims()
+                .get(OIDCSessionConstants.OIDC_ID_TOKEN_AZP_CLAIM);
+        if (StringUtils.isBlank(clientId)) {
+            clientId = decryptedIDToken.getJWTClaimsSet().getAudience().get(0);
+            log.info("Provided ID Token does not contain azp claim with client ID. Hence client ID is extracted " +
+                    "from the aud claim in the ID Token.");
+        }
+
+        return clientId;
+    }
+
+    /**
+     * Return true if the id token is encrypted.
+     *
+     * @param idToken String ID token.
+     * @return Boolean state of encryption.
+     */
+    public static boolean isIDTokenEncrypted(String idToken) {
+        // Encrypted ID token contains 5 base64 encoded components separated by periods.
+        return StringUtils.countMatches(idToken, ".") == 4;
+    }
+
 }
