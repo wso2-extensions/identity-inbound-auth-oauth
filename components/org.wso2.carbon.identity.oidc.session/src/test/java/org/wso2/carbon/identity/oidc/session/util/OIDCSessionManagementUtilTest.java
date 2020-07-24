@@ -347,4 +347,61 @@ public class OIDCSessionManagementUtilTest {
         when(serviceURL.getAbsolutePublicURL()).thenReturn("https://localhost:9443" + context);
     }
 
+    @Test(dataProvider = "provideDataForTestIsIDTokenEncrypted")
+    public void testIsIDTokenEncrypted(String idToken, boolean expectedResult) {
+
+        boolean isIdTokenEncrypted = OIDCSessionManagementUtil.isIDTokenEncrypted(idToken);
+        Assert.assertEquals(isIdTokenEncrypted, expectedResult, "Expected value and actual value are different.");
+    }
+
+    @DataProvider(name = "provideDataForTestIsIDTokenEncrypted")
+    public Object[][] provideDataForTestIsIDTokenEncrypted() {
+
+        String encryptedIdToken =
+                "eyJraWQiOiJPVFpsTUdZMk1HRXlPVEExTkdJd01URXpPRFppT0RCa05UTXpZakJqTVdOaE9UbGpaR1pqTldaaFpHRmtPRFEyWXp" +
+                        "aaE9HRXpZbVF4TTJaa05HWmpZUSIsImVuYyI6IkExMjhHQ00iLCJhbGciOiJSU0EtT0FFUCJ9.ayBFPA_EJHl7W7C9e" +
+                        "wu4wQlo4y83DgQdgJZGuHzIAn9k3La30DmRckx7PAdIiZgrm9SPlfd59PMuyEcoYg6FEolV2zirOm1b_J7RH8bAydVP" +
+                        "Wv-bBL_vfJKMWZV1vkuWTB-HNCg6drp8iuvpEroNOvn8yFL-NMltzSbGKAzSMikhTNqy2MkI9Ds9Ems3_dpERd6P65X" +
+                        "U2hMXILpG5YtqUN1VVtv-oHbWX0ZZEWGxeEjw327d4CfZ77FXUdZbemAo3HTq0QrrEVF7NKVHv8sufGu533Aw_9xRIk" +
+                        "L8y9ly_6CerOSeS-1xzAxOgKlA7WSieqpoc9t0QLr5IHnY4Q9_RA.MuP6H_u4IWOx0NhF.aOAy6OrOPQWCvrPnu5fHX" +
+                        "gjjf53_dZgSRNco58hIEp007hq-0PT4G4TdrSfGiNGFQX6EizjerQzr0x8sQ_FgZxQds0-KHmrz7rafGb4FuWTml8_L" +
+                        "2vXcIY4xjKA56q4DL6jRk1skWbjCCFDO37Z4A0A1SWMeZ5wODq_Qz-1SeLdKxT00FhICtZ598X5dmkbB8liVsnLmu3Q" +
+                        "YJNdYNu3KpjHrUL_C35YF_gnAyxFNsFjQiRFSUCnQLxNLkNAEephT_u-SlWFbBd2-g6r7i5IQuGUotgxkcAdIVnAVxf" +
+                        "zonzwB4F8Ufhfh7_kxRHq9s7s1mknsqO9O4CzxuUGp7Jvun3tl_CF7p6Mq6ltOEcC9ovUoEfTRvrvmmznnYwefDJqcw" +
+                        "fyq4eTsRqcfiyzWUXN79-n5RyKDWMlJfXJjusbg9qSCSnr9kYVrcgc.jdK3PVSdSYU-qfnuQCpI5Q";
+
+        String idToken = "eyJ4NXQiOiJNell4TW1Ga09HWXdNV0kwWldObU5EY3hOR1l3WW1NNFpUQTNNV0kyTkRBelpHUXpOR00wWkdSbE5qSm" +
+                "tPREZrWkRSaU9URmtNV0ZoTXpVMlpHVmxOZyIsImtpZCI6Ik16WXhNbUZrT0dZd01XSTBaV05tTkRjeE5HWXdZbU00WlRBM01XS" +
+                "TJOREF6WkdRek5HTTBaR1JsTmpKa09ERmtaRFJpT1RGa01XRmhNelUyWkdWbE5nX1JTMjU2IiwiYWxnIjoiUlMyNTYifQ.eyJhd" +
+                "F9oYXNoIjoiREdLNDRUSVdwM3Noc1hGN3Q3bjlVQSIsImF1ZCI6Ik5pR0ZfRkVDRDFzalRreEZocWlQM0ZQN3pNb2EiLCJjX2hh" +
+                "c2giOiJqZi1MMWQwakJBeWRZa3JNNkFsZG13Iiwic3ViIjoiYWRtaW4iLCJuYmYiOjE1OTU1ODA1NzMsImF6cCI6Ik5pR0ZfRkV" +
+                "DRDFzalRreEZocWlQM0ZQN3pNb2EiLCJhbXIiOlsiQmFzaWNBdXRoZW50aWNhdG9yIl0sImlzcyI6Imh0dHBzOlwvXC9sb2NhbG" +
+                "hvc3Q6OTQ0M1wvb2F1dGgyXC90b2tlbiIsImV4cCI6MTU5NTU4NDE3MywiaWF0IjoxNTk1NTgwNTczLCJzaWQiOiI2NTdlMTUxM" +
+                "S0yZTkzLTQ2MDAtYjc3NC00ZmNjYTBmMjM2OGQifQ.brA_Dfvrol90ElI2euVFi7PIoRfU7OmFUig7cq1KiTBPtLxCG048PVSaQ" +
+                "dUxMXfLuGjaA3qZLykZfViA1fos1ky-afFL5MmYrjdgxJdakxdTO1-5OYvYTpEaUYfPj5twcm38o0C_za55PBxKw1egpKePLmrl" +
+                "Kzw_DEXY4KQ815XwNGIZU8F3_LTbKVTQqsjWSfQAdL7_9cB3se37-TkByhml7RBSywUd86eBrTptKN6MaF4jVfALCof1DkWuZMo" +
+                "E07Z3q7jpnD1FFye5AjOHDN1v6hppOPypTjcl7CPV0DLiCE8m79SewEFYYSwXBxsKABT58kJQwwPjjYaACSZb2Q";
+
+        String invalidIdToken = "eyJ4NXQiOiJNell4TW1Ga09HWXdNV0kwWldObU5EY3hOR1l3WW1NNFpUQTNNV0kyTkRBelpHUXpOR00wWkd" +
+                "SbE5qSmtPREZrWkRSaU9URmtNV0ZoTXpVMlpHVmxOZyIsImtpZCI6Ik16WXhNbUZrT0dZd01XSTBaV05tTkRjeE5HWXdZbU00Wl" +
+                "RBM01XSTJOREF6WkdRek5HTTBaR1JsTmpKa09ERmtaRFJpT1RGa01XRmhNelUyWkdWbE5nX1JTMjU2IiwiYWxnIjoiUlMyNTYif" +
+                "Q.kjcbwecbbcyegkowk_jqnj-jqncjnjcn.eyJhdF9oYXNoIjoiREdLNDRUSVdwM3Noc1hGN3Q3bjlVQSIsImF1ZCI6Ik5pR0Zf" +
+                "RkVDRDFzalRreEZocWlQM0ZQN3pNb2EiLCJjX2hhc2giOiJqZi1MMWQwakJBeWRZa3JNNkFsZG13Iiwic3ViIjoiYWRtaW4iLCJ" +
+                "uYmYiOjE1OTU1ODA1NzMsImF6cCI6Ik5pR0ZfRkVDRDFzalRreEZocWlQM0ZQN3pNb2EiLCJhbXIiOlsiQmFzaWNBdXRoZW50aW" +
+                "NhdG9yIl0sImlzcyI6Imh0dHBzOlwvXC9sb2NhbGhvc3Q6OTQ0M1wvb2F1dGgyXC90b2tlbiIsImV4cCI6MTU5NTU4NDE3Mywia" +
+                "WF0IjoxNTk1NTgwNTczLCJzaWQiOiI2NTdlMTUxMS0yZTkzLTQ2MDAtYjc3NC00ZmNjYTBmMjM2OGQifQ.brA_Dfvrol90ElI2e" +
+                "uVFi7PIoRfU7OmFUig7cq1KiTBPtLxCG048PVSaQdUxMXfLuGjaA3qZLykZfViA1fos1ky-afFL5MmYrjdgxJdakxdTO1-5OYvY" +
+                "TpEaUYfPj5twcm38o0C_za55PBxKw1egpKePLmrlKzw_DEXY4KQ815XwNGIZU8F3_LTbKVTQqsjWSfQAdL7_9cB3se37-TkByhm" +
+                "l7RBSywUd86eBrTptKN6MaF4jVfALCof1DkWuZMoE07Z3q7jpnD1FFye5AjOHDN1v6hppOPypTjcl7CPV0DLiCE8m79SewEFYYS" +
+                "wXBxsKABT58kJQwwPjjYaACSZb2Q";
+
+        return new Object[][]{
+                {encryptedIdToken, true},
+                {idToken, false},
+                {invalidIdToken, false},
+                {"", false},
+                {null, false}
+        };
+    }
+
 }
