@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.listener;
 
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -100,6 +101,12 @@ public class TenantCreationEventListener implements TenantMgtListener {
             OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().removeAllOAuthApplicationData(tenantId);
         } catch (IdentityOAuthAdminException e) {
             throw new StratosException("Error in deleting all OAuth application data of the tenant: " + tenantId, e);
+        }
+
+        try {
+            OAuth2ServiceComponentHolder.getApplicationMgtService().deleteApplications(tenantId);
+        } catch (IdentityApplicationManagementException e) {
+            throw new StratosException("Error in deleting all SP apps of the tenant: " + tenantId, e);
         }
     }
 
