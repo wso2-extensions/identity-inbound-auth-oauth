@@ -81,6 +81,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String AUTHORIZATION_PARTY = "azp";
     private static final String AUDIENCE = "aud";
     private static final String SCOPE = "scope";
+    private static final String TOKEN_BINDING_REF = "binding_ref";
+    private static final String TOKEN_BINDING_TYPE = "binding_type";
 
     // To keep track of the expiry time provided in the original jwt assertion, when JWT grant type is used.
     private static final String EXPIRY_TIME_JWT = "EXPIRY_TIME_JWT";
@@ -495,6 +497,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         } else {
             jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
         }
+        // Include token binding.
+        jwtClaimsSet = handleTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
 
         return jwtClaimsSet;
     }
@@ -684,5 +688,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         // If grant handler is null ideally we would not come to this point as the flow will be broken before. So we
         // can guarantee grantHandler will not be null
         return grantHandler.isOfTypeApplicationUser();
+    }
+
+    private JWTClaimsSet handleTokenBinding(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                            OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (tokReqMsgCtx != null && tokReqMsgCtx.getTokenBinding() != null) {
+            // Include token binding into the jwt token.
+            jwtClaimsSetBuilder.claim(TOKEN_BINDING_REF, tokReqMsgCtx.getTokenBinding().getBindingReference());
+            jwtClaimsSetBuilder.claim(TOKEN_BINDING_TYPE, tokReqMsgCtx.getTokenBinding().getBindingType());
+        }
+        return jwtClaimsSetBuilder.build();
     }
 }
