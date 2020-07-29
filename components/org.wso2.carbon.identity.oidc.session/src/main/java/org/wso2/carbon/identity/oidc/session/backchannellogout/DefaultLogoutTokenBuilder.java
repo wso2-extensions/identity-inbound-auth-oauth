@@ -21,6 +21,7 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
@@ -91,8 +92,9 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
                 for (String clientID : sessionParticipants) {
                     OAuthAppDO oAuthAppDO = getOAuthAppDO(clientID);
                     String backChannelLogoutUrl = oAuthAppDO.getBackChannelLogoutUrl();
+                    String tenantDomain = oAuthAppDO.getAppOwner().getTenantDomain();
 
-                    if (StringUtils.equals(clientID, getClientId(request))) {
+                    if (StringUtils.equals(clientID, getClientId(request, tenantDomain))) {
                         // No need to send logut token if the client id of the RP initiated logout is known.
                         continue;
                     }
@@ -153,17 +155,27 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     /**
      * Returns client id from servlet request.
      *
-     * @param request
-     * @return
-     * @throws IdentityOAuth2Exception
-     * @throws InvalidOAuthClientException
+     * @param request      Http Servlet Request.
+     * @param tenantDomain Tenant domain.
+     * @return Client ID.
+     * @throws IdentityOAuth2Exception     Error in validating ID token hint.
+     * @throws InvalidOAuthClientException Error in validating ID token hint.
      */
-    private String getClientId(HttpServletRequest request)
+    private String getClientId(HttpServletRequest request, String tenantDomain)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        String clientId;
+        String clientId = null;
         String idToken = getIdToken(request);
         if (idToken != null) {
+            if (OIDCSessionManagementUtil.isIDTokenEncrypted(idToken)) {
+                try {
+                    JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(tenantDomain, idToken);
+                    clientId = OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(decryptedIDToken);
+                } catch (ParseException e) {
+                    log.error("Error in extracting the client ID from the ID token.");
+                }
+                return clientId;
+            }
             clientId = getClientIdFromIDTokenHint(idToken);
         } else {
             log.debug("IdTokenHint is not found in the request ");

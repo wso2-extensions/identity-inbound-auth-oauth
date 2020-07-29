@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oidc.session.servlet;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
@@ -195,7 +196,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             boolean skipConsent;
             // Get user consent to logout
             try {
-                skipConsent = getOpenIDConnectSkipUserConsent(idTokenHint);
+                skipConsent = getOpenIDConnectSkipUserConsent(request);
             } catch (ParseException e) {
                 log.error("Error while getting clientId from the IdTokenHint.", e);
                 redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, "ID token signature validation failed.");
@@ -287,20 +288,24 @@ public class OIDCLogoutServlet extends HttpServlet {
         String clientId;
         String appTenantDomain = null;
         try {
-            if (!validateIdToken(idTokenHint)) {
-                String msg = "ID token signature validation failed.";
-                log.error(msg);
-                redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
-                return redirectURL;
+            if (OIDCSessionManagementUtil.isIDTokenEncrypted(idTokenHint)) {
+                appTenantDomain = request.getParameter(OIDCSessionConstants.OIDC_TENANT_DOMAIN_PARAM);
+                JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(appTenantDomain, idTokenHint);
+                clientId = OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(decryptedIDToken);
+            } else {
+                if (!validateIdToken(idTokenHint)) {
+                    String msg = "ID token signature validation failed.";
+                    log.error(msg);
+                    redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
+                    return redirectURL;
+                }
+                clientId = extractClientFromIdToken(idTokenHint);
+                appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
+                validateRequestTenantDomain(appTenantDomain);
             }
 
-            clientId = extractClientFromIdToken(idTokenHint);
             OAuthAppDAO appDAO = new OAuthAppDAO();
             OAuthAppDO oAuthAppDO = appDAO.getAppInformation(clientId);
-
-            appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
-            validateRequestTenantDomain(appTenantDomain);
-
             String spName = getServiceProviderName(clientId, appTenantDomain);
             setSPAttributeToRequest(request, spName, appTenantDomain);
 
@@ -759,11 +764,15 @@ public class OIDCLogoutServlet extends HttpServlet {
     /**
      * Returns the OpenIDConnect User logout Consent.
      *
-     * @param idTokenHint Id token params.
-     * @return true/false whether the user skip user consent or not.
+     * @param request Http Servlet Request.
+     * @return True/False whether the user skip user consent or not.
+     * @throws ParseException          Error in retrieving the clientId.
+     * @throws IdentityOAuth2Exception Error in retrieving service provider associated with the OAuth clientId.
      */
-    private boolean getOpenIDConnectSkipUserConsent(String idTokenHint) throws ParseException, IdentityOAuth2Exception {
+    private boolean getOpenIDConnectSkipUserConsent(HttpServletRequest request) throws ParseException,
+            IdentityOAuth2Exception {
 
+        String idTokenHint = request.getParameter(OIDCSessionConstants.OIDC_ID_TOKEN_HINT_PARAM);
         boolean skipLogoutConsent =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectSkipLogoutConsentConfig();
         if (skipLogoutConsent) {
@@ -775,17 +784,22 @@ public class OIDCLogoutServlet extends HttpServlet {
         }
         String clientId;
         if (StringUtils.isNotBlank(idTokenHint)) {
-            if (validateIdToken(idTokenHint)) {
-                clientId = extractClientFromIdToken(idTokenHint);
-                ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
-                if (serviceProvider != null) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Get the skip logout consent from service prover. clientID: " + clientId);
-                    }
-                    return FrameworkUtils.isLogoutConsentPageSkippedForSP(serviceProvider);
-                }
+            if (OIDCSessionManagementUtil.isIDTokenEncrypted(idTokenHint)) {
+                String tenantDomain = request.getParameter(OIDCSessionConstants.OIDC_TENANT_DOMAIN_PARAM);
+                JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(tenantDomain, idTokenHint);
+                clientId = OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(decryptedIDToken);
             } else {
-                throw new IdentityOAuth2Exception("ID token signature validation failed.");
+                if (!validateIdToken(idTokenHint)) {
+                    throw new IdentityOAuth2Exception("ID token signature validation failed.");
+                }
+                clientId = extractClientFromIdToken(idTokenHint);
+            }
+            ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
+            if (serviceProvider != null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Get the skip logout consent from service provider with client ID: " + clientId);
+                }
+                return FrameworkUtils.isLogoutConsentPageSkippedForSP(serviceProvider);
             }
         }
         if (log.isDebugEnabled()) {
@@ -838,7 +852,13 @@ public class OIDCLogoutServlet extends HttpServlet {
         }
         String clientId;
         try {
-            clientId = extractClientFromIdToken(idTokenHint);
+            if (OIDCSessionManagementUtil.isIDTokenEncrypted(idTokenHint)) {
+                String tenantDomain = request.getParameter(OIDCSessionConstants.OIDC_TENANT_DOMAIN_PARAM);
+                JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(tenantDomain, idTokenHint);
+                clientId = OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(decryptedIDToken);
+            } else {
+                clientId = extractClientFromIdToken(idTokenHint);
+            }
         } catch (ParseException e) {
             String msg = "Error occurred while extracting data from id token.";
             if (log.isDebugEnabled()) {
@@ -847,8 +867,16 @@ public class OIDCLogoutServlet extends HttpServlet {
             redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
             response.sendRedirect(getRedirectURL(redirectURL, request));
             return;
+        } catch (IdentityOAuth2Exception e) {
+            String msg = "Error occurred while decrypting the id token (JWE).";
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while decrypting the id token (JWE).", e);
+            }
+            redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
+            response.sendRedirect(getRedirectURL(redirectURL, request));
+            return;
         }
-        if (!validateIdToken(idTokenHint)) {
+        if (!validateIdToken(idTokenHint) && !OIDCSessionManagementUtil.isIDTokenEncrypted(idTokenHint)) {
             String msg = "ID token signature validation failed.";
             if (log.isDebugEnabled()) {
                 log.debug(msg + " Client id from id token: " + clientId);
