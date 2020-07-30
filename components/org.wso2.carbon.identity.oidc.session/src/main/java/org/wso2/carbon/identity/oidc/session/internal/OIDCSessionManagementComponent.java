@@ -32,7 +32,7 @@ import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
-import org.wso2.carbon.identity.oidc.session.backchannellogout.ClaimProviderImpl;
+import org.wso2.carbon.identity.oidc.session.logout.backchannellogout.ClaimProviderImpl;
 import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutEventHandler;
 import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutHandler;
 import org.wso2.carbon.identity.oidc.session.servlet.OIDCLogoutServlet;
