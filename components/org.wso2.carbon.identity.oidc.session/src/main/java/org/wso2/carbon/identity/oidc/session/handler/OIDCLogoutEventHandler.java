@@ -25,7 +25,7 @@ import org.wso2.carbon.identity.event.IdentityEventConstants.EventProperty;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
-import org.wso2.carbon.identity.oidc.session.logout.backchannellogout.LogoutRequestSender;
+import org.wso2.carbon.identity.oidc.session.logout.backchannel.LogoutRequestSender;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 
 import javax.servlet.http.Cookie;
