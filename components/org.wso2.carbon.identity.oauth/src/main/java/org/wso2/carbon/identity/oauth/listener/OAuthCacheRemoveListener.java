@@ -54,8 +54,7 @@ public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKe
         }
 
         String userName = accessTokenDO.getAuthzUser().toString();
-        boolean isUsernameCaseSensitive = IdentityUtil
-                .isUserStoreInUsernameCaseSensitive(accessTokenDO.getAuthzUser().getUserName());
+        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(userName);
         String cacheKeyString;
         if (isUsernameCaseSensitive) {
             cacheKeyString = accessTokenDO.getConsumerKey() + ":" + userName + ":" +
