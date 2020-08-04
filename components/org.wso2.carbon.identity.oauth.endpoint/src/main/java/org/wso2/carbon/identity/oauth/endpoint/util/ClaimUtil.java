@@ -281,8 +281,8 @@ public class ClaimUtil {
         if (userstore == null) {
             throw new UserStoreException("Unable to retrieve UserStoreManager for the domain name: " + userStoreDomain);
         }
-        Map<String, String> userClaims = userstore.getUserClaimValues(MultitenantUtils.getTenantAwareUsername
-                (username), claimURIList.toArray(new String[claimURIList.size()]), null);
+        Map<String, String> userClaims =
+                userstore.getUserClaimValues(username, claimURIList.toArray(new String[claimURIList.size()]), null);
         if (log.isDebugEnabled()) {
             log.debug("User claims retrieved from user store: " + userClaims.size());
         }
