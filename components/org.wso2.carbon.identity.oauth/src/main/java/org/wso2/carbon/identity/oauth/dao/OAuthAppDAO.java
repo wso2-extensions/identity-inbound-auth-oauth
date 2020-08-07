@@ -70,6 +70,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.RENEW_REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties
+        .TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUDIENCE;
 
@@ -613,6 +615,11 @@ public class OAuthAppDAO {
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, TOKEN_BINDING_TYPE,
                 oauthAppDO.getTokenBindingType(), prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION,
+                String.valueOf(oauthAppDO.isTokenRevocationWithIDPSessionTerminationEnabled()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
         preparedStatementForPropertyUpdate.executeBatch();
@@ -1050,6 +1057,10 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty, TOKEN_BINDING_TYPE,
                     consumerAppDO.getTokenBindingType());
 
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION,
+                    String.valueOf(consumerAppDO.isTokenRevocationWithIDPSessionTerminationEnabled()));
+
             prepStmtAddOIDCProperty.executeBatch();
         }
     }
@@ -1132,6 +1143,10 @@ public class OAuthAppDAO {
         oauthApp.setBypassClientCredentials(bypassClientCreds);
 
         oauthApp.setTokenBindingType(getFirstPropertyValue(spOIDCProperties, TOKEN_BINDING_TYPE));
+
+        boolean isTokenRevocationEnabled = Boolean.parseBoolean(getFirstPropertyValue(spOIDCProperties,
+                TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION));
+        oauthApp.setTokenRevocationWithIDPSessionTerminationEnabled(isTokenRevocationEnabled);
 
         String renewRefreshToken = getFirstPropertyValue(spOIDCProperties, RENEW_REFRESH_TOKEN);
         oauthApp.setRenewRefreshTokenEnabled(renewRefreshToken);

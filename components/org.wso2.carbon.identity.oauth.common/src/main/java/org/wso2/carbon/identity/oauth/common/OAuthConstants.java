@@ -438,6 +438,8 @@ public final class OAuthConstants {
         public static final String BYPASS_CLIENT_CREDENTIALS = "bypassClientCredentials";
         public static final String RENEW_REFRESH_TOKEN = "renewRefreshToken";
         public static final String TOKEN_BINDING_TYPE = "tokenBindingType";
+        public static final String TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION =
+                "tokenRevocationWithIDPSessionTermination";
 
         private OIDCConfigProperties() {
 

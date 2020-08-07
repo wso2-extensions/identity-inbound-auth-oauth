@@ -324,6 +324,8 @@ public final class OAuthUtil {
         dto.setBypassClientCredentials(appDO.isBypassClientCredentials());
         dto.setRenewRefreshTokenEnabled(appDO.getRenewRefreshTokenEnabled());
         dto.setTokenBindingType(appDO.getTokenBindingType());
+        dto.setTokenRevocationWithIDPSessionTerminationEnabled(appDO
+                .isTokenRevocationWithIDPSessionTerminationEnabled());
         return dto;
     }
 }
