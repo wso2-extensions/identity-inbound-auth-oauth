@@ -106,18 +106,24 @@ public class OAuthUserStoreConfigListenerImpl extends AbstractUserStoreConfigLis
             for (Map.Entry entry : latestAccessTokens.entrySet()) {
                 tokensToRevoke.add(((AccessTokenDO) entry.getValue()).getAccessToken());
             }
-            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                    .revokeAccessTokens(tokensToRevoke.toArray(new String[tokensToRevoke.size()]),
-                            OAuth2Util.isHashEnabled());
+
+            if (!tokensToRevoke.isEmpty()) {
+                OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                        .revokeAccessTokens(tokensToRevoke.toArray(new String[tokensToRevoke.size()]),
+                                OAuth2Util.isHashEnabled());
+            }
+
             List<AuthzCodeDO> latestAuthzCodes = OAuthTokenPersistenceFactory.getInstance()
                     .getAuthorizationCodeDAO().getLatestAuthorizationCodesByUserStore(tenantId, userStoreName);
-            for (AuthzCodeDO authzCodeDO : latestAuthzCodes) {
-                // remove the authorization code from the cache
-                OAuthUtil.clearOAuthCache(authzCodeDO.getConsumerKey() + ":" + authzCodeDO.getAuthorizationCode());
 
+            if (!latestAuthzCodes.isEmpty()) {
+                for (AuthzCodeDO authzCodeDO : latestAuthzCodes) {
+                    // remove the authorization code from the cache
+                    OAuthUtil.clearOAuthCache(authzCodeDO.getConsumerKey() + ":" + authzCodeDO.getAuthorizationCode());
+                }
+                OAuthTokenPersistenceFactory.getInstance()
+                        .getAuthorizationCodeDAO().deactivateAuthorizationCodes(latestAuthzCodes);
             }
-            OAuthTokenPersistenceFactory.getInstance()
-                    .getAuthorizationCodeDAO().deactivateAuthorizationCodes(latestAuthzCodes);
         } catch (IdentityOAuth2Exception e) {
             throw new UserStoreException("Error occurred while revoking Access Token of user store : " +
                     userStoreName + " in tenant :" + tenantId, e);

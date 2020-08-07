@@ -1059,6 +1059,13 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     @Override
     public void revokeAccessTokensInBatch(String[] tokens, boolean isHashedToken) throws IdentityOAuth2Exception {
 
+        if (ArrayUtils.isEmpty(tokens)) {
+            if (log.isDebugEnabled()) {
+                log.debug("No tokens to revoke in batch mode. Therefore not continuing further in revocation.");
+            }
+            return;
+        }
+
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 StringBuilder stringBuilder = new StringBuilder();
