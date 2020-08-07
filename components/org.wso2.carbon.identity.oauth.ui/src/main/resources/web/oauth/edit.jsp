@@ -95,7 +95,7 @@
         supportedIdTokenEncryptionMethods =
                 client.getSupportedIDTokenAlgorithms().getSupportedIdTokenEncryptionMethods();
         supportedTokenBindingsMetaData = client.getSupportedTokenBindingsMetaData();
-    
+        
         if (consumerkey != null) {
             app = client.getOAuthApplicationData(consumerkey);
         } else {

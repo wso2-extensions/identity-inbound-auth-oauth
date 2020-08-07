@@ -26,9 +26,12 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
+import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.mgt.util.JdbcUtils;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -2438,5 +2441,60 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     private boolean isAccessTokenExpired(long issuedTimeInMillis, long validityPeriodMillis) {
 
         return OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodMillis) < 0;
+    }
+
+    public Set<AccessTokenDO> getAccessTokensByBindingRef(AuthenticatedUser user, String bindingRef)
+            throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving active access tokens issued to user, " + user.getUserName() + " with binding " +
+                    "reference " + bindingRef);
+        }
+
+        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        try {
+            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserId(SQLQueries
+                    .GET_ACCESS_TOKENS_BY_BINDING_REFERENCE, user.getUserName());
+            int tenantId = OAuth2Util.getTenantId(user.getTenantDomain());
+            Map<String, AccessTokenDO> tokenMap = new HashMap<>();
+            jdbcTemplate.executeQuery(sqlQuery,
+                    (resultSet, i) -> {
+                        String token = resultSet.getString("ACCESS_TOKEN");
+                        AccessTokenDO accessTokenDO = new AccessTokenDO();
+                        if (tokenMap.containsKey(token)) {
+                            AccessTokenDO tokenObj = tokenMap.get(token);
+                            String[] previousScope = tokenObj.getScope();
+                            String[] newSope = new String[tokenObj.getScope().length + 1];
+                            System.arraycopy(previousScope, 0, newSope, 0, previousScope.length);
+                            newSope[previousScope.length] = resultSet.getString(2);
+                            tokenObj.setScope(newSope);
+                        } else {
+                            String consumerKey = resultSet.getString("CONSUMER_KEY");
+                            String tokenScope = resultSet.getString("TOKEN_SCOPE");
+                            String refreshToken = resultSet.getString("REFRESH_TOKEN");
+                            String tokenId = resultSet.getString("TOKEN_ID");
+
+                            String[] scope = OAuth2Util.buildScopeArray(tokenScope);
+                            accessTokenDO.setAccessToken(token);
+                            accessTokenDO.setConsumerKey(consumerKey);
+                            accessTokenDO.setScope(scope);
+                            accessTokenDO.setAuthzUser(user);
+                            accessTokenDO.setTenantID(tenantId);
+                            accessTokenDO.setRefreshToken(refreshToken);
+                            accessTokenDO.setTokenId(tokenId);
+                            tokenMap.put(token, accessTokenDO);
+                        }
+                        return null;
+                    },
+                    (PreparedStatement preparedStatement) -> {
+                        preparedStatement.setString(1, user.getUserName());
+                        preparedStatement.setInt(2, tenantId);
+                        preparedStatement.setString(3, user.getUserStoreDomain());
+                        preparedStatement.setString(4, bindingRef);
+                    });
+            return new HashSet<>(tokenMap.values());
+        } catch (DataAccessException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving access tokens.", e);
+        }
     }
 }

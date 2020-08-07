@@ -44,6 +44,18 @@ public interface TokenBinder extends TokenBinderInfo {
     /**
      * Get token binding value.
      *
+     * @param request http servlet request.
+     * @return token binding value.
+     * @throws OAuthSystemException in case of failure.
+     */
+    default String getTokenBindingValue(HttpServletRequest request) throws OAuthSystemException {
+
+        return null;
+    }
+
+    /**
+     * Get token binding value.
+     *
      * @param oAuth2AccessTokenReqDTO OAuth2 access token request DTO.
      * @return token binding value optional.
      */

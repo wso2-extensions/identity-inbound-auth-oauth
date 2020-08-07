@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
+import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
@@ -48,6 +49,7 @@ import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.oauth2.token.bindings.handlers.TokenBindingExpiryEventHandler;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -196,6 +198,13 @@ public class OAuth2ServiceComponent {
             if (log.isDebugEnabled()) {
                 log.debug("Default OpenIDConnect Claim filter registered successfully.");
             }
+
+            bundleContext.registerService(AbstractEventHandler.class.getName(), new TokenBindingExpiryEventHandler(),
+                    null);
+            if (log.isDebugEnabled()) {
+                log.debug("TokenBindingExpiryEventHandler is successfully registered.");
+            }
+
         } catch (Throwable e) {
             log.error("Error while activating OAuth2ServiceComponent.", e);
         }
