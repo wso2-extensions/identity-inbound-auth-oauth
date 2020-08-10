@@ -57,7 +57,7 @@ public class OIDCDCRProcessor extends DCRProcessor {
                 log.debug("Identity Connect DCR endpoint was deprecated. To enable the DCR API endpoint " +
                         "add the following config to deployment.toml file." +
                         "[[legacy_feature]]" +
-                        "id = identity.connector.dcr" +
+                        "id = identity/connect/dcr" +
                         "enable = true");
             }
             String errorMessage =
