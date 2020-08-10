@@ -83,7 +83,7 @@
         bypassClientCredentials = true;
     }
     
-    if (request.getParameter("revokeTokensWhenIDPSessionTerminated") != null){
+    if (request.getParameter("revokeTokensWhenIDPSessionTerminated") != null) {
         isTokenRevocationWithIDPSessionTerminationEnabled = true;
     }
     
