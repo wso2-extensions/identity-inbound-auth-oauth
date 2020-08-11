@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -152,6 +153,7 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
                 .getOpenIDConnectClaimFilters()
                 .add(new OpenIDConnectClaimFilterImpl());
         OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
+        OAuth2ServiceComponentHolder.setKeyIDProvider(new DefaultKeyIDProviderImpl());
 
     }
 
