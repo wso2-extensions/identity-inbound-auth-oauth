@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
+import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.registry.core.service.RegistryService;
@@ -49,6 +50,7 @@ public class OAuth2ServiceComponentHolder {
     private List<TokenBinder> tokenBinders = new ArrayList<>();
     private OAuthAdminServiceImpl oauthAdminService;
     private static AuthenticationDataPublisher authenticationDataPublisherProxy;
+    private static KeyIDProvider keyIDProvider = null;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -220,5 +222,25 @@ public class OAuth2ServiceComponentHolder {
     public static AuthenticationDataPublisher getAuthenticationDataPublisherProxy() {
 
         return OAuth2ServiceComponentHolder.authenticationDataPublisherProxy;
+    }
+
+    /**
+     * Method to get the valid KeyIDProvider implementation
+     *
+     * @return
+     */
+    public static KeyIDProvider getKeyIDProvider() {
+
+        return keyIDProvider;
+    }
+
+    /**
+     * Method to add the KeyIDProvider
+     *
+     * @param keyIDProvider instance of KeyIDProvider
+     */
+    public static void setKeyIDProvider(KeyIDProvider keyIDProvider) {
+
+        OAuth2ServiceComponentHolder.keyIDProvider = keyIDProvider;
     }
 }
