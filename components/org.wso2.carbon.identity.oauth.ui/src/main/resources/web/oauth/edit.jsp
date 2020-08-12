@@ -854,7 +854,7 @@
                                         <label>
                                             <input type="checkbox" name="tokenBindingValidationEnabled"
                                                    value="yes" <%=(
-                                                           app.isTokenRevocationWithIDPSessionTerminationEnabledSpecified() ? "checked" : "")%> />
+                                                           app.isTokenBindingValidationEnabledSpecified() ? "checked" : "")%> />
                                             <fmt:message key='token.binding.validation.enabled'/>
                                         </label>
                                         <div class="sectionHelp">

@@ -703,9 +703,7 @@
                                 <tr id="tokenBindingValidationEnabled">
                                     <td colspan="2">
                                         <label>
-                                            <input type="checkbox" name="tokenBindingValidationEnabled"
-                                                   value="yes" <%=(
-                                                           app.isTokenRevocationWithIDPSessionTerminationEnabledSpecified() ? "checked" : "")%> />
+                                            <input type="checkbox" name="tokenBindingValidationEnabled" value="yes">
                                             <fmt:message key='token.binding.validation.enabled'/>
                                         </label>
                                         <div class="sectionHelp">
