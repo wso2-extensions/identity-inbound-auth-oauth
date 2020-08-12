@@ -95,7 +95,7 @@
         supportedIdTokenEncryptionMethods =
                 client.getSupportedIDTokenAlgorithms().getSupportedIdTokenEncryptionMethods();
         supportedTokenBindingsMetaData = client.getSupportedTokenBindingsMetaData();
-
+        
         if (consumerkey != null) {
             app = client.getOAuthApplicationData(consumerkey);
         } else {
@@ -368,6 +368,7 @@
                         $(jQuery('#bypass_client_credentials').hide());
                         $('#accessTokenBindingType_none').prop('checked', true);
                         $("#bindAccessToken").hide();
+                        $(jQuery('#revokeTokensWhenIDPSessionTerminated').hide());
 
                     } else if (oauthVersion === "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
 
@@ -453,6 +454,7 @@
                         } else {
                             $('#bindAccessToken').hide();
                         }
+                        $(jQuery('#revokeTokensWhenIDPSessionTerminated').show());
                     }
                 }
 
@@ -830,6 +832,19 @@
                                                 }
                                             %>
                                         </table>
+                                    </td>
+                                </tr>
+                                <tr id="revokeTokensWhenIDPSessionTerminated">
+                                    <td colspan="2">
+                                        <label>
+                                            <input type="checkbox" name="revokeTokensWhenIDPSessionTerminated"
+                                                   value="yes" <%=(
+                                                           app.isTokenRevocationWithIDPSessionTerminationEnabledSpecified() ? "checked" : "")%> />
+                                            <fmt:message key='revoke.tokens.when.idp.session.terminated'/>
+                                        </label>
+                                        <div class="sectionHelp">
+                                            <fmt:message key='revoke.tokens.when.idp.session.terminated.hint'/>
+                                        </div>
                                     </td>
                                 </tr>
                                 <tr id="userAccessTokenPlain">

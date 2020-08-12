@@ -81,16 +81,39 @@ public class CookieBasedTokenBinder extends AbstractTokenBinder {
     @Override
     public String getOrGenerateTokenBindingValue(HttpServletRequest request) throws OAuthSystemException {
 
+        String tokenBindingValue = retrieveTokenBindingValueFromRequest(request);
+
+        if (StringUtils.isNotBlank(tokenBindingValue)) {
+            return tokenBindingValue;
+        } else {
+            return UUID.randomUUID().toString();
+        }
+    }
+
+    @Override
+    public String getTokenBindingValue(HttpServletRequest request) throws OAuthSystemException {
+
+        String tokenBindingValue = retrieveTokenBindingValueFromRequest(request);
+
+        if (StringUtils.isNotBlank(tokenBindingValue)) {
+            return tokenBindingValue;
+        } else {
+            throw new OAuthSystemException("Failed to retrieve token binding value.");
+        }
+    }
+
+    private String retrieveTokenBindingValueFromRequest(HttpServletRequest request) throws OAuthSystemException {
+
         Cookie[] cookies = request.getCookies();
         if (ArrayUtils.isEmpty(cookies)) {
-            return UUID.randomUUID().toString();
+            return null;
         }
 
         Optional<Cookie> tokenBindingCookieOptional = Arrays.stream(cookies)
                 .filter(t -> COOKIE_NAME.equals(t.getName())).findAny();
         if (!tokenBindingCookieOptional.isPresent() || StringUtils
                 .isBlank(tokenBindingCookieOptional.get().getValue())) {
-            return UUID.randomUUID().toString();
+            return null;
         }
 
         String tokenBindingValue = tokenBindingCookieOptional.get().getValue();
@@ -103,10 +126,7 @@ public class CookieBasedTokenBinder extends AbstractTokenBinder {
             throw new OAuthSystemException("Failed to check token binding reference existence", e);
         }
 
-        if (isTokenBindingValueValid) {
-            return tokenBindingValue;
-        }
-        return UUID.randomUUID().toString();
+        return isTokenBindingValueValid ? tokenBindingValue : null;
     }
 
     @Override

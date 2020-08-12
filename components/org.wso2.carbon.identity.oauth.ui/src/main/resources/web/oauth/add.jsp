@@ -254,6 +254,7 @@
                         $(jQuery('#renew_refresh_token_per_app').hide());
                         $('#accessTokenBindingType_none').prop('checked', true);
                         $("#bindAccessToken").hide();
+                        $(jQuery('#revokeTokensWhenIDPSessionTerminated').hide());
 
                     } else if (oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
                         $(jQuery('#grant_row')).show();
@@ -333,6 +334,7 @@
                         } else {
                             $('#bindAccessToken').hide();
                         }
+                        $(jQuery('#revokeTokensWhenIDPSessionTerminated').show());
                     }
                 }
 
@@ -683,6 +685,17 @@
                                                 }
                                             %>
                                         </table>
+                                    </td>
+                                </tr>
+                                <tr id="revokeTokensWhenIDPSessionTerminated">
+                                    <td colspan="2">
+                                        <label>
+                                            <input type="checkbox" name="revokeTokensWhenIDPSessionTerminated" value="yes">
+                                            <fmt:message key='revoke.tokens.when.idp.session.terminated'/>
+                                        </label>
+                                        <div class="sectionHelp">
+                                            <fmt:message key='revoke.tokens.when.idp.session.terminated.hint'/>
+                                        </div>
                                     </td>
                                 </tr>
                                 <tr id="userAccessTokenPlain">
