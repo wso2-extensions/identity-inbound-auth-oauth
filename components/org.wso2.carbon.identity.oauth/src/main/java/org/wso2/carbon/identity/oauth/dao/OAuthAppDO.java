@@ -72,6 +72,7 @@ public class OAuthAppDO implements Serializable {
     private String tokenType;
     private String tokenBindingType;
     private boolean tokenRevocationWithIDPSessionTerminationEnabled;
+    private boolean tokenBindingValidationEnabled;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -322,5 +323,15 @@ public class OAuthAppDO implements Serializable {
             boolean tokenRevocationWithIDPSessionTerminationEnabled) {
 
         this.tokenRevocationWithIDPSessionTerminationEnabled = tokenRevocationWithIDPSessionTerminationEnabled;
+    }
+
+    public boolean isTokenBindingValidationEnabled() {
+
+        return tokenBindingValidationEnabled;
+    }
+
+    public void setTokenBindingValidationEnabled(boolean tokenBindingValidationEnabled) {
+
+        this.tokenBindingValidationEnabled = tokenBindingValidationEnabled;
     }
 }

@@ -51,6 +51,7 @@ public class OAuthConsumerAppDTO {
     private String tokenType;
     private String tokenBindingType;
     private boolean tokenRevocationWithIDPSessionTerminationEnabled;
+    private boolean tokenBindingValidationEnabled;
 
     public long getUserAccessTokenExpiryTime() {
         return userAccessTokenExpiryTime;
@@ -288,6 +289,16 @@ public class OAuthConsumerAppDTO {
             boolean tokenRevocationWithIDPSessionTerminationEnabled) {
 
         this.tokenRevocationWithIDPSessionTerminationEnabled = tokenRevocationWithIDPSessionTerminationEnabled;
+    }
+
+    public boolean isTokenBindingValidationEnabled() {
+
+        return tokenBindingValidationEnabled;
+    }
+
+    public void setTokenBindingValidationEnabled(boolean tokenBindingValidationEnabled) {
+
+        this.tokenBindingValidationEnabled = tokenBindingValidationEnabled;
     }
 }
 

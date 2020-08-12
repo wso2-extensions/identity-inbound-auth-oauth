@@ -255,6 +255,7 @@
                         $('#accessTokenBindingType_none').prop('checked', true);
                         $("#bindAccessToken").hide();
                         $(jQuery('#revokeTokensWhenIDPSessionTerminated').hide());
+                        $(jQuery('#tokenBindingValidationEnabled').hide());
 
                     } else if (oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
                         $(jQuery('#grant_row')).show();
@@ -335,6 +336,7 @@
                             $('#bindAccessToken').hide();
                         }
                         $(jQuery('#revokeTokensWhenIDPSessionTerminated').show());
+                        $(jQuery('#okenBindingValidationEnabled').show());
                     }
                 }
 
@@ -695,6 +697,19 @@
                                         </label>
                                         <div class="sectionHelp">
                                             <fmt:message key='revoke.tokens.when.idp.session.terminated.hint'/>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr id="tokenBindingValidationEnabled">
+                                    <td colspan="2">
+                                        <label>
+                                            <input type="checkbox" name="tokenBindingValidationEnabled"
+                                                   value="yes" <%=(
+                                                           app.isTokenRevocationWithIDPSessionTerminationEnabledSpecified() ? "checked" : "")%> />
+                                            <fmt:message key='token.binding.validation.enabled'/>
+                                        </label>
+                                        <div class="sectionHelp">
+                                            <fmt:message key='token.binding.validation.enabled.hint'/>
                                         </div>
                                     </td>
                                 </tr>
