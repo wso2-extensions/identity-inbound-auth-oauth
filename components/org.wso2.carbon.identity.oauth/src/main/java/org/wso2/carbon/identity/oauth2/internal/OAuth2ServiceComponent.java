@@ -397,9 +397,11 @@ public class OAuth2ServiceComponent {
                 log.debug("Custom Key ID Provider: " + keyIDProvider.getClass().getSimpleName() +
                         "Registered replacing the default Key ID provider implementation");
             }
+        } else {
+            log.warn("Key ID Provider: " + keyIDProvider.getClass().getSimpleName() +
+                    " not registered since a custom Key ID Provider already exists in the placeholder. ");
         }
-        log.warn("Key ID Provider: " + keyIDProvider.getClass().getSimpleName() +
-                " not registered since a custom Key ID Provider already exists in the placeholder. ");
+
     }
 
     protected void unsetKeyIDProvider(KeyIDProvider keyIDProvider) {
