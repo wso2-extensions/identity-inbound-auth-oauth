@@ -678,9 +678,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         TokenBinder tokenBinder = tokenBinderOptional.get();
 
-        boolean isValidTokenBinding = tokenBinder
-                .isValidTokenBinding(tokenReqDTO, validationDataDO.getTokenBindingReference());
-        if (!isValidTokenBinding) {
+        if ((oAuthAppDO.isTokenBindingValidationEnabled()) && !tokenBinder
+                .isValidTokenBinding(tokenReqDTO, validationDataDO.getTokenBindingReference())) {
             throw new IdentityOAuth2Exception("Invalid token binding value is present in the request.");
         }
     }
