@@ -84,12 +84,12 @@
         bypassClientCredentials = true;
     }
 
-    if (request.getParameter("revokeTokensWhenIDPSessionTerminated") != null) {
-        isTokenRevocationWithIDPSessionTerminationEnabled = true;
+    if (request.getParameter("validateTokenBindingEnabled") != null) {
+        isTokenBindingValidationEnabled = true;
     }
 
-    if (request.getParameter("tokenBindingValidationEnabled") != null) {
-        isTokenBindingValidationEnabled = true;
+    if (request.getParameter("revokeTokensWhenIDPSessionTerminated") != null) {
+        isTokenRevocationWithIDPSessionTerminationEnabled = true;
     }
     
     String tokenBindingType = request.getParameter("accessTokenBindingType");
