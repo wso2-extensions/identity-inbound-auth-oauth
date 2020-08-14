@@ -189,7 +189,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
     private void revokeTokensOfBindingRef(AuthenticatedUser user, String tokenBindingReference) throws
             IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        if (StringUtils.isBlank(tokenBindingReference)) {
+        if (StringUtils.isBlank(tokenBindingReference) || user == null) {
             return;
         }
 
