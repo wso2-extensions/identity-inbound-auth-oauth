@@ -83,6 +83,7 @@ public class JwksEndpoint {
             } else {
                 try {
                     int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+                    IdentityTenantUtil.initializeRegistry(tenantId);
                     FrameworkUtils.startTenantFlow(tenantDomain);
                     KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
                     keystore = keyStoreManager.getKeyStore(generateKSNameFromDomainName(tenantDomain));
