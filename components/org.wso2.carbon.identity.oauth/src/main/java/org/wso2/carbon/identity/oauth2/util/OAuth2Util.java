@@ -2517,13 +2517,13 @@ public class OAuth2Util {
             byte[] digestInBytes = digestValue.digest();
 
             String publicCertThumbprint = hexify(digestInBytes);
+            String thumbprint = new String(new Base64(0, null, true).
+                    encode(publicCertThumbprint.getBytes(Charsets.UTF_8)), Charsets.UTF_8);
             if (log.isDebugEnabled()) {
-                log.debug(
-                        String.format("Calculating " + digestValue.getAlgorithm() + " thumb-print for certificate: %s",
-                                certificate.toString()));
+                log.debug(String.format("Thumbprint value: %s calculated for Certificate: %s using algorithm: %s",
+                        thumbprint, certificate, digestValue.getAlgorithm()));
             }
-            return new String(new Base64(0, null, true).encode(
-                    publicCertThumbprint.getBytes(Charsets.UTF_8)), Charsets.UTF_8);
+            return thumbprint;
         } catch (CertificateEncodingException e) {
             String error = "Error occurred while encoding thumbPrint from certificate.";
             throw new IdentityOAuth2Exception(error, e);
