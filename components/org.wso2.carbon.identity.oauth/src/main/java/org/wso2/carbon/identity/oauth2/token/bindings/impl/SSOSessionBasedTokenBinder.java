@@ -22,6 +22,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 
 import java.util.Arrays;
@@ -42,8 +43,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.AU
  */
 public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
 
-    private static final String BINDING_TYPE = "sso-session";
-
     private List<String> supportedGrantTypes = Collections.singletonList(AUTHORIZATION_CODE);
 
     @Override
@@ -61,7 +60,7 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
     @Override
     public String getBindingType() {
 
-        return BINDING_TYPE;
+        return OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER;
     }
 
     @Override
@@ -72,6 +71,17 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
 
     @Override
     public String getOrGenerateTokenBindingValue(HttpServletRequest request) throws OAuthSystemException {
+
+        return retrieveTokenBindingValueFromRequest(request);
+    }
+
+    @Override
+    public String getTokenBindingValue(HttpServletRequest request) throws OAuthSystemException {
+
+        return retrieveTokenBindingValueFromRequest(request);
+    }
+
+    private String retrieveTokenBindingValueFromRequest(HttpServletRequest request) throws OAuthSystemException {
 
         Cookie[] cookies = request.getCookies();
         if (ArrayUtils.isEmpty(cookies)) {

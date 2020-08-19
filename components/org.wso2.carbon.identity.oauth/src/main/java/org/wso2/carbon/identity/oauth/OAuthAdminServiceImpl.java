@@ -466,6 +466,8 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
             oauthappdo.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
             oauthappdo.setTokenBindingType(consumerAppDTO.getTokenBindingType());
+            oauthappdo.setTokenRevocationWithIDPSessionTerminationEnabled(consumerAppDTO
+                    .isTokenRevocationWithIDPSessionTerminationEnabled());
         }
         dao.updateConsumerApplication(oauthappdo);
         AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);

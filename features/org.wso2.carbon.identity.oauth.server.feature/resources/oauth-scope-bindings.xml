@@ -881,4 +881,9 @@
       <Permission>/permission/admin/manage/humantask/task</Permission>
    </Permissions>
 </Scope>
+<Scope name="internal_cors_origins_view" displayName="View CORS Origins">
+    <Permissions>
+        <Permission>/permission/admin/manage/identity/cors/origins/view</Permission>
+    </Permissions>
+</Scope>
 </Scopes>
