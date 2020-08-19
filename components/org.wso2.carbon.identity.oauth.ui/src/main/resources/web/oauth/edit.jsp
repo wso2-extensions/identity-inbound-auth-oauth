@@ -839,7 +839,7 @@
                                         <label>
                                             <input type="checkbox" name="revokeTokensWhenIDPSessionTerminated"
                                                    value="yes" <%=(
-                                                           app.isTokenRevocationWithIDPSessionTerminationEnabledSpecified() ? "checked" : "")%> />
+                                                           app.getTokenRevocationWithIDPSessionTerminationEnabled() ? "checked" : "")%> />
                                             <fmt:message key='revoke.tokens.when.idp.session.terminated'/>
                                         </label>
                                         <div class="sectionHelp">
