@@ -41,7 +41,9 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -199,6 +201,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         Set<AccessTokenDO> boundTokens = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .getAccessTokensByBindingRef(user, tokenBindingReference);
 
+        List<String> accessTokensToBeRevoked = new ArrayList<>();
         for (AccessTokenDO accessTokenDO : boundTokens) {
 
             String consumerKey = accessTokenDO.getConsumerKey();
@@ -213,9 +216,11 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                 OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser());
                 OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
 
-                OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessToken(accessTokenDO
-                        .getAccessToken(), accessTokenDO.getAuthzUser().getUserName());
+                accessTokensToBeRevoked.add(accessTokenDO.getAccessToken());
             }
         }
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                .revokeAccessTokens(accessTokensToBeRevoked.toArray(new String[accessTokensToBeRevoked.size()]),
+                        OAuth2Util.isHashEnabled());
     }
 }
