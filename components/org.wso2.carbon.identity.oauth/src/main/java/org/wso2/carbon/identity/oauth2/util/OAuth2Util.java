@@ -273,11 +273,13 @@ public class OAuth2Util {
      * token will expire, as defined in JWT
      */
     public static final String EXP = "exp";
+
     /*
      * OPTIONAL. Integer time-stamp, measured in the number of seconds since January 1 1970 UTC, indicating when this
      * token was originally issued, as defined in JWT
      */
     public static final String IAT = "iat";
+
     /***
      * Constant for user access token expiry time.
      */
