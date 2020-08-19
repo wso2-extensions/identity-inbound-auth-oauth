@@ -22,17 +22,17 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import java.security.cert.Certificate;
 
 /**
- * This extension is to provide custom Key ID calculation logic
+ * This extension is to provide custom Key ID calculation logic.
  */
 public interface KeyIDProvider {
 
     /**
      * Method to retrieve the Key ID.
      *
-     * @param certificate        Signing Certificate
-     * @param signatureAlgorithm Signature Algorithm as a String
-     * @param tenantDomain       Tenant Domain
-     * @return String value of Key ID
+     * @param certificate        Signing Certificate.
+     * @param signatureAlgorithm Signature Algorithm as a String.
+     * @param tenantDomain       Tenant Domain.
+     * @return String value of Key ID.
      * @throws IdentityOAuth2Exception When failed to generate Key ID properly.
      */
     public String getKeyId(Certificate certificate, JWSAlgorithm signatureAlgorithm, String tenantDomain)

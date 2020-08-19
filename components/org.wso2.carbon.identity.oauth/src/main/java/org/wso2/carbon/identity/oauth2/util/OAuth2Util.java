@@ -273,13 +273,11 @@ public class OAuth2Util {
      * token will expire, as defined in JWT
      */
     public static final String EXP = "exp";
-
     /*
      * OPTIONAL. Integer time-stamp, measured in the number of seconds since January 1 1970 UTC, indicating when this
      * token was originally issued, as defined in JWT
      */
     public static final String IAT = "iat";
-
     /***
      * Constant for user access token expiry time.
      */
@@ -2456,9 +2454,9 @@ public class OAuth2Util {
     /**
      * Method to obtain KeyID value for the JWT header.
      *
-     * @param certificate        Signing Certificate
-     * @param signatureAlgorithm relevant signature algorithm
-     * @return KID
+     * @param certificate        Signing Certificate.
+     * @param signatureAlgorithm relevant signature algorithm.
+     * @return KID value as a String.
      */
     public static String getKID(Certificate certificate, JWSAlgorithm signatureAlgorithm, String tenantDomain)
             throws IdentityOAuth2Exception {
@@ -2504,9 +2502,9 @@ public class OAuth2Util {
     /**
      * Method to obtain certificate thumbprint.
      *
-     * @param certificate java.security.cert type certificate
-     * @return Certificate thumbprint as a String
-     * @throws IdentityOAuth2Exception When failed to obtain the thumbprint
+     * @param certificate java.security.cert type certificate.
+     * @return Certificate thumbprint as a String.
+     * @throws IdentityOAuth2Exception When failed to obtain the thumbprint.
      */
     public static String getThumbPrint(Certificate certificate) throws IdentityOAuth2Exception {
 
@@ -2517,6 +2515,11 @@ public class OAuth2Util {
             byte[] digestInBytes = digestValue.digest();
 
             String publicCertThumbprint = hexify(digestInBytes);
+            if (log.isDebugEnabled()) {
+                log.debug(
+                        String.format("Calculating " + digestValue.getAlgorithm() + " thumb-print for certificate: %s",
+                                certificate.toString()));
+            }
             return new String(new Base64(0, null, true).encode(
                     publicCertThumbprint.getBytes(Charsets.UTF_8)), Charsets.UTF_8);
         } catch (CertificateEncodingException e) {
@@ -2538,17 +2541,19 @@ public class OAuth2Util {
     /**
      * Method to obatin Default Signing certificate for the tenant.
      *
-     * @param tenantDomain Tenant Domain as a String
-     * @param tenantId     Tenan ID as an integer
-     * @return Default Signing Certificate of the tenant domain
-     * @throws IdentityOAuth2Exception When failed to obtain the certificate for the requested tenant
+     * @param tenantDomain Tenant Domain as a String.
+     * @param tenantId     Tenan ID as an integer.
+     * @return Default Signing Certificate of the tenant domain.
+     * @throws IdentityOAuth2Exception When failed to obtain the certificate for the requested tenant.
      */
     public static Certificate getCertificate(String tenantDomain, int tenantId) throws IdentityOAuth2Exception {
 
         Certificate publicCert = null;
 
         if (!(publicCerts.containsKey(tenantId))) {
-
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Obtaining certificate for the tenant %s", tenantDomain));
+            }
             try {
                 IdentityTenantUtil.initializeRegistry(tenantId, tenantDomain);
             } catch (IdentityException e) {
@@ -2564,6 +2569,10 @@ public class OAuth2Util {
                 // derive key store name
                 String ksName = tenantDomain.trim().replace(".", "-");
                 String jksName = ksName + ".jks";
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Loading default tenant certificate for tenant : %s from the KeyStore" +
+                            " %s", tenantDomain, ksName));
+                }
                 try {
                     keyStore = tenantKSM.getKeyStore(jksName);
                     publicCert = keyStore.getCertificate(tenantDomain);

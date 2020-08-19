@@ -23,18 +23,18 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import java.security.cert.Certificate;
 
 /**
- * Default Key ID provider implementation
+ * Default Key ID provider implementation.
  */
 public class DefaultKeyIDProviderImpl implements KeyIDProvider {
 
     /**
      * Method containing the default Key ID calculation logic with certificate thumbprint and signature algorithm.
      *
-     * @param certificate        Signing Certificate
-     * @param signatureAlgorithm Signature Algorithm as a String
-     * @param tenantDomain       Tenant Domain
-     * @return String value of Key ID
-     * @throws IdentityOAuth2Exception When failed to generate Key ID properly
+     * @param certificate        Signing Certificate.
+     * @param signatureAlgorithm Signature Algorithm as a String.
+     * @param tenantDomain       Tenant Domain.
+     * @return String value of Key ID.
+     * @throws IdentityOAuth2Exception When failed to generate Key ID properly.
      */
     public String getKeyId(Certificate certificate, JWSAlgorithm signatureAlgorithm, String tenantDomain)
             throws IdentityOAuth2Exception {
