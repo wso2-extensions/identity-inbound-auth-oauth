@@ -2464,7 +2464,6 @@ public class OAuth2Util {
             throws IdentityOAuth2Exception {
 
         return OAuth2ServiceComponentHolder.getKeyIDProvider().getKeyId(certificate, signatureAlgorithm, tenantDomain);
-
     }
 
     /**
@@ -2503,7 +2502,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Method to obtain certificate thumbprint
+     * Method to obtain certificate thumbprint.
      *
      * @param certificate java.security.cert type certificate
      * @return Certificate thumbprint as a String
@@ -2521,10 +2520,10 @@ public class OAuth2Util {
             return new String(new Base64(0, null, true).encode(
                     publicCertThumbprint.getBytes(Charsets.UTF_8)), Charsets.UTF_8);
         } catch (CertificateEncodingException e) {
-            String error = "Error occurred while encoding thumbPrint from certificate";
+            String error = "Error occurred while encoding thumbPrint from certificate.";
             throw new IdentityOAuth2Exception(error, e);
         } catch (NoSuchAlgorithmException e) {
-            String error = "Error in obtaining SHA-1 thumbprint from certificate";
+            String error = "Error in obtaining SHA-1 thumbprint from certificate.";
             throw new IdentityOAuth2Exception(error, e);
         }
 
@@ -2537,7 +2536,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Method to obatin Default Signing certificate for the tenant
+     * Method to obatin Default Signing certificate for the tenant.
      *
      * @param tenantDomain Tenant Domain as a String
      * @param tenantId     Tenan ID as an integer

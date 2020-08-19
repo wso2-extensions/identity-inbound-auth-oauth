@@ -153,7 +153,8 @@ public class OAuth2ServiceComponent {
                 KeyIDProvider defaultKeyIDProvider = new DefaultKeyIDProviderImpl();
                 OAuth2ServiceComponentHolder.setKeyIDProvider(defaultKeyIDProvider);
                 if (log.isDebugEnabled()) {
-                    log.debug("Registering Default Key ID Provider implementation");
+                    log.debug("Key ID Provider " + DefaultKeyIDProviderImpl.class.getSimpleName() +
+                            " registered as the default Key ID Provider implementation.");
                 }
             }
 
@@ -395,11 +396,11 @@ public class OAuth2ServiceComponent {
             OAuth2ServiceComponentHolder.setKeyIDProvider(keyIDProvider);
             if (log.isDebugEnabled()) {
                 log.debug("Custom Key ID Provider: " + keyIDProvider.getClass().getSimpleName() +
-                        "Registered replacing the default Key ID provider implementation");
+                        "Registered replacing the default Key ID provider implementation.");
             }
         } else {
             log.warn("Key ID Provider: " + keyIDProvider.getClass().getSimpleName() +
-                    " not registered since a custom Key ID Provider already exists in the placeholder. ");
+                    " not registered since a custom Key ID Provider already exists in the placeholder.");
         }
 
     }

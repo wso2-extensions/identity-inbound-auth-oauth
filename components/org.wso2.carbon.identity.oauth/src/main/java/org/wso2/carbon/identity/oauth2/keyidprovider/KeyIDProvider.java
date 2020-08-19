@@ -27,13 +27,13 @@ import java.security.cert.Certificate;
 public interface KeyIDProvider {
 
     /**
-     * Method to retrieve the Key ID
+     * Method to retrieve the Key ID.
      *
      * @param certificate        Signing Certificate
      * @param signatureAlgorithm Signature Algorithm as a String
      * @param tenantDomain       Tenant Domain
      * @return String value of Key ID
-     * @throws IdentityOAuth2Exception When failed to generate Key ID properly
+     * @throws IdentityOAuth2Exception When failed to generate Key ID properly.
      */
     public String getKeyId(Certificate certificate, JWSAlgorithm signatureAlgorithm, String tenantDomain)
             throws IdentityOAuth2Exception;

@@ -225,9 +225,9 @@ public class OAuth2ServiceComponentHolder {
     }
 
     /**
-     * Method to get the valid KeyIDProvider implementation
+     * Method to get the configured KeyIDProvider implementation.
      *
-     * @return
+     * @return configured Key ID Provider instance.
      */
     public static KeyIDProvider getKeyIDProvider() {
 
@@ -235,9 +235,9 @@ public class OAuth2ServiceComponentHolder {
     }
 
     /**
-     * Method to add the KeyIDProvider
+     * Method to add the KeyIDProvider.
      *
-     * @param keyIDProvider instance of KeyIDProvider
+     * @param keyIDProvider instance of KeyIDProvider.
      */
     public static void setKeyIDProvider(KeyIDProvider keyIDProvider) {
 
