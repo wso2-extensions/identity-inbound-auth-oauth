@@ -2454,7 +2454,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Method to obtain KeyID value for the JWT header.
+     * Method to obtain 'kid' value for the signing key to be included the JWT header.
      *
      * @param certificate        Signing Certificate.
      * @param signatureAlgorithm relevant signature algorithm.
