@@ -2582,8 +2582,8 @@ public class OAuth2Util {
                     throw new IdentityOAuth2Exception("Error occurred while loading public certificate for tenant: " +
                             tenantDomain, e);
                 } catch (Exception e) {
-                    throw new IdentityOAuth2Exception("Error occurred while loading Keystore: " + keyStore + " for " +
-                            "tenant: " + tenantDomain, e);
+                    throw new IdentityOAuth2Exception("Error occurred while loading Keystore for tenant: " +
+                            tenantDomain, e);
                 }
 
             } else {
