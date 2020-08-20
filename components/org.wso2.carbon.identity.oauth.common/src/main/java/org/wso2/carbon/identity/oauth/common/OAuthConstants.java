@@ -441,6 +441,7 @@ public final class OAuthConstants {
         public static final String TOKEN_BINDING_TYPE = "tokenBindingType";
         public static final String TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION =
                 "tokenRevocationWithIDPSessionTermination";
+        public static final String TOKEN_BINDING_VALIDATION = "tokenBindingValidation";
 
         private OIDCConfigProperties() {
 

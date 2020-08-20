@@ -255,6 +255,7 @@
                         $('#accessTokenBindingType_none').prop('checked', true);
                         $("#bindAccessToken").hide();
                         $(jQuery('#revokeTokensWhenIDPSessionTerminated').hide());
+                        $(jQuery('#validateTokenBindingEnabled').hide());
 
                     } else if (oauthVersion == "<%=OAuthConstants.OAuthVersions.VERSION_2%>") {
                         $(jQuery('#grant_row')).show();
@@ -335,6 +336,7 @@
                             $('#bindAccessToken').hide();
                         }
                         $(jQuery('#revokeTokensWhenIDPSessionTerminated').show());
+                        $(jQuery('#validateTokenBindingEnabled').show());
                     }
                 }
 
@@ -685,6 +687,17 @@
                                                 }
                                             %>
                                         </table>
+                                    </td>
+                                </tr>
+                                <tr id="validateTokenBindingEnabled">
+                                    <td colspan="2">
+                                        <label>
+                                            <input type="checkbox" name="validateTokenBindingEnabled" value="yes">
+                                            <fmt:message key='token.binding.validation.enabled'/>
+                                        </label>
+                                        <div class="sectionHelp">
+                                            <fmt:message key='token.binding.validation.enabled.hint'/>
+                                        </div>
                                     </td>
                                 </tr>
                                 <tr id="revokeTokensWhenIDPSessionTerminated">

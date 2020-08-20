@@ -403,7 +403,9 @@ public class OAuth2Service extends AbstractAdmin {
 
                 } else if (accessTokenDO != null) {
                     if (revokeRequestDTO.getConsumerKey().equals(accessTokenDO.getConsumerKey())) {
-                        if (!isValidTokenBinding(accessTokenDO.getTokenBinding(), revokeRequestDTO.getRequest())) {
+                        if ((OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey()).
+                                isTokenBindingValidationEnabled()) && (!isValidTokenBinding(accessTokenDO.
+                                getTokenBinding(), revokeRequestDTO.getRequest()))) {
                             revokeResponseDTO.setError(true);
                             revokeResponseDTO.setErrorCode(OAuth2ErrorCodes.ACCESS_DENIED);
                             revokeResponseDTO.setErrorMsg("Valid token binding value not present in the request.");
@@ -425,7 +427,7 @@ public class OAuth2Service extends AbstractAdmin {
                         synchronized ((revokeRequestDTO.getConsumerKey() + ":" + authorizedUser + ":" + scope + ":"
                                 + tokenBindingReference).intern()) {
                             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                                    .revokeAccessTokens(new String[] { accessTokenDO.getAccessToken() });
+                                    .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()});
                         }
                         addRevokeResponseHeaders(revokeResponseDTO,
                                 revokeRequestDTO.getToken(),
