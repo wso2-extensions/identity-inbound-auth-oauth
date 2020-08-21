@@ -955,6 +955,11 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 prepStmt.setString(3, tokenId);
                 prepStmt.executeUpdate();
                 OAuth2TokenUtil.postUpdateAccessToken(tokenId, tokenState);
+
+                if (isTokenCleanupFeatureEnabled && !OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(tokenState)) {
+                    oldTokenCleanupObject.cleanupTokenByTokenId(tokenId, connection);
+                }
+
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
