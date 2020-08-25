@@ -47,6 +47,8 @@ import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthent
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
+import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
+import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.handlers.TokenBindingExpiryEventHandler;
@@ -147,6 +149,15 @@ public class OAuth2ServiceComponent {
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
+            }
+
+            if (OAuth2ServiceComponentHolder.getKeyIDProvider() == null) {
+                KeyIDProvider defaultKeyIDProvider = new DefaultKeyIDProviderImpl();
+                OAuth2ServiceComponentHolder.setKeyIDProvider(defaultKeyIDProvider);
+                if (log.isDebugEnabled()) {
+                    log.debug("Key ID Provider " + DefaultKeyIDProviderImpl.class.getSimpleName() +
+                            " registered as the default Key ID Provider implementation.");
+                }
             }
 
             ServiceRegistration tenantMgtListenerSR = bundleContext.registerService(TenantMgtListener.class.getName(),
@@ -376,5 +387,34 @@ public class OAuth2ServiceComponent {
                 getName()) && dataPublisher.isEnabled(null)) {
             OAuth2ServiceComponentHolder.setAuthenticationDataPublisherProxy(null);
         }
+    }
+
+    @Reference(
+            name = "keyid.provider.component",
+            service = KeyIDProvider.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetKeyIDProvider"
+    )
+    protected void setKeyIDProvider(KeyIDProvider keyIDProvider) {
+
+        KeyIDProvider oldKeyIDProvider = OAuth2ServiceComponentHolder.getKeyIDProvider();
+        if (oldKeyIDProvider == null || oldKeyIDProvider.getClass().getSimpleName().
+                equals(DefaultKeyIDProviderImpl.class.getSimpleName())) {
+
+            OAuth2ServiceComponentHolder.setKeyIDProvider(keyIDProvider);
+            if (log.isDebugEnabled()) {
+                log.debug("Custom Key ID Provider: " + keyIDProvider.getClass().getSimpleName() +
+                        "Registered replacing the default Key ID provider implementation.");
+            }
+        } else {
+            log.warn("Key ID Provider: " + keyIDProvider.getClass().getSimpleName() +
+                    " not registered since a custom Key ID Provider already exists in the placeholder.");
+        }
+
+    }
+
+    protected void unsetKeyIDProvider(KeyIDProvider keyIDProvider) {
+
     }
 }

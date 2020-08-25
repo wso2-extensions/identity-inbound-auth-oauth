@@ -37,6 +37,8 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -93,6 +95,7 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
 
         Class<?> clazz = IdentityUtil.class;
         identityUtilObj = clazz.newInstance();
+        OAuth2ServiceComponentHolder.setKeyIDProvider(new DefaultKeyIDProviderImpl());
     }
 
     @DataProvider(name = "provideTenantDomain")
@@ -144,11 +147,10 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuth2Util.class);
 
         if (tenantDomain == null) {
-            when(OAuth2Util.getThumbPrint(any(), anyString())).thenThrow(new IdentityOAuth2Exception("error"));
+            when(OAuth2Util.getKID(any(), any(), anyString())).thenThrow(new IdentityOAuth2Exception("error"));
 
         } else {
-            when(OAuth2Util.getThumbPrint(any(), anyString())).thenReturn(CERT_THUMB_PRINT);
-            when(OAuth2Util.getKID(anyString(), any())).thenReturn(CERT_THUMB_PRINT);
+            when(OAuth2Util.getKID(any(), any(), anyString())).thenReturn(CERT_THUMB_PRINT);
         }
         when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA256withRSA")).thenReturn(JWSAlgorithm.RS256);
         when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA")).thenReturn(JWSAlgorithm.RS512);

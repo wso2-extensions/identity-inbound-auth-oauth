@@ -123,7 +123,7 @@ public class JwksEndpoint {
                 String alias = (String) certificateWithAlias.getKey();
                 RSAPublicKey publicKey = (RSAPublicKey) cert.getPublicKey();
                 RSAKey.Builder jwk = new RSAKey.Builder(publicKey);
-                jwk.keyID(OAuth2Util.getKID(OAuth2Util.getThumbPrint(cert, alias), algorithm));
+                jwk.keyID(OAuth2Util.getKID(cert, algorithm, getTenantDomain()));
                 jwk.algorithm(algorithm);
                 jwk.keyUse(KeyUse.parse(KEY_USE));
                 jwksArray.put(jwk.build().toJSONObject());

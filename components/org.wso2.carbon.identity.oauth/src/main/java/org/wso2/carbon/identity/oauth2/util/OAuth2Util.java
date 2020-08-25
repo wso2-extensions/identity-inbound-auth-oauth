@@ -144,6 +144,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
@@ -2265,12 +2266,8 @@ public class OAuth2Util {
                                 "client_id: %s. Checking for x509 certificate", clientId));
             }
             publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
-            try {
-                thumbPrint = getThumbPrint(publicCert);
-            } catch (CertificateEncodingException | NoSuchAlgorithmException e) {
-                throw new IdentityOAuth2Exception("Error occurred while getting the certificate thumbprint for the " +
-                        "client_id: " + clientId + " with the tenant domain: " + spTenantDomain, e);
-            }
+            thumbPrint = getThumbPrint(publicCert);
+
         } else {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Fetching public keys for the client %s from jwks uri %s", clientId,  jwksUri));
@@ -2394,7 +2391,7 @@ public class OAuth2Util {
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
-            headerBuilder.keyID(getKID(getThumbPrint(tenantDomain, tenantId), signatureAlgorithm));
+            headerBuilder.keyID(getKID(getCertificate(tenantDomain, tenantId), signatureAlgorithm, tenantDomain));
             headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantId)));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
@@ -2457,6 +2454,19 @@ public class OAuth2Util {
     }
 
     /**
+     * Method to obtain 'kid' value for the signing key to be included the JWT header.
+     *
+     * @param certificate        Signing Certificate.
+     * @param signatureAlgorithm relevant signature algorithm.
+     * @return KID value as a String.
+     */
+    public static String getKID(Certificate certificate, JWSAlgorithm signatureAlgorithm, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        return OAuth2ServiceComponentHolder.getKeyIDProvider().getKeyId(certificate, signatureAlgorithm, tenantDomain);
+    }
+
+    /**
      * Helper method to add public certificate to JWT_HEADER to signature verification.
      *
      * @param tenantDomain
@@ -2488,29 +2498,40 @@ public class OAuth2Util {
      * @throws IdentityOAuth2Exception
      */
     public static String getThumbPrint(Certificate certificate, String alias) throws IdentityOAuth2Exception {
-
-        try {
-            return getThumbPrint(certificate);
-        } catch (CertificateEncodingException e) {
-            String error = "Error occurred while encoding thumbPrint for alias: " + alias;
-            throw new IdentityOAuth2Exception(error, e);
-        } catch (NoSuchAlgorithmException e) {
-            String error = "Error in obtaining SHA-1 thumbprint for alias: " + alias;
-            throw new IdentityOAuth2Exception(error, e);
-        }
+        return getThumbPrint(certificate);
     }
 
-    private static String getThumbPrint(Certificate certificate)
-            throws NoSuchAlgorithmException, CertificateEncodingException {
-        // Generate the SHA-256 thumbprint of the certificate.
-        MessageDigest digestValue = MessageDigest.getInstance("SHA-256");
-        byte[] der = certificate.getEncoded();
-        digestValue.update(der);
-        byte[] digestInBytes = digestValue.digest();
+    /**
+     * Method to obtain certificate thumbprint.
+     *
+     * @param certificate java.security.cert type certificate.
+     * @return Certificate thumbprint as a String.
+     * @throws IdentityOAuth2Exception When failed to obtain the thumbprint.
+     */
+    public static String getThumbPrint(Certificate certificate) throws IdentityOAuth2Exception {
 
-        String publicCertThumbprint = hexify(digestInBytes);
-        return new String(new Base64(0, null, true).encode(
-                publicCertThumbprint.getBytes(Charsets.UTF_8)), Charsets.UTF_8);
+        try {
+            MessageDigest digestValue = MessageDigest.getInstance("SHA-1");
+            byte[] der = certificate.getEncoded();
+            digestValue.update(der);
+            byte[] digestInBytes = digestValue.digest();
+
+            String publicCertThumbprint = hexify(digestInBytes);
+            String thumbprint = new String(new Base64(0, null, true).
+                    encode(publicCertThumbprint.getBytes(Charsets.UTF_8)), Charsets.UTF_8);
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Thumbprint value: %s calculated for Certificate: %s using algorithm: %s",
+                        thumbprint, certificate, digestValue.getAlgorithm()));
+            }
+            return thumbprint;
+        } catch (CertificateEncodingException e) {
+            String error = "Error occurred while encoding thumbPrint from certificate.";
+            throw new IdentityOAuth2Exception(error, e);
+        } catch (NoSuchAlgorithmException e) {
+            String error = "Error in obtaining SHA-1 thumbprint from certificate.";
+            throw new IdentityOAuth2Exception(error, e);
+        }
+
     }
 
     private static boolean isRSAAlgorithm(JWEAlgorithm algorithm) {
@@ -2519,12 +2540,22 @@ public class OAuth2Util {
                 JWEAlgorithm.RSA_OAEP_256.equals(algorithm));
     }
 
-    private static Certificate getCertificate(String tenantDomain, int tenantId) throws Exception {
+    /**
+     * Method to obatin Default Signing certificate for the tenant.
+     *
+     * @param tenantDomain Tenant Domain as a String.
+     * @param tenantId     Tenan ID as an integer.
+     * @return Default Signing Certificate of the tenant domain.
+     * @throws IdentityOAuth2Exception When failed to obtain the certificate for the requested tenant.
+     */
+    public static Certificate getCertificate(String tenantDomain, int tenantId) throws IdentityOAuth2Exception {
 
         Certificate publicCert = null;
 
         if (!(publicCerts.containsKey(tenantId))) {
-
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Obtaining certificate for the tenant %s", tenantDomain));
+            }
             try {
                 IdentityTenantUtil.initializeRegistry(tenantId, tenantDomain);
             } catch (IdentityException e) {
@@ -2540,10 +2571,28 @@ public class OAuth2Util {
                 // derive key store name
                 String ksName = tenantDomain.trim().replace(".", "-");
                 String jksName = ksName + ".jks";
-                keyStore = tenantKSM.getKeyStore(jksName);
-                publicCert = keyStore.getCertificate(tenantDomain);
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Loading default tenant certificate for tenant : %s from the KeyStore" +
+                            " %s", tenantDomain, ksName));
+                }
+                try {
+                    keyStore = tenantKSM.getKeyStore(jksName);
+                    publicCert = keyStore.getCertificate(tenantDomain);
+                } catch (KeyStoreException e) {
+                    throw new IdentityOAuth2Exception("Error occurred while loading public certificate for tenant: " +
+                            tenantDomain, e);
+                } catch (Exception e) {
+                    throw new IdentityOAuth2Exception("Error occurred while loading Keystore for tenant: " +
+                            tenantDomain, e);
+                }
+
             } else {
-                publicCert = tenantKSM.getDefaultPrimaryCertificate();
+                try {
+                    publicCert = tenantKSM.getDefaultPrimaryCertificate();
+                } catch (Exception e) {
+                    throw new IdentityOAuth2Exception("Error occurred while loading default public " +
+                            "certificate for tenant: " + tenantDomain, e);
+                }
             }
             if (publicCert != null) {
                 publicCerts.put(tenantId, publicCert);

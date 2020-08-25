@@ -36,6 +36,8 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2TokenValidator;
@@ -124,6 +126,7 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
         ClaimsRetriever claimsRetriever =
                 (ClaimsRetriever) Whitebox.getInternalState(jwtTokenGenerator, "claimsRetriever");
         Assert.assertNotNull(claimsRetriever);
+        OAuth2ServiceComponentHolder.setKeyIDProvider(new DefaultKeyIDProviderImpl());
     }
 
     @Test(dependsOnMethods = "testInit")
