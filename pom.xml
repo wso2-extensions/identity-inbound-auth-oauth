@@ -945,7 +945,7 @@
         <tomcat.wso2.imp.pkg.version.range>[9.0.0, 9.5.0)</tomcat.wso2.imp.pkg.version.range>
 
         <google.guava.version>27.0-jre</google.guava.version>
-        <org.apache.cxf.version>3.2.8</org.apache.cxf.version>
+        <org.apache.cxf.version>3.3.7</org.apache.cxf.version>
         <encoder.wso2.version>1.2.0.wso2v1</encoder.wso2.version>
         <json-simple.version>1.1.wso2v1</json-simple.version>
 
@@ -969,7 +969,7 @@
         <com.fasterxml.jackson.core.version>2.9.9</com.fasterxml.jackson.core.version>
         <com.fasterxml.jackson.version>2.9.7</com.fasterxml.jackson.version>
         <spring-web.version>4.1.6.RELEASE</spring-web.version>
-        <swagger-jaxrs.version>1.5.20</swagger-jaxrs.version>
+        <swagger-jaxrs.version>1.6.2</swagger-jaxrs.version>
         <!-- httpclient dependency Version-->
         <http.client.version>4.3.6.wso2v1</http.client.version>
         <http.core.version>4.3.3.wso2v1</http.core.version>
