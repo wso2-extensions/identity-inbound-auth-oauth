@@ -18,16 +18,25 @@
 
 package org.wso2.carbon.identity.oauth2.token.bindings.impl;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import java.net.HttpCookie;
 import java.util.Optional;
 
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.HttpHeaders;
+
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.AUTHORIZATION_CODE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 
 /**
  * This class provides the abstract token binder implementation.
@@ -51,5 +60,78 @@ public abstract class AbstractTokenBinder implements TokenBinder {
         }
 
         return Optional.empty();
+    }
+
+    /**
+     * Check validity of the token binding.
+     *
+     * @param request request object.
+     * @param bindingReference token binding reference
+     * @param cookieName cookie name
+     * @return true if token binding is valid.
+     */
+    protected boolean isValidTokenBinding(Object request, String bindingReference, String cookieName) {
+
+        if (request == null || StringUtils.isBlank(bindingReference) || StringUtils.isBlank(cookieName)) {
+            return false;
+        }
+
+        if (request instanceof HttpServletRequest) {
+            return isValidTokenBinding((HttpServletRequest) request, bindingReference, cookieName);
+        } else if (request instanceof OAuth2AccessTokenReqDTO) {
+            return isValidTokenBinding((OAuth2AccessTokenReqDTO) request, bindingReference, cookieName);
+        }
+
+        throw new RuntimeException("Unsupported request type: " + request.getClass().getName());
+    }
+
+    private boolean isValidTokenBinding(OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO, String bindingReference,
+            String cookieName) {
+
+        if (REFRESH_TOKEN.equals(oAuth2AccessTokenReqDTO.getGrantType())) {
+
+            HttpRequestHeader[] httpRequestHeaders = oAuth2AccessTokenReqDTO.getHttpRequestHeaders();
+            if (ArrayUtils.isEmpty(httpRequestHeaders)) {
+                return false;
+            }
+
+            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+                if (HttpHeaders.COOKIE.equalsIgnoreCase(httpRequestHeader.getName())) {
+                    if (ArrayUtils.isEmpty(httpRequestHeader.getValue())) {
+                        return false;
+                    }
+
+                    String[] cookies = httpRequestHeader.getValue()[0].split(";");
+                    String cookiePrefix = cookieName + "=";
+                    for (String cookie : cookies) {
+                        if (StringUtils.isNotBlank(cookie) && cookie.trim().startsWith(cookiePrefix)) {
+                            String receivedBindingReference = OAuth2Util
+                                    .getTokenBindingReference(HttpCookie.parse(cookie).get(0).getValue());
+                            return bindingReference.equals(receivedBindingReference);
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        throw new RuntimeException("Unsupported grant type: " + oAuth2AccessTokenReqDTO.getGrantType());
+    }
+
+    private boolean isValidTokenBinding(HttpServletRequest request, String bindingReference, String cookieName) {
+
+        Cookie[] cookies = request.getCookies();
+
+        if (ArrayUtils.isEmpty(cookies)) {
+            return false;
+        }
+
+        for (Cookie cookie : cookies) {
+            if (cookieName.equals(cookie.getName())) {
+                return bindingReference.equals(OAuth2Util.getTokenBindingReference(cookie.getValue()));
+            }
+        }
+        return false;
     }
 }
