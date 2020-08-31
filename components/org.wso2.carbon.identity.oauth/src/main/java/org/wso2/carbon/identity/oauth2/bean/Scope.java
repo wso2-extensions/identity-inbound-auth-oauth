@@ -111,14 +111,16 @@ public class Scope implements Serializable {
         for (ScopeBinding scopeBinding : this.scopeBindings) {
             if (bindingType.equalsIgnoreCase(scopeBinding.getBindingType())) {
                 bindingTypeExists = true;
-                if (!scopeBinding.getBindings().contains(binding)) {
+                if (StringUtils.isNotBlank(binding) && !scopeBinding.getBindings().contains(binding)) {
                     scopeBinding.getBindings().add(binding);
                 }
             }
         }
         if (!bindingTypeExists) {
             List<String> bindings = new ArrayList<>();
-            bindings.add(binding);
+            if (StringUtils.isNotBlank(binding)) {
+                bindings.add(binding);
+            }
             ScopeBinding scopeBinding = new ScopeBinding(bindingType, bindings);
             this.scopeBindings.add(scopeBinding);
         }
