@@ -225,8 +225,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         if (cacheEnabled) {
             clearCache(tokenReq.getClientId(), validationBean.getAuthorizedUser().toString(),
-                    validationBean.getScope(), validationBean.getAuthorizedUser().getFederatedIdPName(),
-                    validationBean.getAccessToken(), validationBean.getTokenBindingReference());
+                    validationBean.getScope(), validationBean.getAccessToken(),
+                    validationBean.getAuthorizedUser().getFederatedIdPName(),
+                    validationBean.getTokenBindingReference());
         }
     }
 
