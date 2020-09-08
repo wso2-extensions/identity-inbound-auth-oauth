@@ -61,8 +61,8 @@ public class OIDCDCRProcessor extends DCRProcessor {
                         "enable = true");
             }
             String errorMessage =
-                    "/identity/connect/register API was deprecated. " +
-                            "Refer the WSO2 official documentation for more information (https://is.docs.wso2.com).";
+                    "/identity/connect/register API was deprecated. Refer the WSO2 official documentation for " +
+                            "more information (https://is.docs.wso2.com).";
             throw IdentityException.error(RegistrationException.class, ErrorCodes.FORBIDDEN.toString(), errorMessage);
         }
 
