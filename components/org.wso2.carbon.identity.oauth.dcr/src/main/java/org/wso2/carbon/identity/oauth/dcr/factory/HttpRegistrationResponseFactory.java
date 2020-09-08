@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.dcr.factory;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.simple.JSONArray;
@@ -44,6 +45,7 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
     public static final String INVALID_SOFTWARE_STATEMENT = "invalid_software_statement";
     public static final String UNAPPROVED_SOFTWARE_STATEMENT = "unapproved_software_statement";
     public static final String BACKEND_FAILED = "backend_failed";
+    public static final String FORBIDDEN = "forbidden";
     private static final Log log = LogFactory.getLog(HttpRegistrationResponseFactory.class);
 
     @Override
@@ -84,6 +86,12 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
         String errorMessage = "";
         if (ErrorCodes.META_DATA_VALIDATION_FAILED.name().equals(exception.getErrorCode())) {
             errorMessage = generateErrorResponse(INVALID_CLIENT_METADATA, exception.getMessage()).toJSONString();
+        } else if (ErrorCodes.FORBIDDEN.name().equals(exception.getErrorCode())) {
+            errorMessage = StringEscapeUtils.unescapeJava(generateErrorResponse(FORBIDDEN,
+                    exception.getMessage()).toJSONString());
+            builder.setBody(errorMessage);
+            builder.setStatusCode(HttpServletResponse.SC_FORBIDDEN);
+            return builder;
         } else if (ErrorCodes.BAD_REQUEST.name().equals(exception.getErrorCode())) {
             errorMessage = generateErrorResponse(BACKEND_FAILED, exception.getMessage()).toJSONString();
         }

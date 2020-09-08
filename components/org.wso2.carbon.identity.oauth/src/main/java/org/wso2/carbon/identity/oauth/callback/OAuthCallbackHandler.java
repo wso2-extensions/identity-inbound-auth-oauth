@@ -45,6 +45,7 @@ import javax.security.auth.callback.UnsupportedCallbackException;
  * <p/>
  * After handling the callback, it can set whether the given callback is authorized or not.
  */
+@Deprecated
 public interface OAuthCallbackHandler extends CallbackHandler {
 
     /**

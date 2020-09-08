@@ -28,6 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 /**
  * DCR Request data for Register a oauth application.
  */
+@Deprecated
 public class OIDCRegistrationRequest extends RegistrationRequest {
 
     private static final long serialVersionUID = -2728761431889772896L;

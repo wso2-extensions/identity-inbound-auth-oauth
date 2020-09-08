@@ -25,6 +25,7 @@ import java.util.List;
 /**
  * This class represents the necessary data used to register an OIDC application.
  */
+@Deprecated
 public class OIDCRegistrationRequestProfile extends RegistrationRequestProfile {
 
     private static final long serialVersionUID = -76875661310642695L;

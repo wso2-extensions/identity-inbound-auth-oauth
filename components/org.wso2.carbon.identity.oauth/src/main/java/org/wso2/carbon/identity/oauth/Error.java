@@ -18,12 +18,14 @@ package org.wso2.carbon.identity.oauth;
 /**
  * Container for error codes related to OAuth consumer apps management.
  */
+@Deprecated
 public enum Error {
 
     // Client errors starts with 60, server errors starts with 65.
     INVALID_REQUEST("60001"),
     INVALID_OAUTH_CLIENT("60002"),
     AUTHENTICATED_USER_NOT_FOUND("60003"),
+    FORBIDDEN("60004"),
 
     UNEXPECTED_SERVER_ERROR("65001");
 

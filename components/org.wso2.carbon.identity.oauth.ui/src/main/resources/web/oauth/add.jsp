@@ -23,6 +23,7 @@
 <%@ page import="org.wso2.carbon.identity.oauth.stub.dto.TokenBindingMetaDataDTO" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.client.OAuthAdminClient" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
+<%@ page import="org.wso2.carbon.identity.core.util.IdentityUtil"%>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
@@ -46,7 +47,7 @@
     String DEFAULT_TOKEN_TYPE = "default";
     ResourceBundle resourceBundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
     String applicationSPName = request.getParameter("spName");
-    
+
     OAuthAdminClient client = null;
     String audienceTableStyle = "display:none";
     String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
@@ -57,7 +58,7 @@
     List<String> allowedGrants = new ArrayList<String>();
     List<String> scopeValidators = new ArrayList<String>();
     List<String> tokenTypes = new ArrayList<String>();
-    
+
     String defaultIdTokenEncryptionAlgorithm =
             client.getSupportedIDTokenAlgorithms().getDefaultIdTokenEncryptionAlgorithm();
     String[] supportedIdTokenEncryptionAlgorithms =
@@ -66,7 +67,7 @@
     String[] supportedIdTokenEncryptionMethods =
             client.getSupportedIDTokenAlgorithms().getSupportedIdTokenEncryptionMethods();
     TokenBindingMetaDataDTO[] supportedTokenBindingsMetaData = client.getSupportedTokenBindingsMetaData();
-    
+
     try {
         allowedGrants = new ArrayList<String>(Arrays.asList(client.getAllowedOAuthGrantTypes()));
     } catch (Exception e) {
@@ -110,14 +111,14 @@
     <carbon:breadcrumb label="add.new.application"
                        resourceBundle="org.wso2.carbon.identity.oauth.ui.i18n.Resources"
                        topPage="false" request="<%=request%>"/>
-    
+
     <script type="text/javascript" src="../carbon/admin/js/breadcrumbs.js"></script>
     <script type="text/javascript" src="../carbon/admin/js/cookies.js"></script>
     <script type="text/javascript" src="../carbon/admin/js/main.js"></script>
-    
+
     <div id="middle">
         <h2><fmt:message key='add.new.application'/></h2>
-        
+
         <div id="workArea">
             <script type="text/javascript">
 
@@ -430,9 +431,9 @@
                     $('select[name=idTokenEncryptionAlgorithm]').val('<%=Encode.forJavaScriptAttribute(defaultIdTokenEncryptionAlgorithm)%>');
                     $('select[name=idTokenEncryptionMethod]').val('<%=Encode.forJavaScriptAttribute(defaultIdTokenEncryptionMethod)%>');
                 })
-            
+
             </script>
-            
+
             <form id="addAppForm" method="post" name="addAppform" action="add-finish-ajaxprocessor.jsp"
                   target="_self">
                 <table style="width: 100%" class="styledLeft">
@@ -448,10 +449,19 @@
                                 <tr>
                                     <td class="leftCol-med"><fmt:message key='oauth.version'/><span
                                             class="required">*</span></td>
-                                    <td><input id="oauthVersion10a" name="oauthVersion" type="radio"
-                                               value="<%=OAuthConstants.OAuthVersions.VERSION_1A%>"/>1.0a
-                                        <input id="oauthVersion20" name="oauthVersion" type="radio"
-                                               value="<%=OAuthConstants.OAuthVersions.VERSION_2%>" CHECKED/>2.0
+                                    <td>
+                                    <%
+                                    String OAuth1FieldDisabled = "disabled";
+                                    boolean isOAuth1Enabled = IdentityUtil.isLegacyFeatureEnabled("oauth", "1.0");
+                                    if (isOAuth1Enabled) {
+                                        OAuth1FieldDisabled = "";
+                                    }
+                                    %>
+                                    <input id="oauthVersion10a" name="oauthVersion" type="radio"
+                                               value="<%=OAuthConstants.OAuthVersions.VERSION_1A%>"
+                                               <%=OAuth1FieldDisabled%>/>1.0a
+                                    <input id="oauthVersion20" name="oauthVersion" type="radio"
+                                           value="<%=OAuthConstants.OAuthVersions.VERSION_2%>" CHECKED/>2.0
                                     </td>
                                 </tr>
                                 <%if (applicationSPName != null) {%>
@@ -469,7 +479,7 @@
                                                type="text"/></td>
                                 </tr>
                                 <% } %>
-                                
+
                                 <tr id="grant_row" name="grant_row">
                                     <td class="leftCol-med"><fmt:message key='grantTypes'/></td>
                                     <td>
@@ -532,7 +542,7 @@
                                             </tr>
                                             <%
                                                 }
-                                                
+
                                                 for (String grantType : allowedGrants) {
                                                     if (grantType
                                                             .equals("urn:ietf:params:oauth:grant-type:saml1-bearer")) {
@@ -574,7 +584,7 @@
                                             </tr>
                                             <%
                                                     }
-                                                    
+
                                                 }
                                             } catch (Exception e) {
                                                 String message =
@@ -589,15 +599,15 @@
                                                     location.href = "<%=forwardTo%>";
                                                 }
                                             </script>
-                                            
+
                                             <script type="text/javascript">
                                                 forward();
                                             </script>
                                             <%
                                                 }
-                                            
+
                                             %>
-                                        
+
                                         </table>
                                     </td>
                                 </tr>
@@ -767,7 +777,7 @@
                                                onclick="return addAudienceFunc()"/>
                                     </td>
                                 </tr>
-                                
+
                                 <tr id="audience_table">
                                     <td></td>
                                     <td>
@@ -795,7 +805,7 @@
                                         </label>
                                     </td>
                                 </tr>
-                                
+
                                 <tr id="encrypt_id_token_row">
                                     <td colspan="2">
                                         <label title="Encrypt the id_token">
@@ -805,7 +815,7 @@
                                         </label>
                                     </td>
                                 </tr>
-                                
+
                                 <tr id="encryption_algorithm_row">
                                     <td style="padding-left: 40px ! important;">
                                         <fmt:message key='id.token.encryption.algorithm'/>
@@ -842,7 +852,7 @@
                                         </select>
                                     </td>
                                 </tr>
-                                
+
                                 <tr id="logout_mechanism_row">
                                     <td colspan="2">
                                         <label title="Enable OIDC Backchannel Logout. Add the Backchannel Logout Endpoint URL in the textbox below">
@@ -854,7 +864,7 @@
                                         </label>
                                     </td>
                                 </tr>
-                                
+
                                 <tr id="logout_url_row">
                                     <td class="leftCol-med" style="padding-left: 40px ! important;">
                                         <fmt:message key="logout.url"/>
@@ -866,7 +876,7 @@
                                         />
                                     </td>
                                 </tr>
-                                    
+
                                     <%--Scope validators--%>
                                 <tr id="scope_validator_row" name="scope_validator_row">
                                     <td class="leftCol-med"><fmt:message key='scopeValidators'/></td>
@@ -875,7 +885,7 @@
                                             <%
                                                 try {
                                                     for (String scopeValidator : scopeValidators) {
-                                            
+
                                             %>
                                             <tr>
                                                 <td><label><input type="checkbox"
@@ -902,7 +912,7 @@
                                                     location.href = "<%=forwardTo%>";
                                                 }
                                             </script>
-                                            
+
                                             <script type="text/javascript">
                                                 forward();
                                             </script>
@@ -939,14 +949,14 @@
                             </table>
                         </td>
                     </tr>
-                    
+
                     <tr>
                         <td class="buttonRow">
                             <input name="addprofile" type="button" class="button" value="<fmt:message key='add'/>"
                                    onclick="onClickAdd();"/>
-                            
+
                             <%
-                                
+
                                 boolean applicationComponentFound =
                                         CarbonUIUtil.isContextRegistered(config, "/application/");
                                 if (applicationComponentFound) {
@@ -955,7 +965,7 @@
                                    onclick="javascript:location.href='../application/configure-service-provider.jsp?spName=<%=Encode.forUriComponent(applicationSPName)%>'"
                                    value="<fmt:message key='cancel'/>"/>
                             <% } else { %>
-                            
+
                             <input type="button" class="button"
                                    onclick="javascript:location.href='index.jsp?region=region1&item=oauth_menu&ordinal=0'"
                                    value="<fmt:message key='cancel'/>"/>
@@ -964,7 +974,7 @@
                     </tr>
                     </tbody>
                 </table>
-            
+
             </form>
         </div>
     </div>
