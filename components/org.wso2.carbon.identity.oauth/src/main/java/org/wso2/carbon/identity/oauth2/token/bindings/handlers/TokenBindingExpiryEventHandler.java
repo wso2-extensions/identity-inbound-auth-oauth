@@ -68,7 +68,8 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
             log.debug(event.getEventName() + " event received to TokenBindingExpiryEventHandler.");
         }
 
-        if (!IdentityEventConstants.EventName.SESSION_TERMINATE.name().equals(event.getEventName())) {
+        if (!IdentityEventConstants.EventName.SESSION_TERMINATE.name().equals(event.getEventName())
+                && !IdentityEventConstants.EventName.SESSION_EXPIRE.name().equals(event.getEventName())) {
             return;
         }
 
