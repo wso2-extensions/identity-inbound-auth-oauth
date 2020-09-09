@@ -24,9 +24,15 @@ import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+
 import javax.servlet.http.HttpServletRequest;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUEST;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUEST_URI;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.SCOPE;
 
 /**
@@ -57,6 +63,11 @@ public class CodeTokenResponseValidator extends TokenValidator {
 
     @Override
     public void validateRequiredParameters(HttpServletRequest request) throws OAuthProblemException {
+
+        if (!StringUtils.isBlank(request.getParameter(REQUEST_URI))) {
+            requiredParams = new ArrayList<>(Arrays.asList(CLIENT_ID, RESPONSE_TYPE, SCOPE, REQUEST_URI));
+            notAllowedParams.add(REQUEST);
+        }
 
         super.validateRequiredParameters(request);
 

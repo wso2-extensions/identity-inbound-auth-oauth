@@ -217,6 +217,8 @@ public final class OAuthConstants {
         public static final String REDIRECT_URI = "redirect_uri";
         public static final String STATE = "state";
         public static final String REQUEST = "request";
+        public static final String REQUEST_URI = "request_uri";
+        public static final String RESPONSE_TYPE = "response_type";
 
         private OAuth20Params() {
 

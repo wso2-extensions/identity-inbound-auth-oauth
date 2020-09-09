@@ -184,7 +184,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
             throws RequestObjectException {
 
         boolean isValid = validateClientIdAndResponseType(requestObject, oAuth2Parameters) && checkExpirationTime
-                (requestObject);
+                (requestObject) && validateRedirectURL(requestObject, oAuth2Parameters);
         if (isParamPresent(requestObject, Constants.REQUEST_URI)) {
             isValid = false;
         } else if (isParamPresent(requestObject, Constants.REQUEST)) {
@@ -320,6 +320,26 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         return logAndReturnFalse("None of the audience values matched the tokenEndpoint Alias: " + currentAudience);
     }
 
+    /**
+     * Check whether the Redirect URL is matching one registered for client ID.
+     *
+     * @param requestObject
+     * @param oauthRequest
+     * @return
+     * @throws RequestObjectException
+     */
+    private boolean validateRedirectURL(RequestObject requestObject, OAuth2Parameters oauthRequest)
+            throws RequestObjectException {
+
+        final String errorMsg = "Request Object and Authorization request contains unmatched ";
+        String redirectUriInReqObj = requestObject.getClaimValue(Constants.REDIRECT_URI);
+        if (!isValidParameter(oauthRequest.getRedirectURI(), redirectUriInReqObj)) {
+            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMsg + Constants
+                    .REDIRECT_URI);
+        }
+
+        return true;
+    }
 
     /**
      * @deprecated use @{@link RequestObjectValidatorImpl#getX509CertOfOAuthApp(String, String)}} instead

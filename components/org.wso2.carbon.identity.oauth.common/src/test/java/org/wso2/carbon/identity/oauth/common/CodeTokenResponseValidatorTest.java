@@ -95,6 +95,69 @@ public class CodeTokenResponseValidatorTest {
         }
     }
 
+    @DataProvider(name = "Request Provider Request Uri")
+    public Object[][] getRequestParamsForRequestUri() {
+
+        Map<String, String> validUriRequest = new HashMap<>();
+        validUriRequest.put(SCOPE, OAuthConstants.Scope.OPENID);
+        validUriRequest.put("response_type", getResponseTypeValue());
+        validUriRequest.put("request_uri", "company:domain:urn");
+        validUriRequest.put(CLIENT_ID, CLIENT_ID);
+
+        Map<String, String> requestUriLessValidRequest = new HashMap<>();
+        requestUriLessValidRequest.put(SCOPE, OAuthConstants.Scope.OPENID);
+        requestUriLessValidRequest.put("response_type", getResponseTypeValue());
+        requestUriLessValidRequest.put("redirect_uri", "www.oidc.test.com");
+        requestUriLessValidRequest.put(CLIENT_ID, CLIENT_ID);
+
+        Map<String, String> clientIDLessRequest = new HashMap<>();
+        clientIDLessRequest.put(SCOPE, OAuthConstants.Scope.OPENID);
+        clientIDLessRequest.put("response_type", getResponseTypeValue());
+        clientIDLessRequest.put("request_uri", "company:domain:urn");
+
+        Map<String, String> requestUriLessRequest = new HashMap<>();
+        requestUriLessRequest.put(SCOPE, OAuthConstants.Scope.OPENID);
+        requestUriLessRequest.put("response_type", getResponseTypeValue());
+        requestUriLessRequest.put(CLIENT_ID, CLIENT_ID);
+
+        Map<String, String> redirectUriWithRedirectUriRequest = new HashMap<>();
+        redirectUriWithRedirectUriRequest.put(SCOPE, OAuthConstants.Scope.OPENID);
+        redirectUriWithRedirectUriRequest.put("response_type", getResponseTypeValue());
+        redirectUriWithRedirectUriRequest.put("request_uri", "company:domain:urn");
+        redirectUriWithRedirectUriRequest.put(CLIENT_ID, CLIENT_ID);
+        redirectUriWithRedirectUriRequest.put("redirect_uri", "www.oidc.test.com");
+
+        return new Object[][]{
+                {validUriRequest, true},
+                {requestUriLessValidRequest, true},
+                {clientIDLessRequest, false},
+                {requestUriLessRequest, false},
+                {redirectUriWithRedirectUriRequest, true},
+        };
+    }
+
+    @Test(dataProvider = "Request Provider Request Uri")
+    public void testValidateRequiredParametersForRequestUri(Map<String, String> headerMap, boolean shouldPass)
+            throws Exception {
+
+        HttpServletRequest mockRequest = mock(HttpServletRequest.class);
+        for (Map.Entry<String, String> entry : headerMap.entrySet()) {
+            when(mockRequest.getParameter(entry.getKey())).thenReturn(entry.getValue());
+        }
+        if (shouldPass) {
+            testedResponseValidator.validateRequiredParameters(mockRequest);
+            // Nothing to assert here. The above method will only throw an exception if not valid
+        } else {
+            try {
+                testedResponseValidator.validateRequiredParameters(mockRequest);
+                fail("Request validation should have failed");
+            } catch (OAuthProblemException e) {
+                assertTrue(e.getMessage().startsWith(OAuthError.TokenResponse.INVALID_REQUEST),
+                        "Invalid error message received");
+            }
+        }
+    }
+
     @DataProvider(name = "Request Method Provider")
     public Object[][] getRequestMethod() {
 
