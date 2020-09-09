@@ -24,7 +24,6 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
  * This is the DataHolder class of DynamicClientRegistration bundle. This holds a reference to the
  * ApplicationManagementService.
  */
-@Deprecated
 public class OIDCDCRDataHolder {
 
     private static OIDCDCRDataHolder

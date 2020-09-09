@@ -22,7 +22,6 @@ import org.wso2.carbon.identity.oauth.dcr.DCRClientException;
 /**
  * Exception class used to handle OIDC DCR client exception.
  */
-@Deprecated
 public class OIDCDCRClientException extends DCRClientException {
 
     public OIDCDCRClientException(String message) {

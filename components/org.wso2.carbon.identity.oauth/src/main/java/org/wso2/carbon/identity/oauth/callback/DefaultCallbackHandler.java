@@ -30,7 +30,6 @@ import javax.security.auth.callback.UnsupportedCallbackException;
  * Default OAuth callback handler
  */
 @SuppressWarnings("unused")
-@Deprecated
 public class DefaultCallbackHandler extends AbstractOAuthCallbackHandler {
 
     @Override

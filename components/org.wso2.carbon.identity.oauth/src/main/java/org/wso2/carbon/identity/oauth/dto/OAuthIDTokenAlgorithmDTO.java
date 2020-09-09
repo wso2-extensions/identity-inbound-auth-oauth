@@ -23,7 +23,6 @@ import java.util.List;
 /**
  * Class to transfer ID token encryption related algorithms.
  */
-@Deprecated
 public class OAuthIDTokenAlgorithmDTO {
 
     private String defaultIdTokenEncryptionAlgorithm;

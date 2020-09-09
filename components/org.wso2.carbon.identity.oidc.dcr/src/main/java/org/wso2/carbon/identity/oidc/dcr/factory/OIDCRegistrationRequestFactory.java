@@ -41,7 +41,6 @@ import javax.ws.rs.HttpMethod;
 /**
  * OIDCRegistrationRequestFactory build the request for DCR Registry Request.
  */
-@Deprecated
 public class OIDCRegistrationRequestFactory extends RegistrationRequestFactory {
 
     private static final Log log = LogFactory.getLog(OIDCRegistrationRequestFactory.class);

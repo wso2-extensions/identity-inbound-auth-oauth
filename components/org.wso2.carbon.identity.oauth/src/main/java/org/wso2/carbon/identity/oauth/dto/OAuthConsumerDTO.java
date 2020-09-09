@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.oauth.dto;
 /**
  * OAuth consumer dto.
  */
-@Deprecated
 public class OAuthConsumerDTO {
 
     // oauth_signature
