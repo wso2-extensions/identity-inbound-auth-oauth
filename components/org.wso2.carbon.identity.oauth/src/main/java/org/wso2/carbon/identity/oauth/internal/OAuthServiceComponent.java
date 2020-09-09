@@ -48,14 +48,12 @@ import org.wso2.carbon.user.core.service.RealmService;
         name = "identity.oauth.component",
         immediate = true
 )
-@Deprecated
 public class OAuthServiceComponent {
 
     private static final Log log = LogFactory.getLog(OAuthServiceComponent.class);
     private ServiceRegistration serviceRegistration = null;
 
     protected void activate(ComponentContext context) {
-
         try {
             // initialize the OAuth Server configuration
             OAuthServerConfiguration oauthServerConfig = OAuthServerConfiguration.getInstance();

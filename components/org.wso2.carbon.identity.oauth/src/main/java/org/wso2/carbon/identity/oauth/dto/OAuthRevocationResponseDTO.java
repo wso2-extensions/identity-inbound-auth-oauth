@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.oauth.dto;
 /**
  * OAuth revocation response dto.
  */
-@Deprecated
 public class OAuthRevocationResponseDTO {
 
     private boolean error;
