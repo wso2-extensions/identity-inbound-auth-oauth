@@ -997,13 +997,7 @@ public class EndpointUtil {
      */
     private static boolean isAllowAdditionalParamsFromErrorUrlEnabled() {
 
-        String isAllowAdditionalParamsEnabled = IdentityUtil.getProperty(ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL);
-
-        if (StringUtils.isNotBlank(isAllowAdditionalParamsEnabled)) {
-            return Boolean.parseBoolean(isAllowAdditionalParamsEnabled);
-        } else {
-            return true;
-        }
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL));
     }
 
     /**
