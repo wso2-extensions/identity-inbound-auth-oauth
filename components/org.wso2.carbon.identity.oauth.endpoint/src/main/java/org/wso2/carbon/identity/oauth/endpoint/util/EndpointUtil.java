@@ -429,22 +429,13 @@ public class EndpointUtil {
             return getErrorPageURL(request, errorCode, errorMessage, appName);
         } else {
             String redirectUri = request.getParameter(OAuthConstants.OAuth20Params.REDIRECT_URI);
-            String state = retrieveStateForErrorURL(oAuth2Parameters);
 
-            Map<String, String> params = new HashMap<>();
-            params.put(PROP_ERROR, errorCode);
-            params.put(PROP_ERROR_DESCRIPTION, errorMessage);
-            if (state != null) {
-                params.put(OAuthConstants.OAuth20Params.STATE, state);
-            }
-
-            try {
-                redirectUri = FrameworkUtils.buildURLWithQueryParams(redirectUri, params);
-            } catch (UnsupportedEncodingException e) {
-                //ignore
-                if (log.isDebugEnabled()) {
-                    log.debug("Error while encoding the error page url", e);
-                }
+            // If the redirect url is not set in the request, page is redirected to common OAuth error page.
+            if (StringUtils.isBlank(redirectUri)) {
+                redirectUri = getErrorPageURL(request, errorCode, errorMessage, appName);
+            } else {
+                String state = retrieveStateForErrorURL(oAuth2Parameters);
+                redirectUri = getUpdatedRedirectURL(request, redirectUri, errorCode, errorMessage, state, appName);
             }
             return redirectUri;
         }
@@ -964,6 +955,40 @@ public class EndpointUtil {
             }
         }
         return state;
+    }
+
+    /**
+     * Return updated redirect URL.
+     *
+     * @param request       HttpServletRequest
+     * @param redirectUri   Redirect Uri
+     * @param errorCode     Error Code
+     * @param errorMessage  Message of the error
+     * @param state         State from the request
+     * @param appName       Application Name
+     * @return Updated Redirect URL
+     */
+    private static String getUpdatedRedirectURL(HttpServletRequest request, String redirectUri, String errorCode,
+                                                String errorMessage, String state, String appName) {
+
+        String updatedRedirectUri = redirectUri;
+        try {
+            OAuthProblemException ex = OAuthProblemException.error(errorCode).description(errorMessage);
+            if (OAuth2Util.isImplicitResponseType(request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE))
+                    || OAuth2Util.isHybridResponseType(request.getParameter(OAuthConstants.OAuth20Params.
+                    RESPONSE_TYPE))) {
+                updatedRedirectUri = OAuthASResponse.errorResponse(HttpServletResponse.SC_FOUND)
+                        .error(ex).location(redirectUri).setState(state).setParam(OAuth.OAUTH_ACCESS_TOKEN, null)
+                        .buildQueryMessage().getLocationUri();
+            } else {
+                updatedRedirectUri = OAuthASResponse.errorResponse(HttpServletResponse.SC_FOUND)
+                        .error(ex).location(redirectUri).setState(state).buildQueryMessage().getLocationUri();
+            }
+
+        } catch (OAuthSystemException e) {
+            log.error("Server error occurred while building error redirect url for application: " + appName, e);
+        }
+        return updatedRedirectUri;
     }
 
     /**

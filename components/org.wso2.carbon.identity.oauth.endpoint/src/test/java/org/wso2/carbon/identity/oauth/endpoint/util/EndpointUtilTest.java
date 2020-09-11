@@ -428,6 +428,66 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         Assert.assertTrue(url.contains(expected), "Expected error redirect url not returned");
     }
 
+    @DataProvider(name = "provideErrorPageData")
+    public Object[][] provideErrorPageData() {
+
+        OAuth2Parameters params1 = new OAuth2Parameters();
+        OAuth2Parameters params2 = new OAuth2Parameters();
+        String state = "active";
+        String responseType = "dummyResponceType";
+        String appName = "myApp";
+
+        params1.setState(state);
+        params1.setResponseType(responseType);
+        params1.setApplicationName(appName);
+        params1.setRedirectURI("http://localhost:8080/callback");
+
+        params2.setState(state);
+        params2.setResponseType(responseType);
+        params2.setApplicationName(appName);
+        params2.setRedirectURI(null);
+
+        return new Object[][]{
+                {true, true, true, params1, "http://localhost:8080/location", false},
+                {true, false, true, params1, "http://localhost:8080/location", false},
+                {false, true, true, params1, "http://localhost:8080/location", true},
+                {false, false, false, params1, ERROR_PAGE_URL, true},
+        };
+    }
+
+    @Test(dataProvider = "provideErrorPageData")
+    public void testGetErrorPageURL(boolean isImplicitResponse, boolean isHybridResponse,
+                                    boolean isRedirectToRedirectURI, Object oAuth2ParamObject, String expected,
+                                    boolean isDebugOn)
+            throws Exception {
+
+        setMockedLog(isDebugOn);
+
+        OAuth2Parameters parameters = (OAuth2Parameters) oAuth2ParamObject;
+
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
+        when(mockedOAuthServerConfiguration.isRedirectToRequestedRedirectUriEnabled())
+                .thenReturn(isRedirectToRedirectURI);
+
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.isImplicitResponseType(anyString())).thenReturn(isImplicitResponse);
+        when(OAuth2Util.isHybridResponseType(anyString())).thenReturn(isHybridResponse);
+
+
+        mockStatic(OAuth2Util.OAuthURL.class);
+        when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
+
+        when(mockedOAuthResponse.getLocationUri()).thenReturn("http://localhost:8080/location");
+        when(mockedHttpServletRequest.getParameter(anyString())).thenReturn("http://localhost:8080/location");
+
+        String url = EndpointUtil.getErrorPageURL(mockedHttpServletRequest, "invalid request",
+                "invalid request object", "invalid request", "test", parameters);
+
+        Assert.assertTrue(url.contains(expected), "Expected error redirect url not returned");
+
+    }
+
     @DataProvider(name = "provideParams")
     public Object[][] provideParams() {
 
