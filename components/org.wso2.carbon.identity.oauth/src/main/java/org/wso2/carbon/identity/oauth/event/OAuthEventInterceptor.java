@@ -202,4 +202,28 @@ public interface OAuthEventInterceptor extends IdentityHandler {
 
         // Nothing to implement
     }
+
+    /**
+     *
+     * This will be called before when Tokens Revoked through Listeners directly.
+     * @param accessTokenDO {@link AccessTokenDO}
+     * @param params Additional parameters
+     * @throws IdentityOAuth2Exception
+     */
+    default void onPreTokenRevocationBySystem(AccessTokenDO accessTokenDO, Map<String, Object> params)
+            throws IdentityOAuth2Exception {
+
+    }
+
+    /**
+     *
+     * This will be called after when Tokens Revoked through Listeners directly.
+     * @param accessTokenDO {@link AccessTokenDO}
+     * @param params Additional parameters
+     * @throws IdentityOAuth2Exception
+     */
+    default void onPostTokenRevocationBySystem(AccessTokenDO accessTokenDO, Map<String, Object> params)
+            throws IdentityOAuth2Exception {
+
+    }
 }
