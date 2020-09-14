@@ -493,12 +493,16 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         }
     }
 
-    private void invokePreRevocationListeners(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
+    private void invokePreRevocationListeners(AccessTokenDO accessTokenDO) {
 
         OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
                 .getOAuthEventInterceptorProxy();
         if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
-            oAuthEventInterceptorProxy.onPreTokenRevocationBySystem(accessTokenDO, Collections.emptyMap());
+            try {
+                oAuthEventInterceptorProxy.onPreTokenRevocationBySystem(accessTokenDO, Collections.emptyMap());
+            } catch (IdentityOAuth2Exception e) {
+                log.error("Error occurred when invoking pre token revoke listener ", e);
+            }
         }
     }
 
