@@ -31,6 +31,8 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
 import org.wso2.carbon.identity.oauth.util.ClaimCacheKey;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCache;
@@ -48,6 +50,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -299,7 +302,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             }
 
             Set<String> scopes = new HashSet<>();
-            List<String> accessTokens = new ArrayList<>();
+            List<AccessTokenDO> accessTokens = new ArrayList<>();
             boolean tokenBindingEnabled = false;
             for (AccessTokenDO accessTokenDO : accessTokenDOs) {
                 // Clear cache
@@ -317,7 +320,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                 OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
                 // Get unique scopes list
                 scopes.add(OAuth2Util.buildScopeString(accessTokenDO.getScope()));
-                accessTokens.add(accessTokenDO.getAccessToken());
+                accessTokens.add(accessTokenDO);
             }
 
             if (!tokenBindingEnabled && OAuth2Util.isHashDisabled()) {
@@ -327,23 +330,27 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                 // Also, if token binding is enabled, there can be multiple active tokens for the same user, scope
                 // and client combination.
                 // So need to revoke all the tokens.
-                return revokeTokens(accessTokens);
+                try {
+                    return revokeTokens(accessTokens);
+                } catch (IdentityOAuth2Exception e) {
+                    String errorMsg = "Error occurred while revoking Access Token";
+                    log.error(errorMsg, e);
+                    throw new UserStoreException(e);
+                }
             }
         }
         return true;
     }
 
-    private boolean revokeTokens(List<String> accessTokens) throws UserStoreException {
+    private boolean revokeTokens(List<AccessTokenDO> accessTokens) throws IdentityOAuth2Exception {
 
         if (!accessTokens.isEmpty()) {
-            try {
-                // Revoking token from database.
+            // Revoking token from database.
+            for (AccessTokenDO accessToken : accessTokens) {
+                invokePreRevocationListeners(accessToken);
                 OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                        .revokeAccessTokens(accessTokens.toArray(new String[0]), OAuth2Util.isHashEnabled());
-            } catch (IdentityOAuth2Exception e) {
-                String errorMsg = "Error occurred while revoking Access Token";
-                log.error(errorMsg, e);
-                throw new UserStoreException(e);
+                        .revokeAccessTokens(new String[]{accessToken.getAccessToken()}, OAuth2Util.isHashEnabled());
+                invokePostRevocationListeners(accessToken);
             }
         }
         return true;
@@ -369,9 +376,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             if (scopedToken != null) {
                 try {
                     // Revoking token from database
-                    OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                            .revokeAccessTokens(new String[]{scopedToken.getAccessToken()},
-                                    OAuth2Util.isHashEnabled());
+                    revokeTokens(Collections.singletonList(scopedToken));
                 } catch (IdentityOAuth2Exception e) {
                     String errorMsg = "Error occurred while revoking " + "Access Token : "
                             + scopedToken.getAccessToken() + " for user " + authenticatedUser;
@@ -474,4 +479,31 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         }
         ClaimCache.getInstance().clearCacheEntry(cacheEntry.getClaimCacheKey());
     }
+
+    private void invokePostRevocationListeners(AccessTokenDO accessTokenDO) {
+
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            try {
+                oAuthEventInterceptorProxy.onPostTokenRevocationBySystem(accessTokenDO, Collections.emptyMap());
+            } catch (IdentityOAuth2Exception e) {
+                log.error("Error occurred when invoking post token revoke listener ", e);
+            }
+        }
+    }
+
+    private void invokePreRevocationListeners(AccessTokenDO accessTokenDO) {
+
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            try {
+                oAuthEventInterceptorProxy.onPreTokenRevocationBySystem(accessTokenDO, Collections.emptyMap());
+            } catch (IdentityOAuth2Exception e) {
+                log.error("Error occurred when invoking pre token revoke listener ", e);
+            }
+        }
+    }
+
 }
