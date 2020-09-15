@@ -23,6 +23,7 @@
 <%@ page import="org.wso2.carbon.identity.oauth.stub.dto.TokenBindingMetaDataDTO" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.client.OAuthAdminClient" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
+<%@ page import="org.wso2.carbon.identity.core.util.IdentityUtil"%>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
@@ -448,10 +449,19 @@
                                 <tr>
                                     <td class="leftCol-med"><fmt:message key='oauth.version'/><span
                                             class="required">*</span></td>
-                                    <td><input id="oauthVersion10a" name="oauthVersion" type="radio"
-                                               value="<%=OAuthConstants.OAuthVersions.VERSION_1A%>"/>1.0a
-                                        <input id="oauthVersion20" name="oauthVersion" type="radio"
-                                               value="<%=OAuthConstants.OAuthVersions.VERSION_2%>" CHECKED/>2.0
+                                    <td>
+                                    <%
+                                    String OAuth1FieldDisabled = "disabled";
+                                    boolean isOAuth1Enabled = IdentityUtil.isLegacyFeatureEnabled("oauth", "1.0");
+                                    if (isOAuth1Enabled) {
+                                          OAuth1FieldDisabled = "";
+                                    }
+                                    %>
+                                    <input id="oauthVersion10a" name="oauthVersion" type="radio"
+                                          value="<%=OAuthConstants.OAuthVersions.VERSION_1A%>"
+                                          <%=OAuth1FieldDisabled%>/>1.0a
+                                    <input id="oauthVersion20" name="oauthVersion" type="radio"
+                                          value="<%=OAuthConstants.OAuthVersions.VERSION_2%>" CHECKED/>2.0
                                     </td>
                                 </tr>
                                 <%if (applicationSPName != null) {%>

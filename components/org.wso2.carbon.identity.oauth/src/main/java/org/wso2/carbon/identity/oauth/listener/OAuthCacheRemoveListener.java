@@ -34,6 +34,7 @@ import javax.cache.event.CacheEntryRemovedListener;
 /**
  * Cache listener to clear OAuth cache.
  */
+@Deprecated
 public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKey, CacheEntry>
         implements CacheEntryRemovedListener<OAuthCacheKey, CacheEntry> {
 

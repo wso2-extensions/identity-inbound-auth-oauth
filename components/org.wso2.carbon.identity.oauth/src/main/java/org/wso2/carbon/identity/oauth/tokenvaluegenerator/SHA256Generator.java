@@ -29,6 +29,7 @@ import java.util.UUID;
 /**
  * Token value generator class to generate SHA-256 hash as a token value (256 bits, 64 Hex Characters).
  */
+@Deprecated
 public class SHA256Generator implements ValueGenerator {
 
     @Override
