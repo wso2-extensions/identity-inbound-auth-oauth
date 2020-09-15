@@ -43,6 +43,7 @@ import java.util.List;
 
 /**
  * OAuthService admin service implementation.
+ * @deprecated
  */
 public class OAuthService {
 
