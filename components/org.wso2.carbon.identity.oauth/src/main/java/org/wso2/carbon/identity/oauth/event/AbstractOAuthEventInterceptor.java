@@ -40,6 +40,7 @@ import java.util.Map;
 /**
  * Oauth Event Interceptor implemented for publishing oauth data to DAS
  */
+@Deprecated
 public class AbstractOAuthEventInterceptor extends AbstractIdentityHandler implements OAuthEventInterceptor {
 
 
