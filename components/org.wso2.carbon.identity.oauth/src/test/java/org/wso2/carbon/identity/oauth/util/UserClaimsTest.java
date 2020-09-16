@@ -27,6 +27,7 @@ import static org.testng.Assert.assertEquals;
 /**
  * Test Class for the UserClaims.
  */
+@Deprecated
 public class UserClaimsTest {
 
     TreeMap<String, String> testval = new TreeMap<>();

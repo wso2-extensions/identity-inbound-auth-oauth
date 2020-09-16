@@ -22,6 +22,7 @@ import java.util.List;
 /**
  * This class represents the token binding meta data DTO.
  */
+@Deprecated
 public class TokenBindingMetaDataDTO implements Serializable {
 
     private static final long serialVersionUID = 6372165740005823232L;

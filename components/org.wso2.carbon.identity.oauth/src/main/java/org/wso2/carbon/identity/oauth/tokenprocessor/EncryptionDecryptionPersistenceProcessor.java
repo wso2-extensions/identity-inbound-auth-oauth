@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
  * An implementation of <Code>TokenPersistenceProcessor</Code>
  * which is used when storing encrypted tokens.
  */
+@Deprecated
 public class EncryptionDecryptionPersistenceProcessor implements TokenPersistenceProcessor {
 
     protected static final Log LOG = LogFactory.getLog(EncryptionDecryptionPersistenceProcessor.class);

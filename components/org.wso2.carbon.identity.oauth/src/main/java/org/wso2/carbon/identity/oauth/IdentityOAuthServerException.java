@@ -18,6 +18,7 @@ package org.wso2.carbon.identity.oauth;
 /**
  * Exception for server errors.
  */
+@Deprecated
 public class IdentityOAuthServerException extends IdentityOAuthAdminException {
 
     public IdentityOAuthServerException(String message) {

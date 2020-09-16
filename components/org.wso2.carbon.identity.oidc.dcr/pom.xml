@@ -151,6 +151,7 @@
                             org.wso2.carbon.identity.application.common.model; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.mgt;version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework.*;version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.core.util;version="${carbon.identity.framework.imp.pkg.version.range}",
 
                             org.wso2.carbon.identity.oauth.dcr.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                             org.wso2.carbon.identity.oauth2.util;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",

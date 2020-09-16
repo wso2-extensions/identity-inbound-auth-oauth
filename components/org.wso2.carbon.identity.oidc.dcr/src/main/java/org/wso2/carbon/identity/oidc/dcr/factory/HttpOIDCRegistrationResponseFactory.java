@@ -33,6 +33,7 @@ import javax.ws.rs.core.MediaType;
 /**
  * Factory class responsible for http OIDC registration response.
  */
+@Deprecated
 public class HttpOIDCRegistrationResponseFactory extends HttpRegistrationResponseFactory {
 
     private static final Log log = LogFactory.getLog(HttpOIDCRegistrationResponseFactory.class);

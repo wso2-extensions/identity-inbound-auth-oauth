@@ -63,6 +63,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings
  * additional operations
  * for some of the core user management operations
  */
+@Deprecated
 public class IdentityOathEventListener extends AbstractIdentityUserOperationEventListener {
 
     private static final Log log = LogFactory.getLog(IdentityOathEventListener.class);

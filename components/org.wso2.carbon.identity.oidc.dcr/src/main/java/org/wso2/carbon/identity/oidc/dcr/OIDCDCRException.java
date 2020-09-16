@@ -23,6 +23,7 @@ import org.wso2.carbon.identity.oauth.dcr.DCRException;
 /**
  * Custom exception to be thrown inside DynamicClientRegistration related functionality.
  */
+@Deprecated
 public class OIDCDCRException extends DCRException {
 
     private static final long serialVersionUID = -3151279311929070297L;

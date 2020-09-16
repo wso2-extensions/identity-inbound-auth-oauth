@@ -22,6 +22,7 @@ import org.wso2.carbon.identity.oauth.dcr.DCRRuntimeException;
 /**
  * Handles OIDC DCR runtime related exceptions.
  */
+@Deprecated
 public class OIDCDCRRuntimeException extends DCRRuntimeException {
 
     protected OIDCDCRRuntimeException(String errorDescription) {
