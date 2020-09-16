@@ -297,6 +297,9 @@ public class OAuthAdminServiceImpl {
                     app.setBypassClientCredentials(application.isBypassClientCredentials());
                     app.setRenewRefreshTokenEnabled(application.getRenewRefreshTokenEnabled());
                     app.setTokenBindingType(application.getTokenBindingType());
+                    app.setTokenBindingValidationEnabled(application.isTokenBindingValidationEnabled());
+                    app.setTokenRevocationWithIDPSessionTerminationEnabled(
+                            application.isTokenRevocationWithIDPSessionTerminationEnabled());
                 }
                 dao.addOAuthApplication(app);
                 AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
