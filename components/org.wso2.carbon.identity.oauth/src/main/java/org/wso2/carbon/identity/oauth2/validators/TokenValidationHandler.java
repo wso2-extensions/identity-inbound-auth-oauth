@@ -338,12 +338,12 @@ public class TokenValidationHandler {
         }
 
         // should be in seconds
-        introResp.setExp((refreshTokenDataDO.getValidityPeriodInMillis() + refreshTokenDataDO.getIssuedTime().getTime())
-                / 1000);
+        introResp.setExp((refreshTokenDataDO.getRefreshTokenValidityPeriodInMillis()
+                + refreshTokenDataDO.getRefreshTokenIssuedTime().getTime()) / 1000);
         // should be in seconds
-        introResp.setIat(refreshTokenDataDO.getIssuedTime().getTime() / 1000);
+        introResp.setIat(refreshTokenDataDO.getRefreshTokenIssuedTime().getTime() / 1000);
         // Not before time will be the same as issued time.
-        introResp.setNbf(refreshTokenDataDO.getIssuedTime().getTime() / 1000);
+        introResp.setNbf(refreshTokenDataDO.getRefreshTokenIssuedTime().getTime() / 1000);
         // Token scopes.
         introResp.setScope(OAuth2Util.buildScopeString((refreshTokenDataDO.getScope())));
         // Set user-name.
