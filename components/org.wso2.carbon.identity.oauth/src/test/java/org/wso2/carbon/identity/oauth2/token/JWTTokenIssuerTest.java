@@ -23,6 +23,7 @@ import org.joda.time.Duration;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
@@ -68,7 +69,8 @@ import static org.testng.Assert.fail;
 @PrepareForTest(
         {
                 OAuthServerConfiguration.class,
-                OAuth2Util.class
+                OAuth2Util.class,
+                JWTTokenIssuer.class
         }
 )
 public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
@@ -251,7 +253,8 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(oAuthServerConfiguration.getApplicationAccessTokenValidityPeriodInSeconds())
                 .thenReturn(DEFAULT_APPLICATION_ACCESS_TOKEN_EXPIRY_TIME);
 
-        JWTTokenIssuer jwtTokenIssuer = new JWTTokenIssuer();
+        JWTTokenIssuer jwtTokenIssuer = PowerMockito.spy(new JWTTokenIssuer());
+        PowerMockito.doReturn(sub).when(jwtTokenIssuer, "getSubjectClaim", anyString(), anyString(), any());
         JWTClaimsSet jwtClaimSet = jwtTokenIssuer.createJWTClaimSet(
                 (OAuthAuthzReqMessageContext) authzReqMessageContext,
                 (OAuthTokenReqMessageContext) tokenReqMessageContext,
