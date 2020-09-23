@@ -262,6 +262,7 @@ public class OAuthServerConfiguration {
 
     // Property to determine whether data providers should be executed during token introspection.
     private boolean enableIntrospectionDataProviders = false;
+    private boolean isGlobalScopeValidatorEnabled = false;
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -416,7 +417,28 @@ public class OAuthServerConfiguration {
 
         // Read the property for error redirection URI
         parseRedirectToOAuthErrorPageConfig(oauthElem);
+
+        // Read config for role based scope validator.
+        parseEnableGlobalScopeValidatorConfiguration(oauthElem);
     }
+
+    /**
+     * Parse role-based scope validation configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseEnableGlobalScopeValidatorConfiguration(OMElement oauthConfigElem) {
+
+        OMElement enableGlobalScopeElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.ENABLE_GLOBAL_SCOPE_VALIDATORS));
+        if (enableGlobalScopeElem != null) {
+            isGlobalScopeValidatorEnabled = Boolean.parseBoolean(enableGlobalScopeElem.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("EnableRoleBasedScopeValidator was set to : " + isGlobalScopeValidatorEnabled);
+        }
+    }
+
 
     private void parseTokenIntrospectionConfig(OMElement oauthElem) {
 
@@ -452,6 +474,10 @@ public class OAuthServerConfiguration {
      */
     public boolean isShowDisplayNameInConsentPage() {
         return showDisplayNameInConsentPage;
+    }
+
+    public boolean isGlobalScopeValidatorEnabled() {
+        return isGlobalScopeValidatorEnabled; 
     }
 
     public String getOAuth1RequestTokenUrl() {
@@ -3100,6 +3126,8 @@ public class OAuthServerConfiguration {
 
         // Enable/Disable token renewal on each request to the token endpoint
         private static final String RENEW_TOKEN_PER_REQUEST = "RenewTokenPerRequest";
+        // Enable/Disable global scope validation
+        private static final String ENABLE_GLOBAL_SCOPE_VALIDATORS = "EnableGlobalScopeValidators";
     }
 
 }
