@@ -263,6 +263,7 @@ public class OAuthServerConfiguration {
     // Property to determine whether data providers should be executed during token introspection.
     private boolean enableIntrospectionDataProviders = false;
     private boolean isGlobalScopeValidatorEnabled = false;
+    private static volatile Set<String> allowedScopesSet;
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -420,6 +421,30 @@ public class OAuthServerConfiguration {
 
         // Read config for role based scope validator.
         parseEnableGlobalScopeValidatorConfiguration(oauthElem);
+
+        // Read config for allowed scopes.
+        parseAllowedScopesConfiguration(oauthElem);
+    }
+
+    /**
+     * Parse allowed scopes configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseAllowedScopesConfiguration(OMElement oauthConfigElem) {
+
+        List<String> allowedScopeList = new ArrayList<>();
+        OMElement allowedScopesElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.ALLOWED_SCOPES_ELEMENT));
+        if (allowedScopesElem != null) {
+            Iterator scopeIterator = allowedScopesElem.getChildrenWithName(getQNameWithIdentityNS(
+                    ConfigElements.SCOPES_ELEMENT));
+            while (scopeIterator.hasNext()) {
+                OMElement scopeElement = (OMElement) scopeIterator.next();
+                allowedScopeList.add(scopeElement.getText());
+            }
+        }
+        allowedScopesSet = new HashSet<String>(allowedScopeList);
     }
 
     /**
@@ -3128,6 +3153,9 @@ public class OAuthServerConfiguration {
         private static final String RENEW_TOKEN_PER_REQUEST = "RenewTokenPerRequest";
         // Enable/Disable global scope validation
         private static final String ENABLE_GLOBAL_SCOPE_VALIDATORS = "EnableGlobalScopeValidators";
+        //Allowed Scopes Config
+        private static final String ALLOWED_SCOPES_ELEMENT = "AllowedScopes";
+        private static final String SCOPES_ELEMENT = "Scope";
     }
 
 }
