@@ -56,6 +56,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CURRENT_SESSION_IDENTIFIER;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PRESERVE_SESSION_WHEN_PASSWORD_UPDATE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 
 /**
@@ -63,7 +65,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings
  * additional operations
  * for some of the core user management operations
  */
-@Deprecated
 public class IdentityOathEventListener extends AbstractIdentityUserOperationEventListener {
 
     private static final Log log = LogFactory.getLog(IdentityOathEventListener.class);
@@ -302,6 +303,16 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                 throw new UserStoreException(e);
             }
 
+            boolean isTokenPreservingAtPasswordUpdateEnabled =
+                    Boolean.parseBoolean(IdentityUtil.getProperty(PRESERVE_SESSION_WHEN_PASSWORD_UPDATE));
+            String currentTokenBindingReference = "";
+            if (isTokenPreservingAtPasswordUpdateEnabled) {
+                if (IdentityUtil.threadLocalProperties.get().get(CURRENT_SESSION_IDENTIFIER) != null) {
+                    currentTokenBindingReference =
+                            (String) IdentityUtil.threadLocalProperties.get().get(CURRENT_SESSION_IDENTIFIER);
+                }
+            }
+
             Set<String> scopes = new HashSet<>();
             List<AccessTokenDO> accessTokens = new ArrayList<>();
             boolean tokenBindingEnabled = false;
@@ -312,6 +323,11 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                         .isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
                     tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
                     tokenBindingEnabled = true;
+                    // Skip current token from being revoked.
+                    if (StringUtils.equals(accessTokenDO.getTokenBinding().getBindingValue(),
+                            currentTokenBindingReference)) {
+                        continue;
+                    }
                 }
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                         OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);

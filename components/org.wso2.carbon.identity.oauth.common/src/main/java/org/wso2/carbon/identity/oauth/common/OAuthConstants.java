@@ -143,6 +143,12 @@ public final class OAuthConstants {
     //Oauth2 sp expire time configuration.
     public static final String TOKEN_EXPIRE_TIME_RESOURCE_PATH = "/identity/config/spTokenExpireTime";
 
+    // Config to enable skipping current session from being terminated at password update event.
+    public static final String PRESERVE_SESSION_WHEN_PASSWORD_UPDATE = "PasswordUpdate.PreserveCurrentSessionAndToken";
+
+    // Current session thread local identifier.
+    public static final String CURRENT_SESSION_IDENTIFIER = "currentSessionIdentifier";
+
     private OAuthConstants() {
 
     }
