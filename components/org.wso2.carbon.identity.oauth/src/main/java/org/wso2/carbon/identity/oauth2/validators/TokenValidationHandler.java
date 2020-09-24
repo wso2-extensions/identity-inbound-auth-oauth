@@ -191,21 +191,12 @@ public class TokenValidationHandler {
             return buildClientAppErrorResponse("Invalid access delegation");
         }
 
-        List<ScopeValidator> globalScopeValidators = OAuthComponentServiceHolder.getInstance().getScopeValidators();
-        // setting to true so that if there are no global validators, we could ignore this.
-        boolean isGlobalValidScope = true;
-        for (ScopeValidator validator : globalScopeValidators) {
-            if (validator.canHandle()) {
-                log.debug("Engaging global scope validator " + validator.getName());
-                isGlobalValidScope = validator.validateScope(messageContext);
-            }
-            // if one global validator fails, we skip other validators
-            if (!isGlobalValidScope) {
-                break;
-            }
+        boolean isGlobalValidScope = isScopeGloballyValid(messageContext);
+        if (!isGlobalValidScope) {
+            return buildClientAppErrorResponse("Scope validation failed at global level");
         }
-        if (!(tokenValidator.validateScope(messageContext) && isGlobalValidScope)) {
-            return buildClientAppErrorResponse("Scope validation failed");
+        if (!tokenValidator.validateScope(messageContext)) {
+            return buildClientAppErrorResponse("Scope validation failed at app level");
         }
 
         if (!tokenValidator.validateAccessToken(messageContext)) {
@@ -488,24 +479,19 @@ public class TokenValidationHandler {
             return buildIntrospectionErrorResponse("Invalid access delegation");
         }
 
-        List<ScopeValidator> globalScopeValidators = OAuthComponentServiceHolder.getInstance().getScopeValidators();
-        // setting to true so that if there are no global validators, we could ignore this.
-        boolean isGlobalValidScope = true;
-        for (ScopeValidator validator : globalScopeValidators) {
-            if (validator.canHandle()) {
-                log.debug("Engaging global scope validator " + validator.getName());
-                isGlobalValidScope = validator.validateScope(messageContext);
-            }
-            // if one global validator fails, we skip other validators
-            if (!isGlobalValidScope) {
-                break;
-            }
+        boolean isGlobalValidScope = isScopeGloballyValid(messageContext);
+
+        //Validate scopes globally at server/global level
+        if (!isGlobalValidScope) {
+            introResp.setActive(false);
+            return buildIntrospectionErrorResponse("Scope validation failed at global level");
         }
-        // Validate scopes.
-        if (!(tokenValidator.validateScope(messageContext) && isGlobalValidScope)) {
+
+        // Validate scopes at app level
+        if (!tokenValidator.validateScope(messageContext)) {
             // This is redundant. But sake of readability.
             introResp.setActive(false);
-            return buildIntrospectionErrorResponse("Scope validation failed");
+            return buildIntrospectionErrorResponse("Scope validation failed at app level");
         }
 
         // All set. mark the token active.
@@ -693,5 +679,24 @@ public class TokenValidationHandler {
     private boolean isSkipValidatorForJWT(OAuth2TokenValidator tokenValidator, boolean isJWTTokenValidation) {
 
         return isJWTTokenValidation && BEARER_TOKEN_TYPE.equals(tokenValidator.getTokenType());
+    }
+
+    private boolean isScopeGloballyValid(OAuth2TokenValidationMessageContext messageContext) throws
+            IdentityOAuth2Exception {
+        List<ScopeValidator> globalScopeValidators = OAuthComponentServiceHolder.getInstance().getScopeValidators();
+        // setting to true so that if there are no global validators, we could ignore this.
+        boolean isGlobalValidScope = true;
+        for (ScopeValidator validator : globalScopeValidators) {
+            if (validator.canHandle()) {
+                log.debug("Engaging global scope validator at token validation flow : " + validator.getName());
+                isGlobalValidScope = validator.validateScope(messageContext);
+            }
+            // if one global validator fails, we skip other validators
+            if (!isGlobalValidScope) {
+                log.debug("Scope Validation failed at global level by : " + validator.getName());
+                return false;
+            }
+        }
+        return isGlobalValidScope;
     }
 }

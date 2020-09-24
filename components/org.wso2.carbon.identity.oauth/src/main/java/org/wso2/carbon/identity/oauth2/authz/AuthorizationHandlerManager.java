@@ -145,20 +145,23 @@ public class AuthorizationHandlerManager {
         boolean isGlobalValidScope = true;
         for (ScopeValidator validator : globalScopeValidators) {
             if (validator.canHandle()) {
-                log.debug("Engaging global scope validator " + validator.getName());
+                log.debug("Engaging global scope validator in authorization flow : " + validator.getName());
                 isGlobalValidScope = validator.validateScope(authzReqMsgCtx);
             }
             // if one global validator fails, we skip other validators
             if (!isGlobalValidScope) {
+                log.debug("Scope Validation failed at the global level by : " + validator.getName());
                 break;
             }
         }
-        //authorization at authorization handler manager
-        boolean valid = validateScope(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler) &&
-                isGlobalValidScope;
-        if (valid) {
-            //Add authorized internal scopes to the request for sending in the response.
-            addAuthorizedInternalScopes(authzReqMsgCtx, authorizedInternalScopes);
+        //Scope is validated at app level only if it passes at server/global level
+        if (isGlobalValidScope) {
+            //authorization at authorization handler manager
+            boolean valid = validateScope(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler);
+            if (valid) {
+                //Add authorized internal scopes to the request for sending in the response.
+                addAuthorizedInternalScopes(authzReqMsgCtx, authorizedInternalScopes);
+            }
         }
         return authorizeRespDTO;
     }

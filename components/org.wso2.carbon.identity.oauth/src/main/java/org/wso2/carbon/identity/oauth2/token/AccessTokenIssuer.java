@@ -283,15 +283,21 @@ public class AccessTokenIssuer {
         boolean isGlobalValidScope = true;
         for (ScopeValidator validator : globalScopeValidators) {
             if (validator.canHandle()) {
-                log.debug("Engaging global scope validator " + validator.getName());
+                log.debug("Engaging global scope validator in token issuer flow : " + validator.getName());
                 isGlobalValidScope = validator.validateScope(tokReqMsgCtx);
             }
             // if one global validator fails, we skip other validators
             if (!isGlobalValidScope) {
+                log.debug("Scope Validation failed at the global level by : " + validator.getName());
                 break;
             }
         }
-        boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx) && isGlobalValidScope;
+        //setting to false so that it becomes true only if scope validation passes at both global and app level
+        boolean isValidScope = false;
+        //Scope is validated at app level only if it passes at server/global level
+        if (isGlobalValidScope) {
+            isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
+        }
         if (isValidScope) {
             //Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(tokReqMsgCtx, authorizedInternalScopes);
