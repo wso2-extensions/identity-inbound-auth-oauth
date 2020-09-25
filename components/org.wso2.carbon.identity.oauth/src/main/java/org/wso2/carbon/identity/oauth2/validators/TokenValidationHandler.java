@@ -182,7 +182,7 @@ public class TokenValidationHandler {
         responseDTO.setExpiryTime(getAccessTokenExpirationTime(accessTokenDO));
 
         // Adding the AccessTokenDO as a context property for further use
-        messageContext.addProperty("AccessTokenDO", accessTokenDO);
+        messageContext.addProperty(OAuthConstants.ACCESS_TOKEN_DO, accessTokenDO);
 
         if (!tokenValidator.validateAccessDelegation(messageContext)) {
             return buildClientAppErrorResponse("Invalid access delegation");

@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
@@ -225,6 +226,12 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
         claimsSetBuilder.claim(API_GATEWAY_ID + "/applicationname", applicationName);
         claimsSetBuilder.claim(API_GATEWAY_ID + "/enduser", authzUser);
         //TODO: check setting audience
+
+        if (messageContext.getProperty(OAuthConstants.ACCESS_TOKEN_DO) != null &&
+                ((AccessTokenDO) messageContext.getProperty(OAuthConstants.ACCESS_TOKEN_DO)).getTokenType() != null) {
+            claimsSetBuilder.claim(OAuthConstants.AUTHORIZED_USER_TYPE,
+                    ((AccessTokenDO) messageContext.getProperty(OAuthConstants.ACCESS_TOKEN_DO)).getTokenType());
+        }
 
         if (claimsRetriever != null) {
 
