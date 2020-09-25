@@ -969,7 +969,7 @@
         <jackson-databind.version>2.10.5</jackson-databind.version>
         <com.fasterxml.jackson.core.version>2.9.9</com.fasterxml.jackson.core.version>
         <com.fasterxml.jackson.version>2.9.7</com.fasterxml.jackson.version>
-        <spring-web.version>4.1.6.RELEASE</spring-web.version>
+        <spring-web.version>4.3.29.RELEASE</spring-web.version>
         <swagger-jaxrs.version>1.6.2</swagger-jaxrs.version>
         <!-- httpclient dependency Version-->
         <http.client.version>4.3.6.wso2v1</http.client.version>
