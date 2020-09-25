@@ -30,12 +30,17 @@ import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
+
+import java.util.Map;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -328,5 +333,41 @@ public final class OAuthUtil {
                 .isTokenRevocationWithIDPSessionTerminationEnabled());
         dto.setTokenBindingValidationEnabled(appDO.isTokenBindingValidationEnabled());
         return dto;
+    }
+
+    /**
+     * This will be called after when Tokens Revoked through Listeners directly.
+     *
+     * @param accessTokenDO {@link AccessTokenDO}
+     */
+    public static void invokePostRevocationBySystemListeners(AccessTokenDO accessTokenDO, Map<String, Object> params) {
+
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            try {
+                oAuthEventInterceptorProxy.onPostTokenRevocationBySystem(accessTokenDO, params);
+            } catch (IdentityOAuth2Exception e) {
+                LOG.error("Error while triggering listener for post token revocation by system.", e);
+            }
+        }
+    }
+
+    /**
+     * This will be called before when Tokens Revoked through Listeners directly.
+     *
+     * @param accessTokenDO {@link AccessTokenDO}
+     */
+    public static void invokePreRevocationBySystemListeners(AccessTokenDO accessTokenDO, Map<String, Object> params) {
+
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            try {
+                oAuthEventInterceptorProxy.onPreTokenRevocationBySystem(accessTokenDO, params);
+            } catch (IdentityOAuth2Exception e) {
+                LOG.error("Error while triggering listener for pre token revocation by system.", e);
+            }
+        }
     }
 }
