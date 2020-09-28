@@ -88,7 +88,7 @@ public class OAuthServerConfiguration {
     private static final String CONFIG_ELEM_OAUTH = "OAuth";
     // Grant Handler Classes
     private static final String AUTHORIZATION_CODE_GRANT_HANDLER_CLASS =
-            "org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationCodeHandler";
+            "org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationCodeGrantHandler";
     private static final String CLIENT_CREDENTIALS_GRANT_HANDLER_CLASS =
             "org.wso2.carbon.identity.oauth2.token.handlers.grant.ClientCredentialsGrantHandler";
     private static final String PASSWORD_GRANT_HANDLER_CLASS =
@@ -263,7 +263,7 @@ public class OAuthServerConfiguration {
     // Property to determine whether data providers should be executed during token introspection.
     private boolean enableIntrospectionDataProviders = false;
     private boolean isGlobalScopeValidatorEnabled = false;
-    private static volatile Set<String> allowedScopesSet;
+    private List<String> allowedScopes = new ArrayList<>();
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -433,7 +433,6 @@ public class OAuthServerConfiguration {
      */
     private void parseAllowedScopesConfiguration(OMElement oauthConfigElem) {
 
-        List<String> allowedScopeList = new ArrayList<>();
         OMElement allowedScopesElem = oauthConfigElem.getFirstChildWithName(
                 getQNameWithIdentityNS(ConfigElements.ALLOWED_SCOPES_ELEMENT));
         if (allowedScopesElem != null) {
@@ -441,10 +440,9 @@ public class OAuthServerConfiguration {
                     ConfigElements.SCOPES_ELEMENT));
             while (scopeIterator.hasNext()) {
                 OMElement scopeElement = (OMElement) scopeIterator.next();
-                allowedScopeList.add(scopeElement.getText());
+                allowedScopes.add(scopeElement.getText());
             }
         }
-        allowedScopesSet = new HashSet<String>(allowedScopeList);
     }
 
     /**
@@ -502,7 +500,11 @@ public class OAuthServerConfiguration {
     }
 
     public boolean isGlobalScopeValidatorEnabled() {
-        return isGlobalScopeValidatorEnabled; 
+        return isGlobalScopeValidatorEnabled;
+    }
+
+    public List<String> getAllowedScopes() {
+        return allowedScopes;
     }
 
     public String getOAuth1RequestTokenUrl() {
@@ -1233,7 +1235,6 @@ public class OAuthServerConfiguration {
 
     /**
      * Returns if login consent enabled or not.
-     *
      */
     public boolean getOpenIDConnectSkipeUserConsentConfig() {
 
@@ -1249,7 +1250,6 @@ public class OAuthServerConfiguration {
 
     /**
      * Returns if skip logout consent enabled or not.
-     *
      */
     public boolean getOpenIDConnectSkipLogoutConsentConfig() {
 
@@ -1328,6 +1328,7 @@ public class OAuthServerConfiguration {
 
         return enableIntrospectionDataProviders;
     }
+
     /**
      * Return the value of whether the refresh token is allowed for this grant type. Null will be returned if there is
      * no tag or empty tag.
@@ -2201,6 +2202,7 @@ public class OAuthServerConfiguration {
 
     /**
      * Adds oauth token issuer instances used for token generation.
+     *
      * @param tokenType registered token type
      * @return token issuer instance
      * @throws IdentityOAuth2Exception
@@ -2470,7 +2472,8 @@ public class OAuthServerConfiguration {
                         useMultiValueSeparatorForAuthContextToken =
                                 Boolean.parseBoolean(
                                         authContextTokGenConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
-                                        ConfigElements.AUTH_CONTEXT_TOKEN_USE_MULTIVALUE_SEPARATOR)).getText().trim());
+                                                ConfigElements.AUTH_CONTEXT_TOKEN_USE_MULTIVALUE_SEPARATOR)
+                                        ).getText().trim());
                     }
                 }
             }
