@@ -29,7 +29,6 @@ import javax.cache.event.CacheEntryRemovedListener;
 /**
  * Claim Cache Remove Listener.
  */
-@Deprecated
 public class ClaimCacheRemoveListener extends AbstractCacheListener<ClaimCacheKey, UserClaims>
         implements CacheEntryRemovedListener<ClaimCacheKey, UserClaims> {
     @Override

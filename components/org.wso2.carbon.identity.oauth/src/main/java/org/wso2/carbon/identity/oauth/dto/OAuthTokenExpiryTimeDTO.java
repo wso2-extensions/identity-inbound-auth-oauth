@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.oauth.dto;
 /**
  * OAuth token expiry time dto.
  */
-@Deprecated
 public class OAuthTokenExpiryTimeDTO {
 
     private long userAccessTokenExpiryTime;
