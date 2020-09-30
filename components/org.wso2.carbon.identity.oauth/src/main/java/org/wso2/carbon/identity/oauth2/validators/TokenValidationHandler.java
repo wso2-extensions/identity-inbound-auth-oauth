@@ -57,6 +57,7 @@ public class TokenValidationHandler {
     private static final Log log = LogFactory.getLog(TokenValidationHandler.class);
     private Map<String, OAuth2TokenValidator> tokenValidators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     private static final String BEARER_TOKEN_TYPE = "Bearer";
+    private static final String BEARER_TOKEN_TYPE_JWT = "jwt";
     private static final String BUILD_FQU_FROM_SP_CONFIG = "OAuth.BuildSubjectIdentifierFromSPConfig";
     private static final String ENABLE_JWT_TOKEN_VALIDATION = "OAuth.EnableJWTTokenValidationDuringIntrospection";
 
@@ -568,7 +569,18 @@ public class TokenValidationHandler {
             throw new IllegalArgumentException("Access token identifier is not present in the validation request");
         }
 
-        OAuth2TokenValidator tokenValidator = tokenValidators.get(accessToken.getTokenType());
+        OAuth2TokenValidator tokenValidator;
+        if (isJWTTokenValidation(accessToken.getIdentifier())) {
+            /*
+            If the token is a self-contained JWT based access token and the
+            config EnableJWTTokenValidationDuringIntrospection is set to true
+            then the jwt token validator is selected. In the default pack TokenValidator
+            type 'jwt' is 'org.wso2.carbon.identity.oauth2.validators.OAuth2JWTTokenValidator'.
+            */
+            tokenValidator = tokenValidators.get(BEARER_TOKEN_TYPE_JWT);
+        } else {
+            tokenValidator = tokenValidators.get(accessToken.getTokenType());
+        }
 
         // There is no token validator for the provided token type.
         if (tokenValidator == null) {

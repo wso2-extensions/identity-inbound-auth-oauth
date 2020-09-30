@@ -2900,7 +2900,7 @@ public class OAuth2Util {
      */
     public static boolean isParsableJWT(String tokenIdentifier) {
 
-        if (StringUtils.isEmpty(tokenIdentifier)) {
+        if (StringUtils.isBlank(tokenIdentifier)) {
             return false;
         }
         try {
@@ -2908,7 +2908,7 @@ public class OAuth2Util {
             return true;
         } catch (ParseException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Provided token identifier is not a parsable JWT", e);
+                log.debug("Provided token identifier is not a parsable JWT.", e);
             }
             return false;
         }
