@@ -500,10 +500,12 @@ public class OAuthServerConfiguration {
     }
 
     public boolean isGlobalScopeValidatorEnabled() {
+
         return isGlobalScopeValidatorEnabled;
     }
 
     public List<String> getAllowedScopes() {
+
         return allowedScopes;
     }
 
