@@ -17,7 +17,12 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.util;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.axiom.util.base64.Base64Utils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -69,8 +74,10 @@ import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -718,6 +725,11 @@ public class EndpointUtil {
 
     public static boolean validateParams(HttpServletRequest request, MultivaluedMap<String, String> paramMap) {
 
+        return validateParams(request, (Map<String, List<String>>) paramMap);
+    }
+
+    public static boolean validateParams(HttpServletRequest request, Map<String, List<String>> paramMap) {
+
         if (paramMap != null) {
             for (Map.Entry<String, List<String>> paramEntry : paramMap.entrySet()) {
                 if (paramEntry.getValue().size() > 1) {
@@ -745,6 +757,39 @@ public class EndpointUtil {
     public static boolean validateParams(OAuthMessage oAuthMessage, MultivaluedMap<String, String> paramMap) {
 
         return validateParams(oAuthMessage.getRequest(), paramMap);
+    }
+
+    public static Map<String, List<String>> parseJsonTokenRequest(String jsonPayload) throws
+            TokenEndpointBadRequestException {
+
+        JsonFactory factory = new JsonFactory();
+        Map<String, List<String>> requestParams = new HashMap<>();
+        try {
+            JsonParser parser  = factory.createParser(jsonPayload);
+            // Skip the first START_OBJECT token. i.e the beginning of the payload: '{'.
+            parser.nextToken();
+            while (!parser.isClosed()) {
+                JsonToken currentToken = parser.nextToken();
+                if (currentToken == null) {
+                    continue;
+                }
+                if (currentToken.isScalarValue()) {
+                    // If the current token is a scalar value, add it to a map along with the corresponding json key.
+                    String key = parser.currentName();
+                    String value = parser.getValueAsString();
+                    requestParams.computeIfAbsent(key, val -> new ArrayList<>()).add(value);
+                } else if (currentToken != JsonToken.FIELD_NAME && currentToken != JsonToken.END_OBJECT) {
+                    // If the current token is a complex value (array or object), flatten the value and add it to map
+                    // with the corresponding json key.
+                    String key = parser.currentName();
+                    String value = (new ObjectMapper()).readTree(parser).toString();
+                    requestParams.computeIfAbsent(key, val -> new ArrayList<>()).add(value);
+                }
+            }
+        } catch (IOException e) {
+            throw new TokenEndpointBadRequestException("Malformed or unsupported request payload", e);
+        }
+        return requestParams;
     }
 
     /**
@@ -816,6 +861,19 @@ public class EndpointUtil {
     public static void triggerOnTokenExceptionListeners(Exception exception, HttpServletRequest request,
                                                         MultivaluedMap<String, String> paramMap) {
 
+        triggerOnTokenExceptionListeners(exception, request, (Map<String, List<String>>) paramMap);
+    }
+
+    /**
+     * Extract information related to the token request and exception and publish the event to listeners.
+     *
+     * @param exception Exception occurred.
+     * @param request   Token servlet request
+     * @param paramMap  Additional parameters.
+     */
+    public static void triggerOnTokenExceptionListeners(Exception exception, HttpServletRequest request,
+                                                        Map<String, List<String>> paramMap) {
+
         Map<String, Object> params = new HashMap<>();
         Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
         String clientId;
@@ -827,8 +885,8 @@ public class EndpointUtil {
         addStringToMap(PROP_CLIENT_ID, clientId, params);
 
         if (paramMap != null) {
-            String grantType = paramMap.getFirst(PROP_GRANT_TYPE);
-            String scopeString = paramMap.getFirst(PROP_SCOPE);
+            String grantType = getFirstParamValue(paramMap, PROP_GRANT_TYPE);
+            String scopeString = getFirstParamValue(paramMap, PROP_SCOPE);
             addStringToMap(PROP_GRANT_TYPE, grantType, params);
             addStringToMap(PROP_SCOPE, scopeString, params);
         }
@@ -839,6 +897,15 @@ public class EndpointUtil {
         }
 
         OAuth2Util.triggerOnTokenExceptionListeners(exception, params);
+    }
+
+    private static String getFirstParamValue(Map<String, List<String>> paramMap, String paramName) {
+
+        String paramValue = null;
+        if (CollectionUtils.isNotEmpty(paramMap.get(paramName))) {
+            paramValue = paramMap.get(paramName).get(0);
+        }
+        return paramValue;
     }
 
     /**
