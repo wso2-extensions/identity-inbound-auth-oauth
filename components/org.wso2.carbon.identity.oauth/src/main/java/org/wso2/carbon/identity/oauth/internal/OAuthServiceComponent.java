@@ -48,7 +48,6 @@ import org.wso2.carbon.user.core.service.RealmService;
         name = "identity.oauth.component",
         immediate = true
 )
-@Deprecated
 public class OAuthServiceComponent {
 
     private static final Log log = LogFactory.getLog(OAuthServiceComponent.class);
