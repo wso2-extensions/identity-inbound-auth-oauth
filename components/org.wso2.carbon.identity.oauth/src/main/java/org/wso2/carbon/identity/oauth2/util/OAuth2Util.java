@@ -2528,7 +2528,7 @@ public class OAuth2Util {
             String error = "Error occurred while encoding thumbPrint from certificate.";
             throw new IdentityOAuth2Exception(error, e);
         } catch (NoSuchAlgorithmException e) {
-            String error = "Error in obtaining SHA-1 thumbprint from certificate.";
+            String error = "Error in obtaining SHA-256 thumbprint from certificate.";
             throw new IdentityOAuth2Exception(error, e);
         }
 
