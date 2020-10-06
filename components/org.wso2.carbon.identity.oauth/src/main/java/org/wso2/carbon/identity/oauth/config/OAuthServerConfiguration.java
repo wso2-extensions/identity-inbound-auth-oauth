@@ -262,7 +262,7 @@ public class OAuthServerConfiguration {
 
     // Property to determine whether data providers should be executed during token introspection.
     private boolean enableIntrospectionDataProviders = false;
-    private boolean isGlobalScopeValidatorEnabled = false;
+    // Property to define the allowed scopes.
     private List<String> allowedScopes = new ArrayList<>();
 
     private OAuthServerConfiguration() {
@@ -419,9 +419,6 @@ public class OAuthServerConfiguration {
         // Read the property for error redirection URI
         parseRedirectToOAuthErrorPageConfig(oauthElem);
 
-        // Read config for role based scope validator.
-        parseEnableGlobalScopeValidatorConfiguration(oauthElem);
-
         // Read config for allowed scopes.
         parseAllowedScopesConfiguration(oauthElem);
     }
@@ -444,24 +441,6 @@ public class OAuthServerConfiguration {
             }
         }
     }
-
-    /**
-     * Parse role-based scope validation configuration.
-     *
-     * @param oauthConfigElem oauthConfigElem.
-     */
-    private void parseEnableGlobalScopeValidatorConfiguration(OMElement oauthConfigElem) {
-
-        OMElement enableGlobalScopeElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
-                ConfigElements.ENABLE_GLOBAL_SCOPE_VALIDATORS));
-        if (enableGlobalScopeElem != null) {
-            isGlobalScopeValidatorEnabled = Boolean.parseBoolean(enableGlobalScopeElem.getText());
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("EnableRoleBasedScopeValidator was set to : " + isGlobalScopeValidatorEnabled);
-        }
-    }
-
 
     private void parseTokenIntrospectionConfig(OMElement oauthElem) {
 
@@ -497,11 +476,6 @@ public class OAuthServerConfiguration {
      */
     public boolean isShowDisplayNameInConsentPage() {
         return showDisplayNameInConsentPage;
-    }
-
-    public boolean isGlobalScopeValidatorEnabled() {
-
-        return isGlobalScopeValidatorEnabled;
     }
 
     public List<String> getAllowedScopes() {
@@ -1237,6 +1211,7 @@ public class OAuthServerConfiguration {
 
     /**
      * Returns if login consent enabled or not.
+     *
      */
     public boolean getOpenIDConnectSkipeUserConsentConfig() {
 
@@ -1252,6 +1227,7 @@ public class OAuthServerConfiguration {
 
     /**
      * Returns if skip logout consent enabled or not.
+     *
      */
     public boolean getOpenIDConnectSkipLogoutConsentConfig() {
 
@@ -1330,7 +1306,6 @@ public class OAuthServerConfiguration {
 
         return enableIntrospectionDataProviders;
     }
-
     /**
      * Return the value of whether the refresh token is allowed for this grant type. Null will be returned if there is
      * no tag or empty tag.
@@ -2204,7 +2179,6 @@ public class OAuthServerConfiguration {
 
     /**
      * Adds oauth token issuer instances used for token generation.
-     *
      * @param tokenType registered token type
      * @return token issuer instance
      * @throws IdentityOAuth2Exception
@@ -2474,8 +2448,7 @@ public class OAuthServerConfiguration {
                         useMultiValueSeparatorForAuthContextToken =
                                 Boolean.parseBoolean(
                                         authContextTokGenConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
-                                                ConfigElements.AUTH_CONTEXT_TOKEN_USE_MULTIVALUE_SEPARATOR)
-                                        ).getText().trim());
+                                        ConfigElements.AUTH_CONTEXT_TOKEN_USE_MULTIVALUE_SEPARATOR)).getText().trim());
                     }
                 }
             }
@@ -3156,9 +3129,7 @@ public class OAuthServerConfiguration {
 
         // Enable/Disable token renewal on each request to the token endpoint
         private static final String RENEW_TOKEN_PER_REQUEST = "RenewTokenPerRequest";
-        // Enable/Disable global scope validation
-        private static final String ENABLE_GLOBAL_SCOPE_VALIDATORS = "EnableGlobalScopeValidators";
-        //Allowed Scopes Config
+        // Allowed Scopes Config.
         private static final String ALLOWED_SCOPES_ELEMENT = "AllowedScopes";
         private static final String SCOPES_ELEMENT = "Scope";
     }

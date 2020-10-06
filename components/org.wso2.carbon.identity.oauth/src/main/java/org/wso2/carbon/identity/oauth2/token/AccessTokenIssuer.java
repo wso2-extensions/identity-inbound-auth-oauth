@@ -278,27 +278,23 @@ public class AccessTokenIssuer {
         // Thus remove the scopes from the tokReqMsgCtx. Will be added to the response after executing
         // the other scope validators.
         removeInternalScopes(tokReqMsgCtx);
-        List<ScopeValidator> globalScopeValidators = OAuthComponentServiceHolder.getInstance().getScopeValidators();
-        // setting to true so that if there are no global validators, we could ignore this.
-        boolean isGlobalValidScope = true;
-        for (ScopeValidator validator : globalScopeValidators) {
-            if (validator.canHandle()) {
-                log.debug("Engaging global scope validator in token issuer flow : " + validator.getName());
-                isGlobalValidScope = validator.validateScope(tokReqMsgCtx);
-            }
-            // if one global validator fails, we skip other validators
-            if (!isGlobalValidScope) {
-                log.debug("Scope Validation failed at the global level by : " + validator.getName());
-                break;
-            }
-        }
-        //setting to false so that it becomes true only if scope validation passes at both global and app level
-        boolean isValidScope = false;
-        //Scope is validated at app level only if it passes at server/global level
-        if (isGlobalValidScope) {
-            isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
-        }
+        boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
+        // The server level validation is engaged only if it passed in app level.
         if (isValidScope) {
+            List<ScopeValidator> globalScopeValidators = OAuthComponentServiceHolder.getInstance().getScopeValidators();
+            // Setting to true so that if there are no global validators, we could ignore this.
+            boolean isGlobalValidScope = true;
+            for (ScopeValidator validator : globalScopeValidators) {
+                if (validator.canHandle(tokReqMsgCtx)) {
+                    log.debug("Engaging global scope validator in token issuer flow : " + validator.getName());
+                    isGlobalValidScope = validator.validateScope(tokReqMsgCtx);
+                }
+                // If one global validator fails, we skip other validators
+                if (!isGlobalValidScope) {
+                    log.debug("Scope Validation failed at the global level by : " + validator.getName());
+                    break;
+                }
+            }
             //Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(tokReqMsgCtx, authorizedInternalScopes);
         } else {

@@ -33,10 +33,13 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
+import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
+import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -45,10 +48,9 @@ import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenti
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
 import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
-import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
-import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.handlers.TokenBindingExpiryEventHandler;
@@ -60,6 +62,11 @@ import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabled;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
@@ -151,15 +158,6 @@ public class OAuth2ServiceComponent {
                 log.debug("Identity OAuth bundle is activated");
             }
 
-            if (OAuth2ServiceComponentHolder.getKeyIDProvider() == null) {
-                KeyIDProvider defaultKeyIDProvider = new DefaultKeyIDProviderImpl();
-                OAuth2ServiceComponentHolder.setKeyIDProvider(defaultKeyIDProvider);
-                if (log.isDebugEnabled()) {
-                    log.debug("Key ID Provider " + DefaultKeyIDProviderImpl.class.getSimpleName() +
-                            " registered as the default Key ID Provider implementation.");
-                }
-            }
-
             ServiceRegistration tenantMgtListenerSR = bundleContext.registerService(TenantMgtListener.class.getName(),
                     new OAuthTenantMgtListenerImpl(), null);
             if (tenantMgtListenerSR != null) {
@@ -189,9 +187,13 @@ public class OAuth2ServiceComponent {
             } else {
                 log.error("OAuth - ApplicationMgtListener could not be registered.");
             }
-
-            // PKCE enabled by default.
-            OAuth2ServiceComponentHolder.setPkceEnabled(true);
+            if (checkPKCESupport()) {
+                OAuth2ServiceComponentHolder.setPkceEnabled(true);
+                log.info("PKCE Support enabled.");
+            } else {
+                OAuth2ServiceComponentHolder.setPkceEnabled(false);
+                log.info("PKCE Support is disabled.");
+            }
 
             // Register device auth service.
             ServiceRegistration deviceAuthService = bundleContext.registerService(DeviceAuthService.class.getName(),
@@ -293,6 +295,42 @@ public class OAuth2ServiceComponent {
     protected void setIdentityCoreInitializedEventService(IdentityCoreInitializedEvent identityCoreInitializedEvent) {
         /* reference IdentityCoreInitializedEvent service to guarantee that this component will wait until identity core
          is started */
+    }
+
+    private boolean checkPKCESupport() {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+
+            String sql;
+            if (connection.getMetaData().getDriverName().contains("MySQL")
+                    || connection.getMetaData().getDriverName().contains("H2")) {
+                sql = SQLQueries.RETRIEVE_PKCE_TABLE_MYSQL;
+            } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                sql = SQLQueries.RETRIEVE_PKCE_TABLE_DB2SQL;
+            } else if (connection.getMetaData().getDriverName().contains("MS SQL") ||
+                    connection.getMetaData().getDriverName().contains("Microsoft")) {
+                sql = SQLQueries.RETRIEVE_PKCE_TABLE_MSSQL;
+            } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
+                sql = SQLQueries.RETRIEVE_PKCE_TABLE_MYSQL;
+            } else if (connection.getMetaData().getDriverName().contains("Informix")) {
+                // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
+                sql = SQLQueries.RETRIEVE_PKCE_TABLE_INFORMIX;
+            } else {
+                sql = SQLQueries.RETRIEVE_PKCE_TABLE_ORACLE;
+            }
+
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql);
+                 ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Following statement will throw SQLException if the column is not found
+                resultSet.findColumn("PKCE_MANDATORY");
+                // If we are here then the column exists, so PKCE is supported by the database.
+                return true;
+            }
+
+        } catch (IdentityRuntimeException | SQLException e) {
+            return false;
+        }
+
     }
 
     @Reference(
@@ -417,4 +455,28 @@ public class OAuth2ServiceComponent {
     protected void unsetKeyIDProvider(KeyIDProvider keyIDProvider) {
 
     }
+
+    @Reference(
+            name = "scope.validator.service",
+            service = ScopeValidator.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "removeScopeValidatorService"
+    )
+    protected void addScopeValidatorService(ScopeValidator scopeValidator) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Adding the Scope validator Service : " + scopeValidator.getName());
+        }
+        OAuthComponentServiceHolder.getInstance().addScopeValidator(scopeValidator);
+    }
+
+    protected void removeScopeValidatorService(ScopeValidator scopeValidator) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing the Scope validator Service : " + scopeValidator.getName());
+        }
+        OAuthComponentServiceHolder.getInstance().removeScopeValidator(scopeValidator);
+    }
+
 }

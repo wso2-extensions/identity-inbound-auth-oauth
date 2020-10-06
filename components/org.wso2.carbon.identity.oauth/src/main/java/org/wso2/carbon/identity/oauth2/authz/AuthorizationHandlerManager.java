@@ -140,28 +140,24 @@ public class AuthorizationHandlerManager {
         // the other scope validators.
         removeInternalScopes(authzReqMsgCtx);
 
-        List<ScopeValidator> globalScopeValidators = OAuthComponentServiceHolder.getInstance().getScopeValidators();
-        // setting to true so that if there are no global validators, we could ignore this.
-        boolean isGlobalValidScope = true;
-        for (ScopeValidator validator : globalScopeValidators) {
-            if (validator.canHandle()) {
-                log.debug("Engaging global scope validator in authorization flow : " + validator.getName());
-                isGlobalValidScope = validator.validateScope(authzReqMsgCtx);
+        boolean valid = validateScope(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler);
+        if (valid) {
+            List<ScopeValidator> globalScopeValidators = OAuthComponentServiceHolder.getInstance().getScopeValidators();
+            // Setting to true so that if there are no global validators, we could ignore this.
+            boolean isGlobalValidScope = true;
+            for (ScopeValidator validator : globalScopeValidators) {
+                if (validator.canHandle(authzReqMsgCtx)) {
+                    log.debug("Engaging global scope validator in authorization flow : " + validator.getName());
+                    isGlobalValidScope = validator.validateScope(authzReqMsgCtx);
+                }
+                // If one global validator fails, we skip other validators.
+                if (!isGlobalValidScope) {
+                    log.debug("Scope Validation failed at the global level by : " + validator.getName());
+                    break;
+                }
             }
-            // if one global validator fails, we skip other validators
-            if (!isGlobalValidScope) {
-                log.debug("Scope Validation failed at the global level by : " + validator.getName());
-                break;
-            }
-        }
-        //Scope is validated at app level only if it passes at server/global level
-        if (isGlobalValidScope) {
-            //authorization at authorization handler manager
-            boolean valid = validateScope(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler);
-            if (valid) {
-                //Add authorized internal scopes to the request for sending in the response.
-                addAuthorizedInternalScopes(authzReqMsgCtx, authorizedInternalScopes);
-            }
+            //Add authorized internal scopes to the request for sending in the response.
+            addAuthorizedInternalScopes(authzReqMsgCtx, authorizedInternalScopes);
         }
         return authorizeRespDTO;
     }

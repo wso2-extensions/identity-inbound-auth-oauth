@@ -49,18 +49,22 @@ public class OAuthComponentServiceHolder {
     private OAuthAdminServiceImpl oAuthAdminService;
 
     public List<ScopeValidator> getScopeValidators() {
+
         return scopeValidators;
     }
 
     public void addScopeValidator(ScopeValidator scopeValidator) {
+
         scopeValidators.add(scopeValidator);
     }
 
     public void removeScopeValidator(ScopeValidator scopeValidator) {
+
         scopeValidators.remove(scopeValidator);
     }
 
     public void setScopeValidators(List<ScopeValidator> scopeValidators) {
+
         this.scopeValidators = scopeValidators;
     }
 
