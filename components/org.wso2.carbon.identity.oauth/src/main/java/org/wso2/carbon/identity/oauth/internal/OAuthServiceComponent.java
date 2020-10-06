@@ -249,27 +249,4 @@ public class OAuthServiceComponent {
         OAuthComponentServiceHolder.getInstance().removeTokenBinderInfo(tokenBinderInfo);
     }
 
-    @Reference(
-            name = "scope.validator.service",
-            service = ScopeValidator.class,
-            cardinality = ReferenceCardinality.MULTIPLE,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "removeScopeValidatorService"
-    )
-    protected void addScopeValidatorService(ScopeValidator scopeValidator) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Setting the Scope validator Service");
-        }
-        OAuthComponentServiceHolder.getInstance().addScopeValidator(scopeValidator);
-    }
-
-    protected void removeScopeValidatorService(ScopeValidator scopeValidator) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Un-setting the Scope validator Service");
-        }
-        OAuthComponentServiceHolder.getInstance().removeScopeValidator(scopeValidator);
-    }
-
 }
