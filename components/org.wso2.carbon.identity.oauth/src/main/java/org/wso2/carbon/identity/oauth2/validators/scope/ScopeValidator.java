@@ -93,3 +93,4 @@ public interface ScopeValidator {
      */
     String getName();
 }
+
