@@ -2511,7 +2511,7 @@ public class OAuth2Util {
     public static String getThumbPrint(Certificate certificate) throws IdentityOAuth2Exception {
 
         try {
-            MessageDigest digestValue = MessageDigest.getInstance("SHA-1");
+            MessageDigest digestValue = MessageDigest.getInstance("SHA-256");
             byte[] der = certificate.getEncoded();
             digestValue.update(der);
             byte[] digestInBytes = digestValue.digest();
