@@ -723,6 +723,7 @@ public class EndpointUtil {
         return validateParams(request, paramMap);
     }
 
+    @Deprecated
     public static boolean validateParams(HttpServletRequest request, MultivaluedMap<String, String> paramMap) {
 
         return validateParams(request, (Map<String, List<String>>) paramMap);
