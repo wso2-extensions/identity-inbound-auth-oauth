@@ -4,6 +4,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -84,6 +85,33 @@ public class NTLMAuthenticationValidatorTest {
             } catch (OAuthProblemException e) {
                 assertTrue(e.getMessage().startsWith(OAuthError.TokenResponse.INVALID_REQUEST), "Invalid error " +
                         "message received. Received was: " + e.getMessage());
+            }
+        }
+    }
+
+    @DataProvider(name = "Content Type Provider")
+    public Object[][] getContentType() {
+
+        return new Object[][]{
+                {"application/x-www-form-urlencoded", true},
+                {"application/json", true},
+                {"application/xml", false},
+        };
+    }
+
+    @Test(dataProvider = "Content Type Provider")
+    public void testValidateContentType(String contentType, boolean shouldPass) throws Exception {
+
+        HttpServletRequest mockRequest = mock(HttpServletRequest.class);
+        when(mockRequest.getContentType()).thenReturn(contentType);
+        try {
+            testedValidator.validateContentType(mockRequest);
+            if (!shouldPass) {
+                Assert.fail(contentType + " should not be an allowed content type");
+            }
+        } catch (OAuthProblemException e) {
+            if (shouldPass) {
+                Assert.fail(contentType + " should be an allowed content type");
             }
         }
     }
