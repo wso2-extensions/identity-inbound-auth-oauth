@@ -18,9 +18,12 @@
 package org.wso2.carbon.identity.oauth.common;
 
 import org.apache.oltu.oauth2.common.OAuth;
+import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.validators.AbstractValidator;
 
 import javax.servlet.http.HttpServletRequest;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthCommonUtil.validateContentTypes;
 
 /**
  * This class used to validate the SAML2 grant.
@@ -33,4 +36,9 @@ public class SAML2GrantValidator extends AbstractValidator<HttpServletRequest> {
         requiredParams.add(OAuth.OAUTH_ASSERTION);
     }
 
+    @Override
+    public void validateContentType(HttpServletRequest request) throws OAuthProblemException {
+
+        validateContentTypes(request);
+    }
 }

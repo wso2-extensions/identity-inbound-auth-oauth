@@ -17,6 +17,11 @@
 package org.wso2.carbon.identity.oauth2.validators.grant;
 
 import org.apache.oltu.oauth2.as.validator.PasswordValidator;
+import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+
+import javax.servlet.http.HttpServletRequest;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthCommonUtil.validateContentTypes;
 
 /**
  * Grant validator for Resource Owner Password Grant Type.
@@ -29,5 +34,11 @@ public class PasswordGrantValidator extends PasswordValidator {
         // org.wso2.carbon.identity.oauth2.token.handlers.clientauth.ClientAuthenticationHandler extensions point.
         // Therefore client_id and client_secret are not mandatory since client can authenticate with other means.
         enforceClientAuthentication = false;
+    }
+
+    @Override
+    public void validateContentType(HttpServletRequest request) throws OAuthProblemException {
+
+        validateContentTypes(request);
     }
 }
