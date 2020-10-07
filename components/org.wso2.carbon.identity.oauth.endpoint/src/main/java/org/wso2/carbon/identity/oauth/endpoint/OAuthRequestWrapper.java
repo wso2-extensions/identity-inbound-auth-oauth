@@ -39,6 +39,7 @@ public class OAuthRequestWrapper extends HttpServletRequestWrapper {
     private Map<String, List<String>> form;
     private Enumeration<String> parameterNames;
 
+    @Deprecated
     public OAuthRequestWrapper(HttpServletRequest request, MultivaluedMap<String, String> form) {
 
         this(request, (Map<String, List<String>>) form);

@@ -40,6 +40,7 @@ public class OAuthCommonUtilTest {
         return new Object[][]{
                 {"application/x-www-form-urlencoded", true},
                 {"application/json", true},
+                {"application/json; charset=utf-8", true},
                 {"application/xml", false},
         };
     }
