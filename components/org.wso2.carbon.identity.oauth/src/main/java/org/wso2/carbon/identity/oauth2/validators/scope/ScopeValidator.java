@@ -29,30 +29,6 @@ import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageCo
 public interface ScopeValidator {
 
     /**
-     * Checks whether the validator can be engaged.
-     *
-     * @param authzReqMessageContext Authorization request.
-     * @return True if it can handle, otherwise false.
-     */
-    boolean canHandle(OAuthAuthzReqMessageContext authzReqMessageContext);
-
-    /**
-     * Checks whether the validator can be engaged.
-     *
-     * @param tokenReqMessageContext OAuthTokenReqMessageContext.
-     * @return True if it can handle, otherwise false.
-     */
-    boolean canHandle(OAuthTokenReqMessageContext tokenReqMessageContext);
-
-    /**
-     * Checks whether the validator can be engaged.
-     *
-     * @param tokenValidationMessageContext OAuth2TokenValidationMessageContext..
-     * @return True if it can handle, otherwise false.
-     */
-    boolean canHandle(OAuth2TokenValidationMessageContext tokenValidationMessageContext);
-
-    /**
      * Validates scopes in the authorization request and manipulate the permitted scopes within the request. Engage
      * it after application-level validators at ResponseTypeHandler level.
      *

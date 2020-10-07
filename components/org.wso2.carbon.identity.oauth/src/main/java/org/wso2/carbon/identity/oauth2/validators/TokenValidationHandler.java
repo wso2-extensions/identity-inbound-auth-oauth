@@ -682,16 +682,12 @@ public class TokenValidationHandler {
         // Setting to true so that if there are no global validators, we could ignore this.
         boolean isGlobalValidScope = true;
         for (ScopeValidator validator : globalScopeValidators) {
-            if (validator.canHandle(messageContext)) {
-                log.debug("Engaging global scope validator at token validation flow : " + validator.getName());
-                isGlobalValidScope = validator.validateScope(messageContext);
-            }
-            // If one global validator fails, we skip other validators.
+            log.debug("Engaging global scope validator at token validation flow : " + validator.getName());
+            isGlobalValidScope = validator.validateScope(messageContext);
             if (!isGlobalValidScope) {
                 log.debug("Scope Validation failed at global level by : " + validator.getName());
-                return false;
             }
         }
-        return isGlobalValidScope;
+        return true;
     }
 }
