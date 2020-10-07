@@ -2511,7 +2511,7 @@ public class OAuth2Util {
     public static String getThumbPrint(Certificate certificate) throws IdentityOAuth2Exception {
 
         try {
-            MessageDigest digestValue = MessageDigest.getInstance("SHA-1");
+            MessageDigest digestValue = MessageDigest.getInstance("SHA-256");
             byte[] der = certificate.getEncoded();
             digestValue.update(der);
             byte[] digestInBytes = digestValue.digest();
@@ -2528,7 +2528,7 @@ public class OAuth2Util {
             String error = "Error occurred while encoding thumbPrint from certificate.";
             throw new IdentityOAuth2Exception(error, e);
         } catch (NoSuchAlgorithmException e) {
-            String error = "Error in obtaining SHA-1 thumbprint from certificate.";
+            String error = "Error in obtaining SHA-256 thumbprint from certificate.";
             throw new IdentityOAuth2Exception(error, e);
         }
 
