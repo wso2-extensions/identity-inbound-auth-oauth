@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.common;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * This class define OAuth related constants.
  */
@@ -31,6 +34,8 @@ public final class OAuthConstants {
     //OAuth2 request headers.
     public static final String HTTP_REQ_HEADER_AUTHZ = "Authorization";
     public static final String HTTP_REQ_HEADER_AUTH_METHOD_BASIC = "Basic";
+    public static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList("application/x-www-form-urlencoded",
+                                                                           "application/json");
 
     // OAuth2 response headers
     public static final String HTTP_RESP_HEADER_CACHE_CONTROL = "Cache-Control";

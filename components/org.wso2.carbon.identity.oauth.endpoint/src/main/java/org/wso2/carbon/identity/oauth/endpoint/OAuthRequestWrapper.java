@@ -18,9 +18,13 @@
 
 package org.wso2.carbon.identity.oauth.endpoint;
 
+import org.apache.commons.collections.CollectionUtils;
+
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
@@ -32,15 +36,21 @@ import javax.ws.rs.core.MultivaluedMap;
  */
 public class OAuthRequestWrapper extends HttpServletRequestWrapper {
 
-    private MultivaluedMap<String, String> form;
+    private Map<String, List<String>> form;
     private Enumeration<String> parameterNames;
 
+    @Deprecated
     public OAuthRequestWrapper(HttpServletRequest request, MultivaluedMap<String, String> form) {
+
+        this(request, (Map<String, List<String>>) form);
+    }
+
+    public OAuthRequestWrapper(HttpServletRequest request, Map<String, List<String>> form) {
 
         super(request);
         this.form = form;
 
-        Set<String> parameterNameSet = new HashSet<String>();
+        Set<String> parameterNameSet = new HashSet<>();
         // Add post parameters
         parameterNameSet.addAll(form.keySet());
         // Add servlet request parameters
@@ -57,7 +67,9 @@ public class OAuthRequestWrapper extends HttpServletRequestWrapper {
 
         String value = super.getParameter(name);
         if (value == null) {
-            value = form.getFirst(name);
+            if (CollectionUtils.isNotEmpty(form.get(name))) {
+                value = form.get(name).get(0);
+            }
         }
         return value;
     }
