@@ -253,14 +253,16 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
         }
         // Deriving the list of global level scope validation implementations.
+        // These are global/server level scope validators which are engaged after the app level scope validation.
         List<ScopeValidator> globalScopeValidators = OAuthComponentServiceHolder.getInstance().getScopeValidators();
-        // Setting to true so that if there are no global validators, we could ignore this.
-        boolean isGlobalValidScope = true;
         for (ScopeValidator validator : globalScopeValidators) {
-            log.debug("Engaging global scope validator in token issuer flow : " + validator.getName());
-            isGlobalValidScope = validator.validateScope(tokReqMsgCtx);
-            if (!isGlobalValidScope) {
-                log.debug("Scope Validation failed at the global level by : " + validator.getName());
+            if (log.isDebugEnabled()) {
+                log.debug("Engaging global scope validator in token issuer flow : " + validator.getName());
+            }
+            boolean isGlobalValidScope = validator.validateScope(tokReqMsgCtx);
+            if (log.isDebugEnabled()) {
+                log.debug("Scope Validation was" + isGlobalValidScope + "at the global level by : "
+                        + validator.getName());
             }
         }
 

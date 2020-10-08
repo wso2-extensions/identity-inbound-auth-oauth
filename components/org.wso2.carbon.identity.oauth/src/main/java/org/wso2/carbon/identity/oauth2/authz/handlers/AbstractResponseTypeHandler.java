@@ -104,12 +104,16 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
         oauthAuthzMsgCtx.setAccessTokenIssuedTime(scopeValidationCallback.getAccessTokenValidityPeriod());
         oauthAuthzMsgCtx.setApprovedScope(scopeValidationCallback.getApprovedScope());
         // Deriving the global level scope validator implementations.
+        // These are global/server level scope validators which are engaged after the app level scope validation.
         List<ScopeValidator> globalScopeValidators = OAuthComponentServiceHolder.getInstance().getScopeValidators();
         for (ScopeValidator validator : globalScopeValidators) {
-            log.debug("Engaging global scope validator in token issuer flow : " + validator.getName());
+            if (log.isDebugEnabled()) {
+                log.debug("Engaging global scope validator in token issuer flow : " + validator.getName());
+            }
             boolean isGlobalValidScope = validator.validateScope(oauthAuthzMsgCtx);
-            if (!isGlobalValidScope) {
-                log.debug("Scope Validation failed at the global level by : " + validator.getName());
+            if (log.isDebugEnabled()) {
+                log.debug("Scope Validation was" + isGlobalValidScope + "at the global level by : "
+                        + validator.getName());
             }
         }
         return scopeValidationCallback.isValidScope();
