@@ -28,7 +28,6 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authcontext.AuthorizationContextTokenGenerator;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -39,7 +38,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -194,9 +192,6 @@ public class TokenValidationHandler {
         if (!tokenValidator.validateScope(messageContext)) {
             return buildClientAppErrorResponse("Scope validation failed at app level");
         }
-
-        // Engage server level scope validation after the app level validation.
-        isScopeGloballyValid(messageContext);
 
         if (!tokenValidator.validateAccessToken(messageContext)) {
             return buildClientAppErrorResponse("OAuth2 access token validation failed");
@@ -485,9 +480,6 @@ public class TokenValidationHandler {
             return buildIntrospectionErrorResponse("Scope validation failed at app level");
         }
 
-        // Engage server level scope validation after the app level validation.
-        isScopeGloballyValid(messageContext);
-
         // All set. mark the token active.
         introResp.setActive(true);
         return introResp;
@@ -673,21 +665,5 @@ public class TokenValidationHandler {
     private boolean isSkipValidatorForJWT(OAuth2TokenValidator tokenValidator, boolean isJWTTokenValidation) {
 
         return isJWTTokenValidation && BEARER_TOKEN_TYPE.equals(tokenValidator.getTokenType());
-    }
-
-    private boolean isScopeGloballyValid(OAuth2TokenValidationMessageContext messageContext)
-            throws IdentityOAuth2Exception {
-
-        List<ScopeValidator> globalScopeValidators = OAuthComponentServiceHolder.getInstance().getScopeValidators();
-        // Setting to true so that if there are no global validators, we could ignore this.
-        boolean isGlobalValidScope = true;
-        for (ScopeValidator validator : globalScopeValidators) {
-            log.debug("Engaging global scope validator at token validation flow : " + validator.getName());
-            isGlobalValidScope = validator.validateScope(messageContext);
-            if (!isGlobalValidScope) {
-                log.debug("Scope Validation failed at global level by : " + validator.getName());
-            }
-        }
-        return true;
     }
 }

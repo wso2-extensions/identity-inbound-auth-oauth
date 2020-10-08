@@ -29,7 +29,6 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
-import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -37,7 +36,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
-import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.util.ArrayList;
@@ -142,16 +140,6 @@ public class AuthorizationHandlerManager {
 
         boolean valid = validateScope(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler);
         if (valid) {
-            List<ScopeValidator> globalScopeValidators = OAuthComponentServiceHolder.getInstance().getScopeValidators();
-            // Setting to true so that if there are no global validators, we could ignore this.
-            boolean isGlobalValidScope = true;
-            for (ScopeValidator validator : globalScopeValidators) {
-                log.debug("Engaging global scope validator in authorization flow : " + validator.getName());
-                isGlobalValidScope = validator.validateScope(authzReqMsgCtx);
-                if (!isGlobalValidScope) {
-                    log.debug("Scope Validation failed at the global level by : " + validator.getName());
-                }
-            }
             //Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(authzReqMsgCtx, authorizedInternalScopes);
         }
