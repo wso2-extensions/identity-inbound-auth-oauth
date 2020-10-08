@@ -56,8 +56,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CURRENT_SESSION_IDENTIFIER;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PRESERVE_SESSION_WHEN_PASSWORD_UPDATE;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.
+        CURRENT_SESSION_IDENTIFIER;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.Config.
+        PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 
 /**
@@ -304,7 +306,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             }
 
             boolean isTokenPreservingAtPasswordUpdateEnabled =
-                    Boolean.parseBoolean(IdentityUtil.getProperty(PRESERVE_SESSION_WHEN_PASSWORD_UPDATE));
+                    Boolean.parseBoolean(IdentityUtil.getProperty(PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE));
             String currentTokenBindingReference = "";
             if (isTokenPreservingAtPasswordUpdateEnabled) {
                 if (IdentityUtil.threadLocalProperties.get().get(CURRENT_SESSION_IDENTIFIER) != null) {
