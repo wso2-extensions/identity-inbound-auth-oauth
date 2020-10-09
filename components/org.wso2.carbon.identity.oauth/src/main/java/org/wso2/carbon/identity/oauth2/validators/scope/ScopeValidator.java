@@ -51,12 +51,11 @@ public interface ScopeValidator {
     boolean validateScope(OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception;
 
     /**
-     * Validates scopes in the token request and manipulate the permitted scopes within the request. Engage it after
-     * application-level validators at TokenValidator level.
+     * Validates the scopes present in the token in the token validation flow.
+     * Engage it after application-level validators at TokenValidator level.
      *
      * @param tokenValidationMessageContext OAuth2TokenValidationMessageContext.
-     * @return True if the user has enough permission to generate tokens with requested scopes or
-     * no scopes are requested, otherwise false.
+     * @return True if scopes present in the tokens are validated successfully, otherwise false.
      * @throws IdentityOAuth2Exception Identity Oauth Exception.
      */
     boolean validateScope(OAuth2TokenValidationMessageContext tokenValidationMessageContext)
