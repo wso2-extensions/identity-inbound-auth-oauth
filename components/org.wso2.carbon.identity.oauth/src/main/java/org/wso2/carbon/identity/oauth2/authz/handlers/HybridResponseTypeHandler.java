@@ -55,7 +55,7 @@ public class HybridResponseTypeHandler extends AbstractResponseTypeHandler {
             ResponseTypeHandlerUtil.buildAuthorizationCodeResponseDTO(respDTO, authzCodeDO);
         }
 
-        // Generating a single access token if id_token and/or token is in response_type
+        // Generating a single access token if id_token and/or token is in response_type.
         if (isAccessTokenIssued(responseType) || isIDTokenIssued(responseType)) {
             AccessTokenDO accessTokenDO = ResponseTypeHandlerUtil.generateAccessToken(oauthAuthzMsgCtx, cacheEnabled);
             // Starting to trigger post listeners.

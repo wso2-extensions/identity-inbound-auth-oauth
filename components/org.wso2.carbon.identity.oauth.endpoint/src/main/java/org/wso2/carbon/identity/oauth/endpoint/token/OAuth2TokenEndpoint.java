@@ -45,6 +45,9 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthTokenRequest;
 
+import java.util.List;
+import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
@@ -58,6 +61,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.parseJsonTokenRequest;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.triggerOnTokenExceptionListeners;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateOauthApplication;
@@ -76,11 +80,37 @@ public class OAuth2TokenEndpoint {
 
     @POST
     @Path("/")
+    @Consumes("application/json")
+    @Produces("application/json")
+    public Response issueAccessToken(@Context HttpServletRequest request, String payload) throws
+            OAuthSystemException, InvalidRequestParentException {
+
+        Map<String, List<String>> paramMap;
+        try {
+            startSuperTenantFlow();
+            paramMap = parseJsonTokenRequest(payload);
+        } catch (TokenEndpointBadRequestException e) {
+            triggerOnTokenExceptionListeners(e, request, null);
+            throw e;
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+        return issueAccessToken(request, paramMap);
+    }
+
+    @POST
+    @Path("/")
     @Consumes("application/x-www-form-urlencoded")
     @Produces("application/json")
     public Response issueAccessToken(@Context HttpServletRequest request,
                                      MultivaluedMap<String, String> paramMap)
             throws OAuthSystemException, InvalidRequestParentException {
+
+        return issueAccessToken(request, (Map<String, List<String>>) paramMap);
+    }
+
+    protected Response issueAccessToken(HttpServletRequest request, Map<String, List<String>> paramMap) throws
+            OAuthSystemException, InvalidRequestParentException {
 
         try {
             startSuperTenantFlow();
@@ -138,7 +168,7 @@ public class OAuth2TokenEndpoint {
         return OAuthError.TokenResponse.INVALID_REQUEST.equalsIgnoreCase(e.getError());
     }
 
-    private void validateRepeatedParams(HttpServletRequest request, MultivaluedMap<String, String> paramMap)
+    private void validateRepeatedParams(HttpServletRequest request, Map<String, List<String>> paramMap)
             throws TokenEndpointBadRequestException {
 
         if (!validateParams(request, paramMap)) {
