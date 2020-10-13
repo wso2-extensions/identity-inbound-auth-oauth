@@ -51,8 +51,14 @@ public class OAuth2ScopeService {
         // to register same scope name across OAuth2 and OIDC scope endpoints. We keep the scope name as unique.
         boolean isScopeExists = isScopeExists(scope.getName(), true);
         if (isScopeExists) {
-            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_CONFLICT_REQUEST_EXISTING_SCOPE, scope.getName());
+            // Rechecking to see if the existing scope is an OIDC scope to improve error response.
+            if (isScopeExists(scope.getName(), false)) {
+                throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
+                        ERROR_CODE_CONFLICT_REQUEST_EXISTING_SCOPE, scope.getName());
+            } else {
+                throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
+                        ERROR_CODE_CONFLICT_REQUEST_EXISTING_SCOPE_OIDC, scope.getName());
+            }
         }
 
         int tenantID = Oauth2ScopeUtils.getTenantID();
