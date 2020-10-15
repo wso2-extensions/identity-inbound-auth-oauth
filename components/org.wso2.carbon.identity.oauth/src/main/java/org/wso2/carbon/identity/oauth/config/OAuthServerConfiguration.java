@@ -478,6 +478,11 @@ public class OAuthServerConfiguration {
         return showDisplayNameInConsentPage;
     }
 
+    /**
+     * Get the list of alloed scopes.
+     *
+     * @return String returns a list of scope string.
+     */
     public List<String> getAllowedScopes() {
 
         return allowedScopes;
