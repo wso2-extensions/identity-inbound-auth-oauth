@@ -56,6 +56,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthRuntimeException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -3229,6 +3230,36 @@ public class OAuth2Util {
                 throw new IdentityOAuth2Exception(errorMsg, e);
             }
         } else {
+            return getIssuerLocation(tenantDomain);
+        }
+    }
+
+    /**
+     * Used to get the issuer url for a given tenant.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Token issuer url.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static String getIssuerLocation(String tenantDomain) throws IdentityOAuth2Exception {
+
+        /*
+        * IMPORTANT:
+        * This method should only honor the given tenant.
+        * Do not add any auto tenant resolving logic.
+        */
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            try {
+                startTenantFlow(tenantDomain);
+                return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
+            } catch (URLBuilderException e) {
+                String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
+                        " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
+                throw new IdentityOAuth2Exception(errorMsg, e);
+            } finally {
+                endTenantFlow();
+            }
+        } else {
             IdentityProvider identityProvider = getResidentIdp(tenantDomain);
             FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
             // Get OIDC authenticator
@@ -3812,5 +3843,17 @@ public class OAuth2Util {
                         "tenantDomain: " + tenantDomainFromContext);
             }
         }
+    }
+
+    private static void startTenantFlow(String tenantDomain) {
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(IdentityTenantUtil.getTenantId(tenantDomain));
+    }
+
+    private static void endTenantFlow() {
+
+        PrivilegedCarbonContext.endTenantFlow();
     }
 }
