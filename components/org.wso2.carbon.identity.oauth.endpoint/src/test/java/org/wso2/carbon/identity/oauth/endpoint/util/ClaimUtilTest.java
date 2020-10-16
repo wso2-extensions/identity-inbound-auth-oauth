@@ -294,6 +294,7 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
 
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.extractDomainFromName(anyString())).thenReturn(userStoreDomain);
+        when(IdentityUtil.addDomainToName(anyString(), anyString())).thenCallRealMethod();
 
         when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);

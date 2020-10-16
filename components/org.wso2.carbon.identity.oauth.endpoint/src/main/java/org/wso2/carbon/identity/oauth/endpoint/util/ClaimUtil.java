@@ -117,7 +117,7 @@ public class ClaimUtil {
             try {
                 AccessTokenDO accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(
                         OAuth2Util.getAccessTokenIdentifier(tokenResponse));
-                username = accessTokenDO.getAuthzUser().getUserName();
+                username = accessTokenDO.getAuthzUser().toFullQualifiedUsername();
                 userTenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
 
                 // If the authenticated user is a federated user and had not mapped to local users, no requirement to
