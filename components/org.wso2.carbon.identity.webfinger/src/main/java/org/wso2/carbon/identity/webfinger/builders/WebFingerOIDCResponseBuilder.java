@@ -60,7 +60,7 @@ public class WebFingerOIDCResponseBuilder {
 
         String oidcIssuerLocation;
         if (isUseEntityIdAsIssuerInOidcDiscovery()) {
-            oidcIssuerLocation = OAuth2Util.getIdTokenIssuer(tenantDomain);
+            oidcIssuerLocation = OAuth2Util.getIssuerLocation(tenantDomain);
         } else {
             oidcIssuerLocation = OAuth2Util.OAuthURL.getOidcDiscoveryEPUrl(tenantDomain);
         }

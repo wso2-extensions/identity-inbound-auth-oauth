@@ -69,7 +69,7 @@ public class WebFingerOIDCResponseBuilderTest extends PowerMockTestCase {
     @Test
     public void testBuildWebFingerResponse() throws Exception {
 
-        when(OAuth2Util.getIdTokenIssuer(any(String.class))).thenReturn(oidcDiscoveryUrl);
+        when(OAuth2Util.getIssuerLocation(any(String.class))).thenReturn(oidcDiscoveryUrl);
         WebFingerResponse webFingerResponse = webFingerOIDCResponseBuilder.buildWebFingerResponse(webFingerRequest);
         assertEquals(webFingerResponse.getLinks().get(0).getRel(), rel, "rel is properly assigned");
         assertEquals(webFingerResponse.getLinks().get(0).getHref(), oidcDiscoveryUrl,
@@ -82,7 +82,7 @@ public class WebFingerOIDCResponseBuilderTest extends PowerMockTestCase {
     public void testBuildWebFingerException() throws WebFingerEndpointException, ServerConfigurationException,
             IdentityException {
 
-        when(OAuth2Util.getIdTokenIssuer(any(String.class))).thenThrow
+        when(OAuth2Util.getIssuerLocation(any(String.class))).thenThrow
                 (new IdentityOAuth2Exception("Error"));
         webFingerOIDCResponseBuilder.buildWebFingerResponse(webFingerRequest);
     }
