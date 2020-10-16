@@ -183,17 +183,32 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     public boolean validateRequestObject(RequestObject requestObject, OAuth2Parameters oAuth2Parameters)
             throws RequestObjectException {
 
-        boolean isValid = validateClientIdAndResponseType(requestObject, oAuth2Parameters) && checkExpirationTime
-                (requestObject);
-        if (isParamPresent(requestObject, Constants.REQUEST_URI)) {
-            isValid = false;
-        } else if (isParamPresent(requestObject, Constants.REQUEST)) {
-            isValid = false;
-        } else if (requestObject.isSigned()) {
-            isValid = isValidIssuer(requestObject, oAuth2Parameters) && isValidAudience(requestObject,
-                    oAuth2Parameters);
+        if (!validateClientIdAndResponseType(requestObject, oAuth2Parameters)) {
+            return false;
         }
-        return isValid;
+
+        if (!checkExpirationTime(requestObject)) {
+            return false;
+        }
+
+        if (!isValidRedirectUri(requestObject, oAuth2Parameters)) {
+            return false;
+        }
+
+        if (isParamPresent(requestObject, Constants.REQUEST_URI) || isParamPresent(requestObject, Constants.REQUEST)) {
+            return false;
+        }
+
+        if (requestObject.isSigned()) {
+            if (!isValidIssuer(requestObject, oAuth2Parameters)) {
+                return false;
+            }
+
+            if (!isValidAudience(requestObject, oAuth2Parameters)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     protected boolean isValidAudience(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws
@@ -405,4 +420,17 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         return false;
     }
 
+    /**
+     * Check if the redirect uri in the request object is valid.
+     *
+     * @param requestObject Request object.
+     * @param oAuth2Parameters OAuth2 parameters.
+     * @return True if redirect uri is valid.
+     */
+    protected boolean isValidRedirectUri(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) {
+
+        String redirectUriInReqObj = requestObject.getClaimValue(Constants.REDIRECT_URI);
+        return StringUtils.isBlank(redirectUriInReqObj) || StringUtils.equals(redirectUriInReqObj,
+                oAuth2Parameters.getRedirectURI());
+    }
 }
