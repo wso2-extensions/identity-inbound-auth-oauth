@@ -3813,4 +3813,19 @@ public class OAuth2Util {
             }
         }
     }
+
+    /**
+     * Determines if the scope is specified in the whitelist.
+     *
+     * @param scope - The scope key to check.
+     * @return - 'true' if the scope is allowed. 'false' if not.
+     */
+    public static boolean isAllowedScope(List<String> scopeSkipList, String scope) {
+        for (String scopeTobeSkipped : scopeSkipList) {
+            if (scope.matches(scopeTobeSkipped)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -380,6 +381,7 @@ public class TokenValidationHandler {
 
         OAuth2IntrospectionResponseDTO introResp = new OAuth2IntrospectionResponseDTO();
         AccessTokenDO accessTokenDO;
+        List<String> requestedAllowedScopes = new ArrayList<>();
 
         if (messageContext.getProperty(OAuth2Util.REMOTE_ACCESS_TOKEN) != null
                 && "true".equalsIgnoreCase((String) messageContext.getProperty(OAuth2Util.REMOTE_ACCESS_TOKEN))) {
@@ -408,9 +410,15 @@ public class TokenValidationHandler {
             }
 
         } else {
-
             try {
                 accessTokenDO = OAuth2Util.findAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
+                List<String> allowedScope = OAuthServerConfiguration.getInstance().getAllowedScopes();
+                String[] requestedScope = accessTokenDO.getScope();
+                for (String scope : requestedScope) {
+                    if (OAuth2Util.isAllowedScope(allowedScope, scope)) {
+                        requestedAllowedScopes.add(scope);
+                    }
+                }
             } catch (IllegalArgumentException e) {
                 // access token not found in the system.
                 return buildIntrospectionErrorResponse(e.getMessage());
@@ -480,6 +488,7 @@ public class TokenValidationHandler {
             return buildIntrospectionErrorResponse("Scope validation failed at app level");
         }
 
+        addAllowedScopes(messageContext, requestedAllowedScopes.toArray(new String[requestedAllowedScopes.size()]));
         // All set. mark the token active.
         introResp.setActive(true);
         return introResp;
@@ -665,5 +674,13 @@ public class TokenValidationHandler {
     private boolean isSkipValidatorForJWT(OAuth2TokenValidator tokenValidator, boolean isJWTTokenValidation) {
 
         return isJWTTokenValidation && BEARER_TOKEN_TYPE.equals(tokenValidator.getTokenType());
+    }
+
+    private void addAllowedScopes(OAuth2TokenValidationMessageContext oAuth2TokenValidationMessageContext,
+                                  String[] allowedScopes) {
+
+        String[] scopes = oAuth2TokenValidationMessageContext.getResponseDTO().getScope();
+        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, allowedScopes);
+        oAuth2TokenValidationMessageContext.getResponseDTO().setScope(scopesToReturn);
     }
 }

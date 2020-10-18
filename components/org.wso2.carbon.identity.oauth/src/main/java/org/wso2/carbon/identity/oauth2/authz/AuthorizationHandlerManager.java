@@ -129,6 +129,15 @@ public class AuthorizationHandlerManager {
             return authorizeRespDTO;
         }
 
+        List<String> allowedScope = OAuthServerConfiguration.getInstance().getAllowedScopes();
+        List<String> requestedAllowedScopes = new ArrayList<>();
+        String[] requestedScope = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
+        for (String scope : requestedScope) {
+            if (OAuth2Util.isAllowedScope(allowedScope, scope)) {
+                requestedAllowedScopes.add(scope);
+            }
+        }
+
         //Execute Internal SCOPE Validation.
         JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
         String[] authorizedInternalScopes = scopeValidator.validateScope(authzReqMsgCtx);
@@ -142,8 +151,25 @@ public class AuthorizationHandlerManager {
         if (valid) {
             //Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(authzReqMsgCtx, authorizedInternalScopes);
+            addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[requestedAllowedScopes.size()]));
         }
         return authorizeRespDTO;
+    }
+
+    /**
+     * Determines if the scope is specified in the whitelist.
+     *
+     * @param scope - The scope key to check
+     * @return - 'true' if the scope is white listed. 'false' if not.
+     */
+    public boolean isAllowedScope(List<String> scopeSkipList, String scope) {
+
+        for (String scopeTobeSkipped : scopeSkipList) {
+            if (scope.matches(scopeTobeSkipped)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void addAuthorizedInternalScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
@@ -151,6 +177,13 @@ public class AuthorizationHandlerManager {
 
         String[] scopes = authzReqMsgCtx.getApprovedScope();
         String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, authorizedInternalScopes);
+        authzReqMsgCtx.setApprovedScope(scopesToReturn);
+    }
+
+    private void addAllowedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx, String[] allowedScopes) {
+
+        String[] scopes = authzReqMsgCtx.getApprovedScope();
+        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, allowedScopes);
         authzReqMsgCtx.setApprovedScope(scopesToReturn);
     }
 

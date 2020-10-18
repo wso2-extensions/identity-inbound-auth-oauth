@@ -269,6 +269,15 @@ public class AccessTokenIssuer {
             return tokenRespDTO;
         }
 
+        List<String> allowedScope = OAuthServerConfiguration.getInstance().getAllowedScopes();
+        List<String> requestedAllowedScopes = new ArrayList<>();
+        String[] requestedScope = tokReqMsgCtx.getScope();
+        for (String scope : requestedScope) {
+            if (OAuth2Util.isAllowedScope(allowedScope, scope)) {
+                requestedAllowedScopes.add(scope);
+            }
+        }
+
         //Execute Internal SCOPE Validation.
         JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
         String[] authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
@@ -281,6 +290,7 @@ public class AccessTokenIssuer {
         if (isValidScope) {
             //Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(tokReqMsgCtx, authorizedInternalScopes);
+            addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes);
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid scope provided by client Id: " + tokenReqDTO.getClientId());
@@ -357,6 +367,21 @@ public class AccessTokenIssuer {
 
         String[] scopes = tokReqMsgCtx.getScope();
         String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, authorizedInternalScopes);
+        tokReqMsgCtx.setScope(scopesToReturn);
+    }
+
+    private void addAllowedScopes(OAuthTokenReqMessageContext tokReqMsgCtx, List<String> allowedScopes) {
+
+        String[] scopes = tokReqMsgCtx.getScope();
+        // Duplicate scopes are removed from the list as there is no separate store for approved scopes
+        // available at OAuthTokenReqMessageContext.
+        for (String scope : scopes) {
+            if (allowedScopes.contains(scope)) {
+                allowedScopes.remove(scope);
+            }
+        }
+        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, allowedScopes.toArray(
+                new String[allowedScopes.size()]));
         tokReqMsgCtx.setScope(scopesToReturn);
     }
 
