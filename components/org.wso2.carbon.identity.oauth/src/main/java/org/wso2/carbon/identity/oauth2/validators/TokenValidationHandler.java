@@ -491,7 +491,10 @@ public class TokenValidationHandler {
         if (!tokenValidator.validateScope(messageContext)) {
             // This is redundant. But sake of readability.
             introResp.setActive(false);
-            return buildIntrospectionErrorResponse("Scope validation failed at app level");
+            if (log.isDebugEnabled()) {
+                log.debug("Scope validation has failed at app level");
+            }
+            return buildIntrospectionErrorResponse("Scope validation failed");
         }
 
         addAllowedScopes(messageContext, requestedAllowedScopes.toArray(new String[0]));
