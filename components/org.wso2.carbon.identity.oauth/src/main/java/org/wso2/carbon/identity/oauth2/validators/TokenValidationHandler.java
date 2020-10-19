@@ -414,16 +414,16 @@ public class TokenValidationHandler {
                 accessTokenDO = OAuth2Util.findAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
                 List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
                 String[] requestedScopes = accessTokenDO.getScope();
-                List<String> requestedScopesList = new ArrayList<>();;
+                List<String> scopesToBeValidated = new ArrayList<>();;
                 if (requestedScopes != null) {
                     for (String scope : requestedScopes) {
                         if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
                             requestedAllowedScopes.add(scope);
                         } else {
-                            requestedScopesList.add(scope);
+                            scopesToBeValidated.add(scope);
                         }
                     }
-                    accessTokenDO.setScope(requestedScopesList.toArray(new String[requestedScopesList.size()]));
+                    accessTokenDO.setScope(scopesToBeValidated.toArray(new String[0]));
                 }
             } catch (IllegalArgumentException e) {
                 // access token not found in the system.
@@ -494,7 +494,7 @@ public class TokenValidationHandler {
             return buildIntrospectionErrorResponse("Scope validation failed at app level");
         }
 
-        addAllowedScopes(messageContext, requestedAllowedScopes.toArray(new String[requestedAllowedScopes.size()]));
+        addAllowedScopes(messageContext, requestedAllowedScopes.toArray(new String[0]));
         // All set. mark the token active.
         introResp.setActive(true);
         return introResp;

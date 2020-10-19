@@ -272,16 +272,16 @@ public class AccessTokenIssuer {
         List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
         List<String> requestedAllowedScopes = new ArrayList<>();
         String[] requestedScopes = tokReqMsgCtx.getScope();
-        List<String> requestedScopesList = new ArrayList<>();
+        List<String> scopesToBeValidated = new ArrayList<>();
         if (requestedScopes != null) {
             for (String scope : requestedScopes) {
                 if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
                     requestedAllowedScopes.add(scope);
                 } else {
-                    requestedScopesList.add(scope);
+                    scopesToBeValidated.add(scope);
                 }
             }
-            tokReqMsgCtx.setScope(requestedScopesList.toArray(new String[requestedScopesList.size()]));
+            tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
         }
 
         //Execute Internal SCOPE Validation.
@@ -296,7 +296,7 @@ public class AccessTokenIssuer {
         if (isValidScope) {
             //Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(tokReqMsgCtx, authorizedInternalScopes);
-            addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[requestedAllowedScopes.size()]));
+            addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid scope provided by client Id: " + tokenReqDTO.getClientId());

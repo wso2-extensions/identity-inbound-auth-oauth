@@ -132,17 +132,17 @@ public class AuthorizationHandlerManager {
         List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
         List<String> requestedAllowedScopes = new ArrayList<>();
         String[] requestedScopes = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
-        List<String> requestedScopesList = new ArrayList<>();
+        List<String> scopesToBeValidated = new ArrayList<>();
         if (requestedScopes != null) {
             for (String scope : requestedScopes) {
                 if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
                     requestedAllowedScopes.add(scope);
                 } else {
-                    requestedScopesList.add(scope);
+                    scopesToBeValidated.add(scope);
                 }
             }
-            authzReqMsgCtx.getAuthorizationReqDTO().setScopes(requestedScopesList.toArray(
-                    new String[requestedScopesList.size()]));
+            authzReqMsgCtx.getAuthorizationReqDTO().setScopes(scopesToBeValidated.toArray(
+                    new String[0]));
         }
 
         //Execute Internal SCOPE Validation.
@@ -158,7 +158,7 @@ public class AuthorizationHandlerManager {
         if (valid) {
             //Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(authzReqMsgCtx, authorizedInternalScopes);
-            addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[requestedAllowedScopes.size()]));
+            addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         }
         return authorizeRespDTO;
     }
