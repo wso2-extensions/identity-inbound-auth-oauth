@@ -131,17 +131,19 @@ public class AuthorizationHandlerManager {
 
         List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
         List<String> requestedAllowedScopes = new ArrayList<>();
-        String[] requestedScope = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
-        List<String> requestedScopesList = new ArrayList<>();;
-        for (String scope : requestedScope) {
-            if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
-                requestedAllowedScopes.add(scope);
-            } else {
-                requestedScopesList.add(scope);
+        String[] requestedScopes = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
+        List<String> requestedScopesList = new ArrayList<>();
+        if (requestedScopes != null) {
+            for (String scope : requestedScopes) {
+                if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
+                    requestedAllowedScopes.add(scope);
+                } else {
+                    requestedScopesList.add(scope);
+                }
             }
+            authzReqMsgCtx.getAuthorizationReqDTO().setScopes(requestedScopesList.toArray(
+                    new String[requestedScopesList.size()]));
         }
-        authzReqMsgCtx.getAuthorizationReqDTO().setScopes(requestedScopesList.toArray(
-                new String[requestedScopesList.size()]));
 
         //Execute Internal SCOPE Validation.
         JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
