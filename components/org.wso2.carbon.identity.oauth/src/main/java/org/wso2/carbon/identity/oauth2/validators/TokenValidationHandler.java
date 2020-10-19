@@ -414,11 +414,15 @@ public class TokenValidationHandler {
                 accessTokenDO = OAuth2Util.findAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
                 List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
                 String[] requestedScope = accessTokenDO.getScope();
+                List<String> requestedScopesList = new ArrayList<>();;
                 for (String scope : requestedScope) {
                     if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
                         requestedAllowedScopes.add(scope);
+                    } else {
+                        requestedScopesList.add(scope);
                     }
                 }
+                accessTokenDO.setScope(requestedScopesList.toArray(new String[requestedScopesList.size()]));
             } catch (IllegalArgumentException e) {
                 // access token not found in the system.
                 return buildIntrospectionErrorResponse(e.getMessage());
