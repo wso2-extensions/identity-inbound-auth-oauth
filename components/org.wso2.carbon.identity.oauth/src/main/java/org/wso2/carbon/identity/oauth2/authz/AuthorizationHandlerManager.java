@@ -129,11 +129,11 @@ public class AuthorizationHandlerManager {
             return authorizeRespDTO;
         }
 
-        List<String> allowedScope = OAuthServerConfiguration.getInstance().getAllowedScopes();
+        List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
         List<String> requestedAllowedScopes = new ArrayList<>();
         String[] requestedScope = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
         for (String scope : requestedScope) {
-            if (OAuth2Util.isAllowedScope(allowedScope, scope)) {
+            if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
                 requestedAllowedScopes.add(scope);
             }
         }
@@ -154,22 +154,6 @@ public class AuthorizationHandlerManager {
             addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[requestedAllowedScopes.size()]));
         }
         return authorizeRespDTO;
-    }
-
-    /**
-     * Determines if the scope is specified in the whitelist.
-     *
-     * @param scope - The scope key to check
-     * @return - 'true' if the scope is white listed. 'false' if not.
-     */
-    public boolean isAllowedScope(List<String> scopeSkipList, String scope) {
-
-        for (String scopeTobeSkipped : scopeSkipList) {
-            if (scope.matches(scopeTobeSkipped)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private void addAuthorizedInternalScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,

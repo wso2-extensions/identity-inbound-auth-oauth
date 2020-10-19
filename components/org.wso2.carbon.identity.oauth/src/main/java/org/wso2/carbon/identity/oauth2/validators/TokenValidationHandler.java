@@ -412,10 +412,10 @@ public class TokenValidationHandler {
         } else {
             try {
                 accessTokenDO = OAuth2Util.findAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
-                List<String> allowedScope = OAuthServerConfiguration.getInstance().getAllowedScopes();
+                List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
                 String[] requestedScope = accessTokenDO.getScope();
                 for (String scope : requestedScope) {
-                    if (OAuth2Util.isAllowedScope(allowedScope, scope)) {
+                    if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
                         requestedAllowedScopes.add(scope);
                     }
                 }

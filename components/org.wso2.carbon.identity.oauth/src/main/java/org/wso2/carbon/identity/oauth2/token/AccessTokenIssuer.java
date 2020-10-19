@@ -269,11 +269,11 @@ public class AccessTokenIssuer {
             return tokenRespDTO;
         }
 
-        List<String> allowedScope = OAuthServerConfiguration.getInstance().getAllowedScopes();
+        List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
         List<String> requestedAllowedScopes = new ArrayList<>();
         String[] requestedScope = tokReqMsgCtx.getScope();
         for (String scope : requestedScope) {
-            if (OAuth2Util.isAllowedScope(allowedScope, scope)) {
+            if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
                 requestedAllowedScopes.add(scope);
             }
         }
