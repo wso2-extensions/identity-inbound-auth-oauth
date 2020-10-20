@@ -414,7 +414,7 @@ public class TokenValidationHandler {
                 accessTokenDO = OAuth2Util.findAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
                 List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
                 String[] requestedScopes = accessTokenDO.getScope();
-                List<String> scopesToBeValidated = new ArrayList<>();;
+                List<String> scopesToBeValidated = new ArrayList<>();
                 if (requestedScopes != null) {
                     for (String scope : requestedScopes) {
                         if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
@@ -492,7 +492,7 @@ public class TokenValidationHandler {
             // This is redundant. But sake of readability.
             introResp.setActive(false);
             if (log.isDebugEnabled()) {
-                log.debug("Scope validation has failed at app level");
+                log.debug("Scope validation has failed at app level.");
             }
             return buildIntrospectionErrorResponse("Scope validation failed");
         }
