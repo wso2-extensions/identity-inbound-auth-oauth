@@ -129,6 +129,22 @@ public class AuthorizationHandlerManager {
             return authorizeRespDTO;
         }
 
+        List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
+        List<String> requestedAllowedScopes = new ArrayList<>();
+        String[] requestedScopes = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
+        List<String> scopesToBeValidated = new ArrayList<>();
+        if (requestedScopes != null) {
+            for (String scope : requestedScopes) {
+                if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
+                    requestedAllowedScopes.add(scope);
+                } else {
+                    scopesToBeValidated.add(scope);
+                }
+            }
+            authzReqMsgCtx.getAuthorizationReqDTO().setScopes(scopesToBeValidated.toArray(
+                    new String[0]));
+        }
+
         //Execute Internal SCOPE Validation.
         JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
         String[] authorizedInternalScopes = scopeValidator.validateScope(authzReqMsgCtx);
@@ -142,6 +158,7 @@ public class AuthorizationHandlerManager {
         if (valid) {
             //Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(authzReqMsgCtx, authorizedInternalScopes);
+            addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         }
         return authorizeRespDTO;
     }
@@ -151,6 +168,13 @@ public class AuthorizationHandlerManager {
 
         String[] scopes = authzReqMsgCtx.getApprovedScope();
         String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, authorizedInternalScopes);
+        authzReqMsgCtx.setApprovedScope(scopesToReturn);
+    }
+
+    private void addAllowedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx, String[] allowedScopes) {
+
+        String[] scopes = authzReqMsgCtx.getApprovedScope();
+        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, allowedScopes);
         authzReqMsgCtx.setApprovedScope(scopesToReturn);
     }
 

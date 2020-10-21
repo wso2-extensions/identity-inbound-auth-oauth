@@ -3856,4 +3856,24 @@ public class OAuth2Util {
 
         PrivilegedCarbonContext.endTenantFlow();
     }
+
+    /**
+     * Determines if the scope is specified in the allowed scopes list.
+     *
+     * @param allowedScopesList Allowed scopes list
+     * @param scope             The scope key to check.
+     * @return - 'true' if the scope is allowed. 'false' if not.
+     */
+    public static boolean isAllowedScope(List<String> allowedScopesList, String scope) {
+
+        for (String scopeTobeSkipped : allowedScopesList) {
+            if (scope.matches(scopeTobeSkipped)) {
+                if (log.isDebugEnabled()) {
+                    log.debug(scope + " is found in the allowed list of scopes.");
+                }
+                return true;
+            }
+        }
+        return false;
+    }
 }

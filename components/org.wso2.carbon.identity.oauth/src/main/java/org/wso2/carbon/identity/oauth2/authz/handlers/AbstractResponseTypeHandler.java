@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.oauth.callback.OAuthCallbackManager;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -36,6 +37,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
+import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -101,6 +103,19 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
                 .getAuthorizationCodeValidityPeriod());
         oauthAuthzMsgCtx.setAccessTokenIssuedTime(scopeValidationCallback.getAccessTokenValidityPeriod());
         oauthAuthzMsgCtx.setApprovedScope(scopeValidationCallback.getApprovedScope());
+        // Deriving the global level scope validator implementations.
+        // These are global/server level scope validators which are engaged after the app level scope validation.
+        List<ScopeValidator> globalScopeValidators = OAuthComponentServiceHolder.getInstance().getScopeValidators();
+        for (ScopeValidator validator : globalScopeValidators) {
+            if (log.isDebugEnabled()) {
+                log.debug("Engaging global scope validator in token issuer flow : " + validator.getName());
+            }
+            boolean isGlobalValidScope = validator.validateScope(oauthAuthzMsgCtx);
+            if (log.isDebugEnabled()) {
+                log.debug("Scope Validation was" + isGlobalValidScope + "at the global level by : "
+                        + validator.getName());
+            }
+        }
         return scopeValidationCallback.isValidScope();
     }
 
