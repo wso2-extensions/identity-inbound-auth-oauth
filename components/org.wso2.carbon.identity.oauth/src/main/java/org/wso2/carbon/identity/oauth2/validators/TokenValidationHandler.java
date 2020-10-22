@@ -408,8 +408,7 @@ public class TokenValidationHandler {
             }
 
             // should be in seconds
-            introResp.setExp((accessTokenDO.getValidityPeriodInMillis() + accessTokenDO.getIssuedTime().getTime())
-                    / 1000);
+            introResp.setExp(getAccessTokenExpiresIn(accessTokenDO));
             // should be in seconds
             introResp.setIat(accessTokenDO.getIssuedTime().getTime() / 1000);
             // Not before time will be the same as issued time.
@@ -582,6 +581,28 @@ public class TokenValidationHandler {
         }
 
         return expiryTime / 1000;
+    }
+
+    /**
+     * This method calculates the exp claim value to be set into introspection response.
+     * @param accessTokenDO
+     * @return
+     */
+    private long getAccessTokenExpiresIn(AccessTokenDO accessTokenDO) {
+
+        long expiryTime = OAuth2Util.getAccessTokenExpireMillis(accessTokenDO);
+        long issuedTime = accessTokenDO.getIssuedTime().getTime();
+        if (OAuthConstants.UserType.APPLICATION_USER.equals(accessTokenDO.getTokenType())
+                && OAuthServerConfiguration.getInstance().getUserAccessTokenValidityPeriodInSeconds() < 0) {
+            return Long.MAX_VALUE;
+        } else if (OAuthConstants.UserType.APPLICATION.equals(accessTokenDO.getTokenType())
+                && OAuthServerConfiguration.getInstance().getApplicationAccessTokenValidityPeriodInSeconds() < 0) {
+            return Long.MAX_VALUE;
+        } else if (expiryTime < 0) {
+            return Long.MAX_VALUE;
+        }
+
+        return (expiryTime + issuedTime) / 1000;
     }
 
     /**
