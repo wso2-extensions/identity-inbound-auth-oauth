@@ -437,8 +437,13 @@ public class TokenValidationHandler {
             }
 
             // should be in seconds
-            introResp.setExp((accessTokenDO.getValidityPeriodInMillis() + accessTokenDO.getIssuedTime().getTime())
-                    / 1000);
+            if (accessTokenDO.getValidityPeriodInMillis() < 0) {
+                introResp.setExp(Long.MAX_VALUE);
+            } else {
+                introResp.setExp(
+                        (accessTokenDO.getValidityPeriodInMillis() + accessTokenDO.getIssuedTime().getTime()) / 1000);
+            }
+
             // should be in seconds
             introResp.setIat(accessTokenDO.getIssuedTime().getTime() / 1000);
             // Not before time will be the same as issued time.
