@@ -12,7 +12,7 @@ jobs:
     if: ${{ github.event.label.name == 'trigger-pr-builder' }}
     runs-on: ubuntu-latest
     steps:
-    - name: Buid init
+    - name: Build init
       run: |
         echo ${{github.event.pull_request.html_url}}
         wget -c https://raw.githubusercontent.com/wso2/product-is/master/pom.xml -O cache-key-file.xml
