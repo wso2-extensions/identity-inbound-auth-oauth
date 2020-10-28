@@ -21,7 +21,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.jaxrs.impl.UriInfoImpl;
 import org.apache.cxf.message.Message;
 import org.apache.cxf.phase.PhaseInterceptorChain;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.scope.endpoint.ScopesApiService;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeDTO;
@@ -31,6 +34,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
+import org.wso2.carbon.user.api.AuthorizationManager;
+import org.wso2.carbon.user.api.UserStoreException;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -49,7 +54,7 @@ import static org.wso2.carbon.identity.oauth.scope.endpoint.Constants.TENANT_CON
 public class ScopesApiServiceImpl extends ScopesApiService {
 
     private static final Log LOG = LogFactory.getLog(ScopesApiServiceImpl.class);
-
+    private static final String INTERNAL_SCOPE_PREFIX = "internal_";
     /**
      * Register a scope with the bindings
      *
@@ -61,6 +66,7 @@ public class ScopesApiServiceImpl extends ScopesApiService {
 
         Scope registeredScope = null;
         try {
+            validateAddRequest(scope);
             registeredScope = ScopeUtils.getOAuth2ScopeService().registerScope(ScopeUtils.getScope(scope));
         } catch (IdentityOAuth2ScopeClientException e) {
             if (LOG.isDebugEnabled()) {
@@ -70,6 +76,10 @@ public class ScopesApiServiceImpl extends ScopesApiService {
                     .equals(e.getErrorCode())) {
                 ScopeUtils.handleErrorResponse(Response.Status.CONFLICT,
                         Response.Status.CONFLICT.getReasonPhrase(), e, false, LOG);
+            } else if (Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_AUTHORIZED_ADD_INTERNAL_SCOPE.getCode()
+                    .equals(e.getErrorCode())) {
+                ScopeUtils.handleErrorResponse(Response.Status.FORBIDDEN,
+                        Response.Status.FORBIDDEN.getReasonPhrase(), e, false, LOG);
             } else {
                 ScopeUtils.handleErrorResponse(Response.Status.BAD_REQUEST,
                         Response.Status.BAD_REQUEST.getReasonPhrase(), e, false, LOG);
@@ -206,6 +216,7 @@ public class ScopesApiServiceImpl extends ScopesApiService {
 
         ScopeDTO updatedScope = null;
         try {
+            validateUpdateRequest(name);
             updatedScope = ScopeUtils.getScopeDTO(ScopeUtils.getOAuth2ScopeService()
                     .updateScope(ScopeUtils.getUpdatedScope(scope, name)));
         } catch (IdentityOAuth2ScopeClientException e) {
@@ -216,6 +227,10 @@ public class ScopesApiServiceImpl extends ScopesApiService {
                     .equals(e.getErrorCode())) {
                 ScopeUtils.handleErrorResponse(Response.Status.NOT_FOUND,
                         Response.Status.NOT_FOUND.getReasonPhrase(), e, false, LOG);
+            } else if (Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_AUTHORIZED_UPDATE_INTERNAL_SCOPE.getCode()
+                    .equals(e.getErrorCode())) {
+                ScopeUtils.handleErrorResponse(Response.Status.FORBIDDEN,
+                        Response.Status.FORBIDDEN.getReasonPhrase(), e, false, LOG);
             } else {
                 ScopeUtils.handleErrorResponse(Response.Status.BAD_REQUEST,
                         Response.Status.BAD_REQUEST.getReasonPhrase(), e, false, LOG);
@@ -240,6 +255,7 @@ public class ScopesApiServiceImpl extends ScopesApiService {
     public Response deleteScope(String name) {
 
         try {
+            validateDeleteRequest(name);
             ScopeUtils.getOAuth2ScopeService().deleteScope(name);
         } catch (IdentityOAuth2ScopeClientException e) {
             if (LOG.isDebugEnabled()) {
@@ -249,6 +265,10 @@ public class ScopesApiServiceImpl extends ScopesApiService {
                     .equals(e.getErrorCode())) {
                 ScopeUtils.handleErrorResponse(Response.Status.NOT_FOUND,
                         Response.Status.NOT_FOUND.getReasonPhrase(), e, false, LOG);
+            } else if (Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_AUTHORIZED_DELETE_INTERNAL_SCOPE.getCode()
+                    .equals(e.getErrorCode())) {
+                ScopeUtils.handleErrorResponse(Response.Status.FORBIDDEN,
+                        Response.Status.FORBIDDEN.getReasonPhrase(), e, false, LOG);
             } else {
                 ScopeUtils.handleErrorResponse(Response.Status.BAD_REQUEST,
                         Response.Status.BAD_REQUEST.getReasonPhrase(), e, false, LOG);
@@ -305,5 +325,60 @@ public class ScopesApiServiceImpl extends ScopesApiService {
             tenantDomain = (String) IdentityUtil.threadLocalProperties.get().get(TENANT_NAME_FROM_CONTEXT);
         }
         return tenantDomain;
+    }
+
+    private void validateAddRequest(ScopeDTO scope) throws IdentityOAuth2ScopeClientException {
+
+        if (scope.getName() != null && scope.getName().startsWith(INTERNAL_SCOPE_PREFIX)) {
+            String authenticatedUser = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+            boolean userAuthorized = isUserAuthorized(authenticatedUser);
+            if (!userAuthorized) {
+                throw new IdentityOAuth2ScopeClientException(
+                        Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_AUTHORIZED_ADD_INTERNAL_SCOPE.getCode(),
+                        String.format(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_AUTHORIZED_ADD_INTERNAL_SCOPE
+                                .getMessage(), authenticatedUser));
+            }
+        }
+    }
+
+    private void validateUpdateRequest(String scopeName) throws IdentityOAuth2ScopeClientException {
+
+        if (scopeName != null && scopeName.startsWith(INTERNAL_SCOPE_PREFIX)) {
+            String authenticatedUser = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+            boolean userAuthorized = isUserAuthorized(authenticatedUser);
+            if (!userAuthorized) {
+                throw new IdentityOAuth2ScopeClientException(
+                        Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_AUTHORIZED_UPDATE_INTERNAL_SCOPE.getCode(),
+                        String.format(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_AUTHORIZED_UPDATE_INTERNAL_SCOPE
+                                .getMessage(), authenticatedUser));
+            }
+        }
+    }
+
+    private void validateDeleteRequest(String scopeName) throws IdentityOAuth2ScopeClientException {
+
+        if (scopeName != null && scopeName.startsWith(INTERNAL_SCOPE_PREFIX)) {
+            String authenticatedUser = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+            boolean userAuthorized = isUserAuthorized(authenticatedUser);
+            if (!userAuthorized) {
+                throw new IdentityOAuth2ScopeClientException(
+                        Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_AUTHORIZED_DELETE_INTERNAL_SCOPE.getCode(),
+                        String.format(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_AUTHORIZED_DELETE_INTERNAL_SCOPE
+                                .getMessage(), authenticatedUser));
+            }
+        }
+    }
+
+    private boolean isUserAuthorized(String authenticatedUser) {
+
+        try {
+            AuthorizationManager authorizationManager =
+                    CarbonContext.getThreadLocalCarbonContext().getUserRealm().getAuthorizationManager();
+            return authorizationManager.isUserAuthorized(authenticatedUser,
+                    CarbonConstants.UI_ADMIN_PERMISSION_COLLECTION, CarbonConstants.UI_PERMISSION_ACTION);
+        } catch (UserStoreException e) {
+            LOG.error("Error while validating user authorization of user: " + authenticatedUser, e);
+        }
+        return false;
     }
 }
