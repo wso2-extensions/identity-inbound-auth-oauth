@@ -258,6 +258,9 @@ public class OIDCLogoutServlet extends HttpServlet {
                 Map<String, String> params = new HashMap<>();
                 params.put(OAuthConstants.OAUTH_ERROR, OAuth2ErrorCodes.ACCESS_DENIED);
                 params.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, "End User denied the logout request");
+                if (cacheEntry.getState() != null) {
+                    params.put(OAuthConstants.OAuth20Params.STATE, cacheEntry.getState());
+                }
                 redirectURL = FrameworkUtils.buildURLWithQueryParams(
                         cacheEntry.getPostLogoutRedirectUri(), params);
             }
