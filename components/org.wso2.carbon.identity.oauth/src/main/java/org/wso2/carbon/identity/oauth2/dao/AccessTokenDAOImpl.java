@@ -853,7 +853,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     long validityPeriodInMillis = resultSet.getLong(8);
                     long refreshTokenValidityPeriodMillis = resultSet.getLong(9);
                     String tokenType = resultSet.getString(10);
-                    String refreshToken = resultSet.getString(11);
+                    String refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(resultSet.getString(11));
                     String tokenId = resultSet.getString(12);
                     String grantType = resultSet.getString(13);
                     String subjectIdentifier = resultSet.getString(14);
