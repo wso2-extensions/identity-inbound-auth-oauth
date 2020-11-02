@@ -2499,6 +2499,14 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             String tokenScope = resultSet.getString("TOKEN_SCOPE");
                             String refreshToken = resultSet.getString("REFRESH_TOKEN");
                             String tokenId = resultSet.getString("TOKEN_ID");
+                            Timestamp issuedTime = resultSet
+                                    .getTimestamp("TIME_CREATED", Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                            Timestamp refreshTokenIssuedTime =
+                                    resultSet.getTimestamp("REFRESH_TOKEN_TIME_CREATED", Calendar.getInstance(TimeZone
+                                            .getTimeZone(UTC)));
+                            long validityPeriodInMillis = resultSet.getLong("VALIDITY_PERIOD");
+                            long refreshTokenValidityPeriodMillis = resultSet.getLong("REFRESH_TOKEN_VALIDITY_PERIOD");
+                            String tokenType = resultSet.getString("USER_TYPE");
 
                             String[] scope = OAuth2Util.buildScopeArray(tokenScope);
                             accessTokenDO.setAccessToken(token);
@@ -2508,6 +2516,11 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             accessTokenDO.setTenantID(tenantId);
                             accessTokenDO.setRefreshToken(refreshToken);
                             accessTokenDO.setTokenId(tokenId);
+                            accessTokenDO.setIssuedTime(issuedTime);
+                            accessTokenDO.setRefreshTokenIssuedTime(refreshTokenIssuedTime);
+                            accessTokenDO.setValidityPeriod(validityPeriodInMillis);
+                            accessTokenDO.setRefreshTokenValidityPeriod(refreshTokenValidityPeriodMillis);
+                            accessTokenDO.setTokenType(tokenType);
                             tokenMap.put(token, accessTokenDO);
                         }
                         return null;
