@@ -241,8 +241,15 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
 
         String errorCode =
                 (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
+        if (StringUtils.isEmpty(errorCode)) {
+            errorCode =
+                    (String) IdentityUtil.threadLocalProperties.get()
+                            .get(IdentityCoreConstants.USER_ACCOUNT_STATE_WITH_USERNAME + userName);
+        }
 
         if (errorCode != null && (errorCode.equalsIgnoreCase(UserCoreConstants.ErrorCode.USER_IS_LOCKED))) {
+            IdentityUtil.threadLocalProperties.get()
+                    .remove(IdentityCoreConstants.USER_ACCOUNT_STATE_WITH_USERNAME + userName);
             return revokeTokens(userName, userStoreManager);
         }
         return true;
@@ -253,8 +260,14 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
 
         String errorCode =
                 (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
-
+        if (StringUtils.isEmpty(errorCode)) {
+            errorCode =
+                    (String) IdentityUtil.threadLocalProperties.get()
+                            .get(IdentityCoreConstants.USER_ACCOUNT_STATE_WITH_USERNAME + userName);
+        }
         if (errorCode != null && errorCode.equalsIgnoreCase(IdentityCoreConstants.USER_ACCOUNT_DISABLED_ERROR_CODE)) {
+            IdentityUtil.threadLocalProperties.get()
+                    .remove(IdentityCoreConstants.USER_ACCOUNT_STATE_WITH_USERNAME + userName);
             return revokeTokens(userName, userStoreManager);
         }
         return true;
