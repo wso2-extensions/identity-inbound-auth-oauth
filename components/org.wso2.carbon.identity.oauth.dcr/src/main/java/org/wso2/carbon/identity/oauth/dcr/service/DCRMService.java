@@ -79,8 +79,7 @@ public class DCRMService {
     public Application getApplication(String clientId) throws DCRMException {
 
         validateRequestTenantDomain(clientId);
-        boolean isApplicationRolePermissionRequired = DCRMUtils.isApplicationRolePermissionRequired();
-        return buildResponse(getApplicationById(clientId, isApplicationRolePermissionRequired));
+        return buildResponse(getApplicationById(clientId, DCRMUtils.isApplicationRolePermissionRequired()));
     }
 
     /**
