@@ -503,6 +503,7 @@ public class OAuthAdminServiceImpl {
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
             if (StringUtils.isNotEmpty(scope)) {
+                validateRegex(scope);
                 OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(tenantId, scope, claims);
             } else {
                 throw handleClientError(INVALID_REQUEST, "The scope can not be empty.");
@@ -1462,6 +1463,7 @@ public class OAuthAdminServiceImpl {
     private void addScopePreValidation(ScopeDTO scope) throws IdentityOAuthClientException {
 
         validateScopeName(scope.getName());
+        validateRegex(scope.getName());
         validateDisplayName(scope.getDisplayName());
     }
 
@@ -1491,6 +1493,17 @@ public class OAuthAdminServiceImpl {
                     ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED.getMessage());
         }
         validateWhiteSpaces(scopeName);
+    }
+
+    private void validateRegex(String scopeName) throws IdentityOAuthClientException {
+
+        String scopeValidatorRegex = "^[^?#/()]*$";
+        Pattern regexPattern = Pattern.compile(scopeValidatorRegex);
+        if (!regexPattern.matcher(scopeName).matches()) {
+            String message = "The scope name: '" + scopeName + "' is not valid! Scope name should satisfy the " +
+                    "regex : " + scopeValidatorRegex;
+            throw handleClientError(INVALID_REQUEST, message);
+        }
     }
 
     /**
