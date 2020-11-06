@@ -46,6 +46,8 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
     public static final String UNAPPROVED_SOFTWARE_STATEMENT = "unapproved_software_statement";
     public static final String BACKEND_FAILED = "backend_failed";
     public static final String FORBIDDEN = "forbidden";
+    // Status 410-Gone.
+    public static final String GONE = "gone";
     private static final Log log = LogFactory.getLog(HttpRegistrationResponseFactory.class);
 
     @Override
@@ -91,6 +93,12 @@ public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory
                     exception.getMessage()).toJSONString());
             builder.setBody(errorMessage);
             builder.setStatusCode(HttpServletResponse.SC_FORBIDDEN);
+            return builder;
+        } else if (ErrorCodes.GONE.name().equals(exception.getErrorCode())) {
+            errorMessage = StringEscapeUtils.unescapeJava(generateErrorResponse(GONE,
+                    exception.getMessage()).toJSONString());
+            builder.setBody(errorMessage);
+            builder.setStatusCode(HttpServletResponse.SC_GONE);
             return builder;
         } else if (ErrorCodes.BAD_REQUEST.name().equals(exception.getErrorCode())) {
             errorMessage = generateErrorResponse(BACKEND_FAILED, exception.getMessage()).toJSONString();
