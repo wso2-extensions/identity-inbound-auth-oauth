@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener;
+import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -246,5 +247,26 @@ public class OAuthServiceComponent {
             log.debug("Un-setting the token binder info for: " + tokenBinderInfo.getBindingType());
         }
         OAuthComponentServiceHolder.getInstance().removeTokenBinderInfo(tokenBinderInfo);
+    }
+
+    @Reference(name = "oauth.application.mgt.listener",
+               service = OAuthApplicationMgtListener.class,
+               cardinality = ReferenceCardinality.MULTIPLE,
+               policy = ReferencePolicy.DYNAMIC,
+               unbind = "unsetOAuthApplicationMgtListener")
+    protected void setOAuthApplicationMgtListener(OAuthApplicationMgtListener oAuthApplicationMgtListener) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Adding OAuthApplicationMgtListener: " + oAuthApplicationMgtListener.getClass().getName());
+        }
+        OAuthComponentServiceHolder.getInstance().addOAuthApplicationMgtListener(oAuthApplicationMgtListener);
+    }
+
+    protected void unsetOAuthApplicationMgtListener(OAuthApplicationMgtListener oAuthApplicationMgtListener) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing OAuthApplicationMgtListener: " + oAuthApplicationMgtListener.getClass().getName());
+        }
+        OAuthComponentServiceHolder.getInstance().removeOAuthApplicationMgtListener(oAuthApplicationMgtListener);
     }
 }

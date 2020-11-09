@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -387,6 +388,11 @@ public class OAuthAdminServiceImpl {
      */
     public void updateConsumerApplication(OAuthConsumerAppDTO consumerAppDTO) throws IdentityOAuthAdminException {
 
+        for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
+                .getOAuthApplicationMgtListeners()) {
+            oAuthApplicationMgtListener.doPreUpdateConsumerApplication(consumerAppDTO);
+        }
+
         String errorMessage = "Error while updating the app information.";
         String oauthConsumerKey = consumerAppDTO.getOauthConsumerKey();
 
@@ -727,6 +733,11 @@ public class OAuthAdminServiceImpl {
      */
     public void updateConsumerAppState(String consumerKey, String newState) throws IdentityOAuthAdminException {
 
+        for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
+                .getOAuthApplicationMgtListeners()) {
+            oAuthApplicationMgtListener.doPreUpdateConsumerApplicationState(consumerKey, newState);
+        }
+
         try {
             OAuthAppDO oAuthAppDO = getOAuthApp(consumerKey);
             // change the state
@@ -856,6 +867,11 @@ public class OAuthAdminServiceImpl {
      * @throws IdentityOAuthAdminException Error when removing the consumer information from the database.
      */
     public void removeOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException {
+
+        for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
+                .getOAuthApplicationMgtListeners()) {
+            oAuthApplicationMgtListener.doPreRemoveOAuthApplicationData(consumerKey);
+        }
 
         OAuthAppDAO dao = new OAuthAppDAO();
         dao.removeConsumerApplication(consumerKey);
