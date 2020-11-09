@@ -26,7 +26,8 @@ public enum Error {
     AUTHENTICATED_USER_NOT_FOUND("60003"),
     FORBIDDEN("60004"),
     GONE("60005"),
-
+    INVALID_UPDATE("60005"),
+    INVALID_DELETE("60006"),
     UNEXPECTED_SERVER_ERROR("65001");
 
     private static final String OAUTH_PREFIX = "OAUTH";
