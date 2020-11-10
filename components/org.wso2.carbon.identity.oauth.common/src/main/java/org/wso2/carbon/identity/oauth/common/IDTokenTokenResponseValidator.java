@@ -18,9 +18,21 @@
 
 package org.wso2.carbon.identity.oauth.common;
 
+import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+
+import javax.servlet.http.HttpServletRequest;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthCommonUtil.validateContentTypes;
+
 /**
  * Validator for IDtoken token response.
  */
 public class IDTokenTokenResponseValidator extends IDTokenResponseValidator {
 
+
+    @Override
+    public void validateContentType(HttpServletRequest request) throws OAuthProblemException {
+
+        validateContentTypes(request);
+    }
 }

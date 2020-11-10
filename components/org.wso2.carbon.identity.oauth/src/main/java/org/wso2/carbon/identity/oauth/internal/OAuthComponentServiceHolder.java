@@ -24,13 +24,19 @@ import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
+import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.registry.api.RegistryService;
 import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Data holder for OAuth component.
@@ -46,6 +52,49 @@ public class OAuthComponentServiceHolder {
     private OAuth2ScopeService oauth2ScopeService;
     private List<TokenBindingMetaDataDTO> tokenBindingMetaDataDTOs = new ArrayList<>();
     private OAuthAdminServiceImpl oAuthAdminService;
+    private List<ScopeValidator> scopeValidators = new ArrayList<>();
+    private Map<Integer, OAuthApplicationMgtListener> oAuthApplicationMgtListeners = new TreeMap<>();
+
+
+    /**
+     * Get the list of scope validator implementations available.
+     *
+     * @return ScopeValidaror returns a list ot scope validator.
+     */
+    public List<ScopeValidator> getScopeValidators() {
+
+        return scopeValidators;
+    }
+
+    /**
+     * Add scope validator implementation.
+     *
+     * @param scopeValidator Scope validator implementation.
+     */
+    public void addScopeValidator(ScopeValidator scopeValidator) {
+
+        scopeValidators.add(scopeValidator);
+    }
+
+    /**
+     * Remove scope validator implementation.
+     *
+     * @param scopeValidator Scope validator implementation.
+     */
+    public void removeScopeValidator(ScopeValidator scopeValidator) {
+
+        scopeValidators.remove(scopeValidator);
+    }
+
+    /**
+     * Set a list of scope validator implementations.
+     *
+     * @param scopeValidators List of Scope validator implementation.
+     */
+    public void setScopeValidators(List<ScopeValidator> scopeValidators) {
+
+        this.scopeValidators = scopeValidators;
+    }
 
     private OAuthComponentServiceHolder() {
 
@@ -128,5 +177,25 @@ public class OAuthComponentServiceHolder {
     public void setOAuthAdminService(OAuthAdminServiceImpl oAuthAdminService) {
 
         this.oAuthAdminService = oAuthAdminService;
+    }
+
+    public Collection<OAuthApplicationMgtListener> getOAuthApplicationMgtListeners() {
+
+        if (oAuthApplicationMgtListeners.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return oAuthApplicationMgtListeners.values();
+    }
+
+    public void addOAuthApplicationMgtListener(OAuthApplicationMgtListener oAuthApplicationMgtListener) {
+
+        this.oAuthApplicationMgtListeners
+                .put(oAuthApplicationMgtListener.getExecutionOrder(), oAuthApplicationMgtListener);
+    }
+
+    public void removeOAuthApplicationMgtListener(OAuthApplicationMgtListener oAuthApplicationMgtListener) {
+
+        this.oAuthApplicationMgtListeners
+                .remove(oAuthApplicationMgtListener.getExecutionOrder(), oAuthApplicationMgtListener);
     }
 }

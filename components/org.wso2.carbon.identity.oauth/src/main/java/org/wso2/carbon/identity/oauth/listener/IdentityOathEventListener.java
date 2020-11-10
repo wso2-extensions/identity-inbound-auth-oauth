@@ -31,8 +31,6 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
-import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
-import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
 import org.wso2.carbon.identity.oauth.util.ClaimCacheKey;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCache;
@@ -56,6 +54,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.
+        CURRENT_SESSION_IDENTIFIER;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.Config.
+        PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 
 /**
@@ -63,7 +65,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings
  * additional operations
  * for some of the core user management operations
  */
-@Deprecated
 public class IdentityOathEventListener extends AbstractIdentityUserOperationEventListener {
 
     private static final Log log = LogFactory.getLog(IdentityOathEventListener.class);
@@ -302,6 +303,16 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                 throw new UserStoreException(e);
             }
 
+            boolean isTokenPreservingAtPasswordUpdateEnabled =
+                    Boolean.parseBoolean(IdentityUtil.getProperty(PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE));
+            String currentTokenBindingReference = "";
+            if (isTokenPreservingAtPasswordUpdateEnabled) {
+                if (IdentityUtil.threadLocalProperties.get().get(CURRENT_SESSION_IDENTIFIER) != null) {
+                    currentTokenBindingReference =
+                            (String) IdentityUtil.threadLocalProperties.get().get(CURRENT_SESSION_IDENTIFIER);
+                }
+            }
+
             Set<String> scopes = new HashSet<>();
             List<AccessTokenDO> accessTokens = new ArrayList<>();
             boolean tokenBindingEnabled = false;
@@ -312,6 +323,11 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                         .isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
                     tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
                     tokenBindingEnabled = true;
+                    // Skip current token from being revoked.
+                    if (StringUtils.equals(accessTokenDO.getTokenBinding().getBindingValue(),
+                            currentTokenBindingReference)) {
+                        continue;
+                    }
                 }
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                         OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
@@ -348,10 +364,10 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!accessTokens.isEmpty()) {
             // Revoking token from database.
             for (AccessTokenDO accessToken : accessTokens) {
-                invokePreRevocationListeners(accessToken);
+                OAuthUtil.invokePreRevocationBySystemListeners(accessToken, Collections.emptyMap());
                 OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                         .revokeAccessTokens(new String[]{accessToken.getAccessToken()}, OAuth2Util.isHashEnabled());
-                invokePostRevocationListeners(accessToken);
+                OAuthUtil.invokePostRevocationBySystemListeners(accessToken, Collections.emptyMap());
             }
         }
         return true;
@@ -480,31 +496,4 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         }
         ClaimCache.getInstance().clearCacheEntry(cacheEntry.getClaimCacheKey());
     }
-
-    private void invokePostRevocationListeners(AccessTokenDO accessTokenDO) {
-
-        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
-                .getOAuthEventInterceptorProxy();
-        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
-            try {
-                oAuthEventInterceptorProxy.onPostTokenRevocationBySystem(accessTokenDO, Collections.emptyMap());
-            } catch (IdentityOAuth2Exception e) {
-                log.error("Error occurred when invoking post token revoke listener ", e);
-            }
-        }
-    }
-
-    private void invokePreRevocationListeners(AccessTokenDO accessTokenDO) {
-
-        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
-                .getOAuthEventInterceptorProxy();
-        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
-            try {
-                oAuthEventInterceptorProxy.onPreTokenRevocationBySystem(accessTokenDO, Collections.emptyMap());
-            } catch (IdentityOAuth2Exception e) {
-                log.error("Error occurred when invoking pre token revoke listener ", e);
-            }
-        }
-    }
-
 }

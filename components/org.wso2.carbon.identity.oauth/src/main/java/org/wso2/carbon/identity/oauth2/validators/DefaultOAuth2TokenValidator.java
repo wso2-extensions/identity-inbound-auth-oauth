@@ -25,13 +25,16 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -110,6 +113,21 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
                             " are not found in the server configuration ", StringUtils.join(appScopeValidators, ", "),
                     app.getApplicationName(), OAuth2Util.getTenantDomainOfOauthApp(app)));
         }
+
+        // Deriving the global level scope validator implementations.
+        // These are global/server level scope validators which are engaged after the app level scope validation.
+        List<ScopeValidator> globalScopeValidators = OAuthComponentServiceHolder.getInstance().getScopeValidators();
+        for (ScopeValidator validator : globalScopeValidators) {
+            if (log.isDebugEnabled()) {
+                log.debug("Engaging global scope validator in token issuer flow : " + validator.getName());
+            }
+            boolean isGlobalValidScope = validator.validateScope(messageContext);
+            if (log.isDebugEnabled()) {
+                log.debug("Scope Validation was" + isGlobalValidScope + "at the global level by : "
+                        + validator.getName());
+            }
+        }
+
         return true;
     }
 

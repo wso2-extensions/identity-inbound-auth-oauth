@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -57,6 +58,7 @@ public class TokenValidationHandler {
     private static final Log log = LogFactory.getLog(TokenValidationHandler.class);
     private Map<String, OAuth2TokenValidator> tokenValidators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     private static final String BEARER_TOKEN_TYPE = "Bearer";
+    private static final String BEARER_TOKEN_TYPE_JWT = "jwt";
     private static final String BUILD_FQU_FROM_SP_CONFIG = "OAuth.BuildSubjectIdentifierFromSPConfig";
     private static final String ENABLE_JWT_TOKEN_VALIDATION = "OAuth.EnableJWTTokenValidationDuringIntrospection";
 
@@ -189,7 +191,7 @@ public class TokenValidationHandler {
         }
 
         if (!tokenValidator.validateScope(messageContext)) {
-            return buildClientAppErrorResponse("Scope validation failed");
+            return buildClientAppErrorResponse("Scope validation failed at app level");
         }
 
         if (!tokenValidator.validateAccessToken(messageContext)) {
@@ -379,6 +381,7 @@ public class TokenValidationHandler {
 
         OAuth2IntrospectionResponseDTO introResp = new OAuth2IntrospectionResponseDTO();
         AccessTokenDO accessTokenDO;
+        List<String> requestedAllowedScopes = new ArrayList<>();
 
         if (messageContext.getProperty(OAuth2Util.REMOTE_ACCESS_TOKEN) != null
                 && "true".equalsIgnoreCase((String) messageContext.getProperty(OAuth2Util.REMOTE_ACCESS_TOKEN))) {
@@ -407,9 +410,21 @@ public class TokenValidationHandler {
             }
 
         } else {
-
             try {
                 accessTokenDO = OAuth2Util.findAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
+                List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
+                String[] requestedScopes = accessTokenDO.getScope();
+                List<String> scopesToBeValidated = new ArrayList<>();
+                if (requestedScopes != null) {
+                    for (String scope : requestedScopes) {
+                        if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
+                            requestedAllowedScopes.add(scope);
+                        } else {
+                            scopesToBeValidated.add(scope);
+                        }
+                    }
+                    accessTokenDO.setScope(scopesToBeValidated.toArray(new String[0]));
+                }
             } catch (IllegalArgumentException e) {
                 // access token not found in the system.
                 return buildIntrospectionErrorResponse(e.getMessage());
@@ -422,8 +437,13 @@ public class TokenValidationHandler {
             }
 
             // should be in seconds
-            introResp.setExp((accessTokenDO.getValidityPeriodInMillis() + accessTokenDO.getIssuedTime().getTime())
-                    / 1000);
+            if (accessTokenDO.getValidityPeriodInMillis() < 0) {
+                introResp.setExp(Long.MAX_VALUE);
+            } else {
+                introResp.setExp(
+                        (accessTokenDO.getValidityPeriodInMillis() + accessTokenDO.getIssuedTime().getTime()) / 1000);
+            }
+
             // should be in seconds
             introResp.setIat(accessTokenDO.getIssuedTime().getTime() / 1000);
             // Not before time will be the same as issued time.
@@ -472,13 +492,17 @@ public class TokenValidationHandler {
             return buildIntrospectionErrorResponse("Invalid access delegation");
         }
 
-        // Validate scopes.
+        // Validate scopes at app level.
         if (!tokenValidator.validateScope(messageContext)) {
             // This is redundant. But sake of readability.
             introResp.setActive(false);
+            if (log.isDebugEnabled()) {
+                log.debug("Scope validation has failed at app level.");
+            }
             return buildIntrospectionErrorResponse("Scope validation failed");
         }
 
+        addAllowedScopes(messageContext, requestedAllowedScopes.toArray(new String[0]));
         // All set. mark the token active.
         introResp.setActive(true);
         return introResp;
@@ -568,7 +592,18 @@ public class TokenValidationHandler {
             throw new IllegalArgumentException("Access token identifier is not present in the validation request");
         }
 
-        OAuth2TokenValidator tokenValidator = tokenValidators.get(accessToken.getTokenType());
+        OAuth2TokenValidator tokenValidator;
+        if (isJWTTokenValidation(accessToken.getIdentifier())) {
+            /*
+            If the token is a self-contained JWT based access token and the
+            config EnableJWTTokenValidationDuringIntrospection is set to true
+            then the jwt token validator is selected. In the default pack TokenValidator
+            type 'jwt' is 'org.wso2.carbon.identity.oauth2.validators.OAuth2JWTTokenValidator'.
+            */
+            tokenValidator = tokenValidators.get(BEARER_TOKEN_TYPE_JWT);
+        } else {
+            tokenValidator = tokenValidators.get(accessToken.getTokenType());
+        }
 
         // There is no token validator for the provided token type.
         if (tokenValidator == null) {
@@ -653,5 +688,13 @@ public class TokenValidationHandler {
     private boolean isSkipValidatorForJWT(OAuth2TokenValidator tokenValidator, boolean isJWTTokenValidation) {
 
         return isJWTTokenValidation && BEARER_TOKEN_TYPE.equals(tokenValidator.getTokenType());
+    }
+
+    private void addAllowedScopes(OAuth2TokenValidationMessageContext oAuth2TokenValidationMessageContext,
+                                  String[] allowedScopes) {
+
+        String[] scopes = oAuth2TokenValidationMessageContext.getResponseDTO().getScope();
+        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, allowedScopes);
+        oAuth2TokenValidationMessageContext.getResponseDTO().setScope(scopesToReturn);
     }
 }

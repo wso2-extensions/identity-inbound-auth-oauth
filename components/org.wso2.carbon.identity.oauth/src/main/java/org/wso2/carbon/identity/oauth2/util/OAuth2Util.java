@@ -56,6 +56,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthRuntimeException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -2511,7 +2512,7 @@ public class OAuth2Util {
     public static String getThumbPrint(Certificate certificate) throws IdentityOAuth2Exception {
 
         try {
-            MessageDigest digestValue = MessageDigest.getInstance("SHA-1");
+            MessageDigest digestValue = MessageDigest.getInstance("SHA-256");
             byte[] der = certificate.getEncoded();
             digestValue.update(der);
             byte[] digestInBytes = digestValue.digest();
@@ -2528,7 +2529,7 @@ public class OAuth2Util {
             String error = "Error occurred while encoding thumbPrint from certificate.";
             throw new IdentityOAuth2Exception(error, e);
         } catch (NoSuchAlgorithmException e) {
-            String error = "Error in obtaining SHA-1 thumbprint from certificate.";
+            String error = "Error in obtaining SHA-256 thumbprint from certificate.";
             throw new IdentityOAuth2Exception(error, e);
         }
 
@@ -2900,7 +2901,7 @@ public class OAuth2Util {
      */
     public static boolean isParsableJWT(String tokenIdentifier) {
 
-        if (StringUtils.isEmpty(tokenIdentifier)) {
+        if (StringUtils.isBlank(tokenIdentifier)) {
             return false;
         }
         try {
@@ -2908,7 +2909,7 @@ public class OAuth2Util {
             return true;
         } catch (ParseException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Provided token identifier is not a parsable JWT", e);
+                log.debug("Provided token identifier is not a parsable JWT.", e);
             }
             return false;
         }
@@ -3227,6 +3228,36 @@ public class OAuth2Util {
                 String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
                         " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
                 throw new IdentityOAuth2Exception(errorMsg, e);
+            }
+        } else {
+            return getIssuerLocation(tenantDomain);
+        }
+    }
+
+    /**
+     * Used to get the issuer url for a given tenant.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Token issuer url.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static String getIssuerLocation(String tenantDomain) throws IdentityOAuth2Exception {
+
+        /*
+        * IMPORTANT:
+        * This method should only honor the given tenant.
+        * Do not add any auto tenant resolving logic.
+        */
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            try {
+                startTenantFlow(tenantDomain);
+                return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
+            } catch (URLBuilderException e) {
+                String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
+                        " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
+                throw new IdentityOAuth2Exception(errorMsg, e);
+            } finally {
+                endTenantFlow();
             }
         } else {
             IdentityProvider identityProvider = getResidentIdp(tenantDomain);
@@ -3812,5 +3843,37 @@ public class OAuth2Util {
                         "tenantDomain: " + tenantDomainFromContext);
             }
         }
+    }
+
+    private static void startTenantFlow(String tenantDomain) {
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(IdentityTenantUtil.getTenantId(tenantDomain));
+    }
+
+    private static void endTenantFlow() {
+
+        PrivilegedCarbonContext.endTenantFlow();
+    }
+
+    /**
+     * Determines if the scope is specified in the allowed scopes list.
+     *
+     * @param allowedScopesList Allowed scopes list
+     * @param scope             The scope key to check.
+     * @return - 'true' if the scope is allowed. 'false' if not.
+     */
+    public static boolean isAllowedScope(List<String> allowedScopesList, String scope) {
+
+        for (String scopeTobeSkipped : allowedScopesList) {
+            if (scope.matches(scopeTobeSkipped)) {
+                if (log.isDebugEnabled()) {
+                    log.debug(scope + " is found in the allowed list of scopes.");
+                }
+                return true;
+            }
+        }
+        return false;
     }
 }
