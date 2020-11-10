@@ -1962,14 +1962,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
     }
 
-    /**
-     * Retrieves access token of the given token id.
-     *
-     * @param tokenId
-     * @return
-     * @throws IdentityOAuth2Exception
-     */
-    private String getAccessTokenByTokenId(String tokenId) throws IdentityOAuth2Exception {
+    @Override
+    public String getAccessTokenByTokenId(String tokenId) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
             log.debug("Retrieving access token by token id: " + tokenId);

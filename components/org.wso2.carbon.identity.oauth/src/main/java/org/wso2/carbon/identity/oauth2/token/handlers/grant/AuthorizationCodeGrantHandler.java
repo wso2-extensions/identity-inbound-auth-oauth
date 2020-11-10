@@ -253,8 +253,11 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                         tokenReqDTO.getAuthorizationCode());
         if (validationResult != null) {
             if (!validationResult.isActiveCode()) {
+                String tokenAlias = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                        .getAccessTokenByTokenId(validationResult.getTokenId());
                 //revoking access token issued for authorization code as per RFC 6749 Section 4.1.2
                 revokeExistingAccessTokens(validationResult.getTokenId(), validationResult.getAuthzCodeDO());
+                clearTokenCache(tokenAlias, validationResult.getTokenId());
             }
             return validationResult.getAuthzCodeDO();
         } else {
@@ -325,6 +328,28 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             if (log.isDebugEnabled()) {
                 log.debug("Removed token from cache for user : " + authzCodeBean.getAuthorizedUser().toString() +
                         ", for client : " + clientId);
+            }
+        }
+    }
+
+    private void clearTokenCache(String tokenAlias, String tokenId) {
+
+        if (cacheEnabled) {
+            if (tokenAlias == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Received token alias is null. Skipping clearing token cache with token alias for " +
+                            "tokenId : " + tokenId);
+                }
+                return;
+            }
+            OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(tokenAlias));
+            if (log.isDebugEnabled()) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("Removed token from cache for token alias : " + tokenAlias);
+                } else {
+                    log.debug("Removed token from cache for token alias associated with tokenId : "
+                            + tokenId);
+                }
             }
         }
     }
