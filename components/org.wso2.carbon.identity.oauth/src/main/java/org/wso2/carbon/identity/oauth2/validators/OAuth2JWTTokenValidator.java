@@ -71,7 +71,10 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
                 throw new IdentityOAuth2Exception("Claim values are empty in the given Token.");
             }
 
-            validateRequiredFields(claimsSet);
+            if (!validateRequiredFields(claimsSet)) {
+                return false;
+            }
+
             IdentityProvider identityProvider = getResidentIDPForIssuer(claimsSet.getIssuer());
 
             if (!validateSignature(signedJWT, identityProvider)) {
@@ -245,8 +248,11 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         String jti = claimsSet.getJWTID();
         if (StringUtils.isEmpty(claimsSet.getIssuer()) || StringUtils.isEmpty(subject) ||
                 claimsSet.getExpirationTime() == null || audience == null || jti == null) {
-            throw new IdentityOAuth2Exception("Mandatory fields(Issuer, Subject, Expiration time," +
-                    " jtl or Audience) are empty in the given Token.");
+            if (log.isDebugEnabled()) {
+                log.debug("Mandatory fields(Issuer, Subject, Expiration time," +
+                        " jtl or Audience) are empty in the given Token.");
+            }
+            return false;
         }
         return true;
     }
