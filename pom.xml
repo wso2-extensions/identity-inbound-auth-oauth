@@ -976,7 +976,7 @@
         <http.core.version>4.3.3.wso2v1</http.core.version>
 
         <!--Test Dependencies-->
-        <junit.version>4.12</junit.version>
+        <junit.version>4.13.1</junit.version>
         <testng.version>6.9.10</testng.version>
         <jacoco.version>0.7.9</jacoco.version>
         <powermock.version>1.7.0</powermock.version>
