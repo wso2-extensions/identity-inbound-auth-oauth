@@ -433,6 +433,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
         OAuth2Parameters params1 = new OAuth2Parameters();
         OAuth2Parameters params2 = new OAuth2Parameters();
+        OAuth2Parameters params3 = new OAuth2Parameters();
         String state = "active";
         String responseType = "dummyResponceType";
         String appName = "myApp";
@@ -447,11 +448,17 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         params2.setApplicationName(appName);
         params2.setRedirectURI(null);
 
+        params3.setState(null);
+        params3.setResponseType(responseType);
+        params3.setApplicationName(appName);
+        params3.setRedirectURI("http://localhost:8080/callback");
+
         return new Object[][]{
                 {true, true, true, params1, "http://localhost:8080/location", false},
                 {true, false, true, params1, "http://localhost:8080/location", false},
                 {false, true, true, params1, "http://localhost:8080/location", true},
                 {false, false, false, params1, ERROR_PAGE_URL, true},
+                {true, true, true, params3, "http://localhost:8080/location", false},
         };
     }
 
