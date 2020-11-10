@@ -227,10 +227,8 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
         claimsSetBuilder.claim(API_GATEWAY_ID + "/enduser", authzUser);
         //TODO: check setting audience
 
-        if (messageContext.getProperty(OAuthConstants.ACCESS_TOKEN_DO) != null &&
-                ((AccessTokenDO) messageContext.getProperty(OAuthConstants.ACCESS_TOKEN_DO)).getTokenType() != null) {
-            claimsSetBuilder.claim(OAuthConstants.AUTHORIZED_USER_TYPE,
-                    ((AccessTokenDO) messageContext.getProperty(OAuthConstants.ACCESS_TOKEN_DO)).getTokenType());
+        if (accessTokenDO.getTokenType() != null) {
+            claimsSetBuilder.claim(OAuthConstants.AUTHORIZED_USER_TYPE, accessTokenDO.getTokenType());
         }
 
         if (claimsRetriever != null) {
