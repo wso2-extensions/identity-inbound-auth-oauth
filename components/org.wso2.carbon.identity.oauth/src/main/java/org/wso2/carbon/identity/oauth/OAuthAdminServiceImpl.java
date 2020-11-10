@@ -91,6 +91,7 @@ public class OAuthAdminServiceImpl {
     static String[] allowedScopeValidators = null;
 
     protected static final Log LOG = LogFactory.getLog(OAuthAdminServiceImpl.class);
+    private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
 
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single
@@ -1497,11 +1498,10 @@ public class OAuthAdminServiceImpl {
 
     private void validateRegex(String scopeName) throws IdentityOAuthClientException {
 
-        String scopeValidatorRegex = "^[^?#/()]*$";
-        Pattern regexPattern = Pattern.compile(scopeValidatorRegex);
+        Pattern regexPattern = Pattern.compile(SCOPE_VALIDATION_REGEX);
         if (!regexPattern.matcher(scopeName).matches()) {
-            String message = "The scope name: '" + scopeName + "' is not valid! Scope name should satisfy the " +
-                    "regex : " + scopeValidatorRegex;
+            String message = "Invalid scope name. Scope name : " + scopeName + " cannot contain special characters " +
+                    "?,#,/,( or )";
             throw handleClientError(INVALID_REQUEST, message);
         }
     }
