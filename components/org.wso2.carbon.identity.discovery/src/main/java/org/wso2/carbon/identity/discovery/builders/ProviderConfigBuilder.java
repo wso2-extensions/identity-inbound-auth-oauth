@@ -110,7 +110,7 @@ public class ProviderConfigBuilder {
         providerConfig.setResponseTypesSupported(supportedResponseTypeNames.toArray(new
                 String[supportedResponseTypeNames.size()]));
 
-        providerConfig.setSubjectTypesSupported(new String[]{"pairwise"});
+        providerConfig.setSubjectTypesSupported(new String[]{"public"});
 
         providerConfig.setCheckSessionIframe(buildServiceUrl(IdentityConstants.OAuth.CHECK_SESSION,
                 IdentityUtil.getProperty(IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL)));
