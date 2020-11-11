@@ -125,7 +125,8 @@ public class OAuth2IntrospectionEndpoint {
                 .setTokenType(introspectionResponse.getTokenType())
                 .setClientId(introspectionResponse.getClientId())
                 .setIssuedAt(introspectionResponse.getIat())
-                .setExpiration(introspectionResponse.getExp());
+                .setExpiration(introspectionResponse.getExp())
+                .setAuthorizedUserType(introspectionResponse.getAut());
 
         if (StringUtils.equalsIgnoreCase(introspectionResponse.getTokenType(), JWT_TOKEN_TYPE)) {
             respBuilder.setAudience(introspectionResponse.getAud())

@@ -459,6 +459,10 @@ public class TokenValidationHandler {
                 introResp.setBindingType(accessTokenDO.getTokenBinding().getBindingType());
                 introResp.setBindingReference(accessTokenDO.getTokenBinding().getBindingReference());
             }
+            // add authorized user type
+            if (accessTokenDO.getTokenType() != null) {
+                introResp.setAut(accessTokenDO.getTokenType());
+            }
             // adding the AccessTokenDO as a context property for further use
             messageContext.addProperty("AccessTokenDO", accessTokenDO);
         }

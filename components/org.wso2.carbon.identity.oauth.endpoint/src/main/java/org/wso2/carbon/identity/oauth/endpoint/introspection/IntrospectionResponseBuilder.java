@@ -261,4 +261,18 @@ public class IntrospectionResponseBuilder {
         additionalData.entrySet().forEach(dataEntry -> parameters.put(dataEntry.getKey(), dataEntry.getValue()));
         return this;
     }
+
+    /**
+     * Set authorized user type to the introspection response.
+     *
+     * @param aut Authorized user type
+     * @return IntrospectionResponseBuilder
+     */
+    public IntrospectionResponseBuilder setAuthorizedUserType(String aut) {
+
+        if (StringUtils.isNotBlank(aut)) {
+            parameters.put(IntrospectionResponse.AUT, aut);
+        }
+        return this;
+    }
 }

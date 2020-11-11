@@ -88,6 +88,7 @@ public class IntrospectionResponseBuilderTest {
         introspectionResponseBuilder1.setClientId("rgfKVdnMQnJSSr_pKFTxj3apiwYa");
         introspectionResponseBuilder1.setErrorCode("Invalid input");
         introspectionResponseBuilder1.setErrorDescription("error_discription");
+        introspectionResponseBuilder1.setAuthorizedUserType("APPLICATION_USER");
 
         JSONObject jsonObject = new JSONObject(introspectionResponseBuilder1.build());
 
@@ -113,6 +114,8 @@ public class IntrospectionResponseBuilderTest {
                 "ERROR messages are not equal");
         assertEquals(jsonObject.get(IntrospectionResponse.Error.ERROR_DESCRIPTION), "error_discription",
                 "ERROR_DESCRIPTION messages are not equal");
+        assertEquals(jsonObject.get(IntrospectionResponse.AUT), "APPLICATION_USER",
+                "AUT values are not equal");
     }
 
     /**
@@ -135,6 +138,7 @@ public class IntrospectionResponseBuilderTest {
         introspectionResponseBuilder2.setClientId("");
         introspectionResponseBuilder2.setErrorCode("");
         introspectionResponseBuilder2.setErrorDescription("");
+        introspectionResponseBuilder2.setAuthorizedUserType("");
 
         JSONObject jsonObject2 = new JSONObject(introspectionResponseBuilder2.build());
         assertFalse(jsonObject2.has(IntrospectionResponse.EXP), "EXP already exists in the response builder");
@@ -153,6 +157,7 @@ public class IntrospectionResponseBuilderTest {
         assertFalse(jsonObject2.has(IntrospectionResponse.Error.ERROR), "ERROR already exists in the response builder");
         assertFalse(jsonObject2.has(IntrospectionResponse.Error.ERROR_DESCRIPTION),
                 "ERROR_DESCRIPTION already exists in the response builder");
+        assertFalse(jsonObject2.has(IntrospectionResponse.AUT), "AUT already exists in the response builder");
     }
 
     @Test(dependsOnMethods = "testResposeBuilderWithVal")
