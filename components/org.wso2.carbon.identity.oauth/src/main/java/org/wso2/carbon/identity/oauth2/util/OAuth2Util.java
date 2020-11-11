@@ -209,6 +209,7 @@ public class OAuth2Util {
     public static final String OPENID_CONNECT = "OpenIDConnect";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
+    public static final String OPENID_SCOPE = "openid";
     /*
      * Maintain a separate parameter "OPENID_CONNECT_AUDIENCE_IDENTITY_CONFIG" to get the audience from the identity.xml
      * when user didn't add any audience in the UI while creating service provider.
