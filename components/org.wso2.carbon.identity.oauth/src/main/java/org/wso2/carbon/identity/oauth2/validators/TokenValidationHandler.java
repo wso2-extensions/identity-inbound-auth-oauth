@@ -184,7 +184,7 @@ public class TokenValidationHandler {
         responseDTO.setExpiryTime(getAccessTokenExpirationTime(accessTokenDO));
 
         // Adding the AccessTokenDO as a context property for further use
-        messageContext.addProperty("AccessTokenDO", accessTokenDO);
+        messageContext.addProperty(OAuthConstants.ACCESS_TOKEN_DO, accessTokenDO);
 
         if (!tokenValidator.validateAccessDelegation(messageContext)) {
             return buildClientAppErrorResponse("Invalid access delegation");
@@ -458,6 +458,10 @@ public class TokenValidationHandler {
             if (accessTokenDO.getTokenBinding() != null) {
                 introResp.setBindingType(accessTokenDO.getTokenBinding().getBindingType());
                 introResp.setBindingReference(accessTokenDO.getTokenBinding().getBindingReference());
+            }
+            // add authorized user type
+            if (accessTokenDO.getTokenType() != null) {
+                introResp.setAut(accessTokenDO.getTokenType());
             }
             // adding the AccessTokenDO as a context property for further use
             messageContext.addProperty("AccessTokenDO", accessTokenDO);

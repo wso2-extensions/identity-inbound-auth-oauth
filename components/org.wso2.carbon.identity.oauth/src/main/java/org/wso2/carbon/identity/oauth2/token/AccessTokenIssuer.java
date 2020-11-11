@@ -204,8 +204,13 @@ public class AccessTokenIssuer {
 
         tokReqMsgCtx.addProperty(OAUTH_APP_DO, oAuthAppDO);
 
-        if (!authzGrantHandler.isOfTypeApplicationUser()) {
-            tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getUser());
+        boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser();
+
+        if (!isOfTypeApplicationUser) {
+            tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getAppOwner());
+            tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
+        } else {
+            tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
         }
 
         boolean isAuthorizedClient = false;

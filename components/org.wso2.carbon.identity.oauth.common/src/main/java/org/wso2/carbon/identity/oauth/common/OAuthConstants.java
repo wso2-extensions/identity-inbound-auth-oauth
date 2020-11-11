@@ -148,6 +148,12 @@ public final class OAuthConstants {
     //Oauth2 sp expire time configuration.
     public static final String TOKEN_EXPIRE_TIME_RESOURCE_PATH = "/identity/config/spTokenExpireTime";
 
+    //AccessTokenDO context property name
+    public static final String ACCESS_TOKEN_DO = "AccessTokenDO";
+
+    //JWT claim for authorized user type
+    public static final String AUTHORIZED_USER_TYPE = "aut";
+
     private OAuthConstants() {
 
     }
@@ -387,6 +393,7 @@ public final class OAuthConstants {
      */
     public static class UserType {
 
+        public static final String USER_TYPE = "USER_TYPE";
         public static final String APPLICATION = "APPLICATION";
         public static final String APPLICATION_USER = "APPLICATION_USER";
         public static final String FEDERATED_USER_DOMAIN_PREFIX = "FEDERATED";

@@ -513,6 +513,7 @@ public class ResponseTypeHandlerUtil {
         OAuthAppDO oAuthAppBean = getOAuthApp(consumerKey);
         Timestamp timestamp = new Timestamp(new Date().getTime());
         long validityPeriodInMillis = getConfiguredAccessTokenValidityPeriodInMillis(oauthAuthzMsgCtx, oAuthAppBean);
+        oauthAuthzMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
         AccessTokenDO newTokenBean = createNewTokenBean(oauthAuthzMsgCtx, oAuthAppBean, existingTokenBean,
                 oauthIssuerImpl, timestamp, validityPeriodInMillis);
         setDetailsToMessageContext(oauthAuthzMsgCtx, newTokenBean);
