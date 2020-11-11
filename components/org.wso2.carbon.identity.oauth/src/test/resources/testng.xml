@@ -114,6 +114,7 @@
             <!--<class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest"/>-->
             <class name="org.wso2.carbon.identity.openidconnect.DefaultOIDCClaimsCallbackHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidatorTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeysTest"/>
         </classes>
     </test>
 
