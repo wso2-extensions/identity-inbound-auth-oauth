@@ -834,7 +834,6 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                                                   String tenantDomain) throws IdentityOAuth2Exception {
         String tokenEndpointAlias = null;
         FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
-        //validateIdpEntityId(assertion, tenantDomain,  getIdpEntityId(fedAuthnConfigs));
         // Get OpenIDConnect authenticator == OAuth
         // authenticator
         FederatedAuthenticatorConfig oauthAuthenticatorConfig =
@@ -994,6 +993,14 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         return false;
     }
 
+    /**
+     * Get the corresponding SAML service provider using the issuer name.
+     *
+     * @param issuerName    SAML assertion issuer.
+     * @param tenantDomain  Tenant Domain.
+     * @return SAML Service Provider
+     * @throws IdentityOAuth2Exception
+     */
     private SAMLSSOServiceProviderDO getSAMLSSOServiceProvider(String issuerName, String tenantDomain)
             throws IdentityOAuth2Exception {
 
