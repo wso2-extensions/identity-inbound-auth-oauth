@@ -265,13 +265,13 @@ public class IntrospectionResponseBuilder {
     /**
      * Set authorized user type to the introspection response.
      *
-     * @param aut Authorized user type
+     * @param authorizedUserType Authorized user type
      * @return IntrospectionResponseBuilder
      */
-    public IntrospectionResponseBuilder setAuthorizedUserType(String aut) {
+    public IntrospectionResponseBuilder setAuthorizedUserType(String authorizedUserType) {
 
-        if (StringUtils.isNotBlank(aut)) {
-            parameters.put(IntrospectionResponse.AUT, aut);
+        if (StringUtils.isNotBlank(authorizedUserType)) {
+            parameters.put(IntrospectionResponse.AUT, authorizedUserType);
         }
         return this;
     }

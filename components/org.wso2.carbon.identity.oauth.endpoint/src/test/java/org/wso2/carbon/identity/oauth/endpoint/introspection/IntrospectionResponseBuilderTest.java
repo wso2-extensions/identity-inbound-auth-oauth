@@ -22,6 +22,7 @@ import org.json.JSONObject;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -88,7 +89,7 @@ public class IntrospectionResponseBuilderTest {
         introspectionResponseBuilder1.setClientId("rgfKVdnMQnJSSr_pKFTxj3apiwYa");
         introspectionResponseBuilder1.setErrorCode("Invalid input");
         introspectionResponseBuilder1.setErrorDescription("error_discription");
-        introspectionResponseBuilder1.setAuthorizedUserType("APPLICATION_USER");
+        introspectionResponseBuilder1.setAuthorizedUserType(OAuthConstants.UserType.APPLICATION_USER);
 
         JSONObject jsonObject = new JSONObject(introspectionResponseBuilder1.build());
 
