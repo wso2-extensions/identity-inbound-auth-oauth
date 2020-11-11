@@ -441,7 +441,7 @@ public class EndpointUtil {
             if (StringUtils.isBlank(redirectUri)) {
                 redirectUri = getErrorPageURL(request, errorCode, errorMessage, appName);
             } else {
-                String state = retrieveStateForErrorURL(oAuth2Parameters);
+                String state = retrieveStateForErrorURL(request, oAuth2Parameters);
                 redirectUri = getUpdatedRedirectURL(request, redirectUri, errorCode, errorMessage, state, appName);
             }
             return redirectUri;
@@ -1010,16 +1010,23 @@ public class EndpointUtil {
      * If the state is not available in OAuth2Parameters and request object then state will be retrieved
      * from query params.
      *
-     * @param oAuth2Parameters
+     * @param request Http servlet request.
+     * @param oAuth2Parameters OAuth2 parameters.
      * @return state
      */
-    private static String retrieveStateForErrorURL(OAuth2Parameters oAuth2Parameters) {
+    private static String retrieveStateForErrorURL(HttpServletRequest request, OAuth2Parameters oAuth2Parameters) {
 
         String state = null;
         if (oAuth2Parameters != null && oAuth2Parameters.getState() != null) {
             state = oAuth2Parameters.getState();
             if (log.isDebugEnabled()) {
                 log.debug("Retrieved state value " + state + " from OAuth2Parameters.");
+            }
+        }
+        if (StringUtils.isEmpty(state)) {
+            state = request.getParameter(OAuthConstants.OAuth20Params.STATE);
+            if (log.isDebugEnabled()) {
+                log.debug("Retrieved state value " + state + " from request query params.");
             }
         }
         return state;
