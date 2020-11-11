@@ -70,6 +70,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.RENEW_REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE_NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_VALIDATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties
         .TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION;
@@ -613,8 +614,17 @@ public class OAuthAppDAO {
                 oauthAppDO.getRenewRefreshTokenEnabled(), prepStatementForPropertyAdd,
                 preparedStatementForPropertyUpdate);
 
+        if (TOKEN_BINDING_TYPE_NONE.equalsIgnoreCase(oauthAppDO.getTokenBindingType())) {
+            oauthAppDO.setTokenType(null);
+        }
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, TOKEN_BINDING_TYPE,
                 oauthAppDO.getTokenBindingType(), prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        // Token binding is required to enable following features.
+        if (oauthAppDO.getTokenBindingType() == null) {
+            oauthAppDO.setTokenRevocationWithIDPSessionTerminationEnabled(false);
+            oauthAppDO.setTokenBindingValidationEnabled(false);
+        }
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION,
@@ -1149,8 +1159,17 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     RENEW_REFRESH_TOKEN, consumerAppDO.getRenewRefreshTokenEnabled());
 
+            if (TOKEN_BINDING_TYPE_NONE.equalsIgnoreCase(consumerAppDO.getTokenBindingType())) {
+                consumerAppDO.setTokenType(null);
+            }
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty, TOKEN_BINDING_TYPE,
                     consumerAppDO.getTokenBindingType());
+
+            // Token binding is required to enable following features.
+            if (consumerAppDO.getTokenBindingType() == null) {
+                consumerAppDO.setTokenRevocationWithIDPSessionTerminationEnabled(false);
+                consumerAppDO.setTokenBindingValidationEnabled(false);
+            }
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION,
@@ -1241,15 +1260,24 @@ public class OAuthAppDAO {
                 getFirstPropertyValue(spOIDCProperties, BYPASS_CLIENT_CREDENTIALS));
         oauthApp.setBypassClientCredentials(bypassClientCreds);
 
-        oauthApp.setTokenBindingType(getFirstPropertyValue(spOIDCProperties, TOKEN_BINDING_TYPE));
+        String tokenBindingType = getFirstPropertyValue(spOIDCProperties, TOKEN_BINDING_TYPE);
+        if (TOKEN_BINDING_TYPE_NONE.equalsIgnoreCase(tokenBindingType)) {
+            tokenBindingType = null;
+        }
+        oauthApp.setTokenBindingType(tokenBindingType);
 
-        boolean isTokenRevocationEnabled = Boolean.parseBoolean(getFirstPropertyValue(spOIDCProperties,
-                TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION));
-        oauthApp.setTokenRevocationWithIDPSessionTerminationEnabled(isTokenRevocationEnabled);
+        if (tokenBindingType == null) {
+            oauthApp.setTokenRevocationWithIDPSessionTerminationEnabled(false);
+            oauthApp.setTokenBindingValidationEnabled(false);
+        } else {
+            boolean isTokenRevocationEnabled = Boolean.parseBoolean(
+                    getFirstPropertyValue(spOIDCProperties, TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION));
+            oauthApp.setTokenRevocationWithIDPSessionTerminationEnabled(isTokenRevocationEnabled);
 
-        boolean isTokenBindingValidationEnabled = Boolean.parseBoolean(getFirstPropertyValue(spOIDCProperties,
-                TOKEN_BINDING_VALIDATION));
-        oauthApp.setTokenBindingValidationEnabled(isTokenBindingValidationEnabled);
+            boolean isTokenBindingValidationEnabled = Boolean
+                    .parseBoolean(getFirstPropertyValue(spOIDCProperties, TOKEN_BINDING_VALIDATION));
+            oauthApp.setTokenBindingValidationEnabled(isTokenBindingValidationEnabled);
+        }
 
         String renewRefreshToken = getFirstPropertyValue(spOIDCProperties, RENEW_REFRESH_TOKEN);
         oauthApp.setRenewRefreshTokenEnabled(renewRefreshToken);
