@@ -193,4 +193,16 @@ public interface AccessTokenDAO {
 
         return null;
     }
+
+    /**
+     * Retrieve the access token for a given token id.
+     *
+     * @param tokenId token id.
+     * @return access token.
+     * @throws IdentityOAuth2Exception if the retrieval process fails.
+     */
+    default String getAccessTokenByTokenId(String tokenId) throws IdentityOAuth2Exception {
+
+        return null;
+    }
 }
