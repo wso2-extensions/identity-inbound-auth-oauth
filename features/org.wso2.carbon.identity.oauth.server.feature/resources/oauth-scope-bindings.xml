@@ -26,11 +26,26 @@
         <Permission>/permission/protected/manage/modify/tenants</Permission>
      </Permissions>
   </Scope>
-  <Scope name="internal_list_tenants" displayName="List Tenant">
-      <Permissions>
-        <Permission>/permission/protected/manage/monitor/tenants/list</Permission>
-     </Permissions>
-</Scope>
+    <Scope name="internal_view_tenants" displayName="View Tenant">
+        <Permissions>
+            <Permission>/permission/protected/manage/monitor/tenants/list</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_create_tenants" displayName="Create Tenant">
+        <Permissions>
+            <Permission>/permission/protected/manage/modify/tenants/create</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_update_tenants" displayName="Update Tenant">
+        <Permissions>
+            <Permission>/permission/protected/manage/modify/tenants/update</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_tenant_metadata_delete" displayName="Delete Tenant">
+        <Permissions>
+            <Permission>/permission/protected/manage/modify/tenants/delete</Permission>
+        </Permissions>
+    </Scope>
 <Scope name="internal_server_admin" displayName="Server Admin">
     <Permissions>
       <Permission>/permission/protected/server-admin/homepage</Permission>
