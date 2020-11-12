@@ -19,11 +19,15 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.oltu.oauth2.common.error.OAuthError;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.user.UserInfoAccessTokenValidator;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.Arrays;
 
@@ -57,6 +61,7 @@ public class UserInfoISAccessTokenValidator implements UserInfoAccessTokenValida
         accessToken.setIdentifier(accessTokenIdentifier);
         dto.setAccessToken(accessToken);
         OAuth2TokenValidationResponseDTO response = EndpointUtil.getOAuth2TokenValidationService().validate(dto);
+        AccessTokenDO accessTokenDO;
 
         // invalid access token
         if (!response.isValid()) {
@@ -71,6 +76,12 @@ public class UserInfoISAccessTokenValidator implements UserInfoAccessTokenValida
             hasOpenIDScope = Arrays.asList(scopes).contains("openid");
         }
 
+        try {
+            accessTokenDO = OAuth2Util.findAccessToken(accessTokenIdentifier, false);
+        } catch (IdentityOAuth2Exception e) {
+            throw new UserInfoEndpointException("Error in getting AccessTokenDO", e);
+        }
+
         if (!hasOpenIDScope) {
             throw new UserInfoEndpointException(OAuthError.ResourceResponse.INSUFFICIENT_SCOPE,
                     "Access token does not have the openid scope");
@@ -81,9 +92,16 @@ public class UserInfoISAccessTokenValidator implements UserInfoAccessTokenValida
                     "Access token is not valid. No authorized user found. Invalid grant");
         }
 
-        if (request != null && !isValidTokenBinding(response.getTokenBinding(), request)) {
-            throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
-                    "Valid token binding value not present in the request.");
+        try {
+            if (accessTokenDO != null && request != null &&
+                    OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey()).
+                    isTokenBindingValidationEnabled() && !isValidTokenBinding(response.getTokenBinding(), request)) {
+                    throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
+                            "Valid token binding value not present in the request.");
+            }
+        } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
+            throw new UserInfoEndpointException("Error in getting information of the client : " +
+                    accessTokenDO.getConsumerKey(), e);
         }
 
         OAuth2TokenValidationResponseDTO.AuthorizationContextToken authorizationContextToken = response.

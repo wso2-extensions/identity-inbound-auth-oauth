@@ -18,13 +18,17 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
+import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
+import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 
 import java.io.IOException;
 import java.util.Scanner;
@@ -32,18 +36,22 @@ import java.util.Scanner;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.HttpHeaders;
 
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 
-@PrepareForTest(UserInforRequestDefaultValidator.class)
+@PrepareForTest({UserInforRequestDefaultValidator.class, UserInfoISAccessTokenValidator.class, EndpointUtil.class})
 public class UserInfoISAccessTokenValidatorTest extends PowerMockTestCase {
 
     @Mock
     private HttpServletRequest httpServletRequest;
     @Mock
     private Scanner scanner;
+    @Mock
+    private OAuth2TokenValidationService oAuth2TokenValidationService;
     private UserInforRequestDefaultValidator userInforRequestDefaultValidator;
+    private UserInfoISAccessTokenValidator userInfoISAccessTokenValidator;
     private final String token = "ZWx1c3VhcmlvOnlsYWNsYXZl";
     private final String basicAuthHeader = "Bearer " + token;
     private static String contentTypeHeaderValue = "application/x-www-form-urlencoded";
@@ -52,6 +60,7 @@ public class UserInfoISAccessTokenValidatorTest extends PowerMockTestCase {
     public void setup() {
 
         userInforRequestDefaultValidator = new UserInforRequestDefaultValidator();
+        userInfoISAccessTokenValidator = new UserInfoISAccessTokenValidator();
     }
 
     @Test
@@ -92,6 +101,27 @@ public class UserInfoISAccessTokenValidatorTest extends PowerMockTestCase {
         };
     }
 
+    @DataProvider
+    public Object[][] getTokens() {
+
+        return new Object[][] {
+                {"48544572-a796-3d42-a571-505bc609acd8"},
+        };
+    }
+
+    @Test(dataProvider = "getTokens", expectedExceptions = UserInfoEndpointException.class)
+    public void testTokenValidation(String accessTokenIdentifier) throws Exception {
+
+        prepareOAuth2TokenValidationService();
+
+        mockStatic(EndpointUtil.class);
+        when(EndpointUtil.getOAuth2TokenValidationService()).thenReturn(oAuth2TokenValidationService);
+
+        OAuth2TokenValidationResponseDTO responseDTO = userInfoISAccessTokenValidator
+                .validateToken(accessTokenIdentifier);
+        assertEquals(responseDTO.getAuthorizationContextToken().getTokenString(), accessTokenIdentifier);
+    }
+
 //    @Test(dataProvider = "requestBodyWithNonASCII", expectedExceptions = UserInfoEndpointException.class)
 //    public void testValidateTokenWithRequestBodyNonASCII(String contentType, String requestBody, String expected)
 // throws Exception {
@@ -118,6 +148,12 @@ public class UserInfoISAccessTokenValidatorTest extends PowerMockTestCase {
 
         String token = userInforRequestDefaultValidator.validateRequest(httpServletRequest);
         return token;
+    }
+
+    private void prepareOAuth2TokenValidationService() {
+
+        when(oAuth2TokenValidationService.validate(Matchers.anyObject()))
+                .thenReturn(new OAuth2TokenValidationResponseDTO());
     }
 
     private void prepareHttpServletRequest(String authorization, String contentType) {
