@@ -109,11 +109,10 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
         String errorCode =
                 (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
 
-        if (errorCode != null && (errorCode.equalsIgnoreCase(UserCoreConstants.ErrorCode.USER_IS_LOCKED))) {
+        if (UserCoreConstants.ErrorCode.USER_IS_LOCKED.equalsIgnoreCase(errorCode)) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("User %s is locked. Hence revoking user's access tokens.", userName));
             }
-            log.info(String.format("User %s is locked. Hence revoking user's access tokens.", userName));
             revokeTokens(userName, userStoreManager);
         }
     }
@@ -123,11 +122,10 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
 
         String errorCode =
                 (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
-        if (errorCode != null && errorCode.equalsIgnoreCase(IdentityCoreConstants.USER_ACCOUNT_DISABLED_ERROR_CODE)) {
+        if (IdentityCoreConstants.USER_ACCOUNT_DISABLED_ERROR_CODE.equalsIgnoreCase(errorCode)) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("User %s is disabled. Hence revoking user's access tokens.", userName));
             }
-            log.info(String.format("User %s is disabled. Hence revoking user's access tokens.", userName));
             revokeTokens(userName, userStoreManager);
         }
     }
