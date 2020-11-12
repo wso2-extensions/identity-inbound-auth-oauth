@@ -27,6 +27,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
+import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -34,6 +35,7 @@ import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener;
+import org.wso2.carbon.identity.oauth.listener.IdentityOauthEventHandler;
 import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
@@ -67,6 +69,12 @@ public class OAuthServiceComponent {
             serviceRegistration = context.getBundleContext().registerService(UserOperationEventListener.class.getName(),
                     listener, null);
             log.debug("Identity Oath Event Listener is enabled");
+
+            context.getBundleContext().registerService(AbstractEventHandler.class.getName(),
+                    new IdentityOauthEventHandler(), null);
+            if (log.isDebugEnabled()) {
+                log.debug("Identity Oauth Event handler is enabled");
+            }
 
             OAuth2Service oauth2Service = new OAuth2Service();
             context.getBundleContext().registerService(OAuth2Service.class.getName(), oauth2Service, null);
