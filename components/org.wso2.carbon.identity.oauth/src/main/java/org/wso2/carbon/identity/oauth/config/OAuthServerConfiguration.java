@@ -144,6 +144,7 @@ public class OAuthServerConfiguration {
     private boolean cacheEnabled = false;
     private boolean isTokenRenewalPerRequestEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
+    private boolean isExtendRenewedTokenExpiryTimeEnabled = false;
     private boolean assertionsUserNameEnabled = false;
     private boolean accessTokenPartitioningEnabled = false;
     private boolean redirectToRequestedRedirectUriEnabled = true;
@@ -704,6 +705,10 @@ public class OAuthServerConfiguration {
 
     public boolean isRefreshTokenRenewalEnabled() {
         return isRefreshTokenRenewalEnabled;
+    }
+
+    public boolean isExtendRenewedTokenExpiryTimeEnabled() {
+        return isExtendRenewedTokenExpiryTimeEnabled;
     }
 
     public Map<String, OauthTokenIssuer> getOauthTokenIssuerMap() {
@@ -1820,6 +1825,15 @@ public class OAuthServerConfiguration {
         }
         if (log.isDebugEnabled()) {
             log.debug("RenewRefreshTokenForRefreshGrant was set to : " + isRefreshTokenRenewalEnabled);
+        }
+
+        OMElement enableExtendRenewedTokenExpTimeElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME));
+        if (enableExtendRenewedTokenExpTimeElem != null) {
+            isExtendRenewedTokenExpiryTimeEnabled = Boolean.parseBoolean(enableExtendRenewedTokenExpTimeElem.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("ExtendRenewedRefreshTokenExpiryTime was set to : " + isExtendRenewedTokenExpiryTimeEnabled);
         }
     }
 
@@ -3052,6 +3066,8 @@ public class OAuthServerConfiguration {
         private static final String ENABLE_CACHE = "EnableOAuthCache";
         // Enable/Disable refresh token renewal on each refresh_token grant request
         private static final String RENEW_REFRESH_TOKEN_FOR_REFRESH_GRANT = "RenewRefreshTokenForRefreshGrant";
+        // Enable/Disable extend the lifetime of the new refresh token
+        private static final String EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME = "ExtendRenewedRefreshTokenExpiryTime";
         // TokenPersistenceProcessor
         private static final String TOKEN_PERSISTENCE_PROCESSOR = "TokenPersistenceProcessor";
         // Token issuer generator.
