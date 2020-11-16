@@ -293,7 +293,7 @@ public class OAuthRevocationEndpoint {
                     .setErrorDescription("Client Authentication failed.").buildJSONMessage();
             return Response.status(response.getResponseStatus())
                     .header(HTTP_RESP_HEADER_AUTHENTICATE, getRealmInfo())
-                    .header(HttpHeaders.CONTENT_TYPE,ALLOWED_CONTENT_TYPES.get(1))
+                    .header(HttpHeaders.CONTENT_TYPE, ALLOWED_CONTENT_TYPES.get(1))
                     .entity(response.getBody()).build();
         } else {
             OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
