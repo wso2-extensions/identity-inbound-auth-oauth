@@ -61,6 +61,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEA
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_PRAGMA;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ALLOWED_CONTENT_TYPES;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.extractCredentialsFromAuthzHeader;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getRealmInfo;
@@ -292,7 +293,7 @@ public class OAuthRevocationEndpoint {
                     .setErrorDescription("Client Authentication failed.").buildJSONMessage();
             return Response.status(response.getResponseStatus())
                     .header(HTTP_RESP_HEADER_AUTHENTICATE, getRealmInfo())
-                    .header(HttpHeaders.CONTENT_TYPE,"application/json")
+                    .header(HttpHeaders.CONTENT_TYPE,ALLOWED_CONTENT_TYPES.get(1))
                     .entity(response.getBody()).build();
         } else {
             OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
