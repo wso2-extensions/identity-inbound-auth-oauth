@@ -34,7 +34,6 @@ host: localhost:9443
 # The base path of the API.
 # Will be prefixed to all paths.
 
-# For a tenant, basepath should be /t/{tenant_domain}/api/identity/oauth2/v1.0.
 #basePath: /api/identity/oauth2/v1.0
 basePath: /t/{tenant_domain}/api/identity/oauth2/v1.0
 
