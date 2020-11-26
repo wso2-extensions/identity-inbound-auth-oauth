@@ -501,7 +501,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.claim(OAuthConstants.AUTHORIZED_USER_TYPE,
                 getAuthorizedUserType(authAuthzReqMessageContext, tokenReqMessageContext));
 
-        jwtClaimsSetBuilder.expirationTime(new Date(curTimeInMillis + accessTokenLifeTimeInMillis));
+        jwtClaimsSetBuilder.expirationTime(calculateAccessTokenExpiryTime(accessTokenLifeTimeInMillis,
+                curTimeInMillis));
 
         // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens. But we are keeping this in JWT
         // as well.
@@ -519,6 +520,32 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSet = handleTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
 
         return jwtClaimsSet;
+    }
+
+    /**
+     * Calculates access token expiry time.
+     *
+     * @param accessTokenLifeTimeInMillis accessTokenLifeTimeInMillis
+     * @param curTimeInMillis             currentTimeInMillis
+     * @return expirationTime
+     */
+    private Date calculateAccessTokenExpiryTime(Long accessTokenLifeTimeInMillis, Long curTimeInMillis) {
+
+        Date expirationTime;
+        if (accessTokenLifeTimeInMillis < 0) {
+            if (log.isDebugEnabled()) {
+                log.debug("Infinite access token expiry detected. Setting the expiry value to MAX value: " +
+                        Long.MAX_VALUE + "ms.");
+            }
+            // Expiry time set to MAX value as (current + MAX) will lead to a negative value.
+            expirationTime = new Date(Long.MAX_VALUE);
+        } else {
+            expirationTime = new Date(curTimeInMillis + accessTokenLifeTimeInMillis);
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Access token expiry time : " + expirationTime + "ms.");
+        }
+        return expirationTime;
     }
 
     private String getAuthorizedUserType(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
