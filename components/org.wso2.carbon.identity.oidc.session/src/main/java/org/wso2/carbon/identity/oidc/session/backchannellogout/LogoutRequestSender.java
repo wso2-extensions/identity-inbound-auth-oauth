@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -41,6 +42,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -74,7 +76,22 @@ public class LogoutRequestSender {
      */
     public void sendLogoutRequests(HttpServletRequest request) {
 
-        Map<String, String> logoutTokenList = getLogoutTokenList(request);
+        Cookie opbsCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
+        if (opbsCookie != null) {
+            sendLogoutRequests(opbsCookie.getValue());
+        } else {
+            log.error("No opbscookie exists in the request");
+        }
+    }
+
+    /**
+     * Sends logout requests to all service providers.
+     *
+     * @param opbsCookieId
+     */
+    public void sendLogoutRequests(String opbsCookieId) {
+
+        Map<String, String> logoutTokenList = getLogoutTokenList(opbsCookieId);
         if (MapUtils.isNotEmpty(logoutTokenList)) {
             // For each logoutReq, create a new task and submit it to the thread pool.
             for (Map.Entry<String, String> logoutTokenMap : logoutTokenList.entrySet()) {
@@ -89,18 +106,19 @@ public class LogoutRequestSender {
         }
     }
 
+
     /**
      * Returns a Map with logout tokens and back-channel logut Url of Service providers.
      *
-     * @param request
+     * @param opbsCookie
      * @return Map with logoutToken, back-channel logout Url.
      */
-    private Map<String, String> getLogoutTokenList(HttpServletRequest request) {
+    private Map<String, String> getLogoutTokenList(String opbsCookie) {
 
         Map<String, String> logoutTokenList = null;
         try {
             DefaultLogoutTokenBuilder logoutTokenBuilder = new DefaultLogoutTokenBuilder();
-            logoutTokenList = logoutTokenBuilder.buildLogoutToken(request);
+            logoutTokenList = logoutTokenBuilder.buildLogoutToken(opbsCookie);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             log.error("Error while initializing " + DefaultLogoutTokenBuilder.class, e);
         }
