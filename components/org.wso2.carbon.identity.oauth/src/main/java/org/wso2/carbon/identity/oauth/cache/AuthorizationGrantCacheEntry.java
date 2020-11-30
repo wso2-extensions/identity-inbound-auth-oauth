@@ -70,6 +70,8 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     private String tokenBindingValue;
 
+    private String sessionContextIdentifier;
+
     public String getSubjectClaim() {
         return subjectClaim;
     }
@@ -234,5 +236,26 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     public void setTokenBindingValue(String tokenBindingValue) {
 
         this.tokenBindingValue = tokenBindingValue;
+    }
+
+    /**
+     * Get sessionContextIdentifier value.
+     *
+     * @return sessionContextIdentifier value.
+     */
+    public String getSessionContextIdentifier() {
+
+        return sessionContextIdentifier;
+    }
+
+    /**
+     * Set sessionContextIdentifier value. This can be used to add sessionContext identifier into the idtoken.
+     * Hence it will be used when extending the idp session.
+     *
+     * @param sessionContextIdentifier sessionContextIdentifier.
+     */
+    public void setSessionContextIdentifier(String sessionContextIdentifier) {
+
+        this.sessionContextIdentifier = sessionContextIdentifier;
     }
 }

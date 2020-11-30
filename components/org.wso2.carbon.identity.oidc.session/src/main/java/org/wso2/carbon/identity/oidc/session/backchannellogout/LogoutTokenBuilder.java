@@ -38,4 +38,14 @@ public interface LogoutTokenBuilder {
      */
     Map<String, String> buildLogoutToken(HttpServletRequest request)
             throws IdentityOAuth2Exception, InvalidOAuthClientException;
+
+    /**
+     * Returns logout token and back-channel logout uri map.
+     *
+     * @param opbsCookie opbscookie value
+     * @return a map of logout tokens and corresponding back-channel logout URLs.
+     * @throws IdentityOAuth2Exception
+     */
+    Map<String, String> buildLogoutToken(String opbsCookie)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException;
 }
