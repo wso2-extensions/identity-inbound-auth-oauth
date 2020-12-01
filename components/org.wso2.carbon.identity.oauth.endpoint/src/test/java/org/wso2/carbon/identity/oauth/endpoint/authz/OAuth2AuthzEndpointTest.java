@@ -36,6 +36,7 @@ import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.Assert;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
@@ -146,6 +147,7 @@ import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.FileAssert.fail;
 
@@ -1292,7 +1294,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(sessionDataCache.getValueFromCache(loginDataCacheKey)).thenReturn(loginCacheEntry);
         when(loginCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
         when(loginCacheEntry.getLoggedInUser()).thenReturn(result.getSubject());
-
         mockStatic(IdentityDatabaseUtil.class);
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
 
@@ -1340,6 +1341,43 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         ApplicationManagementService appMgtService = mock(ApplicationManagementService.class);
         when(appMgtService.getServiceProviderByClientId(anyString(), anyString(), anyString())).thenReturn(sp);
         OAuth2ServiceComponentHolder.setApplicationMgtService(appMgtService);
+    }
+
+    @DataProvider(name = "provideSessionContextData")
+    public Object[][] provideSessionContextData() {
+
+        return new Object[][]{{"1234", "1234"}, {null, null}, {"1234", ""}};
+    }
+
+    @Test(dataProvider = "provideSessionContextData")
+    public void testStoreOpbsInSessionContext(String identifier, String opbs) throws Exception {
+
+        AuthenticationResult result = setAuthenticationResult(true, null, null, null, null);
+        result.addProperty(FrameworkConstants.AnalyticsAttributes.SESSION_ID, identifier);
+        mockStatic(SessionDataCache.class);
+        when(SessionDataCache.getInstance()).thenReturn(sessionDataCache);
+        SessionDataCacheKey loginDataCacheKey = new SessionDataCacheKey(SESSION_DATA_KEY_VALUE);
+        when(sessionDataCache.getValueFromCache(loginDataCacheKey)).thenReturn(loginCacheEntry);
+        when(loginCacheEntry.getLoggedInUser()).thenReturn(result.getSubject());
+        when(loginCacheEntry.getSessionContextIdentifier()).thenReturn(identifier);
+        String sessionContextIdentifier = WhiteboxImpl.invokeMethod(authzEndpointObject, "getSessionContextIdentifier"
+                , loginCacheEntry);
+        if (identifier != null) {
+            assertNotNull(sessionContextIdentifier, "Session context identifier should not be null");
+        } else {
+            assertNull(sessionContextIdentifier, "Session context identifier should be null");
+        }
+        SessionContext sessionContext = new SessionContext();
+        mockStatic(FrameworkUtils.class);
+        when(FrameworkUtils.getSessionContextFromCache(anyString())).thenReturn(sessionContext);
+        sessionContext.addProperty("opbs", opbs);
+        Assert.assertNull(WhiteboxImpl.invokeMethod(authzEndpointObject, "storeOpbsInSessionContext",
+                loginCacheEntry, opbs));
+        if (opbs != null) {
+            assertNotNull(sessionContext.getProperty("opbs"), "OpbsCookie is null in the context");
+        } else {
+            assertNull(sessionContext.getProperty("opbs"), "OpbsCookie is not null in the context");
+        }
     }
 
     @DataProvider(name = "providePathExistsData")
