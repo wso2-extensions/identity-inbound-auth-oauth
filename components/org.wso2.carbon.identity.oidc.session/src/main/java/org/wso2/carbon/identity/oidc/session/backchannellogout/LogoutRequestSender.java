@@ -110,7 +110,7 @@ public class LogoutRequestSender {
     /**
      * Returns a Map with logout tokens and back-channel logut Url of Service providers.
      *
-     * @param opbsCookie
+     * @param opbsCookie OpbsCookie.
      * @return Map with logoutToken, back-channel logout Url.
      */
     private Map<String, String> getLogoutTokenList(String opbsCookie) {
