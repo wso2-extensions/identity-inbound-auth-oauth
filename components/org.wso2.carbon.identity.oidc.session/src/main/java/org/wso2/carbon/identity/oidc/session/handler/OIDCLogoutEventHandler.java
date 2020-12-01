@@ -86,9 +86,10 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
         HttpServletRequest request = getHttpRequestFromEvent(event);
         if (request != null) {
             if (StringUtils.equals(request.getParameter(TYPE), FrameworkConstants.RequestType.CLAIM_TYPE_OIDC)) {
-                // If a logout request is triggered from an OIDC app then the OIDCLogoutServlet
-                // and OIDCLogoutEventHandler both are triggered and the logout request is handled in both
-                // places. https://github.com/wso2/product-is/issues/6418
+                /* If a logout request is triggered from an OIDC app then the OIDCLogoutServlet
+                and OIDCLogoutEventHandler both are triggered and the logout request is handled in both
+                places. https://github.com/wso2/product-is/issues/6418
+                */
                 return true;
             }
         }

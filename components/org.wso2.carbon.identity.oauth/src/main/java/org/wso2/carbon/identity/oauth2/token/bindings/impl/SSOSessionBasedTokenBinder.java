@@ -126,10 +126,8 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
                 }
                 return false;
             }
-            /*
-            Retrieve session context information using sessionIdentifier in order to check the validity of
-            commonAuthId cookie.
-            */
+            /* Retrieve session context information using sessionIdentifier in order to check the validity of
+            commonAuthId cookie.*/
             SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionIdentifier);
             if (sessionContext == null) {
                 if (log.isDebugEnabled()) {

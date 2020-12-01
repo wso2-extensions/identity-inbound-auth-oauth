@@ -238,8 +238,8 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     /**
      * Returns the OIDCsessionState of the obps cookie.
      *
-     * @param opbscookie
-     * @return
+     * @param opbscookie OpbsCookie.
+     * @return OIDCSessionState
      */
     private OIDCSessionState getSessionState(String opbscookie) {
 
