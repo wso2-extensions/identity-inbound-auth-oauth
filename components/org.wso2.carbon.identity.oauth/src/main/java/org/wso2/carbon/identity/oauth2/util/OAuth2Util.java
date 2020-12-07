@@ -124,8 +124,10 @@ import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
+import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -3876,5 +3878,62 @@ public class OAuth2Util {
             }
         }
         return false;
+    }
+
+    /**
+     * Util method to get Identity Provider by name and tenant domain.
+     *
+     * @param identityProviderName Identity provider
+     * @param tenantDomain         Tenant domain
+     * @return Identity Provider
+     * @throws IdentityOAuth2Exception If were unable to get Identity provider.
+     */
+    public static IdentityProvider getIdentityProvider(String identityProviderName, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        try {
+            if (OAuth2ServiceComponentHolder.getInstance().getIdpManager() != null) {
+                return OAuth2ServiceComponentHolder.getInstance().getIdpManager().getIdPByName(identityProviderName,
+                        tenantDomain);
+            } else {
+                String errorMsg = String.format("Unable to retrieve Idp manager. Error while " +
+                        "getting '%s' Identity  Provider of '%s' tenant.", identityProviderName, tenantDomain);
+                throw new IdentityOAuth2Exception(errorMsg);
+            }
+        } catch (IdentityProviderManagementException e) {
+            String errorMsg =
+                    String.format("Error while getting '%s' Identity Provider of '%s' tenant.", identityProviderName,
+                            tenantDomain);
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        }
+    }
+
+    /**
+     * Get Internal/everyone role for corresponding user using realm configuration.
+     *
+     * @param user Authenticated user
+     * @return Internal/everyone role
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception
+     */
+    public static String getInternalEveryoneRole(AuthenticatedUser user) throws IdentityOAuth2Exception {
+
+        try {
+            RealmConfiguration realmConfiguration;
+            RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+            int tenantId = getTenantId(user.getTenantDomain());
+            if (realmService != null && tenantId != org.wso2.carbon.base.MultitenantConstants.INVALID_TENANT_ID) {
+                UserStoreManager userStoreManager;
+                userStoreManager = (UserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
+                if (userStoreManager != null) {
+                    realmConfiguration = userStoreManager.getRealmConfiguration();
+                    return realmConfiguration.getEveryOneRoleName();
+                }
+            }
+            return null;
+        } catch (UserStoreException e) {
+            String errorMsg =
+                    "Error while getting Realm configuration of tenant " + user.getTenantDomain();
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        }
     }
 }
