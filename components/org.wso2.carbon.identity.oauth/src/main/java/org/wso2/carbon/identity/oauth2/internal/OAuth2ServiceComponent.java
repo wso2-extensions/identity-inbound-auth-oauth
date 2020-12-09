@@ -60,6 +60,7 @@ import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
+import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
 
@@ -443,4 +444,19 @@ public class OAuth2ServiceComponent {
         OAuthComponentServiceHolder.getInstance().removeScopeValidator(scopeValidator);
     }
 
+    @Reference(
+            name = "IdentityProviderManager",
+            service = org.wso2.carbon.idp.mgt.IdpManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIdpManager")
+    protected void setIdpManager(IdpManager idpManager) {
+
+        OAuth2ServiceComponentHolder.getInstance().setIdpManager(idpManager);
+    }
+
+    protected void unsetIdpManager(IdpManager idpManager) {
+
+        OAuth2ServiceComponentHolder.getInstance().setIdpManager(null);
+    }
 }
