@@ -61,6 +61,29 @@ public interface AccessTokenDAO {
         return getLatestAccessToken(consumerKey, authzUser, userStoreDomain, scope, includeExpiredTokens);
     }
 
+    /**
+     * Get tokenId by binding reference.
+     * @param bindingRef BindingRef.
+     * @return TokenId.
+     * @throws IdentityOAuth2Exception
+     */
+    default String getTokenIdByBindingRef(String bindingRef) throws IdentityOAuth2Exception {
+
+        return null;
+    }
+
+    /**
+     * Store tokenId to sessioncontext identifier mapping.
+     * @param sessionIdentifier SessionIdentifier.
+     * @param tokenId TokenId.
+     * @param tenantId TenantId.
+     * @throws IdentityOAuth2Exception
+     */
+    default void storeTokenToSessionMapping(String sessionIdentifier, String tokenId, int tenantId)
+            throws IdentityOAuth2Exception {
+
+    }
+
     Set<AccessTokenDO> getAccessTokens(String consumerKey, AuthenticatedUser userName,
                                        String userStoreDomain, boolean includeExpired) throws IdentityOAuth2Exception;
 

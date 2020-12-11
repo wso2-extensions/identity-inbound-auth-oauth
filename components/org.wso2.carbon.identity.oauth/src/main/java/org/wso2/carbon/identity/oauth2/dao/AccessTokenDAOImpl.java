@@ -66,6 +66,7 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 
+import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.core.util.IdentityUtil.getProperty;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID;
@@ -941,13 +942,65 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             tokenBindingPreparedStatement.setString(1, tokenId);
             try (ResultSet tokenBindingResultSet = tokenBindingPreparedStatement.executeQuery()) {
                 if (tokenBindingResultSet.next()) {
-                    TokenBinding tokenBinding = new TokenBinding();
-                    tokenBinding.setBindingType(tokenBindingResultSet.getString("TOKEN_BINDING_TYPE"));
-                    tokenBinding.setBindingReference(tokenBindingResultSet.getString("TOKEN_BINDING_REF"));
-                    tokenBinding.setBindingValue(tokenBindingResultSet.getString("TOKEN_BINDING_VALUE"));
-                    dataDO.setTokenBinding(tokenBinding);
+                    if (!StringUtils.equals("commonauth", tokenBindingResultSet.getString("TOKEN_BINDING_TYPE"))) {
+                        TokenBinding tokenBinding = new TokenBinding();
+                        tokenBinding.setBindingType(tokenBindingResultSet.getString("TOKEN_BINDING_TYPE"));
+                        tokenBinding.setBindingReference(tokenBindingResultSet.getString("TOKEN_BINDING_REF"));
+                        tokenBinding.setBindingValue(tokenBindingResultSet.getString("TOKEN_BINDING_VALUE"));
+                        dataDO.setTokenBinding(tokenBinding);
+                    }
                 }
             }
+        }
+    }
+
+    public void storeTokenToSessionMapping(String sessionContextIdentifier, String tokenId, int tenantId)
+            throws IdentityOAuth2Exception {
+
+        if (isNotBlank(sessionContextIdentifier)) {
+            Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+            try (PreparedStatement preparedStatement = connection.prepareStatement(STORE_TOKEN_BINDING)) {
+                preparedStatement.setString(1, tokenId);
+                preparedStatement.setString(2, "commonauth");
+                preparedStatement.setString(3,
+                        OAuth2Util.getTokenBindingReference(sessionContextIdentifier));
+                preparedStatement.setString(4, sessionContextIdentifier);
+                preparedStatement.setInt(5, tenantId);
+                preparedStatement.execute();
+            } catch (SQLException e) {
+                String errorMsg = "Error while persisting token to session mapping";
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMsg);
+                }
+                throw new IdentityOAuth2Exception(errorMsg, e);
+            } finally {
+                IdentityDatabaseUtil.closeConnection(connection);
+            }
+        }
+    }
+
+    public String getTokenIdByBindingRef(String bindingRef) throws IdentityOAuth2Exception {
+
+        String sql = SQLQueries.RETRIEVE_TOKEN_BINDING_BY_TOKEN_REF;
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+        PreparedStatement prepStmt = null;
+        ResultSet resultSet = null;
+        try {
+            prepStmt = connection.prepareStatement(sql);
+            prepStmt.setString(1, bindingRef);
+            resultSet = prepStmt.executeQuery();
+
+            if (resultSet.next()) {
+                return resultSet.getString("TOKEN_ID");
+            }
+            return null;
+
+        } catch (SQLException e) {
+            String errorMsg = "Error occurred while retrieving 'token id' for " +
+                    "binding ref : " + bindingRef;
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
         }
     }
 

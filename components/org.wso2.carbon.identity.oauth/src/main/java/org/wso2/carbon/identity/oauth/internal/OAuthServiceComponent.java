@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener;
 import org.wso2.carbon.identity.oauth.listener.IdentityOauthEventHandler;
 import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
+import org.wso2.carbon.identity.oauth.listener.OAuthEventInterceptorListener;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -88,6 +89,8 @@ public class OAuthServiceComponent {
 
             OAuthComponentServiceHolder.getInstance().setOAuthAdminService(oauthAdminService);
             OAuth2ServiceComponentHolder.getInstance().setOAuthAdminService(oauthAdminService);
+            context.getBundleContext().registerService(OAuthEventInterceptor.class, new OAuthEventInterceptorListener(),
+                    null);
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");

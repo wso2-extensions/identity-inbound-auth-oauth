@@ -815,7 +815,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private AccessTokenDO getExistingTokenFromCache(OAuthCacheKey cacheKey, String consumerKey, String authorizedUser,
-            String scope, String tokenBindingReference) throws IdentityOAuth2Exception {
+                                                    String scope, String tokenBindingReference)
+            throws IdentityOAuth2Exception {
 
         AccessTokenDO existingToken = null;
         CacheEntry cacheEntry = oauthCache.getValueFromCache(cacheKey);

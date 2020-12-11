@@ -2309,6 +2309,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setMaxAge(oauth2Params.getMaxAge());
         authzReqDTO.setEssentialClaims(oauth2Params.getEssentialClaims());
         authzReqDTO.setSessionDataKey(oauth2Params.getSessionDataKey());
+        authzReqDTO.setIdpSessionIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {
             authzReqDTO.addProperty(OAuthConstants.AMR, sessionDataCacheEntry.getParamMap().get(OAuthConstants.AMR));
