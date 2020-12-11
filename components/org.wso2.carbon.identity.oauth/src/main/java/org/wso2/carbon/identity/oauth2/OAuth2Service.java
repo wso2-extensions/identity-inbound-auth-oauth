@@ -343,8 +343,12 @@ public class OAuth2Service extends AbstractAdmin {
                     }
 
                 } else {
-
-                    accessTokenDO = OAuth2Util.findAccessToken(revokeRequestDTO.getToken(), true);
+                    try {
+                        accessTokenDO = OAuth2Util.findAccessToken(revokeRequestDTO.getToken(), true);
+                    } catch (IllegalArgumentException e) {
+                        log.debug("Invalid Access Token. ACTIVE access token is not found");
+                        accessTokenDO = null;
+                    }
                     if (accessTokenDO == null) {
 
                         refreshTokenDO = OAuthTokenPersistenceFactory.getInstance()
