@@ -24,9 +24,15 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.SequenceConfig;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
+import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.mgt.ApplicationMgtSystemConfig;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
@@ -41,11 +47,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -78,6 +80,10 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                 .EventProperty.CONTEXT);
         try {
             if (request == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Request object is null.");
+                }
+                revokeAccessTokensForSessionTerminationAPI(event);
                 return;
             }
             if (FrameworkConstants.RequestType.CLAIM_TYPE_OIDC.equals(request.getParameter(TYPE))) {
@@ -98,6 +104,70 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         } catch (IdentityOAuth2Exception | OAuthSystemException | InvalidOAuthClientException e) {
             log.error("Error while revoking the tokens on session termination.", e);
         }
+    }
+
+    private String getSessionIdentifier(Event event) {
+
+        Map<String, Object> eventProperties = event.getEventProperties();
+        Map<String, Object> paramMap = (Map<String, Object>) eventProperties.get(IdentityEventConstants
+                .EventProperty.PARAMS);
+        String sessionContextIdentifier = null;
+        for (Map.Entry<String, Object> entry : paramMap.entrySet()) {
+            log.info(entry.getKey() + ":" + entry.getValue());
+            if (StringUtils.equals(entry.getKey(), FrameworkConstants.AnalyticsAttributes.SESSION_ID)) {
+                sessionContextIdentifier = (String) entry.getValue();
+                if (log.isDebugEnabled()) {
+                    log.debug(" Found session context identifier: "+ sessionContextIdentifier + " from the event.");
+                }
+                break;
+            }
+        }
+        return sessionContextIdentifier;
+    }
+
+    private void revokeAccessTokensForSessionTerminationAPI(Event event)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        String sessionContextIdentifier = getSessionIdentifier(event);
+        Map<String, Object> eventProperties = event.getEventProperties();
+        if (StringUtils.isNotBlank(sessionContextIdentifier)) {
+            SessionContext sessionContext = (SessionContext) eventProperties.get(IdentityEventConstants
+                    .EventProperty.SESSION_CONTEXT);
+            Map<String, SequenceConfig> authenticatedSequences = sessionContext.getAuthenticatedSequences();
+            AuthenticatedUser user = (AuthenticatedUser) sessionContext.getProperty(FrameworkConstants.AUTHENTICATED_USER);
+            String tenantDomain = user.getTenantDomain();
+
+            for (Map.Entry<String, SequenceConfig> sequenceConfigEntry : authenticatedSequences.entrySet()) {
+                String applicationName = sequenceConfigEntry.getValue().getApplicationId();
+                String clientId = getClientIdFromApplicationName(applicationName, tenantDomain);
+                String bindingType = OAuth2Util.getAppInformationByClientId(clientId).getTokenBindingType();
+                if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(bindingType)) {
+                    revokeTokensOfBindingRef(user, OAuth2Util.getTokenBindingReference(sessionContextIdentifier));
+                }
+            }
+        }
+    }
+
+    private String getClientIdFromApplicationName(String applicationName, String tenantDomain) {
+
+        String clientId = null;
+        try {
+            ServiceProvider serviceProvider = ApplicationMgtSystemConfig.getInstance()
+                    .getApplicationDAO().getApplication(applicationName, tenantDomain);
+
+            InboundAuthenticationRequestConfig[] inboundAuthenticationRequestConfigs = serviceProvider
+                    .getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs();
+            for (InboundAuthenticationRequestConfig inboundAuthenticationRequestConfig :
+                    inboundAuthenticationRequestConfigs) {
+                if (StringUtils.equals("oauth2",
+                        inboundAuthenticationRequestConfig.getInboundAuthType())) {
+                    clientId = inboundAuthenticationRequestConfig.getInboundAuthKey();
+                }
+            }
+        } catch (IdentityApplicationManagementException e) {
+            log.error("error while getting the app");
+        }
+        return clientId;
     }
 
     @Override
