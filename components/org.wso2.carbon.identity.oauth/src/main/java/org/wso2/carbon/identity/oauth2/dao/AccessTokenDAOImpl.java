@@ -131,7 +131,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 log.debug("Error while getting access token hash for token(hashed): " + DigestUtils
                         .sha256Hex(accessTokenHash));
             }
-            throw new IdentityOAuth2Exception("Error while getting access token hash.");
+            throw new IdentityOAuth2Exception("Error while getting access token hash.", e);
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception(
                     "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
