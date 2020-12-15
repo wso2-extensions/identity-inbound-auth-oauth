@@ -24,10 +24,10 @@ import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.json.JSONObject;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
@@ -72,6 +72,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     private static final String OPENID_IDP_ENTITY_ID = "IdPEntityId";
     private static final String ERROR_GET_RESIDENT_IDP =
             "Error while getting Resident Identity Provider of '%s' tenant.";
+    private static final String BACKCHANNEL_LOGOUT_EVENT = "http://schemas.openidnet/event/backchannel-logout";
 
     public DefaultLogoutTokenBuilder() throws IdentityOAuth2Exception {
 
@@ -161,7 +162,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
         Date iat = new Date(currentTimeInMillis);
         String sid = getSidClaim(sessionState);
-        JSONObject event = new JSONObject().put("http://schemas.openidnet/event/backchannel-logout",
+        JSONObject event = new JSONObject().appendField(BACKCHANNEL_LOGOUT_EVENT,
                 new JSONObject());
 
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
@@ -169,7 +170,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
         jwtClaimsSetBuilder.issuer(iss);
         jwtClaimsSetBuilder.audience(audience);
         jwtClaimsSetBuilder.claim("jti", jti);
-        jwtClaimsSetBuilder.claim("event", event);
+        jwtClaimsSetBuilder.claim("events", event);
         jwtClaimsSetBuilder.expirationTime(new Date(currentTimeInMillis + logoutTokenValidityInMillis));
         jwtClaimsSetBuilder.claim("iat", iat);
         jwtClaimsSetBuilder.claim("sid", sid);
