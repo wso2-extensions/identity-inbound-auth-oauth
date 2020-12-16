@@ -28,8 +28,12 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -53,6 +57,9 @@ import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,8 +68,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.STORE_TOKEN_BINDING;
 
 /**
  * Abstract authorization grant handler.
@@ -775,7 +784,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         if (cacheEnabled) {
             existingToken = getExistingTokenFromCache(cacheKey, tokenReq.getClientId(),
-                    tokenMsgCtx.getAuthorizedUser().toString(), scope, tokenBindingReference);
+                    tokenMsgCtx.getAuthorizedUser().toString(), scope, tokenBindingReference,
+                    tokenMsgCtx.getOauth2AccessTokenReqDTO().getAuthorizationCode());
         }
 
         if (existingToken == null) {
@@ -791,7 +801,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         AccessTokenDO existingToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .getLatestAccessToken(tokenReq.getClientId(), tokenMsgCtx.getAuthorizedUser(),
                         getUserStoreDomain(tokenMsgCtx.getAuthorizedUser()), scope,
-                        getTokenBindingReference(tokenMsgCtx), false);
+                        getTokenBindingReference(tokenMsgCtx), false,
+                        tokenMsgCtx.getOauth2AccessTokenReqDTO().getAuthorizationCode());
         if (existingToken != null) {
             if (log.isDebugEnabled()) {
                 if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
@@ -815,7 +826,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private AccessTokenDO getExistingTokenFromCache(OAuthCacheKey cacheKey, String consumerKey, String authorizedUser,
-            String scope, String tokenBindingReference) throws IdentityOAuth2Exception {
+            String scope, String tokenBindingReference, String code) throws IdentityOAuth2Exception {
 
         AccessTokenDO existingToken = null;
         CacheEntry cacheEntry = oauthCache.getValueFromCache(cacheKey);
@@ -831,8 +842,46 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 // Token is expired. Clear it from cache.
                 removeFromCache(cacheKey, consumerKey, existingToken);
             }
+            storeTokenToSessionMapping(existingToken, code, existingToken.getTenantID());
         }
         return existingToken;
+    }
+
+    private void storeTokenToSessionMapping(AccessTokenDO accessTokenDO, String code, int tenantId)
+            throws IdentityOAuth2Exception {
+
+        String sessionContextIdentifier = null;
+        if (isNotBlank(code)) {
+            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(code);
+            AuthorizationGrantCacheEntry cacheEntry =
+                    AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
+            if (cacheEntry != null) {
+                sessionContextIdentifier = cacheEntry.getSessionContextIdentifier();
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Found session context identifier: %s for the obtained authorization code",
+                            sessionContextIdentifier));
+                }
+            }
+        }
+        if (isNotBlank(sessionContextIdentifier)) {
+            try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+                 PreparedStatement preparedStatement = connection.prepareStatement(STORE_TOKEN_BINDING)) {
+                log.info(accessTokenDO.getTokenId());
+                preparedStatement.setString(1, accessTokenDO.getTokenId());
+                preparedStatement.setString(2, "commonauth");
+                preparedStatement.setString(3,
+                        OAuth2Util.getTokenBindingReference(sessionContextIdentifier));
+                preparedStatement.setString(4, sessionContextIdentifier);
+                preparedStatement.setInt(5, tenantId);
+                preparedStatement.execute();
+            } catch (SQLException e) {
+                String errorMsg = "Error while persisting token to session mapping";
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMsg);
+                }
+                throw new IdentityOAuth2Exception(errorMsg, e);
+            }
+        }
     }
 
     private void removeFromCache(OAuthCacheKey cacheKey, String consumerKey, AccessTokenDO existingAccessTokenDO) {

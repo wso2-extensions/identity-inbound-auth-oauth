@@ -35,6 +35,9 @@ import org.wso2.carbon.identity.application.mgt.util.JdbcUtils;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -66,6 +69,7 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 
+import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.core.util.IdentityUtil.getProperty;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID;
@@ -245,6 +249,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     preparedStatement.execute();
                 }
             }
+            storeTokenToSessionMapping(connection, accessTokenDO, accessTokenDO.getAuthorizationCode(), tenantId);
 
             if (retryAttemptCounter > 0) {
                 log.info("Successfully recovered 'CON_APP_KEY' constraint violation with the attempt : " +
@@ -342,6 +347,21 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             String scope, boolean includeExpiredTokens) throws IdentityOAuth2Exception {
 
         return getLatestAccessToken(consumerKey, authzUser, userStoreDomain, scope, NONE, includeExpiredTokens);
+    }
+
+    @Override
+    public AccessTokenDO getLatestAccessToken(String consumerKey, AuthenticatedUser authzUser, String userStoreDomain,
+                                              String scope, String tokenBindingReference, boolean includeExpiredTokens,
+                                              String authorizationCode) throws IdentityOAuth2Exception {
+
+        AccessTokenDO accessTokenDO = getLatestAccessToken(consumerKey, authzUser, userStoreDomain,
+                scope, tokenBindingReference, includeExpiredTokens);
+        String tenantDomain = authzUser.getTenantDomain();
+        int tenantId = OAuth2Util.getTenantId(tenantDomain);
+        if (accessTokenDO != null) {
+            storeTokenToSessionMapping(accessTokenDO, authorizationCode, tenantId);
+        }
+        return accessTokenDO;
     }
 
     @Override
@@ -941,13 +961,107 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             tokenBindingPreparedStatement.setString(1, tokenId);
             try (ResultSet tokenBindingResultSet = tokenBindingPreparedStatement.executeQuery()) {
                 if (tokenBindingResultSet.next()) {
-                    TokenBinding tokenBinding = new TokenBinding();
-                    tokenBinding.setBindingType(tokenBindingResultSet.getString("TOKEN_BINDING_TYPE"));
-                    tokenBinding.setBindingReference(tokenBindingResultSet.getString("TOKEN_BINDING_REF"));
-                    tokenBinding.setBindingValue(tokenBindingResultSet.getString("TOKEN_BINDING_VALUE"));
-                    dataDO.setTokenBinding(tokenBinding);
+                    if (!StringUtils.equals("commonauth", tokenBindingResultSet.getString("TOKEN_BINDING_TYPE"))) {
+                        TokenBinding tokenBinding = new TokenBinding();
+                        tokenBinding.setBindingType(tokenBindingResultSet.getString("TOKEN_BINDING_TYPE"));
+                        tokenBinding.setBindingReference(tokenBindingResultSet.getString("TOKEN_BINDING_REF"));
+                        tokenBinding.setBindingValue(tokenBindingResultSet.getString("TOKEN_BINDING_VALUE"));
+                        dataDO.setTokenBinding(tokenBinding);
+                    }
                 }
             }
+        }
+    }
+
+    private void storeTokenToSessionMapping(Connection connection, AccessTokenDO accessTokenDO, String code,
+                                            int tenantId) throws IdentityOAuth2Exception {
+
+        String sessionContextIdentifier = getSessionContextIdentifier(code);
+        if (isNotBlank(sessionContextIdentifier)) {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(STORE_TOKEN_BINDING)) {
+                preparedStatement.setString(1, accessTokenDO.getTokenId());
+                preparedStatement.setString(2, "commonauth");
+                preparedStatement.setString(3,
+                        OAuth2Util.getTokenBindingReference(sessionContextIdentifier));
+                preparedStatement.setString(4, sessionContextIdentifier);
+                preparedStatement.setInt(5, tenantId);
+                preparedStatement.execute();
+            } catch (SQLException e) {
+                String errorMsg = "Error while persisting token to session mapping";
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMsg);
+                }
+                throw new IdentityOAuth2Exception(errorMsg, e);
+            }
+        }
+    }
+
+    private void storeTokenToSessionMapping(AccessTokenDO accessTokenDO, String code, int tenantId)
+            throws IdentityOAuth2Exception {
+
+        String sessionContextIdentifier = getSessionContextIdentifier(code);
+        if (isNotBlank(sessionContextIdentifier)) {
+            Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+            try (PreparedStatement preparedStatement = connection.prepareStatement(STORE_TOKEN_BINDING)) {
+                preparedStatement.setString(1, accessTokenDO.getTokenId());
+                preparedStatement.setString(2, "commonauth");
+                preparedStatement.setString(3,
+                        OAuth2Util.getTokenBindingReference(sessionContextIdentifier));
+                preparedStatement.setString(4, sessionContextIdentifier);
+                preparedStatement.setInt(5, tenantId);
+                preparedStatement.execute();
+            } catch (SQLException e) {
+                String errorMsg = "Error while persisting token to session mapping";
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMsg);
+                }
+                throw new IdentityOAuth2Exception(errorMsg, e);
+            } finally {
+                IdentityDatabaseUtil.closeConnection(connection);
+            }
+        }
+    }
+
+    private String getSessionContextIdentifier(String code) {
+
+        String sessionContextIdentifier = null;
+        if (isNotBlank(code)) {
+            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(code);
+            AuthorizationGrantCacheEntry cacheEntry =
+                    AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
+            if (cacheEntry != null) {
+                sessionContextIdentifier = cacheEntry.getSessionContextIdentifier();
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Found session context identifier: %s for the obtained authorization code",
+                            sessionContextIdentifier));
+                }
+            }
+        }
+        return sessionContextIdentifier;
+    }
+
+    public String getTokenIdByBindingRef(String bindingRef) throws IdentityOAuth2Exception {
+
+        String sql = SQLQueries.RETRIEVE_TOKEN_BINDING_BY_TOKEN_REF;
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+        PreparedStatement prepStmt = null;
+        ResultSet resultSet = null;
+        try {
+            prepStmt = connection.prepareStatement(sql);
+            prepStmt.setString(1, bindingRef);
+            resultSet = prepStmt.executeQuery();
+
+            if (resultSet.next()) {
+                return resultSet.getString("TOKEN_ID");
+            }
+            return null;
+
+        } catch (SQLException e) {
+            String errorMsg = "Error occurred while retrieving 'token id' for " +
+                    "binding ref : " + bindingRef;
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
         }
     }
 

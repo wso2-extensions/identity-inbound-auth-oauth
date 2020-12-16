@@ -166,12 +166,20 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                     }
                     String bindingType = OAuth2Util.getAppInformationByClientId(clientId).getTokenBindingType();
                     if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(bindingType)) {
+                        if (log.isDebugEnabled()) {
+                            log.debug(String.format("Application: %s has sso-session binding. Hence revoking the access"
+                                            + " tokens bound to the session: %s", applicationName,
+                                    bindingType, sessionContextIdentifier));
+                        }
                         revokeTokensOfBindingRef(user, OAuth2Util.getTokenBindingReference(sessionContextIdentifier));
                     } else {
                         if (log.isDebugEnabled()) {
-                            log.debug(String.format("Application: %s has binding type: %s.", applicationName,
-                                    bindingType));
+                            log.debug(String.format("Application: %s has binding type: %s. Hence revoking the access " +
+                                            "tokens mapped to this session identifier: %s", applicationName,
+                                    bindingType, sessionContextIdentifier));
                         }
+                        revokeTokensMappedToSession(user, OAuth2Util.getTokenBindingReference(
+                                sessionContextIdentifier));
                     }
                 }
             } else {
@@ -339,28 +347,55 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         if (StringUtils.isBlank(tokenBindingReference) || user == null) {
             return;
         }
-
         Set<AccessTokenDO> boundTokens = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .getAccessTokensByBindingRef(user, tokenBindingReference);
-
         for (AccessTokenDO accessTokenDO : boundTokens) {
-
             String consumerKey = accessTokenDO.getConsumerKey();
-
-            if (OAuth2Util.getAppInformationByClientId(consumerKey)
-                    .isTokenRevocationWithIDPSessionTerminationEnabled()) {
-
-                OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser(), OAuth2Util.buildScopeString
-                        (accessTokenDO.getScope()), tokenBindingReference);
-                OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser(), OAuth2Util.buildScopeString
-                        (accessTokenDO.getScope()));
-                OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser());
-                OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
-                OAuthUtil.invokePreRevocationBySystemListeners(accessTokenDO, Collections.emptyMap());
-                OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                        .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()}, OAuth2Util.isHashEnabled());
-                OAuthUtil.invokePostRevocationBySystemListeners(accessTokenDO, Collections.emptyMap());
-            }
+            revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
         }
+    }
+
+    private void revokeTokensMappedToSession(AuthenticatedUser user, String tokenBindingReference) throws
+            IdentityOAuth2Exception {
+
+        if (StringUtils.isBlank(tokenBindingReference) || user == null) {
+            return;
+        }
+        String tokenId = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                .getTokenIdByBindingRef(tokenBindingReference);
+        if (StringUtils.isBlank(tokenId)) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Could not find tokenId mapped for the session binding reference: %s of " +
+                        "the user: %s", tokenBindingReference, user.getUserName()));
+            }
+            return;
+        }
+        String accessToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                .getAccessTokenByTokenId(tokenId);
+        if (StringUtils.isBlank(accessToken)) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Could not find accesstoken mapped for tokenId: %s of " +
+                        "the user: %s", tokenId, user.getUserName()));
+            }
+            return;
+        }
+        log.info(accessToken);
+        AccessTokenDO accessTokenDO = OAuth2Util.getAccessTokenDOFromTokenIdentifier(accessToken, false);
+        revokeTokens(accessTokenDO.getConsumerKey(), accessTokenDO, StringUtils.EMPTY);
+    }
+
+    private void revokeTokens(String consumerKey, AccessTokenDO accessTokenDO, String tokenBindingReference)
+            throws IdentityOAuth2Exception {
+
+        OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser(), OAuth2Util.buildScopeString
+                (accessTokenDO.getScope()), tokenBindingReference);
+        OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser(), OAuth2Util.buildScopeString
+                (accessTokenDO.getScope()));
+        OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser());
+        OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
+        OAuthUtil.invokePreRevocationBySystemListeners(accessTokenDO, Collections.emptyMap());
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()}, OAuth2Util.isHashEnabled());
+        OAuthUtil.invokePostRevocationBySystemListeners(accessTokenDO, Collections.emptyMap());
     }
 }
