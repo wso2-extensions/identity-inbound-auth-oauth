@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManagerException;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
@@ -79,7 +80,7 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
                 throw new OIDCSessionManagerException(
                         "Invalid request. client_id not found in request as parameter.");
             }
-            String callbackURL = getCallbackURL(request, clientId);
+            String callbackURL = OAuth2Util.processURI(getCallbackURL(request, clientId));
             String clientOrigin = OIDCSessionManagementUtil.getOrigin(callbackURL);
 
             if (log.isDebugEnabled()) {
@@ -123,8 +124,10 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
                                 + "mandatory because of there is regex pattern for "
                                 + "callback url in service provider configuration. client_id : " + clientId);
             } else {
+                configuredCallbackURL = OAuth2Util.processURI(configuredCallbackURL);
                 if (log.isDebugEnabled()) {
-                    log.debug("Requested redirect_uri from rp IFrame : " + rpIFrameReqCallbackURL);
+                    log.debug("Requested redirect_uri from rp IFrame : " + rpIFrameReqCallbackURL + " and processed " +
+                            "callback URL: " + configuredCallbackURL);
                 }
                 String regexp = configuredCallbackURL
                         .substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());

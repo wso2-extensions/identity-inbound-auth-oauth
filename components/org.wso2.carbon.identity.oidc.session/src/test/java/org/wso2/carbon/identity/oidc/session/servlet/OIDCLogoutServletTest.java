@@ -58,6 +58,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -372,6 +373,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
         when(OAuth2Util.getTenantDomainOfOauthApp(anyString())).thenReturn("wso2.com");
         when(OAuth2Util.getTenantDomainOfOauthApp(any(oAuthAppDO.getClass()))).thenReturn("wso2.com");
+        when(OAuth2Util.processURI(anyString())).then(returnsFirstArg());
         when(keyStoreManager.getKeyStore(anyString())).thenReturn(TestUtil.loadKeyStoreFromFileSystem(TestUtil
                 .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"));
 
@@ -465,7 +467,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
         when(OAuth2Util.getTenantDomainOfOauthApp(any(oAuthAppDO.getClass()))).thenReturn("wso2.com");
-
+        when(OAuth2Util.processURI(anyString())).then(returnsFirstArg());
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
 

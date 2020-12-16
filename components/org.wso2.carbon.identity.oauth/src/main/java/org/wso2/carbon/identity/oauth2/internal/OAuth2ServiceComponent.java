@@ -63,6 +63,7 @@ import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfi
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
+import org.wso2.carbon.utils.ConfigurationContextService;
 
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabled;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
@@ -458,5 +459,24 @@ public class OAuth2ServiceComponent {
     protected void unsetIdpManager(IdpManager idpManager) {
 
         OAuth2ServiceComponentHolder.getInstance().setIdpManager(null);
+    }
+
+    @Reference(
+            name = "configuration.context.service",
+            service = ConfigurationContextService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetConfigurationContextService"
+    )
+    protected void setConfigurationContextService(ConfigurationContextService configurationContextService) {
+
+        OAuth2ServiceComponentHolder.getInstance().setConfigurationContextService(configurationContextService);
+        log.debug("ConfigurationContextService Instance was set.");
+    }
+
+    protected void unsetConfigurationContextService(ConfigurationContextService configurationContextService) {
+
+        OAuth2ServiceComponentHolder.getInstance().setConfigurationContextService(null);
+        log.debug("ConfigurationContextService Instance was unset.");
     }
 }

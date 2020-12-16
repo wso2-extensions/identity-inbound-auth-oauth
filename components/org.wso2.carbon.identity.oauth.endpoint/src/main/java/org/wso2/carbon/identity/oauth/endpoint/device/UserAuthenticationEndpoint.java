@@ -154,7 +154,7 @@ public class UserAuthenticationEndpoint {
         try {
             OAuthAppDO oAuthAppDO;
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-            String redirectURI = oAuthAppDO.getCallbackUrl();
+            String redirectURI = OAuth2Util.processURI(oAuthAppDO.getCallbackUrl());
             if (StringUtils.isBlank(redirectURI)) {
                 String appName = oAuthAppDO.getApplicationName();
                 redirectURI = getRedirectionURI(appName);

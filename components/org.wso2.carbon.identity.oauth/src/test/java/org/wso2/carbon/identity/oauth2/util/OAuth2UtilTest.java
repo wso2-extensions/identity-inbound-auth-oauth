@@ -107,7 +107,7 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
         OAuth2Util.class, OAuthComponentServiceHolder.class, AppInfoCache.class, IdentityConfigParser.class,
         PrivilegedCarbonContext.class, IdentityTenantUtil.class, CarbonUtils.class,
         IdentityCoreServiceComponent.class, NetworkUtils.class, IdentityApplicationManagementUtil.class,
-        IdentityProviderManager.class, FederatedAuthenticatorConfig.class})
+        IdentityProviderManager.class, FederatedAuthenticatorConfig.class, OAuth2ServiceComponentHolder.class})
 public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
@@ -178,6 +178,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private IdentityProvider mockIdentityProvider;
+
+    @Mock
+    private OAuth2ServiceComponentHolder mockOAuth2ServiceComponentHolder;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -1798,5 +1801,31 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         }
 
         assertEquals(isInvalidClientExceptionThrown, isExceptionExpected);
+    }
+
+    @Test()
+    public void testProcessURL() {
+
+        mockStatic(OAuth2ServiceComponentHolder.class);
+        when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(mockOAuth2ServiceComponentHolder);
+        when(OAuth2ServiceComponentHolder.getInstance().getConfigurationContextService()).thenReturn
+                (mockConfigurationContextService);
+        when(mockConfigurationContextService.getServerConfigContext()).thenReturn(mockConfigurationContext);
+        when(mockConfigurationContext.getAxisConfiguration()).thenReturn(mockAxisConfiguration);
+        when(CarbonUtils.getTransportPort(any(AxisConfiguration.class), anyString())).thenReturn(9443);
+        when(CarbonUtils.getTransportProxyPort(any(AxisConfiguration.class), anyString())).thenReturn(9443);
+        when(CarbonUtils.getManagementTransport()).thenReturn("https");
+        PowerMockito.mockStatic(IdentityUtil.class);
+        String url = "http://localhost:8080/callback";
+        PowerMockito.when(IdentityUtil.fillURLPlaceholders(url))
+                .thenReturn(fillURLPlaceholdersForTest(url));
+        assertEquals(url, OAuth2Util.processURI(url), "URL processing hasn't done properly.");
+    }
+
+    private String fillURLPlaceholdersForTest(String url) {
+
+        return url.replace("${carbon.protocol}", "https")
+                .replace("${carbon.host}", "localhost")
+                .replace("${carbon.management.port}", "9443");
     }
 }

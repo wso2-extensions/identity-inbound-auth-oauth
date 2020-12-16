@@ -496,7 +496,7 @@ public class OIDCLogoutServlet extends HttpServlet {
         if (StringUtils.isEmpty(postLogoutUri)) {
             return true;
         }
-
+        registeredCallbackUri = OAuth2Util.processURI(registeredCallbackUri);
         String regexp = null;
         if (registeredCallbackUri.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
             regexp = registeredCallbackUri.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());

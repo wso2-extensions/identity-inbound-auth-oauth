@@ -230,7 +230,7 @@ public class OAuth2Service extends AbstractAdmin {
      */
     private boolean validateCallbackURI(String callbackURI, OAuthAppDO oauthApp) {
         String regexp = null;
-        String registeredCallbackUrl = oauthApp.getCallbackUrl();
+        String registeredCallbackUrl = OAuth2Util.processURI(oauthApp.getCallbackUrl());
         if (registeredCallbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
             regexp = registeredCallbackUrl.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
         }

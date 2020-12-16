@@ -45,6 +45,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.util.base64.Base64Utils;
+import org.apache.axis2.engine.AxisConfiguration;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
@@ -3935,5 +3936,38 @@ public class OAuth2Util {
                     "Error while getting Realm configuration of tenant " + user.getTenantDomain();
             throw new IdentityOAuth2Exception(errorMsg, e);
         }
+    }
+
+    /**
+     * Replace placeholder values of the url with server configurations
+     *
+     * @param url
+     * @return
+     */
+    public static String processURI(String url) {
+
+        if (StringUtils.contains(url, IdentityConstants.CarbonPlaceholders.CARBON_PORT)) {
+
+            String mgtTransport = CarbonUtils.getManagementTransport();
+            AxisConfiguration axisConfiguration = OAuth2ServiceComponentHolder.getInstance()
+                    .getConfigurationContextService().
+                            getServerConfigContext().getAxisConfiguration();
+            int mgtTransportPort = CarbonUtils.getTransportProxyPort(axisConfiguration, mgtTransport);
+            if (mgtTransportPort <= 0) {
+                mgtTransportPort = CarbonUtils.getTransportPort(axisConfiguration, mgtTransport);
+            }
+            // If it's well known HTTPS port, skip adding port
+            if (mgtTransportPort == IdentityCoreConstants.DEFAULT_HTTPS_PORT) {
+                url = StringUtils.replace(url, ":" +
+                        IdentityConstants.CarbonPlaceholders.CARBON_PORT, "");
+            }
+
+        }
+        if (StringUtils.contains(url, IdentityConstants.CarbonPlaceholders.CARBON_PORT)
+                || StringUtils.contains(url, IdentityConstants.CarbonPlaceholders.CARBON_HOST)
+                || StringUtils.contains(url, IdentityConstants.CarbonPlaceholders.CARBON_PROTOCOL)) {
+            return IdentityUtil.fillURLPlaceholders(url);
+        }
+        return url;
     }
 }

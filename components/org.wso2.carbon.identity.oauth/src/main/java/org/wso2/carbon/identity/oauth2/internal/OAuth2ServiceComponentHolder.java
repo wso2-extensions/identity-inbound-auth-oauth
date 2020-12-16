@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
+import org.wso2.carbon.utils.ConfigurationContextService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,6 +54,7 @@ public class OAuth2ServiceComponentHolder {
     private static AuthenticationDataPublisher authenticationDataPublisherProxy;
     private static KeyIDProvider keyIDProvider = null;
     private IdpManager idpManager;
+    private ConfigurationContextService configurationContextService;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -264,5 +266,17 @@ public class OAuth2ServiceComponentHolder {
     public IdpManager getIdpManager() {
 
         return idpManager;
+    }
+
+    /**
+     * Get ConfigurationContextService
+     * @return ConfigurationContextService
+     */
+    public ConfigurationContextService getConfigurationContextService() {
+        return configurationContextService;
+    }
+
+    public void setConfigurationContextService(ConfigurationContextService configurationContextService) {
+        this.configurationContextService = configurationContextService;
     }
 }
