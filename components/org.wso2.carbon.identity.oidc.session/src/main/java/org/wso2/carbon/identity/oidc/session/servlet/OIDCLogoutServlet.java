@@ -132,7 +132,7 @@ public class OIDCLogoutServlet extends HttpServlet {
         String redirectURL;
         String opBrowserStateCookieValue = getOPBSCookieValue(request);
 
-        if (opBrowserStateCookieValue == null) {
+        if (StringUtils.isBlank(opBrowserStateCookieValue)) {
             String msg = OIDCSessionConstants.OPBS_COOKIE_ID + " cookie not received. Missing session state.";
             if (log.isDebugEnabled()) {
                 log.debug(msg);
@@ -259,8 +259,8 @@ public class OIDCLogoutServlet extends HttpServlet {
     /**
      * If postLogoutRedirectUri is send in Logout request parameter then set it as redirect URL.
      *
-     * @param redirectURL
-     * @param opBrowserStateCookieValue
+     * @param redirectURL               Redirect URL.
+     * @param opBrowserStateCookieValue OP browser state cookie value.
      * @return
      * @throws UnsupportedEncodingException
      */
@@ -741,8 +741,7 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     private void sendRequestToFramework(HttpServletRequest request, HttpServletResponse response, String sessionDataKey,
-                                        String type)
-            throws ServletException, IOException {
+                                        String type) throws ServletException, IOException {
 
         CommonAuthenticationHandler commonAuthenticationHandler = new CommonAuthenticationHandler();
 
@@ -839,7 +838,7 @@ public class OIDCLogoutServlet extends HttpServlet {
     /**
      * Sends logout token to registered back-channel logout uris.
      *
-     * @param opbsCookieValue
+     * @param opbsCookieValue OP browser state cookie value.
      */
     private void doBackChannelLogout(String opbsCookieValue) {
 
