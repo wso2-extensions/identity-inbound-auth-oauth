@@ -130,9 +130,9 @@ public class OIDCLogoutServlet extends HttpServlet {
          */
 
         String redirectURL;
-        String opBrowserStateCookieValue = getOPBSCookieValue(request);
+        String opBrowserState = getOPBrowserState(request);
 
-        if (StringUtils.isBlank(opBrowserStateCookieValue)) {
+        if (StringUtils.isBlank(opBrowserState)) {
             String msg = OIDCSessionConstants.OPBS_COOKIE_ID + " cookie not received. Missing session state.";
             if (log.isDebugEnabled()) {
                 log.debug(msg);
@@ -152,7 +152,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             }
         }
 
-        if (!OIDCSessionManagementUtil.getSessionManager().sessionExists(opBrowserStateCookieValue)) {
+        if (!OIDCSessionManagementUtil.getSessionManager().sessionExists(opBrowserState)) {
             String msg = "No valid session found for the received session state.";
             if (log.isDebugEnabled()) {
                 log.debug(msg);
@@ -183,7 +183,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 // User denied logout.
                 redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, "End User denied the logout request");
                 // If postlogoutUri is available then set it as redirectUrl
-                redirectURL = generatePostLogoutRedirectUrl(redirectURL, opBrowserStateCookieValue);
+                redirectURL = generatePostLogoutRedirectUrl(redirectURL, opBrowserState);
 
             }
         } else {
@@ -226,7 +226,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                      available in the redirected IDP's page to support any custom requirement.
                      */
                     setStateParameterInCache(request, cacheEntry);
-                    addSessionDataToCache(opBrowserStateCookieValue, cacheEntry);
+                    addSessionDataToCache(opBrowserState, cacheEntry);
                 }
 
                 sendToFrameworkForLogout(request, response);
@@ -239,19 +239,32 @@ public class OIDCLogoutServlet extends HttpServlet {
         response.sendRedirect(getRedirectURL(redirectURL, request));
     }
 
-    private String getOPBSCookieValue(HttpServletRequest request) {
+    private String getOPBrowserState(HttpServletRequest request) {
 
         Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
         if (opBrowserStateCookie != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Resolving opBrowserState from the opBrowserState Cookie in the inbound request.");
+            }
             return opBrowserStateCookie.getValue();
         } else {
+            if (log.isDebugEnabled()) {
+                log.debug("OpBrowserState cookie not found in the inbound request. Attempting to extract the " +
+                        "opBrowserState from cache.");
+            }
             String sessionDataKey = request.getParameter(OIDCSessionConstants.OIDC_SESSION_DATA_KEY_PARAM);
             if (StringUtils.isNotBlank(sessionDataKey)) {
                 OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(sessionDataKey);
                 if (cacheEntry != null) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Resolving the opBrowserState from cache.");
+                    }
                     return cacheEntry.getParamMap().get(OIDCSessionConstants.OPBS_COOKIE_ID);
                 }
             }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Unable to resolve the opBrowser state.");
         }
         return null;
     }
@@ -635,7 +648,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                     .setRelyingParty(cacheEntry.getParamMap().get(OIDCSessionConstants.OIDC_CACHE_CLIENT_ID_PARAM));
             authenticationRequest
                     .setTenantDomain(cacheEntry.getParamMap().get(OIDCSessionConstants.OIDC_CACHE_TENANT_DOMAIN_PARAM));
-            addOPBSCookieValueToCache(opBrowserStateCookieValue, cacheEntry);
+            addOPBSCookieValueToCacheEntry(opBrowserStateCookieValue, cacheEntry);
             addSessionDataToCache(sessionDataKey, cacheEntry);
         }
 
@@ -652,9 +665,13 @@ public class OIDCLogoutServlet extends HttpServlet {
         sendRequestToFramework(request, response, sessionDataKey, FrameworkConstants.RequestType.CLAIM_TYPE_OIDC);
     }
 
-    private void addOPBSCookieValueToCache(String opBrowserStateCookieValue, OIDCSessionDataCacheEntry cacheEntry) {
+    private void addOPBSCookieValueToCacheEntry(String opBrowserStateCookieValue,
+                                                OIDCSessionDataCacheEntry cacheEntry) {
 
         ConcurrentMap<String, String> paramMap = cacheEntry.getParamMap();
+        if (paramMap == null) {
+            paramMap = new ConcurrentHashMap<>();
+        }
         paramMap.put(OIDCSessionConstants.OPBS_COOKIE_ID, opBrowserStateCookieValue);
         cacheEntry.setParamMap(paramMap);
     }
@@ -664,7 +681,7 @@ public class OIDCLogoutServlet extends HttpServlet {
 
         String sessionDataKey = request.getParameter(FrameworkConstants.SESSION_DATA_KEY);
         OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(sessionDataKey);
-        String obpsCookieValue = getOPBSCookieValue(request);
+        String obpsCookieValue = getOPBrowserState(request);
 
         if (cacheEntry != null) {
             if (log.isDebugEnabled()) {
