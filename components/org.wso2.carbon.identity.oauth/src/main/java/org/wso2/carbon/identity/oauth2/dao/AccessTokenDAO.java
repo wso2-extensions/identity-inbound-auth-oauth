@@ -67,7 +67,7 @@ public interface AccessTokenDAO {
      * @return TokenId.
      * @throws IdentityOAuth2Exception
      */
-    default String getTokenIdByBindingRef(String bindingRef) throws IdentityOAuth2Exception {
+    default Set<String> getTokenIdBySessionIdentifier(String bindingRef) throws IdentityOAuth2Exception {
 
         return null;
     }
