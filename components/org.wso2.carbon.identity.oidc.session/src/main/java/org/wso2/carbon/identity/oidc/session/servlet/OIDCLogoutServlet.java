@@ -244,7 +244,7 @@ public class OIDCLogoutServlet extends HttpServlet {
         Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
         if (opBrowserStateCookie != null) {
             if (log.isDebugEnabled()) {
-                log.debug("Resolving opBrowserState from the opBrowserState Cookie in the inbound request.");
+                log.debug("Resolving opBrowserState from the 'obps' Cookie in the inbound request.");
             }
             return opBrowserStateCookie.getValue();
         } else {
