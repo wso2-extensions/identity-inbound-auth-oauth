@@ -54,6 +54,9 @@ public class OAuth2AuthorizeReqDTO {
     // Identifier of the authenticated framework session. This will be included as a claim in the ID token.
     private String idpSessionIdentifier;
 
+    // Identifier of the authenticated framework session. This will be included as a claim in the ID token.
+    private String idpSessionIdentifier;
+
     public String getSessionDataKey() {
         return sessionDataKey;
     }
