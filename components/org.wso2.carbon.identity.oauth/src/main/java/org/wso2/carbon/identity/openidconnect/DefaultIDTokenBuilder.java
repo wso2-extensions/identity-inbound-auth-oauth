@@ -155,14 +155,11 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                     authTime = authzGrantCacheEntry.getAuthTime();
                 }
                 amrValues = authzGrantCacheEntry.getAmrList();
-                if (isSessionExtenderEndpointEnabled()) {
-                    idpSessionKey = getIdpSessionKey(authzGrantCacheEntry);
-                }            }
+                idpSessionKey = getIdpSessionKey(authzGrantCacheEntry);
+            }
         } else {
             amrValues = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getAuthenticationMethodReferences();
-            if (isSessionExtenderEndpointEnabled()) {
-                idpSessionKey = getIdpSessionKey(accessToken);
-            }
+            idpSessionKey = getIdpSessionKey(accessToken);
         }
 
         if (log.isDebugEnabled()) {
@@ -231,10 +228,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String nonceValue = authzReqMessageContext.getAuthorizationReqDTO().getNonce();
         String acrValue = authzReqMessageContext.getAuthorizationReqDTO().getSelectedAcr();
         List<String> amrValues = Collections.emptyList(); //TODO:
-        String idpSessionKey = null;
-        if (isSessionExtenderEndpointEnabled()) {
-            idpSessionKey = getIdpSessionKey(authzReqMessageContext);
-        }
+        String idpSessionKey = getIdpSessionKey(authzReqMessageContext);
+
         // Initialize OAuthAppDO using the client ID.
         OAuthAppDO oAuthAppDO;
         try {
@@ -941,13 +936,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         String idpSessionKey = authzGrantCacheEntry.getSessionContextIdentifier();
         if (idpSessionKey == null) {
-            if (isSessionExtenderEndpointEnabled()) {
-                throw new IdentityOAuth2Exception("Session context identifier not available in the Authorization " +
-                        "Grant cache. Session identifier is a required claim to be included in the id_token when " +
-                        "the Session Extender endpoint is enabled.");
-            } else if (log.isDebugEnabled()) {
-                log.debug("Session context identifier not available in the Authorization Grant cache.");
-            }
+            throw new IdentityOAuth2Exception("Session context identifier not available in the Authorization " +
+                    "Grant cache. Session identifier is a required claim to be included in the id_token when " +
+                    "the Session Extender endpoint is enabled.");
         }
         return idpSessionKey;
     }
@@ -963,13 +954,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         String idpSessionKey = authzReqMessageContext.getAuthorizationReqDTO().getIdpSessionIdentifier();
         if (idpSessionKey == null) {
-            if (isSessionExtenderEndpointEnabled()) {
-                throw new IdentityOAuth2Exception("Session context identifier not available in the Authorization " +
-                        "Request Message context. Session identifier is a required claim to be included in the " +
-                        "id_token when the Session Extender endpoint is enabled.");
-            } else if (log.isDebugEnabled()) {
-                log.debug("Session context identifier not available in the Authorization Request Message context.");
-            }
+            throw new IdentityOAuth2Exception("Session context identifier not available in the Authorization " +
+                    "Request Message context. Session identifier is a required claim to be included in the " +
+                    "id_token when the Session Extender endpoint is enabled.");
         }
         return idpSessionKey;
     }
@@ -995,16 +982,5 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             log.debug("Session context identifier not available when retrieving using the access token.");
         }
         return idpSessionKey;
-    }
-
-    /**
-     * Checks whether the Session Extender endpoint has been enabled.
-     *
-     * @return Session Extender endpoint enabled status.
-     */
-    private boolean isSessionExtenderEndpointEnabled() {
-
-        return Boolean.parseBoolean(IdentityUtil.getProperty(
-                IdentityConstants.ServerConfig.ENABLE_SESSION_EXTENDER_ENDPOINT));
     }
 }
