@@ -963,7 +963,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
     /**
      * Retrieves IDP session key using an Access Token. This method is used in the Refresh Grant flow.
-     * This method will return null for the Password Grant as no session will be involved in the said flow.
+     * This method will return null for the backchannel grant types (e.g. Password Grant) as no session
+     * will be involved in the said flow.
      *
      * @param accessToken   Access Token.
      * @return              IDP Session Key.
