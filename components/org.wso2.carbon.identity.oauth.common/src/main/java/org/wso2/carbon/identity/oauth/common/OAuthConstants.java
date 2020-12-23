@@ -428,6 +428,7 @@ public final class OAuthConstants {
         public static final String REALM = "realm";
         public static final String TENANT = "tenant";
         public static final String USERSTORE = "userstore";
+        public static final String IDP_SESSION_KEY = "isk";
 
         private OIDCClaims() {
 
