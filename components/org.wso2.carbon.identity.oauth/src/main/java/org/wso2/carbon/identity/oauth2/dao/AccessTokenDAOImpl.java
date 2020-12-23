@@ -66,6 +66,7 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 
+import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.core.util.IdentityUtil.getProperty;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID;
@@ -80,6 +81,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     private static final int DEFAULT_TOKEN_PERSIST_RETRY_COUNT = 5;
     private static final String IDN_OAUTH2_ACCESS_TOKEN = "IDN_OAUTH2_ACCESS_TOKEN";
     private boolean isTokenCleanupFeatureEnabled = OAuthServerConfiguration.getInstance().isTokenCleanupEnabled();
+    private static final String DEFAULT_TOKEN_TO_SESSION_MAPPING = "DEFAULT";
 
     private static final Log log = LogFactory.getLog(AccessTokenDAOImpl.class);
     OldTokensCleanDAO oldTokenCleanupObject = new OldTokensCleanDAO();
@@ -941,14 +943,84 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             tokenBindingPreparedStatement.setString(1, tokenId);
             try (ResultSet tokenBindingResultSet = tokenBindingPreparedStatement.executeQuery()) {
                 if (tokenBindingResultSet.next()) {
-                    TokenBinding tokenBinding = new TokenBinding();
-                    tokenBinding.setBindingType(tokenBindingResultSet.getString("TOKEN_BINDING_TYPE"));
-                    tokenBinding.setBindingReference(tokenBindingResultSet.getString("TOKEN_BINDING_REF"));
-                    tokenBinding.setBindingValue(tokenBindingResultSet.getString("TOKEN_BINDING_VALUE"));
-                    dataDO.setTokenBinding(tokenBinding);
+                    if (!StringUtils.equals(DEFAULT_TOKEN_TO_SESSION_MAPPING,
+                            tokenBindingResultSet.getString("TOKEN_BINDING_TYPE"))) {
+                        TokenBinding tokenBinding = new TokenBinding();
+                        tokenBinding.setBindingType(tokenBindingResultSet.getString("TOKEN_BINDING_TYPE"));
+                        tokenBinding.setBindingReference(tokenBindingResultSet.getString("TOKEN_BINDING_REF"));
+                        tokenBinding.setBindingValue(tokenBindingResultSet.getString("TOKEN_BINDING_VALUE"));
+                        dataDO.setTokenBinding(tokenBinding);
+                    }
                 }
             }
         }
+    }
+
+    /**
+     * Persist all token to session mapping in the token binding table with binding type as "DEFAULT".
+     *
+     * @param sessionContextIdentifier SessionContextIdentifier
+     * @param tokenId                  TokenId.
+     * @param tenantId                 TenantId.
+     * @throws IdentityOAuth2Exception
+     */
+    public void storeTokenToSessionMapping(String sessionContextIdentifier, String tokenId, int tenantId)
+            throws IdentityOAuth2Exception {
+
+        if (isNotBlank(sessionContextIdentifier) && isNotBlank(tokenId)) {
+            Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+            try (PreparedStatement preparedStatement = connection.prepareStatement(STORE_TOKEN_BINDING)) {
+                preparedStatement.setString(1, tokenId);
+                preparedStatement.setString(2, DEFAULT_TOKEN_TO_SESSION_MAPPING);
+                preparedStatement.setString(3,
+                        OAuth2Util.getTokenBindingReference(sessionContextIdentifier));
+                preparedStatement.setString(4, sessionContextIdentifier);
+                preparedStatement.setInt(5, tenantId);
+                preparedStatement.execute();
+            } catch (SQLException e) {
+                String errorMsg = "Error while persisting token to session mapping for sessionId: " +
+                        sessionContextIdentifier;
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMsg);
+                }
+                throw new IdentityOAuth2Exception(errorMsg, e);
+            } finally {
+                IdentityDatabaseUtil.closeConnection(connection);
+            }
+        }
+    }
+
+    /**
+     * Get all tokens mapped to the bindingRef.
+     *
+     * @param sessionId SessionIdentifier
+     * @throws IdentityOAuth2Exception
+     * @return
+     */
+    public Set<String> getTokenIdBySessionIdentifier(String sessionId) throws IdentityOAuth2Exception {
+
+        String sql = SQLQueries.RETRIEVE_TOKENS_MAPPED_FOR_TOKEN_BINDING_VALUE;
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+        PreparedStatement prepStmt = null;
+        Set<String> tokenIds = new HashSet<>();
+        try {
+            prepStmt = connection.prepareStatement(sql);
+            prepStmt.setString(1, sessionId);
+            prepStmt.setString(2, DEFAULT_TOKEN_TO_SESSION_MAPPING);
+            try (ResultSet resultSet = prepStmt.executeQuery()) {
+                while (resultSet.next()) {
+                    tokenIds.add(resultSet.getString("TOKEN_ID"));
+                }
+            }
+
+        } catch (SQLException e) {
+            String errorMsg = "Error occurred while retrieving 'token id' for " +
+                    "binding value : " + sessionId;
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+        }
+        return tokenIds;
     }
 
     public void updateAccessTokenState(String tokenId, String tokenState) throws IdentityOAuth2Exception {

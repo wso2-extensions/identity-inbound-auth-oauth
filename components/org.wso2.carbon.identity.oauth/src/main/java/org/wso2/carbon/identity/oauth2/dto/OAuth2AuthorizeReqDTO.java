@@ -51,6 +51,8 @@ public class OAuth2AuthorizeReqDTO {
     private RequestObject requestObject;
     private String requestUriParamClaims;
     private String sessionDataKey;
+    // Identifier of the authenticated framework session. This will be included as a claim in the ID token.
+    private String idpSessionIdentifier;
 
     public String getSessionDataKey() {
         return sessionDataKey;
@@ -221,5 +223,13 @@ public class OAuth2AuthorizeReqDTO {
 
     public Cookie[] getCookie() {
         return this.cookies;
+    }
+
+    public String getIdpSessionIdentifier() {
+        return idpSessionIdentifier;
+    }
+
+    public void setIdpSessionIdentifier(String idpSessionIdentifier) {
+        this.idpSessionIdentifier = idpSessionIdentifier;
     }
 }

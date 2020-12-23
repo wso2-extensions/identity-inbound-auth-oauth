@@ -284,6 +284,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
         OAuth2AccessTokenRespDTO tokenResp = new OAuth2AccessTokenRespDTO();
         tokenResp.setAccessToken(accessTokenBean.getAccessToken());
+        tokenResp.setTokenId(accessTokenBean.getTokenId());
         tokenResp.setRefreshToken(accessTokenBean.getRefreshToken());
         if (accessTokenBean.getValidityPeriodInMillis() > 0) {
             tokenResp.setExpiresIn(accessTokenBean.getValidityPeriod());
