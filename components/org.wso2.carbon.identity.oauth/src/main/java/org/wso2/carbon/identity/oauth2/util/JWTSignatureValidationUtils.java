@@ -53,8 +53,6 @@ public class JWTSignatureValidationUtils {
     private static final String ENFORCE_CERTIFICATE_VALIDITY
             = "JWTValidatorConfigs.EnforceCertificateExpiryTimeValidity";
 
-    private static String tenantDomain;
-
     /**
      * Method to validate the signature of the JWT
      *
@@ -190,7 +188,7 @@ public class JWTSignatureValidationUtils {
                     .decodeCertificate(idp.getCertificate());
         } catch (CertificateException e) {
             handleException("Error occurred while decoding public certificate of Identity Provider "
-                    + idp.getIdentityProviderName() + " for tenant domain " + tenantDomain);
+                    + idp.getIdentityProviderName());
         }
         return x509Certificate;
     }
