@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -257,7 +258,11 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                         .getAccessTokenByTokenId(validationResult.getTokenId());
                 //revoking access token issued for authorization code as per RFC 6749 Section 4.1.2
                 revokeExistingAccessTokens(validationResult.getTokenId(), validationResult.getAuthzCodeDO());
+
                 clearTokenCache(tokenAlias, validationResult.getTokenId());
+                String scope = OAuth2Util.buildScopeString(validationResult.getAuthzCodeDO().getScope());
+                OAuthUtil.clearOAuthCache(tokenReqDTO.getClientId(), validationResult.getAuthzCodeDO().
+                        getAuthorizedUser(), scope);
             }
             return validationResult.getAuthzCodeDO();
         } else {
