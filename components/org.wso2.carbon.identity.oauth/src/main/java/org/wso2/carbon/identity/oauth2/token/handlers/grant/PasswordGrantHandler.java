@@ -104,7 +104,19 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
 
     private boolean validateUserTenant(OAuth2AccessTokenReqDTO tokenReq, ServiceProvider serviceProvider)
             throws IdentityOAuth2Exception {
+
         String userTenantDomain = MultitenantUtils.getTenantDomain(tokenReq.getResourceOwnerUsername());
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            if (!serviceProvider.isSaasApp() ||
+                    (serviceProvider.isSaasApp() && !IdentityTenantUtil.isLegacySaaSAuthenticationEnabled())) {
+                userTenantDomain = IdentityTenantUtil.getTenantDomainFromContext();
+                String tenantAwareUsername =
+                        MultitenantUtils.getTenantAwareUsername(tokenReq.getResourceOwnerUsername());
+                String userNameWithTenant =
+                        tenantAwareUsername + UserCoreConstants.TENANT_DOMAIN_COMBINER + userTenantDomain;
+                tokenReq.setResourceOwnerUsername(userNameWithTenant);
+            }
+        }
         if (!serviceProvider.isSaasApp() && !userTenantDomain.equals(tokenReq.getTenantDomain())) {
             if (log.isDebugEnabled()) {
                 log.debug("Non-SaaS service provider. Application tenantDomain(" + tokenReq.getTenantDomain() + ") " +
