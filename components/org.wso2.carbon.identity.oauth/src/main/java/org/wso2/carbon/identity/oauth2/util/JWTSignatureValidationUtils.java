@@ -98,49 +98,60 @@ public class JWTSignatureValidationUtils {
         }
 
         if (isJWKSEnabled && hasJWKSUri) {
-            JWKSBasedJWTValidator jwksBasedJWTValidator = new JWKSBasedJWTValidator();
-            return jwksBasedJWTValidator.validateSignature(signedJWT.getParsedString(), jwksUri, signedJWT.getHeader
-                    ().getAlgorithm().getName(), null);
+            return validateUsingJWKSUri(signedJWT, jwksUri);
         } else {
-            JWSVerifier verifier = null;
-            JWSHeader header = signedJWT.getHeader();
-            X509Certificate x509Certificate = resolveSignerCertificate(header, idp);
-            if (x509Certificate == null) {
-                handleException(
-                        "Unable to locate certificate for Identity Provider " + idp.getDisplayName() + "; JWT " +
-                                header.toString());
+            return validateUsingCertificate(signedJWT, idp);
+        }
+    }
+
+    private static boolean validateUsingJWKSUri(SignedJWT signedJWT, String jwksUri) throws IdentityOAuth2Exception {
+
+        JWKSBasedJWTValidator jwksBasedJWTValidator = new JWKSBasedJWTValidator();
+        return jwksBasedJWTValidator.validateSignature(signedJWT.getParsedString(), jwksUri, signedJWT.getHeader
+                ().getAlgorithm().getName(), null);
+    }
+
+    private static boolean validateUsingCertificate(SignedJWT signedJWT, IdentityProvider idp)
+            throws IdentityOAuth2Exception, JOSEException {
+
+        JWSVerifier verifier = null;
+        JWSHeader header = signedJWT.getHeader();
+        X509Certificate x509Certificate = resolveSignerCertificate(header, idp);
+        if (x509Certificate == null) {
+            handleException(
+                    "Unable to locate certificate for Identity Provider " + idp.getDisplayName() + "; JWT " +
+                            header.toString());
+        }
+
+        checkValidity(x509Certificate);
+
+        String alg = signedJWT.getHeader().getAlgorithm().getName();
+        if (StringUtils.isEmpty(alg)) {
+            handleException("Algorithm must not be null.");
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Signature Algorithm found in the JWT Header: " + alg);
             }
-
-            checkValidity(x509Certificate);
-
-            String alg = signedJWT.getHeader().getAlgorithm().getName();
-            if (StringUtils.isEmpty(alg)) {
-                handleException("Algorithm must not be null.");
+            if (alg.startsWith("RS")) {
+                // At this point 'x509Certificate' will never be null.
+                PublicKey publicKey = x509Certificate.getPublicKey();
+                if (publicKey instanceof RSAPublicKey) {
+                    verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
+                } else {
+                    handleException("Public key is not an RSA public key.");
+                }
             } else {
                 if (log.isDebugEnabled()) {
-                    log.debug("Signature Algorithm found in the JWT Header: " + alg);
-                }
-                if (alg.startsWith("RS")) {
-                    // At this point 'x509Certificate' will never be null.
-                    PublicKey publicKey = x509Certificate.getPublicKey();
-                    if (publicKey instanceof RSAPublicKey) {
-                        verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
-                    } else {
-                        handleException("Public key is not an RSA public key.");
-                    }
-                } else {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Signature Algorithm not supported yet : " + alg);
-                    }
-                }
-                if (verifier == null) {
-                    handleException("Could not create a signature verifier for algorithm type: " + alg);
+                    log.debug("Signature Algorithm not supported yet : " + alg);
                 }
             }
-
-            // At this point 'verifier' will never be null;
-            return signedJWT.verify(verifier);
+            if (verifier == null) {
+                handleException("Could not create a signature verifier for algorithm type: " + alg);
+            }
         }
+
+        // At this point 'verifier' will never be null;
+        return signedJWT.verify(verifier);
     }
 
     /**
