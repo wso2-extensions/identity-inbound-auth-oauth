@@ -53,6 +53,11 @@
             <artifactId>commons-lang</artifactId>
         </dependency>
         <dependency>
+            <groupId>commons-beanutils</groupId>
+            <artifactId>commons-beanutils</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.carbon</groupId>
             <artifactId>org.wso2.carbon.user.core</artifactId>
         </dependency>
@@ -128,6 +133,7 @@
 
                             org.apache.commons.logging; version="${commons-logging.osgi.version.range}",
                             org.apache.commons.lang; version="${commons-lang.wso2.osgi.version.range}",
+                            org.apache.commons.beanutils; version="${commons-beanutils.version.range}"
 
                             org.json,
                             org.json.simple,

@@ -144,6 +144,11 @@
                 <artifactId>commons-codec</artifactId>
                 <version>${commons-codec.version}</version>
             </dependency>
+            <dependency>
+                <groupId>commons-beanutils</groupId>
+                <artifactId>commons-beanutils</artifactId>
+                <version>${commons.beanutils.version}</version>
+            </dependency>
 
             <!-- Axis2/Axiom dependencies -->
             <dependency>
@@ -911,6 +916,8 @@
         <commons-lang.wso2.osgi.version.range>[2.6.0,3.0.0)</commons-lang.wso2.osgi.version.range>
         <commons-collections.wso2.osgi.version.range>[3.2.0,4.0.0)</commons-collections.wso2.osgi.version.range>
         <commons-lang.version.range>[2.6.0,3.0.0)</commons-lang.version.range>
+        <commons.beanutils.version>1.9.4</commons.beanutils.version>
+        <commons-beanutils.version.range>[1.9.0,2.0.0)</commons-beanutils.version.range>
 
         <!-- Orbit dependency version -->
         <gdata-core.wso2.version>1.47.0.wso2v1</gdata-core.wso2.version>

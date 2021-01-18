@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.dcr.service;
 
+import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -51,6 +52,7 @@ import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -183,14 +185,20 @@ public class DCRMService {
 
         // Update Service Provider
         ServiceProvider sp = getServiceProvider(appDTO.getApplicationName(), tenantDomain);
+        // Need to create a clone, since modifying the fields of the original object, will modify the cached SP object.
+        if (sp == null) {
+            throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.FAILED_TO_GET_SP,
+                    appDTO.getApplicationName(), null);
+        }
+        ServiceProvider clonedSP = createSPClone(sp);
         if (StringUtils.isNotEmpty(clientName)) {
             // Regex validation of the application name.
             if (!DCRMUtils.isRegexValidated(clientName)) {
                 throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
                         DCRMUtils.getSPValidatorRegex(), null);
             }
-            sp.setApplicationName(clientName);
-            updateServiceProvider(sp, tenantDomain, applicationOwner);
+            clonedSP.setApplicationName(clientName);
+            updateServiceProvider(clonedSP, tenantDomain, applicationOwner);
         }
 
         // Update application
@@ -692,6 +700,23 @@ public class DCRMService {
         } catch (IdentityOAuth2Exception e) {
             throw new DCRMServerException(String.format(DCRMConstants.ErrorMessages.FAILED_TO_VALIDATE_TENANT_DOMAIN
                     .getMessage(), clientId));
+        }
+    }
+
+    /**
+     * Create a duplicate of the input Service Provider.
+     *
+     * @param sp Service Provider.
+     * @return Clone of sp.
+     */
+    private ServiceProvider createSPClone(ServiceProvider sp) throws DCRMServerException {
+
+        try {
+            return (ServiceProvider) BeanUtils.cloneBean(sp);
+        } catch (IllegalAccessException | InstantiationException |
+                InvocationTargetException | NoSuchMethodException e) {
+            throw DCRMUtils.generateServerException(DCRMConstants.
+                    ErrorMessages.FAILED_TO_UPDATE_SP, sp.getApplicationName(), e);
         }
     }
 }
