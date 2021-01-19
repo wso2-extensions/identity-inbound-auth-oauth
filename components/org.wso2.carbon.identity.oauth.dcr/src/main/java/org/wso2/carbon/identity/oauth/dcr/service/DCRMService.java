@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.dcr.service;
 
+import com.google.gson.Gson;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -184,13 +185,28 @@ public class DCRMService {
         // Update Service Provider
         ServiceProvider sp = getServiceProvider(appDTO.getApplicationName(), tenantDomain);
         if (StringUtils.isNotEmpty(clientName)) {
+            // Check whether a service provider already exists for the name we are trying
+            // to register the OAuth app with.
+            if (!appDTO.getApplicationName().equals(clientName) && isServiceProviderExist(clientName, tenantDomain)) {
+                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.CONFLICT_EXISTING_APPLICATION,
+                        clientName);
+            }
+
             // Regex validation of the application name.
             if (!DCRMUtils.isRegexValidated(clientName)) {
                 throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
                         DCRMUtils.getSPValidatorRegex(), null);
             }
-            sp.setApplicationName(clientName);
-            updateServiceProvider(sp, tenantDomain, applicationOwner);
+            if (sp == null) {
+                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.FAILED_TO_GET_SP,
+                        appDTO.getApplicationName(), null);
+            }
+            // Need to create a deep clone, since modifying the fields of the original object,
+            // will modify the cached SP object.
+            Gson gson = new Gson();
+            ServiceProvider clonedSP = gson.fromJson(gson.toJson(sp), ServiceProvider.class);
+            clonedSP.setApplicationName(clientName);
+            updateServiceProvider(clonedSP, tenantDomain, applicationOwner);
         }
 
         // Update application
