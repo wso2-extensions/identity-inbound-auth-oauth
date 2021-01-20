@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.dcr.service;
 
+import com.google.gson.Gson;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -184,13 +185,27 @@ public class DCRMService {
         // Update Service Provider
         ServiceProvider sp = getServiceProvider(appDTO.getApplicationName(), tenantDomain);
         if (StringUtils.isNotEmpty(clientName)) {
+            // Check whether a service provider already exists for the name we are trying
+            // to register the OAuth app with.
+            if (!appDTO.getApplicationName().equals(clientName) && isServiceProviderExist(clientName, tenantDomain)) {
+                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.CONFLICT_EXISTING_APPLICATION,
+                        clientName);
+            }
+
             // Regex validation of the application name.
             if (!DCRMUtils.isRegexValidated(clientName)) {
                 throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
                         DCRMUtils.getSPValidatorRegex(), null);
             }
-            sp.setApplicationName(clientName);
-            updateServiceProvider(sp, tenantDomain, applicationOwner);
+            if (sp == null) {
+                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.FAILED_TO_GET_SP,
+                        appDTO.getApplicationName(), null);
+            }
+            // Need to create a deep clone, since modifying the fields of the original object,
+            // will modify the cached SP object.
+            ServiceProvider clonedSP = cloneServiceProvider(sp);
+            clonedSP.setApplicationName(clientName);
+            updateServiceProvider(clonedSP, tenantDomain, applicationOwner);
         }
 
         // Update application
@@ -693,5 +708,18 @@ public class DCRMService {
             throw new DCRMServerException(String.format(DCRMConstants.ErrorMessages.FAILED_TO_VALIDATE_TENANT_DOMAIN
                     .getMessage(), clientId));
         }
+    }
+
+    /**
+     * Create a deep copy of the input Service Provider.
+     *
+     * @param serviceProvider Service Provider.
+     * @return Clone of serviceProvider.
+     */
+    private ServiceProvider cloneServiceProvider(ServiceProvider serviceProvider) {
+
+        Gson gson = new Gson();
+        ServiceProvider clonedServiceProvider = gson.fromJson(gson.toJson(serviceProvider), ServiceProvider.class);
+        return clonedServiceProvider;
     }
 }
