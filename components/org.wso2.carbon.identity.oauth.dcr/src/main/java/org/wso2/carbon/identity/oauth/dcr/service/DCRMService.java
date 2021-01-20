@@ -203,8 +203,7 @@ public class DCRMService {
             }
             // Need to create a deep clone, since modifying the fields of the original object,
             // will modify the cached SP object.
-            Gson gson = new Gson();
-            ServiceProvider clonedSP = gson.fromJson(gson.toJson(sp), ServiceProvider.class);
+            ServiceProvider clonedSP = cloneServiceProvider(sp);
             clonedSP.setApplicationName(clientName);
             updateServiceProvider(clonedSP, tenantDomain, applicationOwner);
         }
@@ -709,5 +708,18 @@ public class DCRMService {
             throw new DCRMServerException(String.format(DCRMConstants.ErrorMessages.FAILED_TO_VALIDATE_TENANT_DOMAIN
                     .getMessage(), clientId));
         }
+    }
+
+    /**
+     * Create a deep copy of the input Service Provider.
+     *
+     * @param serviceProvider Service Provider.
+     * @return Clone of serviceProvider.
+     */
+    private ServiceProvider cloneServiceProvider(ServiceProvider serviceProvider) {
+
+        Gson gson = new Gson();
+        ServiceProvider clonedServiceProvider = gson.fromJson(gson.toJson(serviceProvider), ServiceProvider.class);
+        return clonedServiceProvider;
     }
 }
