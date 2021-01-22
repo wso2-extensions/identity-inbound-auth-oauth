@@ -269,8 +269,10 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
+
     private void setCommonAuthIdToRequest(HttpServletRequest request, HttpServletResponse response) {
 
+        // Issue https://github.com/wso2/product-is/issues/11065 needs to addressed.
         response.getHeaders(SET_COOKIE_HEADER).stream()
                 .filter(value -> value.contains(COMMONAUTH_COOKIE))
                 // TODO: 2021-01-22 Refactor this logic - Check kernel Cookie.
