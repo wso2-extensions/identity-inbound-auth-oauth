@@ -95,17 +95,12 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
 
         Optional<Cookie> commonAuthCookieOptional = Arrays.stream(cookies)
                 .filter(t -> COMMONAUTH_COOKIE.equals(t.getName())).findAny();
-        String commonAuthCookieValueFromRequestAttribute = (String) request.getAttribute(COMMONAUTH_COOKIE);
-
-        if ((!commonAuthCookieOptional.isPresent() || StringUtils.isBlank(commonAuthCookieOptional.get().getValue()))
-                && StringUtils.isEmpty(commonAuthCookieValueFromRequestAttribute)) {
+        if (!commonAuthCookieOptional.isPresent() || StringUtils.isBlank(commonAuthCookieOptional.get().getValue())) {
             throw new OAuthSystemException("Failed to retrieve token binding value.");
         }
 
         // Get the session context key value form common auth cookie value.
-        return commonAuthCookieOptional
-                .map(cookie -> DigestUtils.sha256Hex(cookie.getValue()))
-                .orElseGet(() -> DigestUtils.sha256Hex(commonAuthCookieValueFromRequestAttribute));
+        return DigestUtils.sha256Hex(commonAuthCookieOptional.get().getValue());
     }
 
     @Override
