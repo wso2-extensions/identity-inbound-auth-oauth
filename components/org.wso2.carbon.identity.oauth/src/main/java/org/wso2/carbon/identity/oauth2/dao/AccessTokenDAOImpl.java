@@ -2080,13 +2080,13 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             resultSet = prepStmt.executeQuery();
 
             if (resultSet.next()) {
-                return resultSet.getString("ACCESS_TOKEN");
+                String persistedAccessToken = resultSet.getString("ACCESS_TOKEN");
+                return getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(persistedAccessToken);
             }
             return null;
 
         } catch (SQLException e) {
-            String errorMsg = "Error occurred while retrieving 'Access Token' for " +
-                    "token id : " + tokenId;
+            String errorMsg = "Error occurred while retrieving 'Access Token' for token id: " + tokenId;
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
