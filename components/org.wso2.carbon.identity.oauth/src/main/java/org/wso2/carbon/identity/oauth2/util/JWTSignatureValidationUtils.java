@@ -157,7 +157,7 @@ public class JWTSignatureValidationUtils {
     /**
      * Check the validity of the x509Certificate.
      *
-     * @param x509Certificate x509Certificate
+     * @param x509Certificate x509Certificate.
      * @throws IdentityOAuth2Exception
      */
     private static void checkValidity(X509Certificate x509Certificate) throws IdentityOAuth2Exception {
