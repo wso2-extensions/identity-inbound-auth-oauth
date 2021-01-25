@@ -205,6 +205,8 @@ public class OAuth2AuthzEndpoint {
     private static final String ACCESS_CODE = "code";
     private static final String DEFAULT_ERROR_DESCRIPTION = "User denied the consent";
     private static final String DEFAULT_ERROR_MSG_FOR_FAILURE = "Authentication required";
+    private static final String COMMONAUTH_COOKIE = "commonAuthId";
+    private static final String SET_COOKIE_HEADER = "Set-Cookie";
 
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
@@ -231,6 +233,9 @@ public class OAuth2AuthzEndpoint {
 
         startSuperTenantFlow();
         OAuthMessage oAuthMessage;
+
+        // TODO: 2021-01-22 Check for the flag in request.
+        setCommonAuthIdToRequest(request, response);
 
         // Using a separate try-catch block as this next try block has operations in the final block.
         try {
@@ -262,6 +267,18 @@ public class OAuth2AuthzEndpoint {
             handleRetainCache(oAuthMessage);
             PrivilegedCarbonContext.endTenantFlow();
         }
+    }
+
+
+    private void setCommonAuthIdToRequest(HttpServletRequest request, HttpServletResponse response) {
+
+        // Issue https://github.com/wso2/product-is/issues/11065 needs to addressed.
+        response.getHeaders(SET_COOKIE_HEADER).stream()
+                .filter(value -> value.contains(COMMONAUTH_COOKIE))
+                // TODO: 2021-01-22 Refactor this logic - Check kernel Cookie.
+                .map(cookieValue -> cookieValue.split(COMMONAUTH_COOKIE + "=")[1])
+                .map(cookieValue -> cookieValue.split(";")[0])
+                .findAny().ifPresent(s -> request.setAttribute(COMMONAUTH_COOKIE, s));
     }
 
     @POST
