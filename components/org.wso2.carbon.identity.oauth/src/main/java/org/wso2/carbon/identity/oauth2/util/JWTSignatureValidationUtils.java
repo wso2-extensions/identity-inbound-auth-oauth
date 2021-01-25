@@ -42,7 +42,7 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 
 /**
- * Utility methods for JWT Signature Validation
+ * Utility class for JWT Signature Validation related functionalities.
  */
 public class JWTSignatureValidationUtils {
 
@@ -54,9 +54,9 @@ public class JWTSignatureValidationUtils {
             = "JWTValidatorConfigs.EnforceCertificateExpiryTimeValidity";
 
     /**
-     * Method to validate the signature of the JWT
+     * Method to validate the signature of the JWT.
      *
-     * @param signedJWT signed JWT whose signature is to be verified
+     * @param signedJWT signed JWT whose signature is to be verified.
      * @param idp       Identity provider who issued the signed JWT
      * @return whether signature is valid, true if valid else false
      * @throws JOSEException
