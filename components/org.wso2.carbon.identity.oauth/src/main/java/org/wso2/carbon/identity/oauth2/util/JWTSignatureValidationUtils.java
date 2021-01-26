@@ -31,7 +31,9 @@ import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.IdentityProviderProperty;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidator;
 
 import java.security.PublicKey;
@@ -57,8 +59,8 @@ public class JWTSignatureValidationUtils {
      * Method to validate the signature of the JWT.
      *
      * @param signedJWT signed JWT whose signature is to be verified.
-     * @param idp       Identity provider who issued the signed JWT
-     * @return whether signature is valid, true if valid else false
+     * @param idp       Identity provider who issued the signed JWT.
+     * @return whether signature is valid, true if valid else false.
      * @throws JOSEException
      * @throws IdentityOAuth2Exception
      */
@@ -66,9 +68,27 @@ public class JWTSignatureValidationUtils {
             throws JOSEException, IdentityOAuth2Exception {
 
         boolean isJWKSEnabled = false;
-        boolean hasJWKSUri = false;
         String jwksUri = null;
 
+        isJWKSEnabled = isJWKSEnabled();
+
+        jwksUri = getJWKSUri(idp);
+
+        if (isJWKSEnabled && (jwksUri != null)) {
+            return validateUsingJWKSUri(signedJWT, jwksUri);
+        } else {
+            return validateUsingCertificate(signedJWT, idp);
+        }
+    }
+
+    /**
+     * Method to check whether the JWKS is enabled.
+     *
+     * @return boolean value depending on whether the JWKS is enabled.
+     */
+    private static boolean isJWKSEnabled() {
+
+        boolean isJWKSEnabled = false;
         String isJWKSEnalbedProperty = IdentityUtil.getProperty(JWKS_VALIDATION_ENABLE_CONFIG);
         isJWKSEnabled = Boolean.parseBoolean(isJWKSEnalbedProperty);
         if (isJWKSEnabled) {
@@ -76,12 +96,23 @@ public class JWTSignatureValidationUtils {
                 log.debug("JWKS based JWT validation enabled.");
             }
         }
+        return isJWKSEnabled;
+    }
+
+    /**
+     * Method to get the JWKS Uri of the identity provider.
+     *
+     * @param idp Identity provider to get the JWKS Uri.
+     * @return JWKS Uri of the identity provider.
+     */
+    private static String getJWKSUri(IdentityProvider idp) {
+
+        String jwksUri = null;
 
         IdentityProviderProperty[] identityProviderProperties = idp.getIdpProperties();
         if (!ArrayUtils.isEmpty(identityProviderProperties)) {
             for (IdentityProviderProperty identityProviderProperty : identityProviderProperties) {
                 if (StringUtils.equals(identityProviderProperty.getName(), JWKS_URI)) {
-                    hasJWKSUri = true;
                     jwksUri = identityProviderProperty.getValue();
                     if (log.isDebugEnabled()) {
                         log.debug("JWKS endpoint set for the identity provider : " + idp.getIdentityProviderName() +
@@ -97,13 +128,17 @@ public class JWTSignatureValidationUtils {
             }
         }
 
-        if (isJWKSEnabled && hasJWKSUri) {
-            return validateUsingJWKSUri(signedJWT, jwksUri);
-        } else {
-            return validateUsingCertificate(signedJWT, idp);
-        }
+        return jwksUri;
     }
 
+    /**
+     * Method to validate the signature using JWKS Uri.
+     *
+     * @param signedJWT Signed JWT whose signature is to be validated.
+     * @param jwksUri   JWKS Uri of the identity provider.
+     * @return boolean value depending on the success of the validation.
+     * @throws IdentityOAuth2Exception
+     */
     private static boolean validateUsingJWKSUri(SignedJWT signedJWT, String jwksUri) throws IdentityOAuth2Exception {
 
         JWKSBasedJWTValidator jwksBasedJWTValidator = new JWKSBasedJWTValidator();
@@ -111,6 +146,15 @@ public class JWTSignatureValidationUtils {
                 ().getAlgorithm().getName(), null);
     }
 
+    /**
+     * Method to validate the signature using certificate
+     *
+     * @param signedJWT Signed JWT whose signature is to be validated.
+     * @param idp       Identity provider to get the certificate.
+     * @return boolean value depending on the success of the validation.
+     * @throws IdentityOAuth2Exception
+     * @throws JOSEException
+     */
     private static boolean validateUsingCertificate(SignedJWT signedJWT, IdentityProvider idp)
             throws IdentityOAuth2Exception, JOSEException {
 
@@ -118,7 +162,7 @@ public class JWTSignatureValidationUtils {
         JWSHeader header = signedJWT.getHeader();
         X509Certificate x509Certificate = resolveSignerCertificate(header, idp);
         if (x509Certificate == null) {
-            handleException(
+            handleClientException(
                     "Unable to locate certificate for Identity Provider " + idp.getDisplayName() + "; JWT " +
                             header.toString());
         }
@@ -127,7 +171,7 @@ public class JWTSignatureValidationUtils {
 
         String alg = signedJWT.getHeader().getAlgorithm().getName();
         if (StringUtils.isEmpty(alg)) {
-            handleException("Algorithm must not be null.");
+            handleClientException("Algorithm must not be null.");
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Signature Algorithm found in the JWT Header: " + alg);
@@ -138,7 +182,7 @@ public class JWTSignatureValidationUtils {
                 if (publicKey instanceof RSAPublicKey) {
                     verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
                 } else {
-                    handleException("Public key is not an RSA public key.");
+                    handleClientException("Public key is not an RSA public key.");
                 }
             } else {
                 if (log.isDebugEnabled()) {
@@ -146,7 +190,7 @@ public class JWTSignatureValidationUtils {
                 }
             }
             if (verifier == null) {
-                handleException("Could not create a signature verifier for algorithm type: " + alg);
+                handleServerException("Could not create a signature verifier for algorithm type: " + alg);
             }
         }
 
@@ -198,15 +242,35 @@ public class JWTSignatureValidationUtils {
             x509Certificate = (X509Certificate) IdentityApplicationManagementUtil
                     .decodeCertificate(idp.getCertificate());
         } catch (CertificateException e) {
-            handleException("Error occurred while decoding public certificate of Identity Provider "
+            handleServerException("Error occurred while decoding public certificate of Identity Provider "
                     + idp.getIdentityProviderName());
         }
         return x509Certificate;
     }
 
-    private static void handleException(String errorMessage) throws IdentityOAuth2Exception {
+    /**
+     * Method to handle the exceptions occurred due to client errors.
+     *
+     * @param errorMessage
+     * @throws IdentityOAuth2ClientException
+     */
+    private static void handleClientException(String errorMessage) throws IdentityOAuth2ClientException {
+
+        if (log.isDebugEnabled()) {
+            log.debug(errorMessage);
+        }
+        throw new IdentityOAuth2ClientException(errorMessage);
+    }
+
+    /**
+     * Method to handle the exceptions occurred due to server errors.
+     *
+     * @param errorMessage
+     * @throws IdentityOAuth2ServerException
+     */
+    private static void handleServerException(String errorMessage) throws IdentityOAuth2ServerException {
 
         log.error(errorMessage);
-        throw new IdentityOAuth2Exception(errorMessage);
+        throw new IdentityOAuth2ServerException(errorMessage);
     }
 }
