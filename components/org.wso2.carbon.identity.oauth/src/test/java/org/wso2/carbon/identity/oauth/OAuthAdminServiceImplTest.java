@@ -51,6 +51,7 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.powermock.reflect.Whitebox.invokeMethod;
 
 @PowerMockIgnore({"javax.net.*", "javax.security.*", "javax.crypto.*"})
 @PrepareForTest({OAuthAdminServiceImpl.class, IdentityCoreServiceComponent.class, ConfigurationContextService.class,
@@ -546,5 +547,55 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         Assert.assertEquals(supportedTokenTypesCall2.size(), 2);
         Assert.assertTrue(supportedTokenTypesCall2.contains("Default"));
         Assert.assertTrue(supportedTokenTypesCall2.contains("JWT"));
+    }
+
+    @DataProvider(name = "invalidAudienceDataProvider")
+    public Object[][] getInvalidAudiences() {
+
+        return new Object[][]{
+                {new String[]{" "}},
+                {new String[]{""}},
+                {new String[]{null}},
+                {new String[]{"duplicate", "duplicate"}},
+                {new String[]{null, "", "   ", "duplicate", "duplicate"}}
+        };
+    }
+
+    @Test(description = "Test validating invalid audiences", dataProvider = "invalidAudienceDataProvider")
+    public void testValidateAudiencesWithInvalidAudiences(String[] invalidAudience) {
+
+        OAuthConsumerAppDTO appDTO = new OAuthConsumerAppDTO();
+        appDTO.setAudiences(invalidAudience);
+
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+
+        try {
+            invokeMethod(oAuthAdminService, "validateAudiences", appDTO);
+        } catch (Exception ex) {
+            Assert.assertTrue(ex instanceof IdentityOAuthClientException);
+            Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
+                    Error.INVALID_REQUEST.getErrorCode());
+        }
+    }
+
+    @DataProvider(name = "validAudienceDataProvider")
+    public Object[][] getValidAudiences() {
+
+        return new Object[][]{
+                {null},
+                {new String[0]},
+                {new String[]{"audience1"}},
+                {new String[]{"audience1", "audience2"}}
+        };
+    }
+
+    @Test(description = "Test validating invalid audiences", dataProvider = "validAudienceDataProvider")
+    public void testValidateAudiencesWithValidAudiences(String[] validaAudience) throws Exception {
+
+        OAuthConsumerAppDTO appDTO = new OAuthConsumerAppDTO();
+        appDTO.setAudiences(validaAudience);
+
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+        invokeMethod(oAuthAdminService, "validateAudiences", appDTO);
     }
 }

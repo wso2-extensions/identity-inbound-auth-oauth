@@ -268,6 +268,8 @@ public class OAuthAdminServiceImpl {
                     app.setGrantTypes(application.getGrantTypes());
 
                     app.setScopeValidators(filterScopeValidators(application));
+
+                    validateAudiences(application);
                     app.setAudiences(application.getAudiences());
                     app.setPkceMandatory(application.getPkceMandatory());
                     app.setPkceSupportPlain(application.getPkceSupportPlain());
@@ -329,6 +331,20 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(AUTHENTICATED_USER_NOT_FOUND, message);
         }
         return OAuthUtil.buildConsumerAppDTO(app);
+    }
+
+    private void validateAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
+
+        if (application.getAudiences() != null) {
+            // Filter out any duplicates and empty audiences here.
+            long filteredAudienceSize = Arrays.stream(application.getAudiences()).filter(StringUtils::isNotBlank)
+                    .distinct().count();
+
+            if (filteredAudienceSize != application.getAudiences().length) {
+                // This means we had duplicates and empty strings.
+                throw handleClientError(INVALID_REQUEST, "Audience values cannot contain duplicates or empty values.");
+            }
+        }
     }
 
     private void validateGrantTypes(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
@@ -460,6 +476,7 @@ public class OAuthAdminServiceImpl {
             validateGrantTypes(consumerAppDTO);
             oauthappdo.setGrantTypes(consumerAppDTO.getGrantTypes());
 
+            validateAudiences(consumerAppDTO);
             oauthappdo.setAudiences(consumerAppDTO.getAudiences());
             oauthappdo.setScopeValidators(filterScopeValidators(consumerAppDTO));
             oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
