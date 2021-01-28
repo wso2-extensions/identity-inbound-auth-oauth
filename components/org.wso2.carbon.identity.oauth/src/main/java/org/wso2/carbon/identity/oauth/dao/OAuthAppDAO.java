@@ -30,7 +30,9 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.Error;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.IdentityOAuthClientException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -52,6 +54,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -86,6 +89,8 @@ public class OAuthAppDAO {
     private static final String APP_STATE = "APP_STATE";
     private static final String USERNAME = "USERNAME";
     private static final String LOWER_USERNAME = "LOWER(USERNAME)";
+    private static final String CONSUMER_KEY_CONSTRAINT = "CONSUMER_KEY_CONSTRAINT";
+
     private TokenPersistenceProcessor persistenceProcessor;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
@@ -102,10 +107,10 @@ public class OAuthAppDAO {
 
     public void addOAuthApplication(OAuthAppDO consumerAppDO) throws IdentityOAuthAdminException {
 
-        int spTenantId = IdentityTenantUtil.getTenantId(consumerAppDO.getUser().getTenantDomain());
-        String userStoreDomain = consumerAppDO.getUser().getUserStoreDomain();
-        if (!isDuplicateApplication(consumerAppDO.getUser().getUserName(), spTenantId, userStoreDomain,
-                consumerAppDO)) {
+        AuthenticatedUser appOwner = consumerAppDO.getAppOwner();
+        int spTenantId = IdentityTenantUtil.getTenantId(appOwner.getTenantDomain());
+        String userStoreDomain = appOwner.getUserStoreDomain();
+        if (!isDuplicateApplication(appOwner.getUserName(), spTenantId, userStoreDomain, consumerAppDO)) {
             int appId = 0;
             try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
                 try {
@@ -121,7 +126,7 @@ public class OAuthAppDAO {
                             })) {
                         prepStmt.setString(1, processedClientId);
                         prepStmt.setString(2, processedClientSecret);
-                        prepStmt.setString(3, consumerAppDO.getUser().getUserName());
+                        prepStmt.setString(3, appOwner.getUserName());
                         prepStmt.setInt(4, spTenantId);
                         prepStmt.setString(5, userStoreDomain);
                         prepStmt.setString(6, consumerAppDO.getApplicationName());
@@ -157,12 +162,16 @@ public class OAuthAppDAO {
                     IdentityDatabaseUtil.commitTransaction(connection);
                 } catch (SQLException e1) {
                     IdentityDatabaseUtil.rollbackTransaction(connection);
+                    if (isDuplicateClient(e1)) {
+                        String msg = "An application with the same clientId already exists.";
+                        throw new IdentityOAuthClientException(Error.DUPLICATE_OAUTH_CLIENT.getErrorCode(), msg, e1);
+                    }
                     throw handleError(String.format("Error when executing SQL to create OAuth app %s@%s ",
-                            consumerAppDO.getApplicationName(), consumerAppDO.getUser().getTenantDomain()), e1);
+                            consumerAppDO.getApplicationName(), appOwner.getTenantDomain()), e1);
                 }
             } catch (SQLException e) {
                 throw handleError(String.format("Error when executing SQL to create OAuth app %s@%s ",
-                        consumerAppDO.getApplicationName(), consumerAppDO.getUser().getTenantDomain()), e);
+                        consumerAppDO.getApplicationName(), appOwner.getTenantDomain()), e);
             } catch (IdentityOAuth2Exception e) {
                 throw handleError("Error occurred while processing the client id and client secret by " +
                         "TokenPersistenceProcessor", null);
@@ -170,9 +179,16 @@ public class OAuthAppDAO {
                 throw handleError("Error occurred while processing client id", e);
             }
         } else {
-            String message = "Error when adding the application. An application with the same name already exists.";
-            throw handleError(message, null);
+            String msg = "An application with the same name already exists.";
+            throw new IdentityOAuthClientException(Error.DUPLICATE_OAUTH_CLIENT.getErrorCode(), msg);
         }
+    }
+
+    private boolean isDuplicateClient(SQLException e) {
+        // We detect constraint violations in JDBC drivers which don't throw SQLIntegrityConstraintViolationException
+        // by looking at the error message.
+        return e instanceof SQLIntegrityConstraintViolationException ||
+                StringUtils.containsIgnoreCase(e.getMessage(), CONSUMER_KEY_CONSTRAINT);
     }
 
     public String[] addOAuthConsumer(String username, int tenantId, String userDomain) throws
