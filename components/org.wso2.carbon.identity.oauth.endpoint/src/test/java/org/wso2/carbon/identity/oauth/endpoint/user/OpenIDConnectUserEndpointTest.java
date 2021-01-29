@@ -37,9 +37,11 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.lang.reflect.Method;
+import java.util.Enumeration;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
@@ -82,10 +84,14 @@ public class OpenIDConnectUserEndpointTest extends PowerMockIdentityBaseTest {
 
     private OpenIDConnectUserEndpoint openIDConnectUserEndpoint;
 
+    private MultivaluedMap<String, String> paramMap;
+
     @BeforeTest
     public void setUp() throws Exception {
 
         openIDConnectUserEndpoint = new OpenIDConnectUserEndpoint();
+        paramMap = new MultivaluedHashMap<>();
+        paramMap.add("access_token", "ca19a540f544777860e44e75f605d927");
     }
 
     @DataProvider(name = "provideDataForGetUserClaims")
@@ -158,7 +164,18 @@ public class OpenIDConnectUserEndpointTest extends PowerMockIdentityBaseTest {
         assertNotNull(response);
         assertEquals(response.getEntity().toString(), authResponse, "Response values are not same");
 
-        openIDConnectUserEndpoint.getUserClaimsPost(httpServletRequest);
+        when(httpServletRequest.getParameterNames()).thenReturn(new Enumeration<String>() {
+            @Override
+            public boolean hasMoreElements() {
+                return false;
+            }
+
+            @Override
+            public String nextElement() {
+                return null;
+            }
+        });
+        openIDConnectUserEndpoint.getUserClaimsPost(httpServletRequest, paramMap);
     }
 
 }
