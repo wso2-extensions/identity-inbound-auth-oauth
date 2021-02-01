@@ -230,6 +230,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @param tokenContext         Token context.
      * @param authorizationContext Authorization context.
      * @return Signed JWT.
+     * @deprecated {@link OAuth2Util#signJWT(JWTClaimsSet, JWSAlgorithm, String)}
      * @throws IdentityOAuth2Exception
      */
     @Deprecated
@@ -334,8 +335,10 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @param tokenContext         Token context if available.
      * @param authorizationContext Authorization context if available.
      * @return Signed JWT token.
+     * @deprecated {@link OAuth2Util#signJWTWithRSA(JWTClaimsSet, JWSAlgorithm, String)}
      * @throws IdentityOAuth2Exception
      */
+    @Deprecated
     protected String signJWTWithRSA(JWTClaimsSet jwtClaimsSet, OAuthTokenReqMessageContext tokenContext,
                                     OAuthAuthzReqMessageContext authorizationContext) throws IdentityOAuth2Exception {
 

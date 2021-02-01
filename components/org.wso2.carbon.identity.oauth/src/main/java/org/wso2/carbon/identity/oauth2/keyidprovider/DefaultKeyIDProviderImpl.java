@@ -39,7 +39,7 @@ public class DefaultKeyIDProviderImpl implements KeyIDProvider {
     public String getKeyId(Certificate certificate, JWSAlgorithm signatureAlgorithm, String tenantDomain)
             throws IdentityOAuth2Exception {
 
-        return OAuth2Util.getThumbPrint(certificate) + "_" + signatureAlgorithm.toString();
+        return OAuth2Util.getKID(certificate, signatureAlgorithm);
 
     }
 

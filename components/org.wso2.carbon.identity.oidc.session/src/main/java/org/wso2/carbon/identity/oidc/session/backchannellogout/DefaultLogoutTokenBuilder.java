@@ -207,7 +207,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
             log.debug("IdTokenHint is not found in the request ");
             return null;
         }
-        if (validateIdTokenHint(clientId, idToken)) {
+        if (OAuth2Util.validateIdToken(idToken)) {
             return clientId;
         } else {
             log.debug("Id Token is not valid");
@@ -404,48 +404,4 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
 
         return SignedJWT.parse(idToken).getJWTClaimsSet().getAudience().get(0);
     }
-
-    /**
-     * Validate Id Token Hint.
-     *
-     * @param clientId
-     * @param idToken
-     * @return
-     * @throws IdentityOAuth2Exception
-     * @throws InvalidOAuthClientException
-     */
-    private Boolean validateIdTokenHint(String clientId, String idToken) throws IdentityOAuth2Exception,
-            InvalidOAuthClientException {
-
-        String tenantDomain = getSigningTenantDomain(getOAuthAppDO(clientId));
-        if (StringUtils.isEmpty(tenantDomain)) {
-            return false;
-        }
-        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-        RSAPublicKey publicKey;
-
-        try {
-            KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
-
-            if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                String ksName = tenantDomain.trim().replace(".", "-");
-                String jksName = ksName + ".jks";
-                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(jksName).getCertificate(tenantDomain)
-                        .getPublicKey();
-            } else {
-                publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
-            }
-            SignedJWT signedJWT = SignedJWT.parse(idToken);
-            JWSVerifier verifier = new RSASSAVerifier(publicKey);
-
-            return signedJWT.verify(verifier);
-        } catch (JOSEException | ParseException e) {
-            log.error("Error occurred while validating id token signature.", e);
-            return false;
-        } catch (Exception e) {
-            log.error("Error occurred while validating id token signature.", e);
-            return false;
-        }
-    }
-
 }

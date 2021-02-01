@@ -163,6 +163,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -2156,6 +2157,8 @@ public class OAuth2Util {
         String tenantDomain;
         try {
             String clientId = SignedJWT.parse(idToken).getJWTClaimsSet().getAudience().get(0);
+            String jwtKid = SignedJWT.parse(idToken).getHeader().getKeyID();
+            JWSAlgorithm signatureAlgorithm = SignedJWT.parse(idToken).getHeader().getAlgorithm();
             if (isJWTSignedWithSPKey) {
                 OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
                 tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
@@ -2171,15 +2174,16 @@ public class OAuth2Util {
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
             RSAPublicKey publicKey;
             KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
+            KeyStore keyStore;
 
             if (!tenantDomain.equals(org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
                 String ksName = tenantDomain.trim().replace(".", "-");
                 String jksName = ksName + ".jks";
-                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(jksName).getCertificate(tenantDomain)
-                        .getPublicKey();
+                keyStore = keyStoreManager.getKeyStore(jksName);
             } else {
-                publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
+                keyStore = keyStoreManager.getPrimaryKeyStore();
             }
+            publicKey = (RSAPublicKey) getSignedCert(keyStore, jwtKid, signatureAlgorithm).getPublicKey();
             SignedJWT signedJWT = SignedJWT.parse(idToken);
             JWSVerifier verifier = new RSASSAVerifier(publicKey);
 
@@ -2191,6 +2195,26 @@ public class OAuth2Util {
             log.error("Error occurred while validating id token signature.");
             return false;
         }
+    }
+
+    private static Certificate getSignedCert(KeyStore keyStore, String jwtKid, JWSAlgorithm signatureAlg)
+            throws KeyStoreException, IdentityOAuth2Exception {
+
+        Enumeration enumeration = keyStore.aliases();
+        Certificate signedCert = null;
+        while (enumeration.hasMoreElements()) {
+            String alias = (String) enumeration.nextElement();
+            if (keyStore.isKeyEntry(alias)) {
+                Certificate cert = keyStore.getCertificate(alias);
+                String kid = OAuth2Util.getKID(cert, signatureAlg);
+                if (StringUtils.equals(jwtKid, kid)) {
+                    signedCert = cert;
+                    break;
+                }
+
+            }
+        }
+        return signedCert;
     }
 
     /**
@@ -2439,7 +2463,7 @@ public class OAuth2Util {
 
             } else {
                 try {
-                    privateKey = tenantKSM.getDefaultPrivateKey();
+                    privateKey = KeyStoreMgtUtil.getDefaultPrivateKey();
                 } catch (Exception e) {
                     throw new IdentityOAuth2Exception("Error while obtaining private key for super tenant", e);
                 }
@@ -2452,6 +2476,20 @@ public class OAuth2Util {
             privateKey = privateKeys.get(privateKeysMapKey);
         }
         return privateKey;
+    }
+
+    /**
+     * Returns kid by appending Certificate thumbprinnt with signature algorithm name;
+     *
+     * @param certificate
+     * @param signatureAlgorithm
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    public static String getKID(Certificate certificate, JWSAlgorithm signatureAlgorithm)
+            throws IdentityOAuth2Exception {
+
+        return getThumbPrint(certificate) + "_" + signatureAlgorithm.toString();
     }
 
     /**

@@ -18,17 +18,12 @@
 
 package org.wso2.carbon.identity.oidc.session.servlet;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
@@ -42,7 +37,6 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -67,7 +61,6 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -184,7 +177,6 @@ public class OIDCLogoutServlet extends HttpServlet {
                 redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, "End User denied the logout request");
                 // If postlogoutUri is available then set it as redirectUrl
                 redirectURL = generatePostLogoutRedirectUrl(redirectURL, opBrowserState);
-
             }
         } else {
             // OIDC Logout response
@@ -327,7 +319,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(appTenantDomain, idTokenHint);
                 clientId = OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(decryptedIDToken);
             } else {
-                if (!validateIdToken(idTokenHint)) {
+                if (!OAuth2Util.validateIdToken(idTokenHint)) {
                     String msg = "ID token signature validation failed.";
                     log.error(msg);
                     redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
@@ -375,86 +367,6 @@ public class OIDCLogoutServlet extends HttpServlet {
         addSessionDataToCache(opBrowserStateCookie.getValue(), cacheEntry);
 
         return redirectURL;
-    }
-
-    /**
-     * Validate Id token signature.
-     *
-     * @param idToken Id token
-     * @return validation state
-     */
-    private boolean validateIdToken(String idToken) {
-
-        String tenantDomain = getTenantDomainForSignatureValidation(idToken);
-        if (StringUtils.isEmpty(tenantDomain)) {
-            return false;
-        }
-        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-        RSAPublicKey publicKey;
-
-        try {
-            KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
-
-            if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                String ksName = tenantDomain.trim().replace(".", "-");
-                String jksName = ksName + ".jks";
-                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(jksName).getCertificate(tenantDomain)
-                        .getPublicKey();
-            } else {
-                publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
-            }
-            SignedJWT signedJWT = SignedJWT.parse(idToken);
-            JWSVerifier verifier = new RSASSAVerifier(publicKey);
-
-            return signedJWT.verify(verifier);
-        } catch (JOSEException | ParseException e) {
-            log.error("Error occurred while validating id token signature.");
-            return false;
-        } catch (Exception e) {
-            log.error("Error occurred while validating id token signature.");
-            return false;
-        }
-    }
-
-    /**
-     * Get tenant domain for signature validation.
-     * There is a problem If Id token signed using SP's tenant and there is no direct way to get the tenant domain
-     * using client id. So have iterate all the Tenants until get the right client id.
-     *
-     * @param idToken id token
-     * @return Tenant domain
-     */
-    private String getTenantDomainForSignatureValidation(String idToken) {
-
-        boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
-        if (log.isDebugEnabled()) {
-            log.debug("'SignJWTWithSPKey' property is set to : " + isJWTSignedWithSPKey);
-        }
-        String tenantDomain;
-
-        try {
-            String clientId = extractClientFromIdToken(idToken);
-            if (isJWTSignedWithSPKey) {
-                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-                tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-                if (log.isDebugEnabled()) {
-                    log.debug("JWT signature will be validated with the service provider's tenant domain : " +
-                            tenantDomain);
-                }
-            } else {
-                if (log.isDebugEnabled()) {
-                    log.debug("JWT signature will be validated with user tenant domain.");
-                }
-                tenantDomain = extractTenantDomainFromIdToken(idToken);
-            }
-        } catch (ParseException e) {
-            log.error("Error occurred while extracting client id from id token", e);
-            return null;
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            log.error("Error occurred while getting oauth application information.", e);
-            return null;
-        }
-        return tenantDomain;
     }
 
     /**
@@ -833,7 +745,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(tenantDomain, idTokenHint);
                 clientId = OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(decryptedIDToken);
             } else {
-                if (!validateIdToken(idTokenHint)) {
+                if (!OAuth2Util.validateIdToken(idTokenHint)) {
                     throw new IdentityOAuth2Exception("ID token signature validation failed.");
                 }
                 clientId = extractClientFromIdToken(idTokenHint);
@@ -920,7 +832,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             response.sendRedirect(getRedirectURL(redirectURL, request));
             return;
         }
-        if (!validateIdToken(idTokenHint) && !OIDCSessionManagementUtil.isIDTokenEncrypted(idTokenHint)) {
+        if (!OAuth2Util.validateIdToken(idTokenHint) && !OIDCSessionManagementUtil.isIDTokenEncrypted(idTokenHint)) {
             String msg = "ID token signature validation failed.";
             if (log.isDebugEnabled()) {
                 log.debug(msg + " Client id from id token: " + clientId);
