@@ -67,38 +67,15 @@ public class JWTSignatureValidationUtils {
     public static boolean validateSignature(SignedJWT signedJWT, IdentityProvider idp)
             throws JOSEException, IdentityOAuth2Exception {
 
-        boolean isJWKSEnabled = false;
-        String jwksUri = null;
+        String jwksUri = getJWKSUri(idp);
 
-        isJWKSEnabled = isJWKSEnabled();
-
-        jwksUri = getJWKSUri(idp);
-
-        if (isJWKSEnabled && (jwksUri != null)) {
+        if (jwksUri != null) {
             return validateUsingJWKSUri(signedJWT, jwksUri);
         } else {
             return validateUsingCertificate(signedJWT, idp);
         }
     }
-
-    /**
-     * Method to check whether the JWKS is enabled.
-     *
-     * @return boolean value depending on whether the JWKS is enabled.
-     */
-    private static boolean isJWKSEnabled() {
-
-        boolean isJWKSEnabled = false;
-        String isJWKSEnalbedProperty = IdentityUtil.getProperty(JWKS_VALIDATION_ENABLE_CONFIG);
-        isJWKSEnabled = Boolean.parseBoolean(isJWKSEnalbedProperty);
-        if (isJWKSEnabled) {
-            if (log.isDebugEnabled()) {
-                log.debug("JWKS based JWT validation enabled.");
-            }
-        }
-        return isJWKSEnabled;
-    }
-
+    
     /**
      * Method to get the JWKS Uri of the identity provider.
      *
