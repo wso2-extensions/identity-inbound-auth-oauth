@@ -193,8 +193,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
-
-        return signJWT(jwtClaimsSet, request, null);
+        String tenantDomain = resolveSigningTenantDomain(request, null);
+        return OAuth2Util.signJWT(jwtClaimsSet, (JWSAlgorithm) signatureAlgorithm, tenantDomain).serialize();
     }
 
     /**
@@ -219,8 +219,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
-
-        return signJWT(jwtClaimsSet, null, request);
+        String tenantDomain = resolveSigningTenantDomain(null, request);
+        return OAuth2Util.signJWT(jwtClaimsSet, (JWSAlgorithm) signatureAlgorithm, tenantDomain).serialize();
     }
 
     /**
@@ -232,6 +232,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @return Signed JWT.
      * @throws IdentityOAuth2Exception
      */
+    @Deprecated
     protected String signJWT(JWTClaimsSet jwtClaimsSet,
                              OAuthTokenReqMessageContext tokenContext,
                              OAuthAuthzReqMessageContext authorizationContext) throws IdentityOAuth2Exception {

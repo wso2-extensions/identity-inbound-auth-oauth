@@ -124,6 +124,7 @@ import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
+import org.wso2.carbon.security.util.KeyStoreMgtUtil;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -315,8 +316,8 @@ public class OAuth2Util {
     // System flag to allow the weak keys (key length less than 2048) to be used for the signing.
     private static final String ALLOW_WEAK_RSA_SIGNER_KEY = "allow_weak_rsa_signer_key";
 
-    private static Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<Integer, Certificate>();
-    private static Map<Integer, Key> privateKeys = new ConcurrentHashMap<Integer, Key>();
+    private static Map<String, Certificate> publicCerts = new ConcurrentHashMap<String, Certificate>();
+    private static Map<String, Key> privateKeys = new ConcurrentHashMap<String, Key>();
 
     // Supported Signature Algorithms
     private static final String NONE = "NONE";
@@ -2408,8 +2409,13 @@ public class OAuth2Util {
     public static Key getPrivateKey(String tenantDomain, int tenantId) throws IdentityOAuth2Exception {
 
         Key privateKey;
-        if (!(privateKeys.containsKey(tenantId))) {
-
+        String signingKey = getSigningKeyAlias(tenantDomain);
+        if (StringUtils.isBlank(signingKey)) {
+            throw new IdentityOAuth2Exception("Error while obtaining signing key alias for the tenant tenant: "
+                    + tenantDomain);
+        }
+        String privateKeysMapKey = tenantId + "_" + signingKey;
+        if (!(privateKeys.containsKey(privateKeysMapKey))) {
             try {
                 IdentityTenantUtil.initializeRegistry(tenantId, tenantDomain);
             } catch (IdentityException e) {
@@ -2425,7 +2431,11 @@ public class OAuth2Util {
                 String ksName = tenantDomain.trim().replace(".", "-");
                 String jksName = ksName + ".jks";
                 // obtain private key
-                privateKey = tenantKSM.getPrivateKey(jksName, tenantDomain);
+                if (StringUtils.isNotBlank(signingKey)) {
+                    privateKey = tenantKSM.getPrivateKey(jksName, signingKey);
+                } else {
+                    privateKey = tenantKSM.getPrivateKey(jksName, tenantDomain);
+                }
 
             } else {
                 try {
@@ -2435,11 +2445,11 @@ public class OAuth2Util {
                 }
             }
             //privateKey will not be null always
-            privateKeys.put(tenantId, privateKey);
+            privateKeys.put(privateKeysMapKey, privateKey);
         } else {
             //privateKey will not be null because containsKey() true says given key is exist and ConcurrentHashMap
             // does not allow to store null values
-            privateKey = privateKeys.get(tenantId);
+            privateKey = privateKeys.get(privateKeysMapKey);
         }
         return privateKey;
     }
@@ -2555,8 +2565,10 @@ public class OAuth2Util {
     public static Certificate getCertificate(String tenantDomain, int tenantId) throws IdentityOAuth2Exception {
 
         Certificate publicCert = null;
+        String signingKeyAlias = getSigningKeyAlias(tenantDomain);
+        String publicCertsMapKey = tenantId + "_" + signingKeyAlias;
 
-        if (!(publicCerts.containsKey(tenantId))) {
+        if (!(publicCerts.containsKey(publicCertsMapKey))) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Obtaining certificate for the tenant %s", tenantDomain));
             }
@@ -2581,7 +2593,7 @@ public class OAuth2Util {
                 }
                 try {
                     keyStore = tenantKSM.getKeyStore(jksName);
-                    publicCert = keyStore.getCertificate(tenantDomain);
+                    publicCert = keyStore.getCertificate(signingKeyAlias);
                 } catch (KeyStoreException e) {
                     throw new IdentityOAuth2Exception("Error occurred while loading public certificate for tenant: " +
                             tenantDomain, e);
@@ -2592,19 +2604,28 @@ public class OAuth2Util {
 
             } else {
                 try {
-                    publicCert = tenantKSM.getDefaultPrimaryCertificate();
+                    publicCert = KeyStoreMgtUtil.getDefaultPrimaryCertificate();
                 } catch (Exception e) {
                     throw new IdentityOAuth2Exception("Error occurred while loading default public " +
                             "certificate for tenant: " + tenantDomain, e);
                 }
             }
             if (publicCert != null) {
-                publicCerts.put(tenantId, publicCert);
+                publicCerts.put(publicCertsMapKey, publicCert);
             }
         } else {
-            publicCert = publicCerts.get(tenantId);
+            publicCert = publicCerts.get(publicCertsMapKey);
         }
         return publicCert;
+    }
+
+    public static String getSigningKeyAlias(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            return KeyStoreMgtUtil.getSigningKeyAlias(tenantDomain);
+        } catch (IdentityProviderManagementException e) {
+            throw new IdentityOAuth2Exception("Error while obtaining signing key alias tenant", e);
+        }
     }
 
     /**
