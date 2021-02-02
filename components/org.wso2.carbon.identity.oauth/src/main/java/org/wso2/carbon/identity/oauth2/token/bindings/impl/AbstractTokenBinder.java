@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.token.bindings.impl;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -31,7 +32,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import java.net.HttpCookie;
 import java.util.Optional;
 
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.HttpHeaders;
 
@@ -77,7 +77,7 @@ public abstract class AbstractTokenBinder implements TokenBinder {
         }
 
         if (request instanceof HttpServletRequest) {
-            return isValidTokenBinding((HttpServletRequest) request, bindingReference, cookieName);
+            return isValidTokenBinding((HttpServletRequest) request, bindingReference);
         } else if (request instanceof OAuth2AccessTokenReqDTO) {
             return isValidTokenBinding((OAuth2AccessTokenReqDTO) request, bindingReference, cookieName);
         }
@@ -119,19 +119,15 @@ public abstract class AbstractTokenBinder implements TokenBinder {
         throw new RuntimeException("Unsupported grant type: " + oAuth2AccessTokenReqDTO.getGrantType());
     }
 
-    private boolean isValidTokenBinding(HttpServletRequest request, String bindingReference, String cookieName) {
+    private boolean isValidTokenBinding(HttpServletRequest request, String bindingReference) {
 
-        Cookie[] cookies = request.getCookies();
-
-        if (ArrayUtils.isEmpty(cookies)) {
+        String tokenBindingValue;
+        try {
+            tokenBindingValue = getTokenBindingValue(request);
+        } catch (OAuthSystemException e) {
             return false;
         }
 
-        for (Cookie cookie : cookies) {
-            if (cookieName.equals(cookie.getName())) {
-                return bindingReference.equals(OAuth2Util.getTokenBindingReference(cookie.getValue()));
-            }
-        }
-        return false;
+        return bindingReference.equals(OAuth2Util.getTokenBindingReference(tokenBindingValue));
     }
 }

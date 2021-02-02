@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -55,9 +56,11 @@ import org.wso2.carbon.identity.oauth2.token.bindings.handlers.TokenBindingExpir
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
+import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
 
@@ -416,5 +419,44 @@ public class OAuth2ServiceComponent {
 
     protected void unsetKeyIDProvider(KeyIDProvider keyIDProvider) {
 
+    }
+
+    @Reference(
+            name = "scope.validator.service",
+            service = ScopeValidator.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "removeScopeValidatorService"
+    )
+    protected void addScopeValidatorService(ScopeValidator scopeValidator) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Adding the Scope validator Service : " + scopeValidator.getName());
+        }
+        OAuthComponentServiceHolder.getInstance().addScopeValidator(scopeValidator);
+    }
+
+    protected void removeScopeValidatorService(ScopeValidator scopeValidator) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing the Scope validator Service : " + scopeValidator.getName());
+        }
+        OAuthComponentServiceHolder.getInstance().removeScopeValidator(scopeValidator);
+    }
+
+    @Reference(
+            name = "IdentityProviderManager",
+            service = org.wso2.carbon.idp.mgt.IdpManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIdpManager")
+    protected void setIdpManager(IdpManager idpManager) {
+
+        OAuth2ServiceComponentHolder.getInstance().setIdpManager(idpManager);
+    }
+
+    protected void unsetIdpManager(IdpManager idpManager) {
+
+        OAuth2ServiceComponentHolder.getInstance().setIdpManager(null);
     }
 }

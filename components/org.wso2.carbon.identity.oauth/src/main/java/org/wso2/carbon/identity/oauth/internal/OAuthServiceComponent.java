@@ -27,6 +27,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
+import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -34,6 +35,9 @@ import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener;
+import org.wso2.carbon.identity.oauth.listener.IdentityOauthEventHandler;
+import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
+import org.wso2.carbon.identity.oauth.listener.OAuthTokenSessionMappingEventHandler;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -48,14 +52,12 @@ import org.wso2.carbon.user.core.service.RealmService;
         name = "identity.oauth.component",
         immediate = true
 )
-@Deprecated
 public class OAuthServiceComponent {
 
     private static final Log log = LogFactory.getLog(OAuthServiceComponent.class);
     private ServiceRegistration serviceRegistration = null;
 
     protected void activate(ComponentContext context) {
-
         try {
             // initialize the OAuth Server configuration
             OAuthServerConfiguration oauthServerConfig = OAuthServerConfiguration.getInstance();
@@ -69,6 +71,12 @@ public class OAuthServiceComponent {
                     listener, null);
             log.debug("Identity Oath Event Listener is enabled");
 
+            context.getBundleContext().registerService(AbstractEventHandler.class.getName(),
+                    new IdentityOauthEventHandler(), null);
+            if (log.isDebugEnabled()) {
+                log.debug("Identity Oauth Event handler is enabled");
+            }
+
             OAuth2Service oauth2Service = new OAuth2Service();
             context.getBundleContext().registerService(OAuth2Service.class.getName(), oauth2Service, null);
             OAuthComponentServiceHolder.getInstance().setOauth2Service(oauth2Service);
@@ -81,6 +89,11 @@ public class OAuthServiceComponent {
 
             OAuthComponentServiceHolder.getInstance().setOAuthAdminService(oauthAdminService);
             OAuth2ServiceComponentHolder.getInstance().setOAuthAdminService(oauthAdminService);
+            context.getBundleContext().registerService(OAuthEventInterceptor.class,
+                    new OAuthTokenSessionMappingEventHandler(), null);
+            if (log.isDebugEnabled()) {
+                log.debug("OAuthTokenSessionMapping Event Handler is enabled");
+            }
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
@@ -248,5 +261,26 @@ public class OAuthServiceComponent {
             log.debug("Un-setting the token binder info for: " + tokenBinderInfo.getBindingType());
         }
         OAuthComponentServiceHolder.getInstance().removeTokenBinderInfo(tokenBinderInfo);
+    }
+
+    @Reference(name = "oauth.application.mgt.listener",
+               service = OAuthApplicationMgtListener.class,
+               cardinality = ReferenceCardinality.MULTIPLE,
+               policy = ReferencePolicy.DYNAMIC,
+               unbind = "unsetOAuthApplicationMgtListener")
+    protected void setOAuthApplicationMgtListener(OAuthApplicationMgtListener oAuthApplicationMgtListener) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Adding OAuthApplicationMgtListener: " + oAuthApplicationMgtListener.getClass().getName());
+        }
+        OAuthComponentServiceHolder.getInstance().addOAuthApplicationMgtListener(oAuthApplicationMgtListener);
+    }
+
+    protected void unsetOAuthApplicationMgtListener(OAuthApplicationMgtListener oAuthApplicationMgtListener) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing OAuthApplicationMgtListener: " + oAuthApplicationMgtListener.getClass().getName());
+        }
+        OAuthComponentServiceHolder.getInstance().removeOAuthApplicationMgtListener(oAuthApplicationMgtListener);
     }
 }

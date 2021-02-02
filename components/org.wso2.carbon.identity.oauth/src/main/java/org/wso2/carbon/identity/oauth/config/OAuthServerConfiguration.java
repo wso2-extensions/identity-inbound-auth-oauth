@@ -88,7 +88,7 @@ public class OAuthServerConfiguration {
     private static final String CONFIG_ELEM_OAUTH = "OAuth";
     // Grant Handler Classes
     private static final String AUTHORIZATION_CODE_GRANT_HANDLER_CLASS =
-            "org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationCodeHandler";
+            "org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationCodeGrantHandler";
     private static final String CLIENT_CREDENTIALS_GRANT_HANDLER_CLASS =
             "org.wso2.carbon.identity.oauth2.token.handlers.grant.ClientCredentialsGrantHandler";
     private static final String PASSWORD_GRANT_HANDLER_CLASS =
@@ -144,6 +144,7 @@ public class OAuthServerConfiguration {
     private boolean cacheEnabled = false;
     private boolean isTokenRenewalPerRequestEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
+    private boolean isExtendRenewedTokenExpiryTimeEnabled = false;
     private boolean assertionsUserNameEnabled = false;
     private boolean accessTokenPartitioningEnabled = false;
     private boolean redirectToRequestedRedirectUriEnabled = true;
@@ -262,6 +263,8 @@ public class OAuthServerConfiguration {
 
     // Property to determine whether data providers should be executed during token introspection.
     private boolean enableIntrospectionDataProviders = false;
+    // Property to define the allowed scopes.
+    private List<String> allowedScopes = new ArrayList<>();
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -416,6 +419,28 @@ public class OAuthServerConfiguration {
 
         // Read the property for error redirection URI
         parseRedirectToOAuthErrorPageConfig(oauthElem);
+
+        // Read config for allowed scopes.
+        parseAllowedScopesConfiguration(oauthElem);
+    }
+
+    /**
+     * Parse allowed scopes configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseAllowedScopesConfiguration(OMElement oauthConfigElem) {
+
+        OMElement allowedScopesElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.ALLOWED_SCOPES_ELEMENT));
+        if (allowedScopesElem != null) {
+            Iterator scopeIterator = allowedScopesElem.getChildrenWithName(getQNameWithIdentityNS(
+                    ConfigElements.SCOPES_ELEMENT));
+            while (scopeIterator.hasNext()) {
+                OMElement scopeElement = (OMElement) scopeIterator.next();
+                allowedScopes.add(scopeElement.getText());
+            }
+        }
     }
 
     private void parseTokenIntrospectionConfig(OMElement oauthElem) {
@@ -452,6 +477,16 @@ public class OAuthServerConfiguration {
      */
     public boolean isShowDisplayNameInConsentPage() {
         return showDisplayNameInConsentPage;
+    }
+
+    /**
+     * Get the list of alloed scopes.
+     *
+     * @return String returns a list of scope string.
+     */
+    public List<String> getAllowedScopes() {
+
+        return allowedScopes;
     }
 
     public String getOAuth1RequestTokenUrl() {
@@ -670,6 +705,10 @@ public class OAuthServerConfiguration {
 
     public boolean isRefreshTokenRenewalEnabled() {
         return isRefreshTokenRenewalEnabled;
+    }
+
+    public boolean isExtendRenewedTokenExpiryTimeEnabled() {
+        return isExtendRenewedTokenExpiryTimeEnabled;
     }
 
     public Map<String, OauthTokenIssuer> getOauthTokenIssuerMap() {
@@ -1786,6 +1825,15 @@ public class OAuthServerConfiguration {
         }
         if (log.isDebugEnabled()) {
             log.debug("RenewRefreshTokenForRefreshGrant was set to : " + isRefreshTokenRenewalEnabled);
+        }
+
+        OMElement enableExtendRenewedTokenExpTimeElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME));
+        if (enableExtendRenewedTokenExpTimeElem != null) {
+            isExtendRenewedTokenExpiryTimeEnabled = Boolean.parseBoolean(enableExtendRenewedTokenExpTimeElem.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("ExtendRenewedRefreshTokenExpiryTime was set to : " + isExtendRenewedTokenExpiryTimeEnabled);
         }
     }
 
@@ -3018,6 +3066,8 @@ public class OAuthServerConfiguration {
         private static final String ENABLE_CACHE = "EnableOAuthCache";
         // Enable/Disable refresh token renewal on each refresh_token grant request
         private static final String RENEW_REFRESH_TOKEN_FOR_REFRESH_GRANT = "RenewRefreshTokenForRefreshGrant";
+        // Enable/Disable extend the lifetime of the new refresh token
+        private static final String EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME = "ExtendRenewedRefreshTokenExpiryTime";
         // TokenPersistenceProcessor
         private static final String TOKEN_PERSISTENCE_PROCESSOR = "TokenPersistenceProcessor";
         // Token issuer generator.
@@ -3100,6 +3150,9 @@ public class OAuthServerConfiguration {
 
         // Enable/Disable token renewal on each request to the token endpoint
         private static final String RENEW_TOKEN_PER_REQUEST = "RenewTokenPerRequest";
+        // Allowed Scopes Config.
+        private static final String ALLOWED_SCOPES_ELEMENT = "AllowedScopes";
+        private static final String SCOPES_ELEMENT = "Scope";
     }
 
 }

@@ -56,6 +56,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthRuntimeException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -123,8 +124,10 @@ import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
+import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -208,6 +211,7 @@ public class OAuth2Util {
     public static final String OPENID_CONNECT = "OpenIDConnect";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
+    public static final String OPENID_SCOPE = "openid";
     /*
      * Maintain a separate parameter "OPENID_CONNECT_AUDIENCE_IDENTITY_CONFIG" to get the audience from the identity.xml
      * when user didn't add any audience in the UI while creating service provider.
@@ -2511,7 +2515,7 @@ public class OAuth2Util {
     public static String getThumbPrint(Certificate certificate) throws IdentityOAuth2Exception {
 
         try {
-            MessageDigest digestValue = MessageDigest.getInstance("SHA-1");
+            MessageDigest digestValue = MessageDigest.getInstance("SHA-256");
             byte[] der = certificate.getEncoded();
             digestValue.update(der);
             byte[] digestInBytes = digestValue.digest();
@@ -2528,7 +2532,7 @@ public class OAuth2Util {
             String error = "Error occurred while encoding thumbPrint from certificate.";
             throw new IdentityOAuth2Exception(error, e);
         } catch (NoSuchAlgorithmException e) {
-            String error = "Error in obtaining SHA-1 thumbprint from certificate.";
+            String error = "Error in obtaining SHA-256 thumbprint from certificate.";
             throw new IdentityOAuth2Exception(error, e);
         }
 
@@ -2900,7 +2904,7 @@ public class OAuth2Util {
      */
     public static boolean isParsableJWT(String tokenIdentifier) {
 
-        if (StringUtils.isEmpty(tokenIdentifier)) {
+        if (StringUtils.isBlank(tokenIdentifier)) {
             return false;
         }
         try {
@@ -2908,7 +2912,7 @@ public class OAuth2Util {
             return true;
         } catch (ParseException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Provided token identifier is not a parsable JWT", e);
+                log.debug("Provided token identifier is not a parsable JWT.", e);
             }
             return false;
         }
@@ -3227,6 +3231,36 @@ public class OAuth2Util {
                 String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
                         " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
                 throw new IdentityOAuth2Exception(errorMsg, e);
+            }
+        } else {
+            return getIssuerLocation(tenantDomain);
+        }
+    }
+
+    /**
+     * Used to get the issuer url for a given tenant.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Token issuer url.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static String getIssuerLocation(String tenantDomain) throws IdentityOAuth2Exception {
+
+        /*
+        * IMPORTANT:
+        * This method should only honor the given tenant.
+        * Do not add any auto tenant resolving logic.
+        */
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            try {
+                startTenantFlow(tenantDomain);
+                return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
+            } catch (URLBuilderException e) {
+                String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
+                        " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
+                throw new IdentityOAuth2Exception(errorMsg, e);
+            } finally {
+                endTenantFlow();
             }
         } else {
             IdentityProvider identityProvider = getResidentIdp(tenantDomain);
@@ -3811,6 +3845,95 @@ public class OAuth2Util {
                 throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in " +
                         "tenantDomain: " + tenantDomainFromContext);
             }
+        }
+    }
+
+    private static void startTenantFlow(String tenantDomain) {
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(IdentityTenantUtil.getTenantId(tenantDomain));
+    }
+
+    private static void endTenantFlow() {
+
+        PrivilegedCarbonContext.endTenantFlow();
+    }
+
+    /**
+     * Determines if the scope is specified in the allowed scopes list.
+     *
+     * @param allowedScopesList Allowed scopes list
+     * @param scope             The scope key to check.
+     * @return - 'true' if the scope is allowed. 'false' if not.
+     */
+    public static boolean isAllowedScope(List<String> allowedScopesList, String scope) {
+
+        for (String scopeTobeSkipped : allowedScopesList) {
+            if (scope.matches(scopeTobeSkipped)) {
+                if (log.isDebugEnabled()) {
+                    log.debug(scope + " is found in the allowed list of scopes.");
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Util method to get Identity Provider by name and tenant domain.
+     *
+     * @param identityProviderName Identity provider
+     * @param tenantDomain         Tenant domain
+     * @return Identity Provider
+     * @throws IdentityOAuth2Exception If were unable to get Identity provider.
+     */
+    public static IdentityProvider getIdentityProvider(String identityProviderName, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        try {
+            if (OAuth2ServiceComponentHolder.getInstance().getIdpManager() != null) {
+                return OAuth2ServiceComponentHolder.getInstance().getIdpManager().getIdPByName(identityProviderName,
+                        tenantDomain);
+            } else {
+                String errorMsg = String.format("Unable to retrieve Idp manager. Error while " +
+                        "getting '%s' Identity  Provider of '%s' tenant.", identityProviderName, tenantDomain);
+                throw new IdentityOAuth2Exception(errorMsg);
+            }
+        } catch (IdentityProviderManagementException e) {
+            String errorMsg =
+                    String.format("Error while getting '%s' Identity Provider of '%s' tenant.", identityProviderName,
+                            tenantDomain);
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        }
+    }
+
+    /**
+     * Get Internal/everyone role for corresponding user using realm configuration.
+     *
+     * @param user Authenticated user
+     * @return Internal/everyone role
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception
+     */
+    public static String getInternalEveryoneRole(AuthenticatedUser user) throws IdentityOAuth2Exception {
+
+        try {
+            RealmConfiguration realmConfiguration;
+            RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+            int tenantId = getTenantId(user.getTenantDomain());
+            if (realmService != null && tenantId != org.wso2.carbon.base.MultitenantConstants.INVALID_TENANT_ID) {
+                UserStoreManager userStoreManager;
+                userStoreManager = (UserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
+                if (userStoreManager != null) {
+                    realmConfiguration = userStoreManager.getRealmConfiguration();
+                    return realmConfiguration.getEveryOneRoleName();
+                }
+            }
+            return null;
+        } catch (UserStoreException e) {
+            String errorMsg =
+                    "Error while getting Realm configuration of tenant " + user.getTenantDomain();
+            throw new IdentityOAuth2Exception(errorMsg, e);
         }
     }
 }

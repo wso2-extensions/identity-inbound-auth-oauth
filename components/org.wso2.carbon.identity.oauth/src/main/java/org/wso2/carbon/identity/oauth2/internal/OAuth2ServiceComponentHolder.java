@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenti
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
+import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
 import java.util.ArrayList;
@@ -51,6 +52,7 @@ public class OAuth2ServiceComponentHolder {
     private OAuthAdminServiceImpl oauthAdminService;
     private static AuthenticationDataPublisher authenticationDataPublisherProxy;
     private static KeyIDProvider keyIDProvider = null;
+    private IdpManager idpManager;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -242,5 +244,25 @@ public class OAuth2ServiceComponentHolder {
     public static void setKeyIDProvider(KeyIDProvider keyIDProvider) {
 
         OAuth2ServiceComponentHolder.keyIDProvider = keyIDProvider;
+    }
+
+    /**
+     * Set Idp manager Instance.
+     *
+     * @param idpManager IdpManager.
+     */
+    public void setIdpManager(IdpManager idpManager) {
+
+        this.idpManager = idpManager;
+    }
+
+    /**
+     * Get IdpManager Instance.
+     *
+     * @return IdpManager.
+     */
+    public IdpManager getIdpManager() {
+
+        return idpManager;
     }
 }

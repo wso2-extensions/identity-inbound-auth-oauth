@@ -109,6 +109,11 @@ public class OAuth2IntrospectionResponseDTO {
      */
     private String bindingReference;
 
+    /**
+     * OPTIONAL. Authorized user type of the token. (APPLICATION or APPLICATION_USER)
+     */
+    private String aut;
+
     /*
      * this is used for extensions.
      */
@@ -284,5 +289,15 @@ public class OAuth2IntrospectionResponseDTO {
     public void setBindingReference(String bindingReference) {
 
         this.bindingReference = bindingReference;
+    }
+
+    public String getAut() {
+
+        return aut;
+    }
+
+    public void setAut(String aut) {
+
+        this.aut = aut;
     }
 }

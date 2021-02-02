@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.common;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * This class define OAuth related constants.
  */
@@ -31,6 +34,8 @@ public final class OAuthConstants {
     //OAuth2 request headers.
     public static final String HTTP_REQ_HEADER_AUTHZ = "Authorization";
     public static final String HTTP_REQ_HEADER_AUTH_METHOD_BASIC = "Basic";
+    public static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList("application/x-www-form-urlencoded",
+                                                                           "application/json");
 
     // OAuth2 response headers
     public static final String HTTP_RESP_HEADER_CACHE_CONTROL = "Cache-Control";
@@ -143,6 +148,12 @@ public final class OAuthConstants {
     //Oauth2 sp expire time configuration.
     public static final String TOKEN_EXPIRE_TIME_RESOURCE_PATH = "/identity/config/spTokenExpireTime";
 
+    //AccessTokenDO context property name
+    public static final String ACCESS_TOKEN_DO = "AccessTokenDO";
+
+    //JWT claim for authorized user type
+    public static final String AUTHORIZED_USER_TYPE = "aut";
+
     private OAuthConstants() {
 
     }
@@ -216,6 +227,7 @@ public final class OAuthConstants {
         public static final String CLIENT_ID = "client_id";
         public static final String REDIRECT_URI = "redirect_uri";
         public static final String STATE = "state";
+        public static final String RESPONSE_TYPE = "response_type";
         public static final String REQUEST = "request";
         public static final String REQUEST_URI = "request_uri";
         public static final String RESPONSE_TYPE = "response_type";
@@ -383,6 +395,7 @@ public final class OAuthConstants {
      */
     public static class UserType {
 
+        public static final String USER_TYPE = "USER_TYPE";
         public static final String APPLICATION = "APPLICATION";
         public static final String APPLICATION_USER = "APPLICATION_USER";
         public static final String FEDERATED_USER_DOMAIN_PREFIX = "FEDERATED";
@@ -417,6 +430,7 @@ public final class OAuthConstants {
         public static final String REALM = "realm";
         public static final String TENANT = "tenant";
         public static final String USERSTORE = "userstore";
+        public static final String IDP_SESSION_KEY = "isk";
 
         private OIDCClaims() {
 
@@ -444,6 +458,7 @@ public final class OAuthConstants {
         public static final String TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION =
                 "tokenRevocationWithIDPSessionTermination";
         public static final String TOKEN_BINDING_VALIDATION = "tokenBindingValidation";
+        public static final String TOKEN_BINDING_TYPE_NONE = "None";
 
         private OIDCConfigProperties() {
 

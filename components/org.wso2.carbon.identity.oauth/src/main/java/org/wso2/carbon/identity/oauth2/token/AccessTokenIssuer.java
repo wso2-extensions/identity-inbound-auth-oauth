@@ -204,8 +204,13 @@ public class AccessTokenIssuer {
 
         tokReqMsgCtx.addProperty(OAUTH_APP_DO, oAuthAppDO);
 
-        if (!authzGrantHandler.isOfTypeApplicationUser()) {
-            tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getUser());
+        boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser();
+
+        if (!isOfTypeApplicationUser) {
+            tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getAppOwner());
+            tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
+        } else {
+            tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
         }
 
         boolean isAuthorizedClient = false;
@@ -269,6 +274,21 @@ public class AccessTokenIssuer {
             return tokenRespDTO;
         }
 
+        List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
+        List<String> requestedAllowedScopes = new ArrayList<>();
+        String[] requestedScopes = tokReqMsgCtx.getScope();
+        List<String> scopesToBeValidated = new ArrayList<>();
+        if (requestedScopes != null) {
+            for (String scope : requestedScopes) {
+                if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
+                    requestedAllowedScopes.add(scope);
+                } else {
+                    scopesToBeValidated.add(scope);
+                }
+            }
+            tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
+        }
+
         //Execute Internal SCOPE Validation.
         JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
         String[] authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
@@ -281,6 +301,7 @@ public class AccessTokenIssuer {
         if (isValidScope) {
             //Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(tokReqMsgCtx, authorizedInternalScopes);
+            addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid scope provided by client Id: " + tokenReqDTO.getClientId());
@@ -357,6 +378,13 @@ public class AccessTokenIssuer {
 
         String[] scopes = tokReqMsgCtx.getScope();
         String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, authorizedInternalScopes);
+        tokReqMsgCtx.setScope(scopesToReturn);
+    }
+
+    private void addAllowedScopes(OAuthTokenReqMessageContext tokReqMsgCtx, String[] allowedScopes) {
+
+        String[] scopes = tokReqMsgCtx.getScope();
+        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, allowedScopes);
         tokReqMsgCtx.setScope(scopesToReturn);
     }
 

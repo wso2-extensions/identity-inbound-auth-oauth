@@ -101,8 +101,8 @@ public class OIDProviderConfigResponseTest {
     @Test
     public void testGetandSetScopesSupported() throws Exception {
 
-        String scopesSupported[] = {"scope1", "scope2"};
-        oidProviderConfigResponse.setScopesSupported(new String[]{"scope1", "scope2"});
+        String scopesSupported[] = { "scope1", "scope2" };
+        oidProviderConfigResponse.setScopesSupported(new String[] { "scope1", "scope2" });
         String scopesSupported1[] = oidProviderConfigResponse.getScopesSupported();
         assertEquals(scopesSupported1, scopesSupported);
     }
@@ -110,8 +110,8 @@ public class OIDProviderConfigResponseTest {
     @Test
     public void testGetResponseTypesSupported() throws Exception {
 
-        String responseTypesSupported[] = {"type1", "type2"};
-        oidProviderConfigResponse.setResponseTypesSupported(new String[]{"type1", "type2"});
+        String responseTypesSupported[] = { "type1", "type2" };
+        oidProviderConfigResponse.setResponseTypesSupported(new String[] { "type1", "type2" });
         String responseTypesSupported1[] = oidProviderConfigResponse.getResponseTypesSupported();
         assertEquals(responseTypesSupported1, responseTypesSupported);
     }
@@ -119,8 +119,8 @@ public class OIDProviderConfigResponseTest {
     @Test
     public void testGetandSetResponseModesSupported() throws Exception {
 
-        String responseModesSupported[] = {"mode1", "mode2"};
-        oidProviderConfigResponse.setResponseModesSupported(new String[]{"mode1", "mode2"});
+        String responseModesSupported[] = { "mode1", "mode2" };
+        oidProviderConfigResponse.setResponseModesSupported(new String[] { "mode1", "mode2" });
         String responseModesSupported1[] = oidProviderConfigResponse.getResponseModesSupported();
         assertEquals(responseModesSupported1, responseModesSupported);
     }
@@ -128,8 +128,8 @@ public class OIDProviderConfigResponseTest {
     @Test
     public void testGetandSetGrantTypesSupported() throws Exception {
 
-        String grantTypesSupported[] = {"type1", "type2"};
-        oidProviderConfigResponse.setGrantTypesSupported(new String[]{"type1", "type2"});
+        String grantTypesSupported[] = { "type1", "type2" };
+        oidProviderConfigResponse.setGrantTypesSupported(new String[] { "type1", "type2" });
         String grantTypesSupported1[] = oidProviderConfigResponse.getGrantTypesSupported();
         assertEquals(grantTypesSupported1, grantTypesSupported);
     }
@@ -137,8 +137,8 @@ public class OIDProviderConfigResponseTest {
     @Test
     public void testGetandSetAcrValuesSupported() throws Exception {
 
-        String acrValuesSupported[] = {"value1", "value2"};
-        oidProviderConfigResponse.setAcrValuesSupported(new String[]{"value1", "value2"});
+        String acrValuesSupported[] = { "value1", "value2" };
+        oidProviderConfigResponse.setAcrValuesSupported(new String[] { "value1", "value2" });
         String acrValuesSupported1[] = oidProviderConfigResponse.getAcrValuesSupported();
         assertEquals(acrValuesSupported1, acrValuesSupported);
     }
@@ -146,8 +146,8 @@ public class OIDProviderConfigResponseTest {
     @Test
     public void testGetandSetSubjectTypesSupported() throws Exception {
 
-        String subjectTypesSupported[] = {"type1", "type2"};
-        oidProviderConfigResponse.setSubjectTypesSupported(new String[]{"type1", "type2"});
+        String subjectTypesSupported[] = { "type1", "type2" };
+        oidProviderConfigResponse.setSubjectTypesSupported(new String[] { "type1", "type2" });
         String subjectTypesSupported1[] = oidProviderConfigResponse.getSubjectTypesSupported();
         assertEquals(subjectTypesSupported1, subjectTypesSupported);
     }
@@ -155,8 +155,8 @@ public class OIDProviderConfigResponseTest {
     @Test
     public void testGetandSetIdTokenSigningAlgValuesSupported() throws Exception {
 
-        String idTokenSigningAlgValuesSupported[] = {"value1", "value2"};
-        oidProviderConfigResponse.setIdTokenSigningAlgValuesSupported(new String[]{"value1", "value2"});
+        String idTokenSigningAlgValuesSupported[] = { "value1", "value2" };
+        oidProviderConfigResponse.setIdTokenSigningAlgValuesSupported(new String[] { "value1", "value2" });
         String idTokenSigningAlgValuesSupported1[] = oidProviderConfigResponse.getIdTokenSigningAlgValuesSupported();
         assertEquals(idTokenSigningAlgValuesSupported1, idTokenSigningAlgValuesSupported);
     }
@@ -164,28 +164,28 @@ public class OIDProviderConfigResponseTest {
     @Test
     public void testGetandSetIdTokenEncryptionAlgValuesSupported() throws Exception {
 
-        String idTokenEncryptionAlgValuesSupported[] = {"value1", "value2"};
-        oidProviderConfigResponse.setIdTokenEncryptionAlgValuesSupported(new String[]{"value1", "value2"});
-        String idTokenEncryptionAlgValuesSupported1[] = oidProviderConfigResponse.
-                getIdTokenEncryptionAlgValuesSupported();
+        String idTokenEncryptionAlgValuesSupported[] = { "value1", "value2" };
+        oidProviderConfigResponse.setIdTokenEncryptionAlgValuesSupported(new String[] { "value1", "value2" });
+        String idTokenEncryptionAlgValuesSupported1[] =
+            oidProviderConfigResponse.getIdTokenEncryptionAlgValuesSupported();
         assertEquals(idTokenEncryptionAlgValuesSupported1, idTokenEncryptionAlgValuesSupported);
     }
 
     @Test
     public void testGetandSetIdTokenEncryptionEncValuesSupported() throws Exception {
 
-        String idTokenEncryptionEncValuesSupported[] = {"value1", "value2"};
-        oidProviderConfigResponse.setIdTokenEncryptionEncValuesSupported(new String[]{"value1", "value2"});
-        String idTokenEncryptionEncValuesSupported1[] = oidProviderConfigResponse.
-                getIdTokenEncryptionEncValuesSupported();
+        String idTokenEncryptionEncValuesSupported[] = { "value1", "value2" };
+        oidProviderConfigResponse.setIdTokenEncryptionEncValuesSupported(new String[] { "value1", "value2" });
+        String idTokenEncryptionEncValuesSupported1[] =
+            oidProviderConfigResponse.getIdTokenEncryptionEncValuesSupported();
         assertEquals(idTokenEncryptionEncValuesSupported1, idTokenEncryptionEncValuesSupported);
     }
 
     @Test
     public void testGetandSetUserinfoSigningAlgValuesSupported() throws Exception {
 
-        String userinfoSigningAlgValuesSupported[] = {"value1", "value2"};
-        oidProviderConfigResponse.setUserinfoSigningAlgValuesSupported(new String[]{"value1", "value2"});
+        String userinfoSigningAlgValuesSupported[] = { "value1", "value2" };
+        oidProviderConfigResponse.setUserinfoSigningAlgValuesSupported(new String[] { "value1", "value2" });
         String userinfoSigningAlgValuesSupported1[] = oidProviderConfigResponse.getUserinfoSigningAlgValuesSupported();
         assertEquals(userinfoSigningAlgValuesSupported1, userinfoSigningAlgValuesSupported);
     }
@@ -193,88 +193,86 @@ public class OIDProviderConfigResponseTest {
     @Test
     public void testGetandSetUserinfoEncryptionAlgValuesSupported() throws Exception {
 
-        String userinfoEncryptionAlgValuesSupported[] = {"value1", "value2"};
-        oidProviderConfigResponse.setUserinfoEncryptionAlgValuesSupported(new String[]{"value1", "value2"});
-        String userinfoEncryptionAlgValuesSupported1[] = oidProviderConfigResponse.
-                getUserinfoEncryptionAlgValuesSupported();
+        String userinfoEncryptionAlgValuesSupported[] = { "value1", "value2" };
+        oidProviderConfigResponse.setUserinfoEncryptionAlgValuesSupported(new String[] { "value1", "value2" });
+        String userinfoEncryptionAlgValuesSupported1[] =
+            oidProviderConfigResponse.getUserinfoEncryptionAlgValuesSupported();
         assertEquals(userinfoEncryptionAlgValuesSupported1, userinfoEncryptionAlgValuesSupported);
     }
 
     @Test
     public void testGetandSetUserinfoEncryptionEncValuesSupported() throws Exception {
 
-        String userinfoEncryptionEncValuesSupported[] = {"value1", "value2"};
-        oidProviderConfigResponse.setUserinfoEncryptionEncValuesSupported(new String[]{"value1", "value2"});
-        String userinfoEncryptionEncValuesSupported1[] = oidProviderConfigResponse.
-                getUserinfoEncryptionEncValuesSupported();
+        String userinfoEncryptionEncValuesSupported[] = { "value1", "value2" };
+        oidProviderConfigResponse.setUserinfoEncryptionEncValuesSupported(new String[] { "value1", "value2" });
+        String userinfoEncryptionEncValuesSupported1[] =
+            oidProviderConfigResponse.getUserinfoEncryptionEncValuesSupported();
         assertEquals(userinfoEncryptionEncValuesSupported1, userinfoEncryptionEncValuesSupported);
     }
 
     @Test
     public void testGetandSetRequestObjectSigningAlgValuesSupported() throws Exception {
 
-        String requestObjectSigningAlgValuesSupported[] = {"value1", "value2"};
-        oidProviderConfigResponse.setRequestObjectSigningAlgValuesSupported(new String[]{"value1", "value2"});
-        String requestObjectSigningAlgValuesSupported1[] = oidProviderConfigResponse.
-                getRequestObjectSigningAlgValuesSupported();
+        String requestObjectSigningAlgValuesSupported[] = { "value1", "value2" };
+        oidProviderConfigResponse.setRequestObjectSigningAlgValuesSupported(new String[] { "value1", "value2" });
+        String requestObjectSigningAlgValuesSupported1[] =
+            oidProviderConfigResponse.getRequestObjectSigningAlgValuesSupported();
         assertEquals(requestObjectSigningAlgValuesSupported1, requestObjectSigningAlgValuesSupported);
     }
 
     @Test
     public void testGetandSetRequestObjectEncryptionAlgValuesSupported() throws Exception {
 
-        String requestObjectEncryptionAlgValuesSupported[] = {"value1", "value2"};
-        oidProviderConfigResponse.setRequestObjectEncryptionAlgValuesSupported(new String[]{"value1", "value2"});
-        String requestObjectEncryptionAlgValuesSupported1[] = oidProviderConfigResponse.
-                getRequestObjectEncryptionAlgValuesSupported();
+        String requestObjectEncryptionAlgValuesSupported[] = { "value1", "value2" };
+        oidProviderConfigResponse.setRequestObjectEncryptionAlgValuesSupported(new String[] { "value1", "value2" });
+        String requestObjectEncryptionAlgValuesSupported1[] =
+            oidProviderConfigResponse.getRequestObjectEncryptionAlgValuesSupported();
         assertEquals(requestObjectEncryptionAlgValuesSupported1, requestObjectEncryptionAlgValuesSupported);
     }
 
     @Test
     public void testGetandSetRequestObjectEncryptionEncValuesSupported() throws Exception {
 
-        String requestObjectEncryptionEncValuesSupported[] = {"value1", "value2"};
-        oidProviderConfigResponse.setRequestObjectEncryptionEncValuesSupported(new String[]{"value1", "value2"});
-        String requestObjectEncryptionEncValuesSupported1[] = oidProviderConfigResponse.
-                getRequestObjectEncryptionEncValuesSupported();
+        String requestObjectEncryptionEncValuesSupported[] = { "value1", "value2" };
+        oidProviderConfigResponse.setRequestObjectEncryptionEncValuesSupported(new String[] { "value1", "value2" });
+        String requestObjectEncryptionEncValuesSupported1[] =
+            oidProviderConfigResponse.getRequestObjectEncryptionEncValuesSupported();
         assertEquals(requestObjectEncryptionEncValuesSupported1, requestObjectEncryptionEncValuesSupported);
     }
 
     @Test
     public void testGetandSetTokenEndpointAuthMethodsSupported() throws Exception {
 
-        String tokenEndpointAuthMethodsSupported[] = {"method1", "method2"};
-        oidProviderConfigResponse.setTokenEndpointAuthMethodsSupported(new String[]{"method1", "method2"});
-        String tokenEndpointAuthMethodsSupported1[] = oidProviderConfigResponse.
-                getTokenEndpointAuthMethodsSupported();
+        String tokenEndpointAuthMethodsSupported[] = { "method1", "method2" };
+        oidProviderConfigResponse.setTokenEndpointAuthMethodsSupported(new String[] { "method1", "method2" });
+        String tokenEndpointAuthMethodsSupported1[] = oidProviderConfigResponse.getTokenEndpointAuthMethodsSupported();
         assertEquals(tokenEndpointAuthMethodsSupported1, tokenEndpointAuthMethodsSupported);
     }
 
     @Test
     public void testGetandSetTokenEndpointAuthSigningAlgValuesSupported() throws Exception {
 
-        String tokenEndpointAuthSigningAlgValuesSupported[] = {"value1", "value2"};
-        oidProviderConfigResponse.setTokenEndpointAuthSigningAlgValuesSupported(new String[]{"value1", "value2"});
-        String tokenEndpointAuthSigningAlgValuesSupported1[] = oidProviderConfigResponse.
-                getTokenEndpointAuthSigningAlgValuesSupported();
+        String tokenEndpointAuthSigningAlgValuesSupported[] = { "value1", "value2" };
+        oidProviderConfigResponse.setTokenEndpointAuthSigningAlgValuesSupported(new String[] { "value1", "value2" });
+        String tokenEndpointAuthSigningAlgValuesSupported1[] =
+            oidProviderConfigResponse.getTokenEndpointAuthSigningAlgValuesSupported();
         assertEquals(tokenEndpointAuthSigningAlgValuesSupported1, tokenEndpointAuthSigningAlgValuesSupported);
     }
 
     @Test
     public void testGetandSetDisplayValuesSupported() throws Exception {
 
-        String displayValuesSupported[] = {"value1", "value2"};
-        oidProviderConfigResponse.setDisplayValuesSupported(new String[]{"value1", "value2"});
-        String displayValuesSupported1[] = oidProviderConfigResponse.
-                getDisplayValuesSupported();
+        String displayValuesSupported[] = { "value1", "value2" };
+        oidProviderConfigResponse.setDisplayValuesSupported(new String[] { "value1", "value2" });
+        String displayValuesSupported1[] = oidProviderConfigResponse.getDisplayValuesSupported();
         assertEquals(displayValuesSupported1, displayValuesSupported);
     }
 
     @Test
     public void testGetandSetClaimTypesSupported() throws Exception {
 
-        String claimTypesSupported[] = {"type1", "type2"};
-        oidProviderConfigResponse.setClaimTypesSupported(new String[]{"type1", "type2"});
+        String claimTypesSupported[] = { "type1", "type2" };
+        oidProviderConfigResponse.setClaimTypesSupported(new String[] { "type1", "type2" });
         String claimTypesSupported1[] = oidProviderConfigResponse.getClaimTypesSupported();
         assertEquals(claimTypesSupported1, claimTypesSupported);
     }
@@ -282,8 +280,8 @@ public class OIDProviderConfigResponseTest {
     @Test
     public void testGetandSetClaimsSupported() throws Exception {
 
-        String claimsSupported[] = {"claim1", "claim2"};
-        oidProviderConfigResponse.setClaimsSupported(new String[]{"claim1", "claim2"});
+        String claimsSupported[] = { "claim1", "claim2" };
+        oidProviderConfigResponse.setClaimsSupported(new String[] { "claim1", "claim2" });
         String claimsSupported1[] = oidProviderConfigResponse.getClaimsSupported();
         assertEquals(claimsSupported1, claimsSupported);
     }
@@ -300,8 +298,8 @@ public class OIDProviderConfigResponseTest {
     @Test
     public void testGetandSetClaimsLocalesSupported() throws Exception {
 
-        String claimsLocalesSupported[] = {"claim1", "claim2"};
-        oidProviderConfigResponse.setClaimsLocalesSupported(new String[]{"claim1", "claim2"});
+        String claimsLocalesSupported[] = { "claim1", "claim2" };
+        oidProviderConfigResponse.setClaimsLocalesSupported(new String[] { "claim1", "claim2" });
         String claimsLocalesSupported1[] = oidProviderConfigResponse.getClaimsLocalesSupported();
         assertEquals(claimsLocalesSupported1, claimsLocalesSupported);
     }
@@ -309,8 +307,8 @@ public class OIDProviderConfigResponseTest {
     @Test
     public void testGetandSetUiLocalesSupported() throws Exception {
 
-        String uiLocalesSupported[] = {"ui1", "ui2"};
-        oidProviderConfigResponse.setUiLocalesSupported(new String[]{"ui1", "ui2"});
+        String uiLocalesSupported[] = { "ui1", "ui2" };
+        oidProviderConfigResponse.setUiLocalesSupported(new String[] { "ui1", "ui2" });
         String uiLocalesSupported1[] = oidProviderConfigResponse.getUiLocalesSupported();
         assertEquals(uiLocalesSupported1, uiLocalesSupported);
     }
@@ -392,5 +390,78 @@ public class OIDProviderConfigResponseTest {
 
         Map map = oidProviderConfigResponse.getConfigMap();
         Assert.assertNotNull(map);
+    }
+
+    @Test
+    public void testGetandSetRevocationEndpoint() {
+        String revocationEndpoint = "revocationEndpoint";
+        oidProviderConfigResponse.setRevocationEndpoint(revocationEndpoint);
+        assertEquals(oidProviderConfigResponse.getRevocationEndpoint(), revocationEndpoint);
+    }
+
+    @Test
+    public void testGetandSetCheckSessionIframe() {
+        String checkSessionIframe = "checkSessionIframe";
+        oidProviderConfigResponse.setCheckSessionIframe(checkSessionIframe);
+        assertEquals(oidProviderConfigResponse.getCheckSessionIframe(), checkSessionIframe);
+    }
+
+    @Test
+    public void testGetandSetEndSessionEndpoint() {
+        String endSessionEndpoint = "endSessionEndpoint";
+        oidProviderConfigResponse.setEndSessionEndpoint(endSessionEndpoint);
+        assertEquals(oidProviderConfigResponse.getEndSessionEndpoint(), endSessionEndpoint);
+    }
+
+    @Test
+    public void testGetandSetIntrospectionEndpoint() {
+        String introspectionEndpoint = "introspectionEndpoint";
+        oidProviderConfigResponse.setIntrospectionEndpoint(introspectionEndpoint);
+        assertEquals(oidProviderConfigResponse.getIntrospectionEndpoint(), introspectionEndpoint);
+    }
+
+    @Test
+    public void testGetandSetRevocationEndpointAuthMethodsSupported() {
+        String[] revocationEndpointAuthMethodsSupported = new String[] { "revocationEndpointAuthMethodsSupported" };
+        oidProviderConfigResponse.setRevocationEndpointAuthMethodsSupported(revocationEndpointAuthMethodsSupported);
+        assertEquals(oidProviderConfigResponse.getRevocationEndpointAuthMethodsSupported(),
+            revocationEndpointAuthMethodsSupported);
+    }
+
+    @Test
+    public void testGetandSetRevocationEndpointAuthSigningAlgValuesSupported() {
+        String[] revocationEndpointAuthSigningAlgValuesSupported =
+            new String[] { "revocationEndpointAuthSigningAlgValuesSupported" };
+        oidProviderConfigResponse
+            .setRevocationEndpointAuthSigningAlgValuesSupported(revocationEndpointAuthSigningAlgValuesSupported);
+        assertEquals(oidProviderConfigResponse.getRevocationEndpointAuthSigningAlgValuesSupported(),
+            revocationEndpointAuthSigningAlgValuesSupported);
+    }
+
+    @Test
+    public void testGetandSetIntrospectionEndpointAuthMethodsSupported() {
+        String[] introspectionEndpointAuthMethodsSupported =
+            new String[] { "introspectionEndpointAuthMethodsSupported" };
+        oidProviderConfigResponse
+            .setIntrospectionEndpointAuthMethodsSupported(introspectionEndpointAuthMethodsSupported);
+        assertEquals(oidProviderConfigResponse.getIntrospectionEndpointAuthMethodsSupported(),
+            introspectionEndpointAuthMethodsSupported);
+    }
+
+    @Test
+    public void testGetandSetIntrospectionEndpointAuthSigningAlgValuesSupported() {
+        String[] introspectionEndpointAuthSigningAlgValuesSupported =
+            new String[] { "introspectionEndpointAuthSigningAlgValuesSupported" };
+        oidProviderConfigResponse
+            .setIntrospectionEndpointAuthSigningAlgValuesSupported(introspectionEndpointAuthSigningAlgValuesSupported);
+        assertEquals(oidProviderConfigResponse.getIntrospectionEndpointAuthSigningAlgValuesSupported(),
+            introspectionEndpointAuthSigningAlgValuesSupported);
+    }
+
+    @Test
+    public void testGetandSetCodeChallengeMethodsSupported() {
+        String[] codeChallengeMethodsSupported = new String[] { "codeChallengeMethodsSupported" };
+        oidProviderConfigResponse.setCodeChallengeMethodsSupported(codeChallengeMethodsSupported);
+        assertEquals(oidProviderConfigResponse.getCodeChallengeMethodsSupported(), codeChallengeMethodsSupported);
     }
 }

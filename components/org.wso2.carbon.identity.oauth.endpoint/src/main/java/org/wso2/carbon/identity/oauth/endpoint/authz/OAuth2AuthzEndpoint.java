@@ -92,6 +92,7 @@ import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCache;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCacheEntry;
@@ -204,6 +205,8 @@ public class OAuth2AuthzEndpoint {
     private static final String ACCESS_CODE = "code";
     private static final String DEFAULT_ERROR_DESCRIPTION = "User denied the consent";
     private static final String DEFAULT_ERROR_MSG_FOR_FAILURE = "Authentication required";
+    private static final String COMMONAUTH_COOKIE = "commonAuthId";
+    private static final String SET_COOKIE_HEADER = "Set-Cookie";
 
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
@@ -230,6 +233,9 @@ public class OAuth2AuthzEndpoint {
 
         startSuperTenantFlow();
         OAuthMessage oAuthMessage;
+
+        // TODO: 2021-01-22 Check for the flag in request.
+        setCommonAuthIdToRequest(request, response);
 
         // Using a separate try-catch block as this next try block has operations in the final block.
         try {
@@ -261,6 +267,18 @@ public class OAuth2AuthzEndpoint {
             handleRetainCache(oAuthMessage);
             PrivilegedCarbonContext.endTenantFlow();
         }
+    }
+
+
+    private void setCommonAuthIdToRequest(HttpServletRequest request, HttpServletResponse response) {
+
+        // Issue https://github.com/wso2/product-is/issues/11065 needs to addressed.
+        response.getHeaders(SET_COOKIE_HEADER).stream()
+                .filter(value -> value.contains(COMMONAUTH_COOKIE))
+                // TODO: 2021-01-22 Refactor this logic - Check kernel Cookie.
+                .map(cookieValue -> cookieValue.split(COMMONAUTH_COOKIE + "=")[1])
+                .map(cookieValue -> cookieValue.split(";")[0])
+                .findAny().ifPresent(s -> request.setAttribute(COMMONAUTH_COOKIE, s));
     }
 
     @POST
@@ -598,7 +616,8 @@ public class OAuth2AuthzEndpoint {
             sessionState.setAddSessionState(true);
             return manageOIDCSessionState(oAuthMessage.getRequest(), oAuthMessage.getResponse(), sessionState,
                     oauth2Params,
-                    getLoggedInUser(oAuthMessage).getAuthenticatedSubjectIdentifier(), redirectURL);
+                    getLoggedInUser(oAuthMessage).getAuthenticatedSubjectIdentifier(), redirectURL,
+                    oAuthMessage.getSessionDataCacheEntry());
         }
         return redirectURL;
     }
@@ -614,10 +633,8 @@ public class OAuth2AuthzEndpoint {
         if (isOIDCRequest) {
             sessionState.setAddSessionState(true);
             sessionStateValue = manageOIDCSessionState(oAuthMessage.getRequest(), oAuthMessage.getResponse(),
-                    sessionState,
-                    oauth2Params,
-                    getLoggedInUser(oAuthMessage).getAuthenticatedSubjectIdentifier(),
-                    redirectURL);
+                    sessionState, oauth2Params, getLoggedInUser(oAuthMessage).getAuthenticatedSubjectIdentifier(),
+                    redirectURL, oAuthMessage.getSessionDataCacheEntry());
         }
 
         return Response.ok(createFormPage(redirectURL, oauth2Params.getRedirectURI(),
@@ -727,7 +744,7 @@ public class OAuth2AuthzEndpoint {
         if (isOIDCRequest) {
             redirectURL = manageOIDCSessionState(oAuthMessage.getRequest(), oAuthMessage.getResponse(),
                     sessionState, oauth2Params, authenticatedUser.getAuthenticatedSubjectIdentifier(),
-                    redirectURL);
+                    redirectURL, oAuthMessage.getSessionDataCacheEntry());
         }
 
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
@@ -784,7 +801,7 @@ public class OAuth2AuthzEndpoint {
                     sessionState,
                     oauth2Params,
                     getLoggedInUser(oAuthMessage).getAuthenticatedSubjectIdentifier(),
-                    redirectURL);
+                    redirectURL, oAuthMessage.getSessionDataCacheEntry());
         }
 
         return Response.ok(createFormPage(redirectURL, oauth2Params.getRedirectURI(),
@@ -798,6 +815,8 @@ public class OAuth2AuthzEndpoint {
         oAuthMessage.getSessionDataCacheEntry().setAuthenticatedIdPs(authnResult.getAuthenticatedIdPs());
         oAuthMessage.getSessionDataCacheEntry().setValidityPeriod(
                 TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
+        oAuthMessage.getSessionDataCacheEntry().setSessionContextIdentifier((String)
+                authnResult.getProperty(FrameworkConstants.AnalyticsAttributes.SESSION_ID));
         SessionDataCacheKey cacheKey = new SessionDataCacheKey(getSessionDataKeyFromLogin(oAuthMessage));
         SessionDataCache.getInstance().addToCache(cacheKey, oAuthMessage.getSessionDataCacheEntry());
     }
@@ -1228,6 +1247,7 @@ public class OAuth2AuthzEndpoint {
         authorizationGrantCacheEntry.setAuthTime(sessionDataCacheEntry.getAuthTime());
         authorizationGrantCacheEntry.setMaxAge(sessionDataCacheEntry.getoAuth2Parameters().getMaxAge());
         authorizationGrantCacheEntry.setTokenBindingValue(tokenBindingValue);
+        authorizationGrantCacheEntry.setSessionContextIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
         String[] sessionIds = sessionDataCacheEntry.getParamMap().get(FrameworkConstants.SESSION_DATA_KEY);
         if (ArrayUtils.isNotEmpty(sessionIds)) {
             String commonAuthSessionId = sessionIds[0];
@@ -2306,6 +2326,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setMaxAge(oauth2Params.getMaxAge());
         authzReqDTO.setEssentialClaims(oauth2Params.getEssentialClaims());
         authzReqDTO.setSessionDataKey(oauth2Params.getSessionDataKey());
+        authzReqDTO.setIdpSessionIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {
             authzReqDTO.addProperty(OAuthConstants.AMR, sessionDataCacheEntry.getParamMap().get(OAuthConstants.AMR));
@@ -2502,7 +2523,8 @@ public class OAuth2AuthzEndpoint {
 
     private String manageOIDCSessionState(HttpServletRequest request, HttpServletResponse response,
                                           OIDCSessionState sessionStateObj, OAuth2Parameters oAuth2Parameters,
-                                          String authenticatedUser, String redirectURL) {
+                                          String authenticatedUser, String redirectURL, SessionDataCacheEntry
+                                                  sessionDataCacheEntry)  {
 
         Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
         if (sessionStateObj.isAuthenticated()) { // successful user authentication
@@ -2513,6 +2535,7 @@ public class OAuth2AuthzEndpoint {
                 opBrowserStateCookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
                 // Adding sid claim in the IDtoken to OIDCSessionState class.
                 storeSidClaim(redirectURL, sessionStateObj, oAuth2Parameters);
+                storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
                 sessionStateObj.setAuthenticatedUser(authenticatedUser);
                 sessionStateObj.addSessionParticipant(oAuth2Parameters.getClientId());
                 OIDCSessionManagementUtil.getSessionManager()
@@ -2531,9 +2554,9 @@ public class OAuth2AuthzEndpoint {
                         opBrowserStateCookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
                         String newOPBrowserStateCookieId = opBrowserStateCookie.getValue();
                         previousSessionState.addSessionParticipant(oAuth2Parameters.getClientId());
+                        storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
                         OIDCSessionManagementUtil.getSessionManager().restoreOIDCSessionState
                                 (oldOPBrowserStateCookieId, newOPBrowserStateCookieId, previousSessionState);
-
                         storeSidClaim(redirectURL, previousSessionState, oAuth2Parameters);
                     }
                 } else {
@@ -2544,6 +2567,8 @@ public class OAuth2AuthzEndpoint {
                     opBrowserStateCookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
                     sessionStateObj.setAuthenticatedUser(authenticatedUser);
                     sessionStateObj.addSessionParticipant(oAuth2Parameters.getClientId());
+                    storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
+                    storeSidClaim(redirectURL, sessionStateObj, oAuth2Parameters);
                     OIDCSessionManagementUtil.getSessionManager()
                             .storeOIDCSessionState(opBrowserStateCookie.getValue(), sessionStateObj);
                 }
@@ -2584,6 +2609,53 @@ public class OAuth2AuthzEndpoint {
             }
         }
         return redirectURL;
+    }
+
+    /**
+     * Store opbscookie in session context.
+     *
+     * @param sessionDataCacheEntry SessionDataCacheEntry.
+     * @param opbscookie            opbscookie value.
+     */
+    private void storeOpbsInSessionContext(SessionDataCacheEntry sessionDataCacheEntry, String opbscookie) {
+
+        String sessionContextIdentifier = getSessionContextIdentifier(sessionDataCacheEntry);
+        if (StringUtils.isNotBlank(sessionContextIdentifier)) {
+            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextIdentifier);
+            if (sessionContext != null) {
+                if (sessionDataCacheEntry.getLoggedInUser() != null) {
+                    sessionContext.addProperty(OIDCSessionConstants.OPBS_COOKIE_ID, opbscookie);
+                    String tenantDomain = sessionDataCacheEntry.getLoggedInUser().getTenantDomain();
+                    FrameworkUtils.addSessionContextToCache(sessionContextIdentifier, sessionContext, tenantDomain);
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("LoggedIn user attribute is not found in the sessionDataCacheEntry");
+                    }
+                }
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Session context is not found for the session identifier: " + sessionContextIdentifier);
+                }
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("SessionContextIdentifier is not found in the authentication result.");
+            }
+        }
+    }
+
+    /**
+     * Get getSessionContextIdentifier from sessionDataCacheEntry.
+     *
+     * @param sessionDataCacheEntry sessionDataCacheEntry.
+     * @return SessionContextIdentifier.
+     */
+    private String getSessionContextIdentifier(SessionDataCacheEntry sessionDataCacheEntry) {
+
+        if (sessionDataCacheEntry != null) {
+            return sessionDataCacheEntry.getSessionContextIdentifier();
+        }
+        return null;
     }
 
     /**

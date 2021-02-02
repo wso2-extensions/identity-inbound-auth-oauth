@@ -37,17 +37,28 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ClaimConfig;
+import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
+import org.wso2.carbon.user.core.UserStoreException;
+import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.security.Key;
 import java.security.interfaces.RSAPrivateKey;
@@ -59,6 +70,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static org.apache.commons.lang.StringUtils.isNotBlank;
 
 /**
  * Self contained access token builder.
@@ -88,6 +101,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String EXPIRY_TIME_JWT = "EXPIRY_TIME_JWT";
 
     private static final Log log = LogFactory.getLog(JWTTokenIssuer.class);
+    private static final String INBOUND_AUTH2_TYPE = "oauth2";
 
     // We are keeping a private key map which will have private key for each tenant domain. We are keeping this as a
     // static Map since then we don't need to read the key from keystore every time.
@@ -465,10 +479,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
-        String sub = getAuthenticatedSubjectIdentifier(authAuthzReqMessageContext, tokenReqMessageContext);
-        if (StringUtils.isEmpty(sub)) {
-            sub = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext).toFullQualifiedUsername();
-        }
+        AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
+        String sub = getSubjectClaim(consumerKey, spTenantDomain, authenticatedUser);
 
         // Set the default claims.
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
@@ -483,6 +495,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         if (StringUtils.isNotEmpty(scope)) {
             jwtClaimsSetBuilder.claim(SCOPE, scope);
         }
+
+        jwtClaimsSetBuilder.claim(OAuthConstants.AUTHORIZED_USER_TYPE,
+                getAuthorizedUserType(authAuthzReqMessageContext, tokenReqMessageContext));
 
         jwtClaimsSetBuilder.expirationTime(new Date(curTimeInMillis + accessTokenLifeTimeInMillis));
 
@@ -504,6 +519,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         return jwtClaimsSet;
     }
 
+    private String getAuthorizedUserType(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
+                                         OAuthTokenReqMessageContext tokenReqMessageContext) {
+
+        if (tokenReqMessageContext != null) {
+            return (String) tokenReqMessageContext.getProperty(OAuthConstants.UserType.USER_TYPE);
+        } else {
+            return (String) authAuthzReqMessageContext.getProperty(OAuthConstants.UserType.USER_TYPE);
+        }
+    }
+
     /**
      * To get authenticated subject identifier.
      *
@@ -516,6 +541,158 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
         return authenticatedUser.getAuthenticatedSubjectIdentifier();
+    }
+
+    private String getSubjectClaim(String clientId, String spTenantDomain, AuthenticatedUser authorizedUser)
+            throws IdentityOAuth2Exception {
+
+        String subjectClaim;
+        if (isLocalUser(authorizedUser)) {
+            // If the user is local then we need to find the subject claim of the user defined in SP configs and
+            // append userStoreDomain/tenantDomain as configured
+            ServiceProvider serviceProvider = getServiceProvider(spTenantDomain, clientId);
+            if (serviceProvider == null) {
+                throw new IdentityOAuth2Exception("Cannot find an service provider for client_id: " + clientId + " " +
+                        "in tenantDomain: " + spTenantDomain);
+            }
+            subjectClaim = getSubjectClaimForLocalUser(serviceProvider, authorizedUser);
+            if (log.isDebugEnabled()) {
+                log.debug("Subject claim: " + subjectClaim + " set for local user: " + authorizedUser + " for " +
+                        "application: " + clientId + " of tenantDomain: " + spTenantDomain);
+            }
+        } else {
+            subjectClaim = authorizedUser.getAuthenticatedSubjectIdentifier();
+            if (log.isDebugEnabled()) {
+                log.debug("Subject claim: " + subjectClaim + " set for federated user: " + authorizedUser + " for " +
+                        "application: " + clientId + " of tenantDomain: " + spTenantDomain);
+            }
+        }
+        return subjectClaim;
+    }
+
+    private ServiceProvider getServiceProvider(String spTenantDomain,
+                                               String clientId) throws IdentityOAuth2Exception {
+
+        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
+        try {
+            String spName = applicationMgtService.getServiceProviderNameByClientId(clientId, INBOUND_AUTH2_TYPE,
+                    spTenantDomain);
+            return applicationMgtService.getApplicationExcludingFileBasedSPs(spName, spTenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while getting service provider information for client_id: "
+                    + clientId + " tenantDomain: " + spTenantDomain, e);
+        }
+    }
+
+    private boolean isLocalUser(AuthenticatedUser authorizedUser) {
+
+        return !authorizedUser.isFederatedUser();
+    }
+
+    private String getSubjectClaimForLocalUser(ServiceProvider serviceProvider,
+                                               AuthenticatedUser authorizedUser) throws IdentityOAuth2Exception {
+
+        String subject;
+        String username = authorizedUser.getUserName();
+        String userStoreDomain = authorizedUser.getUserStoreDomain();
+        String userTenantDomain = authorizedUser.getTenantDomain();
+
+        String subjectClaimUri = getSubjectClaimUriInLocalDialect(serviceProvider);
+        if (StringUtils.isNotBlank(subjectClaimUri)) {
+            String fullQualifiedUsername = authorizedUser.toFullQualifiedUsername();
+            try {
+                subject = getSubjectClaimFromUserStore(subjectClaimUri, authorizedUser);
+                if (StringUtils.isBlank(subject)) {
+                    // Set username as the subject claim since we have no other option
+                    subject = username;
+                    log.warn("Cannot find subject claim: " + subjectClaimUri + " for user:" + fullQualifiedUsername
+                            + ". Defaulting to username: " + subject + " as the subject identifier.");
+                }
+                // Get the subject claim in the correct format (ie. tenantDomain or userStoreDomain appended)
+                subject = getFormattedSubjectClaim(serviceProvider, subject, userStoreDomain, userTenantDomain);
+            } catch (IdentityException e) {
+                String error = "Error occurred while getting user claim for user: " + authorizedUser + ", claim: " +
+                        subjectClaimUri;
+                throw new IdentityOAuth2Exception(error, e);
+            } catch (UserStoreException e) {
+                String error = "Error occurred while getting subject claim: " + subjectClaimUri + " for user: "
+                        + fullQualifiedUsername;
+                throw new IdentityOAuth2Exception(error, e);
+            }
+        } else {
+            subject = getFormattedSubjectClaim(serviceProvider, username, userStoreDomain, userTenantDomain);
+            if (log.isDebugEnabled()) {
+                log.debug("No subject claim defined for service provider: " + serviceProvider.getApplicationName()
+                        + ". Using username as the subject claim.");
+            }
+        }
+        return subject;
+    }
+
+    private String getFormattedSubjectClaim(ServiceProvider serviceProvider, String subjectClaimValue,
+                                            String userStoreDomain, String tenantDomain) {
+
+        boolean appendUserStoreDomainToSubjectClaim = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                .isUseUserstoreDomainInLocalSubjectIdentifier();
+
+        boolean appendTenantDomainToSubjectClaim = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                .isUseTenantDomainInLocalSubjectIdentifier();
+
+        if (appendTenantDomainToSubjectClaim) {
+            subjectClaimValue = UserCoreUtil.addTenantDomainToEntry(subjectClaimValue, tenantDomain);
+        }
+        if (appendUserStoreDomainToSubjectClaim) {
+            subjectClaimValue = IdentityUtil.addDomainToName(subjectClaimValue, userStoreDomain);
+        }
+
+        return subjectClaimValue;
+    }
+
+    private String getSubjectClaimUriInLocalDialect(ServiceProvider serviceProvider) {
+
+        String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig().getSubjectClaimUri();
+        if (log.isDebugEnabled()) {
+            if (isNotBlank(subjectClaimUri)) {
+                log.debug(subjectClaimUri + " is defined as subject claim for service provider: " +
+                        serviceProvider.getApplicationName());
+            } else {
+                log.debug("No subject claim defined for service provider: " + serviceProvider.getApplicationName());
+            }
+        }
+        // Get the local subject claim URI, if subject claim was a SP mapped one
+        return getSubjectClaimUriInLocalDialect(serviceProvider, subjectClaimUri);
+    }
+
+    private String getSubjectClaimUriInLocalDialect(ServiceProvider serviceProvider, String subjectClaimUri) {
+
+        if (isNotBlank(subjectClaimUri)) {
+            ClaimConfig claimConfig = serviceProvider.getClaimConfig();
+            if (claimConfig != null) {
+                boolean isLocalClaimDialect = claimConfig.isLocalClaimDialect();
+                ClaimMapping[] claimMappings = claimConfig.getClaimMappings();
+                if (!isLocalClaimDialect && ArrayUtils.isNotEmpty(claimMappings)) {
+                    for (ClaimMapping claimMapping : claimMappings) {
+                        if (StringUtils.equals(claimMapping.getRemoteClaim().getClaimUri(), subjectClaimUri)) {
+                            return claimMapping.getLocalClaim().getClaimUri();
+                        }
+                    }
+                }
+            }
+        }
+        // This means the original subjectClaimUri passed was the subject claim URI.
+        return subjectClaimUri;
+    }
+
+    private String getSubjectClaimFromUserStore(String subjectClaimUri, AuthenticatedUser authenticatedUser)
+            throws UserStoreException, IdentityException {
+
+        UserStoreManager userStoreManager = IdentityTenantUtil
+                .getRealm(authenticatedUser.getTenantDomain(), authenticatedUser.toFullQualifiedUsername())
+                .getUserStoreManager();
+
+        return userStoreManager
+                .getSecondaryUserStoreManager(authenticatedUser.getUserStoreDomain())
+                .getUserClaimValue(authenticatedUser.getUserName(), subjectClaimUri, null);
     }
 
     /**

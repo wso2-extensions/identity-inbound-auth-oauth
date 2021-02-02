@@ -427,7 +427,7 @@ public class ResponseTypeHandlerUtil {
         String scope = OAuth2Util.buildScopeString(oauthAuthzMsgCtx.getApprovedScope());
         String consumerKey = authorizationReqDTO.getConsumerKey();
         String authorizedUser = authorizationReqDTO.getUser().toString();
-        String authenticatedIDP = authorizationReqDTO.getUser().getFederatedIdPName();
+        String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizationReqDTO.getUser());
 
         if (cacheEnabled) {
             existingTokenBean = getExistingTokenFromCache(consumerKey, scope, authorizedUser, authenticatedIDP);
@@ -495,7 +495,7 @@ public class ResponseTypeHandlerUtil {
             if (TOKEN_STATE_ACTIVE.equals(existingToken.getTokenState()) && expireTime != 0 && cacheEnabled) {
                 // Active token retrieved from db, adding to cache if cacheEnabled
                 addTokenToCache(getOAuthCacheKey(consumerKey, scope, authorizedUser.toString(),
-                        authorizedUser.getFederatedIdPName()), existingToken);
+                        OAuth2Util.getAuthenticatedIDP(authorizedUser)), existingToken);
             }
         }
         return existingToken;
@@ -508,11 +508,12 @@ public class ResponseTypeHandlerUtil {
         String scope = OAuth2Util.buildScopeString(oauthAuthzMsgCtx.getApprovedScope());
         String consumerKey = authorizationReqDTO.getConsumerKey();
         String authorizedUser = authorizationReqDTO.getUser().toString();
-        String authenticatedIDP = authorizationReqDTO.getUser().getFederatedIdPName();
+        String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizationReqDTO.getUser());
 
         OAuthAppDO oAuthAppBean = getOAuthApp(consumerKey);
         Timestamp timestamp = new Timestamp(new Date().getTime());
         long validityPeriodInMillis = getConfiguredAccessTokenValidityPeriodInMillis(oauthAuthzMsgCtx, oAuthAppBean);
+        oauthAuthzMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
         AccessTokenDO newTokenBean = createNewTokenBean(oauthAuthzMsgCtx, oAuthAppBean, existingTokenBean,
                 oauthIssuerImpl, timestamp, validityPeriodInMillis);
         setDetailsToMessageContext(oauthAuthzMsgCtx, newTokenBean);

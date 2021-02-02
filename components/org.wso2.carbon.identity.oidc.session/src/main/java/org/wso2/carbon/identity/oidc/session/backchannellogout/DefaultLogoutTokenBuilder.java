@@ -24,10 +24,10 @@ import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.json.JSONObject;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
@@ -72,6 +72,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     private static final String OPENID_IDP_ENTITY_ID = "IdPEntityId";
     private static final String ERROR_GET_RESIDENT_IDP =
             "Error while getting Resident Identity Provider of '%s' tenant.";
+    private static final String BACKCHANNEL_LOGOUT_EVENT = "http://schemas.openidnet/event/backchannel-logout";
 
     public DefaultLogoutTokenBuilder() throws IdentityOAuth2Exception {
 
@@ -85,35 +86,60 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
 
         Map<String, String> logoutTokenList = new HashMap<>();
         // Send logout token to all RPs.
-        OIDCSessionState sessionState = getSessionState(request);
+        Cookie opbsCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
+        OIDCSessionState sessionState = getSessionState(opbsCookie != null ? opbsCookie.getValue() : null);
         if (sessionState != null) {
             Set<String> sessionParticipants = getSessionParticipants(sessionState);
             if (!sessionParticipants.isEmpty()) {
                 for (String clientID : sessionParticipants) {
                     OAuthAppDO oAuthAppDO = getOAuthAppDO(clientID);
-                    String backChannelLogoutUrl = oAuthAppDO.getBackChannelLogoutUrl();
                     String tenantDomain = oAuthAppDO.getAppOwner().getTenantDomain();
-
                     if (StringUtils.equals(clientID, getClientId(request, tenantDomain))) {
-                        // No need to send logut token if the client id of the RP initiated logout is known.
+                        // No need to send logout token if the client id of the RP initiated logout is known.
                         continue;
                     }
-                    if (StringUtils.isNotBlank(backChannelLogoutUrl)) {
-                        // Send back-channel logout request to all RPs those registered their back-channel logout uri.
-                        JWTClaimsSet jwtClaimsSet = buildJwtToken(sessionState, getTenanatDomain(oAuthAppDO), clientID);
-                        String logoutToken =
-                                OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, getSigningTenantDomain(oAuthAppDO))
-                                        .serialize();
-                        logoutTokenList.put(logoutToken, backChannelLogoutUrl);
-
-                        if (log.isDebugEnabled()) {
-                            log.debug("Logout token created for the client: " + clientID);
-                        }
-                    }
+                    addToLogoutTokenList(logoutTokenList, sessionState, clientID);
                 }
             }
         }
         return logoutTokenList;
+    }
+
+    @Override
+    public Map<String, String> buildLogoutToken(String opbscookie) throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
+
+        Map<String, String> logoutTokenList = new HashMap<>();
+        // Send logout token to all RPs.
+        OIDCSessionState sessionState = getSessionState(opbscookie);
+        if (sessionState != null) {
+            Set<String> sessionParticipants = getSessionParticipants(sessionState);
+            if (!sessionParticipants.isEmpty()) {
+                for (String clientID : sessionParticipants) {
+                    addToLogoutTokenList(logoutTokenList, sessionState, clientID);
+                }
+            }
+        }
+        return logoutTokenList;
+    }
+
+    private void addToLogoutTokenList(Map<String, String> logoutTokenList,
+                                      OIDCSessionState sessionState, String clientID) throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
+
+        OAuthAppDO oAuthAppDO = getOAuthAppDO(clientID);
+        String backChannelLogoutUrl = oAuthAppDO.getBackChannelLogoutUrl();
+        if (StringUtils.isNotBlank(backChannelLogoutUrl)) {
+            // Send back-channel logout request to all RPs those registered their back-channel logout uri.
+            JWTClaimsSet jwtClaimsSet = buildJwtToken(sessionState, getTenanatDomain(oAuthAppDO), clientID);
+            String logoutToken = OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm,
+                    getSigningTenantDomain(oAuthAppDO)).serialize();
+            logoutTokenList.put(logoutToken, backChannelLogoutUrl);
+
+            if (log.isDebugEnabled()) {
+                log.debug("Logout token created for the client: " + clientID);
+            }
+        }
     }
 
     /**
@@ -136,7 +162,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
         Date iat = new Date(currentTimeInMillis);
         String sid = getSidClaim(sessionState);
-        JSONObject event = new JSONObject().put("http://schemas.openidnet/event/backchannel-logout",
+        JSONObject event = new JSONObject().appendField(BACKCHANNEL_LOGOUT_EVENT,
                 new JSONObject());
 
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
@@ -144,7 +170,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
         jwtClaimsSetBuilder.issuer(iss);
         jwtClaimsSetBuilder.audience(audience);
         jwtClaimsSetBuilder.claim("jti", jti);
-        jwtClaimsSetBuilder.claim("event", event);
+        jwtClaimsSetBuilder.claim("events", event);
         jwtClaimsSetBuilder.expirationTime(new Date(currentTimeInMillis + logoutTokenValidityInMillis));
         jwtClaimsSetBuilder.claim("iat", iat);
         jwtClaimsSetBuilder.claim("sid", sid);
@@ -213,20 +239,17 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     /**
      * Returns the OIDCsessionState of the obps cookie.
      *
-     * @param request
-     * @return
+     * @param opbscookie OpbsCookie.
+     * @return OIDCSessionState
      */
-    private OIDCSessionState getSessionState(HttpServletRequest request) {
+    private OIDCSessionState getSessionState(String opbscookie) {
 
-        Cookie opbsCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
-        if (opbsCookie != null) {
-            String obpsCookieValue = opbsCookie.getValue();
-            OIDCSessionState sessionState = OIDCSessionManagementUtil.getSessionManager()
-                    .getOIDCSessionState(obpsCookieValue);
+        if (StringUtils.isNotEmpty(opbscookie)) {
+            OIDCSessionState sessionState =
+                    OIDCSessionManagementUtil.getSessionManager().getOIDCSessionState(opbscookie);
             return sessionState;
-        } else {
-            return null;
         }
+        return null;
     }
 
     /**

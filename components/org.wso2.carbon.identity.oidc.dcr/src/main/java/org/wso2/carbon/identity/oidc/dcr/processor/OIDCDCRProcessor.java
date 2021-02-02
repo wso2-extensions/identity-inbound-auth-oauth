@@ -55,7 +55,7 @@ public class OIDCDCRProcessor extends DCRProcessor {
         if (!isIdentityConnectDCREnabled) {
             if (log.isDebugEnabled()) {
                 log.debug("Identity Connect DCR endpoint was deprecated. To enable the DCR API endpoint " +
-                        "add the following config to deployment.toml file." +
+                        "add the following config to deployment.toml file. \n" +
                         "[[legacy_feature]] \n" +
                         "id = identity/connect/dcr  \n" +
                         "enable = true");
@@ -63,7 +63,7 @@ public class OIDCDCRProcessor extends DCRProcessor {
             String errorMessage =
                     "/identity/connect/register API was deprecated. Refer the WSO2 official documentation for " +
                             "more information (https://is.docs.wso2.com).";
-            throw IdentityException.error(RegistrationException.class, ErrorCodes.FORBIDDEN.toString(), errorMessage);
+            throw IdentityException.error(RegistrationException.class, ErrorCodes.GONE.toString(), errorMessage);
         }
 
         OIDCDCRMessageContext oidcdcrMessageContext = new OIDCDCRMessageContext(identityRequest);

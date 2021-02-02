@@ -43,8 +43,8 @@ import java.util.List;
 
 /**
  * OAuthService admin service implementation.
+ * @Deprecated
  */
-@Deprecated
 public class OAuthService {
 
     private static final String OAUTH_LATEST_TIMESTAMP = "OAUTH_LATEST_TIMESTAMP";

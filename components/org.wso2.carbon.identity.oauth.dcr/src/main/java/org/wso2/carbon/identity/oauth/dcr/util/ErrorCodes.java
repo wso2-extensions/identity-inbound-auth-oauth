@@ -23,6 +23,6 @@ package org.wso2.carbon.identity.oauth.dcr.util;
 public enum ErrorCodes {
     META_DATA_VALIDATION_FAILED,
     BAD_REQUEST,
-    FORBIDDEN;
-
+    FORBIDDEN,
+    GONE;
 }

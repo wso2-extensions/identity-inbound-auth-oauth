@@ -391,19 +391,20 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
             throws SQLException {
 
         String query;
-        if (conn.getMetaData().getDriverName().contains("MySQL")
-                || conn.getMetaData().getDriverName().contains("H2")) {
+        String driverName = conn.getMetaData().getDriverName();
+        if (driverName.contains("MySQL")
+                || driverName.contains("MariaDB")
+                || driverName.contains("H2")) {
             query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_MYSQL;
         } else if (conn.getMetaData().getDatabaseProductName().contains("DB2")) {
             query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_DB2SQL;
-        } else if (conn.getMetaData().getDriverName().contains("MS SQL")) {
+        } else if (driverName.contains("MS SQL")) {
             query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_MSSQL;
-        } else if (conn.getMetaData().getDriverName().contains("Microsoft") || conn.getMetaData()
-                .getDriverName().contains("microsoft")) {
+        } else if (driverName.contains("Microsoft") || driverName.contains("microsoft")) {
             query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_MSSQL;
-        } else if (conn.getMetaData().getDriverName().contains("PostgreSQL")) {
+        } else if (driverName.contains("PostgreSQL")) {
             query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_POSTGRESQL;
-        } else if (conn.getMetaData().getDriverName().contains("Informix")) {
+        } else if (driverName.contains("Informix")) {
             // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
             query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_INFORMIX;
         } else {
@@ -435,19 +436,20 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
             throws SQLException {
 
         String query;
-        if (conn.getMetaData().getDriverName().contains("MySQL")
-                || conn.getMetaData().getDriverName().contains("H2")) {
+        String driverName = conn.getMetaData().getDriverName();
+        if (driverName.contains("MySQL")
+                || driverName.contains("MariaDB")
+                || driverName.contains("H2")) {
             query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_MYSQL;
         } else if (conn.getMetaData().getDatabaseProductName().contains("DB2")) {
             query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_DB2SQL;
-        } else if (conn.getMetaData().getDriverName().contains("MS SQL")) {
+        } else if (driverName.contains("MS SQL")) {
             query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_MSSQL;
-        } else if (conn.getMetaData().getDriverName().contains("Microsoft") || conn.getMetaData()
-                .getDriverName().contains("microsoft")) {
+        } else if (driverName.contains("Microsoft") || driverName.contains("microsoft")) {
             query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_MSSQL;
-        } else if (conn.getMetaData().getDriverName().contains("PostgreSQL")) {
+        } else if (driverName.contains("PostgreSQL")) {
             query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_POSTGRESQL;
-        } else if (conn.getMetaData().getDriverName().contains("Informix")) {
+        } else if (driverName.contains("Informix")) {
             // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
             query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_INFORMIX;
         } else {

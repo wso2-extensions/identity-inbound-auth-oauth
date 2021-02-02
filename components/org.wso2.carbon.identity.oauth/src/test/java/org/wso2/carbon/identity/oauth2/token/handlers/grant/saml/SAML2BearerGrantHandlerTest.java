@@ -283,7 +283,6 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
         when(userStoreManager.isExistingUser(anyString())).thenReturn(isUserExist);
 
-
         if (e instanceof IdentityProviderManagementException) {
             when(identityProviderManager.getIdPByAuthenticatorPropertyValue(anyString(), anyString(), anyString(),
                     anyString(), anyBoolean())).thenThrow(e);
@@ -515,6 +514,7 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
     }
 
     private void prepareForGetSAMLSSOServiceProvider() throws Exception {
+
         when(tenantManager.getTenantId(anyString())).thenReturn(-1234);
         when(realmService.getTenantManager()).thenReturn(tenantManager);
         mockStatic(OAuthComponentServiceHolder.class);

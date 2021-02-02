@@ -79,6 +79,4 @@ public class DefaultWebFingerProcessor implements WebFingerProcessor {
         }
 
     }
-
-
 }

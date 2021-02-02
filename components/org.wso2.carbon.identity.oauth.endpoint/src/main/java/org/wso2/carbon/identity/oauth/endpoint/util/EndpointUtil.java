@@ -17,7 +17,12 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.util;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.axiom.util.base64.Base64Utils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -69,8 +74,10 @@ import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -430,22 +437,13 @@ public class EndpointUtil {
             return getErrorPageURL(request, errorCode, errorMessage, appName);
         } else {
             String redirectUri = request.getParameter(OAuthConstants.OAuth20Params.REDIRECT_URI);
-            String state = retrieveStateForErrorURL(oAuth2Parameters);
 
-            Map<String, String> params = new HashMap<>();
-            params.put(PROP_ERROR, errorCode);
-            params.put(PROP_ERROR_DESCRIPTION, errorMessage);
-            if (state != null) {
-                params.put(OAuthConstants.OAuth20Params.STATE, state);
-            }
-
-            try {
-                redirectUri = FrameworkUtils.buildURLWithQueryParams(redirectUri, params);
-            } catch (UnsupportedEncodingException e) {
-                //ignore
-                if (log.isDebugEnabled()) {
-                    log.debug("Error while encoding the error page url", e);
-                }
+            // If the redirect url is not set in the request, page is redirected to common OAuth error page.
+            if (StringUtils.isBlank(redirectUri)) {
+                redirectUri = getErrorPageURL(request, errorCode, errorMessage, appName);
+            } else {
+                String state = retrieveStateForErrorURL(request, oAuth2Parameters);
+                redirectUri = getUpdatedRedirectURL(request, redirectUri, errorCode, errorMessage, state, appName);
             }
             return redirectUri;
         }
@@ -726,7 +724,13 @@ public class EndpointUtil {
         return validateParams(request, paramMap);
     }
 
+    @Deprecated
     public static boolean validateParams(HttpServletRequest request, MultivaluedMap<String, String> paramMap) {
+
+        return validateParams(request, (Map<String, List<String>>) paramMap);
+    }
+
+    public static boolean validateParams(HttpServletRequest request, Map<String, List<String>> paramMap) {
 
         if (paramMap != null) {
             for (Map.Entry<String, List<String>> paramEntry : paramMap.entrySet()) {
@@ -755,6 +759,39 @@ public class EndpointUtil {
     public static boolean validateParams(OAuthMessage oAuthMessage, MultivaluedMap<String, String> paramMap) {
 
         return validateParams(oAuthMessage.getRequest(), paramMap);
+    }
+
+    public static Map<String, List<String>> parseJsonTokenRequest(String jsonPayload) throws
+            TokenEndpointBadRequestException {
+
+        JsonFactory factory = new JsonFactory();
+        Map<String, List<String>> requestParams = new HashMap<>();
+        try {
+            JsonParser parser  = factory.createParser(jsonPayload);
+            // Skip the first START_OBJECT token. i.e the beginning of the payload: '{'.
+            parser.nextToken();
+            while (!parser.isClosed()) {
+                JsonToken currentToken = parser.nextToken();
+                if (currentToken == null) {
+                    continue;
+                }
+                if (currentToken.isScalarValue()) {
+                    // If the current token is a scalar value, add it to a map along with the corresponding json key.
+                    String key = parser.currentName();
+                    String value = parser.getValueAsString();
+                    requestParams.computeIfAbsent(key, val -> new ArrayList<>()).add(value);
+                } else if (currentToken != JsonToken.FIELD_NAME && currentToken != JsonToken.END_OBJECT) {
+                    // If the current token is a complex value (array or object), flatten the value and add it to map
+                    // with the corresponding json key.
+                    String key = parser.currentName();
+                    String value = (new ObjectMapper()).readTree(parser).toString();
+                    requestParams.computeIfAbsent(key, val -> new ArrayList<>()).add(value);
+                }
+            }
+        } catch (IOException e) {
+            throw new TokenEndpointBadRequestException("Malformed or unsupported request payload", e);
+        }
+        return requestParams;
     }
 
     /**
@@ -826,6 +863,19 @@ public class EndpointUtil {
     public static void triggerOnTokenExceptionListeners(Exception exception, HttpServletRequest request,
                                                         MultivaluedMap<String, String> paramMap) {
 
+        triggerOnTokenExceptionListeners(exception, request, (Map<String, List<String>>) paramMap);
+    }
+
+    /**
+     * Extract information related to the token request and exception and publish the event to listeners.
+     *
+     * @param exception Exception occurred.
+     * @param request   Token servlet request
+     * @param paramMap  Additional parameters.
+     */
+    public static void triggerOnTokenExceptionListeners(Exception exception, HttpServletRequest request,
+                                                        Map<String, List<String>> paramMap) {
+
         Map<String, Object> params = new HashMap<>();
         Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
         String clientId;
@@ -837,8 +887,8 @@ public class EndpointUtil {
         addStringToMap(PROP_CLIENT_ID, clientId, params);
 
         if (paramMap != null) {
-            String grantType = paramMap.getFirst(PROP_GRANT_TYPE);
-            String scopeString = paramMap.getFirst(PROP_SCOPE);
+            String grantType = getFirstParamValue(paramMap, PROP_GRANT_TYPE);
+            String scopeString = getFirstParamValue(paramMap, PROP_SCOPE);
             addStringToMap(PROP_GRANT_TYPE, grantType, params);
             addStringToMap(PROP_SCOPE, scopeString, params);
         }
@@ -849,6 +899,15 @@ public class EndpointUtil {
         }
 
         OAuth2Util.triggerOnTokenExceptionListeners(exception, params);
+    }
+
+    private static String getFirstParamValue(Map<String, List<String>> paramMap, String paramName) {
+
+        String paramValue = null;
+        if (CollectionUtils.isNotEmpty(paramMap.get(paramName))) {
+            paramValue = paramMap.get(paramName).get(0);
+        }
+        return paramValue;
     }
 
     /**
@@ -952,10 +1011,11 @@ public class EndpointUtil {
      * If the state is not available in OAuth2Parameters and request object then state will be retrieved
      * from query params.
      *
-     * @param oAuth2Parameters
+     * @param request Http servlet request.
+     * @param oAuth2Parameters OAuth2 parameters.
      * @return state
      */
-    private static String retrieveStateForErrorURL(OAuth2Parameters oAuth2Parameters) {
+    private static String retrieveStateForErrorURL(HttpServletRequest request, OAuth2Parameters oAuth2Parameters) {
 
         String state = null;
         if (oAuth2Parameters != null && oAuth2Parameters.getState() != null) {
@@ -964,7 +1024,47 @@ public class EndpointUtil {
                 log.debug("Retrieved state value " + state + " from OAuth2Parameters.");
             }
         }
+        if (StringUtils.isEmpty(state)) {
+            state = request.getParameter(OAuthConstants.OAuth20Params.STATE);
+            if (log.isDebugEnabled()) {
+                log.debug("Retrieved state value " + state + " from request query params.");
+            }
+        }
         return state;
+    }
+
+    /**
+     * Return updated redirect URL.
+     *
+     * @param request       HttpServletRequest
+     * @param redirectUri   Redirect Uri
+     * @param errorCode     Error Code
+     * @param errorMessage  Message of the error
+     * @param state         State from the request
+     * @param appName       Application Name
+     * @return Updated Redirect URL
+     */
+    private static String getUpdatedRedirectURL(HttpServletRequest request, String redirectUri, String errorCode,
+                                                String errorMessage, String state, String appName) {
+
+        String updatedRedirectUri = redirectUri;
+        try {
+            OAuthProblemException ex = OAuthProblemException.error(errorCode).description(errorMessage);
+            if (OAuth2Util.isImplicitResponseType(request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE))
+                    || OAuth2Util.isHybridResponseType(request.getParameter(OAuthConstants.OAuth20Params.
+                    RESPONSE_TYPE))) {
+                updatedRedirectUri = OAuthASResponse.errorResponse(HttpServletResponse.SC_FOUND)
+                        .error(ex).location(redirectUri).setState(state).setParam(OAuth.OAUTH_ACCESS_TOKEN, null)
+                        .buildQueryMessage().getLocationUri();
+            } else {
+                updatedRedirectUri = OAuthASResponse.errorResponse(HttpServletResponse.SC_FOUND)
+                        .error(ex).location(redirectUri).setState(state).buildQueryMessage().getLocationUri();
+            }
+
+        } catch (OAuthSystemException e) {
+            log.error("Server error occurred while building error redirect url for application: " + appName, e);
+        }
+        return updatedRedirectUri;
     }
 
     /**

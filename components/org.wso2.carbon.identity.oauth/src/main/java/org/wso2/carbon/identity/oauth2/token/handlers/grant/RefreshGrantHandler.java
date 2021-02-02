@@ -284,6 +284,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
         OAuth2AccessTokenRespDTO tokenResp = new OAuth2AccessTokenRespDTO();
         tokenResp.setAccessToken(accessTokenBean.getAccessToken());
+        tokenResp.setTokenId(accessTokenBean.getTokenId());
         tokenResp.setRefreshToken(accessTokenBean.getRefreshToken());
         if (accessTokenBean.getValidityPeriodInMillis() > 0) {
             tokenResp.setExpiresIn(accessTokenBean.getValidityPeriod());
@@ -557,6 +558,10 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         if (!isRenewRefreshToken(oAuthAppDO.getRenewRefreshTokenEnabled())) {
             // if refresh token renewal not enabled, we use existing one else we issue a new refresh token
             refreshToken = tokenReq.getRefreshToken();
+            refreshTokenIssuedTime = validationBean.getIssuedTime();
+            refreshTokenValidityPeriod = validationBean.getValidityPeriodInMillis();
+        } else if (!OAuthServerConfiguration.getInstance().isExtendRenewedTokenExpiryTimeEnabled()) {
+            // If refresh token renewal enabled and extend token expiry disabled, set the old token issued and validity.
             refreshTokenIssuedTime = validationBean.getIssuedTime();
             refreshTokenValidityPeriod = validationBean.getValidityPeriodInMillis();
         }

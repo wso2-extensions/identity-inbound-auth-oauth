@@ -39,7 +39,6 @@ import javax.security.auth.callback.Callback;
  * <Code>OAuthCallbackHandler</Code>, etc which are called during the OAuth token
  * issuance process.
  */
-@Deprecated
 public class OAuthCallbackHandlerRegistry {
 
     private static final Log log = LogFactory.getLog(OAuthCallbackHandlerRegistry.class);

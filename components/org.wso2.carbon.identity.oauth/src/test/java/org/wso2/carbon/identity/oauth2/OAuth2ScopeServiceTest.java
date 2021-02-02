@@ -55,12 +55,14 @@ public class OAuth2ScopeServiceTest extends PowerMockIdentityBaseTest {
 
     @BeforeMethod
     public void setUp() throws Exception {
+
         oAuth2ScopeService = new OAuth2ScopeService();
         IdentityUtil.populateProperties();
     }
 
     @AfterMethod
     public void tearDown() throws Exception {
+
         Whitebox.setInternalState(IdentityUtil.class, "configuration", new HashMap<>());
         Whitebox.setInternalState(IdentityUtil.class, "eventListenerConfiguration", new HashMap<>());
         Whitebox.setInternalState(IdentityUtil.class, "identityCacheConfigurationHolder", new HashMap<>());
@@ -79,6 +81,7 @@ public class OAuth2ScopeServiceTest extends PowerMockIdentityBaseTest {
 
     @Test(expectedExceptions = IdentityException.class)
     public void testRegisterScopeWithNoScopeName() throws Exception {
+
         String name = "";
         String description = "dummyScopeDescription";
         Scope scope = new Scope(name, name, description);
@@ -87,6 +90,7 @@ public class OAuth2ScopeServiceTest extends PowerMockIdentityBaseTest {
 
     @Test(expectedExceptions = IdentityException.class)
     public void testRegisterScopeWithNoDisplayName() throws Exception {
+
         String name = "dummyScopeName";
         String displayName = "";
         String description = "";
@@ -96,11 +100,13 @@ public class OAuth2ScopeServiceTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetScopes() throws Exception {
+
         assertNotNull(oAuth2ScopeService.getScopes(null, null), "Expected a not null object");
     }
 
     @Test(dataProvider = "indexAndCountProvider")
     public void testGetScopesWithStartAndCount(Integer startIndex, Integer count) throws Exception {
+
         assertNotNull(oAuth2ScopeService.getScopes(startIndex, count), "Expected a not null object");
     }
 
@@ -114,6 +120,7 @@ public class OAuth2ScopeServiceTest extends PowerMockIdentityBaseTest {
 
     @Test(dataProvider = "ProvideCacheConfigurations")
     public void testGetScope(boolean existWithinCache) throws Exception {
+
         Scope dummyScope = new Scope(SCOPE_NAME, SCOPE_NAME, SCOPE_DESCRIPTION);
         oAuth2ScopeService.registerScope(dummyScope);
         if (!existWithinCache) {
@@ -127,6 +134,7 @@ public class OAuth2ScopeServiceTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testUpdateScope() throws Exception {
+
         Scope dummyScope = new Scope(SCOPE_NAME, SCOPE_NAME, SCOPE_DESCRIPTION);
         oAuth2ScopeService.registerScope(dummyScope);
         Scope updatedDummyScope = new Scope(SCOPE_NAME, SCOPE_NAME, StringUtils.EMPTY);
@@ -136,6 +144,7 @@ public class OAuth2ScopeServiceTest extends PowerMockIdentityBaseTest {
 
     @Test(expectedExceptions = IdentityOAuth2ScopeException.class)
     public void testUpdateScopeWithExceptions() throws Exception {
+
         Scope updatedDummyScope = new Scope(SCOPE_NAME, SCOPE_NAME, StringUtils.EMPTY);
         oAuth2ScopeService.updateScope(updatedDummyScope);
         oAuth2ScopeService.deleteScope(SCOPE_NAME);
@@ -143,6 +152,7 @@ public class OAuth2ScopeServiceTest extends PowerMockIdentityBaseTest {
 
     @Test(expectedExceptions = IdentityOAuth2ScopeException.class)
     public void testDeleteScope() throws Exception {
+
         Scope dummyScope = new Scope(SCOPE_NAME, SCOPE_NAME, SCOPE_DESCRIPTION);
         oAuth2ScopeService.registerScope(dummyScope);
         oAuth2ScopeService.deleteScope(SCOPE_NAME);

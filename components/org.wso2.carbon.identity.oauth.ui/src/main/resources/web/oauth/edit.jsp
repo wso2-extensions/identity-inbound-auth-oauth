@@ -841,7 +841,7 @@
                                         <label>
                                             <input type="checkbox" name="validateTokenBindingEnabled"
                                                    value="yes" <%=(
-                                                           app.isTokenBindingValidationEnabledSpecified() ? "checked" : "")%> />
+                                                           app.getTokenBindingValidationEnabled() ? "checked" : "")%> />
                                             <fmt:message key='token.binding.validation.enabled'/>
                                         </label>
                                         <div class="sectionHelp">

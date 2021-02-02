@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.4.62-SNAPSHOT</version>
+        <version>6.4.136-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -182,6 +182,7 @@
                                         <include>oauth2.war</include>
                                         <include>p2.inf</include>
                                         <include>build.properties</include>
+                                        <include>oauth_response.html</include>
                                         <include>oidc-scope-config.xml</include>
                                         <include>oauth-scope-bindings.xml</include>
                                     </includes>

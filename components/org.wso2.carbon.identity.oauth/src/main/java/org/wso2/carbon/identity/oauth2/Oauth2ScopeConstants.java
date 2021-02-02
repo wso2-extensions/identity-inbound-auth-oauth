@@ -40,10 +40,17 @@ public class Oauth2ScopeConstants {
         ERROR_CODE_NOT_FOUND_SCOPE("41003", "Scope %s is not found."),
         ERROR_CODE_CONFLICT_REQUEST_EXISTING_SCOPE("41004",
                 "Scope with the name %s already exists in the system. Please use a different scope name."),
+        ERROR_CODE_CONFLICT_REQUEST_EXISTING_SCOPE_OIDC("41004",
+                "Scope with the name %s already exists as an OIDC scope in the system. Please use a different scope " +
+                        "name."),
         ERROR_CODE_BAD_REQUEST_SCOPE_NOT_SPECIFIED("41005", "Scope is not specified."),
         ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES("41006", "Scope name: %s contains white spaces."),
         ERROR_CODE_BAD_REQUEST("41007", "Invalid request"),
-
+        ERROR_CODE_NOT_AUTHORIZED_ADD_INTERNAL_SCOPE("41008", "User %s is not authorized to add internal scopes"),
+        ERROR_CODE_NOT_AUTHORIZED_UPDATE_INTERNAL_SCOPE("41009", "User %s is not authorized to update internal scopes"),
+        ERROR_CODE_NOT_AUTHORIZED_DELETE_INTERNAL_SCOPE("41010", "User %s is not authorized to delete internal scopes"),
+        ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SATIFIED_THE_REGEX("41011", "Invalid scope name. Scope name %s cannot " +
+                "contain special characters ?,#,/,( or )"),
         ERROR_CODE_FAILED_TO_REGISTER_SCOPE("51001", "Error occurred while registering scope %s."),
         ERROR_CODE_FAILED_TO_GET_ALL_SCOPES("51002", "Error occurred while retrieving all available scopes."),
         ERROR_CODE_FAILED_TO_GET_SCOPE_BY_NAME("51003", "Error occurred while retrieving scope %s."),
