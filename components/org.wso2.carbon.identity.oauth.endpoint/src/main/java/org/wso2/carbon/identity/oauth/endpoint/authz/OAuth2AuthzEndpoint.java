@@ -526,7 +526,13 @@ public class OAuth2AuthzEndpoint {
                     log.debug("Creating user consent receipt for user: " + loggedInUser.toFullQualifiedUsername() +
                             " for client_id: " + clientId + " of tenantDomain: " + spTenantDomain);
                 }
-                getSSOConsentService().processConsent(approvedClaimIds, serviceProvider, loggedInUser, value);
+                if (hasPromptContainsConsent(oauth2Params)) {
+                    getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
+                            loggedInUser, value, true);
+                } else {
+                    getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
+                            loggedInUser, value, false);
+                }
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Post consent handling not required for user: " + loggedInUser.toFullQualifiedUsername() +
