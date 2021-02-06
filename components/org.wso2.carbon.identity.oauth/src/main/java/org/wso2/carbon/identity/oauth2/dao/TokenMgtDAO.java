@@ -388,6 +388,12 @@ public class TokenMgtDAO {
             }
 
             if (accessTokenDO.getTokenBinding() != null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Storing token binding information" +
+                            " accessTokenId: " + accessTokenId +
+                            " bindingType: " + accessTokenDO.getTokenBinding().getBindingType() +
+                            " bindingRef: " + accessTokenDO.getTokenBinding().getBindingReference());
+                }
                 try (PreparedStatement preparedStatement = connection.prepareStatement(STORE_TOKEN_BINDING)) {
                     preparedStatement.setString(1, accessTokenId);
                     preparedStatement.setString(2, accessTokenDO.getTokenBinding().getBindingType());

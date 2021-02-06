@@ -87,6 +87,12 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
     @Override
     public void storeTokenBinding(TokenBinding tokenBinding, int tenantId) throws IdentityOAuth2Exception {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Storing token binding information" +
+                    " accessTokenId: " + tokenBinding.getTokenId() +
+                    " bindingType: " + tokenBinding.getBindingType() +
+                    " bindingRef: " + tokenBinding.getBindingReference());
+        }
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
                 PreparedStatement preparedStatement = connection.prepareStatement(STORE_TOKEN_BINDING)) {
             preparedStatement.setString(1, tokenBinding.getTokenId());
