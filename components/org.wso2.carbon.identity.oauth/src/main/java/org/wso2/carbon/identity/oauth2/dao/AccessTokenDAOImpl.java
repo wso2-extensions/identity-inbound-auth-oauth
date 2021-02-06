@@ -238,6 +238,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
 
             if (tokenBindingAvailable) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Storing token binding information" +
+                            " accessTokenId: " + accessTokenId +
+                            " bindingType: " + accessTokenDO.getTokenBinding().getBindingType() +
+                            " bindingRef: " + accessTokenDO.getTokenBinding().getBindingReference());
+                }
                 try (PreparedStatement preparedStatement = connection.prepareStatement(STORE_TOKEN_BINDING)) {
                     preparedStatement.setString(1, accessTokenId);
                     preparedStatement.setString(2, accessTokenDO.getTokenBinding().getBindingType());
@@ -938,6 +944,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     private void setTokenBindingToAccessTokenDO(AccessTokenDO dataDO, Connection connection, String tokenId)
             throws SQLException {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Setting token binding for tokenId: " + tokenId);
+        }
         try (PreparedStatement tokenBindingPreparedStatement = connection
                 .prepareStatement(RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID)) {
             tokenBindingPreparedStatement.setString(1, tokenId);
@@ -950,6 +959,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         tokenBinding.setBindingReference(tokenBindingResultSet.getString("TOKEN_BINDING_REF"));
                         tokenBinding.setBindingValue(tokenBindingResultSet.getString("TOKEN_BINDING_VALUE"));
                         dataDO.setTokenBinding(tokenBinding);
+                        if (log.isDebugEnabled()) {
+                            log.debug("Set token binding information" +
+                                    " accessTokenId: " + tokenId +
+                                    " bindingType: " + tokenBinding.getBindingType() +
+                                    " bindingRef: " + tokenBinding.getBindingReference());
+                        }
                     }
                 }
             }
@@ -967,6 +982,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     public void storeTokenToSessionMapping(String sessionContextIdentifier, String tokenId, int tenantId)
             throws IdentityOAuth2Exception {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Storing token binding information" +
+                    " accessTokenId: " + tokenId +
+                    " bindingType: " + DEFAULT_TOKEN_TO_SESSION_MAPPING +
+                    " bindingRef: " + sessionContextIdentifier);
+        }
         if (isNotBlank(sessionContextIdentifier) && isNotBlank(tokenId)) {
             Connection connection = IdentityDatabaseUtil.getDBConnection(false);
             try (PreparedStatement preparedStatement = connection.prepareStatement(STORE_TOKEN_BINDING)) {

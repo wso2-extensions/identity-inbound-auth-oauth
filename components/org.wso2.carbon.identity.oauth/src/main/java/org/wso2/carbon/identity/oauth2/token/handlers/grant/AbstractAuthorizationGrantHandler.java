@@ -448,18 +448,21 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                                         AccessTokenDO newTokenBean, Timestamp timestamp, String newAccessToken)
             throws IdentityOAuth2Exception {
         OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
-        storeAccessToken(tokenReq, getUserStoreDomain(tokReqMsgCtx.getAuthorizedUser()), newTokenBean, newAccessToken,
-                existingTokenBean);
         if (log.isDebugEnabled()) {
-            log.debug("Persisted Access Token for " +
+            log.debug("Persisting Access Token for " +
                     "Client ID: " + tokenReq.getClientId() +
                     ", Authorized User: " + tokReqMsgCtx.getAuthorizedUser() +
                     ", Is Federated User: " + tokReqMsgCtx.getAuthorizedUser().isFederatedUser() +
                     ", Timestamp: " + timestamp +
                     ", Validity period: " + newTokenBean.getValidityPeriod() + "s" +
                     ", Scope: " + OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()) +
-                    " and Token State: " + TOKEN_STATE_ACTIVE);
+                    ", Token State: " + TOKEN_STATE_ACTIVE +
+                    ", accessTokenId: " + tokReqMsgCtx.getTokenBinding().getTokenId() +
+                    ", bindingType: " + tokReqMsgCtx.getTokenBinding().getBindingType() +
+                    " and bindingRef: " + tokReqMsgCtx.getTokenBinding().getBindingReference());
         }
+        storeAccessToken(tokenReq, getUserStoreDomain(tokReqMsgCtx.getAuthorizedUser()), newTokenBean, newAccessToken,
+                existingTokenBean);
     }
 
     private void updateCacheIfEnabled(AccessTokenDO newTokenBean, String scope, OauthTokenIssuer oauthTokenIssuer)
