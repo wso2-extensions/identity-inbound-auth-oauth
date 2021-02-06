@@ -1588,6 +1588,9 @@ public class OAuth2Util {
         if (result != null && result instanceof AccessTokenDO) {
             accessTokenDO = (AccessTokenDO) result;
             cacheHit = true;
+            if (log.isDebugEnabled()) {
+                log.debug("Hit OAuthCache for accessTokenIdentifier: " + accessTokenIdentifier);
+            }
         }
 
         // cache miss, load the access token info from the database.
