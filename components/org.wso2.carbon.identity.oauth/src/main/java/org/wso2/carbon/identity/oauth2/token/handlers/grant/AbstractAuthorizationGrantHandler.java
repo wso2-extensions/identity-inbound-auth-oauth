@@ -449,7 +449,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             throws IdentityOAuth2Exception {
         OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         if (log.isDebugEnabled()) {
-            log.debug("Persisted Access Token for " +
+            log.debug("Persisting Access Token for " +
                     "Client ID: " + tokenReq.getClientId() +
                     ", Authorized User: " + tokReqMsgCtx.getAuthorizedUser() +
                     ", Is Federated User: " + tokReqMsgCtx.getAuthorizedUser().isFederatedUser() +
@@ -459,7 +459,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     ", Token State: " + TOKEN_STATE_ACTIVE +
                     ", accessTokenId: " + tokReqMsgCtx.getTokenBinding().getTokenId() +
                     ", bindingType: " + tokReqMsgCtx.getTokenBinding().getBindingType() +
-                    "and bindingRef: " + tokReqMsgCtx.getTokenBinding().getBindingReference());
+                    " and bindingRef: " + tokReqMsgCtx.getTokenBinding().getBindingReference());
         }
         storeAccessToken(tokenReq, getUserStoreDomain(tokReqMsgCtx.getAuthorizedUser()), newTokenBean, newAccessToken,
                 existingTokenBean);

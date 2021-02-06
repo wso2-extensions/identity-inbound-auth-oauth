@@ -976,7 +976,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         if (log.isDebugEnabled()) {
             log.debug("Storing token binding information" +
                     " accessTokenId: " + tokenId +
-                    " bindingType:" + DEFAULT_TOKEN_TO_SESSION_MAPPING +
+                    " bindingType: " + DEFAULT_TOKEN_TO_SESSION_MAPPING +
                     " bindingRef: " + sessionContextIdentifier);
         }
         if (isNotBlank(sessionContextIdentifier) && isNotBlank(tokenId)) {
