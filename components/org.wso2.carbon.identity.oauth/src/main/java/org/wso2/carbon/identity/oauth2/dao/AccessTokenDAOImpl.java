@@ -68,6 +68,7 @@ import java.util.UUID;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.core.util.IdentityUtil.getProperty;
+import static org.wso2.carbon.identity.core.util.LambdaExceptionUtils.rethrowRowMapper;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.STORE_TOKEN_BINDING;
@@ -2572,8 +2573,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             int tenantId = OAuth2Util.getTenantId(user.getTenantDomain());
             Map<String, AccessTokenDO> tokenMap = new HashMap<>();
             jdbcTemplate.executeQuery(sqlQuery,
-                    (resultSet, i) -> {
-                        String token = resultSet.getString("ACCESS_TOKEN");
+                    rethrowRowMapper((resultSet, i) -> {
+                        String token = getPersistenceProcessor()
+                                .getPreprocessedAccessTokenIdentifier(resultSet.getString("ACCESS_TOKEN"));
                         AccessTokenDO accessTokenDO = new AccessTokenDO();
                         if (tokenMap.containsKey(token)) {
                             AccessTokenDO tokenObj = tokenMap.get(token);
@@ -2612,7 +2614,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             tokenMap.put(token, accessTokenDO);
                         }
                         return null;
-                    },
+                    }),
                     (PreparedStatement preparedStatement) -> {
                         preparedStatement.setString(1, user.getUserName());
                         preparedStatement.setInt(2, tenantId);
