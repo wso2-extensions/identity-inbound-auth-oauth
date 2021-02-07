@@ -49,6 +49,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.Charsets;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -3937,6 +3938,42 @@ public class OAuth2Util {
             String errorMsg =
                     "Error while getting Realm configuration of tenant " + user.getTenantDomain();
             throw new IdentityOAuth2Exception(errorMsg, e);
+        }
+    }
+
+    /**
+     * Get a filtered set of scopes after dropping unregistered scopes.
+     *
+     * @param requestedScopesArr Array of requested scopes.
+     * @param tenantDomain Tenant domain.
+     * @return Filtered set of scopes after dropping unregistered scopes.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception
+     */
+    public static String[] dropUnregisteredScopes(String[] requestedScopesArr, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        if (ArrayUtils.isEmpty(requestedScopesArr)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Scope string is empty. No scopes to check for unregistered scopes.");
+            }
+            return requestedScopesArr;
+        }
+        try {
+            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+            String requestedScopes = StringUtils.join(requestedScopesArr, " ");
+            Set<Scope> registeredScopeSet = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                    .getRequestedScopesOnly(tenantId, true, requestedScopes);
+            List<String> filteredScopes = new ArrayList<>();
+            registeredScopeSet.forEach(scope -> filteredScopes.add(scope.getName()));
+
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Dropping unregistered scopes. Requested scopes: %s | Filtered result: %s",
+                        requestedScopes,
+                        StringUtils.join(filteredScopes, " ")));
+            }
+            return filteredScopes.toArray(new String[0]);
+        } catch (IdentityOAuth2ScopeServerException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving registered scopes.", e);
         }
     }
 }

@@ -266,6 +266,9 @@ public class OAuthServerConfiguration {
     // Property to define the allowed scopes.
     private List<String> allowedScopes = new ArrayList<>();
 
+    // Property to check whether to drop unregistered scopes.
+    private boolean dropUnregisteredScopes = false;
+
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
     }
@@ -422,6 +425,9 @@ public class OAuthServerConfiguration {
 
         // Read config for allowed scopes.
         parseAllowedScopesConfiguration(oauthElem);
+
+        // Read config for dropping unregistered scopes.
+        parseDropUnregisteredScopes(oauthElem);
     }
 
     /**
@@ -466,6 +472,15 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseDropUnregisteredScopes(OMElement oauthElem) {
+
+        OMElement dropUnregisteredScopesElement =
+                oauthElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DROP_UNREGISTERED_SCOPES));
+        if (dropUnregisteredScopesElement != null) {
+            dropUnregisteredScopes = Boolean.parseBoolean(dropUnregisteredScopesElement.getText());
+        }
+    }
+
     public Set<OAuthCallbackHandlerMetaData> getCallbackHandlerMetaData() {
         return callbackHandlerMetaData;
     }
@@ -477,6 +492,16 @@ public class OAuthServerConfiguration {
      */
     public boolean isShowDisplayNameInConsentPage() {
         return showDisplayNameInConsentPage;
+    }
+
+    /**
+     * Returns the value of DropUnregisteredScopes configuration.
+     *
+     * @return value of DropUnregisteredScopes configuration.
+     */
+    public boolean isDropUnregisteredScopes() {
+
+        return dropUnregisteredScopes;
     }
 
     /**
@@ -3153,6 +3178,8 @@ public class OAuthServerConfiguration {
         // Allowed Scopes Config.
         private static final String ALLOWED_SCOPES_ELEMENT = "AllowedScopes";
         private static final String SCOPES_ELEMENT = "Scope";
+
+        private static final String DROP_UNREGISTERED_SCOPES = "DropUnregisteredScopes";
     }
 
 }
