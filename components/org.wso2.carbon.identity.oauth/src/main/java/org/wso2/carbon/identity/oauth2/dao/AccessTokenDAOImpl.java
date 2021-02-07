@@ -952,7 +952,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 .prepareStatement(RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID)) {
             tokenBindingPreparedStatement.setString(1, tokenId);
             try (ResultSet tokenBindingResultSet = tokenBindingPreparedStatement.executeQuery()) {
-                if (tokenBindingResultSet.next()) {
+                while (tokenBindingResultSet.next()) {
                     if (!StringUtils.equals(DEFAULT_TOKEN_TO_SESSION_MAPPING,
                             tokenBindingResultSet.getString("TOKEN_BINDING_TYPE"))) {
                         TokenBinding tokenBinding = new TokenBinding();
