@@ -297,6 +297,18 @@ public class AccessTokenIssuer {
         // Thus remove the scopes from the tokReqMsgCtx. Will be added to the response after executing
         // the other scope validators.
         removeInternalScopes(tokReqMsgCtx);
+
+        boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
+        if (isDropUnregisteredScopes) {
+            if (log.isDebugEnabled()) {
+                log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
+            }
+            String[] filteredScopes = OAuth2Util.dropUnregisteredScopes(
+                    tokReqMsgCtx.getScope(),
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain());
+            tokReqMsgCtx.setScope(filteredScopes);
+        }
+
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
         if (isValidScope) {
             //Add authorized internal scopes to the request for sending in the response.

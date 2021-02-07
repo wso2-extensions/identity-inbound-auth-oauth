@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
 import org.wso2.carbon.identity.discovery.OIDCProcessor;
 import org.wso2.carbon.identity.discovery.builders.DefaultOIDCProviderRequestBuilder;
 import org.wso2.carbon.identity.discovery.builders.OIDCProviderRequestBuilder;
+import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
@@ -131,6 +132,9 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
     OAuth2Service mockedOAuth2Service;
+
+    @Mock
+    OAuthAdminServiceImpl mockedOAuthAdminService;
 
     @Mock
     SSOConsentService mockedSSOConsentService;
@@ -246,6 +250,9 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
             when(mockedSessionDataCache.getValueFromCache(any(SessionDataCacheKey.class))).
                     thenReturn(null);
         }
+
+        EndpointUtil.setOAuthAdminService(mockedOAuthAdminService);
+        when(mockedOAuthAdminService.getScopeNames()).thenReturn(new String[0]);
 
         String consentUrl;
         try {

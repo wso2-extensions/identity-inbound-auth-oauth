@@ -154,6 +154,17 @@ public class AuthorizationHandlerManager {
         // the other scope validators.
         removeInternalScopes(authzReqMsgCtx);
 
+        boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
+        if (isDropUnregisteredScopes) {
+            if (log.isDebugEnabled()) {
+                log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
+            }
+            String[] filteredScopes = OAuth2Util.dropUnregisteredScopes(
+                    authzReqMsgCtx.getAuthorizationReqDTO().getScopes(),
+                    authzReqMsgCtx.getAuthorizationReqDTO().getTenantDomain());
+            authzReqMsgCtx.getAuthorizationReqDTO().setScopes(filteredScopes);
+        }
+
         boolean valid = validateScope(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler);
         if (valid) {
             //Add authorized internal scopes to the request for sending in the response.

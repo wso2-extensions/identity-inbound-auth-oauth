@@ -47,6 +47,8 @@ import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
 import org.wso2.carbon.identity.discovery.OIDCProcessor;
 import org.wso2.carbon.identity.discovery.builders.DefaultOIDCProviderRequestBuilder;
 import org.wso2.carbon.identity.discovery.builders.OIDCProviderRequestBuilder;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
@@ -63,9 +65,13 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException
 import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
+import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -78,7 +84,9 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -115,6 +123,8 @@ public class EndpointUtil {
     private static final String NOT_AVAILABLE = "N/A";
     private static final String UNKNOWN_ERROR = "unknown_error";
     private static OAuth2Service oAuth2Service;
+    private static OAuth2ScopeService oAuth2ScopeService;
+    private static OAuthAdminServiceImpl oAuthAdminService;
     private static SSOConsentService ssoConsentService;
     private static OAuthServerConfiguration oauthServerConfiguration;
     private static RequestObjectService requestObjectService;
@@ -124,6 +134,16 @@ public class EndpointUtil {
     public static void setOAuth2Service(OAuth2Service oAuth2Service) {
 
         EndpointUtil.oAuth2Service = oAuth2Service;
+    }
+
+    public static void setOAuth2ScopeService(OAuth2ScopeService oAuth2ScopeService) {
+
+        EndpointUtil.oAuth2ScopeService = oAuth2ScopeService;
+    }
+
+    public static void setOAuthAdminService(OAuthAdminServiceImpl oAuthAdminService) {
+
+        EndpointUtil.oAuthAdminService = oAuthAdminService;
     }
 
     public static void setSSOConsentService(SSOConsentService ssoConsentService) {
@@ -661,7 +681,7 @@ public class EndpointUtil {
                 consentPage += "&tenantDomain=" + getSPTenantDomainFromClientId(params.getClientId());
 
                 consentPage = consentPage + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
-                        (EndpointUtil.getScope(params), UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
+                        (getFilteredScopes(params), UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
                         + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&spQueryParams=" + queryString;
 
                 if (entry != null) {
@@ -684,6 +704,100 @@ public class EndpointUtil {
         }
 
         return consentPage;
+    }
+
+    private static String getFilteredScopes(OAuth2Parameters params) throws OAuthSystemException {
+
+        try {
+            Set<String> allowedScopes = params.getScopes();
+            startTenantFlow(params.getTenantDomain());
+
+            /* If DropUnregisteredScopes scopes config is enabled
+             then any unregistered scopes(excluding internal scopes
+             and allowed scopes) is be dropped. Therefore they will
+             not be shown in the user consent screen.*/
+            if (oauthServerConfiguration.isDropUnregisteredScopes()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
+                }
+                allowedScopes = dropUnregisteredScopes(params);
+            }
+
+            // Get registered OIDC scopes.
+            String[] oidcScopes = oAuthAdminService.getScopeNames();
+            List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
+
+            /* Remove OIDC scopes from scope string sent back
+             in the consent page as consent is not needed for
+             OIDC scopes.*/
+            StringBuilder scopes = new StringBuilder();
+            for (String scope : allowedScopes) {
+                if (!oidcScopeList.contains(scope)) {
+                    scopes.append(scope).append(" ");
+                }
+            }
+
+            String filteredScopes = scopes.toString().trim();
+            if (log.isDebugEnabled()) {
+                log.debug("Filtered scopes: " + filteredScopes + " for request from client: " + params.getClientId());
+            }
+            return scopes.toString().trim();
+        } catch (IdentityOAuthAdminException e) {
+            throw new OAuthSystemException("Error while retrieving OIDC scopes", e);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    private static void startTenantFlow(String tenantDomain) {
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
+        carbonContext.setTenantDomain(tenantDomain, true);
+    }
+
+    private static Set<String> dropUnregisteredScopes(OAuth2Parameters params) throws OAuthSystemException {
+
+        Set<String> requestedScopes = new HashSet<>(params.getScopes());
+        Set<String> registeredScopes = getRegisteredScopes(requestedScopes);
+        List<String> allowedScopesFromConfig = oauthServerConfiguration.getAllowedScopes();
+        Set<String> filteredScopes = new HashSet<>();
+
+        // Filtering allowed scopes.
+        requestedScopes.forEach(scope -> {
+            if (StringUtils.isBlank(scope)) {
+                return;
+            }
+            if (scope.startsWith("internal_") // Check for internal scopes.
+                    || scope.equalsIgnoreCase(Oauth2ScopeConstants.SYSTEM_SCOPE) // Check for SYSTEM scope.
+                    || OAuth2Util.isAllowedScope(allowedScopesFromConfig, scope) // Check for allowed scopes config.
+                    || registeredScopes.contains(scope)) { // Check for registered scopes.
+
+                filteredScopes.add(scope);
+            }
+        });
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Dropping unregistered scopes(excluding internal and allowed scopes). " +
+                            "Requested scopes: %s | Filtered result: %s",
+                            requestedScopes,
+                            StringUtils.join(filteredScopes, " ")));
+        }
+
+        return filteredScopes;
+    }
+
+    private static Set<String> getRegisteredScopes(Set<String> requestedScopes) throws OAuthSystemException {
+
+        try {
+            String requestedScopesStr = StringUtils.join(requestedScopes, " ");
+            Set<String> registeredScopes = new HashSet<>();
+            Set<Scope> registeredScopeSet = oAuth2ScopeService.getScopes(null, null, true, requestedScopesStr);
+            registeredScopeSet.forEach(scope -> registeredScopes.add(scope.getName()));
+            return registeredScopes;
+        } catch (IdentityOAuth2ScopeServerException e) {
+            throw new OAuthSystemException("Error occurred while retrieving registered scopes.", e);
+        }
     }
 
     public static String getScope(OAuth2Parameters params) {
