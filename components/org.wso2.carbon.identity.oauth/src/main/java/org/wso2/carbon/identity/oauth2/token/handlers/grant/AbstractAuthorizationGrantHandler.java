@@ -449,17 +449,28 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             throws IdentityOAuth2Exception {
         OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         if (log.isDebugEnabled()) {
-            log.debug("Persisting Access Token for " +
-                    "Client ID: " + tokenReq.getClientId() +
-                    ", Authorized User: " + tokReqMsgCtx.getAuthorizedUser() +
-                    ", Is Federated User: " + tokReqMsgCtx.getAuthorizedUser().isFederatedUser() +
-                    ", Timestamp: " + timestamp +
-                    ", Validity period: " + newTokenBean.getValidityPeriod() + "s" +
-                    ", Scope: " + OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()) +
-                    ", Token State: " + TOKEN_STATE_ACTIVE +
-                    ", accessTokenId: " + tokReqMsgCtx.getTokenBinding().getTokenId() +
-                    ", bindingType: " + tokReqMsgCtx.getTokenBinding().getBindingType() +
-                    " and bindingRef: " + tokReqMsgCtx.getTokenBinding().getBindingReference());
+            if (tokReqMsgCtx.getTokenBinding() != null) {
+                log.debug("Persisting Access Token for " +
+                        "Client ID: " + tokenReq.getClientId() +
+                        ", Authorized User: " + tokReqMsgCtx.getAuthorizedUser() +
+                        ", Is Federated User: " + tokReqMsgCtx.getAuthorizedUser().isFederatedUser() +
+                        ", Timestamp: " + timestamp +
+                        ", Validity period: " + newTokenBean.getValidityPeriod() + "s" +
+                        ", Scope: " + OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()) +
+                        ", Token State: " + TOKEN_STATE_ACTIVE +
+                        ", accessTokenId for token binding: " + tokReqMsgCtx.getTokenBinding().getTokenId() +
+                        ", bindingType: " + tokReqMsgCtx.getTokenBinding().getBindingType() +
+                        " and bindingRef: " + tokReqMsgCtx.getTokenBinding().getBindingReference());
+            } else {
+                log.debug("Persisting Access Token for " +
+                        "Client ID: " + tokenReq.getClientId() +
+                        ", Authorized User: " + tokReqMsgCtx.getAuthorizedUser() +
+                        ", Is Federated User: " + tokReqMsgCtx.getAuthorizedUser().isFederatedUser() +
+                        ", Timestamp: " + timestamp +
+                        ", Validity period: " + newTokenBean.getValidityPeriod() + "s" +
+                        ", Scope: " + OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()) +
+                        " and Token State: " + TOKEN_STATE_ACTIVE);
+            }
         }
         storeAccessToken(tokenReq, getUserStoreDomain(tokReqMsgCtx.getAuthorizedUser()), newTokenBean, newAccessToken,
                 existingTokenBean);
