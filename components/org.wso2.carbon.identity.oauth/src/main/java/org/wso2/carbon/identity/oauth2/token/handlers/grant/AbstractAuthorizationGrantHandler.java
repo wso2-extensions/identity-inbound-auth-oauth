@@ -449,28 +449,17 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             throws IdentityOAuth2Exception {
         OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         if (log.isDebugEnabled()) {
-            if (tokReqMsgCtx.getTokenBinding() != null) {
-                log.debug("Persisting Access Token for " +
-                        "Client ID: " + tokenReq.getClientId() +
-                        ", Authorized User: " + tokReqMsgCtx.getAuthorizedUser() +
-                        ", Is Federated User: " + tokReqMsgCtx.getAuthorizedUser().isFederatedUser() +
-                        ", Timestamp: " + timestamp +
-                        ", Validity period: " + newTokenBean.getValidityPeriod() + "s" +
-                        ", Scope: " + OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()) +
-                        ", Token State: " + TOKEN_STATE_ACTIVE +
-                        ", accessTokenId for token binding: " + tokReqMsgCtx.getTokenBinding().getTokenId() +
-                        ", bindingType: " + tokReqMsgCtx.getTokenBinding().getBindingType() +
-                        " and bindingRef: " + tokReqMsgCtx.getTokenBinding().getBindingReference());
-            } else {
-                log.debug("Persisting Access Token for " +
-                        "Client ID: " + tokenReq.getClientId() +
-                        ", Authorized User: " + tokReqMsgCtx.getAuthorizedUser() +
-                        ", Is Federated User: " + tokReqMsgCtx.getAuthorizedUser().isFederatedUser() +
-                        ", Timestamp: " + timestamp +
-                        ", Validity period: " + newTokenBean.getValidityPeriod() + "s" +
-                        ", Scope: " + OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()) +
-                        " and Token State: " + TOKEN_STATE_ACTIVE);
-            }
+            log.debug("Persisting Access Token for " +
+                    "Client ID: " + tokenReq.getClientId() +
+                    ", Authorized User: " + tokReqMsgCtx.getAuthorizedUser() +
+                    ", Is Federated User: " + isFederatedUser(tokReqMsgCtx) +
+                    ", Timestamp: " + timestamp +
+                    ", Validity period: " + newTokenBean.getValidityPeriod() + "s" +
+                    ", Scope: " + OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()) +
+                    ", Token State: " + TOKEN_STATE_ACTIVE +
+                    ", accessTokenId for token binding: " + getTokenIdForTokenBinding(tokReqMsgCtx) +
+                    ", bindingType: " + getTokenBindingType(tokReqMsgCtx) +
+                    " and bindingRef: " + getTokenBindingReference(tokReqMsgCtx));
         }
         storeAccessToken(tokenReq, getUserStoreDomain(tokReqMsgCtx.getAuthorizedUser()), newTokenBean, newAccessToken,
                 existingTokenBean);
@@ -976,8 +965,13 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
      */
     private String getTokenBindingReference(OAuthTokenReqMessageContext tokReqMsgCtx) {
 
-        if (tokReqMsgCtx.getTokenBinding() == null || StringUtils
-                .isBlank(tokReqMsgCtx.getTokenBinding().getBindingReference())) {
+        if (tokReqMsgCtx.getTokenBinding() == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Token binding data is null.");
+            }
+            return NONE;
+        }
+        if (StringUtils.isBlank(tokReqMsgCtx.getTokenBinding().getBindingReference())) {
             return NONE;
         }
         return tokReqMsgCtx.getTokenBinding().getBindingReference();
@@ -996,5 +990,38 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             return NONE;
         }
         return accessTokenDO.getTokenBinding().getBindingReference();
+    }
+
+    private String getTokenBindingType(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (tokReqMsgCtx.getTokenBinding() == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Token binding data is null.");
+            }
+            return null;
+        }
+        return tokReqMsgCtx.getTokenBinding().getBindingType();
+    }
+
+    private String getTokenIdForTokenBinding(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (tokReqMsgCtx.getTokenBinding() == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Token binding data is null.");
+            }
+            return null;
+        }
+        return tokReqMsgCtx.getTokenBinding().getTokenId();
+    }
+
+    private boolean isFederatedUser(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (tokReqMsgCtx.getAuthorizedUser() == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Authorized user is null hence returning false.");
+            }
+            return false;
+        }
+        return tokReqMsgCtx.getAuthorizedUser().isFederatedUser();
     }
 }
