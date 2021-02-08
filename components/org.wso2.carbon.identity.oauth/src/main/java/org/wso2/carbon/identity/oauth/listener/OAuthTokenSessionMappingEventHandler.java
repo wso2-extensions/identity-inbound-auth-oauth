@@ -78,7 +78,7 @@ public class OAuthTokenSessionMappingEventHandler extends AbstractOAuthEventInte
             /*
               We need authorization code to get the session context Id from the authorization grant cache for
               code grant. After this event is triggered, we change this cache mapping from code to
-              accesstoken. So at this level, we have the mapping of code to session in the authorization grant cache.
+              access token. So at this level, we have the mapping of code to session in the authorization grant cache.
              */
             if (log.isDebugEnabled()) {
                 log.debug("Since Authorization code is null, couldn't find session context identifier for the " +
@@ -92,6 +92,14 @@ public class OAuthTokenSessionMappingEventHandler extends AbstractOAuthEventInte
             }
             return;
         }
+
+        if (tokenRespDTO == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("TokenRespDTO passed was null. Cannot proceed further to build the token session mapping.");
+            }
+            return;
+        }
+
         persistTokenToSessionMapping(getSessionContextIdentifier(code), tokenRespDTO.getTokenId(),
                 OAuth2Util.getTenantId(tokenReqDTO.getTenantDomain()), tokenReqDTO.getClientId());
     }
