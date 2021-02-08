@@ -87,6 +87,13 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
     @Override
     public void storeTokenBinding(TokenBinding tokenBinding, int tenantId) throws IdentityOAuth2Exception {
 
+        if (tokenBinding == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Token binding information is not available. " +
+                        "Returning without proceeding to store token binding information.");
+            }
+            return;
+        }
         if (log.isDebugEnabled()) {
             log.debug("Storing token binding information" +
                     " accessTokenId: " + tokenBinding.getTokenId() +
