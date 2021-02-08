@@ -105,28 +105,62 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
     private boolean validateUserTenant(OAuth2AccessTokenReqDTO tokenReq, ServiceProvider serviceProvider)
             throws IdentityOAuth2Exception {
 
-        String userTenantDomain = MultitenantUtils.getTenantDomain(tokenReq.getResourceOwnerUsername());
+        String userTenantDomain = null;
+
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            if (!serviceProvider.isSaasApp() ||
-                    (serviceProvider.isSaasApp() && !IdentityTenantUtil.isLegacySaaSAuthenticationEnabled())) {
-                userTenantDomain = IdentityTenantUtil.getTenantDomainFromContext();
-                String tenantAwareUsername =
-                        MultitenantUtils.getTenantAwareUsername(tokenReq.getResourceOwnerUsername());
-                String userNameWithTenant =
-                        tenantAwareUsername + UserCoreConstants.TENANT_DOMAIN_COMBINER + userTenantDomain;
-                tokenReq.setResourceOwnerUsername(userNameWithTenant);
-            }
+            String userNameWithTenant = getFullQualifiedUsernameWhenTenantQualifiedUrlEnabled(tokenReq,
+                    serviceProvider);
+            userTenantDomain = MultitenantUtils.getTenantDomain(userNameWithTenant);
+            tokenReq.setResourceOwnerUsername(userNameWithTenant);
         }
+
+        if (StringUtils.isBlank(userTenantDomain)) {
+            userTenantDomain = MultitenantUtils.getTenantDomain(tokenReq.getResourceOwnerUsername());
+        }
+
         if (!serviceProvider.isSaasApp() && !userTenantDomain.equals(tokenReq.getTenantDomain())) {
             if (log.isDebugEnabled()) {
-                log.debug("Non-SaaS service provider. Application tenantDomain(" + tokenReq.getTenantDomain() + ") " +
-                        "!= User tenant domain(" + userTenantDomain + ")");
+                log.debug("Non-SaaS service provider. Application tenantDomain(" + tokenReq.getTenantDomain() + ") "
+                        + "!= User tenant domain(" + userTenantDomain + ")");
             }
             throw new IdentityOAuth2Exception("Users in the tenant domain : " + userTenantDomain + " do not have" +
                     " access to application " + serviceProvider.getApplicationName());
-
         }
         return true;
+    }
+
+    private String getFullQualifiedUsernameWhenTenantQualifiedUrlEnabled(OAuth2AccessTokenReqDTO tokenReq,
+                                                                         ServiceProvider serviceProvider) {
+
+        boolean isEmailUserNameEnabled = MultitenantUtils.isEmailUserName();
+        boolean isSaasApp = serviceProvider.isSaasApp();
+        boolean isLegacySaaSAuthenticationEnabled = IdentityTenantUtil.isLegacySaaSAuthenticationEnabled();
+        String usernameFromRequest = tokenReq.getResourceOwnerUsername();
+        String tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
+
+        if (!isSaasApp) {
+            /*
+            For non-Saas app tenant domain from context is appended to the username from request.
+            When using tenant qualified URLs, providing tenant-aware username is expected.
+             */
+            return UserCoreUtil.addTenantDomainToEntry(usernameFromRequest, tenantDomainFromContext);
+        } else if (isLegacySaaSAuthenticationEnabled) { // isSaasApp && isLegacySaaSAuthenticationEnabled.
+            return usernameFromRequest;
+        } else { // isSaasApp && !isLegacySaaSAuthenticationEnabled.
+
+            /*
+            If !isEmailUserNameEnabled, then username containing '@' symbol and a username containing
+            a tenant domain can't be distinguished.
+            Hence, tenant-qualified username is expected.
+             */
+            String tenantDomainFromUser = MultitenantUtils.getTenantDomain(usernameFromRequest);
+            if (isEmailUserNameEnabled && StringUtils.equalsIgnoreCase(tenantDomainFromUser,
+                    MultitenantConstants.SUPER_TENANT_DOMAIN_NAME) &&
+                    !usernameFromRequest.endsWith(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
+                return UserCoreUtil.addTenantDomainToEntry(usernameFromRequest, tenantDomainFromContext);
+            }
+            return usernameFromRequest;
+        }
     }
 
     private ServiceProvider getServiceProvider(OAuth2AccessTokenReqDTO tokenReq) throws IdentityOAuth2Exception {
