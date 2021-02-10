@@ -144,7 +144,7 @@ public class OAuthServerConfiguration {
     private boolean cacheEnabled = false;
     private boolean isTokenRenewalPerRequestEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
-    private boolean isExtendRenewedTokenExpiryTimeEnabled = false;
+    private boolean isExtendRenewedTokenExpiryTimeEnabled = true;
     private boolean assertionsUserNameEnabled = false;
     private boolean accessTokenPartitioningEnabled = false;
     private boolean redirectToRequestedRedirectUriEnabled = true;
