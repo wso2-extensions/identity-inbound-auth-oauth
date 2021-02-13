@@ -62,6 +62,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -82,6 +83,7 @@ import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeConsentException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -658,8 +660,8 @@ public class OAuth2AuthzEndpoint {
     private Response handleDenyConsent(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
-        OpenIDConnectUserRPStore.getInstance().putUserRPToStore(getLoggedInUser(oAuthMessage),
-                getOauth2Params(oAuthMessage).getApplicationName(), false, oauth2Params.getClientId());
+        AuthenticatedUser user = getLoggedInUser(oAuthMessage);
+        EndpointUtil.denyOAuthScopeConsent(oauth2Params, user);
 
         OAuthErrorDTO oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleUserConsentDenial(oauth2Params);
         OAuthProblemException ex = buildConsentDenialException(oAuthErrorDTO);
@@ -1041,17 +1043,18 @@ public class OAuth2AuthzEndpoint {
     private void storeUserConsent(OAuthMessage oAuthMessage, String consent) throws OAuthSystemException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
-        String applicationName = oauth2Params.getApplicationName();
         AuthenticatedUser loggedInUser = getLoggedInUser(oAuthMessage);
-        String clientId = oauth2Params.getClientId();
 
         ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
 
         if (!isConsentSkipped(serviceProvider)) {
             boolean approvedAlways = OAuthConstants.Consent.APPROVE_ALWAYS.equals(consent);
             if (approvedAlways) {
-                OpenIDConnectUserRPStore.getInstance().putUserRPToStore(loggedInUser, applicationName,
-                        true, clientId);
+                if (hasPromptContainsConsent(oauth2Params)) {
+                    EndpointUtil.storeOAuthScopeConsent(loggedInUser, oauth2Params, true);
+                } else {
+                    EndpointUtil.storeOAuthScopeConsent(loggedInUser, oauth2Params, false);
+                }
             }
         }
     }
@@ -2237,8 +2240,12 @@ public class OAuth2AuthzEndpoint {
     private boolean isUserAlreadyApproved(OAuth2Parameters oauth2Params, AuthenticatedUser user)
             throws OAuthSystemException {
 
-        return OpenIDConnectUserRPStore.getInstance().hasUserApproved(user, oauth2Params.getApplicationName(),
-                oauth2Params.getClientId());
+        try {
+            return EndpointUtil.isUserAlreadyConsentedForOAuthScopes(user, oauth2Params);
+        } catch (IdentityOAuth2ScopeConsentException | IdentityOAuthAdminException e) {
+            throw new OAuthSystemException("Error occurred while checking scopes are already approved by the user.",
+                    e);
+        }
     }
 
     private boolean isIdTokenSubjectEqualsToLoggedInUser(String loggedInUser, String idTokenHint)
