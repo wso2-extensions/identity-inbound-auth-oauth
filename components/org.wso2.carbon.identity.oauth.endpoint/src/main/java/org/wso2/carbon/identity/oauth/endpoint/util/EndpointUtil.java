@@ -712,6 +712,13 @@ public class EndpointUtil {
         return consentPage;
     }
 
+    /**
+     * Deny consent for given set of OAuth scopes for the application.
+     *
+     * @param params    OAuth2 request parameters.
+     * @param user      Authenticated user.
+     * @throws OAuthSystemException
+     */
     public static void denyOAuthScopeConsent(OAuth2Parameters params, AuthenticatedUser user)
             throws OAuthSystemException {
 
@@ -730,9 +737,17 @@ public class EndpointUtil {
         } catch (IdentityOAuth2ScopeConsentException e) {
             throw new OAuthSystemException(("Error occurred while updating OAuth scope consents."));
         }
-
     }
 
+    /**
+     * Check if the user has already given consent to required OAuth scopes.
+     *
+     * @param user              Authenticated user.
+     * @param oAuth2Parameters  OAuth2 parameters.
+     * @return  True if user has given consent to all the requested OAuth scopes.
+     * @throws IdentityOAuth2ScopeConsentException
+     * @throws IdentityOAuthAdminException
+     */
     public static boolean isUserAlreadyConsentedForOAuthScopes(AuthenticatedUser user,
                                                                OAuth2Parameters oAuth2Parameters)
             throws IdentityOAuth2ScopeConsentException, IdentityOAuthAdminException {
@@ -748,6 +763,15 @@ public class EndpointUtil {
                 null);
     }
 
+    /**
+     * Store consent given for OAuth scopes by the user for the application.
+     *
+     * @param user                      Authenticated user.
+     * @param params                    OAuth2 parameters.
+     * @param overrideExistingConsent   True to override existing consent, otherwise merge the new consent with
+     *                                  existing consent.
+     * @throws OAuthSystemException
+     */
     public static void storeOAuthScopeConsent(AuthenticatedUser user, OAuth2Parameters params,
                                               boolean overrideExistingConsent) throws OAuthSystemException {
 
@@ -760,9 +784,9 @@ public class EndpointUtil {
                         IdentityTenantUtil.getTenantId(params.getTenantDomain()),
                         userApprovedScopes, null);
             } else {
-                boolean isUserConsentExisting = oAuth2ScopeService.isUserHasAnExistingConsentForApp(
+                boolean isUserConsentExist = oAuth2ScopeService.isUserHasAnExistingConsentForApp(
                         user, params.getApplicationName(), IdentityTenantUtil.getTenantId(params.getTenantDomain()));
-                if (isUserConsentExisting) {
+                if (isUserConsentExist) {
                     oAuth2ScopeService.updateUserConsentForApplication(user, params.getApplicationName(),
                             IdentityTenantUtil.getTenantId(params.getTenantDomain()),
                             userApprovedScopes, null);
@@ -798,7 +822,7 @@ public class EndpointUtil {
                 allowedScopes = dropUnregisteredScopes(params);
             }
 
-            OAuth2ScopeConsentResponse existingUserConsent = oAuth2ScopeService.getUserConsentByAppId(user,
+            OAuth2ScopeConsentResponse existingUserConsent = oAuth2ScopeService.getUserConsentForApp(user,
                     params.getApplicationName(), IdentityTenantUtil.getTenantId(params.getTenantDomain()));
             if (existingUserConsent != null) {
                 if (CollectionUtils.isNotEmpty(existingUserConsent.getApprovedScopes())) {

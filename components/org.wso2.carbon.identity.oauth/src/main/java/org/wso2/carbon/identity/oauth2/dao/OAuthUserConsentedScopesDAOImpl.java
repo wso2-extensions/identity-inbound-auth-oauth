@@ -64,6 +64,9 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
         } catch (SQLException e) {
             String msg = "Error occurred while retrieving scope consents for  userId  :" + userId + " and appId: " +
                     appId + " and " + "tenantId : " + tenantId;
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
             throw new IdentityOAuth2ScopeConsentServerException(msg, e);
         }
     }
@@ -99,6 +102,9 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
         } catch (SQLException e) {
             String msg = "Error occurred while retrieving scope consents for  userId  :" + userId + " in tenantId : "
                     + tenantId;
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
             throw new IdentityOAuth2ScopeConsentServerException(msg, e);
         }
     }
@@ -126,6 +132,9 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
         } catch (SQLException e) {
             String msg = "Error occurred while adding scope consents for  userId  :" + userId + " and appId: " +
                     userConsent.getAppId() + " and " + "tenantId : " + tenantId;
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
             throw new IdentityOAuth2ScopeConsentServerException(msg, e);
         }
     }
@@ -157,12 +166,21 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
                 throw new IdentityOAuth2ScopeConsentException("Unable to find an existing consent for user : " +
                         userId + ", app : " + updatedUserConsents.getAppId() + " and tenant with id : " + tenantId);
             }
-            addUserConsentedScopes(conn, consentId, tenantId, consentsToBeAdded);
-            updateUserConsentedScopes(conn, userId, tenantId, consentsToBeUpdated);
+            if (CollectionUtils.isNotEmpty(consentsToBeAdded.getApprovedScopes()) ||
+                    CollectionUtils.isNotEmpty(consentsToBeAdded.getDisapprovedScopes())) {
+                addUserConsentedScopes(conn, consentId, tenantId, consentsToBeAdded);
+            }
+            if (CollectionUtils.isNotEmpty(consentsToBeUpdated.getApprovedScopes()) ||
+                    CollectionUtils.isNotEmpty(consentsToBeUpdated.getDisapprovedScopes())) {
+                updateUserConsentedScopes(conn, userId, tenantId, consentsToBeUpdated);
+            }
             IdentityDatabaseUtil.commitTransaction(conn);
         } catch (SQLException e) {
             String msg = "Error occurred while updating scope consents for  userId  :" + userId + " and appId: " +
                     updatedUserConsents.getAppId() + " and " + "tenantId : " + tenantId + ".";
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
             throw new IdentityOAuth2ScopeConsentServerException(msg, e);
         }
     }

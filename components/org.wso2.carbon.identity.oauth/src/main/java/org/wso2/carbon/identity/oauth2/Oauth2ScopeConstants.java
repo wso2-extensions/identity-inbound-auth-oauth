@@ -61,7 +61,7 @@ public class Oauth2ScopeConstants {
         ERROR_CODE_UNEXPECTED("51007", "Unexpected error"),
         ERROR_CODE_FAILED_TO_GET_REQUESTED_SCOPES("51008", "Error occurred while retrieving requested scopes."),
         ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS_FOR_APP("61001", "Error occurred while retrieving " +
-                "user consents for OAuth scopes for user : %s, application : %s and tenant Id : %d."),
+                "user consent for OAuth scopes for user : %s, application : %s and tenant Id : %d."),
         ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS("61002", "Error occurred while retrieving " +
                 "user consents for OAuth scopes for user : %s in tenant with tenant Id : %d."),
         ERROR_CODE_FAILED_TO_ADD_USER_CONSENT_FOR_APP("61003", "Error occurred while adding " +
