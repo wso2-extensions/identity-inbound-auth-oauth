@@ -59,7 +59,23 @@ public class Oauth2ScopeConstants {
         ERROR_CODE_FAILED_TO_GET_ALL_SCOPES_PAGINATION("51006",
                 "Error occurred while retrieving scopes with pagination."),
         ERROR_CODE_UNEXPECTED("51007", "Unexpected error"),
-        ERROR_CODE_FAILED_TO_GET_REQUESTED_SCOPES("51008", "Error occurred while retrieving requested scopes.");
+        ERROR_CODE_FAILED_TO_GET_REQUESTED_SCOPES("51008", "Error occurred while retrieving requested scopes."),
+        ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS_FOR_APP("61001", "Error occurred while retrieving " +
+                "user consents for OAuth scopes for user : %s, application : %s and tenant Id : %d."),
+        ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS("61002", "Error occurred while retrieving " +
+                "user consents for OAuth scopes for user : %s in tenant with tenant Id : %d."),
+        ERROR_CODE_FAILED_TO_ADD_USER_CONSENT_FOR_APP("61003", "Error occurred while adding " +
+                "user consent for OAuth scopes for user : %s, application : %s and tenant Id : %d."),
+        ERROR_CODE_FAILED_TO_UPDATE_USER_CONSENT_FOR_APP("61004", "Error occurred while updating " +
+                "user consent for OAuth scopes for user : %s, application : %s and tenant Id : %d."),
+        ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT_FOR_APP("61005", "Error occurred while revoking " +
+                "user consent for OAuth scopes for user : %s, application : %s and tenant Id : %d."),
+        ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT("61006", "Error occurred while revoking " +
+                "user consent for OAuth scopes for user : %s in tenant with tenant Id : %d."),
+        ERROR_CODE_FAILED_TO_CHECK_ALREADY_USER_CONSENTED("61007", "Error occurred while checking " +
+                "whether user : %s is already consented for all scopes for application : %s in tenant with Id : %d."),
+        ERROR_CODE_FAILED_TO_CHECK_EXISTING_CONSENTS_FOR_USER("61008", "Error occurred while checking " +
+                "whether user : %s has an existing consent for app : %s in tenant with id : %d");
 
         private final String code;
         private final String message;

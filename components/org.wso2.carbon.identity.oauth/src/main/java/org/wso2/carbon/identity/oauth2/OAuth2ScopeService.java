@@ -16,23 +16,41 @@
 
 package org.wso2.carbon.identity.oauth2;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeCacheKey;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
+import org.wso2.carbon.identity.oauth2.model.UserApplicationScopeConsentDO;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCache;
 
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.
         ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SATIFIED_THE_REGEX;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_FAILED_TO_ADD_USER_CONSENT_FOR_APP;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_FAILED_TO_CHECK_ALREADY_USER_CONSENTED;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_FAILED_TO_CHECK_EXISTING_CONSENTS_FOR_USER;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS_FOR_APP;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT_FOR_APP;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_FAILED_TO_UPDATE_USER_CONSENT_FOR_APP;
 
 /**
  * OAuth2ScopeService use for scope handling
@@ -304,6 +322,314 @@ public class OAuth2ScopeService {
                 Integer.toString(tenantID)), updatedScope);
         OIDCScopeClaimCache.getInstance().clearScopeClaimMap(tenantID);
         return updatedScope;
+    }
+
+    /**
+     * Get OAuth scope consent given for an application by the user.
+     *
+     * @param user      Authenticated user.
+     * @param appName   Application name.
+     * @param tenantId  Tenant Id.
+     * @return  {@link OAuth2ScopeConsentResponse}.
+     * @throws IdentityOAuth2ScopeConsentException
+     */
+    public OAuth2ScopeConsentResponse getUserConsentByAppId(AuthenticatedUser user, String appName, int tenantId)
+            throws IdentityOAuth2ScopeConsentException {
+
+        String userId = resolveUserIdFromAuthenticatedUser(user);
+        String appId = resolveAppIdFromAppName(appName, tenantId);
+        try {
+             UserApplicationScopeConsentDO userConsent = OAuthTokenPersistenceFactory.getInstance()
+                     .getOAuthUserConsentedScopesDAO()
+                    .getUserConsentForApplication(userId, appId, tenantId);
+             OAuth2ScopeConsentResponse consentResponse = new OAuth2ScopeConsentResponse(userId, appId, tenantId,
+                     userConsent.getApprovedScopes(), userConsent.getDisapprovedScopes());
+             if (log.isDebugEnabled()) {
+                 log.debug("Successfully retrieved the user consent for userId : " + userId + " and appId: "
+                         + appId);
+             }
+             return consentResponse;
+        } catch (IdentityOAuth2ScopeConsentException e) {
+            throw new IdentityOAuth2ScopeConsentException(ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS_FOR_APP.getCode(),
+                    String.format(ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS_FOR_APP.getMessage(), userId, appName,
+                            tenantId), e);
+        }
+    }
+
+    /**
+     * Get list of scope consents given by user for all the applications.
+     *
+     * @param user      Authenticated user.
+     * @param tenantId  Tenant Id.
+     * @return  List of {@link OAuth2ScopeConsentResponse} objects.
+     * @throws IdentityOAuth2ScopeConsentException
+     */
+    public List<OAuth2ScopeConsentResponse> getUserConsents(AuthenticatedUser user, int tenantId)
+            throws IdentityOAuth2ScopeConsentException {
+
+        String userId = resolveUserIdFromAuthenticatedUser(user);
+        try {
+            List<UserApplicationScopeConsentDO> userConsents = OAuthTokenPersistenceFactory.getInstance()
+                    .getOAuthUserConsentedScopesDAO()
+                    .getUserConsents(userId, tenantId);
+            if (log.isDebugEnabled()) {
+                log.debug("Successfully retrieved the user consents for userId : " + userId);
+            }
+            return userConsents.stream()
+                    .map(consent -> new OAuth2ScopeConsentResponse(userId, consent.getAppId(), tenantId,
+                            consent.getApprovedScopes(), consent.getDisapprovedScopes()))
+                    .collect(Collectors.toList());
+        } catch (IdentityOAuth2ScopeConsentException e) {
+            throw new IdentityOAuth2ScopeConsentException(ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS.getCode(),
+                    String.format(ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS.getMessage(), userId, tenantId), e);
+        }
+    }
+
+    /**
+     * Add an OAuth scope consent given for an application by an user.
+     *
+     * @param user              Authenticated user.
+     * @param appName           Application name.
+     * @param tenantId          Tenant Id.
+     * @param approvedScopes    List of approved scopes.
+     * @param disapprovedScopes List of disapproved scopes.
+     * @throws IdentityOAuth2ScopeConsentException
+     */
+    public void addNewUserConsentForApplication(AuthenticatedUser user, String appName, int tenantId,
+                                                List<String> approvedScopes, List<String> disapprovedScopes)
+            throws IdentityOAuth2ScopeConsentException {
+
+        String userId = resolveUserIdFromAuthenticatedUser(user);
+        String appId = resolveAppIdFromAppName(appName, tenantId);
+        try {
+            UserApplicationScopeConsentDO userApplicationScopeConsents =
+                    new UserApplicationScopeConsentDO(appId, approvedScopes, disapprovedScopes);
+            OAuthTokenPersistenceFactory.getInstance().getOAuthUserConsentedScopesDAO()
+                    .addNewUserConsentForApplication(userId, tenantId, userApplicationScopeConsents);
+            if (log.isDebugEnabled()) {
+                log.debug("Successfully added the user consent for OAuth scopes for user : " + userId +
+                        " and application name : " + appName + " in tenant with id : " + tenantId);
+            }
+        } catch (IdentityOAuth2ScopeConsentException e) {
+            throw new IdentityOAuth2ScopeConsentException(ERROR_CODE_FAILED_TO_ADD_USER_CONSENT_FOR_APP.getCode(),
+                    String.format(ERROR_CODE_FAILED_TO_ADD_USER_CONSENT_FOR_APP.getMessage(), userId, appName,
+                            tenantId), e);
+        }
+    }
+
+    /**
+     * Update consent given for OAuth scopes by a user for a given application.
+     *
+     * @param user              Authenticated user.
+     * @param appName           Application name.
+     * @param tenantId          Tenant Id.
+     * @param approvedScopes    List of approved scopes.
+     * @param disapprovedScopes List of disapproved scopes.
+     * @throws IdentityOAuth2ScopeConsentException
+     */
+    public void updateUserConsentForApplication(AuthenticatedUser user, String appName, int tenantId,
+                                                List<String> approvedScopes, List<String> disapprovedScopes)
+            throws IdentityOAuth2ScopeConsentException {
+
+        String userId = resolveUserIdFromAuthenticatedUser(user);
+        String appId = resolveAppIdFromAppName(appName, tenantId);
+        try {
+            UserApplicationScopeConsentDO updatedUserApplicationScopeConsents =
+                    new UserApplicationScopeConsentDO(appId, approvedScopes, disapprovedScopes);
+            OAuthTokenPersistenceFactory.getInstance().getOAuthUserConsentedScopesDAO()
+                    .updateExistingConsentForApplication(userId, tenantId, updatedUserApplicationScopeConsents);
+            if (log.isDebugEnabled()) {
+                log.debug("Successfully updated the user consent for OAuth scopes for user : " + userId +
+                        " and application : " + appName + " in tenant with Id : " + tenantId);
+            }
+        } catch (IdentityOAuth2ScopeConsentException e) {
+            throw new IdentityOAuth2ScopeConsentException(ERROR_CODE_FAILED_TO_UPDATE_USER_CONSENT_FOR_APP.getCode(),
+                    String.format(ERROR_CODE_FAILED_TO_UPDATE_USER_CONSENT_FOR_APP.getMessage(), userId, appName,
+                            tenantId), e);
+        }
+    }
+
+    /**
+     * Revoke scope consents of a given user for a given application.
+     *
+     * @param user      Authenticated user.
+     * @param appName   Application identifier.
+     * @param tenantId  Tenant Id.
+     * @throws IdentityOAuth2ScopeConsentException
+     */
+    public void revokeUserConsentForApplication(AuthenticatedUser user, String appName, int tenantId)
+            throws IdentityOAuth2ScopeConsentException {
+
+        String userId = resolveUserIdFromAuthenticatedUser(user);
+        String appId = resolveAppIdFromAppName(appName, tenantId);
+        try {
+            OAuthTokenPersistenceFactory.getInstance().getOAuthUserConsentedScopesDAO()
+                    .deleteUserConsentOfApplication(userId, appId, tenantId);
+            if (log.isDebugEnabled()) {
+                log.debug("Successfully revoked the user consents for OAuth scopes for user : " + userId +
+                        " and application : " + appName + " for tenant with Id : " + tenantId);
+            }
+        } catch (IdentityOAuth2ScopeConsentException e) {
+            throw new IdentityOAuth2ScopeConsentException(ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT_FOR_APP.getCode(),
+                    String.format(ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT_FOR_APP.getMessage(), userId, appName,
+                            tenantId), e);
+        }
+    }
+
+    /**
+     * Revoke all scope consents for the user.
+     *
+     * @param user      Authenticated user.
+     * @param tenantId  Tenant Id.
+     * @throws IdentityOAuth2ScopeConsentException
+     */
+    public void revokeUserConsents(AuthenticatedUser user, int tenantId)
+            throws IdentityOAuth2ScopeConsentException {
+
+        String userId = resolveUserIdFromAuthenticatedUser(user);
+        try {
+            OAuthTokenPersistenceFactory.getInstance().getOAuthUserConsentedScopesDAO()
+                    .deleteUserConsents(userId, tenantId);
+            if (log.isDebugEnabled()) {
+                log.debug("Successfully deleted the user consents OAuth scopes for user : " + userId +
+                        " in tenant with Id : " + tenantId);
+            }
+        } catch (IdentityOAuth2ScopeConsentException e) {
+            throw new IdentityOAuth2ScopeConsentException(ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT.getCode(),
+                    String.format(ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT.getMessage(), userId, tenantId), e);
+        }
+    }
+
+    /**
+     * Check if user has already consented for requested scopes.
+     *
+     * @param user                              Authenticated user.
+     * @param appName                           Application name.
+     * @param tenantId                          Tenant Id.
+     * @param consentRequiredApprovedScopes     List of consent required approved claims.
+     * @param consentRequiredDisapprovedScopes  List of consent required disapproved claims.
+     * @return true if user has already provided the consent.
+     * @throws IdentityOAuth2ScopeConsentException
+     */
+    public boolean hasUserAlreadyProvidedConsentForAllRequestedScopes(AuthenticatedUser user, String appName,
+                                                                      int tenantId,
+                                                                      List<String> consentRequiredApprovedScopes,
+                                                                      List<String> consentRequiredDisapprovedScopes)
+            throws IdentityOAuth2ScopeConsentException {
+
+        String userId = resolveUserIdFromAuthenticatedUser(user);
+        String appId = resolveAppIdFromAppName(appName, tenantId);
+        try {
+            UserApplicationScopeConsentDO existingConsents = OAuthTokenPersistenceFactory.getInstance()
+                    .getOAuthUserConsentedScopesDAO()
+                    .getUserConsentForApplication(userId, appId, tenantId);
+            boolean consentRequiredApprovedScopesAreApproved = true;
+            boolean consentRequiredDisapprovedScopesAreDisapproved = true;
+            if (CollectionUtils.isNotEmpty(consentRequiredApprovedScopes)) {
+                consentRequiredApprovedScopesAreApproved = consentRequiredApprovedScopes
+                        .stream().allMatch(scope -> existingConsents.getApprovedScopes().contains(scope));
+            }
+            if (CollectionUtils.isNotEmpty(consentRequiredDisapprovedScopes)) {
+                consentRequiredDisapprovedScopesAreDisapproved = consentRequiredDisapprovedScopes
+                        .stream().allMatch(scope -> existingConsents.getDisapprovedScopes().contains(scope));
+            }
+            return consentRequiredApprovedScopesAreApproved && consentRequiredDisapprovedScopesAreDisapproved;
+        } catch (IdentityOAuth2ScopeConsentException e) {
+            throw new IdentityOAuth2ScopeConsentException(ERROR_CODE_FAILED_TO_CHECK_ALREADY_USER_CONSENTED.getCode(),
+                    String.format(ERROR_CODE_FAILED_TO_CHECK_ALREADY_USER_CONSENTED.getMessage(), userId, appName,
+                            tenantId), e);
+        }
+    }
+
+    /**
+     * Check if the user already has an existing consent for the application.
+     *
+     * @param user      Authenticated user.
+     * @param appName   Application name.
+     * @param tenantId  Tenant id.
+     * @return  True if user already has an existing consent.
+     * @throws IdentityOAuth2ScopeConsentException
+     */
+    public boolean isUserHasAnExistingConsentForApp(AuthenticatedUser user, String appName, int tenantId)
+            throws IdentityOAuth2ScopeConsentException {
+
+        String userId = resolveUserIdFromAuthenticatedUser(user);
+        String appId = resolveAppIdFromAppName(appName, tenantId);
+        try {
+            boolean consentExists = false;
+            UserApplicationScopeConsentDO existingConsents = OAuthTokenPersistenceFactory.getInstance()
+                    .getOAuthUserConsentedScopesDAO()
+                    .getUserConsentForApplication(userId, appId, tenantId);
+            if (CollectionUtils.isNotEmpty(existingConsents.getApprovedScopes()) ||
+                    CollectionUtils.isNotEmpty(existingConsents.getDisapprovedScopes())) {
+                consentExists = true;
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("Existing consent status : " + consentExists + " for user : " + userId +
+                        ", app : " + appName + " in tenant with id : " + tenantId);
+            }
+            return consentExists;
+        } catch (IdentityOAuth2ScopeConsentException e) {
+            throw new IdentityOAuth2ScopeConsentException(
+                    ERROR_CODE_FAILED_TO_CHECK_EXISTING_CONSENTS_FOR_USER.getCode(),
+                    String.format(ERROR_CODE_FAILED_TO_CHECK_EXISTING_CONSENTS_FOR_USER.getMessage(), userId, appName,
+                            tenantId), e);
+        }
+    }
+
+    /**
+     * Resolve user id from the authenticated user.
+     *
+     * @param user  Authenticated user.
+     * @return  User Id.
+     * @throws IdentityOAuth2ScopeConsentException
+     */
+    private String resolveUserIdFromAuthenticatedUser(AuthenticatedUser user)
+            throws IdentityOAuth2ScopeConsentException {
+
+        if (user != null && StringUtils.isNotBlank(user.toFullQualifiedUsername())) {
+            return user.toFullQualifiedUsername();
+        } else {
+            throw new IdentityOAuth2ScopeConsentClientException("Authenticated user can't be null.");
+        }
+    }
+
+    /**
+     * Resolve application Id from the appName and tenant domain.
+     *
+     * @param appName   Application name.
+     * @param tenantId  Tenant Id.
+     * @return  Application id.
+     * @throws IdentityOAuth2ScopeConsentException
+     */
+    private String resolveAppIdFromAppName(String appName, int tenantId) throws IdentityOAuth2ScopeConsentException {
+
+        if (StringUtils.isBlank(appName)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Application name can't be empty/null.");
+            }
+            throw new IdentityOAuth2ScopeConsentClientException("Application name can't be null.");
+        }
+        try {
+            ServiceProvider application = OAuth2ServiceComponentHolder.getApplicationMgtService()
+                    .getApplicationExcludingFileBasedSPs(appName, IdentityTenantUtil.getTenantDomain(tenantId));
+            if (application != null && StringUtils.isNotBlank(application.getApplicationResourceId())) {
+                return application.getApplicationResourceId();
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Can't find an application with name : " + appName + " for tenantId : " + tenantId);
+                }
+                throw new IdentityOAuth2ScopeConsentClientException("Can't find an application with name : " +
+                        appName + " for tenantId : " + tenantId);
+            }
+        } catch (IdentityApplicationManagementException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while retrieving the application Id using appName : " + appName +
+                        " and tenantId : " + tenantId);
+            }
+            throw new IdentityOAuth2ScopeConsentServerException("Error occurred while retrieving the application Id " +
+                    "using appName : " + appName + " and tenantId : " + tenantId, e);
+        }
     }
 
     /**
