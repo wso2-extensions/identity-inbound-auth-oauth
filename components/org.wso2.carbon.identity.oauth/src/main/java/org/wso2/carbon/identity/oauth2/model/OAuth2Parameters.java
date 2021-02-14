@@ -32,6 +32,7 @@ public class OAuth2Parameters implements Serializable {
     private String applicationName;
     private String redirectURI;
     private Set<String> scopes;
+    private Set<String> consentRequiredScopes;
     private String state;
     private String responseType;
     private String clientId;
@@ -105,6 +106,16 @@ public class OAuth2Parameters implements Serializable {
 
     public void setRedirectURI(String redirectURI) {
         this.redirectURI = redirectURI;
+    }
+
+    public Set<String> getConsentRequiredScopes() {
+
+        return consentRequiredScopes;
+    }
+
+    public void setConsentRequiredScopes(Set<String> consentRequiredScopes) {
+
+        this.consentRequiredScopes = consentRequiredScopes;
     }
 
     public Set<String> getScopes() {

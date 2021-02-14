@@ -97,6 +97,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -688,7 +689,10 @@ public class EndpointUtil {
 
                 consentPage = consentPage + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
                         (getFilteredScopes(params, user), UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
-                        + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&spQueryParams=" + queryString;
+                        + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" +
+                        OAuthConstants.OAuth20Params.CONSENT_REQUIRED_SCOPES + "=" +
+                        URLEncoder.encode(getConsentRequiredScopes(user, params), UTF_8) +
+                        "&spQueryParams=" + queryString;
 
                 if (entry != null) {
 
@@ -723,7 +727,7 @@ public class EndpointUtil {
             throws OAuthSystemException {
 
         try {
-            List<String> disapprovedScopeConsents = new ArrayList<>(params.getScopes());
+            List<String> disapprovedScopeConsents = new ArrayList<>(params.getConsentRequiredScopes());
             // Remove OIDC scopes.
             disapprovedScopeConsents.removeAll(
                     Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames())));
@@ -776,7 +780,7 @@ public class EndpointUtil {
                                               boolean overrideExistingConsent) throws OAuthSystemException {
 
         try {
-            List<String> userApprovedScopes = new ArrayList<>(params.getScopes());
+            List<String> userApprovedScopes = new ArrayList<>(params.getConsentRequiredScopes());
             // Remove OIDC scopes.
             userApprovedScopes.removeAll(Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames())));
             if (overrideExistingConsent) {
@@ -807,6 +811,21 @@ public class EndpointUtil {
     private static String getFilteredScopes(OAuth2Parameters params, AuthenticatedUser user)
             throws OAuthSystemException {
 
+        List<String> allowedOAuthScopes = getAllowedOAuthScopes(params);
+        StringBuilder scopes = new StringBuilder();
+        for (String scope : allowedOAuthScopes) {
+            scopes.append(scope).append(" ");
+        }
+
+        String filteredScopes = scopes.toString().trim();
+        if (log.isDebugEnabled()) {
+            log.debug("Filtered scopes: " + filteredScopes + " for request from client: " + params.getClientId());
+        }
+        return filteredScopes;
+    }
+
+    private static List<String> getAllowedOAuthScopes(OAuth2Parameters params) throws OAuthSystemException {
+
         try {
             Set<String> allowedScopes = params.getScopes();
             startTenantFlow(params.getTenantDomain());
@@ -822,38 +841,44 @@ public class EndpointUtil {
                 allowedScopes = dropUnregisteredScopes(params);
             }
 
+            // Get registered OIDC scopes.
+            String[] oidcScopes = oAuthAdminService.getScopeNames();
+            List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
+            List<String> allowedOAuthScopes = new ArrayList<>();
+            for (String scope : allowedScopes) {
+                if (!oidcScopeList.contains(scope)) {
+                    allowedOAuthScopes.add(scope);
+                }
+            }
+            return allowedOAuthScopes;
+        } catch (IdentityOAuthAdminException e) {
+            throw new OAuthSystemException("Error while retrieving OIDC scopes.", e);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    private static String getConsentRequiredScopes(AuthenticatedUser user, OAuth2Parameters params)
+            throws OAuthSystemException {
+
+        try {
+            List<String> allowedOAuthScopes = getAllowedOAuthScopes(params);
             OAuth2ScopeConsentResponse existingUserConsent = oAuth2ScopeService.getUserConsentForApp(user,
                     params.getApplicationName(), IdentityTenantUtil.getTenantId(params.getTenantDomain()));
             if (existingUserConsent != null) {
                 if (CollectionUtils.isNotEmpty(existingUserConsent.getApprovedScopes())) {
-                    allowedScopes.removeAll(existingUserConsent.getApprovedScopes());
+                    allowedOAuthScopes.removeAll(existingUserConsent.getApprovedScopes());
                 }
+                // ToDo: Remove disapproved scopes from allowed scopes after implementing selected scope approval.
             }
-            // Get registered OIDC scopes.
-            String[] oidcScopes = oAuthAdminService.getScopeNames();
-            List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
-
-            /* Remove OIDC scopes from scope string sent back
-             in the consent page as consent is not needed for
-             OIDC scopes.*/
-            StringBuilder scopes = new StringBuilder();
-            for (String scope : allowedScopes) {
-                if (!oidcScopeList.contains(scope)) {
-                    scopes.append(scope).append(" ");
-                }
+            if (CollectionUtils.isNotEmpty(allowedOAuthScopes)) {
+                params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
+                return allowedOAuthScopes.stream().collect(Collectors.joining(" ")).trim();
+            } else {
+                return StringUtils.EMPTY;
             }
-
-            String filteredScopes = scopes.toString().trim();
-            if (log.isDebugEnabled()) {
-                log.debug("Filtered scopes: " + filteredScopes + " for request from client: " + params.getClientId());
-            }
-            return scopes.toString().trim();
-        } catch (IdentityOAuthAdminException e) {
-            throw new OAuthSystemException("Error while retrieving OIDC scopes", e);
         } catch (IdentityOAuth2ScopeConsentException e) {
             throw new OAuthSystemException("Error occurred while retrieving user consents OAuth scopes.");
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
         }
     }
 
