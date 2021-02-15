@@ -10,20 +10,20 @@ public class UserApplicationScopeConsentDO {
 
     private String appId;
     private List<String> approvedScopes;
-    private List<String> disapprovedScopes;
+    private List<String> deniedScopes;
 
 
-    public UserApplicationScopeConsentDO(String appId, List<String> approvedScopes, List<String> disapprovedScopes) {
+    public UserApplicationScopeConsentDO(String appId, List<String> approvedScopes, List<String> deniedScopes) {
 
         this.appId = appId;
         setApprovedScopes(approvedScopes);
-        setDisapprovedScopes(disapprovedScopes);
+        setDeniedScopes(deniedScopes);
     }
 
     public UserApplicationScopeConsentDO(String appId) {
 
         this.appId = appId;
-        this.disapprovedScopes = Collections.emptyList();
+        this.deniedScopes = Collections.emptyList();
         this.approvedScopes = Collections.emptyList();
     }
 
@@ -51,17 +51,17 @@ public class UserApplicationScopeConsentDO {
         }
     }
 
-    public List<String> getDisapprovedScopes() {
+    public List<String> getDeniedScopes() {
 
-        return disapprovedScopes;
+        return deniedScopes;
     }
 
-    public void setDisapprovedScopes(List<String> disapprovedScopes) {
+    public void setDeniedScopes(List<String> deniedScopes) {
 
-        if (disapprovedScopes == null) {
-            this.disapprovedScopes = Collections.emptyList();
+        if (deniedScopes == null) {
+            this.deniedScopes = Collections.emptyList();
         } else {
-            this.disapprovedScopes = disapprovedScopes;
+            this.deniedScopes = deniedScopes;
         }
     }
 }

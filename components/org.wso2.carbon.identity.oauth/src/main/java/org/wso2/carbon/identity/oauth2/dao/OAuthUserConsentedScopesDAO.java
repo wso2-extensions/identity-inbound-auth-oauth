@@ -41,7 +41,7 @@ public interface OAuthUserConsentedScopesDAO {
      * @param userConsent   User consent {@link UserApplicationScopeConsentDO}.
      * @throws IdentityOAuth2ScopeConsentException
      */
-    void addNewUserConsentForApplication(String userId, int tenantId, UserApplicationScopeConsentDO userConsent)
+    void addUserConsentForApplication(String userId, int tenantId, UserApplicationScopeConsentDO userConsent)
             throws IdentityOAuth2ScopeConsentException;
 
     /**

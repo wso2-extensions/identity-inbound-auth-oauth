@@ -11,16 +11,16 @@ public class OAuth2ScopeConsentResponse {
     private String appId;
     private int tenantId;
     private List<String> approvedScopes;
-    private List<String> disapprovedScopes;
+    private List<String> deniedScopes;
 
     public OAuth2ScopeConsentResponse(String userId, String appId, int tenantId, List<String> approvedScopes,
-                                      List<String> disapprovedScopes) {
+                                      List<String> deniedScopes) {
 
         this.userId = userId;
         this.appId = appId;
         this.tenantId = tenantId;
         this.approvedScopes = approvedScopes;
-        this.disapprovedScopes = disapprovedScopes;
+        this.deniedScopes = deniedScopes;
     }
 
     public OAuth2ScopeConsentResponse(String userId, String appId, int tenantId, List<String> approvedScopes) {
@@ -48,8 +48,8 @@ public class OAuth2ScopeConsentResponse {
         return approvedScopes;
     }
 
-    public List<String> getDisapprovedScopes() {
+    public List<String> getDeniedScopes() {
 
-        return disapprovedScopes;
+        return deniedScopes;
     }
 }

@@ -59,7 +59,7 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
                 }
             }
             userScopeConsent.setApprovedScopes(approvedScopes);
-            userScopeConsent.setDisapprovedScopes(disapprovedScopes);
+            userScopeConsent.setDeniedScopes(disapprovedScopes);
             return userScopeConsent;
         } catch (SQLException e) {
             String msg = "Error occurred while retrieving scope consents for  userId  :" + userId + " and appId: " +
@@ -93,7 +93,7 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
                         if (consent) {
                             userScopeConsentsMap.get(appId).getApprovedScopes().add(scope);
                         } else {
-                            userScopeConsentsMap.get(appId).getDisapprovedScopes().add(scope);
+                            userScopeConsentsMap.get(appId).getDeniedScopes().add(scope);
                         }
                     }
                 }
@@ -110,15 +110,15 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
     }
 
     @Override
-    public void addNewUserConsentForApplication(String userId, int tenantId,
-                                                UserApplicationScopeConsentDO userConsent)
+    public void addUserConsentForApplication(String userId, int tenantId,
+                                             UserApplicationScopeConsentDO userConsent)
             throws IdentityOAuth2ScopeConsentException {
 
         if (log.isDebugEnabled()) {
             log.debug("Adding scope consents for userId  :" + userId + " and appId: " + userConsent.getAppId() +
                     " and tenantId : " + tenantId + " for approved scopes : " +
                     userConsent.getApprovedScopes().stream().collect(Collectors.joining(", ")) + " and " +
-                    "disapproved scopes : " + userConsent.getDisapprovedScopes().stream()
+                    "disapproved scopes : " + userConsent.getDeniedScopes().stream()
                     .collect(Collectors.joining(", ")) + ".");
         }
         validateUserId(userId);
@@ -167,11 +167,11 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
                         userId + ", app : " + updatedUserConsents.getAppId() + " and tenant with id : " + tenantId);
             }
             if (CollectionUtils.isNotEmpty(consentsToBeAdded.getApprovedScopes()) ||
-                    CollectionUtils.isNotEmpty(consentsToBeAdded.getDisapprovedScopes())) {
+                    CollectionUtils.isNotEmpty(consentsToBeAdded.getDeniedScopes())) {
                 addUserConsentedScopes(conn, consentId, tenantId, consentsToBeAdded);
             }
             if (CollectionUtils.isNotEmpty(consentsToBeUpdated.getApprovedScopes()) ||
-                    CollectionUtils.isNotEmpty(consentsToBeUpdated.getDisapprovedScopes())) {
+                    CollectionUtils.isNotEmpty(consentsToBeUpdated.getDeniedScopes())) {
                 updateUserConsentedScopes(conn, userId, tenantId, consentsToBeUpdated);
             }
             IdentityDatabaseUtil.commitTransaction(conn);
@@ -232,13 +232,13 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
         List<String> approvedScopes = new ArrayList<>();
         List<String> disapprovedScopes = new ArrayList<>();
         approvedScopes.addAll(updatedConsent.getApprovedScopes().stream()
-                .filter(scope -> existingConsent.getDisapprovedScopes().contains(scope))
+                .filter(scope -> existingConsent.getDeniedScopes().contains(scope))
                 .collect(Collectors.toSet()));
-        disapprovedScopes.addAll(updatedConsent.getDisapprovedScopes().stream()
+        disapprovedScopes.addAll(updatedConsent.getDeniedScopes().stream()
                 .filter(scope -> existingConsent.getApprovedScopes().contains(scope))
                 .collect(Collectors.toSet()));
         consentToBeUpdated.setApprovedScopes(approvedScopes);
-        consentToBeUpdated.setDisapprovedScopes(disapprovedScopes);
+        consentToBeUpdated.setDeniedScopes(disapprovedScopes);
         return consentToBeUpdated;
     }
 
@@ -251,12 +251,12 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
             addAll(updatedConsent.getApprovedScopes());
         }};
         List<String> disapprovedScopes = new ArrayList<String>() {{
-            addAll(updatedConsent.getDisapprovedScopes());
+            addAll(updatedConsent.getDeniedScopes());
         }};
         approvedScopes.removeAll(consentToBeUpdated.getApprovedScopes());
-        disapprovedScopes.removeAll(consentToBeUpdated.getDisapprovedScopes());
+        disapprovedScopes.removeAll(consentToBeUpdated.getDeniedScopes());
         consentToBeAdded.setApprovedScopes(approvedScopes);
-        consentToBeAdded.setDisapprovedScopes(disapprovedScopes);
+        consentToBeAdded.setDeniedScopes(disapprovedScopes);
         return consentToBeAdded;
     }
 
@@ -265,7 +265,7 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
 
         try (PreparedStatement ps = connection.prepareStatement(SQLQueries.UPDATE_OAUTH2_USER_CONSENTED_SCOPES)) {
             List<String> approvedScopes = userConsentsToBeUpdated.getApprovedScopes();
-            List<String> disapprovedScopes = userConsentsToBeUpdated.getDisapprovedScopes();
+            List<String> disapprovedScopes = userConsentsToBeUpdated.getDeniedScopes();
             if (CollectionUtils.isNotEmpty(approvedScopes)) {
                 for (String scope : approvedScopes) {
                     ps.setBoolean(1, true);
@@ -308,7 +308,7 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
 
         try (PreparedStatement ps = connection.prepareStatement(SQLQueries.INSERT_OAUTH2_USER_CONSENTED_SCOPE)) {
             List<String> approvedScopes = userConsentsToBeAdded.getApprovedScopes();
-            List<String> disapprovedScopes = userConsentsToBeAdded.getDisapprovedScopes();
+            List<String> disapprovedScopes = userConsentsToBeAdded.getDeniedScopes();
             if (CollectionUtils.isNotEmpty(approvedScopes)) {
                 for (String scope : approvedScopes) {
                     ps.setString(1, consentId);
@@ -381,7 +381,7 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
         }
 
         if (CollectionUtils.isEmpty(userConsent.getApprovedScopes())
-                && CollectionUtils.isEmpty(userConsent.getDisapprovedScopes())) {
+                && CollectionUtils.isEmpty(userConsent.getDeniedScopes())) {
             if (log.isDebugEnabled()) {
                 log.debug("User hasn't approved or disapproved any scopes.");
             }
