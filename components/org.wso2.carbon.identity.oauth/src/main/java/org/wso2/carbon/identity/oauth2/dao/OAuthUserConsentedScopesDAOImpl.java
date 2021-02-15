@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2021, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.identity.oauth2.dao;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -64,9 +82,6 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
         } catch (SQLException e) {
             String msg = "Error occurred while retrieving scope consents for  userId  :" + userId + " and appId: " +
                     appId + " and " + "tenantId : " + tenantId;
-            if (log.isDebugEnabled()) {
-                log.debug(msg, e);
-            }
             throw new IdentityOAuth2ScopeConsentServerException(msg, e);
         }
     }
@@ -102,9 +117,6 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
         } catch (SQLException e) {
             String msg = "Error occurred while retrieving scope consents for  userId  :" + userId + " in tenantId : "
                     + tenantId;
-            if (log.isDebugEnabled()) {
-                log.debug(msg, e);
-            }
             throw new IdentityOAuth2ScopeConsentServerException(msg, e);
         }
     }
@@ -132,9 +144,6 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
         } catch (SQLException e) {
             String msg = "Error occurred while adding scope consents for  userId  :" + userId + " and appId: " +
                     userConsent.getAppId() + " and " + "tenantId : " + tenantId;
-            if (log.isDebugEnabled()) {
-                log.debug(msg, e);
-            }
             throw new IdentityOAuth2ScopeConsentServerException(msg, e);
         }
     }
@@ -178,9 +187,6 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
         } catch (SQLException e) {
             String msg = "Error occurred while updating scope consents for  userId  :" + userId + " and appId: " +
                     updatedUserConsents.getAppId() + " and " + "tenantId : " + tenantId + ".";
-            if (log.isDebugEnabled()) {
-                log.debug(msg, e);
-            }
             throw new IdentityOAuth2ScopeConsentServerException(msg, e);
         }
     }
@@ -367,24 +373,15 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
             throws IdentityOAuth2ScopeConsentClientException {
 
         if (userConsent == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("User consent can't be null or empty.");
-            }
             throw new IdentityOAuth2ScopeConsentClientException("User consent can't be null or empty.");
         }
 
         if (StringUtils.isBlank(userConsent.getAppId())) {
-            if (log.isDebugEnabled()) {
-                log.debug("Application Id can't be null/empty.");
-            }
             throw new IdentityOAuth2ScopeConsentClientException("Application Id can't be null/empty.");
         }
 
         if (CollectionUtils.isEmpty(userConsent.getApprovedScopes())
                 && CollectionUtils.isEmpty(userConsent.getDeniedScopes())) {
-            if (log.isDebugEnabled()) {
-                log.debug("User hasn't approved or disapproved any scopes.");
-            }
             throw new IdentityOAuth2ScopeConsentClientException("User hasn't approved or disapproved any scopes.");
         }
     }
@@ -392,9 +389,6 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
     private void validateAppId(String appId) throws IdentityOAuth2ScopeConsentClientException {
 
         if (StringUtils.isBlank(appId)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Application Id can't be null/empty.");
-            }
             throw new IdentityOAuth2ScopeConsentClientException("Application Id can't be null/empty.");
         }
     }
@@ -402,9 +396,6 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
     private void validateUserId(String userId) throws IdentityOAuth2ScopeConsentClientException {
 
         if (StringUtils.isBlank(userId)) {
-            if (log.isDebugEnabled()) {
-                log.debug("User ID can't be empty or null.");
-            }
             throw new IdentityOAuth2ScopeConsentClientException("User ID can't be empty or null.");
         }
     }

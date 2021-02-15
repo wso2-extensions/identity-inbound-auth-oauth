@@ -435,7 +435,7 @@ public class OAuth2AuthzEndpoint {
         String consent = getConsentFromRequest(oAuthMessage);
         if (consent != null) {
             if (OAuthConstants.Consent.DENY.equals(consent)) {
-                return handleDenyConsent(oAuthMessage);
+                return handleDeniedConsent(oAuthMessage);
             }
 
             /*
@@ -657,11 +657,9 @@ public class OAuth2AuthzEndpoint {
         return Response.ok(createErrorFormPage(oauth2Params.getRedirectURI(), oauthProblemException)).build();
     }
 
-    private Response handleDenyConsent(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
+    private Response handleDeniedConsent(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
-        AuthenticatedUser user = getLoggedInUser(oAuthMessage);
-        EndpointUtil.denyOAuthScopeConsent(oauth2Params, user);
 
         OAuthErrorDTO oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleUserConsentDenial(oauth2Params);
         OAuthProblemException ex = buildConsentDenialException(oAuthErrorDTO);

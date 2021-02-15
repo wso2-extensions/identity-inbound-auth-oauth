@@ -675,7 +675,10 @@ public class EndpointUtil {
         }
         SessionDataCache sessionDataCache = SessionDataCache.getInstance();
         SessionDataCacheEntry entry = sessionDataCache.getValueFromCache(new SessionDataCacheKey(sessionDataKey));
-        AuthenticatedUser user = entry.getLoggedInUser();
+        AuthenticatedUser user = null;
+        if (entry != null) {
+            user = entry.getLoggedInUser();
+        }
         String consentPage = null;
         String sessionDataKeyConsent = UUID.randomUUID().toString();
         try {
@@ -735,7 +738,7 @@ public class EndpointUtil {
      * @param user      Authenticated user.
      * @throws OAuthSystemException
      */
-    public static void denyOAuthScopeConsent(OAuth2Parameters params, AuthenticatedUser user)
+    public static void handleDeniedOAuthScopeConsent(OAuth2Parameters params, AuthenticatedUser user)
             throws OAuthSystemException {
 
         try {
@@ -747,7 +750,7 @@ public class EndpointUtil {
             String userId = getUserIdOfAuthenticatedUser(user);
             String appId = getAppIdFromClientId(params.getClientId());
             oAuth2ScopeService.updateUserConsentForApplication(userId, appId,
-                    IdentityTenantUtil.getTenantId(params.getTenantDomain()),
+                    IdentityTenantUtil.getTenantId(user.getTenantDomain()),
                     null, disapprovedScopeConsents);
         } catch (IdentityOAuthAdminException e) {
             throw new OAuthSystemException(
@@ -776,7 +779,7 @@ public class EndpointUtil {
         String userId = getUserIdOfAuthenticatedUser(user);
         String appId = getAppIdFromClientId(oAuth2Parameters.getClientId());
         return oAuth2ScopeService.hasUserAlreadyProvidedConsentForAllRequestedScopes(userId, appId,
-                IdentityTenantUtil.getTenantId(oAuth2Parameters.getTenantDomain()), scopesToBeConsented,
+                IdentityTenantUtil.getTenantId(user.getTenantDomain()), scopesToBeConsented,
                 null);
     }
 
@@ -800,18 +803,18 @@ public class EndpointUtil {
             String appId = getAppIdFromClientId(params.getClientId());
             if (overrideExistingConsent) {
                 oAuth2ScopeService.addUserConsentForApplication(userId, appId,
-                        IdentityTenantUtil.getTenantId(params.getTenantDomain()),
+                        IdentityTenantUtil.getTenantId(user.getTenantDomain()),
                         userApprovedScopes, null);
             } else {
                 boolean isUserConsentExist = oAuth2ScopeService.isUserHasAnExistingConsentForApp(
-                        userId, appId, IdentityTenantUtil.getTenantId(params.getTenantDomain()));
+                        userId, appId, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
                 if (isUserConsentExist) {
                     oAuth2ScopeService.updateUserConsentForApplication(userId, appId,
-                            IdentityTenantUtil.getTenantId(params.getTenantDomain()),
+                            IdentityTenantUtil.getTenantId(user.getTenantDomain()),
                             userApprovedScopes, null);
                 } else {
                     oAuth2ScopeService.addUserConsentForApplication(userId, appId,
-                            IdentityTenantUtil.getTenantId(params.getTenantDomain()),
+                            IdentityTenantUtil.getTenantId(user.getTenantDomain()),
                             userApprovedScopes, null);
                 }
             }
@@ -882,7 +885,7 @@ public class EndpointUtil {
             String appId = getAppIdFromClientId(params.getClientId());
             if (!hasPromptContainsConsent(params)) {
                 OAuth2ScopeConsentResponse existingUserConsent = oAuth2ScopeService.getUserConsentForApp(userId, appId,
-                        IdentityTenantUtil.getTenantId(params.getTenantDomain()));
+                        IdentityTenantUtil.getTenantId(user.getTenantDomain()));
                 if (existingUserConsent != null) {
                     if (CollectionUtils.isNotEmpty(existingUserConsent.getApprovedScopes())) {
                         allowedOAuthScopes.removeAll(existingUserConsent.getApprovedScopes());
@@ -903,29 +906,41 @@ public class EndpointUtil {
 
     private static String getUserIdOfAuthenticatedUser(AuthenticatedUser user) throws OAuthSystemException {
 
-        String userId;
         if (!user.isFederatedUser()) {
-            try {
-                userId = FrameworkUtils.resolveUserIdFromUsername(
-                        IdentityTenantUtil.getTenantId(user.getTenantDomain()),
-                        user.getUserStoreDomain(), user.getUserName());
-            } catch (UserSessionException e) {
-                throw new OAuthSystemException("Error occurred while resolving user id from authenticated user with " +
-                        "username : " + user.getUserName(), e);
-            }
+            return resolveLocalUserUID(user);
         } else {
-            try {
-                IdentityProvider idp = idpManager.getIdPByName(user.getFederatedIdPName(), user.getTenantDomain());
-                int idpId = Integer.parseInt(idp.getId());
-                userId = UserSessionStore.getInstance().getUserId(user.getUserName(),
-                        IdentityTenantUtil.getTenantId(user.getTenantDomain()), null, idpId);
-            } catch (NumberFormatException | IdentityProviderManagementException e) {
-                throw new OAuthSystemException("Error occurred while retrieving IDP id for the federated IDP : " +
-                        user.getFederatedIdPName() + " in tenant : " + user.getTenantDomain(), e);
-            } catch (UserSessionException e) {
-                throw new OAuthSystemException("Error occurred while retrieving user id of the federated user " +
-                        "for IDP : " + user.getFederatedIdPName() + " in tenant : " + user.getTenantDomain());
-            }
+            return resolveFederatedUserUID(user);
+        }
+    }
+
+    private static String resolveLocalUserUID(AuthenticatedUser user) throws OAuthSystemException {
+
+        String userId;
+        try {
+            userId = FrameworkUtils.resolveUserIdFromUsername(
+                    IdentityTenantUtil.getTenantId(user.getTenantDomain()),
+                    user.getUserStoreDomain(), user.getUserName());
+        } catch (UserSessionException e) {
+            throw new OAuthSystemException("Error occurred while resolving user id from authenticated user with " +
+                    "username : " + user.getUserName(), e);
+        }
+        return userId;
+    }
+
+    private static String resolveFederatedUserUID(AuthenticatedUser user) throws OAuthSystemException {
+
+        String userId;
+        try {
+            IdentityProvider idp = idpManager.getIdPByName(user.getFederatedIdPName(), user.getTenantDomain());
+            int idpId = Integer.parseInt(idp.getId());
+            userId = UserSessionStore.getInstance().getUserId(user.getUserName(),
+                    IdentityTenantUtil.getTenantId(user.getTenantDomain()), null, idpId);
+        } catch (NumberFormatException | IdentityProviderManagementException e) {
+            throw new OAuthSystemException("Error occurred while retrieving IDP id for the federated IDP : " +
+                    user.getFederatedIdPName() + " in tenant : " + user.getTenantDomain(), e);
+        } catch (UserSessionException e) {
+            throw new OAuthSystemException("Error occurred while retrieving user id of the federated user " +
+                    "for IDP : " + user.getFederatedIdPName() + " in tenant : " + user.getTenantDomain());
         }
         return userId;
     }
@@ -936,9 +951,8 @@ public class EndpointUtil {
             ServiceProvider sp = OAuth2Util.getServiceProvider(clientId);
             if (sp != null) {
                 return sp.getApplicationResourceId();
-            } else {
-                throw new OAuthSystemException("Unable to find an service provider with client Id : " + clientId);
             }
+            throw new OAuthSystemException("Unable to find an service provider with client Id : " + clientId);
         } catch (IdentityOAuth2Exception e) {
             throw new OAuthSystemException("Error occurred while resolving application Id using the client Id : "
                     + clientId, e);
