@@ -880,13 +880,15 @@ public class EndpointUtil {
             List<String> allowedOAuthScopes = getAllowedOAuthScopes(params);
             String userId = getUserIdOfAuthenticatedUser(user);
             String appId = getAppIdFromClientId(params.getClientId());
-            OAuth2ScopeConsentResponse existingUserConsent = oAuth2ScopeService.getUserConsentForApp(userId, appId,
-                    IdentityTenantUtil.getTenantId(params.getTenantDomain()));
-            if (existingUserConsent != null) {
-                if (CollectionUtils.isNotEmpty(existingUserConsent.getApprovedScopes())) {
-                    allowedOAuthScopes.removeAll(existingUserConsent.getApprovedScopes());
+            if (!hasPromptContainsConsent(params)) {
+                OAuth2ScopeConsentResponse existingUserConsent = oAuth2ScopeService.getUserConsentForApp(userId, appId,
+                        IdentityTenantUtil.getTenantId(params.getTenantDomain()));
+                if (existingUserConsent != null) {
+                    if (CollectionUtils.isNotEmpty(existingUserConsent.getApprovedScopes())) {
+                        allowedOAuthScopes.removeAll(existingUserConsent.getApprovedScopes());
+                    }
+                    // ToDo: Remove disapproved scopes from allowed scopes after implementing selected scope approval.
                 }
-                // ToDo: Remove disapproved scopes from allowed scopes after implementing selected scope approval.
             }
             if (CollectionUtils.isNotEmpty(allowedOAuthScopes)) {
                 params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
@@ -941,6 +943,15 @@ public class EndpointUtil {
             throw new OAuthSystemException("Error occurred while resolving application Id using the client Id : "
                     + clientId, e);
         }
+    }
+
+    private static boolean hasPromptContainsConsent(OAuth2Parameters oauth2Params) {
+
+        String[] prompts = null;
+        if (StringUtils.isNotBlank(oauth2Params.getPrompt())) {
+            prompts = oauth2Params.getPrompt().trim().split("\\s");
+        }
+        return prompts != null && Arrays.asList(prompts).contains(OAuthConstants.Prompt.CONSENT);
     }
 
     private static void startTenantFlow(String tenantDomain) {
