@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.dto;
 
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -113,6 +115,11 @@ public class OAuth2IntrospectionResponseDTO {
      * OPTIONAL. Authorized user type of the token. (APPLICATION or APPLICATION_USER)
      */
     private String aut;
+
+    /*
+     * OPTIONAL. User object for the resource owner who authorized this token.
+     */
+    private AuthenticatedUser authorizedUser;
 
     /*
      * this is used for extensions.
@@ -299,5 +306,15 @@ public class OAuth2IntrospectionResponseDTO {
     public void setAut(String aut) {
 
         this.aut = aut;
+    }
+
+    public AuthenticatedUser getAuthorizedUser() {
+
+        return authorizedUser;
+    }
+
+    public void setAuthorizedUser(AuthenticatedUser authorizedUser) {
+
+        this.authorizedUser = authorizedUser;
     }
 }

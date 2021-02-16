@@ -84,10 +84,10 @@ public class OAuth2IntrospectionEndpoint {
                     entity("{\"error\": \"" + INVALID_INPUT + "\"}").build();
         }
 
-        String[] claimsUris;
+        String[] claimsUris = null;
         if (StringUtils.isNotEmpty(requiredClaims)) {
             claimsUris = requiredClaims.split(",");
-        } else {
+        } else if (requiredClaims != null && requiredClaims.length() == 0) {
             claimsUris = new String[0];
         }
 
