@@ -601,7 +601,7 @@ public class OAuth2ScopeService {
     private void validateAppId(String appId) throws IdentityOAuth2ScopeConsentException {
 
         if (StringUtils.isBlank(appId)) {
-            throw new IdentityOAuth2ScopeConsentClientException("Application name can't be null/empty.");
+            throw new IdentityOAuth2ScopeConsentClientException("Application ID can't be null/empty.");
         }
     }
 

@@ -2241,8 +2241,8 @@ public class OAuth2AuthzEndpoint {
         try {
             return EndpointUtil.isUserAlreadyConsentedForOAuthScopes(user, oauth2Params);
         } catch (IdentityOAuth2ScopeConsentException | IdentityOAuthAdminException e) {
-            throw new OAuthSystemException("Error occurred while checking scopes are already approved by the user.",
-                    e);
+            throw new OAuthSystemException("Error occurred while checking user has already approved the consent " +
+                    "required OAuth scopes.", e);
         }
     }
 
