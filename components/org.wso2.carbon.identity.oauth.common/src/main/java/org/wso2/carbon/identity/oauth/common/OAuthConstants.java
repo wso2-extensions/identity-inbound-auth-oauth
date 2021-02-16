@@ -216,7 +216,6 @@ public final class OAuthConstants {
     public static class OAuth20Params {
 
         public static final String SCOPE = "scope";
-        public static final String CONSENT_REQUIRED_SCOPES = "consentRequiredScopes";
         public static final String PROMPT = "prompt";
         public static final String NONCE = "nonce";
         public static final String DISPLAY = "display";

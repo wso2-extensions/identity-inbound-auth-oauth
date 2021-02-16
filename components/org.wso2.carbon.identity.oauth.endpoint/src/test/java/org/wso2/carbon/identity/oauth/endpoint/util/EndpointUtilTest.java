@@ -19,7 +19,6 @@ package org.wso2.carbon.identity.oauth.endpoint.util;
 
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.collections.map.HashedMap;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
@@ -88,7 +87,6 @@ import javax.ws.rs.core.MultivaluedMap;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyMap;
-import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.doAnswer;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
@@ -280,8 +278,6 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuth2Util.class);
         spy(EndpointUtil.class);
         doReturn("sampleId").when(EndpointUtil.class, "getAppIdFromClientId", anyString());
-        doReturn(StringUtils.EMPTY).when(EndpointUtil.class, "getConsentRequiredScopes", anyObject(), anyObject());
-
         mockStatic(SessionDataCache.class);
         when(SessionDataCache.getInstance()).thenReturn(mockedSessionDataCache);
         if (cacheEntryExists) {

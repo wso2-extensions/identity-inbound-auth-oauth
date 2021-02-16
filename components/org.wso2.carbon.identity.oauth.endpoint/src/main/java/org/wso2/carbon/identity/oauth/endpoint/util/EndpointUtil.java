@@ -676,11 +676,6 @@ public class EndpointUtil {
         SessionDataCache sessionDataCache = SessionDataCache.getInstance();
         SessionDataCacheEntry entry = sessionDataCache.getValueFromCache(new SessionDataCacheKey(sessionDataKey));
         AuthenticatedUser user = null;
-        String consentRequiredScopes = StringUtils.EMPTY;
-        if (entry != null) {
-            user = entry.getLoggedInUser();
-            consentRequiredScopes = getConsentRequiredScopes(user, params);
-        }
         String consentPage = null;
         String sessionDataKeyConsent = UUID.randomUUID().toString();
         try {
@@ -704,11 +699,14 @@ public class EndpointUtil {
                 }
                 consentPage += "&tenantDomain=" + getSPTenantDomainFromClientId(params.getClientId());
 
+                if (entry != null) {
+                    user = entry.getLoggedInUser();
+                }
+                String consentRequiredScopes = getConsentRequiredScopes(user, params);
+
                 consentPage = consentPage + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
-                        (getFilteredScopes(params), UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
+                        (consentRequiredScopes, UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
                         + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" +
-                        OAuthConstants.OAuth20Params.CONSENT_REQUIRED_SCOPES + "=" +
-                        URLEncoder.encode(consentRequiredScopes, UTF_8) +
                         "&spQueryParams=" + queryString;
 
                 if (entry != null) {
@@ -834,22 +832,6 @@ public class EndpointUtil {
         }
     }
 
-    private static String getFilteredScopes(OAuth2Parameters params)
-            throws OAuthSystemException {
-
-        List<String> allowedOAuthScopes = getAllowedOAuthScopes(params);
-        StringBuilder scopes = new StringBuilder();
-        for (String scope : allowedOAuthScopes) {
-            scopes.append(scope).append(" ");
-        }
-
-        String filteredScopes = scopes.toString().trim();
-        if (log.isDebugEnabled()) {
-            log.debug("Filtered scopes: " + filteredScopes + " for request from client: " + params.getClientId());
-        }
-        return filteredScopes;
-    }
-
     private static List<String> getAllowedOAuthScopes(OAuth2Parameters params) throws OAuthSystemException {
 
         Set<String> allowedScopes = params.getScopes();
@@ -891,16 +873,15 @@ public class EndpointUtil {
 
         try {
             List<String> allowedOAuthScopes = getAllowedOAuthScopes(params);
-            String userId = getUserIdOfAuthenticatedUser(user);
-            String appId = getAppIdFromClientId(params.getClientId());
-            if (!isPromptContainsConsent(params)) {
-                OAuth2ScopeConsentResponse existingUserConsent = oAuth2ScopeService.getUserConsentForApp(userId, appId,
-                        IdentityTenantUtil.getTenantId(user.getTenantDomain()));
+            if (user != null && !isPromptContainsConsent(params)) {
+                String userId = getUserIdOfAuthenticatedUser(user);
+                String appId = getAppIdFromClientId(params.getClientId());
+                OAuth2ScopeConsentResponse existingUserConsent = oAuth2ScopeService.getUserConsentForApp(
+                        userId, appId, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
                 if (existingUserConsent != null) {
                     if (CollectionUtils.isNotEmpty(existingUserConsent.getApprovedScopes())) {
                         allowedOAuthScopes.removeAll(existingUserConsent.getApprovedScopes());
                     }
-                    // ToDo: Remove disapproved scopes from allowed scopes after implementing selected scope approval.
                 }
             }
             if (CollectionUtils.isNotEmpty(allowedOAuthScopes)) {
