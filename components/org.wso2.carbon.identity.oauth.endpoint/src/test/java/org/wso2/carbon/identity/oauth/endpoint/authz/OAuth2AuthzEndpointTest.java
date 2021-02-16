@@ -577,6 +577,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
+        spy(FrameworkUtils.class);
+        doReturn("sample").when(FrameworkUtils.class, "resolveUserIdFromUsername", anyInt(), anyString(), anyString());
         try (Connection connection = getConnection()) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
@@ -593,6 +595,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
             mockEndpointUtil();
             when(oAuth2Service.handleAuthenticationFailure(oAuth2Params)).thenReturn(oAuthErrorDTO);
+            when(oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(
+                    anyString(), anyString(), anyInt(), anyList(), anyList())).thenReturn(true);
 
             mockServiceURLBuilder();
 
@@ -1171,6 +1175,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(loginCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
 
         mockEndpointUtil();
+        when(oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(
+                anyString(), anyString(), anyInt(), anyList(), anyList())).thenReturn(hasUserApproved);
 
         mockOAuthServerConfiguration();
 
@@ -1198,6 +1204,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
         mockApplicationManagementService();
+
+        spy(FrameworkUtils.class);
+        doReturn("sample").when(FrameworkUtils.class, "resolveUserIdFromUsername", anyInt(), anyString(), anyString());
+        spy(IdentityTenantUtil.class);
+        doReturn(MultitenantConstants.SUPER_TENANT_ID).when(IdentityTenantUtil.class, "getTenantId", anyString());
+        doReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME).when(IdentityTenantUtil.class, "getTenantDomain",
+                anyInt());
 
         Response response;
         try {
@@ -1320,6 +1333,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
         mockApplicationManagementService();
+
+        spy(FrameworkUtils.class);
+        doReturn("sample").when(FrameworkUtils.class, "resolveUserIdFromUsername", anyInt(), anyString(), anyString());
+        spy(IdentityTenantUtil.class);
+        doReturn(MultitenantConstants.SUPER_TENANT_ID).when(IdentityTenantUtil.class, "getTenantId", anyString());
+        doReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME).when(IdentityTenantUtil.class, "getTenantDomain",
+                anyInt());
 
         Response response;
         try {
@@ -1784,12 +1804,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         doReturn(requestObjectService).when(EndpointUtil.class, "getRequestObjectService");
         EndpointUtil.setOAuthAdminService(oAuthAdminService);
         EndpointUtil.setOAuth2ScopeService(oAuth2ScopeService);
-        when(oAuthAdminService.getScopeNames()).thenReturn(new String[0]);
-        when(oAuth2ScopeService.isUserHasAnExistingConsentForApp(anyString(), anyString(), anyInt())).thenReturn(true);
-        when(oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(
-                anyString(), anyString(), anyInt(), anyList(), anyList())).thenReturn(true);
-        when(oAuth2ScopeService.getUserConsentForApp(anyString(), anyString(), anyInt()))
-                .thenReturn(oAuth2ScopeConsentResponse);
 
         // TODO: Remove mocking consentUtil and test the consent flow as well
         // https://github.com/wso2/product-is/issues/2679
@@ -1804,13 +1818,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 .thenReturn(new ConsentClaimsData());
 
         doReturn(ssoConsentService).when(EndpointUtil.class, "getSSOConsentService");
-
-        mockStatic(FrameworkUtils.class);
-        when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString())).thenReturn("sample");
-        when(FrameworkUtils.appendQueryParamsStringToUrl(anyString(), anyString())).thenCallRealMethod();
-        when(FrameworkUtils.getRedirectURL(anyString(), any(HttpServletRequest.class))).thenCallRealMethod();
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
     }
 
     private AuthenticationResult setAuthenticationResult(boolean isAuthenticated, Map<ClaimMapping, String> attributes,
