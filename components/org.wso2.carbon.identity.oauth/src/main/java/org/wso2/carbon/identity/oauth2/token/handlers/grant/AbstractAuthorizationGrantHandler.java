@@ -851,6 +851,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             if (getAccessTokenExpiryTimeMillis(existingToken) == 0) {
                 // Token is expired. Clear it from cache.
                 removeFromCache(cacheKey, consumerKey, existingToken);
+                return null;
             }
         }
         return existingToken;
