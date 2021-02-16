@@ -1786,7 +1786,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         EndpointUtil.setOAuth2ScopeService(oAuth2ScopeService);
         when(oAuthAdminService.getScopeNames()).thenReturn(new String[0]);
         when(oAuth2ScopeService.isUserHasAnExistingConsentForApp(anyString(), anyString(), anyInt())).thenReturn(true);
-        when(oAuth2ScopeService.hasUserAlreadyProvidedConsentForAllRequestedScopes(
+        when(oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(
                 anyString(), anyString(), anyInt(), anyList(), anyList())).thenReturn(true);
         when(oAuth2ScopeService.getUserConsentForApp(anyString(), anyString(), anyInt()))
                 .thenReturn(oAuth2ScopeConsentResponse);

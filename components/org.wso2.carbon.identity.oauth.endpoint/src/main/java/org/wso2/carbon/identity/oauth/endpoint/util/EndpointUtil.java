@@ -783,7 +783,7 @@ public class EndpointUtil {
         scopesToBeConsented.removeAll(Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames())));
         String userId = getUserIdOfAuthenticatedUser(user);
         String appId = getAppIdFromClientId(oAuth2Parameters.getClientId());
-        return oAuth2ScopeService.hasUserAlreadyProvidedConsentForAllRequestedScopes(userId, appId,
+        return oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(userId, appId,
                 IdentityTenantUtil.getTenantId(user.getTenantDomain()), scopesToBeConsented,
                 null);
     }
@@ -893,7 +893,7 @@ public class EndpointUtil {
             List<String> allowedOAuthScopes = getAllowedOAuthScopes(params);
             String userId = getUserIdOfAuthenticatedUser(user);
             String appId = getAppIdFromClientId(params.getClientId());
-            if (!hasPromptContainsConsent(params)) {
+            if (!isPromptContainsConsent(params)) {
                 OAuth2ScopeConsentResponse existingUserConsent = oAuth2ScopeService.getUserConsentForApp(userId, appId,
                         IdentityTenantUtil.getTenantId(user.getTenantDomain()));
                 if (existingUserConsent != null) {
@@ -969,7 +969,7 @@ public class EndpointUtil {
         }
     }
 
-    private static boolean hasPromptContainsConsent(OAuth2Parameters oauth2Params) {
+    private static boolean isPromptContainsConsent(OAuth2Parameters oauth2Params) {
 
         String[] prompts = null;
         if (StringUtils.isNotBlank(oauth2Params.getPrompt())) {
