@@ -676,8 +676,10 @@ public class EndpointUtil {
         SessionDataCache sessionDataCache = SessionDataCache.getInstance();
         SessionDataCacheEntry entry = sessionDataCache.getValueFromCache(new SessionDataCacheKey(sessionDataKey));
         AuthenticatedUser user = null;
+        String consentRequiredScopes = StringUtils.EMPTY;
         if (entry != null) {
             user = entry.getLoggedInUser();
+            consentRequiredScopes = getConsentRequiredScopes(user, params);
         }
         String consentPage = null;
         String sessionDataKeyConsent = UUID.randomUUID().toString();
@@ -703,10 +705,10 @@ public class EndpointUtil {
                 consentPage += "&tenantDomain=" + getSPTenantDomainFromClientId(params.getClientId());
 
                 consentPage = consentPage + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
-                        (getFilteredScopes(params, user), UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
+                        (getFilteredScopes(params), UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
                         + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" +
                         OAuthConstants.OAuth20Params.CONSENT_REQUIRED_SCOPES + "=" +
-                        URLEncoder.encode(getConsentRequiredScopes(user, params), UTF_8) +
+                        URLEncoder.encode(consentRequiredScopes, UTF_8) +
                         "&spQueryParams=" + queryString;
 
                 if (entry != null) {
@@ -742,16 +744,19 @@ public class EndpointUtil {
             throws OAuthSystemException {
 
         try {
-            List<String> disapprovedScopeConsents = new ArrayList<>(params.getConsentRequiredScopes());
-            // Remove OIDC scopes.
-            disapprovedScopeConsents.removeAll(
-                    Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames())));
-            // Update user consent by merging existing consent.
-            String userId = getUserIdOfAuthenticatedUser(user);
-            String appId = getAppIdFromClientId(params.getClientId());
-            oAuth2ScopeService.updateUserConsentForApplication(userId, appId,
-                    IdentityTenantUtil.getTenantId(user.getTenantDomain()),
-                    null, disapprovedScopeConsents);
+            Set<String> userDeniedScopesSet = params.getConsentRequiredScopes();
+            if (CollectionUtils.isNotEmpty(userDeniedScopesSet)) {
+                List<String> disapprovedScopeConsents = new ArrayList<>(userDeniedScopesSet);
+                // Remove OIDC scopes.
+                disapprovedScopeConsents.removeAll(
+                        Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames())));
+                // Update user consent by merging existing consent.
+                String userId = getUserIdOfAuthenticatedUser(user);
+                String appId = getAppIdFromClientId(params.getClientId());
+                oAuth2ScopeService.updateUserConsentForApplication(userId, appId,
+                        IdentityTenantUtil.getTenantId(user.getTenantDomain()),
+                        null, disapprovedScopeConsents);
+            }
         } catch (IdentityOAuthAdminException e) {
             throw new OAuthSystemException(
                     "Error occurred while removing OIDC scopes from disapproved OAuth scopes.", e);
@@ -796,26 +801,29 @@ public class EndpointUtil {
                                               boolean overrideExistingConsent) throws OAuthSystemException {
 
         try {
-            List<String> userApprovedScopes = new ArrayList<>(params.getConsentRequiredScopes());
-            // Remove OIDC scopes.
-            userApprovedScopes.removeAll(Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames())));
-            String userId = getUserIdOfAuthenticatedUser(user);
-            String appId = getAppIdFromClientId(params.getClientId());
-            if (overrideExistingConsent) {
-                oAuth2ScopeService.addUserConsentForApplication(userId, appId,
-                        IdentityTenantUtil.getTenantId(user.getTenantDomain()),
-                        userApprovedScopes, null);
-            } else {
-                boolean isUserConsentExist = oAuth2ScopeService.isUserHasAnExistingConsentForApp(
-                        userId, appId, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
-                if (isUserConsentExist) {
-                    oAuth2ScopeService.updateUserConsentForApplication(userId, appId,
-                            IdentityTenantUtil.getTenantId(user.getTenantDomain()),
-                            userApprovedScopes, null);
-                } else {
+            Set<String> userApprovedScopesSet = params.getConsentRequiredScopes();
+            if (CollectionUtils.isNotEmpty(userApprovedScopesSet)) {
+                List<String> userApprovedScopes = new ArrayList<>(userApprovedScopesSet);
+                // Remove OIDC scopes.
+                userApprovedScopes.removeAll(Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames())));
+                String userId = getUserIdOfAuthenticatedUser(user);
+                String appId = getAppIdFromClientId(params.getClientId());
+                if (overrideExistingConsent) {
                     oAuth2ScopeService.addUserConsentForApplication(userId, appId,
                             IdentityTenantUtil.getTenantId(user.getTenantDomain()),
                             userApprovedScopes, null);
+                } else {
+                    boolean isUserConsentExist = oAuth2ScopeService.isUserHasAnExistingConsentForApp(
+                            userId, appId, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
+                    if (isUserConsentExist) {
+                        oAuth2ScopeService.updateUserConsentForApplication(userId, appId,
+                                IdentityTenantUtil.getTenantId(user.getTenantDomain()),
+                                userApprovedScopes, null);
+                    } else {
+                        oAuth2ScopeService.addUserConsentForApplication(userId, appId,
+                                IdentityTenantUtil.getTenantId(user.getTenantDomain()),
+                                userApprovedScopes, null);
+                    }
                 }
             }
         } catch (IdentityOAuthAdminException e) {
@@ -826,7 +834,7 @@ public class EndpointUtil {
         }
     }
 
-    private static String getFilteredScopes(OAuth2Parameters params, AuthenticatedUser user)
+    private static String getFilteredScopes(OAuth2Parameters params)
             throws OAuthSystemException {
 
         List<String> allowedOAuthScopes = getAllowedOAuthScopes(params);
@@ -844,36 +852,38 @@ public class EndpointUtil {
 
     private static List<String> getAllowedOAuthScopes(OAuth2Parameters params) throws OAuthSystemException {
 
-        try {
-            Set<String> allowedScopes = params.getScopes();
-            startTenantFlow(params.getTenantDomain());
+        Set<String> allowedScopes = params.getScopes();
+        List<String> allowedOAuthScopes = new ArrayList<>();
+        if (CollectionUtils.isNotEmpty(allowedScopes)) {
+            try {
+                startTenantFlow(params.getTenantDomain());
 
             /* If DropUnregisteredScopes scopes config is enabled
              then any unregistered scopes(excluding internal scopes
              and allowed scopes) is be dropped. Therefore they will
              not be shown in the user consent screen.*/
-            if (oauthServerConfiguration.isDropUnregisteredScopes()) {
-                if (log.isDebugEnabled()) {
-                    log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
+                if (oauthServerConfiguration.isDropUnregisteredScopes()) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
+                    }
+                    allowedScopes = dropUnregisteredScopes(params);
                 }
-                allowedScopes = dropUnregisteredScopes(params);
-            }
 
-            // Get registered OIDC scopes.
-            String[] oidcScopes = oAuthAdminService.getScopeNames();
-            List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
-            List<String> allowedOAuthScopes = new ArrayList<>();
-            for (String scope : allowedScopes) {
-                if (!oidcScopeList.contains(scope)) {
-                    allowedOAuthScopes.add(scope);
+                // Get registered OIDC scopes.
+                String[] oidcScopes = oAuthAdminService.getScopeNames();
+                List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
+                for (String scope : allowedScopes) {
+                    if (!oidcScopeList.contains(scope)) {
+                        allowedOAuthScopes.add(scope);
+                    }
                 }
+            } catch (IdentityOAuthAdminException e) {
+                throw new OAuthSystemException("Error while retrieving OIDC scopes.", e);
+            } finally {
+                PrivilegedCarbonContext.endTenantFlow();
             }
-            return allowedOAuthScopes;
-        } catch (IdentityOAuthAdminException e) {
-            throw new OAuthSystemException("Error while retrieving OIDC scopes.", e);
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
         }
+        return allowedOAuthScopes;
     }
 
     private static String getConsentRequiredScopes(AuthenticatedUser user, OAuth2Parameters params)
