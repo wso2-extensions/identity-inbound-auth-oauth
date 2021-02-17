@@ -117,7 +117,7 @@ public class OAuth2IntrospectionResponseDTO {
     private String aut;
 
     /*
-     * OPTIONAL. User object for the resource owner who authorized this token.
+     * OPTIONAL. Represents the resource owner who authorized this token.
      */
     private AuthenticatedUser authorizedUser;
 
