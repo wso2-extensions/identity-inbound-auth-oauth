@@ -333,7 +333,10 @@ public class OAuth2ScopeService {
                      userConsent.getApprovedScopes(), userConsent.getDeniedScopes());
              if (log.isDebugEnabled()) {
                  log.debug("Successfully retrieved the user consent for userId : " + userId + " and appId: "
-                         + appId);
+                         + appId + " as approved scopes : " +
+                         userConsent.getApprovedScopes().stream().collect(Collectors.joining(" ")) +
+                         " and denied scopes : " +
+                         userConsent.getDeniedScopes().stream().collect(Collectors.joining(" ")));
              }
              return consentResponse;
         } catch (IdentityOAuth2ScopeConsentException e) {

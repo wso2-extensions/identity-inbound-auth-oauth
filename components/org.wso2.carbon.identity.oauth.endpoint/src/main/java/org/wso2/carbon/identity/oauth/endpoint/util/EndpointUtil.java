@@ -703,7 +703,12 @@ public class EndpointUtil {
                 if (entry != null) {
                     user = entry.getLoggedInUser();
                 }
-                String consentRequiredScopes = getConsentRequiredScopes(user, params);
+                setConsentRequiredScopesToOAuthParams(user, params);
+                Set<String> consentRequiredScopesSet = params.getConsentRequiredScopes();
+                String consentRequiredScopes = StringUtils.EMPTY;
+                if (CollectionUtils.isNotEmpty(consentRequiredScopesSet)) {
+                    consentRequiredScopes = String.join(" ", consentRequiredScopesSet).trim();
+                }
 
                 consentPage = consentPage + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
                         (consentRequiredScopes, UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
@@ -743,6 +748,9 @@ public class EndpointUtil {
             throws OAuthSystemException {
 
         try {
+            if (log.isDebugEnabled()) {
+                log.debug("Handling scope consent denial for client : " + params.getClientId());
+            }
             Set<String> userDeniedScopesSet = params.getConsentRequiredScopes();
             if (CollectionUtils.isNotEmpty(userDeniedScopesSet)) {
                 List<String> disapprovedScopeConsents = new ArrayList<>(userDeniedScopesSet);
@@ -778,8 +786,13 @@ public class EndpointUtil {
             throws IdentityOAuth2ScopeException, IdentityOAuthAdminException, OAuthSystemException {
 
         List<String> scopesToBeConsented = new ArrayList<>(oAuth2Parameters.getScopes());
+        if (log.isDebugEnabled()) {
+            log.debug("Checking if user has already provided the consent for requested scopes : " +
+                    scopesToBeConsented.stream().collect(Collectors.joining(" ")) + " for client : " +
+                    oAuth2Parameters.getClientId());
+        }
         // Remove OIDC scopes.
-        scopesToBeConsented.removeAll(Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames())));
+        scopesToBeConsented.removeAll(getOIDCScopeNames());
         String userId = getUserIdOfAuthenticatedUser(user);
         String appId = getAppIdFromClientId(oAuth2Parameters.getClientId());
         return oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(userId, appId,
@@ -801,9 +814,13 @@ public class EndpointUtil {
         try {
             Set<String> userApprovedScopesSet = params.getConsentRequiredScopes();
             if (CollectionUtils.isNotEmpty(userApprovedScopesSet)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Storing user consent for approved scopes : " + userApprovedScopesSet.stream()
+                            .collect(Collectors.joining(" ")) + " of client : " + params.getClientId());
+                }
                 List<String> userApprovedScopes = new ArrayList<>(userApprovedScopesSet);
                 // Remove OIDC scopes.
-                userApprovedScopes.removeAll(Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames())));
+                userApprovedScopes.removeAll(getOIDCScopeNames());
                 String userId = getUserIdOfAuthenticatedUser(user);
                 String appId = getAppIdFromClientId(params.getClientId());
                 if (overrideExistingConsent) {
@@ -826,10 +843,15 @@ public class EndpointUtil {
             }
         } catch (IdentityOAuthAdminException e) {
             throw new OAuthSystemException(
-                    "Error occurred while removing OIDC scopes from disapproved OAuth scopes.", e);
+                    "Error occurred while removing OIDC scopes from approved OAuth scopes.", e);
         } catch (IdentityOAuth2ScopeException e) {
             throw new OAuthSystemException("Error occurred while storing OAuth scope consent.", e);
         }
+    }
+
+    private static List<String> getOIDCScopeNames() throws IdentityOAuthAdminException {
+
+        return Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames()));
     }
 
     private static List<String> getAllowedOAuthScopes(OAuth2Parameters params) throws OAuthSystemException {
@@ -865,13 +887,18 @@ public class EndpointUtil {
                 PrivilegedCarbonContext.endTenantFlow();
             }
         }
+        if (log.isDebugEnabled()) {
+            log.debug("Allowed OAuth scopes : " + allowedOAuthScopes.stream()
+                    .collect(Collectors.joining(" ")) + " for client : " + params.getClientId());
+        }
         return allowedOAuthScopes;
     }
 
-    private static String getConsentRequiredScopes(AuthenticatedUser user, OAuth2Parameters params)
+    private static void setConsentRequiredScopesToOAuthParams(AuthenticatedUser user, OAuth2Parameters params)
             throws OAuthSystemException {
 
         try {
+            String consentRequiredScopes = StringUtils.EMPTY;
             List<String> allowedOAuthScopes = getAllowedOAuthScopes(params);
             if (user != null && !isPromptContainsConsent(params)) {
                 String userId = getUserIdOfAuthenticatedUser(user);
@@ -886,9 +913,11 @@ public class EndpointUtil {
             }
             if (CollectionUtils.isNotEmpty(allowedOAuthScopes)) {
                 params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
-                return allowedOAuthScopes.stream().collect(Collectors.joining(" ")).trim();
-            } else {
-                return StringUtils.EMPTY;
+                consentRequiredScopes = String.join(" ", allowedOAuthScopes).trim();
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("Consent required scopes : " + consentRequiredScopes + " for request from client : " +
+                        params.getClientId());
             }
         } catch (IdentityOAuth2ScopeException e) {
             throw new OAuthSystemException("Error occurred while retrieving user consents OAuth scopes.");
