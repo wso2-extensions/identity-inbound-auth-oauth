@@ -596,7 +596,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             mockEndpointUtil();
             when(oAuth2Service.handleAuthenticationFailure(oAuth2Params)).thenReturn(oAuthErrorDTO);
             when(oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(
-                    anyString(), anyString(), anyInt(), anyList(), anyList())).thenReturn(true);
+                    anyString(), anyString(), anyInt(), anyList())).thenReturn(true);
 
             mockServiceURLBuilder();
 
@@ -1176,7 +1176,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         mockEndpointUtil();
         when(oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(
-                anyString(), anyString(), anyInt(), anyList(), anyList())).thenReturn(hasUserApproved);
+                anyString(), anyString(), anyInt(), anyList())).thenReturn(hasUserApproved);
 
         mockOAuthServerConfiguration();
 

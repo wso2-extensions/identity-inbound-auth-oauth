@@ -83,7 +83,7 @@ import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeConsentException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -660,6 +660,8 @@ public class OAuth2AuthzEndpoint {
     private Response handleDeniedConsent(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
+        OpenIDConnectUserRPStore.getInstance().putUserRPToStore(getLoggedInUser(oAuthMessage),
+                getOauth2Params(oAuthMessage).getApplicationName(), false, oauth2Params.getClientId());
 
         OAuthErrorDTO oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleUserConsentDenial(oauth2Params);
         OAuthProblemException ex = buildConsentDenialException(oAuthErrorDTO);
@@ -1041,13 +1043,17 @@ public class OAuth2AuthzEndpoint {
     private void storeUserConsent(OAuthMessage oAuthMessage, String consent) throws OAuthSystemException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
+        String applicationName = oauth2Params.getApplicationName();
         AuthenticatedUser loggedInUser = getLoggedInUser(oAuthMessage);
+        String clientId = oauth2Params.getClientId();
 
         ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
 
         if (!isConsentSkipped(serviceProvider)) {
             boolean approvedAlways = OAuthConstants.Consent.APPROVE_ALWAYS.equals(consent);
             if (approvedAlways) {
+                OpenIDConnectUserRPStore.getInstance().putUserRPToStore(loggedInUser, applicationName,
+                        true, clientId);
                 if (hasPromptContainsConsent(oauth2Params)) {
                     EndpointUtil.storeOAuthScopeConsent(loggedInUser, oauth2Params, true);
                 } else {
@@ -2240,7 +2246,7 @@ public class OAuth2AuthzEndpoint {
 
         try {
             return EndpointUtil.isUserAlreadyConsentedForOAuthScopes(user, oauth2Params);
-        } catch (IdentityOAuth2ScopeConsentException | IdentityOAuthAdminException e) {
+        } catch (IdentityOAuth2ScopeException | IdentityOAuthAdminException e) {
             throw new OAuthSystemException("Error occurred while checking user has already approved the consent " +
                     "required OAuth scopes.", e);
         }

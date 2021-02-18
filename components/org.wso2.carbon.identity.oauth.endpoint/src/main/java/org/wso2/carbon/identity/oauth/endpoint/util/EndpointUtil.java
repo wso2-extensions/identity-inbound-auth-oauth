@@ -73,6 +73,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequest
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeConsentException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
@@ -758,7 +759,7 @@ public class EndpointUtil {
         } catch (IdentityOAuthAdminException e) {
             throw new OAuthSystemException(
                     "Error occurred while removing OIDC scopes from disapproved OAuth scopes.", e);
-        } catch (IdentityOAuth2ScopeConsentException e) {
+        } catch (IdentityOAuth2ScopeException e) {
             throw new OAuthSystemException(("Error occurred while updating OAuth scope consents."));
         }
     }
@@ -774,7 +775,7 @@ public class EndpointUtil {
      */
     public static boolean isUserAlreadyConsentedForOAuthScopes(AuthenticatedUser user,
                                                                OAuth2Parameters oAuth2Parameters)
-            throws IdentityOAuth2ScopeConsentException, IdentityOAuthAdminException, OAuthSystemException {
+            throws IdentityOAuth2ScopeException, IdentityOAuthAdminException, OAuthSystemException {
 
         List<String> scopesToBeConsented = new ArrayList<>(oAuth2Parameters.getScopes());
         // Remove OIDC scopes.
@@ -782,8 +783,7 @@ public class EndpointUtil {
         String userId = getUserIdOfAuthenticatedUser(user);
         String appId = getAppIdFromClientId(oAuth2Parameters.getClientId());
         return oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(userId, appId,
-                IdentityTenantUtil.getTenantId(user.getTenantDomain()), scopesToBeConsented,
-                null);
+                IdentityTenantUtil.getTenantId(user.getTenantDomain()), scopesToBeConsented);
     }
 
     /**
@@ -827,7 +827,7 @@ public class EndpointUtil {
         } catch (IdentityOAuthAdminException e) {
             throw new OAuthSystemException(
                     "Error occurred while removing OIDC scopes from disapproved OAuth scopes.", e);
-        } catch (IdentityOAuth2ScopeConsentException e) {
+        } catch (IdentityOAuth2ScopeException e) {
             throw new OAuthSystemException("Error occurred while storing OAuth scope consent.", e);
         }
     }
@@ -890,7 +890,7 @@ public class EndpointUtil {
             } else {
                 return StringUtils.EMPTY;
             }
-        } catch (IdentityOAuth2ScopeConsentException e) {
+        } catch (IdentityOAuth2ScopeException e) {
             throw new OAuthSystemException("Error occurred while retrieving user consents OAuth scopes.");
         }
     }
