@@ -68,6 +68,7 @@ import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
@@ -83,6 +84,7 @@ import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
@@ -90,6 +92,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
@@ -131,6 +134,7 @@ import javax.ws.rs.core.Response;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyList;
 import static org.mockito.Matchers.anyMap;
 import static org.mockito.Matchers.anySet;
 import static org.mockito.Matchers.anyString;
@@ -178,6 +182,12 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
     OAuth2Service oAuth2Service;
+
+    @Mock
+    OAuthAdminServiceImpl oAuthAdminService;
+
+    @Mock
+    OAuth2ScopeService oAuth2ScopeService;
 
     @Mock
     RequestObjectService requestObjectService;
@@ -240,6 +250,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     private OAuth2AuthzEndpoint oAuth2AuthzEndpoint;
     private Object authzEndpointObject;
+    private OAuth2ScopeConsentResponse oAuth2ScopeConsentResponse;
+    private ServiceProvider dummySp;
 
     @BeforeTest
     public void setUp() throws Exception {
@@ -256,6 +268,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         Class<?> clazz = OAuth2AuthzEndpoint.class;
         authzEndpointObject = clazz.newInstance();
+
+        oAuth2ScopeConsentResponse = new OAuth2ScopeConsentResponse("sampleUser", "sampleApp",
+                -1234, new ArrayList<>(), new ArrayList<>());
+        dummySp = new ServiceProvider();
+        dummySp.setApplicationResourceId("sampleApp");
     }
 
     @AfterTest
@@ -560,6 +577,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
+        spy(FrameworkUtils.class);
+        doReturn("sample").when(FrameworkUtils.class, "resolveUserIdFromUsername", anyInt(), anyString(), anyString());
         try (Connection connection = getConnection()) {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
@@ -576,6 +595,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
             mockEndpointUtil();
             when(oAuth2Service.handleAuthenticationFailure(oAuth2Params)).thenReturn(oAuthErrorDTO);
+            when(oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(
+                    anyString(), anyString(), anyInt(), anyList())).thenReturn(true);
 
             mockServiceURLBuilder();
 
@@ -704,7 +725,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         mockApplicationManagementService();
 
-        mockEndpointUtil();
         when(oAuth2Service.handleUserConsentDenial(oAuth2Params)).thenReturn(oAuthErrorDTO);
 
         when(oAuthErrorDTO.getErrorDescription()).thenReturn(oAuthErrorDTODescription);
@@ -1155,6 +1175,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(loginCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
 
         mockEndpointUtil();
+        when(oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(
+                anyString(), anyString(), anyInt(), anyList())).thenReturn(hasUserApproved);
 
         mockOAuthServerConfiguration();
 
@@ -1182,6 +1204,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
         mockApplicationManagementService();
+
+        spy(FrameworkUtils.class);
+        doReturn("sample").when(FrameworkUtils.class, "resolveUserIdFromUsername", anyInt(), anyString(), anyString());
+        spy(IdentityTenantUtil.class);
+        doReturn(MultitenantConstants.SUPER_TENANT_ID).when(IdentityTenantUtil.class, "getTenantId", anyString());
+        doReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME).when(IdentityTenantUtil.class, "getTenantDomain",
+                anyInt());
 
         Response response;
         try {
@@ -1304,6 +1333,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
         mockApplicationManagementService();
+
+        spy(FrameworkUtils.class);
+        doReturn("sample").when(FrameworkUtils.class, "resolveUserIdFromUsername", anyInt(), anyString(), anyString());
+        spy(IdentityTenantUtil.class);
+        doReturn(MultitenantConstants.SUPER_TENANT_ID).when(IdentityTenantUtil.class, "getTenantId", anyString());
+        doReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME).when(IdentityTenantUtil.class, "getTenantDomain",
+                anyInt());
 
         Response response;
         try {
@@ -1766,6 +1802,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         doReturn(LOGIN_PAGE_URL).when(EndpointUtil.class, "getLoginPageURL", anyString(), anyString(), anyBoolean(),
                 anyBoolean(), anySet(), anyMap());
         doReturn(requestObjectService).when(EndpointUtil.class, "getRequestObjectService");
+        EndpointUtil.setOAuthAdminService(oAuthAdminService);
+        EndpointUtil.setOAuth2ScopeService(oAuth2ScopeService);
 
         // TODO: Remove mocking consentUtil and test the consent flow as well
         // https://github.com/wso2/product-is/issues/2679

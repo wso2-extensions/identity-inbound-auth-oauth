@@ -62,6 +62,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -82,6 +83,7 @@ import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -433,7 +435,7 @@ public class OAuth2AuthzEndpoint {
         String consent = getConsentFromRequest(oAuthMessage);
         if (consent != null) {
             if (OAuthConstants.Consent.DENY.equals(consent)) {
-                return handleDenyConsent(oAuthMessage);
+                return handleDeniedConsent(oAuthMessage);
             }
 
             /*
@@ -655,7 +657,7 @@ public class OAuth2AuthzEndpoint {
         return Response.ok(createErrorFormPage(oauth2Params.getRedirectURI(), oauthProblemException)).build();
     }
 
-    private Response handleDenyConsent(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
+    private Response handleDeniedConsent(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         OpenIDConnectUserRPStore.getInstance().putUserRPToStore(getLoggedInUser(oAuthMessage),
@@ -1052,6 +1054,11 @@ public class OAuth2AuthzEndpoint {
             if (approvedAlways) {
                 OpenIDConnectUserRPStore.getInstance().putUserRPToStore(loggedInUser, applicationName,
                         true, clientId);
+                if (hasPromptContainsConsent(oauth2Params)) {
+                    EndpointUtil.storeOAuthScopeConsent(loggedInUser, oauth2Params, true);
+                } else {
+                    EndpointUtil.storeOAuthScopeConsent(loggedInUser, oauth2Params, false);
+                }
             }
         }
     }
@@ -2237,8 +2244,12 @@ public class OAuth2AuthzEndpoint {
     private boolean isUserAlreadyApproved(OAuth2Parameters oauth2Params, AuthenticatedUser user)
             throws OAuthSystemException {
 
-        return OpenIDConnectUserRPStore.getInstance().hasUserApproved(user, oauth2Params.getApplicationName(),
-                oauth2Params.getClientId());
+        try {
+            return EndpointUtil.isUserAlreadyConsentedForOAuthScopes(user, oauth2Params);
+        } catch (IdentityOAuth2ScopeException | IdentityOAuthAdminException e) {
+            throw new OAuthSystemException("Error occurred while checking user has already approved the consent " +
+                    "required OAuth scopes.", e);
+        }
     }
 
     private boolean isIdTokenSubjectEqualsToLoggedInUser(String loggedInUser, String idTokenHint)
