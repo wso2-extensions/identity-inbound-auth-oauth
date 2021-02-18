@@ -38,14 +38,6 @@ import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.
         ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SATIFIED_THE_REGEX;
-import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_FAILED_TO_ADD_USER_CONSENT_FOR_APP;
-import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_FAILED_TO_CHECK_ALREADY_USER_CONSENTED;
-import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_FAILED_TO_CHECK_EXISTING_CONSENTS_FOR_USER;
-import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS;
-import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS_FOR_APP;
-import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT;
-import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT_FOR_APP;
-import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_FAILED_TO_UPDATE_USER_CONSENT_FOR_APP;
 
 /**
  * OAuth2ScopeService use for scope handling
@@ -345,10 +337,10 @@ public class OAuth2ScopeService {
              }
              return consentResponse;
         } catch (IdentityOAuth2ScopeConsentException e) {
-            String msg = String.format(ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS_FOR_APP.getMessage(), userId,
-                    appId, userTenantId);
-            throw new IdentityOAuth2ScopeConsentException(
-                    ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS_FOR_APP.getCode(), msg, e);
+            Oauth2ScopeConstants.ErrorMessages error = Oauth2ScopeConstants.ErrorMessages
+                    .ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS_FOR_APP;
+            String msg = String.format(error.getMessage(), userId, appId, userTenantId);
+            throw new IdentityOAuth2ScopeConsentException(error.getCode(), msg, e);
         }
     }
 
@@ -376,9 +368,10 @@ public class OAuth2ScopeService {
                             consent.getApprovedScopes(), consent.getDeniedScopes()))
                     .collect(Collectors.toList());
         } catch (IdentityOAuth2ScopeConsentException e) {
-            String msg = String.format(ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS.getMessage(), userId, userTenantId);
-            throw new IdentityOAuth2ScopeConsentException(
-                    ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS.getCode(), msg, e);
+            Oauth2ScopeConstants.ErrorMessages error = Oauth2ScopeConstants.ErrorMessages
+                    .ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS;
+            String msg = String.format(error.getMessage(), userId, userTenantId);
+            throw new IdentityOAuth2ScopeConsentException(error.getCode(), msg, e);
         }
     }
 
@@ -408,10 +401,10 @@ public class OAuth2ScopeService {
                         " and application name : " + appId + " in tenant with id : " + userTenantId);
             }
         } catch (IdentityOAuth2ScopeConsentException e) {
-            String msg = String.format(ERROR_CODE_FAILED_TO_ADD_USER_CONSENT_FOR_APP.getMessage(), userId, appId,
-                    userTenantId);
-            throw new IdentityOAuth2ScopeConsentException(
-                    ERROR_CODE_FAILED_TO_ADD_USER_CONSENT_FOR_APP.getCode(), msg, e);
+            Oauth2ScopeConstants.ErrorMessages error = Oauth2ScopeConstants.ErrorMessages
+                    .ERROR_CODE_FAILED_TO_ADD_USER_CONSENT_FOR_APP;
+            String msg = String.format(error.getMessage(), userId, appId, userTenantId);
+            throw new IdentityOAuth2ScopeConsentException(error.getCode(), msg, e);
         }
     }
 
@@ -441,10 +434,10 @@ public class OAuth2ScopeService {
                         " and application : " + appId + " in tenant with Id : " + userTenantId);
             }
         } catch (IdentityOAuth2ScopeConsentException e) {
-            String msg = String.format(ERROR_CODE_FAILED_TO_UPDATE_USER_CONSENT_FOR_APP.getMessage(), userId, appId,
-                    userTenantId);
-            throw new IdentityOAuth2ScopeConsentException(
-                    ERROR_CODE_FAILED_TO_UPDATE_USER_CONSENT_FOR_APP.getCode(), msg, e);
+            Oauth2ScopeConstants.ErrorMessages error = Oauth2ScopeConstants.ErrorMessages
+                    .ERROR_CODE_FAILED_TO_UPDATE_USER_CONSENT_FOR_APP;
+            String msg = String.format(error.getMessage(), userId, appId, userTenantId);
+            throw new IdentityOAuth2ScopeConsentException(error.getCode(), msg, e);
         }
     }
 
@@ -469,10 +462,10 @@ public class OAuth2ScopeService {
                         " and application : " + appId + " for tenant with Id : " + userTenantId);
             }
         } catch (IdentityOAuth2ScopeConsentException e) {
-            String msg = String.format(ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT_FOR_APP.getMessage(), userId, appId,
-                    userTenantId);
-            throw new IdentityOAuth2ScopeConsentException(
-                    ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT_FOR_APP.getCode(), msg, e);
+            Oauth2ScopeConstants.ErrorMessages error = Oauth2ScopeConstants.ErrorMessages
+                    .ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT_FOR_APP;
+            String msg = String.format(error.getMessage(), userId, appId, userTenantId);
+            throw new IdentityOAuth2ScopeConsentException(error.getCode(), msg, e);
         }
     }
 
@@ -495,9 +488,10 @@ public class OAuth2ScopeService {
                         " in tenant with Id : " + userTenantId);
             }
         } catch (IdentityOAuth2ScopeConsentException e) {
-            String msg = String.format(ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT.getMessage(), userId, userTenantId);
-            throw new IdentityOAuth2ScopeConsentException(
-                    ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT.getCode(), msg, e);
+            Oauth2ScopeConstants.ErrorMessages error = Oauth2ScopeConstants.ErrorMessages
+                    .ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT;
+            String msg = String.format(error.getMessage(), userId, userTenantId);
+            throw new IdentityOAuth2ScopeConsentException(error.getCode(), msg, e);
         }
     }
 
@@ -536,10 +530,11 @@ public class OAuth2ScopeService {
             }
             return consentRequiredApprovedScopesAreApproved && consentRequiredDisapprovedScopesAreDisapproved;
         } catch (IdentityOAuth2ScopeConsentException e) {
-            String msg = String.format(ERROR_CODE_FAILED_TO_CHECK_ALREADY_USER_CONSENTED.getMessage(), userId, appId,
+            Oauth2ScopeConstants.ErrorMessages error = Oauth2ScopeConstants.ErrorMessages
+                    .ERROR_CODE_FAILED_TO_CHECK_ALREADY_USER_CONSENTED;
+            String msg = String.format(error.getMessage(), userId, appId,
                     userTenantId);
-            throw new IdentityOAuth2ScopeConsentException(
-                    ERROR_CODE_FAILED_TO_CHECK_ALREADY_USER_CONSENTED.getCode(), msg, e);
+            throw new IdentityOAuth2ScopeConsentException(error.getCode(), msg, e);
         }
     }
 
@@ -572,10 +567,10 @@ public class OAuth2ScopeService {
             }
             return consentExists;
         } catch (IdentityOAuth2ScopeConsentException e) {
-            String msg = String.format(ERROR_CODE_FAILED_TO_CHECK_EXISTING_CONSENTS_FOR_USER.getMessage(), userId,
-                    appId, userTenantId);
-            throw new IdentityOAuth2ScopeConsentException(
-                    ERROR_CODE_FAILED_TO_CHECK_EXISTING_CONSENTS_FOR_USER.getCode(), msg, e);
+            Oauth2ScopeConstants.ErrorMessages error = Oauth2ScopeConstants.ErrorMessages
+                    .ERROR_CODE_FAILED_TO_CHECK_EXISTING_CONSENTS_FOR_USER;
+            String msg = String.format(error.getMessage(), userId, appId, userTenantId);
+            throw new IdentityOAuth2ScopeConsentException(error.getCode(), msg, e);
         }
     }
 
