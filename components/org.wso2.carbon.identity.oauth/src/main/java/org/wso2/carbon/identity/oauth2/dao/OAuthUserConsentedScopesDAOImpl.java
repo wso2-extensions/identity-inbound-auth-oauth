@@ -49,7 +49,7 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
             throws IdentityOAuth2ScopeConsentException {
 
         if (log.isDebugEnabled()) {
-            log.debug("Get user consented scopes for userId  :" + userId + " and appId: " + appId + " and " +
+            log.debug("Get user consented scopes for userId :" + userId + " and appId : " + appId + " and " +
                     "tenantId : " + tenantId);
         }
         UserApplicationScopeConsentDO userScopeConsent = new UserApplicationScopeConsentDO(appId);
@@ -76,8 +76,8 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
             userScopeConsent.setDeniedScopes(disapprovedScopes);
             return userScopeConsent;
         } catch (SQLException e) {
-            String msg = "Error occurred while retrieving scope consents for  userId  :" + userId + " and appId: " +
-                    appId + " and " + "tenantId : " + tenantId;
+            String msg = "Error occurred while retrieving scope consents for userId : " + userId + " and appId : " +
+                    appId + " and tenantId : " + tenantId;
             throw new IdentityOAuth2ScopeConsentException(msg, e);
         }
     }
@@ -87,7 +87,7 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
             throws IdentityOAuth2ScopeConsentException {
 
         if (log.isDebugEnabled()) {
-            log.debug("Get user consented scopes for user with userId  :" + userId + " in tenantId : " + tenantId);
+            log.debug("Get user consented scopes for user with userId : " + userId + " in tenantId : " + tenantId);
         }
         Map<String, UserApplicationScopeConsentDO> userScopeConsentsMap = new HashMap<>();
         try (Connection conn = IdentityDatabaseUtil.getDBConnection(false)) {
@@ -110,7 +110,7 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
             }
             return new ArrayList<>(userScopeConsentsMap.values());
         } catch (SQLException e) {
-            String msg = "Error occurred while retrieving scope consents for  userId  :" + userId + " in tenantId : "
+            String msg = "Error occurred while retrieving scope consents for userId :" + userId + " in tenantId : "
                     + tenantId;
             throw new IdentityOAuth2ScopeConsentException(msg, e);
         }
@@ -122,7 +122,7 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
             throws IdentityOAuth2ScopeConsentException {
 
         if (log.isDebugEnabled()) {
-            log.debug("Adding scope consents for userId  :" + userId + " and appId: " + userConsent.getAppId() +
+            log.debug("Adding scope consents for userId : " + userId + " and appId : " + userConsent.getAppId() +
                     " and tenantId : " + tenantId + " for approved scopes : " +
                     userConsent.getApprovedScopes().stream().collect(Collectors.joining(", ")) + " and " +
                     "disapproved scopes : " + userConsent.getDeniedScopes().stream()
@@ -135,8 +135,8 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
             addUserConsentedScopes(conn, consentId, tenantId, userConsent);
             IdentityDatabaseUtil.commitTransaction(conn);
         } catch (SQLException e) {
-            String msg = "Error occurred while adding scope consents for  userId  :" + userId + " and appId: " +
-                    userConsent.getAppId() + " and " + "tenantId : " + tenantId;
+            String msg = "Error occurred while adding scope consents for userId : " + userId + " and appId : " +
+                    userConsent.getAppId() + " and tenantId : " + tenantId;
             throw new IdentityOAuth2ScopeConsentException(msg, e);
         }
     }
@@ -147,8 +147,8 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
             throws IdentityOAuth2ScopeConsentException {
 
         if (log.isDebugEnabled()) {
-            log.debug("Update scope consents for userId  :" + userId + " and appId: "
-                    + updatedUserConsents.getAppId() + " and " + "tenantId : " + tenantId + ".");
+            log.debug("Update scope consents for userId : " + userId + " and appId: "
+                    + updatedUserConsents.getAppId() + " and tenantId : " + tenantId);
         }
         UserApplicationScopeConsentDO existingConsent =
                 getUserConsentForApplication(userId, updatedUserConsents.getAppId(), tenantId);
@@ -176,8 +176,8 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
             }
             IdentityDatabaseUtil.commitTransaction(conn);
         } catch (SQLException e) {
-            String msg = "Error occurred while updating scope consents for  userId  :" + userId + " and appId: " +
-                    updatedUserConsents.getAppId() + " and " + "tenantId : " + tenantId + ".";
+            String msg = "Error occurred while updating scope consents for  userId : " + userId + " and appId : " +
+                    updatedUserConsents.getAppId() + " and tenantId : " + tenantId;
             throw new IdentityOAuth2ScopeConsentException(msg, e);
         }
     }
@@ -187,14 +187,14 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
             throws IdentityOAuth2ScopeConsentException {
 
         if (log.isDebugEnabled()) {
-            log.debug("Delete scope consents for userId  :" + userId + " and appId: " + appId + " and " +
-                    "tenantId : " + tenantId + ".");
+            log.debug("Delete scope consents for userId : " + userId + " and appId : " + appId + " and " +
+                    "tenantId : " + tenantId);
         }
         try (Connection conn = IdentityDatabaseUtil.getDBConnection(false)) {
             deleteUserConsent(conn, userId, appId, tenantId);
         } catch (SQLException e) {
-            String msg = "Error occurred while deleting scope consents for  userId  :" + userId + " and appId: " +
-                    appId + " and " + "tenantId : " + tenantId + ".";
+            String msg = "Error occurred while deleting scope consents for user id :" + userId + " and app id : " +
+                    appId + " and tenantId : " + tenantId;
             throw new IdentityOAuth2ScopeConsentException(msg, e);
         }
     }
@@ -203,8 +203,8 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
     public void deleteUserConsents(String userId, int tenantId) throws IdentityOAuth2ScopeConsentException {
 
         if (log.isDebugEnabled()) {
-            log.debug("Revoking all scope consents for user with userId  :" + userId + " in tenantId : "
-                    + tenantId + ".");
+            log.debug("Revoking all scope consents for user with userId : " + userId + " in tenantId : "
+                    + tenantId);
         }
         try (Connection conn = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement ps = conn.prepareStatement(SQLQueries.REMOVE_OAUTH2_USER_CONSENTS)) {
@@ -213,8 +213,8 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
                 ps.execute();
             }
         } catch (SQLException e) {
-            String msg = "Error occurred while deleting user scope consents for  userId  :" + userId + " and "
-                    + "tenantId : " + tenantId + ".";
+            String msg = "Error occurred while deleting user scope consents for  userId : " + userId + " and "
+                    + "tenantId : " + tenantId;
             throw new IdentityOAuth2ScopeConsentException(msg, e);
         }
     }

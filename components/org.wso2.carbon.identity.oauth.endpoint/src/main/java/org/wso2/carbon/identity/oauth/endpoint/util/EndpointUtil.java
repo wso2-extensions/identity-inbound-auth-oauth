@@ -738,41 +738,6 @@ public class EndpointUtil {
     }
 
     /**
-     * Deny consent for given set of OAuth scopes for the application.
-     *
-     * @param params    OAuth2 request parameters.
-     * @param user      Authenticated user.
-     * @throws OAuthSystemException
-     */
-    public static void handleDeniedOAuthScopeConsent(OAuth2Parameters params, AuthenticatedUser user)
-            throws OAuthSystemException {
-
-        try {
-            if (log.isDebugEnabled()) {
-                log.debug("Handling scope consent denial for client : " + params.getClientId());
-            }
-            Set<String> userDeniedScopesSet = params.getConsentRequiredScopes();
-            if (CollectionUtils.isNotEmpty(userDeniedScopesSet)) {
-                List<String> disapprovedScopeConsents = new ArrayList<>(userDeniedScopesSet);
-                // Remove OIDC scopes.
-                disapprovedScopeConsents.removeAll(
-                        Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames())));
-                // Update user consent by merging existing consent.
-                String userId = getUserIdOfAuthenticatedUser(user);
-                String appId = getAppIdFromClientId(params.getClientId());
-                oAuth2ScopeService.updateUserConsentForApplication(userId, appId,
-                        IdentityTenantUtil.getTenantId(user.getTenantDomain()),
-                        null, disapprovedScopeConsents);
-            }
-        } catch (IdentityOAuthAdminException e) {
-            throw new OAuthSystemException(
-                    "Error occurred while removing OIDC scopes from disapproved OAuth scopes.", e);
-        } catch (IdentityOAuth2ScopeException e) {
-            throw new OAuthSystemException(("Error occurred while updating OAuth scope consents."));
-        }
-    }
-
-    /**
      * Check if the user has already given consent to required OAuth scopes.
      *
      * @param user              Authenticated user.
@@ -824,6 +789,10 @@ public class EndpointUtil {
                 String userId = getUserIdOfAuthenticatedUser(user);
                 String appId = getAppIdFromClientId(params.getClientId());
                 if (overrideExistingConsent) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Overriding existing consents of the user : " + userId + " for application : " +
+                                appId);
+                    }
                     oAuth2ScopeService.addUserConsentForApplication(userId, appId,
                             IdentityTenantUtil.getTenantId(user.getTenantDomain()),
                             userApprovedScopes, null);
@@ -831,10 +800,17 @@ public class EndpointUtil {
                     boolean isUserConsentExist = oAuth2ScopeService.isUserHasAnExistingConsentForApp(
                             userId, appId, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
                     if (isUserConsentExist) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Updating existing consents of the user : " + userId + " for application : " +
+                                    appId);
+                        }
                         oAuth2ScopeService.updateUserConsentForApplication(userId, appId,
                                 IdentityTenantUtil.getTenantId(user.getTenantDomain()),
                                 userApprovedScopes, null);
                     } else {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Adding new consent to the user : " + userId + " for application : " + appId);
+                        }
                         oAuth2ScopeService.addUserConsentForApplication(userId, appId,
                                 IdentityTenantUtil.getTenantId(user.getTenantDomain()),
                                 userApprovedScopes, null);
