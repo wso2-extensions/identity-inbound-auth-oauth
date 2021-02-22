@@ -1904,10 +1904,21 @@ public class OAuth2Util {
             while (iterator.hasNext()) {
                 ScopeDTO scope = new ScopeDTO();
                 OMElement omElement = (OMElement) iterator.next();
-                String configType = omElement.getAttributeValue(new QName(
-                        "id"));
+                String configType = omElement.getAttributeValue(new QName("id"));
                 scope.setName(configType);
-                scope.setDisplayName(configType);
+
+                String displayName = omElement.getAttributeValue(new QName("displayName"));
+                if (StringUtils.isNotEmpty(displayName)) {
+                    scope.setDisplayName(displayName);
+                } else {
+                    scope.setDisplayName(configType);
+                }
+
+                String description = omElement.getAttributeValue(new QName("description"));
+                if (StringUtils.isNotEmpty(description)) {
+                    scope.setDescription(description);
+                }
+
                 scope.setClaim(loadClaimConfig(omElement));
                 listOIDCScopesClaims.add(scope);
             }
