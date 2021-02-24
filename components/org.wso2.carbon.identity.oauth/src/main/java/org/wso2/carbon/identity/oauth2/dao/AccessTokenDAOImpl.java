@@ -984,7 +984,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.debug("Storing token binding information" +
+            log.debug("Storing token to session mapping information for" +
                     " accessTokenId: " + tokenId +
                     " bindingType: " + DEFAULT_TOKEN_TO_SESSION_MAPPING +
                     " bindingRef: " + sessionContextIdentifier);

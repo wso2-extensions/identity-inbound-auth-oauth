@@ -100,7 +100,7 @@ public class OAuthTokenSessionMappingEventHandler extends AbstractOAuthEventInte
             return;
         }
 
-        persistTokenToSessionMapping(getSessionContextIdentifier(code), tokenRespDTO.getTokenId(),
+        persistTokenToSessionMapping(getSessionContextIdentifierByCode(code), tokenRespDTO.getTokenId(),
                 OAuth2Util.getTenantId(tokenReqDTO.getTenantDomain()), tokenReqDTO.getClientId());
     }
 
@@ -122,6 +122,12 @@ public class OAuthTokenSessionMappingEventHandler extends AbstractOAuthEventInte
         if (log.isDebugEnabled()) {
             log.debug("Listening to the token renewal event for the application: " + tokenReqDTO.getClientId());
         }
+        if (tokenRespDTO == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("TokenRespDTO passed was null. Cannot proceed further to build the token session mapping.");
+            }
+            return;
+        }
         if (StringUtils.isBlank(tokenRespDTO.getAccessToken())) {
             // Need accesstoken to get the sessioncontext Id from the authorization grant cache for refresh token grant.
             if (log.isDebugEnabled()) {
@@ -136,7 +142,7 @@ public class OAuthTokenSessionMappingEventHandler extends AbstractOAuthEventInte
             }
             return;
         }
-        persistTokenToSessionMapping(getSessionContextIdentifier(tokenRespDTO.getAccessToken()),
+        persistTokenToSessionMapping(getSessionContextIdentifierByToken(tokenRespDTO.getAccessToken()),
                 tokenRespDTO.getTokenId(), OAuth2Util.getTenantId(tokenReqDTO.getTenantDomain()),
                 tokenReqDTO.getClientId());
     }
@@ -182,22 +188,47 @@ public class OAuthTokenSessionMappingEventHandler extends AbstractOAuthEventInte
 
     /**
      * Return session context identifier from authorization grant cache. For authorization code flow, we mapped it
-     * against auth_code. For refresh key grant, we map the cache against the accesstoken.
+     * against auth_code.
      *
-     * @param key Authorization code or accesstoken.
+     * @param authorizationCode Authorization code.
      * @return SessionContextIdentifier.
      */
-    private String getSessionContextIdentifier(String key) {
+    private String getSessionContextIdentifierByCode(String authorizationCode) {
 
         String sessionContextIdentifier = null;
-        if (isNotBlank(key)) {
-            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(key);
+        if (isNotBlank(authorizationCode)) {
+            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(authorizationCode);
+            AuthorizationGrantCacheEntry cacheEntry =
+                    AuthorizationGrantCache.getInstance().getValueFromCacheByCode(cacheKey);
+            if (cacheEntry != null) {
+                sessionContextIdentifier = cacheEntry.getSessionContextIdentifier();
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Found session context identifier: %s for the obtained authorization " +
+                            "code", sessionContextIdentifier));
+                }
+            }
+        }
+        return sessionContextIdentifier;
+    }
+
+    /**
+     * Return session context identifier from authorization grant cache. For refresh token flow, we mapped it
+     * against the accesstoken.
+     *
+     * @param accessToken Accesstoken.
+     * @return SessionContextIdentifier.
+     */
+    private String getSessionContextIdentifierByToken(String accessToken) {
+
+        String sessionContextIdentifier = null;
+        if (isNotBlank(accessToken)) {
+            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
             AuthorizationGrantCacheEntry cacheEntry =
                     AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
             if (cacheEntry != null) {
                 sessionContextIdentifier = cacheEntry.getSessionContextIdentifier();
                 if (log.isDebugEnabled()) {
-                    log.debug(String.format("Found session context identifier: %s for the obtained authorization code",
+                    log.debug(String.format("Found session context identifier: %s for the obtained accesstoken",
                             sessionContextIdentifier));
                 }
             }
