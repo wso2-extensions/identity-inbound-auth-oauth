@@ -18,10 +18,13 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.store.SessionDataStore;
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
+import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -108,7 +111,12 @@ public class AuthorizationGrantCache extends BaseCache<AuthorizationGrantCacheKe
         AuthorizationGrantCacheEntry cacheEntry = super.getValueFromCache(key);
         if (cacheEntry == null) {
             if (log.isDebugEnabled()) {
-                log.debug("Getting cache entry from session store using access token");
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("Getting cache entry from session store using access token(hashed): "
+                            + DigestUtils.sha256Hex(key.getUserAttributesId()));
+                } else {
+                    log.debug("Getting cache entry from session store using access token");
+                }
             }
             cacheEntry = getFromSessionStore(replaceFromTokenId(key.getUserAttributesId()));
         }
@@ -159,7 +167,12 @@ public class AuthorizationGrantCache extends BaseCache<AuthorizationGrantCacheKe
         AuthorizationGrantCacheEntry cacheEntry = super.getValueFromCache(key);
         if (cacheEntry == null) {
             if (log.isDebugEnabled()) {
-                log.debug("Getting cache entry from session store using authorization code");
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)) {
+                    log.debug("Getting cache entry from session store using authorization code(hashed): "
+                            + DigestUtils.sha256Hex(key.getUserAttributesId()));
+                } else {
+                    log.debug("Getting cache entry from session store using authorization code");
+                }
             }
             cacheEntry = getFromSessionStore(replaceFromCodeId(key.getUserAttributesId()));
         }
