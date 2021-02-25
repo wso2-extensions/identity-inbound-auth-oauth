@@ -124,7 +124,8 @@ public class OAuthTokenSessionMappingEventHandler extends AbstractOAuthEventInte
         }
         if (tokenRespDTO == null) {
             if (log.isDebugEnabled()) {
-                log.debug("TokenRespDTO passed was null. Cannot proceed further to build the token session mapping.");
+                log.debug("TokenRespDTO passed was null. Cannot proceed further to build the token session mapping "
+                        + "for the clientId: " + tokenReqDTO.getClientId());
             }
             return;
         }
