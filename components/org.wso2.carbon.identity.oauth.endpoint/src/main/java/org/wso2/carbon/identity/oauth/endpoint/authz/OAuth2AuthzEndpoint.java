@@ -2549,7 +2549,8 @@ public class OAuth2AuthzEndpoint {
                 if (log.isDebugEnabled()) {
                     log.debug("User authenticated. Initiate OIDC browser session.");
                 }
-                opBrowserStateCookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
+                opBrowserStateCookie =
+                        OIDCSessionManagementUtil.addOPBrowserStateCookie(response, oAuth2Parameters.getTenantDomain());
                 // Adding sid claim in the IDtoken to OIDCSessionState class.
                 storeSidClaim(redirectURL, sessionStateObj, oAuth2Parameters);
                 storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
