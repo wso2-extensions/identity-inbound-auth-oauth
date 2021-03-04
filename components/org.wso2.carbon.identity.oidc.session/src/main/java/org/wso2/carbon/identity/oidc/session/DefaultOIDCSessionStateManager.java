@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oidc.session;
 import org.apache.commons.codec.binary.Base64;
 import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 
 import java.nio.charset.StandardCharsets;
@@ -93,7 +94,7 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
         ServletCookie cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, UUID.randomUUID().toString());
         cookie.setSecure(true);
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && IdentityTenantUtil.isTenantedSessionsEnabled()) {
-            cookie.setPath("/t/" + tenantDomain);
+            cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain);
         } else {
             cookie.setPath("/");
         }
