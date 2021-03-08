@@ -21,8 +21,6 @@ package org.wso2.carbon.identity.oidc.session;
 import org.apache.commons.codec.binary.Base64;
 import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
