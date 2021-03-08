@@ -83,26 +83,6 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
         return cookie;
     }
 
-    /**
-     * Adds the browser state cookie with tenant qualified path to the response.
-     *
-     * @param response
-     * @return Cookie
-     */
-    public Cookie addOPBrowserStateCookie(HttpServletResponse response, String tenantDomain) {
-
-        ServletCookie cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, UUID.randomUUID().toString());
-        cookie.setSecure(true);
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && IdentityTenantUtil.isTenantedSessionsEnabled()) {
-            cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain);
-        } else {
-            cookie.setPath("/");
-        }
-        cookie.setSameSite(SameSiteCookie.NONE);
-        response.addCookie(cookie);
-        return cookie;
-    }
-
     private static String generateSaltValue() throws NoSuchAlgorithmException {
 
         byte[] bytes = new byte[16];
