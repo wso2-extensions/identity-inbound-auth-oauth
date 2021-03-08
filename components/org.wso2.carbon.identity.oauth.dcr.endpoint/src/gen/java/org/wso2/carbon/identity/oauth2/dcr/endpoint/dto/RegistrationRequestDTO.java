@@ -29,6 +29,7 @@ public class RegistrationRequestDTO  {
   private String tokenType = null;
   private String spTemplateName = null;
   private String backchannelLogoutUri = null;
+  private List<String> audiences = new ArrayList<>();
   private boolean backchannelLogoutSessionRequired;
 
   @ApiModelProperty(required = true)
@@ -50,6 +51,12 @@ public class RegistrationRequestDTO  {
   public void setClientName(String clientName) {
     this.clientName = clientName;
   }
+
+  @ApiModelProperty
+  @JsonProperty("aud")
+  public  List<String> getAudiences() {return audiences; }
+
+  public void setAudiences(List<String> audiences) { this.audiences = audiences; }
 
   @ApiModelProperty
   @JsonProperty("grant_types")
@@ -195,7 +202,8 @@ public class RegistrationRequestDTO  {
   public String toString()  {
     StringBuilder sb = new StringBuilder();
     sb.append("class RegistrationRequestDTO {\n");
-    
+
+    sb.append(" audiences: ").append(audiences).append("\n");
     sb.append("  redirect_uris: ").append(redirectUris).append("\n");
     sb.append("  client_name: ").append(clientName).append("\n");
     sb.append("  grant_types: ").append(grantTypes).append("\n");

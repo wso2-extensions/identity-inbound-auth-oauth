@@ -50,6 +50,7 @@ import org.wso2.carbon.identity.oauth.dcr.util.DCRMUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
@@ -387,6 +388,10 @@ public class DCRMService {
         oAuthConsumerApp.setTokenType(registrationRequest.getTokenType());
         oAuthConsumerApp.setBackChannelLogoutUrl(
                 validateBackchannelLogoutURI(registrationRequest.getBackchannelLogoutUri()));
+        if (!registrationRequest.getAudiences().isEmpty()) {
+            OAuth2ServiceComponentHolder.setAudienceEnabled(true);
+            oAuthConsumerApp.setAudiences(registrationRequest.getAudiences().toArray(new String[0]));
+        }
 
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerKey())) {
             String clientIdRegex = OAuthServerConfiguration.getInstance().getClientIdValidationRegex();

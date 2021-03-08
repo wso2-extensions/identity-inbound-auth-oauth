@@ -67,6 +67,7 @@ public class DCRMUtils {
         appRegistrationRequest.setConsumerSecret(registrationRequestDTO.getClientSecret());
         appRegistrationRequest.setSpTemplateName(registrationRequestDTO.getSpTemplateName());
         appRegistrationRequest.setBackchannelLogoutUri(registrationRequestDTO.getBackchannelLogoutUri());
+        appRegistrationRequest.setAudiences(registrationRequestDTO.getAudiences());
         return appRegistrationRequest;
 
     }

@@ -29,6 +29,7 @@ public class ApplicationRegistrationRequest implements Serializable {
 
     private static final long serialVersionUID = -1766289861296661081L;
 
+    private List<String> audiences = new ArrayList<>();
     private List<String> redirectUris = new ArrayList<>();
     private String clientName = null;
     private List<String> grantTypes = new ArrayList<>();
@@ -37,6 +38,15 @@ public class ApplicationRegistrationRequest implements Serializable {
     private String consumerSecret = null;
     private String spTemplateName = null;
     private String backchannelLogoutUri = null;
+
+    public List<String> getAudiences() {
+        return audiences;
+    }
+
+    public void setAudiences(List<String> audiences) {
+
+        this.audiences = audiences;
+    }
 
     public List<String> getRedirectUris() {
 
