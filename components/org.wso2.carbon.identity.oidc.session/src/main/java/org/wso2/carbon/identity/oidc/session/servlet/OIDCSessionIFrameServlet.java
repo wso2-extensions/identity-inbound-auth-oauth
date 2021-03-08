@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManagerException;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
@@ -81,7 +82,9 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
             }
             String callbackURL = getCallbackURL(request, clientId);
             String clientOrigin = OIDCSessionManagementUtil.getOrigin(callbackURL);
-
+            // Validate application's tenant with the tenant from the context.
+            String tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
+            OAuth2Util.validateRequestTenantDomain(tenantDomain);
             if (log.isDebugEnabled()) {
                 log.debug("Client Origin : " + clientOrigin);
             }
