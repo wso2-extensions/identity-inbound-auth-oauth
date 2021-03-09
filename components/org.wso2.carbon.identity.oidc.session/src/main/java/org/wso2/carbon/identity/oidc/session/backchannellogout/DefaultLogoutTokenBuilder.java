@@ -72,7 +72,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     private static final String OPENID_IDP_ENTITY_ID = "IdPEntityId";
     private static final String ERROR_GET_RESIDENT_IDP =
             "Error while getting Resident Identity Provider of '%s' tenant.";
-    private static final String BACKCHANNEL_LOGOUT_EVENT = "http://schemas.openidnet/event/backchannel-logout";
+    private static final String BACKCHANNEL_LOGOUT_EVENT = "http://schemas.openid.net/event/backchannel-logout";
 
     public DefaultLogoutTokenBuilder() throws IdentityOAuth2Exception {
 
