@@ -89,6 +89,7 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
      * @param response
      * @return Cookie
      */
+    @Override
     public Cookie addOPBrowserStateCookie(HttpServletResponse response, String tenantDomain) {
 
         ServletCookie cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, UUID.randomUUID().toString());
