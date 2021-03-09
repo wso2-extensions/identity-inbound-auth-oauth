@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth.dcr.service;
 
 import com.google.gson.Gson;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -388,9 +389,24 @@ public class DCRMService {
         oAuthConsumerApp.setTokenType(registrationRequest.getTokenType());
         oAuthConsumerApp.setBackChannelLogoutUrl(
                 validateBackchannelLogoutURI(registrationRequest.getBackchannelLogoutUri()));
-        if (!registrationRequest.getAudiences().isEmpty()) {
+        if (CollectionUtils.isNotEmpty(registrationRequest.getAudiences())) {
             OAuth2ServiceComponentHolder.setAudienceEnabled(true);
             oAuthConsumerApp.setAudiences(registrationRequest.getAudiences().toArray(new String[0]));
+        }
+
+        if (registrationRequest.getIdTokenEncryptionAlgorithm() != null) {
+            oAuthConsumerApp.setIdTokenEncryptionEnabled(true);
+            oAuthConsumerApp.setIdTokenEncryptionAlgorithm(registrationRequest.getIdTokenEncryptionAlgorithm());
+            if (registrationRequest.getIdTokenEncryptionMethod() != null) {
+                oAuthConsumerApp.setIdTokenEncryptionMethod(registrationRequest.getIdTokenEncryptionMethod());
+            } else {
+                oAuthConsumerApp.setIdTokenEncryptionMethod("A128CBC-HS256");
+            }
+        } else {
+            if (registrationRequest.getIdTokenEncryptionMethod() != null) {
+                throw  DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INSUFFICIENT_DATA,
+                        null);
+            }
         }
 
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerKey())) {

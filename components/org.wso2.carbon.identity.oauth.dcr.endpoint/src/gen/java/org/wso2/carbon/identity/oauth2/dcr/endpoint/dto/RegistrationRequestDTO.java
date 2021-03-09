@@ -30,6 +30,8 @@ public class RegistrationRequestDTO  {
   private String spTemplateName = null;
   private String backchannelLogoutUri = null;
   private List<String> audiences = new ArrayList<>();
+  private String idTokenEncryptionAlgorithm;
+  private String idTokenEncryptionMethod;
   private boolean backchannelLogoutSessionRequired;
 
   @ApiModelProperty(required = true)
@@ -179,6 +181,22 @@ public class RegistrationRequestDTO  {
   }
 
   @ApiModelProperty
+  @JsonProperty("id_token_encrypted_response_alg")
+  public String getIdTokenEncryptionAlgorithm() { return idTokenEncryptionAlgorithm; }
+
+  public void setIdTokenEncryptionAlgorithm(String idTokenEncryptionAlgorithm) {
+    this.idTokenEncryptionAlgorithm = idTokenEncryptionAlgorithm;
+  }
+
+  @ApiModelProperty
+  @JsonProperty("id_token_encrypted_response_enc")
+  public String getIdTokenEncryptionMethod() { return idTokenEncryptionMethod; }
+
+  public void setIdTokenEncryptionMethod(String idTokenEncryptionMethod) {
+    this.idTokenEncryptionMethod = idTokenEncryptionMethod;
+  }
+
+  @ApiModelProperty
   @JsonProperty("backchannel_logout_session_required")
   public boolean getBackchannelLogoutSessionRequired() {
     return backchannelLogoutSessionRequired;
@@ -219,6 +237,8 @@ public class RegistrationRequestDTO  {
     sb.append("  token_type_extension: ").append(tokenType).append("\n");
     sb.append("  ext_param_sp_template: ").append(spTemplateName).append("\n");
     sb.append("  backchannel_logout_uri: ").append(backchannelLogoutUri).append("\n");
+    sb.append("  id_token_encrypted_response_alg: ").append(idTokenEncryptionAlgorithm).append("\n");
+    sb.append("  id_token_encrypted_response_enc: ").append(idTokenEncryptionMethod).append("\n");
     sb.append("  backchannel_logout_session_required: ").append(backchannelLogoutSessionRequired).append("\n");
     sb.append("}\n");
     return sb.toString();

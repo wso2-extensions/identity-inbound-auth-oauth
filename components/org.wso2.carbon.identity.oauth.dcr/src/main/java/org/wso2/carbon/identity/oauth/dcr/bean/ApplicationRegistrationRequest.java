@@ -37,9 +37,12 @@ public class ApplicationRegistrationRequest implements Serializable {
     private String consumerKey = null;
     private String consumerSecret = null;
     private String spTemplateName = null;
+    private String idTokenEncryptionAlgorithm = null;
+    private String idTokenEncryptionMethod = null;
     private String backchannelLogoutUri = null;
 
     public List<String> getAudiences() {
+
         return audiences;
     }
 
@@ -106,6 +109,26 @@ public class ApplicationRegistrationRequest implements Serializable {
     public void setConsumerSecret(String consumerSecret) {
 
         this.consumerSecret = consumerSecret;
+    }
+
+    public String getIdTokenEncryptionAlgorithm() {
+
+        return  idTokenEncryptionAlgorithm;
+    }
+
+    public void setIdTokenEncryptionAlgorithm(String idTokenEncryptionAlgorithm) {
+
+        this.idTokenEncryptionAlgorithm = idTokenEncryptionAlgorithm;
+    }
+
+    public String getIdTokenEncryptionMethod() {
+
+        return idTokenEncryptionMethod;
+    }
+
+    public void setIdTokenEncryptionMethod(String idTokenEncryptionMethod) {
+
+        this.idTokenEncryptionMethod = idTokenEncryptionMethod;
     }
 
     public String getBackchannelLogoutUri() {

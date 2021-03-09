@@ -68,6 +68,8 @@ public class DCRMUtils {
         appRegistrationRequest.setSpTemplateName(registrationRequestDTO.getSpTemplateName());
         appRegistrationRequest.setBackchannelLogoutUri(registrationRequestDTO.getBackchannelLogoutUri());
         appRegistrationRequest.setAudiences(registrationRequestDTO.getAudiences());
+        appRegistrationRequest.setIdTokenEncryptionAlgorithm(registrationRequestDTO.getIdTokenEncryptionAlgorithm());
+        appRegistrationRequest.setIdTokenEncryptionMethod(registrationRequestDTO.getIdTokenEncryptionMethod());
         return appRegistrationRequest;
 
     }
