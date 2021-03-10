@@ -44,6 +44,7 @@ import javax.ws.rs.core.Context;
 public class CibaAuthzHandler {
 
     private static final Log log = LogFactory.getLog(CibaAuthzHandler.class);
+    private static final String REQUEST_OBJECT = "request_object";
 
     OAuth2AuthzEndpoint authzEndPoint = new OAuth2AuthzEndpoint();
 
@@ -65,6 +66,7 @@ public class CibaAuthzHandler {
         cibaAuthRequestWrapper.setParameter(Constants.REDIRECT_URI, authCodeResponse.getCallBackUrl());
         cibaAuthRequestWrapper.setParameter(Constants.CLIENT_ID, authCodeResponse.getClientId());
         cibaAuthRequestWrapper.setParameter(CibaConstants.USER_IDENTITY, authCodeResponse.getUserHint());
+        cibaAuthRequestWrapper.setParameter(REQUEST_OBJECT, request.getParameter("request"));
         if (!StringUtils.isBlank(authCodeResponse.getBindingMessage())) {
             cibaAuthRequestWrapper.setParameter(CibaConstants.BINDING_MESSAGE, authCodeResponse.getBindingMessage());
         }
