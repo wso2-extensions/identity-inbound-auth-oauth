@@ -66,7 +66,7 @@ public class CibaAuthzHandler {
         cibaAuthRequestWrapper.setParameter(Constants.REDIRECT_URI, authCodeResponse.getCallBackUrl());
         cibaAuthRequestWrapper.setParameter(Constants.CLIENT_ID, authCodeResponse.getClientId());
         cibaAuthRequestWrapper.setParameter(CibaConstants.USER_IDENTITY, authCodeResponse.getUserHint());
-        cibaAuthRequestWrapper.setParameter(REQUEST_OBJECT, request.getParameter("request"));
+        cibaAuthRequestWrapper.setParameter(REQUEST_OBJECT, request.getParameter(CibaConstants.REQUEST));
         if (!StringUtils.isBlank(authCodeResponse.getBindingMessage())) {
             cibaAuthRequestWrapper.setParameter(CibaConstants.BINDING_MESSAGE, authCodeResponse.getBindingMessage());
         }
