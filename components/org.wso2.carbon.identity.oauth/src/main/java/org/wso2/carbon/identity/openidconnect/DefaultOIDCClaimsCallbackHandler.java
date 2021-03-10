@@ -65,7 +65,6 @@ import java.util.regex.Pattern;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.LOCAL_ROLE_CLAIM_URI;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
 
@@ -525,12 +524,20 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     private void handleServiceProviderRoleMappings(ServiceProvider serviceProvider,
                                                    String claimSeparator,
                                                    Map<String, String> userClaims) throws FrameworkException {
-        if (isNotEmpty(userClaims) && userClaims.containsKey(LOCAL_ROLE_CLAIM_URI)) {
-            String roleClaim = userClaims.get(LOCAL_ROLE_CLAIM_URI);
+        for (String roleGroupClaimURI : IdentityUtil.getRoleGroupClaims()) {
+            handleSPRoleMapping(serviceProvider, claimSeparator, userClaims, roleGroupClaimURI);
+        }
+    }
+
+    private void handleSPRoleMapping(ServiceProvider serviceProvider, String claimSeparator, Map<String, String>
+            userClaims, String roleGroupClaimURI) throws FrameworkException {
+
+        if (isNotEmpty(userClaims) && userClaims.containsKey(roleGroupClaimURI)) {
+            String roleClaim = userClaims.get(roleGroupClaimURI);
             List<String> rolesList = Arrays.asList(roleClaim.split(Pattern.quote(claimSeparator)));
             String spMappedRoleClaim =
                     OIDCClaimUtil.getServiceProviderMappedUserRoles(serviceProvider, rolesList, claimSeparator);
-            userClaims.put(LOCAL_ROLE_CLAIM_URI, spMappedRoleClaim);
+            userClaims.put(roleGroupClaimURI, spMappedRoleClaim);
         }
     }
 
