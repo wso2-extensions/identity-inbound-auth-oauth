@@ -511,35 +511,29 @@ public class OAuth2AuthzEndpoint {
             }
 
             List<Integer> approvedClaimIds = getUserConsentClaimIds(oAuthMessage);
-            if (isPostConsentHandlingRequired(approvedClaimIds)) {
-                serviceProvider = getServiceProvider(clientId);
-                /*
-                    With the current implementation of the SSOConsentService we need to send back the original
-                    ConsentClaimsData object we got during pre consent stage. Currently we are repeating the API call
-                    during post consent handling to get the original ConsentClaimsData object (Assuming there is no
-                    change in SP during pre-consent and post-consent).
 
-                    The API on the SSO Consent Service will be improved to avoid having to send the original
-                    ConsentClaimsData object.
-                 */
-                ConsentClaimsData value = getConsentRequiredClaims(loggedInUser, serviceProvider, oauth2Params);
-                // Call framework and create the consent receipt.
-                if (log.isDebugEnabled()) {
-                    log.debug("Creating user consent receipt for user: " + loggedInUser.toFullQualifiedUsername() +
-                            " for client_id: " + clientId + " of tenantDomain: " + spTenantDomain);
-                }
-                if (hasPromptContainsConsent(oauth2Params)) {
-                    getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
-                            loggedInUser, value, true);
-                } else {
-                    getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
-                            loggedInUser, value, false);
-                }
+            serviceProvider = getServiceProvider(clientId);
+            /*
+                With the current implementation of the SSOConsentService we need to send back the original
+                ConsentClaimsData object we got during pre consent stage. Currently we are repeating the API call
+                during post consent handling to get the original ConsentClaimsData object (Assuming there is no
+                change in SP during pre-consent and post-consent).
+
+                The API on the SSO Consent Service will be improved to avoid having to send the original
+                ConsentClaimsData object.
+             */
+            ConsentClaimsData value = getConsentRequiredClaims(loggedInUser, serviceProvider, oauth2Params);
+            // Call framework and create the consent receipt.
+            if (log.isDebugEnabled()) {
+                log.debug("Creating user consent receipt for user: " + loggedInUser.toFullQualifiedUsername() +
+                        " for client_id: " + clientId + " of tenantDomain: " + spTenantDomain);
+            }
+            if (hasPromptContainsConsent(oauth2Params)) {
+                getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
+                        loggedInUser, value, true);
             } else {
-                if (log.isDebugEnabled()) {
-                    log.debug("Post consent handling not required for user: " + loggedInUser.toFullQualifiedUsername() +
-                            " for client_id: " + clientId + " of tenantDomain: " + spTenantDomain + ".");
-                }
+                getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
+                        loggedInUser, value, false);
             }
         } catch (OAuthSystemException | SSOConsentServiceException e) {
             String msg = "Error while processing consent of user: " + loggedInUser.toFullQualifiedUsername() + " for " +
@@ -558,11 +552,6 @@ public class OAuth2AuthzEndpoint {
         } else {
             return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user);
         }
-    }
-
-    private boolean isPostConsentHandlingRequired(List<Integer> approvedClaimIds) {
-
-        return CollectionUtils.isNotEmpty(approvedClaimIds);
     }
 
     private List<Integer> getUserConsentClaimIds(OAuthMessage oAuthMessage) {
