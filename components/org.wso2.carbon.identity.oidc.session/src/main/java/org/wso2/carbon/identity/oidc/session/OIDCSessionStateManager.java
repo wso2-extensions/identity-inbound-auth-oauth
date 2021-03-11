@@ -42,6 +42,7 @@ public interface OIDCSessionStateManager {
      * @param response
      * @return Cookie
      */
+    @Deprecated
     Cookie addOPBrowserStateCookie(HttpServletResponse response);
 
     /**
@@ -51,7 +52,8 @@ public interface OIDCSessionStateManager {
      * @return Cookie
      */
     default Cookie addOPBrowserStateCookie(HttpServletResponse response, String tenantDomain) {
-        return null;
+
+        return addOPBrowserStateCookie(response);
     }
 
 }
