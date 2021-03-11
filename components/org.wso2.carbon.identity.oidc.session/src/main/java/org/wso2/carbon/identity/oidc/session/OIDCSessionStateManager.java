@@ -55,5 +55,4 @@ public interface OIDCSessionStateManager {
 
         return addOPBrowserStateCookie(response);
     }
-
 }
