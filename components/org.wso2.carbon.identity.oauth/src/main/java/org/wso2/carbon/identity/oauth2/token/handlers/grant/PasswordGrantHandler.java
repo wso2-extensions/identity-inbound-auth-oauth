@@ -222,7 +222,12 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                         (tokenReq.getResourceOwnerUsername()))) {
                     throw new IdentityOAuth2Exception("Authentication failed for " + tenantAwareUserName);
                 }
-                throw new IdentityOAuth2Exception("Authentication failed for " + tokenReq.getResourceOwnerUsername());
+                String username = tokenReq.getResourceOwnerUsername();
+                if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                    // For tenant qualified urls, no need to send fully qualified username in response.
+                    username = tenantAwareUserName;
+                }
+                throw new IdentityOAuth2Exception("Authentication failed for " + username);
             } else if (isPublishPasswordGrantLoginEnabled) {
                 publishAuthenticationData(tokenReq, true, serviceProvider);
             }
