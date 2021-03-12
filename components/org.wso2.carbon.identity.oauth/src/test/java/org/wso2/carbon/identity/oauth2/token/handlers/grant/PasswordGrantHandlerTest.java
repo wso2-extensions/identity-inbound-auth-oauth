@@ -24,13 +24,14 @@ import org.testng.IObjectFactory;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService;
+import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -63,7 +64,8 @@ import static org.wso2.carbon.user.core.UserCoreConstants.PRIMARY_DEFAULT_DOMAIN
                 UserCoreUtil.class,
                 OAuthComponentServiceHolder.class,
                 OAuthServerConfiguration.class,
-                IdentityUtil.class
+                IdentityUtil.class,
+                FrameworkUtils.class
         }
 )
 public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
@@ -90,8 +92,6 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
     private OauthTokenIssuer oauthIssuer;
     @Mock
     private LocalAndOutboundAuthenticationConfig localAndOutboundAuthenticationConfig;
-    @Mock
-    private MultiAttributeLoginService multiAttributeLoginService;
 
     private static final String CLIENT_ID = "IbWwXLf5MnKSY6x6gnR_7gd7f1wa";
 
@@ -124,7 +124,10 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
 
         mockStatic(OAuth2ServiceComponentHolder.class);
         when(OAuth2ServiceComponentHolder.getApplicationMgtService()).thenReturn(applicationManagementService);
-        when(OAuth2ServiceComponentHolder.getMultiAttributeLoginService()).thenReturn(multiAttributeLoginService);
+        mockStatic(FrameworkUtils.class);
+        ResolvedUserResult resolvedUserResult = new ResolvedUserResult(ResolvedUserResult.UserResolvedStatus.FAIL);
+        when(FrameworkUtils.processMultiAttributeLoginIdentification(anyString(), anyString())).
+                thenReturn(resolvedUserResult);
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantIdOfUser(anyString())).thenReturn(1);
 
@@ -191,8 +194,10 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuth2ServiceComponentHolder.class);
         when(OAuth2ServiceComponentHolder.getApplicationMgtService()).thenReturn(applicationManagementService);
         OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
-        when(OAuth2ServiceComponentHolder.getMultiAttributeLoginService()).thenReturn(multiAttributeLoginService);
-
+        mockStatic(FrameworkUtils.class);
+        ResolvedUserResult resolvedUserResult = new ResolvedUserResult(ResolvedUserResult.UserResolvedStatus.FAIL);
+        when(FrameworkUtils.processMultiAttributeLoginIdentification(anyString(), anyString())).
+                thenReturn(resolvedUserResult);
         if (e instanceof IdentityApplicationManagementException) {
             when(applicationManagementService
                     .getServiceProviderByClientId(anyString(), anyString(), anyString())).thenThrow(e);
