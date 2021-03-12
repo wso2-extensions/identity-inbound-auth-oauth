@@ -35,7 +35,6 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
-import org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -459,21 +458,5 @@ public class OAuth2ServiceComponent {
     protected void unsetIdpManager(IdpManager idpManager) {
 
         OAuth2ServiceComponentHolder.getInstance().setIdpManager(null);
-    }
-
-    @Reference(
-            name = "MultiAttributeLoginService",
-            service = MultiAttributeLoginService.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetMultiAttributeLoginService")
-    protected void setMultiAttributeLoginService(MultiAttributeLoginService multiAttributeLoginService) {
-
-        OAuth2ServiceComponentHolder.setMultiAttributeLoginService(multiAttributeLoginService);
-    }
-
-    protected void unsetMultiAttributeLoginService(MultiAttributeLoginService multiAttributeLoginService) {
-
-        OAuth2ServiceComponentHolder.setMultiAttributeLoginService(null);
     }
 }
