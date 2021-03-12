@@ -22,7 +22,6 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
-import org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
@@ -54,7 +53,6 @@ public class OAuth2ServiceComponentHolder {
     private static AuthenticationDataPublisher authenticationDataPublisherProxy;
     private static KeyIDProvider keyIDProvider = null;
     private IdpManager idpManager;
-    private static MultiAttributeLoginService multiAttributeLoginService;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -63,16 +61,6 @@ public class OAuth2ServiceComponentHolder {
     public static OAuth2ServiceComponentHolder getInstance() {
 
         return instance;
-    }
-
-    public static MultiAttributeLoginService getMultiAttributeLoginService() {
-
-        return multiAttributeLoginService;
-    }
-
-    public static void setMultiAttributeLoginService(MultiAttributeLoginService multiAttributeLoginService) {
-
-        OAuth2ServiceComponentHolder.multiAttributeLoginService = multiAttributeLoginService;
     }
 
     /**

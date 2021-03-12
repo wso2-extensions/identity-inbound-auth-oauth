@@ -210,13 +210,12 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             UserStoreManager userStoreManager = getUserStoreManager(tokenReq);
             String tenantAwareUserName = MultitenantUtils.getTenantAwareUsername(tokenReq.getResourceOwnerUsername());
             String userTenantDomain = MultitenantUtils.getTenantDomain(tokenReq.getResourceOwnerUsername());
-            if (OAuth2ServiceComponentHolder.getMultiAttributeLoginService().isEnabled(userTenantDomain)) {
-                ResolvedUserResult resolvedUser = OAuth2ServiceComponentHolder.getMultiAttributeLoginService().
-                        resolveUser(tenantAwareUserName, userTenantDomain);
-                if (resolvedUser.isResolved()) {
-                    tenantAwareUserName = resolvedUser.getUser().getUsername();
-                    tokenReq.setResourceOwnerUsername(tenantAwareUserName + "@" + userTenantDomain);
-                }
+            ResolvedUserResult resolvedUserResult =
+                    FrameworkUtils.processMultiAttributeLoginIdentification(tenantAwareUserName, userTenantDomain);
+            if (resolvedUserResult != null &&
+                    ResolvedUserResult.UserResolvedStatus.SUCCESS.equals(resolvedUserResult.getResolvedStatus())) {
+                tenantAwareUserName = resolvedUserResult.getUser().getUsername();
+                tokenReq.setResourceOwnerUsername(tenantAwareUserName + "@" + userTenantDomain);
             }
             authenticated = userStoreManager.authenticate(tenantAwareUserName, tokenReq.getResourceOwnerPassword());
             if (log.isDebugEnabled()) {
