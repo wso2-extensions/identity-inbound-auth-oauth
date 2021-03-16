@@ -53,8 +53,6 @@ public class Constants {
     public static final String ERROR_DESCRIPTION = "error_description";
     public static final String DEVICE_DO_ENDPOINT = "/authenticationendpoint/device.do";
     public static final String DEVICE_SUCCESS_DO_ENDPOINT = "/authenticationendpoint/device_success.do";
-    public static final String IDN_OAUTH2_DEVICE_FLOW = "IDN_OAUTH2_DEVICE_FLOW";
-    public static final String QUANTIFIER = "QUANTIFIER";
     public static final String USRCDE_QNTFR_CONSTRAINT = "USRCDE_QNTFR_CONSTRAINT";
 
     public static final String EXPIRY_TIME_PATH = "OAuth.SupportedGrantTypes.SupportedGrantType.ExpiryTime";
@@ -68,5 +66,4 @@ public class Constants {
     public static final int INTERVAL_VALUE = 5000; //in milliseconds
     public static final String KEY_SET = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     public static final int DEFAULT_DEVICE_TOKEN_PERSIST_RETRY_COUNT = 5;
-    public static final boolean SET_RESPONSE_TO_STRING = false;
 }
