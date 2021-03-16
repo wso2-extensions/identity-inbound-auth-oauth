@@ -57,6 +57,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -2632,7 +2633,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     public Set<AccessTokenDO> getAccessTokensByBindingRef(String bindingRef) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.debug("Retrieving active access tokens issued with binding reference " + bindingRef);
+            log.debug("Retrieving active access tokens issued with binding reference : " + bindingRef);
         }
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
@@ -2647,10 +2648,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         if (tokenMap.containsKey(token)) {
                             AccessTokenDO tokenObj = tokenMap.get(token);
                             String[] previousScope = tokenObj.getScope();
-                            String[] newSope = new String[tokenObj.getScope().length + 1];
-                            System.arraycopy(previousScope, 0, newSope, 0, previousScope.length);
-                            newSope[previousScope.length] = resultSet.getString(2);
-                            tokenObj.setScope(newSope);
+                            String[] newScope = new String[tokenObj.getScope().length + 1];
+                            System.arraycopy(previousScope, 0, newScope, 0, previousScope.length);
+                            newScope[previousScope.length] = resultSet.getString(2);
+                            tokenObj.setScope(newScope);
                         } else {
                             String consumerKey = resultSet.getString("CONSUMER_KEY");
                             String tokenScope = resultSet.getString("TOKEN_SCOPE");
@@ -2686,7 +2687,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             accessTokenDO.setTokenType(tokenType);
                             tokenMap.put(token, accessTokenDO);
                         }
-                        return null;
+                        return Collections.emptySet();
                     }),
                     (PreparedStatement preparedStatement) -> {
                         preparedStatement.setString(1, bindingRef);

@@ -226,7 +226,7 @@ public interface AccessTokenDAO {
      */
     default Set<AccessTokenDO> getAccessTokensByBindingRef(String bindingRef) throws IdentityOAuth2Exception {
 
-        return null;
+        return Collections.emptySet();
     }
 
     /**
