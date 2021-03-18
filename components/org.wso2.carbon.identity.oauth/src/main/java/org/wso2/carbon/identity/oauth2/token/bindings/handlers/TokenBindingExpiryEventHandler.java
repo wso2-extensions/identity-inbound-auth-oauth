@@ -254,7 +254,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
             return;
         }
         Set<AccessTokenDO> boundTokens = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                .getAccessTokensByBindingRef(user, tokenBindingReference);
+                .getAccessTokensByBindingRef(tokenBindingReference);
         for (AccessTokenDO accessTokenDO : boundTokens) {
             String consumerKey = accessTokenDO.getConsumerKey();
             if (OAuth2Util.getAppInformationByClientId(consumerKey).
