@@ -402,7 +402,8 @@ public class DCRMService {
             if (registrationRequest.getIdTokenEncryptionMethod() != null) {
                 oAuthConsumerApp.setIdTokenEncryptionMethod(registrationRequest.getIdTokenEncryptionMethod());
             } else {
-                oAuthConsumerApp.setIdTokenEncryptionMethod("A128CBC-HS256");
+                oAuthConsumerApp.setIdTokenEncryptionMethod(OAuthServerConfiguration.getInstance().
+                        getDefaultIdTokenEncryptionMethod());
             }
         } else {
             if (registrationRequest.getIdTokenEncryptionMethod() != null) {
