@@ -52,6 +52,8 @@ public class OAuthConsumerAppDTO {
     private String tokenBindingType;
     private boolean tokenRevocationWithIDPSessionTerminationEnabled;
     private boolean tokenBindingValidationEnabled;
+    private String tokenEndpointAuthMethod;
+    private String softwareId;
 
     public long getUserAccessTokenExpiryTime() {
         return userAccessTokenExpiryTime;
@@ -299,6 +301,26 @@ public class OAuthConsumerAppDTO {
     public void setTokenBindingValidationEnabled(boolean tokenBindingValidationEnabled) {
 
         this.tokenBindingValidationEnabled = tokenBindingValidationEnabled;
+    }
+
+    public String getTokenEndpointAuthMethod() {
+
+        return tokenEndpointAuthMethod;
+    }
+
+    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+
+        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
+    public String getSoftwareId() {
+
+        return softwareId;
+    }
+
+    public void setSoftwareId(String softwareId) {
+
+        this.softwareId = softwareId;
     }
 }
 

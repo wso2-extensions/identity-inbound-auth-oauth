@@ -12,15 +12,15 @@ import javax.validation.constraints.NotNull;
 
 @ApiModel(description = "")
 public class ErrorDTO  {
-  
-  
-  
+
+
+
   private String error = null;
-  
-  
+
+
   private String errorDescription = null;
 
-  
+
   /**
    **/
   @ApiModelProperty(value = "")
@@ -32,7 +32,7 @@ public class ErrorDTO  {
     this.error = error;
   }
 
-  
+
   /**
    **/
   @ApiModelProperty(value = "")
@@ -44,13 +44,13 @@ public class ErrorDTO  {
     this.errorDescription = errorDescription;
   }
 
-  
+
 
   @Override
   public String toString()  {
     StringBuilder sb = new StringBuilder();
     sb.append("class ErrorDTO {\n");
-    
+
     sb.append("  error: ").append(error).append("\n");
     sb.append("  error_description: ").append(errorDescription).append("\n");
     sb.append("}\n");

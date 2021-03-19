@@ -14,27 +14,27 @@ import javax.validation.constraints.NotNull;
 
 @ApiModel(description = "")
 public class ApplicationDTO  {
-  
-  
-  
+
+
+
   private String clientId = null;
-  
-  
+
+
   private String clientSecret = null;
-  
-  
+
+
   private String clientSecretExpiresAt = null;
-  
-  
+
+
   private List<String> redirectUris = new ArrayList<String>();
-  
-  
+
+
   private List<String> grantTypes = new ArrayList<String>();
-  
-  
+
+
   private String clientName = null;
 
-  
+
   /**
    **/
   @ApiModelProperty(value = "")
@@ -46,7 +46,7 @@ public class ApplicationDTO  {
     this.clientId = clientId;
   }
 
-  
+
   /**
    **/
   @ApiModelProperty(value = "")
@@ -58,7 +58,7 @@ public class ApplicationDTO  {
     this.clientSecret = clientSecret;
   }
 
-  
+
   /**
    **/
   @ApiModelProperty(value = "")
@@ -70,7 +70,7 @@ public class ApplicationDTO  {
     this.clientSecretExpiresAt = clientSecretExpiresAt;
   }
 
-  
+
   /**
    **/
   @ApiModelProperty(value = "")
@@ -82,7 +82,7 @@ public class ApplicationDTO  {
     this.redirectUris = redirectUris;
   }
 
-  
+
   /**
    **/
   @ApiModelProperty(value = "")
@@ -94,7 +94,7 @@ public class ApplicationDTO  {
     this.grantTypes = grantTypes;
   }
 
-  
+
   /**
    **/
   @ApiModelProperty(value = "")
@@ -106,13 +106,13 @@ public class ApplicationDTO  {
     this.clientName = clientName;
   }
 
-  
+
 
   @Override
   public String toString()  {
     StringBuilder sb = new StringBuilder();
     sb.append("class ApplicationDTO {\n");
-    
+
     sb.append("  client_id: ").append(clientId).append("\n");
     sb.append("  client_secret: ").append(clientSecret).append("\n");
     sb.append("  client_secret_expires_at: ").append(clientSecretExpiresAt).append("\n");

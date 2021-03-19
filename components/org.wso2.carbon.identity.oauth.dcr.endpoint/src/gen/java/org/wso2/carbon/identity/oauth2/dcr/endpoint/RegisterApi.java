@@ -26,92 +26,91 @@ import javax.ws.rs.*;
 @io.swagger.annotations.Api(value = "/register", description = "the register API")
 public class RegisterApi  {
 
-   private final RegisterApiService delegate = RegisterApiServiceFactory.getRegisterApi();
+ private final RegisterApiService delegate = RegisterApiServiceFactory.getRegisterApi();
 
-    @DELETE
-    @Path("/{client_id}")
-    @Consumes({ "application/json" })
-    @Produces({ "application/json" })
-    @io.swagger.annotations.ApiOperation(value = "Delete OAuth2 application\n", notes = "This API is used to delete an OAuth2 application by client_id.\n", response = void.class)
-    @io.swagger.annotations.ApiResponses(value = { 
-        @io.swagger.annotations.ApiResponse(code = 204, message = "Successfully deleted"),
-        
-        @io.swagger.annotations.ApiResponse(code = 404, message = "Not Found"),
-        
-        @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
+ @DELETE
+ @Path("/{client_id}")
+ @Consumes({ "application/json" })
+ @Produces({ "application/json" })
+ @io.swagger.annotations.ApiOperation(value = "Delete OAuth2 application\n", notes = "This API is used to delete an OAuth2 application by client_id.\n", response = void.class)
+ @io.swagger.annotations.ApiResponses(value = {
+         @io.swagger.annotations.ApiResponse(code = 204, message = "Successfully deleted"),
 
-    public Response deleteApplication(@ApiParam(value = "Unique identifier of the OAuth2 client application.",required=true ) @PathParam("client_id") String clientId)
-    {
-    return delegate.deleteApplication(clientId);
-    }
-    @GET
-    @Path("/{client_id}")
-    @Consumes({ "application/json" })
-    @Produces({ "application/json" })
-    @io.swagger.annotations.ApiOperation(value = "Get OAuth2 application information\n", notes = "This API is used to get/retrieve an OAuth2 application by client_id.\n", response = ApplicationDTO.class)
-    @io.swagger.annotations.ApiResponses(value = { 
-        @io.swagger.annotations.ApiResponse(code = 200, message = "Successfully Retrieved"),
-        
-        @io.swagger.annotations.ApiResponse(code = 404, message = "Not Found"),
-        
-        @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
+         @io.swagger.annotations.ApiResponse(code = 404, message = "Not Found"),
 
-    public Response getApplication(@ApiParam(value = "Unique identifier of the OAuth2 client application.",required=true ) @PathParam("client_id") String clientId)
-    {
-    return delegate.getApplication(clientId);
-    }
-    @POST
-    
-    @Consumes({ "application/json" })
-    @Produces({ "application/json" })
-    @io.swagger.annotations.ApiOperation(value = "Registers an OAuth2 application\n", notes = "This API is used to create an OAuth2 application.\n", response = ApplicationDTO.class)
-    @io.swagger.annotations.ApiResponses(value = { 
-        @io.swagger.annotations.ApiResponse(code = 201, message = "Created"),
-        
-        @io.swagger.annotations.ApiResponse(code = 400, message = "Bad Request"),
-        
-        @io.swagger.annotations.ApiResponse(code = 409, message = "Conflict"),
-        
-        @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
+         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
-    public Response registerApplication(@ApiParam(value = "Application information to register." ,required=true ) RegistrationRequestDTO registrationRequest)
-    {
-    return delegate.registerApplication(registrationRequest);
-    }
-    @PUT
-    @Path("/{client_id}")
-    @Consumes({ "application/json" })
-    @Produces({ "application/json" })
-    @io.swagger.annotations.ApiOperation(value = "Updates an OAuth2 application\n", notes = "This API is used to update an OAuth2 application.\n", response = ApplicationDTO.class)
-    @io.swagger.annotations.ApiResponses(value = { 
-        @io.swagger.annotations.ApiResponse(code = 200, message = "Successfully updated"),
-        
-        @io.swagger.annotations.ApiResponse(code = 400, message = "Bad Request"),
-        
-        @io.swagger.annotations.ApiResponse(code = 409, message = "Conflict"),
-        
-        @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
+ public Response deleteApplication(@ApiParam(value = "Unique identifier of the OAuth2 client application.",required=true ) @PathParam("client_id")  String clientId)
+ {
+  return delegate.deleteApplication(clientId);
+ }
+ @GET
+ @Path("/{client_id}")
+ @Consumes({ "application/json" })
+ @Produces({ "application/json" })
+ @io.swagger.annotations.ApiOperation(value = "Get OAuth2 application information\n", notes = "This API is used to get/retrieve an OAuth2 application by client_id.\n", response = ApplicationDTO.class)
+ @io.swagger.annotations.ApiResponses(value = {
+         @io.swagger.annotations.ApiResponse(code = 200, message = "Successfully Retrieved"),
 
-    public Response updateApplication(@ApiParam(value = "Application information to update." ,required=true ) UpdateRequestDTO updateRequest,
-    @ApiParam(value = "Unique identifier for the OAuth2 client application.",required=true ) @PathParam("client_id") String clientId)
-    {
-    return delegate.updateApplication(updateRequest,clientId);
-    }
-    @GET
+         @io.swagger.annotations.ApiResponse(code = 404, message = "Not Found"),
 
-    @Consumes({ "application/json" })
-    @Produces({ "application/json" })
-    @io.swagger.annotations.ApiOperation(value = "Get OAuth2 application information\n", notes = "This API is used to get/retrieve an OAuth2 application by client_name.\n", response = ApplicationDTO.class)
-    @io.swagger.annotations.ApiResponses(value = {
-            @io.swagger.annotations.ApiResponse(code = 200, message = "Successfully Retrieved"),
+         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
-            @io.swagger.annotations.ApiResponse(code = 401, message = "Unauthorized"),
+ public Response getApplication(@ApiParam(value = "Unique identifier of the OAuth2 client application.",required=true ) @PathParam("client_id")  String clientId)
+ {
+  return delegate.getApplication(clientId);
+ }
+ @GET
 
-            @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
+ @Consumes({ "application/json" })
+ @Produces({ "application/json" })
+ @io.swagger.annotations.ApiOperation(value = "Get OAuth2 application information\n", notes = "This API is used to get/retrieve an OAuth2 application by client_name.\n", response = ApplicationDTO.class)
+ @io.swagger.annotations.ApiResponses(value = {
+         @io.swagger.annotations.ApiResponse(code = 200, message = "Successfully Retrieved"),
 
-    public Response getApplicationWithName(@ApiParam(value = "Client name provided during registration.",required=true ) @QueryParam("client_name") String clientName)
-    {
-     return delegate.getApplicationByName(clientName);
-    }
+         @io.swagger.annotations.ApiResponse(code = 401, message = "Unauthorized"),
+
+         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
+
+ public Response getApplicationByName(@ApiParam(value = "Unique identifier of the OAuth2 client application.",required=true ) @PathParam("client_name")  String clientName)
+ {
+  return delegate.getApplicationByName(clientName);
+ }
+ @POST
+
+ @Consumes({ "application/json" })
+ @Produces({ "application/json" })
+ @io.swagger.annotations.ApiOperation(value = "Registers an OAuth2 application\n", notes = "If you want to register an OAuth2 application with a specified client_id and secret, check the sample request given below.\n", response = ApplicationDTO.class)
+ @io.swagger.annotations.ApiResponses(value = {
+         @io.swagger.annotations.ApiResponse(code = 201, message = "Created"),
+
+         @io.swagger.annotations.ApiResponse(code = 400, message = "Bad Request"),
+
+         @io.swagger.annotations.ApiResponse(code = 409, message = "Conflict"),
+
+         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
+
+ public Response registerApplication(@ApiParam(value = "Application information to register." ,required=true ) RegistrationRequestDTO registrationRequest)
+ {
+  return delegate.registerApplication(registrationRequest);
+ }
+ @PUT
+ @Path("/{client_id}")
+ @Consumes({ "application/json" })
+ @Produces({ "application/json" })
+ @io.swagger.annotations.ApiOperation(value = "Updates an OAuth2 application\n", notes = "This API is used to update an OAuth2 application.\n", response = ApplicationDTO.class)
+ @io.swagger.annotations.ApiResponses(value = {
+         @io.swagger.annotations.ApiResponse(code = 200, message = "Successfully updated"),
+
+         @io.swagger.annotations.ApiResponse(code = 400, message = "Bad Request"),
+
+         @io.swagger.annotations.ApiResponse(code = 409, message = "Conflict"),
+
+         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
+
+ public Response updateApplication(@ApiParam(value = "Application information to update." ,required=true ) UpdateRequestDTO updateRequest,
+                                   @ApiParam(value = "Unique identifier for the OAuth2 client application.",required=true ) @PathParam("client_id")  String clientId)
+ {
+  return delegate.updateApplication(updateRequest,clientId);
+ }
 }
-

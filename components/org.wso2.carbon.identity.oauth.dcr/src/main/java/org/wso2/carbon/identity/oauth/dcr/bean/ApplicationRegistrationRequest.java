@@ -39,7 +39,9 @@ public class ApplicationRegistrationRequest implements Serializable {
     private String spTemplateName = null;
     private String idTokenEncryptionAlgorithm = null;
     private String idTokenEncryptionMethod = null;
+    private String tokenEndpointAuthMethod = null;
     private String backchannelLogoutUri = null;
+    private String softwareId = null;
 
     public List<String> getAudiences() {
 
@@ -131,6 +133,16 @@ public class ApplicationRegistrationRequest implements Serializable {
         this.idTokenEncryptionMethod = idTokenEncryptionMethod;
     }
 
+    public String getTokenEndpointAuthMethod() {
+
+        return tokenEndpointAuthMethod;
+    }
+
+    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+
+        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
     public String getBackchannelLogoutUri() {
 
         return backchannelLogoutUri;
@@ -139,6 +151,16 @@ public class ApplicationRegistrationRequest implements Serializable {
     public void setBackchannelLogoutUri(String backchannelLogoutUri) {
 
         this.backchannelLogoutUri = backchannelLogoutUri;
+    }
+
+    public String getSoftwareId() {
+
+        return softwareId;
+    }
+
+    public void setSoftwareId(String softwareId) {
+
+        this.softwareId = softwareId;
     }
 
     /**

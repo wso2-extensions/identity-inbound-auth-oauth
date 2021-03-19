@@ -1,227 +1,343 @@
 package org.wso2.carbon.identity.oauth2.dcr.endpoint.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import io.swagger.annotations.*;
+import com.fasterxml.jackson.annotation.*;
+
 import javax.validation.constraints.NotNull;
 
 
-@ApiModel
+
+
+
+@ApiModel(description = "")
 public class RegistrationRequestDTO  {
 
+
   @NotNull
-  private List<String> redirectUris = new ArrayList<>();
+  private List<String> redirectUris = new ArrayList<String>();
+
   @NotNull
   private String clientName = null;
-  private List<String> grantTypes = new ArrayList<>();
-  private String applicationType = null;
-  private String jwksUri = null;
-  private String url = null;
-  private String clientId = null;
-  private String clientSecret = null;
-  private List<String> contacts = new ArrayList<>();
-  private List<String> postLogoutRedirectUris = new ArrayList<>();
-  private List<String> requestUris = new ArrayList<>();
-  private List<String> responseTypes = new ArrayList<>();
-  private String tokenType = null;
-  private String spTemplateName = null;
-  private String backchannelLogoutUri = null;
-  private List<String> audiences = new ArrayList<>();
-  private String idTokenEncryptionAlgorithm;
-  private String idTokenEncryptionMethod;
-  private boolean backchannelLogoutSessionRequired;
 
-  @ApiModelProperty(required = true)
+
+  private List<String> grantTypes = new ArrayList<String>();
+
+
+  private String applicationType = null;
+
+
+  private String jwksUri = null;
+
+
+  private String url = null;
+
+
+  private String clientId = null;
+
+
+  private String clientSecret = null;
+
+
+  private List<String> contacts = new ArrayList<String>();
+
+
+  private List<String> postLogoutRedirectUris = new ArrayList<String>();
+
+
+  private List<String> requestUris = new ArrayList<String>();
+
+
+  private List<String> responseTypes = new ArrayList<String>();
+
+
+  private String spTemplateName = null;
+
+
+  private String backchannelLogoutUri = null;
+
+
+  private Boolean backchannelLogoutSessionRequired = null;
+
+
+  private List<String> aud = new ArrayList<String>();
+
+
+  private String idTokenEncryptedResponseAlg = null;
+
+
+  private String idTokenEncryptedResponseEnc = null;
+
+
+  private String tokenEndpointAuthMethod = null;
+
+
+  private String softwareId = null;
+
+
+  private String tokenType = null;
+
+
+  /**
+   **/
+  @ApiModelProperty(required = true, value = "")
   @JsonProperty("redirect_uris")
   public List<String> getRedirectUris() {
     return redirectUris;
   }
-
   public void setRedirectUris(List<String> redirectUris) {
     this.redirectUris = redirectUris;
   }
 
-  @ApiModelProperty(required = true)
+
+  /**
+   **/
+  @ApiModelProperty(required = true, value = "")
   @JsonProperty("client_name")
   public String getClientName() {
     return clientName;
   }
-
   public void setClientName(String clientName) {
     this.clientName = clientName;
   }
 
-  @ApiModelProperty
-  @JsonProperty("aud")
-  public  List<String> getAudiences() {return audiences; }
 
-  public void setAudiences(List<String> audiences) { this.audiences = audiences; }
-
-  @ApiModelProperty
+  /**
+   **/
+  @ApiModelProperty(value = "")
   @JsonProperty("grant_types")
   public List<String> getGrantTypes() {
     return grantTypes;
   }
-
   public void setGrantTypes(List<String> grantTypes) {
     this.grantTypes = grantTypes;
   }
 
-  @ApiModelProperty
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
   @JsonProperty("application_type")
   public String getApplicationType() {
     return applicationType;
   }
-
   public void setApplicationType(String applicationType) {
     this.applicationType = applicationType;
   }
 
-  @ApiModelProperty
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
   @JsonProperty("jwks_uri")
   public String getJwksUri() {
     return jwksUri;
   }
-
   public void setJwksUri(String jwksUri) {
     this.jwksUri = jwksUri;
   }
 
-  @ApiModelProperty
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
   @JsonProperty("url")
   public String getUrl() {
     return url;
   }
-
   public void setUrl(String url) {
     this.url = url;
   }
 
-  @ApiModelProperty
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
   @JsonProperty("ext_param_client_id")
   public String getClientId() {
     return clientId;
   }
-
   public void setClientId(String clientId) {
     this.clientId = clientId;
   }
 
-  @ApiModelProperty
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
   @JsonProperty("ext_param_client_secret")
   public String getClientSecret() {
     return clientSecret;
   }
-
   public void setClientSecret(String clientSecret) {
     this.clientSecret = clientSecret;
   }
 
-  @ApiModelProperty
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
   @JsonProperty("contacts")
   public List<String> getContacts() {
     return contacts;
   }
-
   public void setContacts(List<String> contacts) {
     this.contacts = contacts;
   }
 
-  @ApiModelProperty
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
   @JsonProperty("post_logout_redirect_uris")
   public List<String> getPostLogoutRedirectUris() {
     return postLogoutRedirectUris;
   }
-
   public void setPostLogoutRedirectUris(List<String> postLogoutRedirectUris) {
     this.postLogoutRedirectUris = postLogoutRedirectUris;
   }
 
-  @ApiModelProperty
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
   @JsonProperty("request_uris")
   public List<String> getRequestUris() {
     return requestUris;
   }
-
   public void setRequestUris(List<String> requestUris) {
     this.requestUris = requestUris;
   }
 
-  @ApiModelProperty
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
   @JsonProperty("response_types")
   public List<String> getResponseTypes() {
     return responseTypes;
   }
-
   public void setResponseTypes(List<String> responseTypes) {
     this.responseTypes = responseTypes;
   }
 
-  @ApiModelProperty
-  @JsonProperty("token_type_extension")
-  public String getTokenType() {
-    return tokenType;
-  }
 
-  public void setTokenType(String tokenType) {
-    this.tokenType = tokenType;
-  }
-
-  @ApiModelProperty
-  @JsonProperty("backchannel_logout_uri")
-  public String getBackchannelLogoutUri() {
-    return backchannelLogoutUri;
-  }
-
-  public void setBackchannelLogoutUri(String backchannelLogoutUri) {
-    this.backchannelLogoutUri = backchannelLogoutUri;
-  }
-
-  @ApiModelProperty
-  @JsonProperty("id_token_encrypted_response_alg")
-  public String getIdTokenEncryptionAlgorithm() { return idTokenEncryptionAlgorithm; }
-
-  public void setIdTokenEncryptionAlgorithm(String idTokenEncryptionAlgorithm) {
-    this.idTokenEncryptionAlgorithm = idTokenEncryptionAlgorithm;
-  }
-
-  @ApiModelProperty
-  @JsonProperty("id_token_encrypted_response_enc")
-  public String getIdTokenEncryptionMethod() { return idTokenEncryptionMethod; }
-
-  public void setIdTokenEncryptionMethod(String idTokenEncryptionMethod) {
-    this.idTokenEncryptionMethod = idTokenEncryptionMethod;
-  }
-
-  @ApiModelProperty
-  @JsonProperty("backchannel_logout_session_required")
-  public boolean getBackchannelLogoutSessionRequired() {
-    return backchannelLogoutSessionRequired;
-  }
-
-  public void setBackchannelLogoutSessionRequired(boolean backchannelLogoutSessionRequired) {
-    this.backchannelLogoutSessionRequired = backchannelLogoutSessionRequired;
-  }
-
-  @ApiModelProperty
+  /**
+   **/
+  @ApiModelProperty(value = "")
   @JsonProperty("ext_param_sp_template")
   public String getSpTemplateName() {
     return spTemplateName;
   }
-
   public void setSpTemplateName(String spTemplateName) {
     this.spTemplateName = spTemplateName;
   }
+
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("backchannel_logout_uri")
+  public String getBackchannelLogoutUri() {
+    return backchannelLogoutUri;
+  }
+  public void setBackchannelLogoutUri(String backchannelLogoutUri) {
+    this.backchannelLogoutUri = backchannelLogoutUri;
+  }
+
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("backchannel_logout_session_required")
+  public Boolean getBackchannelLogoutSessionRequired() {
+    return backchannelLogoutSessionRequired;
+  }
+  public void setBackchannelLogoutSessionRequired(Boolean backchannelLogoutSessionRequired) {
+    this.backchannelLogoutSessionRequired = backchannelLogoutSessionRequired;
+  }
+
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("aud")
+  public List<String> getAud() {
+    return aud;
+  }
+  public void setAud(List<String> aud) {
+    this.aud = aud;
+  }
+
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("id_token_encrypted_response_alg")
+  public String getIdTokenEncryptedResponseAlg() {
+    return idTokenEncryptedResponseAlg;
+  }
+  public void setIdTokenEncryptedResponseAlg(String idTokenEncryptedResponseAlg) {
+    this.idTokenEncryptedResponseAlg = idTokenEncryptedResponseAlg;
+  }
+
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("id_token_encrypted_response_enc")
+  public String getIdTokenEncryptedResponseEnc() {
+    return idTokenEncryptedResponseEnc;
+  }
+  public void setIdTokenEncryptedResponseEnc(String idTokenEncryptedResponseEnc) {
+    this.idTokenEncryptedResponseEnc = idTokenEncryptedResponseEnc;
+  }
+
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("token_endpoint_auth_method")
+  public String getTokenEndpointAuthMethod() {
+    return tokenEndpointAuthMethod;
+  }
+  public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+    this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+  }
+
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("software_id")
+  public String getSoftwareId() {
+    return softwareId;
+  }
+  public void setSoftwareId(String softwareId) {
+    this.softwareId = softwareId;
+  }
+
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("token_type_extension")
+  public String getTokenType() {
+    return tokenType;
+  }
+  public void setTokenType(String tokenType) {
+    this.tokenType = tokenType;
+  }
+
+
 
   @Override
   public String toString()  {
     StringBuilder sb = new StringBuilder();
     sb.append("class RegistrationRequestDTO {\n");
 
-    sb.append(" audiences: ").append(audiences).append("\n");
     sb.append("  redirect_uris: ").append(redirectUris).append("\n");
     sb.append("  client_name: ").append(clientName).append("\n");
     sb.append("  grant_types: ").append(grantTypes).append("\n");
@@ -237,9 +353,12 @@ public class RegistrationRequestDTO  {
     sb.append("  token_type_extension: ").append(tokenType).append("\n");
     sb.append("  ext_param_sp_template: ").append(spTemplateName).append("\n");
     sb.append("  backchannel_logout_uri: ").append(backchannelLogoutUri).append("\n");
-    sb.append("  id_token_encrypted_response_alg: ").append(idTokenEncryptionAlgorithm).append("\n");
-    sb.append("  id_token_encrypted_response_enc: ").append(idTokenEncryptionMethod).append("\n");
     sb.append("  backchannel_logout_session_required: ").append(backchannelLogoutSessionRequired).append("\n");
+    sb.append("  aud: ").append(aud).append("\n");
+    sb.append("  id_token_encrypted_response_alg: ").append(idTokenEncryptedResponseAlg).append("\n");
+    sb.append("  id_token_encrypted_response_enc: ").append(idTokenEncryptedResponseEnc).append("\n");
+    sb.append("  token_endpoint_auth_method: ").append(tokenEndpointAuthMethod).append("\n");
+    sb.append("  software_id: ").append(softwareId).append("\n");
     sb.append("}\n");
     return sb.toString();
   }

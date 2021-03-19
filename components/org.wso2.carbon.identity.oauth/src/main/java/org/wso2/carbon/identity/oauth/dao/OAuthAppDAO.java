@@ -72,9 +72,11 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.RENEW_REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNED;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SOFTWARE_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE_NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_VALIDATION;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_ENDPOINT_AUTH_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties
         .TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_TYPE;
@@ -1174,6 +1176,12 @@ public class OAuthAppDAO {
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     RENEW_REFRESH_TOKEN, consumerAppDO.getRenewRefreshTokenEnabled());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    TOKEN_ENDPOINT_AUTH_METHOD, consumerAppDO.getTokenEndpointAuthMethod());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    SOFTWARE_ID, consumerAppDO.getSoftwareId());
 
             if (TOKEN_BINDING_TYPE_NONE.equalsIgnoreCase(consumerAppDO.getTokenBindingType())) {
                 consumerAppDO.setTokenType(null);

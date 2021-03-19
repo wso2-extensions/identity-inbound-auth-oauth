@@ -71,6 +71,8 @@ public class DCRMService {
     private static final String OAUTH_VERSION = "OAuth-2.0";
     private static final String GRANT_TYPE_SEPARATOR = " ";
     private static Pattern clientIdRegexPattern = null;
+    private static final String[] TOKEN_ENDPOINT_AUTH_METHODS = {"none", "client_secret_post",
+            "client_secret_basic", "private_key_jwt"};
 
     /**
      * Get OAuth2/OIDC application information with client_id.
@@ -404,8 +406,19 @@ public class DCRMService {
             }
         } else {
             if (registrationRequest.getIdTokenEncryptionMethod() != null) {
-                throw  DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INSUFFICIENT_DATA,
+                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INSUFFICIENT_DATA,
                         null);
+            }
+        }
+
+        oAuthConsumerApp.setSoftwareId(registrationRequest.getSoftwareId());
+        if (registrationRequest.getTokenEndpointAuthMethod() != null) {
+            if (validateTokenEndpointAuthMethod(registrationRequest.getTokenEndpointAuthMethod())) {
+                oAuthConsumerApp.setTokenEndpointAuthMethod(registrationRequest.getTokenEndpointAuthMethod());
+            } else {
+                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.
+                        BAD_REQUEST_INVALID_TOKEN_ENDPOINT_AUTH_METHOD,
+                        registrationRequest.getTokenEndpointAuthMethod());
             }
         }
 
@@ -443,6 +456,14 @@ public class DCRMService {
             throw DCRMUtils.generateServerException(DCRMConstants.ErrorMessages.FAILED_TO_REGISTER_APPLICATION, spName);
         }
         return createdApp;
+    }
+
+    private boolean validateTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+        if (Arrays.asList(TOKEN_ENDPOINT_AUTH_METHODS).contains(tokenEndpointAuthMethod)) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     private ServiceProvider createServiceProvider(String applicationOwner, String tenantDomain,

@@ -304,6 +304,8 @@ public class OAuthAdminServiceImpl {
                     app.setTokenBindingValidationEnabled(application.isTokenBindingValidationEnabled());
                     app.setTokenRevocationWithIDPSessionTerminationEnabled(
                             application.isTokenRevocationWithIDPSessionTerminationEnabled());
+                    app.setSoftwareId(application.getSoftwareId());
+                    app.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
                 }
                 dao.addOAuthApplication(app);
                 AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
