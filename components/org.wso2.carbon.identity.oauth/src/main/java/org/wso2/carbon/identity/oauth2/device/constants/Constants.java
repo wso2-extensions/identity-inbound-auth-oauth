@@ -51,9 +51,9 @@ public class Constants {
     public static final String SEPARATED_WITH_SPACE = " ";
     public static final String ERROR = "error";
     public static final String ERROR_DESCRIPTION = "error_description";
-    public static final String DEVICE_DO_ENDPOINT = "/authenticationendpoint/device.do";
-    public static final String DEVICE_SUCCESS_DO_ENDPOINT = "/authenticationendpoint/device_success.do";
-    public static final String USRCDE_QNTFR_CONSTRAINT = "USRCDE_QNTFR_CONSTRAINT";
+    public static final String DEVICE_ENDPOINT_PATH = "/authenticationendpoint/device.do";
+    public static final String DEVICE_SUCCESS_ENDPOINT_PATH = "/authenticationendpoint/device_success.do";
+    public static final String USERCODE_QUANTIFIER_CONSTRAINT = "USRCDE_QNTFR_CONSTRAINT";
 
     public static final String EXPIRY_TIME_PATH = "OAuth.SupportedGrantTypes.SupportedGrantType.ExpiryTime";
     public static final String CONF_KEY_SET = "OAuth.SupportedGrantTypes.SupportedGrantType.KeySet";
@@ -62,8 +62,8 @@ public class Constants {
 
     // Configurable values.
     public static final int KEY_LENGTH = 6;
-    public static final long EXPIRES_IN_VALUE = 600L;  //in seconds
-    public static final int INTERVAL_VALUE = 5000; //in milliseconds
+    public static final long EXPIRES_IN_MILLISECONDS = 600000L;
+    public static final int  INTERVAL_MILLISECONDS = 5000;
     public static final String KEY_SET = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     public static final int DEFAULT_DEVICE_TOKEN_PERSIST_RETRY_COUNT = 5;
 }
