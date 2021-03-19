@@ -196,6 +196,8 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         oAuthConsumerAppDTO.setOauthConsumerSecret(consumerSecret);
         oAuthConsumerAppDTO.setOAuthVersion(oauthVersion);
         oAuthConsumerAppDTO.setRenewRefreshTokenEnabled("true");
+        oAuthConsumerAppDTO.setTokenEndpointAuthMethod("none");
+        oAuthConsumerAppDTO.setSoftwareId("HCDHdV2VgxdbFkZYvAVQ");
 
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
         doNothing().when(oAuthAppDAO).addOAuthApplication(Matchers.any(OAuthAppDO.class));

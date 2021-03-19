@@ -1280,6 +1280,12 @@ public class OAuthAppDAO {
         String tokenType = getFirstPropertyValue(spOIDCProperties, TOKEN_TYPE);
         oauthApp.setTokenType(tokenType);
 
+        String tokenEndpointAuthMethod = getFirstPropertyValue(spOIDCProperties, TOKEN_ENDPOINT_AUTH_METHOD);
+        oauthApp.setTokenEndpointAuthMethod(tokenEndpointAuthMethod);
+
+        String softwareId = getFirstPropertyValue(spOIDCProperties, SOFTWARE_ID);
+        oauthApp.setSoftwareId(softwareId);
+
         boolean bypassClientCreds = Boolean.parseBoolean(
                 getFirstPropertyValue(spOIDCProperties, BYPASS_CLIENT_CREDENTIALS));
         oauthApp.setBypassClientCredentials(bypassClientCreds);
