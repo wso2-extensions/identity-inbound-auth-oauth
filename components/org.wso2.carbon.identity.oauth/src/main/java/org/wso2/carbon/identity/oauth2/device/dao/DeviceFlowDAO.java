@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.device.dao;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
@@ -29,6 +30,23 @@ import java.sql.Timestamp;
  * during  this step.
  */
 public interface DeviceFlowDAO {
+
+    /**
+     * This will be used to enter the values to the database tables and return the unique user_code.
+     *
+     * @param deviceCode  Code that is used to identify the device.
+     * @param userCode    Code that is used to correlate user and device.
+     * @param quantifier  Quantized time period user_code belongs.
+     * @param consumerKey Consumer key of the client application.
+     * @param scopes      Requested scopes.
+     * @return Unique user_code.
+     * @throws IdentityOAuth2Exception Error while inserting device flow parameters.
+     */
+    default String insertDeviceFlowParametersWithQuantifier(String deviceCode, String userCode, long quantifier,
+        String consumerKey, String scopes) throws IdentityOAuth2Exception {
+
+        throw new NotImplementedException("Not Implemented");
+    }
 
     /**
      * This will be used to enter the value to the database tables.
@@ -57,10 +75,34 @@ public interface DeviceFlowDAO {
      * Set the status of the user code and device code.
      *
      * @param userCode Code that is used to correlate user and device.
+     * @throws IdentityOAuth2Exception Error while setting authentication status.
+     */
+    default void setAuthenticationStatus(String userCode) throws IdentityOAuth2Exception {
+
+        throw new NotImplementedException("Not Implemented");
+    }
+
+    /**
+     * Set the status of the user code and device code.
+     *
+     * @param userCode Code that is used to correlate user and device.
      * @param status   Status of the device and user codes.
      * @throws IdentityOAuth2Exception Error while setting authentication status.
      */
     void setAuthenticationStatus(String userCode, String status) throws IdentityOAuth2Exception;
+
+    /**
+     * Get the authentication status for device code.
+     *
+     * @param deviceCode Code that is used to identify the device.
+     * @param clientId   Consumer key of the application.
+     * @return Map of values.
+     * @throws IdentityOAuth2Exception Error while getting authentication details.
+     */
+    default DeviceFlowDO getAuthenticationDetails(String deviceCode, String clientId) throws IdentityOAuth2Exception {
+
+        throw new NotImplementedException("Not Implemented");
+    }
 
     /**
      * Get the authentication status for device code.
@@ -144,4 +186,16 @@ public interface DeviceFlowDAO {
      * @throws IdentityOAuth2Exception Error while getting scopes for device code.
      */
     String[] getScopesForDeviceCode(String deviceCode) throws IdentityOAuth2Exception;
+
+    /**
+     * Get details for user_code.
+     *
+     * @param userCode Code that is used to correlate user and device.
+     * @return Map of values.
+     * @throws IdentityOAuth2Exception Error while getting authentication details for user code.
+     */
+    default DeviceFlowDO getDetailsForUserCode(String userCode) throws IdentityOAuth2Exception {
+
+        throw new NotImplementedException("Not Implemented");
+    }
 }

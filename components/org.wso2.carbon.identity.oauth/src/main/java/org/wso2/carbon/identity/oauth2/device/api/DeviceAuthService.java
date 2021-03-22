@@ -18,12 +18,31 @@
 
 package org.wso2.carbon.identity.oauth2.device.api;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 
 /**
  * Device authentication service.
  */
 public interface DeviceAuthService {
+
+    /**
+     * Store device flow parameters and scopes in different tables.
+     *
+     * @param deviceCode Code that is used to identify the device.
+     * @param userCode   Code that is used to correlate two devices.
+     * @param quantifier Quantized time period user_code belongs.
+     * @param clientId   Consumer key of the application.
+     * @param scopes     Requested scopes.
+     * @return Unique user_code.
+     * @throws IdentityOAuth2Exception Error while storing device flow parameters.
+     */
+    default String generateDeviceResponse(String deviceCode, String userCode, long quantifier, String clientId,
+                                          String scopes) throws IdentityOAuth2Exception {
+
+        throw new NotImplementedException("Not Implemented");
+    }
 
     /**
      * Store device flow parameters and scopes in different tables.
@@ -36,6 +55,11 @@ public interface DeviceAuthService {
      */
     void generateDeviceResponse(String deviceCode, String userCode, String clientId, String scopes)
             throws IdentityOAuth2Exception;
+
+    default DeviceFlowDO getDetailsByUserCode(String userCode) throws IdentityOAuth2Exception {
+
+        throw new NotImplementedException("Not Implemented");
+    }
 
     /**
      * Store scopes in a different table.

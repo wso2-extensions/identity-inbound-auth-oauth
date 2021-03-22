@@ -58,7 +58,6 @@ public class Constants {
     public static final String EXPIRY_TIME_PATH = "OAuth.SupportedGrantTypes.SupportedGrantType.ExpiryTime";
     public static final String CONF_KEY_SET = "OAuth.SupportedGrantTypes.SupportedGrantType.KeySet";
     public static final String CONF_USER_CODE_LENGTH = "OAuth.SupportedGrantTypes.SupportedGrantType.UserCodeLength";
-    public static final String RESPNSE_TO_STRING_PATH = "OAuth.SupportedGrantTypes.SupportedGrantType.ResponseToString";
 
     // Configurable values.
     public static final int KEY_LENGTH = 6;
