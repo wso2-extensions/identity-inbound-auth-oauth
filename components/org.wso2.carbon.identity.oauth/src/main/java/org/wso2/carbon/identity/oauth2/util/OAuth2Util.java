@@ -991,6 +991,13 @@ public class OAuth2Util {
         return userId;
     }
 
+    /**
+     * Get token expire time in milliseconds.
+     *
+     * @param accessTokenDO Access token data object.
+     * @return expire time in milliseconds.
+     * @deprecated Instead use {@link #getTokenExpireTimeMillis(AccessTokenDO, boolean)}.
+     */
     @Deprecated
     public static long getTokenExpireTimeMillis(AccessTokenDO accessTokenDO) {
 
@@ -1042,6 +1049,13 @@ public class OAuth2Util {
         return 0;
     }
 
+    /**
+     * Get access token expire time in milliseconds.
+     *
+     * @param accessTokenDO Access token data object.
+     * @return expire time in milliseconds.
+     * @deprecated {@link #getAccessTokenExpireMillis(AccessTokenDO, boolean)}.
+     */
     @Deprecated
     public static long getAccessTokenExpireMillis(AccessTokenDO accessTokenDO) {
 
