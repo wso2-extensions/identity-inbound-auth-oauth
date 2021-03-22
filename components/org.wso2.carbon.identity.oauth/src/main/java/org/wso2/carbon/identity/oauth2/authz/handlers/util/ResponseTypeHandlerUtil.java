@@ -291,7 +291,7 @@ public class ResponseTypeHandlerUtil {
     public static OAuth2AuthorizeRespDTO buildAccessTokenResponseDTO(OAuth2AuthorizeRespDTO respDTO,
                                                                      AccessTokenDO accessTokenDO) {
 
-        long expireTime = OAuth2Util.getTokenExpireTimeMillis(accessTokenDO);
+        long expireTime = OAuth2Util.getTokenExpireTimeMillis(accessTokenDO, false);
         if (log.isDebugEnabled()) {
             if (expireTime > 0) {
                 log.debug("Access Token" +
