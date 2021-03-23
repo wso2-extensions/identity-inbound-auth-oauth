@@ -152,6 +152,14 @@
                                 </artifactItem>
                                 <artifactItem>
                                     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                                    <artifactId>org.wso2.carbon.identity.oauth.scope.endpoint</artifactId>
+                                    <version>${project.version}</version>
+                                    <type>jar</type>
+                                    <overWrite>true</overWrite>
+                                    <outputDirectory>${basedir}/src/main/resources/api_resources</outputDirectory>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
                                     <artifactId>org.wso2.carbon.identity.oauth.client.authn.filter</artifactId>
                                     <version>${project.version}</version>
                                     <type>jar</type>

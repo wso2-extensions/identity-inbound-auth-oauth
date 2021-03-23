@@ -5,6 +5,8 @@
     <context:annotation-config/>
     <bean class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer"/>
     <bean class="org.springframework.beans.factory.config.PreferencesPlaceholderConfigurer"/>
+    <!-- For Identity Server, the jaxrs:server configuration is maintained in beans.xml of wso2/identity-rest-dispatcher
+         These configuration is maintained here as other products packing this webapp as .war -->
     <jaxrs:server id="services" address="/">
         <jaxrs:serviceBeans>
             <bean class="org.wso2.carbon.identity.oauth2.dcr.endpoint.RegisterApi"/>

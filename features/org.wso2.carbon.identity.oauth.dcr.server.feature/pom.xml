@@ -119,6 +119,14 @@
                                     <outputDirectory>${basedir}/src/main/resources/</outputDirectory>
                                     <destFileName>api#identity#oauth2#dcr#v1.1.war</destFileName>
                                 </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                                    <artifactId>org.wso2.carbon.identity.oauth2.dcr.endpoint</artifactId>
+                                    <version>${project.version}</version>
+                                    <type>jar</type>
+                                    <overWrite>true</overWrite>
+                                    <outputDirectory>${basedir}/src/main/resources/api_resources</outputDirectory>
+                                </artifactItem>
                             </artifactItems>
                         </configuration>
                     </execution>
