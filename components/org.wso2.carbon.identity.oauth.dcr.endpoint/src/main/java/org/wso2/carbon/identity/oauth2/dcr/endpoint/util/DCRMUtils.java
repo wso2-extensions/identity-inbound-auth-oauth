@@ -155,6 +155,11 @@ public class DCRMUtils {
         applicationDTO.setClientSecret(application.getClientSecret());
         applicationDTO.setRedirectUris(application.getRedirectUris());
         applicationDTO.setGrantTypes(application.getGrantTypes());
+        applicationDTO.setAud(application.getAud());
+        applicationDTO.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
+        applicationDTO.setIdTokenEncryptionAlgorithm(application.getIdTokenEncryptionAlgorithm());
+        applicationDTO.setIdTokenEncryptionMethod(application.getIdTokenEncryptionMethod());
+        applicationDTO.setSoftwareId(application.getSoftwareId());
 
         return applicationDTO;
     }

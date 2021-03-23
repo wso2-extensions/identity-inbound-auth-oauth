@@ -34,6 +34,16 @@ public class ApplicationDTO  {
 
   private String clientName = null;
 
+  private  List<String> aud = new ArrayList<String>();
+
+  private String tokenEndpointAuthMethod = null;
+
+  private String idTokenEncryptionAlgorithm = null;
+
+  private String idTokenEncryptionMethod = null;
+
+  private String softwareId = null;
+
 
   /**
    **/
@@ -106,7 +116,50 @@ public class ApplicationDTO  {
     this.clientName = clientName;
   }
 
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("aud")
+  public List<String> getAud() { return aud; }
+  public void setAud(List<String> aud) {
+    this.aud = aud;
+  }
 
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("token_endpoint_auth_method")
+  public String getTokenEndpointAuthMethod() { return tokenEndpointAuthMethod; }
+  public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+    this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+  }
+
+  /**
+  **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("id_token_encrypted_response_alg")
+  public String getIdTokenEncryptionAlgorithm() { return idTokenEncryptionAlgorithm; }
+  public void setIdTokenEncryptionAlgorithm(String idTokenEncryptionAlgorithm) {
+    this.idTokenEncryptionAlgorithm = idTokenEncryptionAlgorithm;
+  }
+
+  /**
+  **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("id_token_encrypted_response_enc")
+  public String getIdTokenEncryptionMethod() { return idTokenEncryptionMethod; }
+  public void setIdTokenEncryptionMethod(String idTokenEncryptionMethod) {
+    this.idTokenEncryptionMethod = idTokenEncryptionMethod;
+  }
+
+  /**
+  **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("software_id")
+  public String getSoftwareId() { return softwareId; }
+  public void setSoftwareId(String softwareId) {
+    this.softwareId = softwareId;
+  }
 
   @Override
   public String toString()  {

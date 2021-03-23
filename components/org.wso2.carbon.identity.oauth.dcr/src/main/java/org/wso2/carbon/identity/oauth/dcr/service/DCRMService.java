@@ -349,6 +349,18 @@ public class DCRMService {
         }
         application.setGrantTypes(grantTypesList);
 
+        if (createdApp.getAudiences() != null) {
+            List<String> audList = new ArrayList<String>(createdApp.getAudiences().length);
+            CollectionUtils.addAll(audList, createdApp.getAudiences());
+            application.setAud(audList);
+        }
+
+        application.setTokenEndpointAuthMethod(createdApp.getTokenEndpointAuthMethod());
+        application.setIdTokenEncryptionAlgorithm(createdApp.getIdTokenEncryptionAlgorithm());
+        application.setIdTokenEncryptionMethod(createdApp.getIdTokenEncryptionMethod());
+        application.setSoftwareId(createdApp.getSoftwareId());
+
+
         return application;
     }
 
