@@ -172,7 +172,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         AuthenticatedUser user;
         int tenantId = 0;
         String userName = null;
-        boolean checked = false; //check for valid deviceCode and clientId
+        boolean checked = false; // Check for valid deviceCode and clientId.
         String userDomain = null;
         String authenticatedIDP = null;
         DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
@@ -516,7 +516,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 // Handle constrain violation issue in JDBC drivers which does not throw
-                // SQLIntegrityConstraintViolationException
+                // SQLIntegrityConstraintViolationException.
                 if (e instanceof SQLIntegrityConstraintViolationException ||
                         StringUtils.containsIgnoreCase(e.getMessage(), Constants.USERCODE_QUANTIFIER_CONSTRAINT)) {
                     tempUserCode = GenerateKeys.getKey(Constants.KEY_LENGTH);
