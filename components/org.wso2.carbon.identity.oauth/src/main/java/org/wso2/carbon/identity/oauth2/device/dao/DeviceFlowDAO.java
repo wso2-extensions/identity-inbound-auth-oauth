@@ -192,7 +192,7 @@ public interface DeviceFlowDAO {
      *
      * @param userCode Code that is used to correlate user and device.
      * @return Map of values.
-     * @throws IdentityOAuth2Exception Error while getting authentication details for user code.
+     * @throws IdentityOAuth2Exception Error while getting details for user code.
      */
     default DeviceFlowDO getDetailsForUserCode(String userCode) throws IdentityOAuth2Exception {
 

@@ -56,6 +56,13 @@ public interface DeviceAuthService {
     void generateDeviceResponse(String deviceCode, String userCode, String clientId, String scopes)
             throws IdentityOAuth2Exception;
 
+    /**
+     * Get details for user_code.
+     *
+     * @param userCode Code that is used to correlate user and device.
+     * @return Map of values.
+     * @throws IdentityOAuth2Exception Error while getting details for user code.
+     */
     default DeviceFlowDO getDetailsByUserCode(String userCode) throws IdentityOAuth2Exception {
 
         throw new NotImplementedException("Not Implemented");

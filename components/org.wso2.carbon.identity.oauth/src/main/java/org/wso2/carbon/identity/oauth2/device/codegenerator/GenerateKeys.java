@@ -35,6 +35,7 @@ import java.time.Instant;
 public class GenerateKeys {
 
     private static final Log log = LogFactory.getLog(GenerateKeys.class);
+
     public GenerateKeys() {
 
     }
@@ -83,6 +84,7 @@ public class GenerateKeys {
      */
     public static long getCurrentQuantifier() {
 
+        //https://github.com/wso2/product-is/issues/7348#issuecomment-593761350
         return (Instant.now().getEpochSecond() / (2 * DeviceFlowUtil.getConfiguredExpiryTime()));
     }
 }

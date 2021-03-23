@@ -43,9 +43,14 @@ public class DeviceFlowUtil {
             log.debug("User defined expiry time : " + configuredExpiresInValue);
         }
         return ((StringUtils.isNumeric(configuredExpiresInValue)) ?
-                Long.parseLong(configuredExpiresInValue) : Constants.EXPIRES_IN_MILLISECONDS);
+                Long.parseLong(configuredExpiresInValue) : (Constants.EXPIRES_IN_MILLISECONDS / 1000));
     }
 
+    /**
+     * Returns the minimum polling interval in seconds.
+     *
+     * @return INTERVAL(s).
+     */
     public static long getIntervalValue() {
 
         return (Constants.INTERVAL_MILLISECONDS / 1000);
