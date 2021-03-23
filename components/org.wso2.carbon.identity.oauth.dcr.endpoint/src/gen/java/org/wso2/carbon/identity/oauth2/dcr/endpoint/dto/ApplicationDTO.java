@@ -34,13 +34,18 @@ public class ApplicationDTO  {
 
   private String clientName = null;
 
+
   private  List<String> aud = new ArrayList<String>();
+
 
   private String tokenEndpointAuthMethod = null;
 
+
   private String idTokenEncryptionAlgorithm = null;
 
+
   private String idTokenEncryptionMethod = null;
+
 
   private String softwareId = null;
 
@@ -172,6 +177,11 @@ public class ApplicationDTO  {
     sb.append("  redirect_uris: ").append(redirectUris).append("\n");
     sb.append("  grant_types: ").append(grantTypes).append("\n");
     sb.append("  client_name: ").append(clientName).append("\n");
+    sb.append("  aud: ").append(aud).append("\n");
+    sb.append("  token_endpoint_auth_method: ").append(tokenEndpointAuthMethod).append("\n");
+    sb.append("  id_token_encrypted_response_alg: ").append(idTokenEncryptionAlgorithm).append("\n");
+    sb.append("  id_token_encrypted_response_enc: ").append(idTokenEncryptionMethod).append("\n");
+    sb.append("  software_id: ").append(softwareId).append("\n");
     sb.append("}\n");
     return sb.toString();
   }

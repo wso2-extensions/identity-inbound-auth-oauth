@@ -608,11 +608,11 @@ public class OAuthAppDAO {
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, ID_TOKEN_ENCRYPTION_ALGORITHM,
-                String.valueOf(oauthAppDO.getIdTokenEncryptionAlgorithm()),
+                oauthAppDO.getIdTokenEncryptionAlgorithm(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, ID_TOKEN_ENCRYPTION_METHOD,
-                String.valueOf(oauthAppDO.getIdTokenEncryptionMethod()),
+                oauthAppDO.getIdTokenEncryptionMethod(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, BACK_CHANNEL_LOGOUT_URL,
@@ -652,6 +652,14 @@ public class OAuthAppDAO {
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 TOKEN_BINDING_VALIDATION, String.valueOf(oauthAppDO.isTokenBindingValidationEnabled()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                TOKEN_ENDPOINT_AUTH_METHOD, oauthAppDO.getTokenEndpointAuthMethod(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                SOFTWARE_ID, oauthAppDO.getSoftwareId(), prepStatementForPropertyAdd,
+                preparedStatementForPropertyUpdate);
 
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
@@ -1157,10 +1165,10 @@ public class OAuthAppDAO {
                     ID_TOKEN_ENCRYPTED, String.valueOf(consumerAppDO.isIdTokenEncryptionEnabled()));
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    ID_TOKEN_ENCRYPTION_ALGORITHM, String.valueOf(consumerAppDO.getIdTokenEncryptionAlgorithm()));
+                    ID_TOKEN_ENCRYPTION_ALGORITHM, consumerAppDO.getIdTokenEncryptionAlgorithm());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    ID_TOKEN_ENCRYPTION_METHOD, String.valueOf(consumerAppDO.getIdTokenEncryptionMethod()));
+                    ID_TOKEN_ENCRYPTION_METHOD, consumerAppDO.getIdTokenEncryptionMethod());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     BACK_CHANNEL_LOGOUT_URL, consumerAppDO.getBackChannelLogoutUrl());

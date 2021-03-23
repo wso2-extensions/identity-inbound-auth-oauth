@@ -318,6 +318,8 @@ definitions:
         type: string
       token_endpoint_auth_method:
         type: string
+      software_id:
+        type: string
 #-----------------------------------------------------
 # The Application Update Request Object
 #-----------------------------------------------------
@@ -342,6 +344,18 @@ definitions:
         type: string
       backchannel_logout_session_required:
         type: boolean
+      aud:
+        type: array
+        items:
+          type: string
+      id_token_encrypted_response_alg:
+        type: string
+      id_token_encrypted_response_enc:
+        type: string
+      token_endpoint_auth_method:
+        type: string
+      software_id:
+        type: string
 #-----------------------------------------------------
 # The OAuth2 Application Object
 #-----------------------------------------------------

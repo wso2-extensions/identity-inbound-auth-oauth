@@ -238,6 +238,44 @@ public class DCRMService {
                 String backChannelLogoutUri = validateBackchannelLogoutURI(updateRequest.getBackchannelLogoutUri());
                 appDTO.setBackChannelLogoutUrl(backChannelLogoutUri);
             }
+            if (CollectionUtils.isNotEmpty(updateRequest.getAud())) {
+                appDTO.setAudiences(updateRequest.getAud().toArray(new String[0]));
+            }
+            if (updateRequest.getTokenEndpointAuthMethod() != null) {
+                if (validateTokenEndpointAuthMethod(updateRequest.getTokenEndpointAuthMethod())) {
+                    appDTO.setTokenEndpointAuthMethod(updateRequest.getTokenEndpointAuthMethod());
+                } else {
+                    throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.
+                                    BAD_REQUEST_INVALID_TOKEN_ENDPOINT_AUTH_METHOD,
+                            updateRequest.getTokenEndpointAuthMethod());
+                }
+            }
+
+            if (updateRequest.getIdTokenEncryptionAlgorithm() != null ||
+                    updateRequest.getIdTokenEncryptionMethod() != null) {
+                appDTO.setIdTokenEncryptionEnabled(true);
+                if (updateRequest.getIdTokenEncryptionAlgorithm() != null) {
+                    appDTO.setIdTokenEncryptionAlgorithm(updateRequest.getIdTokenEncryptionAlgorithm());
+                }
+                if (updateRequest.getIdTokenEncryptionMethod() != null) {
+                    appDTO.setIdTokenEncryptionMethod(updateRequest.getIdTokenEncryptionMethod());
+                }
+                if (appDTO.getIdTokenEncryptionAlgorithm() == null &&
+                        appDTO.getIdTokenEncryptionMethod() != null) {
+                    throw DCRMUtils.generateClientException(DCRMConstants.
+                            ErrorMessages.BAD_REQUEST_INSUFFICIENT_DATA, null);
+                }
+                if (appDTO.getIdTokenEncryptionAlgorithm() != null &&
+                        appDTO.getIdTokenEncryptionMethod() == null) {
+                    appDTO.setIdTokenEncryptionMethod(OAuthServerConfiguration.getInstance().
+                            getDefaultIdTokenEncryptionMethod());
+                }
+
+            }
+
+            if (updateRequest.getSoftwareId() != null) {
+                appDTO.setSoftwareId(updateRequest.getSoftwareId());
+            }
             oAuthAdminService.updateConsumerApplication(appDTO);
         } catch (IdentityOAuthAdminException e) {
             throw DCRMUtils.generateServerException(

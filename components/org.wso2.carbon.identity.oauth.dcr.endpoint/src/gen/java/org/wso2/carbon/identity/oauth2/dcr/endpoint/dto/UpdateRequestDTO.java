@@ -41,6 +41,23 @@ public class UpdateRequestDTO  {
     private String tokenType = null;
 
 
+    private List<String> aud = new ArrayList<String>();
+
+
+    private String tokenEndpointAuthMethod = null;
+
+
+    private String idTokenEncryptionAlgorithm = null;
+
+
+    private String idTokenEncryptionMethod = null;
+
+
+    private String softwareId = null;
+
+
+
+
     /**
      **/
     @ApiModelProperty(value = "")
@@ -137,6 +154,55 @@ public class UpdateRequestDTO  {
     }
 
 
+    /**
+     **/
+    @ApiModelProperty(value = "")
+    @JsonProperty("aud")
+    public List<String> getAud() { return aud; }
+    public void setAud(List<String> aud) {
+        this.aud = aud;
+    }
+
+
+    /**
+     **/
+    @ApiModelProperty(value = "")
+    @JsonProperty("token_endpoint_auth_method")
+    public String getTokenEndpointAuthMethod() { return tokenEndpointAuthMethod; }
+    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
+
+    /**
+     **/
+    @ApiModelProperty(value = "")
+    @JsonProperty("id_token_encrypted_response_alg")
+    public String getIdTokenEncryptionAlgorithm() { return idTokenEncryptionAlgorithm; }
+    public void setIdTokenEncryptionAlgorithm(String idTokenEncryptionAlgorithm) {
+        this.idTokenEncryptionAlgorithm = idTokenEncryptionAlgorithm;
+    }
+
+
+    /**
+     **/
+    @ApiModelProperty(value = "")
+    @JsonProperty("id_token_encrypted_response_enc")
+    public String getIdTokenEncryptionMethod() { return idTokenEncryptionMethod; }
+    public void setIdTokenEncryptionMethod(String idTokenEncryptionMethod) {
+        this.idTokenEncryptionMethod = idTokenEncryptionMethod;
+    }
+
+
+    /**
+     **/
+    @ApiModelProperty(value = "")
+    @JsonProperty("software_id")
+    public String getSoftwareId() { return softwareId; }
+    public void setSoftwareId(String softwareId) {
+        this.softwareId = softwareId;
+    }
+
 
     @Override
     public String toString()  {
@@ -151,6 +217,11 @@ public class UpdateRequestDTO  {
         sb.append("  backchannel_logout_uri: ").append(backchannelLogoutUri).append("\n");
         sb.append("  backchannel_logout_session_required: ").append(backchannelLogoutSessionRequired).append("\n");
         sb.append("  token_type_extension: ").append(tokenType).append("\n");
+        sb.append("  aud: ").append(aud).append("\n");
+        sb.append("  token_endpoint_auth_method: ").append(tokenEndpointAuthMethod).append("\n");
+        sb.append("  id_token_encrypted_response_alg: ").append(idTokenEncryptionAlgorithm).append("\n");
+        sb.append("  id_token_encrypted_response_enc: ").append(idTokenEncryptionMethod).append("\n");
+        sb.append("  software_id: ").append(softwareId).append("\n");
         sb.append("}\n");
         return sb.toString();
     }

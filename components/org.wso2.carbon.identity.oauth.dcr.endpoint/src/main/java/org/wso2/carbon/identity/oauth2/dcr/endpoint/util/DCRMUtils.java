@@ -84,6 +84,11 @@ public class DCRMUtils {
         applicationUpdateRequest.setGrantTypes(updateRequestDTO.getGrantTypes());
         applicationUpdateRequest.setTokenType(updateRequestDTO.getTokenType());
         applicationUpdateRequest.setBackchannelLogoutUri(updateRequestDTO.getBackchannelLogoutUri());
+        applicationUpdateRequest.setAud(updateRequestDTO.getAud());
+        applicationUpdateRequest.setTokenEndpointAuthMethod(updateRequestDTO.getTokenEndpointAuthMethod());
+        applicationUpdateRequest.setIdTokenEncryptionAlgorithm(updateRequestDTO.getIdTokenEncryptionAlgorithm());
+        applicationUpdateRequest.setIdTokenEncryptionMethod(updateRequestDTO.getIdTokenEncryptionMethod());
+        applicationUpdateRequest.setSoftwareId(updateRequestDTO.getSoftwareId());
         return applicationUpdateRequest;
 
     }
