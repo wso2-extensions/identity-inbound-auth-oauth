@@ -72,7 +72,7 @@ public class RegisterApi  {
 
          @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
- public Response getApplicationByName(@ApiParam(value = "Unique identifier of the OAuth2 client application.",required=true ) @PathParam("client_name")  String clientName)
+ public Response getApplicationWithName(@ApiParam(value = "Client name provided during registration.",required=true ) @QueryParam("client_name") String clientName)
  {
   return delegate.getApplicationByName(clientName);
  }
