@@ -176,17 +176,6 @@ public class OIDCSessionManagementUtil {
     }
 
     /**
-     * Adds the browser state cookie with tenant qualified path to the response.
-     *
-     * @param response
-     * @return Cookie
-     */
-    public static Cookie addOPBrowserStateCookie(HttpServletResponse response, String tenantDomain) {
-
-        return getOIDCessionStateManager().addOPBrowserStateCookie(response, tenantDomain);
-    }
-
-    /**
      * Invalidate the browser state cookie.
      *
      * @param request

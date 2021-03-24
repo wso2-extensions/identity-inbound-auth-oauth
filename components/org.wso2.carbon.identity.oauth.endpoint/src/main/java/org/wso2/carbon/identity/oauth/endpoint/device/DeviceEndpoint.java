@@ -169,8 +169,8 @@ public class DeviceEndpoint {
                 .put(Constants.USER_CODE, userCode)
                 .put(Constants.VERIFICATION_URI, redirectionUri)
                 .put(Constants.VERIFICATION_URI_COMPLETE, redirectionUriComplete)
-                .put(Constants.EXPIRES_IN, stringValueInSeconds(Constants.EXPIRES_IN_VALUE))
-                .put(Constants.INTERVAL, stringValueInSeconds(Constants.INTERVAL_VALUE));
+                .put(Constants.EXPIRES_IN, stringValueInSeconds(Constants.EXPIRES_IN_MILLISECONDS))
+                .put(Constants.INTERVAL, stringValueInSeconds(Constants.INTERVAL_MILLISECONDS));
         Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_OK);
         return respBuilder.entity(jsonObject.toString()).build();
     }
