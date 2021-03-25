@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>6.4.153-SNAPSHOT</version>
+    <version>6.4.165-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -875,8 +875,8 @@
         <apache.felix.scr.ds.annotations.version>1.2.4</apache.felix.scr.ds.annotations.version>
 
         <!-- Carbon kernel version -->
-        <carbon.kernel.version>4.6.0</carbon.kernel.version>
-        <carbon.kernel.feature.version>4.6.0</carbon.kernel.feature.version>
+        <carbon.kernel.version>4.6.1</carbon.kernel.version>
+        <carbon.kernel.feature.version>4.6.1</carbon.kernel.feature.version>
         <carbon.kernel.imp.pkg.version.range>[4.5.0, 5.0.0)</carbon.kernel.imp.pkg.version.range>
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
@@ -970,7 +970,7 @@
 
         <!--Swagger Dependency Version-->
         <jackson.version>1.8.6</jackson.version>
-        <jackson-databind.version>2.10.5</jackson-databind.version>
+        <jackson-databind.version>2.10.5.1</jackson-databind.version>
         <com.fasterxml.jackson.core.version>2.9.9</com.fasterxml.jackson.core.version>
         <com.fasterxml.jackson.version>2.9.7</com.fasterxml.jackson.version>
         <spring-web.version>4.3.29.RELEASE</spring-web.version>
