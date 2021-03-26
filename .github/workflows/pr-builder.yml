@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     if: ${{ github.event.label.name == 'trigger-pr-builder' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
     - name: Build init
       run: |
