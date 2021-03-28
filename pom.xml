@@ -51,8 +51,10 @@
         <module>components/org.wso2.carbon.identity.oauth.dcr</module>
         <module>components/org.wso2.carbon.identity.oidc.dcr</module>
         <module>components/org.wso2.carbon.identity.discovery</module>
+        <module>components/org.wso2.carbon.identity.api.server.oauth.scope</module>
         <module>components/org.wso2.carbon.identity.oauth.scope.endpoint</module>
         <module>components/org.wso2.carbon.identity.webfinger</module>
+        <module>components/org.wso2.carbon.identity.api.server.dcr</module>
         <module>components/org.wso2.carbon.identity.oauth.dcr.endpoint</module>
         <module>components/org.wso2.carbon.identity.oauth.client.authn.filter</module>
         <module>components/org.wso2.carbon.identity.oauth.ciba</module>
@@ -362,6 +364,16 @@
                 <artifactId>org.wso2.carbon.identity.oauth</artifactId>
                 <version>${project.version}</version>
                 <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                <artifactId>org.wso2.carbon.identity.api.server.oauth.scope</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                <artifactId>org.wso2.carbon.identity.api.server.dcr</artifactId>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
