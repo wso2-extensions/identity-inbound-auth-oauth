@@ -145,7 +145,7 @@ public class AuthorizationHandlerManager {
                     new String[0]));
         }
 
-        //Execute Internal SCOPE Validation.
+        // Execute Internal SCOPE Validation.
         JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
         String[] authorizedInternalScopes = scopeValidator.validateScope(authzReqMsgCtx);
         // Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
@@ -153,6 +153,9 @@ public class AuthorizationHandlerManager {
         // Thus remove the scopes from the authzReqMsgCtx. Will be added to the response after executing
         // the other scope validators.
         removeInternalScopes(authzReqMsgCtx);
+
+        // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
+        authzReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
 
         boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
         if (isDropUnregisteredScopes) {
@@ -167,8 +170,8 @@ public class AuthorizationHandlerManager {
 
         boolean valid = validateScope(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler);
         if (valid) {
-            //Add authorized internal scopes to the request for sending in the response.
-            addAuthorizedInternalScopes(authzReqMsgCtx, authorizedInternalScopes);
+            // Add authorized internal scopes to the request for sending in the response.
+            addAuthorizedInternalScopes(authzReqMsgCtx, authzReqMsgCtx.getAuthorizedInternalScopes());
             addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         }
         return authorizeRespDTO;
