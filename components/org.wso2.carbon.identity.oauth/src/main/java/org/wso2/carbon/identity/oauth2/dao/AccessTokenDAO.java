@@ -205,4 +205,16 @@ public interface AccessTokenDAO {
 
         return null;
     }
+
+    /**
+     * Get tokenId by binding reference.
+     *
+     * @param sessionId Session identifier.
+     * @return set of token identifiers binds to the session.
+     * @throws IdentityOAuth2Exception
+     */
+    default Set<String> getTokenIdBySessionIdentifier(String sessionId) throws IdentityOAuth2Exception {
+
+        return null;
+    }
 }
