@@ -683,10 +683,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         long expireTimeMillis;
         if (issueRefreshToken()) {
             // Consider both access and refresh expiry time
-            expireTimeMillis = OAuth2Util.getTokenExpireTimeMillis(existingAccessTokenDO);
+            expireTimeMillis = OAuth2Util.getTokenExpireTimeMillis(existingAccessTokenDO, false);
         } else {
             // Consider only access token expiry time
-            expireTimeMillis = OAuth2Util.getAccessTokenExpireMillis(existingAccessTokenDO);
+            expireTimeMillis = OAuth2Util.getAccessTokenExpireMillis(existingAccessTokenDO, false);
         }
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {

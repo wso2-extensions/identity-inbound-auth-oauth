@@ -992,13 +992,33 @@ public class OAuth2Util {
         return userId;
     }
 
+    /**
+     * Get token expire time in milliseconds.
+     *
+     * @param accessTokenDO Access token data object.
+     * @return expire time in milliseconds.
+     * @deprecated Instead use {@link #getTokenExpireTimeMillis(AccessTokenDO, boolean)}.
+     */
+    @Deprecated
     public static long getTokenExpireTimeMillis(AccessTokenDO accessTokenDO) {
+
+        return getTokenExpireTimeMillis(accessTokenDO, true);
+    }
+
+    /**
+     * Get token expire time in milliseconds.
+     *
+     * @param accessTokenDO Access token data object.
+     * @param considerSkew  Consider time stamp skew when calculating expire time.
+     * @return expire time in milliseconds.
+     */
+    public static long getTokenExpireTimeMillis(AccessTokenDO accessTokenDO, boolean considerSkew) {
 
         if (accessTokenDO == null) {
             throw new IllegalArgumentException("accessTokenDO is " + "\'NULL\'");
         }
 
-        long accessTokenValidity = getAccessTokenExpireMillis(accessTokenDO);
+        long accessTokenValidity = getAccessTokenExpireMillis(accessTokenDO, considerSkew);
         long refreshTokenValidity = getRefreshTokenExpireTimeMillis(accessTokenDO);
 
         if (accessTokenValidity > 1000 && (refreshTokenValidity > 1000 || refreshTokenValidity < 0)) {
@@ -1030,7 +1050,27 @@ public class OAuth2Util {
         return 0;
     }
 
+    /**
+     * Get access token expire time in milliseconds.
+     *
+     * @param accessTokenDO Access token data object.
+     * @return expire time in milliseconds.
+     * @deprecated {@link #getAccessTokenExpireMillis(AccessTokenDO, boolean)}.
+     */
+    @Deprecated
     public static long getAccessTokenExpireMillis(AccessTokenDO accessTokenDO) {
+
+        return getAccessTokenExpireMillis(accessTokenDO, true);
+    }
+
+    /**
+     * Get access token expire time in milliseconds.
+     *
+     * @param accessTokenDO Access token data object.
+     * @param considerSkew  Consider time stamp skew when calculating expire time.
+     * @return expire time in milliseconds.
+     */
+    public static long getAccessTokenExpireMillis(AccessTokenDO accessTokenDO, boolean considerSkew) {
 
         if (accessTokenDO == null) {
             throw new IllegalArgumentException("accessTokenDO is " + "\'NULL\'");
@@ -1050,7 +1090,7 @@ public class OAuth2Util {
         }
 
         long issuedTime = accessTokenDO.getIssuedTime().getTime();
-        long validityMillis = getTimeToExpire(issuedTime, validityPeriodMillis);
+        long validityMillis = getTimeToExpire(issuedTime, validityPeriodMillis, considerSkew);
         if (validityMillis > 1000) {
             return validityMillis;
         } else {
@@ -1070,10 +1110,28 @@ public class OAuth2Util {
      * @param issuedTimeInMillis
      * @param validityPeriodMillis
      * @return skew corrected validity period in milliseconds
+     * @deprecated use {@link #getTimeToExpire(long, long, boolean)}.
      */
+    @Deprecated
     public static long getTimeToExpire(long issuedTimeInMillis, long validityPeriodMillis) {
 
-        return issuedTimeInMillis + validityPeriodMillis - (System.currentTimeMillis() - timestampSkew);
+        return getTimeToExpire(issuedTimeInMillis, validityPeriodMillis, true);
+    }
+
+    /**
+     * Util method to calculate the validity period.
+     *
+     * @param issuedTimeInMillis    Issued time in milliseconds.
+     * @param validityPeriodMillis  Validity period in milliseconds.
+     * @param considerSkew          Consider timestamp skew when calculating exipry time.
+     * @return skew corrected validity period in milliseconds.
+     */
+    public static long getTimeToExpire(long issuedTimeInMillis, long validityPeriodMillis, boolean considerSkew) {
+
+        if (considerSkew) {
+            return issuedTimeInMillis + validityPeriodMillis - (System.currentTimeMillis() - timestampSkew);
+        }
+        return issuedTimeInMillis + validityPeriodMillis - (System.currentTimeMillis());
     }
 
     public static int getTenantId(String tenantDomain) throws IdentityOAuth2Exception {
