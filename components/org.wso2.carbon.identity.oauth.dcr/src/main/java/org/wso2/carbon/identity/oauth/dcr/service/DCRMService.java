@@ -241,14 +241,9 @@ public class DCRMService {
             if (CollectionUtils.isNotEmpty(updateRequest.getAud())) {
                 appDTO.setAudiences(updateRequest.getAud().toArray(new String[0]));
             }
-            if (updateRequest.getTokenEndpointAuthMethod() != null) {
-                if (validateTokenEndpointAuthMethod(updateRequest.getTokenEndpointAuthMethod())) {
-                    appDTO.setTokenEndpointAuthMethod(updateRequest.getTokenEndpointAuthMethod());
-                } else {
-                    throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.
-                                    BAD_REQUEST_INVALID_TOKEN_ENDPOINT_AUTH_METHOD,
-                            updateRequest.getTokenEndpointAuthMethod());
-                }
+
+            if (validateTokenEndpointAuthMethod(updateRequest.getTokenEndpointAuthMethod())) {
+                appDTO.setTokenEndpointAuthMethod(updateRequest.getTokenEndpointAuthMethod());
             }
 
             if (updateRequest.getIdTokenEncryptionAlgorithm() != null ||
@@ -463,14 +458,9 @@ public class DCRMService {
         }
 
         oAuthConsumerApp.setSoftwareId(registrationRequest.getSoftwareId());
-        if (registrationRequest.getTokenEndpointAuthMethod() != null) {
-            if (validateTokenEndpointAuthMethod(registrationRequest.getTokenEndpointAuthMethod())) {
-                oAuthConsumerApp.setTokenEndpointAuthMethod(registrationRequest.getTokenEndpointAuthMethod());
-            } else {
-                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.
-                        BAD_REQUEST_INVALID_TOKEN_ENDPOINT_AUTH_METHOD,
-                        registrationRequest.getTokenEndpointAuthMethod());
-            }
+
+        if (validateTokenEndpointAuthMethod(registrationRequest.getTokenEndpointAuthMethod())) {
+            oAuthConsumerApp.setTokenEndpointAuthMethod(registrationRequest.getTokenEndpointAuthMethod());
         }
 
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerKey())) {
@@ -509,9 +499,15 @@ public class DCRMService {
         return createdApp;
     }
 
-    private boolean validateTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
-        if (Arrays.asList(TOKEN_ENDPOINT_AUTH_METHODS).contains(tokenEndpointAuthMethod)) {
+    private boolean validateTokenEndpointAuthMethod(String tokenEndpointAuthMethod) throws DCRMException {
+        if (tokenEndpointAuthMethod != null &&
+                Arrays.asList(TOKEN_ENDPOINT_AUTH_METHODS).contains(tokenEndpointAuthMethod)) {
             return true;
+        } else if (tokenEndpointAuthMethod != null &&
+                !Arrays.asList(TOKEN_ENDPOINT_AUTH_METHODS).contains(tokenEndpointAuthMethod)) {
+            throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.
+                    BAD_REQUEST_INVALID_TOKEN_ENDPOINT_AUTH_METHOD,
+                    tokenEndpointAuthMethod);
         } else {
             return false;
         }
