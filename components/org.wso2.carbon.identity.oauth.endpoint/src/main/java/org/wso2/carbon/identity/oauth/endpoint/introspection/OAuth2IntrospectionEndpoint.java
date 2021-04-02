@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.JSONException;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IntrospectionDataProvider;
@@ -158,6 +159,13 @@ public class OAuth2IntrospectionEndpoint {
             for (Object dataProvider : introspectionDataProviders) {
                 if (dataProvider instanceof IntrospectionDataProvider) {
 
+                    if (!((AbstractIdentityHandler) dataProvider).isEnabled()) {
+                        if (log.isDebugEnabled()) {
+                            log.debug(String.format("%s data provider is not enabled.",
+                                    ((AbstractIdentityHandler) dataProvider).getName()));
+                        }
+                        continue;
+                    }
                     if (log.isDebugEnabled()) {
                         log.debug("Executing introspection data provider: " + dataProvider.getClass().getName());
                     }
