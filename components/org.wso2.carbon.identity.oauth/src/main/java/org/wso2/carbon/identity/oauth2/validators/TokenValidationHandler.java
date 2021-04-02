@@ -303,7 +303,7 @@ public class TokenValidationHandler {
             responseDTO.setAuthorizedUser(introResp.getUsername());
         }
 
-        if (tokenGenerator != null) {
+        if (tokenGenerator != null && validationRequest.getRequiredClaimURIs() != null) {
             // add user attributes to the introspection response.
             tokenGenerator.generateToken(messageContext);
             if (log.isDebugEnabled()) {
@@ -354,6 +354,9 @@ public class TokenValidationHandler {
         introResp.setClientId(refreshTokenDataDO.getConsumerKey());
         // Adding the AccessTokenDO as a context property for further use.
         messageContext.addProperty("RefreshTokenDO", refreshTokenDataDO);
+        // Add full qualified user to properties map since username attribute may not have the domain appended if
+        // subject identifier is build based in the SO config.
+        introResp.getProperties().put(OAuth2Util.AUTHORIZED_USER, refreshTokenDataDO.getAuthzUser());
 
         // Validate access delegation.
         if (!tokenValidator.validateAccessDelegation(messageContext)) {
@@ -465,6 +468,9 @@ public class TokenValidationHandler {
             }
             // adding the AccessTokenDO as a context property for further use
             messageContext.addProperty("AccessTokenDO", accessTokenDO);
+            // Add full qualified user to properties map since username attribute may not have the domain appended if
+            // subject identifier is build based in the SO config.
+            introResp.getProperties().put(OAuth2Util.AUTHORIZED_USER, accessTokenDO.getAuthzUser());
         }
 
         if (messageContext.getProperty(OAuth2Util.JWT_ACCESS_TOKEN) != null

@@ -220,6 +220,7 @@ public class OAuth2Util {
     private static final String OPENID_CONNECT_AUDIENCES = "Audiences";
     private static final String DOT_SEPARATER = ".";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
+    public static final String AUTHORIZED_USER = "AuthorizedUser";
 
     public static final String DEFAULT_TOKEN_TYPE = "Default";
 
