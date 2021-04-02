@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oidc.session.cache;
 
+import org.wso2.carbon.identity.application.authentication.framework.store.SessionDataStore;
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
 
 /**
@@ -44,5 +45,44 @@ public class OIDCSessionDataCache extends BaseCache<OIDCSessionDataCacheKey, OID
             }
         }
         return instance;
+    }
+
+    /**
+     * Add OIDCSessionDataCache to cache.
+     *
+     * @param key   OIDCSessionDataCacheKey.
+     * @param entry OIDCSessionDataCacheEntry.
+     */
+    public void addToCache(OIDCSessionDataCacheKey key, OIDCSessionDataCacheEntry entry) {
+
+        super.addToCache(key, entry);
+        SessionDataStore.getInstance().storeSessionData(key.getSessionDataId(), SESSION_DATA_CACHE_NAME, entry);
+    }
+
+    /**
+     * Get OIDCSessionDataCacheEntry from OIDCSessionDataCache.
+     *
+     * @param key OIDCSessionDataCacheKey.
+     * @return OIDCSessionDataCacheEntry.
+     */
+    public OIDCSessionDataCacheEntry getValueFromCache(OIDCSessionDataCacheKey key) {
+
+        OIDCSessionDataCacheEntry cacheEntry = super.getValueFromCache(key);
+        if (cacheEntry == null) {
+            cacheEntry = (OIDCSessionDataCacheEntry) SessionDataStore.getInstance().
+                    getSessionData(key.getSessionDataId(), SESSION_DATA_CACHE_NAME);
+        }
+        return cacheEntry;
+    }
+
+    /**
+     * Clear OIDCSessionDataCache.
+     *
+     * @param key OIDCSessionDataCacheKey.
+     */
+    public void clearCacheEntry(OIDCSessionDataCacheKey key) {
+
+        super.clearCacheEntry(key);
+        SessionDataStore.getInstance().clearSessionData(key.getSessionDataId(), SESSION_DATA_CACHE_NAME);
     }
 }

@@ -30,7 +30,6 @@ public class Oauth2ScopeConstants {
     public static final String SCOPE_TYPE_OAUTH2 = "OAUTH2";
     public static final String SCOPE_TYPE_OIDC = "OIDC";
 
-
     /**
      * Enums for error messages.
      */

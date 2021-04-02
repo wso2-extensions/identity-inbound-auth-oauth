@@ -218,6 +218,18 @@ public interface AccessTokenDAO {
     }
 
     /**
+     * Retrieve the active access tokens with a given access token binding reference.
+     *
+     * @param bindingRef access token binding reference
+     * @return set of active access objects
+     * @throws IdentityOAuth2Exception if the retrieval process fails
+     */
+    default Set<AccessTokenDO> getAccessTokensByBindingRef(String bindingRef) throws IdentityOAuth2Exception {
+
+        return Collections.emptySet();
+    }
+
+    /**
      * Retrieve the access token for a given token id.
      *
      * @param tokenId token id.

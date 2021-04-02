@@ -57,6 +57,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -70,6 +71,7 @@ import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.core.util.IdentityUtil.getProperty;
 import static org.wso2.carbon.identity.core.util.LambdaExceptionUtils.rethrowRowMapper;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
+import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.GET_ACCESS_TOKENS_BY_BINDING_REFERENCE;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.STORE_TOKEN_BINDING;
 
@@ -2569,7 +2571,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
             String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserId(SQLQueries
-                    .GET_ACCESS_TOKENS_BY_BINDING_REFERENCE, user.getUserName());
+                    .GET_ACCESS_TOKENS_BY_BINDING_REFERENCE_AND_USER, user.getUserName());
             int tenantId = OAuth2Util.getTenantId(user.getTenantDomain());
             Map<String, AccessTokenDO> tokenMap = new HashMap<>();
             jdbcTemplate.executeQuery(sqlQuery,
@@ -2620,6 +2622,75 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         preparedStatement.setInt(2, tenantId);
                         preparedStatement.setString(3, user.getUserStoreDomain());
                         preparedStatement.setString(4, bindingRef);
+                    });
+            return new HashSet<>(tokenMap.values());
+        } catch (DataAccessException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving access tokens.", e);
+        }
+    }
+
+    @Override
+    public Set<AccessTokenDO> getAccessTokensByBindingRef(String bindingRef) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving active access tokens issued with binding reference : " + bindingRef);
+        }
+
+        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        try {
+            String sqlQuery = GET_ACCESS_TOKENS_BY_BINDING_REFERENCE;
+            Map<String, AccessTokenDO> tokenMap = new HashMap<>();
+            jdbcTemplate.executeQuery(sqlQuery,
+                    rethrowRowMapper((resultSet, i) -> {
+                        String token = getPersistenceProcessor()
+                                .getPreprocessedAccessTokenIdentifier(resultSet.getString("ACCESS_TOKEN"));
+                        AccessTokenDO accessTokenDO = new AccessTokenDO();
+                        if (tokenMap.containsKey(token)) {
+                            AccessTokenDO tokenObj = tokenMap.get(token);
+                            String[] previousScope = tokenObj.getScope();
+                            String[] newScope = new String[tokenObj.getScope().length + 1];
+                            System.arraycopy(previousScope, 0, newScope, 0, previousScope.length);
+                            newScope[previousScope.length] = resultSet.getString(2);
+                            tokenObj.setScope(newScope);
+                        } else {
+                            String consumerKey = resultSet.getString("CONSUMER_KEY");
+                            String tokenScope = resultSet.getString("TOKEN_SCOPE");
+                            String refreshToken = resultSet.getString("REFRESH_TOKEN");
+                            String tokenId = resultSet.getString("TOKEN_ID");
+                            int tenantId = resultSet.getInt("TENANT_ID");
+                            String authzUser = resultSet.getString("AUTHZ_USER");
+                            String userDomain = resultSet.getString("USER_DOMAIN");
+                            String authenticatedIDP = resultSet.getString("IDP_ID");
+                            AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser,
+                                    userDomain, OAuth2Util.getTenantDomain(tenantId), authenticatedIDP);
+                            Timestamp issuedTime = resultSet
+                                    .getTimestamp("TIME_CREATED", Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                            Timestamp refreshTokenIssuedTime =
+                                    resultSet.getTimestamp("REFRESH_TOKEN_TIME_CREATED", Calendar.getInstance(TimeZone
+                                            .getTimeZone(UTC)));
+                            long validityPeriodInMillis = resultSet.getLong("VALIDITY_PERIOD");
+                            long refreshTokenValidityPeriodMillis = resultSet.getLong("REFRESH_TOKEN_VALIDITY_PERIOD");
+                            String tokenType = resultSet.getString("USER_TYPE");
+
+                            String[] scope = OAuth2Util.buildScopeArray(tokenScope);
+                            accessTokenDO.setAccessToken(token);
+                            accessTokenDO.setConsumerKey(consumerKey);
+                            accessTokenDO.setScope(scope);
+                            accessTokenDO.setAuthzUser(user);
+                            accessTokenDO.setTenantID(tenantId);
+                            accessTokenDO.setRefreshToken(refreshToken);
+                            accessTokenDO.setTokenId(tokenId);
+                            accessTokenDO.setIssuedTime(issuedTime);
+                            accessTokenDO.setRefreshTokenIssuedTime(refreshTokenIssuedTime);
+                            accessTokenDO.setValidityPeriod(validityPeriodInMillis);
+                            accessTokenDO.setRefreshTokenValidityPeriod(refreshTokenValidityPeriodMillis);
+                            accessTokenDO.setTokenType(tokenType);
+                            tokenMap.put(token, accessTokenDO);
+                        }
+                        return Collections.emptySet();
+                    }),
+                    (PreparedStatement preparedStatement) -> {
+                        preparedStatement.setString(1, bindingRef);
                     });
             return new HashSet<>(tokenMap.values());
         } catch (DataAccessException e) {
