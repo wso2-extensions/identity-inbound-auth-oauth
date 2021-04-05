@@ -1336,8 +1336,8 @@ public class OAuthServerConfiguration {
      * Returns whether introspection data providers should be enabled.
      *
      * @return true if introspection data providers should be enabled.
-     * @deprecated This configuration is deprecated from IS 5.12.0 onwards. Use EventListener configurations for data providers
-     * instead.
+     * @deprecated This configuration is deprecated from IS 5.12.0 onwards. Use EventListener configurations for
+     * data providers instead.
      */
     @Deprecated
     public boolean isEnableIntrospectionDataProviders() {
