@@ -42,6 +42,7 @@ public class DCRMConstants {
         BAD_REQUEST_INVALID_SP_NAME("Client Name is not adhering to the regex: %s"),
         BAD_REQUEST_INVALID_SP_TEMPLATE_NAME("Invalid service provider template name: %s"),
         BAD_REQUEST_INVALID_INPUT("%s"),
+        BAD_REQUEST_INVALID_TOKEN_ENDPOINT_AUTH_METHOD("Invalid token endpoint auth method: %s"),
         BAD_REQUEST_INSUFFICIENT_DATA("Insufficient data in the request"),
         NOT_FOUND_APPLICATION_WITH_ID("Application not available for given client key: %s"),
         NOT_FOUND_APPLICATION_WITH_NAME("Application not available for given client name: %s"),

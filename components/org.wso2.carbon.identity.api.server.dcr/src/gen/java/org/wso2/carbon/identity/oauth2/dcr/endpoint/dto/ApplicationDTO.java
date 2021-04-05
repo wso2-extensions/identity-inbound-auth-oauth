@@ -34,7 +34,11 @@ public class ApplicationDTO  {
   
   private String clientName = null;
 
-  
+
+  private String tokenEndpointAuthMethod = null;
+
+
+
   /**
    **/
   @ApiModelProperty(value = "")
@@ -106,6 +110,16 @@ public class ApplicationDTO  {
     this.clientName = clientName;
   }
 
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("token_endpoint_auth_method")
+  public String getTokenEndpointAuthMethod() { return tokenEndpointAuthMethod; }
+  public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+    this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+  }
+
   
 
   @Override
@@ -119,6 +133,7 @@ public class ApplicationDTO  {
     sb.append("  redirect_uris: ").append(redirectUris).append("\n");
     sb.append("  grant_types: ").append(grantTypes).append("\n");
     sb.append("  client_name: ").append(clientName).append("\n");
+    sb.append(" token_endpoint_auth_method: ").append(tokenEndpointAuthMethod).append("\n");
     sb.append("}\n");
     return sb.toString();
   }

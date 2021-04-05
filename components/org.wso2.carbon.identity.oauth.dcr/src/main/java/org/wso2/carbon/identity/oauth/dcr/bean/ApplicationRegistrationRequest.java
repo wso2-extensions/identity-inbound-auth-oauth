@@ -37,6 +37,8 @@ public class ApplicationRegistrationRequest implements Serializable {
     private String consumerSecret = null;
     private String spTemplateName = null;
     private String backchannelLogoutUri = null;
+    private String tokenEndpointAuthMethod = null;
+
 
     public List<String> getRedirectUris() {
 
@@ -106,6 +108,16 @@ public class ApplicationRegistrationRequest implements Serializable {
     public void setBackchannelLogoutUri(String backchannelLogoutUri) {
 
         this.backchannelLogoutUri = backchannelLogoutUri;
+    }
+
+    public String getTokenEndpointAuthMethod() {
+
+        return tokenEndpointAuthMethod;
+    }
+
+    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+
+        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
     }
 
     /**

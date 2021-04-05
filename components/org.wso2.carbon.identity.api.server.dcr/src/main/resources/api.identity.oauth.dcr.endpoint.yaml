@@ -308,6 +308,8 @@ definitions:
         type: string
       backchannel_logout_session_required:
         type: boolean
+      token_endpoint_auth_method:
+        type: string
 #-----------------------------------------------------
 # The Application Update Request Object
 #-----------------------------------------------------
@@ -332,6 +334,8 @@ definitions:
         type: string
       backchannel_logout_session_required:
         type: boolean
+      token_endpoint_auth_method:
+        type: string
 #-----------------------------------------------------
 # The OAuth2 Application Object
 #-----------------------------------------------------
@@ -353,6 +357,8 @@ definitions:
         items:
           type: string
       client_name:
+        type: string
+      token_endpoint_auth_method:
         type: string
 #-----------------------------------------------------
 # The Error Response object

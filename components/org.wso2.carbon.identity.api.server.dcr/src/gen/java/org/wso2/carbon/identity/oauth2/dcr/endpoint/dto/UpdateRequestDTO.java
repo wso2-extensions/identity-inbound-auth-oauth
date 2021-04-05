@@ -19,6 +19,8 @@ public class UpdateRequestDTO {
     private String clientSecret = null;
     private String backchannelLogoutUri = null;
     private boolean backchannelLogoutSessionRequired;
+    private String tokenEndpointAuthMethod = null;
+
 
     @ApiModelProperty
     @JsonProperty("redirect_uris")
@@ -99,6 +101,15 @@ public class UpdateRequestDTO {
         this.backchannelLogoutSessionRequired = backchannelLogoutSessionRequired;
     }
 
+    /**
+     **/
+    @ApiModelProperty(value = "")
+    @JsonProperty("token_endpoint_auth_method")
+    public String getTokenEndpointAuthMethod() { return tokenEndpointAuthMethod; }
+    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -112,6 +123,7 @@ public class UpdateRequestDTO {
         sb.append("  client_secret: ").append(clientSecret).append("\n");
         sb.append("  backchannel_logout_uri: ").append(backchannelLogoutUri).append("\n");
         sb.append("  backchannel_logout_session_required: ").append(backchannelLogoutSessionRequired).append("\n");
+        sb.append("  token_endpoint_auth_method: ").append(tokenEndpointAuthMethod).append("\n");
         sb.append("}\n");
         return sb.toString();
     }
