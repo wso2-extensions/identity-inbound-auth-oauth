@@ -301,11 +301,6 @@
                 <version>${json.wso2.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.google.guava</groupId>
-                <artifactId>guava</artifactId>
-                <version>${google.guava.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.wso2.orbit.org.opensaml</groupId>
                 <artifactId>opensaml</artifactId>
                 <version>${opensaml3.wso2.version}</version>
@@ -960,7 +955,6 @@
         <tomcat.version>9.0.21</tomcat.version>
         <tomcat.wso2.imp.pkg.version.range>[9.0.0, 9.5.0)</tomcat.wso2.imp.pkg.version.range>
 
-        <google.guava.version>27.0-jre</google.guava.version>
         <org.apache.cxf.version>3.3.7</org.apache.cxf.version>
         <encoder.wso2.version>1.2.0.wso2v1</encoder.wso2.version>
         <json-simple.version>1.1.wso2v1</json-simple.version>
