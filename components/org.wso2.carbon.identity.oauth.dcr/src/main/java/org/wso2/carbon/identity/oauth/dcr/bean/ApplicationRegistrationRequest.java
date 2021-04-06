@@ -39,7 +39,6 @@ public class ApplicationRegistrationRequest implements Serializable {
     private String spTemplateName = null;
     private String idTokenEncryptionAlgorithm = null;
     private String idTokenEncryptionMethod = null;
-    private String tokenEndpointAuthMethod = null;
     private String backchannelLogoutUri = null;
     private String softwareId = null;
 
@@ -131,16 +130,6 @@ public class ApplicationRegistrationRequest implements Serializable {
     public void setIdTokenEncryptionMethod(String idTokenEncryptionMethod) {
 
         this.idTokenEncryptionMethod = idTokenEncryptionMethod;
-    }
-
-    public String getTokenEndpointAuthMethod() {
-
-        return tokenEndpointAuthMethod;
-    }
-
-    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
-
-        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
     }
 
     public String getBackchannelLogoutUri() {

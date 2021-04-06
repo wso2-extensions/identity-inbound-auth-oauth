@@ -71,9 +71,6 @@ public class RegistrationRequestDTO  {
   private String idTokenEncryptedResponseEnc = null;
 
 
-  private String tokenEndpointAuthMethod = null;
-
-
   private String softwareId = null;
 
 
@@ -299,18 +296,6 @@ public class RegistrationRequestDTO  {
   /**
    **/
   @ApiModelProperty(value = "")
-  @JsonProperty("token_endpoint_auth_method")
-  public String getTokenEndpointAuthMethod() {
-    return tokenEndpointAuthMethod;
-  }
-  public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
-    this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
-  }
-
-
-  /**
-   **/
-  @ApiModelProperty(value = "")
   @JsonProperty("software_id")
   public String getSoftwareId() {
     return softwareId;
@@ -357,7 +342,6 @@ public class RegistrationRequestDTO  {
     sb.append("  aud: ").append(aud).append("\n");
     sb.append("  id_token_encrypted_response_alg: ").append(idTokenEncryptedResponseAlg).append("\n");
     sb.append("  id_token_encrypted_response_enc: ").append(idTokenEncryptedResponseEnc).append("\n");
-    sb.append("  token_endpoint_auth_method: ").append(tokenEndpointAuthMethod).append("\n");
     sb.append("  software_id: ").append(softwareId).append("\n");
     sb.append("}\n");
     return sb.toString();

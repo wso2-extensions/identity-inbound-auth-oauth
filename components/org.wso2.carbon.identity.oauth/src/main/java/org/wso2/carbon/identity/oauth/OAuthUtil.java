@@ -350,7 +350,6 @@ public final class OAuthUtil {
         dto.setTokenRevocationWithIDPSessionTerminationEnabled(appDO
                 .isTokenRevocationWithIDPSessionTerminationEnabled());
         dto.setTokenBindingValidationEnabled(appDO.isTokenBindingValidationEnabled());
-        dto.setTokenEndpointAuthMethod(appDO.getTokenEndpointAuthMethod());
         dto.setSoftwareId(appDO.getSoftwareId());
         return dto;
     }

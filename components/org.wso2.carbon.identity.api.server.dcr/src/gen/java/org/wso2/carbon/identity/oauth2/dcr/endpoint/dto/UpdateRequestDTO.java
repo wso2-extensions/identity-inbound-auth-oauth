@@ -44,9 +44,6 @@ public class UpdateRequestDTO  {
     private List<String> aud = new ArrayList<String>();
 
 
-    private String tokenEndpointAuthMethod = null;
-
-
     private String idTokenEncryptionAlgorithm = null;
 
 
@@ -167,16 +164,6 @@ public class UpdateRequestDTO  {
     /**
      **/
     @ApiModelProperty(value = "")
-    @JsonProperty("token_endpoint_auth_method")
-    public String getTokenEndpointAuthMethod() { return tokenEndpointAuthMethod; }
-    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
-        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
-    }
-
-
-    /**
-     **/
-    @ApiModelProperty(value = "")
     @JsonProperty("id_token_encrypted_response_alg")
     public String getIdTokenEncryptionAlgorithm() { return idTokenEncryptionAlgorithm; }
     public void setIdTokenEncryptionAlgorithm(String idTokenEncryptionAlgorithm) {
@@ -218,7 +205,6 @@ public class UpdateRequestDTO  {
         sb.append("  backchannel_logout_session_required: ").append(backchannelLogoutSessionRequired).append("\n");
         sb.append("  token_type_extension: ").append(tokenType).append("\n");
         sb.append("  aud: ").append(aud).append("\n");
-        sb.append("  token_endpoint_auth_method: ").append(tokenEndpointAuthMethod).append("\n");
         sb.append("  id_token_encrypted_response_alg: ").append(idTokenEncryptionAlgorithm).append("\n");
         sb.append("  id_token_encrypted_response_enc: ").append(idTokenEncryptionMethod).append("\n");
         sb.append("  software_id: ").append(softwareId).append("\n");

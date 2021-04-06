@@ -316,8 +316,6 @@ definitions:
         type: string
       id_token_encrypted_response_enc:
         type: string
-      token_endpoint_auth_method:
-        type: string
       software_id:
         type: string
 #-----------------------------------------------------
@@ -352,8 +350,6 @@ definitions:
         type: string
       id_token_encrypted_response_enc:
         type: string
-      token_endpoint_auth_method:
-        type: string
       software_id:
         type: string
 #-----------------------------------------------------
@@ -382,8 +378,6 @@ definitions:
         type: array
         items:
           type: string
-      token_endpoint_auth_method:
-        type: string
       id_token_encrypted_response_alg:
         type: string
       id_token_encrypted_response_enc:

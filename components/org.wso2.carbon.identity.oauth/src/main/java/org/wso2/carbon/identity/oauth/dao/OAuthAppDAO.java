@@ -76,7 +76,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE_NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_VALIDATION;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_ENDPOINT_AUTH_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties
         .TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_TYPE;
@@ -654,10 +653,6 @@ public class OAuthAppDAO {
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                TOKEN_ENDPOINT_AUTH_METHOD, oauthAppDO.getTokenEndpointAuthMethod(),
-                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
-
-        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 SOFTWARE_ID, oauthAppDO.getSoftwareId(), prepStatementForPropertyAdd,
                 preparedStatementForPropertyUpdate);
 
@@ -1186,9 +1181,6 @@ public class OAuthAppDAO {
                     RENEW_REFRESH_TOKEN, consumerAppDO.getRenewRefreshTokenEnabled());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    TOKEN_ENDPOINT_AUTH_METHOD, consumerAppDO.getTokenEndpointAuthMethod());
-
-            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     SOFTWARE_ID, consumerAppDO.getSoftwareId());
 
             if (TOKEN_BINDING_TYPE_NONE.equalsIgnoreCase(consumerAppDO.getTokenBindingType())) {
@@ -1287,9 +1279,6 @@ public class OAuthAppDAO {
 
         String tokenType = getFirstPropertyValue(spOIDCProperties, TOKEN_TYPE);
         oauthApp.setTokenType(tokenType);
-
-        String tokenEndpointAuthMethod = getFirstPropertyValue(spOIDCProperties, TOKEN_ENDPOINT_AUTH_METHOD);
-        oauthApp.setTokenEndpointAuthMethod(tokenEndpointAuthMethod);
 
         String softwareId = getFirstPropertyValue(spOIDCProperties, SOFTWARE_ID);
         oauthApp.setSoftwareId(softwareId);

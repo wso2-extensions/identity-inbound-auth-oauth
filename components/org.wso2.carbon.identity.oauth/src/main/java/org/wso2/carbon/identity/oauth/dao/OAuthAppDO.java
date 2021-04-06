@@ -67,7 +67,6 @@ public class OAuthAppDO implements Serializable {
     private String idTokenEncryptionMethod;
     private String backChannelLogoutUrl;
     private String frontchannelLogoutUrl;
-    private String tokenEndpointAuthMethod;
     private String softwareId;
     @XmlTransient
     private AuthenticatedUser appOwner;
@@ -269,16 +268,6 @@ public class OAuthAppDO implements Serializable {
 
     public void setFrontchannelLogoutUrl(String frontchannelLogoutUrl) {
         this.frontchannelLogoutUrl = frontchannelLogoutUrl;
-    }
-
-    public String getTokenEndpointAuthMethod() {
-
-        return tokenEndpointAuthMethod;
-    }
-
-    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
-
-        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
     }
 
     public String getSoftwareId() {

@@ -34,7 +34,6 @@ public class Application implements Serializable {
     private List<String> redirectUris = null;
     private List<String> grantTypes = null;
     private List<String> aud = null;
-    private String tokenEndpointAuthMethod = null;
     private String idTokenEncryptionAlgorithm = null;
     private String idTokenEncryptionMethod = null;
     private String softwareId = null;
@@ -99,16 +98,6 @@ public class Application implements Serializable {
         this.aud = aud;
     }
 
-    public String getTokenEndpointAuthMethod() {
-
-        return tokenEndpointAuthMethod;
-    }
-
-    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
-
-        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
-    }
-
     public String getIdTokenEncryptionAlgorithm() {
 
         return idTokenEncryptionAlgorithm;
@@ -149,9 +138,8 @@ public class Application implements Serializable {
                 "  redirectUris: " + this.redirectUris + "\n" +
                 "  grantTypes: " + this.grantTypes + "\n" +
                 "  aud: " + this.aud + "\n" +
-                "  tokenEndpointAuthMethod: " + this.tokenEndpointAuthMethod + "\n" +
                 "  idTokenEncryptionAlgorithm: " + this.idTokenEncryptionAlgorithm + "\n" +
-                "  idTokenEncryptionMethod: " + this.tokenEndpointAuthMethod + "\n" +
+                "  idTokenEncryptionMethod: " + this.idTokenEncryptionMethod + "\n" +
                 "  softwareId: " + this.softwareId + "\n" +
                 "}\n";
     }

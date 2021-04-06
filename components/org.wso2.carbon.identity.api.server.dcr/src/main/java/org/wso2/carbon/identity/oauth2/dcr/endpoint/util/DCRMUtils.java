@@ -70,7 +70,6 @@ public class DCRMUtils {
         appRegistrationRequest.setAudiences(registrationRequestDTO.getAud());
         appRegistrationRequest.setIdTokenEncryptionAlgorithm(registrationRequestDTO.getIdTokenEncryptedResponseAlg());
         appRegistrationRequest.setIdTokenEncryptionMethod(registrationRequestDTO.getIdTokenEncryptedResponseEnc());
-        appRegistrationRequest.setTokenEndpointAuthMethod(registrationRequestDTO.getTokenEndpointAuthMethod());
         appRegistrationRequest.setSoftwareId(registrationRequestDTO.getSoftwareId());
         return appRegistrationRequest;
 
@@ -85,7 +84,6 @@ public class DCRMUtils {
         applicationUpdateRequest.setTokenType(updateRequestDTO.getTokenType());
         applicationUpdateRequest.setBackchannelLogoutUri(updateRequestDTO.getBackchannelLogoutUri());
         applicationUpdateRequest.setAud(updateRequestDTO.getAud());
-        applicationUpdateRequest.setTokenEndpointAuthMethod(updateRequestDTO.getTokenEndpointAuthMethod());
         applicationUpdateRequest.setIdTokenEncryptionAlgorithm(updateRequestDTO.getIdTokenEncryptionAlgorithm());
         applicationUpdateRequest.setIdTokenEncryptionMethod(updateRequestDTO.getIdTokenEncryptionMethod());
         applicationUpdateRequest.setSoftwareId(updateRequestDTO.getSoftwareId());
@@ -161,7 +159,6 @@ public class DCRMUtils {
         applicationDTO.setRedirectUris(application.getRedirectUris());
         applicationDTO.setGrantTypes(application.getGrantTypes());
         applicationDTO.setAud(application.getAud());
-        applicationDTO.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
         applicationDTO.setIdTokenEncryptionAlgorithm(application.getIdTokenEncryptionAlgorithm());
         applicationDTO.setIdTokenEncryptionMethod(application.getIdTokenEncryptionMethod());
         applicationDTO.setSoftwareId(application.getSoftwareId());

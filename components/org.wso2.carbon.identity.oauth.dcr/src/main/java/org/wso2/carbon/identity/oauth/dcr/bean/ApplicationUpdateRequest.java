@@ -35,7 +35,6 @@ public class ApplicationUpdateRequest implements Serializable {
     private String tokenType = null;
     private String backchannelLogoutUri = null;
     private List<String> aud = new ArrayList<String>();
-    private String tokenEndpointAuthMethod = null;
     private String idTokenEncryptionAlgorithm = null;
     private String idTokenEncryptionMethod = null;
     private String softwareId = null;
@@ -98,16 +97,6 @@ public class ApplicationUpdateRequest implements Serializable {
     public void setAud(List<String> aud) {
 
         this.aud = aud;
-    }
-
-    public String getTokenEndpointAuthMethod() {
-
-        return tokenEndpointAuthMethod;
-    }
-
-    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
-
-        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
     }
 
     public String getIdTokenEncryptionAlgorithm() {
