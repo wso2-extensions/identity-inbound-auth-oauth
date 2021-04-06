@@ -54,10 +54,6 @@
             <artifactId>gdata-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.thetransactioncompany.wso2</groupId>
             <artifactId>java-property-utils</artifactId>
         </dependency>
