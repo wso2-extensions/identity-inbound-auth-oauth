@@ -628,7 +628,7 @@ public class TokenValidationHandler {
      * @return
      */
     private long getAccessTokenExpirationTime(AccessTokenDO accessTokenDO) {
-        long expiryTime = OAuth2Util.getAccessTokenExpireMillis(accessTokenDO);
+        long expiryTime = OAuth2Util.getAccessTokenExpireMillis(accessTokenDO, false);
 
         if (OAuthConstants.UserType.APPLICATION_USER.equals(accessTokenDO.getTokenType())
                 && OAuthServerConfiguration.getInstance().getUserAccessTokenValidityPeriodInSeconds() < 0) {
@@ -655,7 +655,7 @@ public class TokenValidationHandler {
                 log.debug("Access Token has infinite lifetime");
             }
         } else {
-            if (OAuth2Util.getAccessTokenExpireMillis(accessTokenDO) == 0) {
+            if (OAuth2Util.getTokenExpireTimeMillis(accessTokenDO, true) == 0) {
                 if (log.isDebugEnabled()) {
                     log.debug("Access Token has expired");
                 }

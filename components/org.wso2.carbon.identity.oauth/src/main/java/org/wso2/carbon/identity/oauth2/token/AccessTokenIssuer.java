@@ -298,6 +298,9 @@ public class AccessTokenIssuer {
         // the other scope validators.
         removeInternalScopes(tokReqMsgCtx);
 
+        // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
+        tokReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
+
         boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
         if (isDropUnregisteredScopes) {
             if (log.isDebugEnabled()) {
@@ -311,8 +314,8 @@ public class AccessTokenIssuer {
 
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
         if (isValidScope) {
-            //Add authorized internal scopes to the request for sending in the response.
-            addAuthorizedInternalScopes(tokReqMsgCtx, authorizedInternalScopes);
+            // Add authorized internal scopes to the request for sending in the response.
+            addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
             addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         } else {
             if (log.isDebugEnabled()) {

@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -210,6 +211,14 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             }
             UserStoreManager userStoreManager = getUserStoreManager(tokenReq);
             String tenantAwareUserName = MultitenantUtils.getTenantAwareUsername(tokenReq.getResourceOwnerUsername());
+            String userTenantDomain = MultitenantUtils.getTenantDomain(tokenReq.getResourceOwnerUsername());
+            ResolvedUserResult resolvedUserResult =
+                    FrameworkUtils.processMultiAttributeLoginIdentification(tenantAwareUserName, userTenantDomain);
+            if (resolvedUserResult != null &&
+                    ResolvedUserResult.UserResolvedStatus.SUCCESS.equals(resolvedUserResult.getResolvedStatus())) {
+                tenantAwareUserName = resolvedUserResult.getUser().getUsername();
+                tokenReq.setResourceOwnerUsername(tenantAwareUserName + "@" + userTenantDomain);
+            }
             authenticated = userStoreManager.authenticate(tenantAwareUserName, tokenReq.getResourceOwnerPassword());
             if (log.isDebugEnabled()) {
                 log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: " + authenticated);

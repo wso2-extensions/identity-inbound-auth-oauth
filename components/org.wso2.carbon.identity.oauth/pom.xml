@@ -23,7 +23,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.4.165-SNAPSHOT</version>
+        <version>6.5.3-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -267,12 +267,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>22.0</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.testutil</artifactId>
             <scope>test</scope>
@@ -304,6 +298,10 @@
         <dependency>
             <groupId>org.wso2.carbon.utils</groupId>
             <artifactId>org.wso2.carbon.database.utils</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.multi.attribute.login.mgt</artifactId>
         </dependency>
     </dependencies>
 
@@ -392,6 +390,8 @@
                             org.wso2.carbon.core.*;version="${carbon.kernel.imp.pkg.version.range}",
                             org.wso2.carbon.user.core.*;version="${carbon.kernel.imp.pkg.version.range}",
                             org.wso2.carbon.utils.multitenancy;version="${carbon.kernel.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.multi.attribute.login.mgt.*;
+                            version="${carbon.identity.framework.imp.pkg.version.range}",
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.oauth.internal,

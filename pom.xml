@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>6.4.165-SNAPSHOT</version>
+    <version>6.5.3-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -51,8 +51,10 @@
         <module>components/org.wso2.carbon.identity.oauth.dcr</module>
         <module>components/org.wso2.carbon.identity.oidc.dcr</module>
         <module>components/org.wso2.carbon.identity.discovery</module>
+        <module>components/org.wso2.carbon.identity.api.server.oauth.scope</module>
         <module>components/org.wso2.carbon.identity.oauth.scope.endpoint</module>
         <module>components/org.wso2.carbon.identity.webfinger</module>
+        <module>components/org.wso2.carbon.identity.api.server.dcr</module>
         <module>components/org.wso2.carbon.identity.oauth.dcr.endpoint</module>
         <module>components/org.wso2.carbon.identity.oauth.client.authn.filter</module>
         <module>components/org.wso2.carbon.identity.oauth.ciba</module>
@@ -299,11 +301,6 @@
                 <version>${json.wso2.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.google.guava</groupId>
-                <artifactId>guava</artifactId>
-                <version>${google.guava.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.wso2.orbit.org.opensaml</groupId>
                 <artifactId>opensaml</artifactId>
                 <version>${opensaml3.wso2.version}</version>
@@ -362,6 +359,16 @@
                 <artifactId>org.wso2.carbon.identity.oauth</artifactId>
                 <version>${project.version}</version>
                 <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                <artifactId>org.wso2.carbon.identity.api.server.oauth.scope</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                <artifactId>org.wso2.carbon.identity.api.server.dcr</artifactId>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
@@ -507,7 +514,11 @@
                 <artifactId>jackson-jaxrs-json-provider</artifactId>
                 <version>${com.fasterxml.jackson.version}</version>
             </dependency>
-
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.multi.attribute.login.mgt</artifactId>
+                <version>${carbon.identity.framework.version}</version>
+            </dependency>
             <!--Test Dependencies-->
             <dependency>
                 <groupId>junit</groupId>
@@ -944,7 +955,6 @@
         <tomcat.version>9.0.21</tomcat.version>
         <tomcat.wso2.imp.pkg.version.range>[9.0.0, 9.5.0)</tomcat.wso2.imp.pkg.version.range>
 
-        <google.guava.version>27.0-jre</google.guava.version>
         <org.apache.cxf.version>3.3.7</org.apache.cxf.version>
         <encoder.wso2.version>1.2.0.wso2v1</encoder.wso2.version>
         <json-simple.version>1.1.wso2v1</json-simple.version>
