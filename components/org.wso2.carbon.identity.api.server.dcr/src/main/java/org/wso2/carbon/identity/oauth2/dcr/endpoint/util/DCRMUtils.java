@@ -154,7 +154,6 @@ public class DCRMUtils {
         applicationDTO.setGrantTypes(application.getGrantTypes());
         applicationDTO.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
 
-
         return applicationDTO;
     }
 
