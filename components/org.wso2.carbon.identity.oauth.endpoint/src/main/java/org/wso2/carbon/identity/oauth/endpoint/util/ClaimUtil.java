@@ -25,7 +25,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -171,7 +170,8 @@ public class ClaimUtil {
                     if (isNotEmpty(userClaims)) {
                         for (Map.Entry<String, String> entry : userClaims.entrySet()) {
                             //set local2sp role mappings
-                            if (FrameworkConstants.LOCAL_ROLE_CLAIM_URI.equals(entry.getKey())) {
+                            if (IdentityUtil.getRoleGroupClaims().stream().anyMatch(roleGroupClaimURI ->
+                                    roleGroupClaimURI.equals(entry.getKey()))) {
                                 String claimSeparator = getMultiAttributeSeparator(username, realm);
                                 entry.setValue(getSpMappedRoleClaim(serviceProvider, entry, claimSeparator));
                             }
