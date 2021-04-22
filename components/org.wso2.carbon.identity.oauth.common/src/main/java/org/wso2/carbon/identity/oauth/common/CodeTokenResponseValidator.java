@@ -19,6 +19,8 @@
 package org.wso2.carbon.identity.oauth.common;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.error.OAuthError;
@@ -33,6 +35,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params
  * Validator for hybrid flow code token requests
  */
 public class CodeTokenResponseValidator extends TokenValidator {
+
+    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
 
     public CodeTokenResponseValidator() {
 
@@ -64,6 +68,8 @@ public class CodeTokenResponseValidator extends TokenValidator {
         String openIdScope = request.getParameter(SCOPE);
         if (StringUtils.isBlank(openIdScope) || !isContainOIDCScope(openIdScope)) {
             String clientID = request.getParameter(CLIENT_ID);
+            diagnosticLog.error("Request with 'client_id' : '" + clientID + "' has " +
+                    "'response_type' for 'hybrid flow', but 'openid' scope not found.");
             throw OAuthProblemException.error(OAuthError.TokenResponse.INVALID_REQUEST)
                     .description("Request with \'client_id\' = \'" + clientID + "\' has " +
                             "\'response_type\' for \'hybrid flow\'; but \'openid\' scope not found.");
@@ -75,6 +81,7 @@ public class CodeTokenResponseValidator extends TokenValidator {
 
         String method = request.getMethod();
         if (!OAuth.HttpMethod.GET.equals(method) && !OAuth.HttpMethod.POST.equals(method)) {
+            diagnosticLog.info("HTTP method used in the request: '" + method + "' is not correct.");
             throw OAuthProblemException.error(OAuthError.CodeResponse.INVALID_REQUEST)
                     .description("Method not correct.");
         }
