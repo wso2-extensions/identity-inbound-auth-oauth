@@ -29,6 +29,7 @@
             <class name="org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2TokenValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContextTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.handlers.CodeResponseTypeHandlerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.authz.handlers.HybridResponseTypeHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.device.grant.DeviceFlowGrantTest"/>
             <class name="org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManagerTest"/>
@@ -91,6 +92,7 @@
             <class name="org.wso2.carbon.identity.oauth2.dao.AuthContextTokenDOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.ScopeMgtDAOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.TokenMgtDAOTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAOImplTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth2.internal.OAuthApplicationMgtListenerTest"/>-->
             <!--<class name="org.wso2.carbon.identity.oauth2.internal.OAuthTenantMgtListenerImplTest"/>-->
             <!--<class name="org.wso2.carbon.identity.oauth2.internal.OAuthUserStoreConfigListenerImplTest"/>-->
