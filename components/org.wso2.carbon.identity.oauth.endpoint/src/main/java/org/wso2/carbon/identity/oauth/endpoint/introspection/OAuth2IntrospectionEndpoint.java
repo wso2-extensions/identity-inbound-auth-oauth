@@ -22,7 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.JSONException;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IntrospectionDataProvider;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -148,31 +148,35 @@ public class OAuth2IntrospectionEndpoint {
             respBuilder.setBindingReference(introspectionResponse.getBindingReference());
         }
 
-        // Check data providers are enabled for token introspection.
-        if (OAuthServerConfiguration.getInstance().isEnableIntrospectionDataProviders()) {
+        // Retrieve list of registered IntrospectionDataProviders.
+        List<Object> introspectionDataProviders = PrivilegedCarbonContext
+                .getThreadLocalCarbonContext().getOSGiServices(IntrospectionDataProvider.class, null);
 
-            // Retrieve list of registered IntrospectionDataProviders.
-            List<Object> introspectionDataProviders = PrivilegedCarbonContext
-                    .getThreadLocalCarbonContext().getOSGiServices(IntrospectionDataProvider.class, null);
+        for (Object dataProvider : introspectionDataProviders) {
+            if (dataProvider instanceof IntrospectionDataProvider) {
 
-            for (Object dataProvider : introspectionDataProviders) {
-                if (dataProvider instanceof IntrospectionDataProvider) {
-
+                if (dataProvider instanceof AbstractIdentityHandler &&
+                        !((AbstractIdentityHandler) dataProvider).isEnabled()) {
                     if (log.isDebugEnabled()) {
-                        log.debug("Executing introspection data provider: " + dataProvider.getClass().getName());
+                        log.debug(String.format("%s data provider is not enabled.",
+                                ((AbstractIdentityHandler) dataProvider).getName()));
                     }
-                    try {
-                        respBuilder.setAdditionalData(
-                                (((IntrospectionDataProvider) dataProvider).getIntrospectionData(
-                                        introspectionRequest, introspectionResponse)));
-                    } catch (IdentityOAuth2Exception e) {
-                        log.error("Error occurred while processing additional token introspection data.", e);
+                    continue;
+                }
+                if (log.isDebugEnabled()) {
+                    log.debug("Executing introspection data provider: " + dataProvider.getClass().getName());
+                }
+                try {
+                    respBuilder.setAdditionalData(
+                            (((IntrospectionDataProvider) dataProvider).getIntrospectionData(
+                                    introspectionRequest, introspectionResponse)));
+                } catch (IdentityOAuth2Exception e) {
+                    log.error("Error occurred while processing additional token introspection data.", e);
 
-                        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                                .entity("{\"error\": \"Error occurred while building the introspection " +
-                                        "response.\"}")
-                                .build();
-                    }
+                    return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                            .entity("{\"error\": \"Error occurred while building the introspection " +
+                                    "response.\"}")
+                            .build();
                 }
             }
         }
