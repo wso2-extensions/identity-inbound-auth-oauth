@@ -42,7 +42,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 /**
  * Test class covering HybridResponseTypeHandler.
  */
-
 @WithCarbonHome
 @WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
 @WithRealmService(tenantId = TestConstants.TENANT_ID,
@@ -51,7 +50,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
         injectToSingletons = {OAuthComponentServiceHolder.class})
 @PrepareForTest({OAuth2TokenUtil.class})
 public class HybridResponseTypeHandlerTest {
-
 
     private static final String TEST_CONSUMER_KEY = "testconsumenrkey";
     private static final String TEST_CALLBACK_URL = "https://localhost:8000/callback";
