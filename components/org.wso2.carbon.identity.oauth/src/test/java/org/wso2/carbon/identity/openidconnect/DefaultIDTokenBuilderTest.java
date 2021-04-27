@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import org.junit.Assert;
 import org.mockito.Mockito;
 import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.annotations.BeforeClass;
@@ -37,6 +38,7 @@ import org.wso2.carbon.identity.common.testng.WithKeyStore;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -205,5 +207,25 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
         defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
         defaultIDTokenBuilder.buildIDToken(authzMessageContext, authzTokenRespDTO);
     }
+
+    @Test
+    public void testClientIDNotFoundException() throws Exception {
+        RealmService realmService = IdentityTenantUtil.getRealmService();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
+        IdpMgtServiceComponentHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
+
+        tokenReqDTO.setClientId(null);
+
+        try {
+            defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
+        } catch (IdentityOAuth2Exception e){
+            Assert.assertEquals(e.getMessage(),"Error occurred while getting app information for client_id: null");
+
+        } finally {
+            tokenReqDTO.setClientId(TestConstants.CLIENT_ID);
+        }
+    }
+
 
 }
