@@ -17,15 +17,15 @@
  */
 package org.wso2.carbon.identity.oauth.dcr.util;
 
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
-import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 
-public class DCRMUtilsTest extends IdentityBaseTest {
+public class DCRMUtilsTest extends PowerMockTestCase {
 
     @DataProvider(name = "BuildRedirectUrl")
     public Object[][] buildRedirectUrl() {

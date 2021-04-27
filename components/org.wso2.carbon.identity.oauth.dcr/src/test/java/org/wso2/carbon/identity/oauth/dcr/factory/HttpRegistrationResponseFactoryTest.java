@@ -22,15 +22,17 @@ import org.json.simple.JSONObject;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponse;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityResponse;
+import org.wso2.carbon.identity.oauth.dcr.exception.RegistrationException;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponse;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponseProfile;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
+import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +54,7 @@ import static org.testng.Assert.assertTrue;
  * Unit test covering HttpRegistrationResponseFactory
  */
 @PrepareForTest(HttpRegistrationResponseFactory.class)
-public class HttpRegistrationResponseFactoryTest extends PowerMockIdentityBaseTest {
+public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
 
     private RegistrationResponse mockRegistrationResponse;
     private HttpIdentityResponse.HttpIdentityResponseBuilder mockHttpIdentityResponseBuilder;
@@ -60,6 +62,9 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockIdentityBaseTe
     private List<String> grantType = new ArrayList<>();
     private List<String> redirectUrl = new ArrayList<>();
     private String dummyDescription = "dummyDescription";
+
+    private Integer[] statusCode;
+    private String[] header;
 
     @BeforeMethod
     private void setUp() {
@@ -86,6 +91,26 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockIdentityBaseTe
             assertTrue(httpRegistrationResponseFactory.canHandle((RegistrationResponse) identityResponse));
         } else {
             assertFalse(httpRegistrationResponseFactory.canHandle((IdentityResponse) identityResponse));
+        }
+    }
+
+    @DataProvider(name = "exceptionInstanceProvider")
+    public Object[][] getExceptionInstanceType() {
+
+        FrameworkException exception1 = new RegistrationException("");
+        FrameworkException exception2 = new FrameworkException("");
+        return new Object[][]{
+                {exception1, true},
+                {exception2, false}
+        };
+    }
+
+    @Test(dataProvider = "exceptionInstanceProvider")
+    public void testCanHandleException(Object exception, boolean expected) throws Exception {
+        if (expected) {
+            assertTrue(httpRegistrationResponseFactory.canHandle((RegistrationException) exception));
+        } else {
+            assertFalse(httpRegistrationResponseFactory.canHandle((FrameworkException) exception));
         }
     }
 
@@ -165,6 +190,73 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockIdentityBaseTe
     @Test
     public void testHandleException() throws Exception {
 
+        FrameworkException exception = handleException();
+        httpRegistrationResponseFactory.handleException(exception);
+
+        assertEquals(header[0], MediaType.APPLICATION_JSON);
+        assertEquals((int) statusCode[0], HttpServletResponse.SC_BAD_REQUEST);
+    }
+    private FrameworkException handleException() throws Exception {
+        mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);
+        whenNew(HttpIdentityResponse.HttpIdentityResponseBuilder.class).withNoArguments().thenReturn
+                (mockHttpIdentityResponseBuilder);
+
+        statusCode = new Integer[1];
+        doAnswer(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+
+                statusCode[0] = (Integer) invocation.getArguments()[0];
+                return null;
+            }
+        }).when(mockHttpIdentityResponseBuilder).setStatusCode(anyInt());
+
+        header = new String[1];
+        doAnswer(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+
+                header[0] = (String) invocation.getArguments()[1];
+                return null;
+            }
+        }).when(mockHttpIdentityResponseBuilder).addHeader(anyString(), anyString());
+
+        FrameworkException exception = mock(FrameworkException.class);
+        when(exception.getMessage()).thenReturn(dummyDescription);
+        return exception;
+    }
+    @Test
+    public void testHandleExceptionValidationError() throws Exception {
+
+        FrameworkException exception = handleException();
+
+        when(exception.getErrorCode()).thenReturn(ErrorCodes.META_DATA_VALIDATION_FAILED.toString());
+        httpRegistrationResponseFactory.handleException(exception);
+
+        assertEquals(header[0], MediaType.APPLICATION_JSON);
+        assertEquals((int) statusCode[0], HttpServletResponse.SC_BAD_REQUEST);
+    }
+    @Test
+    public void testHandleExceptionForbiddenError() throws Exception {
+
+        FrameworkException exception = handleException();
+        when(exception.getErrorCode()).thenReturn(ErrorCodes.FORBIDDEN.toString());
+        httpRegistrationResponseFactory.handleException(exception);
+        assertEquals((int) statusCode[0], HttpServletResponse.SC_FORBIDDEN);
+    }
+    @Test
+    public void testHandleExceptionGoneError() throws Exception {
+
+        FrameworkException exception = handleException();
+        when(exception.getErrorCode()).thenReturn(ErrorCodes.GONE.toString());
+        httpRegistrationResponseFactory.handleException(exception);
+
+
+        assertEquals((int) statusCode[0], HttpServletResponse.SC_GONE);
+    }
+    @Test
+    public void testHandleExceptionBadRequestError() throws Exception {
+
         mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);
         whenNew(HttpIdentityResponse.HttpIdentityResponseBuilder.class).withNoArguments().thenReturn
                 (mockHttpIdentityResponseBuilder);
@@ -190,7 +282,9 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockIdentityBaseTe
         }).when(mockHttpIdentityResponseBuilder).addHeader(anyString(), anyString());
 
         FrameworkException exception = mock(FrameworkException.class);
+        exception.setErrorCode(String.valueOf(ErrorCodes.BAD_REQUEST));
         when(exception.getMessage()).thenReturn(dummyDescription);
+        when(exception.getErrorCode()).thenReturn(ErrorCodes.BAD_REQUEST.toString());
         httpRegistrationResponseFactory.handleException(exception);
 
         assertEquals(header[0], MediaType.APPLICATION_JSON);

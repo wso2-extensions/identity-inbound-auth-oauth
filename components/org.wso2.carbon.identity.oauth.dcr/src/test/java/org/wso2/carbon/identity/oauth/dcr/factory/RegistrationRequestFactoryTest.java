@@ -25,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -37,7 +38,6 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.io.BufferedReader;
 import java.nio.file.Paths;
@@ -63,7 +63,7 @@ import static org.testng.Assert.assertEquals;
  * Unit test covering RegistrationRequestFactory
  */
 @PrepareForTest(RegistrationRequestFactory.class)
-public class RegistrationRequestFactoryTest extends PowerMockIdentityBaseTest {
+public class RegistrationRequestFactoryTest extends PowerMockTestCase {
 
     private RegistrationRequestFactory registrationRequestFactory;
     private String dummyDescription = "dummyDescription";

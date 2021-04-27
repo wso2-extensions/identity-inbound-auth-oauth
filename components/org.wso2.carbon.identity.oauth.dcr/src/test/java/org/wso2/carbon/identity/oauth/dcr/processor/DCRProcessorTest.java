@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth.dcr.processor;
 
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -35,7 +36,6 @@ import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dcr.util.HandlerManager;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import static org.powermock.api.mockito.PowerMockito.doThrow;
 import static org.powermock.api.mockito.PowerMockito.mock;
@@ -51,7 +51,7 @@ import static org.testng.Assert.fail;
  * Unit test covering DCRProcessor
  */
 @PrepareForTest({HandlerManager.class, DCRProcessor.class})
-public class DCRProcessorTest extends PowerMockIdentityBaseTest {
+public class DCRProcessorTest extends PowerMockTestCase {
 
     private DCRProcessor dcrProcessor;
     private IdentityMessageContext mockIdentityMessageContext;

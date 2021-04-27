@@ -22,12 +22,12 @@ import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityRequestFactory;
 import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationRequest;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -44,7 +44,7 @@ import static org.testng.Assert.assertEquals;
  * Unit test covering UnregistrationRequestFactory
  */
 @PrepareForTest(UnregistrationRequestFactory.class)
-public class UnregistrationRequestFactoryTest extends PowerMockIdentityBaseTest {
+public class UnregistrationRequestFactoryTest extends PowerMockTestCase {
 
     @Mock
     private UnregistrationRequest.DCRUnregisterRequestBuilder unregisterRequestBuilder;
