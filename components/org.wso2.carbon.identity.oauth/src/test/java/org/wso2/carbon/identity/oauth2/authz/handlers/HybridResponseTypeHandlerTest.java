@@ -99,29 +99,19 @@ public class HybridResponseTypeHandlerTest {
         user.setUserStoreDomain("PRIMARY");
         user.setUserName("testUser");
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
-
         oAuthAppDO.setUser(user);
         oAuthAppDO.setApplicationName("testApp");
-
         AppInfoCache appInfoCache = AppInfoCache.getInstance();
         appInfoCache.addToCache(TEST_CONSUMER_KEY, oAuthAppDO);
-
         HybridResponseTypeHandler hybridResponseTypeHandler = new HybridResponseTypeHandler();
         hybridResponseTypeHandler.init();
-
-
         authorizationReqDTO.setResponseType(OAuthConstants.GrantTypes.AUTHORIZATION_CODE);
-        authAuthzReqMessageContext
-                = new OAuthAuthzReqMessageContext(authorizationReqDTO);
-        authAuthzReqMessageContext
-                .setApprovedScope(new String[]{"scope1", "scope2", OAuthConstants.Scope.OPENID});
-
-        OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO =
-                hybridResponseTypeHandler.issue(authAuthzReqMessageContext);
+        authAuthzReqMessageContext = new OAuthAuthzReqMessageContext(authorizationReqDTO);
+        authAuthzReqMessageContext.setApprovedScope(new String[]{"scope1", "scope2", OAuthConstants.Scope.OPENID});
+        OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO = hybridResponseTypeHandler.issue(authAuthzReqMessageContext);
 
         // Validating whether authorization code and response for authorization code flow is generated.
         Assert.assertNotNull(oAuth2AuthorizeRespDTO.getAuthorizationCode(), "Authorization code obtained when " +
                 "response type is CODE");
-
     }
 }
