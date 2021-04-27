@@ -24,6 +24,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.context.internal.CarbonContextDataHolder;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
@@ -48,7 +49,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
         tenantDomain = TestConstants.TENANT_DOMAIN,
         initUserStoreManager = true,
         injectToSingletons = {OAuthComponentServiceHolder.class})
-@PrepareForTest({OAuth2TokenUtil.class})
+@PrepareForTest({OAuth2TokenUtil.class, CarbonContextDataHolder.class})
 public class HybridResponseTypeHandlerTest {
 
     private static final String TEST_CONSUMER_KEY = "testconsumenrkey";
