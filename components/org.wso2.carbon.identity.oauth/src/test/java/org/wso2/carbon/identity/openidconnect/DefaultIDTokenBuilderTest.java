@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.openidconnect;
 import org.mockito.Mockito;
 import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -37,8 +38,11 @@ import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.TestConstants;
+import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
@@ -75,18 +79,28 @@ import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENA
 public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
 
     public static final String TEST_APPLICATION_NAME = "DefaultIDTokenBuilderTest";
+    private static final String AUTHORIZATION_CODE = "AuthorizationCode";
+    private static final String AUTHORIZATION_CODE_VALUE = "55fe926f-3b43-3681-aecc-dc3ed7938325";
     private DefaultIDTokenBuilder defaultIDTokenBuilder;
     private OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
     private OAuthTokenReqMessageContext messageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
     private OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
+    private OAuth2AuthorizeReqDTO authzTokenReqDTO = new OAuth2AuthorizeReqDTO();
+    private OAuthAuthzReqMessageContext authzMessageContext = new OAuthAuthzReqMessageContext(authzTokenReqDTO);
+    private OAuth2AuthorizeRespDTO authzTokenRespDTO = new OAuth2AuthorizeRespDTO();
+    AuthenticatedUser user = new AuthenticatedUser();
 
     @BeforeClass
     public void setUp() throws Exception {
         tokenReqDTO.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
         tokenReqDTO.setClientId(TestConstants.CLIENT_ID);
         tokenReqDTO.setCallbackURI(TestConstants.CALLBACK);
+        authzTokenReqDTO.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+        authzTokenReqDTO.setConsumerKey(TestConstants.CLIENT_ID);
+        authzTokenReqDTO.setIdpSessionIdentifier(TestConstants.IDP_ENTITY_ID_ALIAS);
+        authzTokenReqDTO.setUser(user);
+        authzTokenRespDTO.setAccessToken(TestConstants.ACCESS_TOKEN);
 
-        AuthenticatedUser user = new AuthenticatedUser();
         user.setAuthenticatedSubjectIdentifier(TestConstants.USER_NAME);
         user.setUserName(TestConstants.USER_NAME);
         user.setUserStoreDomain(TestConstants.USER_STORE_DOMAIN);
@@ -157,14 +171,39 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
 
     }
 
-    @Test
-    public void testBuildIDToken() throws Exception {
+    @DataProvider(name = "TestBuildIDToken")
+    public Object[][] buildRequestIDToken() throws Exception {
+        // second set of values
+        OAuthTokenReqMessageContext messageContext2 = new OAuthTokenReqMessageContext(tokenReqDTO);
+        messageContext2.setAuthorizedUser(user);
+        messageContext2.setScope(TestConstants.OPENID_SCOPE_STRING.split(" "));
+        messageContext2.addProperty(AUTHORIZATION_CODE, AUTHORIZATION_CODE_VALUE);
 
+        AuthenticatedUser user2 = new AuthenticatedUser();
+        user2.setAuthenticatedSubjectIdentifier(TestConstants.USER_NAME);
+        user2.setUserName(TestConstants.USER_NAME);
+        user2.setUserStoreDomain(TestConstants.USER_STORE_DOMAIN);
+        user2.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+        user2.setFederatedUser(true);
+        messageContext2.setAuthorizedUser(user2);
+
+        return new Object[][]{
+                {messageContext, tokenRespDTO, authzMessageContext, authzTokenRespDTO},
+                {messageContext2, tokenRespDTO, authzMessageContext, authzTokenRespDTO}
+        };
+    }
+
+    @Test(dataProvider = "TestBuildIDToken")
+    public void testBuildIDToken(OAuthTokenReqMessageContext messageContext,
+                                 OAuth2AccessTokenRespDTO tokenRespDTO,
+                                 OAuthAuthzReqMessageContext authzMessageContext,
+                                 OAuth2AuthorizeRespDTO authzTokenRespDTO) throws Exception {
         RealmService realmService = IdentityTenantUtil.getRealmService();
         PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
         IdpMgtServiceComponentHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
         defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
+        defaultIDTokenBuilder.buildIDToken(authzMessageContext, authzTokenRespDTO);
     }
 
 }
