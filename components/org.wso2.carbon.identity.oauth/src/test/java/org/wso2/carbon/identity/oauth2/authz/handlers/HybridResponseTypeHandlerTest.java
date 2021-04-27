@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.authz.handlers;
 
-import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
@@ -40,12 +39,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.doNothing;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-
 /**
- * Test class covering HybridResponseTypeHandler
+ * Test class covering HybridResponseTypeHandler.
  */
 
 @WithCarbonHome
@@ -131,42 +126,4 @@ public class HybridResponseTypeHandlerTest {
                 "response type is CODE");
 
     }
-
-//    @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
-//    public void testIssue1(boolean isIDPIdColumnEnabled) throws Exception {
-//
-//        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
-//        OAuthAppDO oAuthAppDO = new OAuthAppDO();
-//        oAuthAppDO.setGrantTypes("implicit");
-//        oAuthAppDO.setOauthConsumerKey(TEST_CONSUMER_KEY);
-//        oAuthAppDO.setState("active");
-//        AuthenticatedUser user = new AuthenticatedUser();
-//        user.setUserStoreDomain("PRIMARY");
-//        user.setUserName("testUser");
-//        user.setFederatedIdPName(TestConstants.LOCAL_IDP);
-//
-//        oAuthAppDO.setUser(user);
-//        oAuthAppDO.setApplicationName("testApp");
-//
-//        AppInfoCache appInfoCache = AppInfoCache.getInstance();
-//        appInfoCache.addToCache(TEST_CONSUMER_KEY, oAuthAppDO);
-//
-//        HybridResponseTypeHandler hybridResponseTypeHandler = new HybridResponseTypeHandler();
-//        hybridResponseTypeHandler.init();
-//
-//        authorizationReqDTO.setResponseType(OAuthConstants.GrantTypes.TOKEN);
-//        authAuthzReqMessageContext
-//                = new OAuthAuthzReqMessageContext(authorizationReqDTO);
-//        authAuthzReqMessageContext
-//                .setApprovedScope(new String[]{"scope1", "scope2", OAuthConstants.Scope.OPENID});
-//
-//        mockStatic(OAuth2TokenUtil.class);
-//        doNothing().when(OAuth2TokenUtil.postIssueCode(anyString(),anyString()));
-//
-//        OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO =
-//                hybridResponseTypeHandler.issue(authAuthzReqMessageContext);
-//
-//        Assert.assertNotNull(oAuth2AuthorizeRespDTO.getAuthorizationCode(), "Authorization code obtained when " +
-//                "response type is CODE");
-//    }
 }
