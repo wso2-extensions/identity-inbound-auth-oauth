@@ -363,7 +363,14 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                             Property[] props = inboundRequestConfig.getProperties();
                             Property property = new Property();
                             property.setName(OAUTH2_CONSUMER_SECRET);
-                            property.setValue(OAuth2Util.getClientSecret(inboundRequestConfig.getInboundAuthKey()));
+                            String clientSecret = null;
+                            try {
+                                clientSecret = OAuth2Util.getClientSecret(inboundRequestConfig.getInboundAuthKey());
+                            } catch (InvalidOAuthClientException e) {
+                                log.warn("The OAuth application data not exists for " +
+                                        inboundRequestConfig.getInboundAuthKey());
+                            }
+                            property.setValue(clientSecret);
                             props = (Property[]) ArrayUtils.add(props, property);
                             inboundRequestConfig.setProperties(props);
                             continue; // we are interested only on oauth2 config. Only one will be present.
@@ -377,7 +384,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             } else {
                 //nothing to do
             }
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (IdentityOAuth2Exception e) {
             throw new IdentityApplicationManagementException("Injecting client secret failed.", e);
         }
 
