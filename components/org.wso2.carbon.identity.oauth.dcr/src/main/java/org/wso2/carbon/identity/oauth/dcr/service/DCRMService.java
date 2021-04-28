@@ -69,6 +69,8 @@ public class DCRMService {
     private static final String OAUTH_VERSION = "OAuth-2.0";
     private static final String GRANT_TYPE_SEPARATOR = " ";
     private static Pattern clientIdRegexPattern = null;
+    private static final String[] TOKEN_ENDPOINT_AUTH_METHODS = {"none", "client_secret_post",
+            "client_secret_basic", "private_key_jwt"};
 
     /**
      * Get OAuth2/OIDC application information with client_id.
@@ -234,6 +236,9 @@ public class DCRMService {
                 String backChannelLogoutUri = validateBackchannelLogoutURI(updateRequest.getBackchannelLogoutUri());
                 appDTO.setBackChannelLogoutUrl(backChannelLogoutUri);
             }
+            if (validateTokenEndpointAuthMethod(updateRequest.getTokenEndpointAuthMethod())) {
+                appDTO.setTokenEndpointAuthMethod(updateRequest.getTokenEndpointAuthMethod());
+            }
             oAuthAdminService.updateConsumerApplication(appDTO);
         } catch (IdentityOAuthAdminException e) {
             throw DCRMUtils.generateServerException(
@@ -344,6 +349,8 @@ public class DCRMService {
             grantTypesList = Arrays.asList(createdApp.getGrantTypes().split(" "));
         }
         application.setGrantTypes(grantTypesList);
+        application.setTokenEndpointAuthMethod(createdApp.getTokenEndpointAuthMethod());
+
 
         return application;
     }
@@ -405,6 +412,9 @@ public class DCRMService {
         if (log.isDebugEnabled()) {
             log.debug("Creating OAuth Application: " + spName + " in tenant: " + tenantDomain);
         }
+        if (validateTokenEndpointAuthMethod(registrationRequest.getTokenEndpointAuthMethod())) {
+            oAuthConsumerApp.setTokenEndpointAuthMethod(registrationRequest.getTokenEndpointAuthMethod());
+        }
 
         OAuthConsumerAppDTO createdApp;
         try {
@@ -422,6 +432,20 @@ public class DCRMService {
             throw DCRMUtils.generateServerException(DCRMConstants.ErrorMessages.FAILED_TO_REGISTER_APPLICATION, spName);
         }
         return createdApp;
+    }
+
+    private boolean validateTokenEndpointAuthMethod(String tokenEndpointAuthMethod) throws DCRMException {
+        if (tokenEndpointAuthMethod != null &&
+                Arrays.asList(TOKEN_ENDPOINT_AUTH_METHODS).contains(tokenEndpointAuthMethod)) {
+            return true;
+        } else if (tokenEndpointAuthMethod != null &&
+                !Arrays.asList(TOKEN_ENDPOINT_AUTH_METHODS).contains(tokenEndpointAuthMethod)) {
+            throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.
+                            BAD_REQUEST_INVALID_TOKEN_ENDPOINT_AUTH_METHOD,
+                    tokenEndpointAuthMethod);
+        } else {
+            return false;
+        }
     }
 
     private ServiceProvider createServiceProvider(String applicationOwner, String tenantDomain,

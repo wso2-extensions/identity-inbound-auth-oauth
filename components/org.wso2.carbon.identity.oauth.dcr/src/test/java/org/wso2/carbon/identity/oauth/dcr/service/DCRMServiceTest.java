@@ -81,6 +81,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
     private String dummyTenantDomain = "dummyTenantDomain";
     private ApplicationManagementService mockApplicationManagementService;
     private OAuthServerConfiguration oAuthServerConfiguration;
+    private String dummyInvalidTokenEndpointAuthMethod = "clientSecretPost";
+
 
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
@@ -556,6 +558,46 @@ public class DCRMServiceTest extends PowerMockTestCase {
             return;
         }
         fail("Expected exception IdentityException not thrown by registerApplication method");
+    }
+
+    @Test(dataProvider = "redirectUriProvider")
+    public void testRegisterApplicationWithInvalidTokenEndpointAuthMethod(List<String> redirectUri) throws Exception {
+
+        mockApplicationManagementService = mock(ApplicationManagementService.class);
+
+        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+
+        startTenantFlow();
+
+        dummyGrantTypes.add("implicit");
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
+        applicationRegistrationRequest.setRedirectUris(redirectUri);
+        applicationRegistrationRequest.setTokenEndpointAuthMethod(dummyInvalidTokenEndpointAuthMethod);
+
+        String grantType = StringUtils.join(applicationRegistrationRequest.getGrantTypes(), " ");
+        ServiceProvider serviceProvider = new ServiceProvider();
+        DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
+        dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
+        when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain)).thenReturn
+                (null, serviceProvider);
+
+
+        OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
+        oAuthConsumerApp.setApplicationName(dummyClientName);
+        oAuthConsumerApp.setGrantTypes(grantType);
+        oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
+        when(mockOAuthAdminService
+                .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
+        when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class)))
+                .thenReturn(oAuthConsumerApp);
+
+        try {
+            dcrmService.registerApplication(applicationRegistrationRequest);
+        } catch (IdentityException ex) {
+            assertEquals(ex.getErrorCode(),
+                    DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_TOKEN_ENDPOINT_AUTH_METHOD.toString());
+            return;
+        }
     }
 
     private void startTenantFlow() {

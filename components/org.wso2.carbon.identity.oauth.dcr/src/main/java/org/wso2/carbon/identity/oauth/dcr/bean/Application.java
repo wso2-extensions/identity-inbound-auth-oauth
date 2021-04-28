@@ -33,6 +33,7 @@ public class Application implements Serializable {
     private String clientSecret = null;
     private List<String> redirectUris = null;
     private List<String> grantTypes = null;
+    private String tokenEndpointAuthMethod = null;
 
     public String getClientName() {
 
@@ -84,6 +85,16 @@ public class Application implements Serializable {
         this.grantTypes = grantTypes;
     }
 
+    public String getTokenEndpointAuthMethod() {
+
+        return tokenEndpointAuthMethod;
+    }
+
+    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+
+        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
     @Override
     public String toString() {
 
@@ -93,6 +104,7 @@ public class Application implements Serializable {
                 "  clientSecret: " + this.clientSecret + "\n" +
                 "  redirectUris: " + this.redirectUris + "\n" +
                 "  grantTypes: " + this.grantTypes + "\n" +
+                "  tokenEndpointAuthMethod: " + this.tokenEndpointAuthMethod + "\n" +
                 "}\n";
     }
 }

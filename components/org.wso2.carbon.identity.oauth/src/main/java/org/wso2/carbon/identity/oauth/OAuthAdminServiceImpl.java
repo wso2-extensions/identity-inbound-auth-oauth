@@ -304,6 +304,8 @@ public class OAuthAdminServiceImpl {
                     app.setTokenBindingValidationEnabled(application.isTokenBindingValidationEnabled());
                     app.setTokenRevocationWithIDPSessionTerminationEnabled(
                             application.isTokenRevocationWithIDPSessionTerminationEnabled());
+                    app.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
+
                 }
                 dao.addOAuthApplication(app);
                 AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
@@ -496,6 +498,7 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setTokenRevocationWithIDPSessionTerminationEnabled(consumerAppDTO
                     .isTokenRevocationWithIDPSessionTerminationEnabled());
             oauthappdo.setTokenBindingValidationEnabled(consumerAppDTO.isTokenBindingValidationEnabled());
+            oauthappdo.setTokenEndpointAuthMethod(consumerAppDTO.getTokenEndpointAuthMethod());
         }
         dao.updateConsumerApplication(oauthappdo);
         AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);

@@ -457,6 +457,7 @@ public final class OAuthConstants {
                 "tokenRevocationWithIDPSessionTermination";
         public static final String TOKEN_BINDING_VALIDATION = "tokenBindingValidation";
         public static final String TOKEN_BINDING_TYPE_NONE = "None";
+        public static final String TOKEN_ENDPOINT_AUTH_METHOD = "tokenEndpointAuthMethod";
 
         private OIDCConfigProperties() {
 
