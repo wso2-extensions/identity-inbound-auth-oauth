@@ -2069,6 +2069,31 @@ public class OAuth2Util {
     }
 
     /**
+     * Get the client secret of the application.
+     *
+     * @param consumerKey Consumer Key provided by the user.
+     * @return Consumer Secret.
+     * @throws IdentityOAuthAdminException Error when reading the consumer secret from the persistence store.
+     */
+    public static String getClientSecret(String consumerKey) throws IdentityOAuthAdminException {
+
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new IdentityOAuthAdminException("Error while retrieving the OAuth application for " +
+                    "consumer key: " + consumerKey, e);
+        }
+
+        if (oAuthAppDO == null) {
+            throw new IdentityOAuthAdminException("Unable to retrieve app information for consumer key: " +
+                    consumerKey);
+        }
+
+        return oAuthAppDO.getOauthConsumerSecret();
+    }
+
+    /**
      * This method map signature algorithm define in identity.xml to nimbus
      * signature algorithm
      *

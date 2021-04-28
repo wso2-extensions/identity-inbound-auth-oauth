@@ -53,7 +53,6 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -364,7 +363,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                             Property[] props = inboundRequestConfig.getProperties();
                             Property property = new Property();
                             property.setName(OAUTH2_CONSUMER_SECRET);
-                            property.setValue(getClientSecret(inboundRequestConfig.getInboundAuthKey()));
+                            property.setValue(OAuth2Util.getClientSecret(inboundRequestConfig.getInboundAuthKey()));
                             props = (Property[]) ArrayUtils.add(props, property);
                             inboundRequestConfig.setProperties(props);
                             continue; // we are interested only on oauth2 config. Only one will be present.
@@ -384,11 +383,6 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
 
         return;
-    }
-
-    private String getClientSecret(String inboundAuthKey) throws IdentityOAuthAdminException {
-        OAuthConsumerDAO dao = new OAuthConsumerDAO();
-        return dao.getOAuthConsumerSecret(inboundAuthKey);
     }
 
     /**
