@@ -2075,21 +2075,14 @@ public class OAuth2Util {
      * @return Consumer Secret.
      * @throws IdentityOAuthAdminException Error when reading the consumer secret from the persistence store.
      */
-    public static String getClientSecret(String consumerKey) throws IdentityOAuthAdminException {
+    public static String getClientSecret(String consumerKey) throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
 
         OAuthAppDO oAuthAppDO;
-        try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new IdentityOAuthAdminException("Error while retrieving the OAuth application for " +
-                    "consumer key: " + consumerKey, e);
-        }
-
+        oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
         if (oAuthAppDO == null) {
-            throw new IdentityOAuthAdminException("Unable to retrieve app information for consumer key: " +
-                    consumerKey);
+            throw new IdentityOAuth2Exception("Unable to retrieve app information for consumer key: " + consumerKey);
         }
-
         return oAuthAppDO.getOauthConsumerSecret();
     }
 

@@ -377,10 +377,9 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             } else {
                 //nothing to do
             }
-        } catch (IdentityOAuthAdminException e) {
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             throw new IdentityApplicationManagementException("Injecting client secret failed.", e);
         }
-
 
         return;
     }
