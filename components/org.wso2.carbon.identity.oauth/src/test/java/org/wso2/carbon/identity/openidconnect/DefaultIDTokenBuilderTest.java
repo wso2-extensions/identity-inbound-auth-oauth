@@ -219,8 +219,9 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
 
         try {
             defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
-        } catch (IdentityOAuth2Exception e){
-            Assert.assertEquals(e.getMessage(),"Error occurred while getting app information for client_id: null");
+        } catch (IdentityOAuth2Exception e) {
+            Assert.assertEquals(e.getMessage(),
+                    "Error occurred while getting app information for client_id: null");
 
         } finally {
             tokenReqDTO.setClientId(TestConstants.CLIENT_ID);
