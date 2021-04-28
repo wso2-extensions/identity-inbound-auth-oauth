@@ -107,6 +107,7 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
 
     @Test(dataProvider = "exceptionInstanceProvider")
     public void testCanHandleException(Object exception, boolean expected) throws Exception {
+
         if (expected) {
             assertTrue(httpRegistrationResponseFactory.canHandle((RegistrationException) exception));
         } else {
@@ -121,7 +122,6 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
         redirectUrl.add("dummyRedirectUrl");
 
         RegistrationResponseProfile registrationRequestProfile = mock(RegistrationResponseProfile.class);
-
         when(mockRegistrationResponse.getRegistrationResponseProfile()).thenReturn(registrationRequestProfile);
         String dummyClientId = "dummyClientId";
         when(registrationRequestProfile.getClientId()).thenReturn(dummyClientId);
@@ -197,6 +197,7 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
         assertEquals((int) statusCode[0], HttpServletResponse.SC_BAD_REQUEST);
     }
     private FrameworkException handleException() throws Exception {
+
         mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);
         whenNew(HttpIdentityResponse.HttpIdentityResponseBuilder.class).withNoArguments().thenReturn
                 (mockHttpIdentityResponseBuilder);
@@ -225,17 +226,18 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
         when(exception.getMessage()).thenReturn(dummyDescription);
         return exception;
     }
+
     @Test
     public void testHandleExceptionValidationError() throws Exception {
 
         FrameworkException exception = handleException();
-
         when(exception.getErrorCode()).thenReturn(ErrorCodes.META_DATA_VALIDATION_FAILED.toString());
         httpRegistrationResponseFactory.handleException(exception);
 
         assertEquals(header[0], MediaType.APPLICATION_JSON);
         assertEquals((int) statusCode[0], HttpServletResponse.SC_BAD_REQUEST);
     }
+
     @Test
     public void testHandleExceptionForbiddenError() throws Exception {
 
@@ -244,16 +246,16 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
         httpRegistrationResponseFactory.handleException(exception);
         assertEquals((int) statusCode[0], HttpServletResponse.SC_FORBIDDEN);
     }
+
     @Test
     public void testHandleExceptionGoneError() throws Exception {
 
         FrameworkException exception = handleException();
         when(exception.getErrorCode()).thenReturn(ErrorCodes.GONE.toString());
         httpRegistrationResponseFactory.handleException(exception);
-
-
         assertEquals((int) statusCode[0], HttpServletResponse.SC_GONE);
     }
+
     @Test
     public void testHandleExceptionBadRequestError() throws Exception {
 

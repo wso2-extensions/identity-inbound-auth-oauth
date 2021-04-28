@@ -311,9 +311,9 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         assertEquals(registrationRqstProfile.getClientName(), applicationName);
     }
 
-
     @Test
     public void unregisterOAuthApplicationIAMExceptionTest() throws Exception {
+
         unRegister();
         doThrow(new IdentityApplicationManagementException("")).when(mockApplicationManagementService)
                 .deleteApplication(applicationName, tenantDomain, userName);
@@ -330,6 +330,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
 
     @Test
     public void unregisterOAuthApplicationEmptyApplicationNameTest() throws Exception {
+
         unRegister();
         applicationName = "";
         try {
@@ -343,6 +344,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
 
     @Test
     public void unregisterOAuthApplicationWithNullSPTest() throws Exception {
+
         unRegister();
         when(mockApplicationManagementService.getServiceProvider(applicationName, tenantDomain)).thenReturn(
                 null);
@@ -355,8 +357,8 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         fail("Expected exception IdentityException not thrown by registerApplication method");
     }
 
-
     private void unRegister() throws Exception {
+
         startTenantFlow();
         mockApplicationManagementService = mock(ApplicationManagementService.class);
         ServiceProvider serviceProvider = new ServiceProvider();
@@ -375,7 +377,6 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
         dto.setApplicationName(applicationName);
         when(mockOAuthAdminService.getOAuthApplicationData(consumerkey)).thenReturn(dto);
-
     }
 
     private void registerOAuthApplication() {
