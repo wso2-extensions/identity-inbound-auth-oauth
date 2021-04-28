@@ -2079,8 +2079,7 @@ public class OAuth2Util {
     public static String getClientSecret(String consumerKey) throws IdentityOAuth2Exception,
             InvalidOAuthClientException {
 
-        OAuthAppDO oAuthAppDO;
-        oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
         if (oAuthAppDO == null) {
             throw new IdentityOAuth2Exception("Unable to retrieve app information for consumer key: " + consumerKey);
         }
