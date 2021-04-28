@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
+import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
@@ -82,6 +83,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
     private final String dummyTokenType = "dummyTokenType";
     private String dummyConsumerSecret = "dummyConsumerSecret";
     private String dummyCallbackUrl = "dummyCallbackUrl";
+    private final String dummyTemplateName = "dummyTemplateName";
 
     @Mock
     private OAuthConsumerAppDTO dto;
@@ -648,6 +650,57 @@ public class DCRMServiceTest extends PowerMockTestCase {
             dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_SP.toString());
+            return;
+        }
+        fail("Expected exception IdentityException not thrown by registerApplication method");
+    }
+
+    @Test(dataProvider = "redirectUriProvider")
+    public void registerApplicationTestWithInvalidSpTemplateNameTest(List<String> redirectUri) throws Exception {
+
+        registerApplicationTestWithFailedToUpdateSP();
+
+        applicationRegistrationRequest.setRedirectUris(redirectUri);
+        applicationRegistrationRequest.setSpTemplateName("");
+
+        try {
+            dcrmService.registerApplication(applicationRegistrationRequest);
+        } catch (IdentityException ex) {
+            assertEquals(ex.getErrorCode(),
+                    DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_TEMPLATE_NAME.toString());
+            return;
+        }
+        fail("Expected exception IdentityException not thrown by registerApplication method");
+    }
+
+    @Test(dataProvider = "redirectUriProvider")
+    public void registerApplicationTestWithErrorCreataingSPTenantTest(List<String> redirectUri) throws Exception {
+
+        mockApplicationManagementService = mock(ApplicationManagementService.class);
+        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        startTenantFlow();
+
+        dummyGrantTypes.add("implicit");
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
+        dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
+        when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain))
+                .thenReturn(null, serviceProvider);
+        applicationRegistrationRequest.setRedirectUris(redirectUri);
+        applicationRegistrationRequest.setSpTemplateName(dummyTemplateName);
+        whenNew(ServiceProvider.class).withNoArguments().thenReturn
+                (serviceProvider);
+        when(mockApplicationManagementService.isExistingApplicationTemplate(dummyTemplateName, dummyTenantDomain))
+                .thenReturn(true);
+        doThrow(new IdentityApplicationManagementException("")).when(mockApplicationManagementService)
+                .createApplicationWithTemplate(serviceProvider, dummyTenantDomain, dummyUserName, dummyTemplateName);
+
+        try {
+            dcrmService.registerApplication(applicationRegistrationRequest);
+        } catch (IdentityException ex) {
+            assertEquals(ex.getErrorCode(), ErrorCodes.BAD_REQUEST.toString());
             return;
         }
         fail("Expected exception IdentityException not thrown by registerApplication method");
