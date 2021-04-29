@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth2.validators.jwt;
 
 import com.nimbusds.jose.jwk.source.RemoteJWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
-import com.nimbusds.jose.util.DefaultResourceRetriever;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -133,7 +132,7 @@ public class JWKSourceDataProvider {
         if (sizeLimit <= 0) {
             sizeLimit = RemoteJWKSet.DEFAULT_HTTP_SIZE_LIMIT;
         }
-        DefaultResourceRetriever resourceRetriever = new DefaultResourceRetriever(
+        ExtendedDefaultResourceRetriever resourceRetriever = new ExtendedDefaultResourceRetriever(
                 connectionTimeout,
                 readTimeout,
                 sizeLimit);
