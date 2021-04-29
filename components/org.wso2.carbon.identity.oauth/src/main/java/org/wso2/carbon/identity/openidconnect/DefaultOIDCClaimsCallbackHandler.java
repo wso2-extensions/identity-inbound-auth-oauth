@@ -241,22 +241,18 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     private Map<ClaimMapping, String> getCachedUserAttributes(OAuthTokenReqMessageContext requestMsgCtx) {
-
-        Map<ClaimMapping, String> userAttributes =
-                getUserAttributesCachedAgainstAuthorizationCode(getAuthorizationCode(requestMsgCtx));
+        Map<ClaimMapping, String> userAttributes = getUserAttributesCachedAgainstToken(getAccessToken(requestMsgCtx));
         if (log.isDebugEnabled()) {
-            log.debug("Retrieving claims cached against authorization_code for user: " +
-                    requestMsgCtx.getAuthorizedUser());
+            log.debug("Retrieving claims cached against access_token for user: " + requestMsgCtx.getAuthorizedUser());
         }
         if (isEmpty(userAttributes)) {
             if (log.isDebugEnabled()) {
-                log.debug("No claims cached against the authorization_code for user: " +
-                        requestMsgCtx.getAuthorizedUser() +
-                        ". Retrieving claims cached against the access_token code.");
+                log.debug("No claims cached against the access_token for user: " + requestMsgCtx.getAuthorizedUser() +
+                        ". Retrieving claims cached against the authorization code.");
             }
-            userAttributes = getUserAttributesCachedAgainstToken(getAccessToken(requestMsgCtx));
+            userAttributes = getUserAttributesCachedAgainstAuthorizationCode(getAuthorizationCode(requestMsgCtx));
             if (log.isDebugEnabled()) {
-                log.debug("Retrieving claims cached against access_token for user: " +
+                log.debug("Retrieving claims cached against authorization_code for user: " +
                         requestMsgCtx.getAuthorizedUser());
             }
         }
