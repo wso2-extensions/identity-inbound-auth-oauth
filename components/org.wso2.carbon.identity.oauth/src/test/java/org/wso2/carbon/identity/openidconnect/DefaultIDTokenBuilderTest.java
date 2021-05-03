@@ -214,7 +214,6 @@ public class DefaultIDTokenBuilderTest extends IdentityBaseTest {
         PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
         IdpMgtServiceComponentHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
-
         tokenReqDTO.setClientId(null);
 
         try {

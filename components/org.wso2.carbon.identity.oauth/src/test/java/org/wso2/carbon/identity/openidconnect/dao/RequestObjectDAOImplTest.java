@@ -72,8 +72,8 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
 
         requestObjectDAO = new RequestObjectDAOImpl();
         requestedEssentialClaims = new ArrayList<>();
-        List<RequestedClaim> lstRequestedClams = new ArrayList<>();
-        List<String> values = new ArrayList<>();
+        List lstRequestedClams = new ArrayList<>();
+        List values = new ArrayList<>();
 
         RequestedClaim requestedClaim = new RequestedClaim();
         requestedClaim.setName("email");
