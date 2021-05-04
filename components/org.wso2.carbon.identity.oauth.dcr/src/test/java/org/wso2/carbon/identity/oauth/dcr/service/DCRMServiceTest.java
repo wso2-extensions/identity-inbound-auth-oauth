@@ -54,8 +54,11 @@ import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
@@ -64,7 +67,6 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AParams.OAUTH_VERSION;
 
 /**
@@ -84,6 +86,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
     private String dummyConsumerSecret = "dummyConsumerSecret";
     private String dummyCallbackUrl = "dummyCallbackUrl";
     private final String dummyTemplateName = "dummyTemplateName";
+    private final String dummyBackchannelLogoutUri = "http://backchannel.com/";
 
     @Mock
     private OAuthConsumerAppDTO dto;
@@ -503,6 +506,10 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         dummyGrantTypes.add("implicit");
         applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
+        applicationRegistrationRequest.setConsumerSecret(dummyConsumerSecret);
+        applicationRegistrationRequest.setTokenType(dummyTokenType);
+        applicationRegistrationRequest.setBackchannelLogoutUri(dummyBackchannelLogoutUri);
+        applicationRegistrationRequest.setConsumerKey(dummyConsumerKey);
 
         String grantType = StringUtils.join(applicationRegistrationRequest.getGrantTypes(), " ");
 
@@ -517,6 +524,12 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
         oAuthConsumerApp.setApplicationName(dummyClientName);
+        oAuthConsumerApp.setGrantTypes(dummyGrantTypes.get(0));
+        oAuthConsumerApp.setOauthConsumerKey(dummyConsumerKey);
+        oAuthConsumerApp.setOauthConsumerSecret(dummyConsumerSecret);
+        oAuthConsumerApp.setCallbackUrl(redirectUri.get(0));
+
+
 
         oAuthConsumerApp.setGrantTypes(grantType);
         oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
@@ -525,9 +538,21 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
         when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class)))
                 .thenReturn(oAuthConsumerApp);
-
+        OAuthServerConfiguration oAuthServerConfiguration = OAuthServerConfiguration.getInstance();
+        assertNotNull(oAuthServerConfiguration);
+        when(oAuthServerConfiguration.getClientIdValidationRegex()).thenReturn("[a-zA-Z0-9_]{15,30}");
+        String toString =  "Application {\n" +
+                "  clientName: " + oAuthConsumerApp.getApplicationName() + "\n" +
+                "  clientId: " + oAuthConsumerApp.getOauthConsumerKey() + "\n" +
+                "  clientSecret: " + oAuthConsumerApp.getOauthConsumerSecret() + "\n" +
+                "  redirectUris: " +  Arrays.asList(oAuthConsumerApp.getCallbackUrl()) + "\n" +
+                "  grantTypes: " + Arrays.asList(oAuthConsumerApp.getGrantTypes().split(" ")) + "\n" +
+                "}\n";
         Application application = dcrmService.registerApplication(applicationRegistrationRequest);
         assertEquals(application.getClientName(), dummyClientName);
+        assertEquals(application.getGrantTypes(), dummyGrantTypes);
+        assertEquals(application.toString(), toString);
+
     }
 
     @Test
@@ -861,6 +886,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         applicationUpdateRequest.setClientName(dummyClientName);
         applicationUpdateRequest.setGrantTypes(dummyGrantTypes);
         applicationUpdateRequest.setTokenType(dummyTokenType);
+        applicationUpdateRequest.setBackchannelLogoutUri(dummyBackchannelLogoutUri);
 
         OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
         dto.setApplicationName(dummyClientName);
@@ -888,6 +914,5 @@ public class DCRMServiceTest extends PowerMockTestCase {
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(dummyTenantDomain);
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(dummyUserName);
     }
-
 
 }

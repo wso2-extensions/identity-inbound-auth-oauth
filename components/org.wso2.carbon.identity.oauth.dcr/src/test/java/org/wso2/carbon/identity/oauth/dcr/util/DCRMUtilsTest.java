@@ -25,6 +25,8 @@ import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 
+import static org.wso2.carbon.identity.oauth.dcr.util.DCRConstants.APP_NAME_VALIDATING_REGEX;
+
 public class DCRMUtilsTest extends PowerMockTestCase {
 
     @DataProvider(name = "BuildRedirectUrl")
@@ -32,6 +34,7 @@ public class DCRMUtilsTest extends PowerMockTestCase {
 
         return new Object[][]{
                 {"http://example.com/", true},
+                {"http:\\example.com/", false},
                 {null, false},
                 {"", false},
         };
@@ -76,5 +79,40 @@ public class DCRMUtilsTest extends PowerMockTestCase {
     public void testGenerateClientException(DCRMConstants.ErrorMessages error, String data) throws Exception {
 
         throw DCRMUtils.generateClientException(error, data);
+    }
+
+    @DataProvider(name = "BuildRBackchannelLogoutUri")
+    public Object[][] buildBackchannelLogoutUri() {
+
+        return new Object[][]{
+                {"http://example.com/", true},
+                {"", true},
+                {"http://examp#le.com/", false},
+                {"http:\\example.com", false},
+                {"example", false},
+        };
+    }
+
+    @Test(dataProvider = "BuildRBackchannelLogoutUri")
+    public void backChannelURIValidTest(String url, boolean response) {
+
+        Assert.assertEquals(DCRMUtils.isBackchannelLogoutUriValid(url), response);
+
+    }
+
+    @DataProvider(name = "applicationName")
+    public Object[][] buildApplicationName() {
+
+        return new Object[][]{
+                {"dummyApplicationName", true},
+                {"dummy@ApllicationName", false},
+
+        };
+    }
+
+    @Test(dataProvider = "applicationName")
+    public void regrexTest(String input, boolean expected) {
+
+        Assert.assertEquals(DCRMUtils.isRegexValidated(input, APP_NAME_VALIDATING_REGEX), expected);
     }
 }
