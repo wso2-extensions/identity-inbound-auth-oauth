@@ -194,7 +194,6 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
     public void testGenerateErrorResponse() throws Exception {
 
         String dummyError = "dummyError";
-
         JSONObject jsonObject = httpRegistrationResponseFactory.generateErrorResponse(dummyError, dummyDescription);
         assertEquals(jsonObject.get("error"), dummyError);
         assertEquals(jsonObject.get("error_description"), dummyDescription);

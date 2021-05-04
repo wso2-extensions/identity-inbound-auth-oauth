@@ -528,9 +528,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
         oAuthConsumerApp.setOauthConsumerKey(dummyConsumerKey);
         oAuthConsumerApp.setOauthConsumerSecret(dummyConsumerSecret);
         oAuthConsumerApp.setCallbackUrl(redirectUri.get(0));
-
-
-
         oAuthConsumerApp.setGrantTypes(grantType);
         oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
 
