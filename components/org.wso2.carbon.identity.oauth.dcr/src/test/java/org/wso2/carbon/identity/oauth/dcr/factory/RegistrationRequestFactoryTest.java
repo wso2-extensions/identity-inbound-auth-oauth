@@ -66,9 +66,8 @@ import static org.testng.Assert.assertEquals;
 public class RegistrationRequestFactoryTest extends PowerMockTestCase {
 
     private RegistrationRequestFactory registrationRequestFactory;
-    private String dummyDescription = "dummyDescription";
-    private String ownerName = "dummyOwnerName";
-    private RegistrationRequestProfile registrationRequestProfile;
+    private final String dummyDescription = "dummyDescription";
+    private final String ownerName = "dummyOwnerName";
 
     @Mock
     private HttpServletRequest mockHttpRequest;
@@ -158,60 +157,39 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
         contactsWithInt.add(0);
         scopesWithInt.add(0);
 
+        mockRegistrationRequestBuilder = mock(RegistrationRequest.RegistrationRequestBuilder.class);
+        mockHttpResponse = mock(HttpServletResponse.class);
+        mockHttpRequest = mock(HttpServletRequest.class);
+
         return new Object[][]{
                 // Check with String values.
-                {grantTypes, redirectUrls, responseTypes, clientName, scopes, contacts, grantTypes},
+                {grantTypes, redirectUrls, responseTypes, clientName, scopes, contacts, grantTypes,
+                        mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse},
                 // Check with jsonArray.
-                {grantType, redirectUrl, responseType, clientName, scope, contact, grantType},
+                {grantType, redirectUrl, responseType, clientName, scope, contact, grantType,
+                        null, mockHttpRequest, mockHttpResponse},
                 // Check with empty jsonArray.
                 {emptyGrantTypes, emptyRedirectUrls, emptyResponseTypes, clientName, emptyScopes, emptyContacts,
-                        "empty"},
+                        "empty", mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse},
                 // Check with wrong data type values.
-                {0, 0, 0, clientName, 0, 0, "empty"},
+                {0, 0, 0, clientName, 0, 0, "empty", mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse},
                 // Check with Wrong data type values.
                 {grantTypeWithInt, redirectUrlsWithInt, responseTypesWithInt, null, scopesWithInt, contactsWithInt,
-                        "empty"}
+                        "empty", null, mockHttpRequest, mockHttpResponse}
         };
     }
 
     @Test(dataProvider = "jsonObjectDataProvider")
     public void testCreate(Object grantType, Object redirectUrl, Object responseType, String clientName, Object
-            scope, Object contact, Object expected) throws Exception {
+            scope, Object contact, Object expected, Object builder, Object request, Object response) throws Exception {
 
-        create(grantType, redirectUrl, responseType, clientName, scope, contact);
-
-        try {
-            startTenantFlow();
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
-
-            registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
-            checkSimilarity(registrationRequestProfile, grantType, redirectUrl, responseType, clientName,
-                    scope, contact, expected);
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
+        mockHttpRequest = (HttpServletRequest) request;
+        mockHttpResponse = (HttpServletResponse) response;
+        if (builder == null) {
+            mockRegistrationRequestBuilder = mock(RegistrationRequest.RegistrationRequestBuilder.class);
+        } else {
+            mockRegistrationRequestBuilder = (RegistrationRequest.RegistrationRequestBuilder) builder;
         }
-    }
-
-    @Test(dataProvider = "jsonObjectDataProvider")
-    private void createTest(Object grantType, Object redirectUrl, Object responseType, String clientName, Object
-            scope, Object contact, Object expected) throws Exception {
-
-        create(grantType, redirectUrl, responseType, clientName, scope, contact);
-        try {
-            startTenantFlow();
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
-
-            registrationRequestFactory.create(mockHttpRequest, mockHttpResponse);
-            checkSimilarity(registrationRequestProfile, grantType, redirectUrl, responseType, clientName,
-                    scope, contact, expected);
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
-        }
-
-    }
-
-    private void create(Object grantType, Object redirectUrl, Object responseType, String clientName, Object
-            scope, Object contact) throws Exception {
 
         JSONObject jsonObject = new JSONObject();
         jsonObject.put(RegistrationRequest.RegisterRequestConstant.GRANT_TYPES, grantType);
@@ -221,7 +199,7 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
         jsonObject.put(RegistrationRequest.RegisterRequestConstant.SCOPE, scope);
         jsonObject.put(RegistrationRequest.RegisterRequestConstant.CONTACTS, contact);
 
-        registrationRequestProfile = new RegistrationRequestProfile();
+        RegistrationRequestProfile registrationRequestProfile = new RegistrationRequestProfile();
 
         whenNew(RegistrationRequestProfile.class).withNoArguments().thenReturn(registrationRequestProfile);
 
@@ -231,44 +209,54 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
         whenNew(JSONParser.class).withNoArguments().thenReturn(jsonParser);
 
         when(jsonParser.parse(mockReader)).thenReturn(jsonObject);
-    }
 
-    private void checkSimilarity(RegistrationRequestProfile registrationRequestProfile, Object grantType,
-                                 Object redirectUrl, Object responseType, String clientName, Object
-            scope, Object contact, Object expected) {
+        try {
+            startTenantFlow();
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
 
-        if (clientName != null) {
-            assertEquals(registrationRequestProfile.getClientName(), clientName,
-                    "expected client name is not found in registrationRequestProfile");
-        }
+           if (builder == null) {
+                registrationRequestFactory.create(mockHttpRequest, mockHttpResponse);
 
-        if (!expected.equals("empty")) {
-            if (expected instanceof String) {
-                assertEquals(registrationRequestProfile.getGrantTypes().get(0), grantType,
-                        "expected grant type is not found in registrationRequestProfile");
-                assertEquals(registrationRequestProfile.getRedirectUris().get(0), redirectUrl,
-                        "expected redirectUrl is not found in registrationRequestProfile");
-                assertEquals(registrationRequestProfile.getContacts().get(0), contact,
-                        "expected contact is not found in registrationRequestProfile");
-                assertEquals(registrationRequestProfile.getScopes().get(0), scope,
-                        "expected scope is not found in registrationRequestProfile");
-                assertEquals(registrationRequestProfile.getResponseTypes().get(0), responseType,
-                        "expected response type is not found in registrationRequestProfile");
             } else {
-                assertEquals(registrationRequestProfile.getGrantTypes(), grantType,
-                        "expected grant type is not found in registrationRequestProfile");
-                assertEquals(registrationRequestProfile.getRedirectUris(), redirectUrl,
-                        "expected redirect url is not found in registrationRequestProfile");
-                assertEquals(registrationRequestProfile.getContacts(), contact,
-                        "expected contact is not found in registrationRequestProfile");
-                assertEquals(registrationRequestProfile.getScopes(), scope,
-                        "expected scope is not found in registrationRequestProfile");
-                assertEquals(registrationRequestProfile.getResponseTypes(), responseType,
-                        "expected response type is not found in registrationRequestProfile");
+                registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
+
             }
+
+            if (clientName != null) {
+                assertEquals(registrationRequestProfile.getClientName(), clientName,
+                        "expected client name is not found in registrationRequestProfile");
+            }
+
+            if (!expected.equals("empty")) {
+                if (expected instanceof String) {
+                    assertEquals(registrationRequestProfile.getGrantTypes().get(0), grantType,
+                            "expected grant type is not found in registrationRequestProfile");
+                    assertEquals(registrationRequestProfile.getRedirectUris().get(0), redirectUrl,
+                            "expected redirectUrl is not found in registrationRequestProfile");
+                    assertEquals(registrationRequestProfile.getContacts().get(0), contact,
+                            "expected contact is not found in registrationRequestProfile");
+                    assertEquals(registrationRequestProfile.getScopes().get(0), scope,
+                            "expected scope is not found in registrationRequestProfile");
+                    assertEquals(registrationRequestProfile.getResponseTypes().get(0), responseType,
+                            "expected response type is not found in registrationRequestProfile");
+                } else {
+                    assertEquals(registrationRequestProfile.getGrantTypes(), grantType,
+                            "expected grant type is not found in registrationRequestProfile");
+                    assertEquals(registrationRequestProfile.getRedirectUris(), redirectUrl,
+                            "expected redirect url is not found in registrationRequestProfile");
+                    assertEquals(registrationRequestProfile.getContacts(), contact,
+                            "expected contact is not found in registrationRequestProfile");
+                    assertEquals(registrationRequestProfile.getScopes(), scope,
+                            "expected scope is not found in registrationRequestProfile");
+                    assertEquals(registrationRequestProfile.getResponseTypes(), responseType,
+                            "expected response type is not found in registrationRequestProfile");
+                }
+            }
+            assertEquals(registrationRequestProfile.getOwner(), ownerName,
+                    "expected owner name is not found in registrationRequestProfile");
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
         }
-        assertEquals(registrationRequestProfile.getOwner(), ownerName,
-                "expected owner name is not found in registrationRequestProfile");
     }
 
     @Test(expectedExceptions = IdentityException.class)

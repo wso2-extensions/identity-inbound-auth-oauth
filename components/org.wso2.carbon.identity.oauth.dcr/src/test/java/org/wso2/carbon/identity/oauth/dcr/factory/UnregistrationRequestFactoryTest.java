@@ -48,11 +48,6 @@ import static org.testng.Assert.assertEquals;
 @PrepareForTest(UnregistrationRequestFactory.class)
 public class UnregistrationRequestFactoryTest extends PowerMockTestCase {
 
-    private String[] header;
-    private final String dummyApplicationName = "dummyApplicationName";
-    private final String dummyUserId = "dummyUserId";
-    private final String dummyConsumerKey = "dummyConsumerKey";
-
     @Mock
     private UnregistrationRequest.DCRUnregisterRequestBuilder unregisterRequestBuilder;
 
@@ -91,54 +86,39 @@ public class UnregistrationRequestFactoryTest extends PowerMockTestCase {
                 "Redirect Uri doesn't match");
     }
 
-    @Test
-    public void testCreate() throws Exception {
+    @DataProvider(name = "instanceDataProvider")
+    public Object[][] getInstanceData() {
+        unregisterRequestBuilder = mock(UnregistrationRequest.DCRUnregisterRequestBuilder.class);
+        mockHttpResponse = mock(HttpServletResponse.class);
+        mockHttpRequest = mock(HttpServletRequest.class);
+        return new Object[][]{
+                {null, mockHttpRequest, mockHttpResponse},
+                {unregisterRequestBuilder, mockHttpRequest, mockHttpResponse}
 
-        create();
-        header = new String[3];
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-
-                header[0] = (String) invocation.getArguments()[0];
-                return null;
-            }
-        }).when(unregisterRequestBuilder).setApplicationName(anyString());
-
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-
-                header[1] = (String) invocation.getArguments()[0];
-                return null;
-            }
-        }).when(unregisterRequestBuilder).setUserId(anyString());
-
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-
-                header[2] = (String) invocation.getArguments()[0];
-                return null;
-            }
-        }).when(unregisterRequestBuilder).setConsumerKey(anyString());
-        registrationRequestFactory.create(unregisterRequestBuilder, mockHttpRequest, mockHttpResponse);
-        assertEquals(header[0], dummyApplicationName, "Application name doesn't match with the given " +
-                "application name");
-        assertEquals(header[1], dummyUserId, "User id doesn't match with the given User id");
-        assertEquals(header[2], dummyConsumerKey, "ConsumerKey doesn't match with the given ConsumerKey");
+        };
     }
 
-    @Test
-    public void createTest() throws Exception {
+    @Test(dataProvider = "instanceDataProvider")
+    public void testCreate(Object builder, Object request, Object response) throws Exception {
 
-        UnregistrationRequest.DCRUnregisterRequestBuilder unregisterRequestBuilder =
-                mock(UnregistrationRequest.DCRUnregisterRequestBuilder.class);
+        mockHttpRequest = (HttpServletRequest) request;
+        suppress(methodsDeclaredIn(HttpIdentityRequestFactory.class));
+        String dummyConsumerKey = "dummyConsumerKey";
+        when(mockHttpRequest.getRequestURI()).thenReturn("dummyVal/identity/register/" + dummyConsumerKey);
+        when(mockHttpRequest.getMethod()).thenReturn(HttpMethod.DELETE);
+        String dummyApplicationName = "dummyApplicationName";
+        when(mockHttpRequest.getParameter("applicationName")).thenReturn(dummyApplicationName);
+        String dummyUserId = "dummyUserId";
+        when(mockHttpRequest.getParameter("userId")).thenReturn(dummyUserId);
 
+        if (builder == null) {
+            unregisterRequestBuilder = mock(UnregistrationRequest.DCRUnregisterRequestBuilder.class);
+        } else {
+            unregisterRequestBuilder = (UnregistrationRequest.DCRUnregisterRequestBuilder) builder;
+        }
         whenNew(UnregistrationRequest.DCRUnregisterRequestBuilder.class).withNoArguments()
                 .thenReturn(unregisterRequestBuilder);
 
-        create();
         final String[] header = new String[3];
         doAnswer(new Answer<Object>() {
             @Override
@@ -167,21 +147,16 @@ public class UnregistrationRequestFactoryTest extends PowerMockTestCase {
             }
         }).when(unregisterRequestBuilder).setConsumerKey(anyString());
 
-        registrationRequestFactory.create(mockHttpRequest, mockHttpResponse);
+        if (builder == null) {
+            registrationRequestFactory.create(mockHttpRequest, (HttpServletResponse) response);
+        } else {
+            registrationRequestFactory.create(unregisterRequestBuilder,
+                    mockHttpRequest, (HttpServletResponse) response);
+        }
         assertEquals(header[0], dummyApplicationName, "Application name doesn't match with the given " +
                 "application name");
         assertEquals(header[1], dummyUserId, "User id doesn't match with the given User id");
         assertEquals(header[2], dummyConsumerKey, "ConsumerKey doesn't match with the given ConsumerKey");
-    }
-
-    private void create() {
-
-        suppress(methodsDeclaredIn(HttpIdentityRequestFactory.class));
-        when(mockHttpRequest.getRequestURI()).thenReturn("dummyVal/identity/register/" + dummyConsumerKey);
-        when(mockHttpRequest.getMethod()).thenReturn(HttpMethod.DELETE);
-        when(mockHttpRequest.getParameter("applicationName")).thenReturn(dummyApplicationName);
-        when(mockHttpRequest.getParameter("userId")).thenReturn(dummyUserId);
-
     }
 
 }

@@ -780,8 +780,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         doThrow(new IdentityApplicationManagementException("ehweh")).when(mockApplicationManagementService)
                 .updateApplication(serviceProvider, dummyTenantDomain, dummyUserName);
-
-
         when(mockApplicationManagementService.
                 getServiceProviderNameByClientId(oAuthConsumerApp.getOauthConsumerKey(),
                         DCRMConstants.OAUTH2, dummyTenantDomain))

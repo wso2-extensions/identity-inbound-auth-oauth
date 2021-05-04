@@ -59,12 +59,9 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
     private RegistrationResponse mockRegistrationResponse;
     private HttpIdentityResponse.HttpIdentityResponseBuilder mockHttpIdentityResponseBuilder;
     private HttpRegistrationResponseFactory httpRegistrationResponseFactory;
-    private List<String> grantType = new ArrayList<>();
-    private List<String> redirectUrl = new ArrayList<>();
-    private String dummyDescription = "dummyDescription";
-
-    private Integer[] statusCode;
-    private String[] header;
+    private final List<String> grantType = new ArrayList<>();
+    private final List<String> redirectUrl = new ArrayList<>();
+    private final String dummyDescription = "dummyDescription";
 
     @BeforeMethod
     private void setUp() {
@@ -145,31 +142,33 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
         assertEquals(jsonObject.get(RegistrationResponse.DCRegisterResponseConstants.REDIRECT_URIS), redirectUrl);
     }
 
-    @Test
-    public void testCreate() throws Exception {
-
-        create();
-        httpRegistrationResponseFactory.create(mockHttpIdentityResponseBuilder, mockRegistrationResponse);
-        assertEquals((int) statusCode[0], HttpServletResponse.SC_CREATED);
-        assertEquals(header[0], MediaType.APPLICATION_JSON);
-    }
-
-    @Test
-    public void createTest() throws Exception {
-        create();
-        httpRegistrationResponseFactory.create(mockRegistrationResponse);
-        assertEquals((int) statusCode[0], HttpServletResponse.SC_CREATED);
-        assertEquals(header[0], MediaType.APPLICATION_JSON);
-    }
-
-    private void create() throws Exception {
-        RegistrationResponseProfile registrationRequestProfile = mock(RegistrationResponseProfile.class);
+    @DataProvider(name = "instanceDataProvider")
+    public Object[][] getInstanceData() {
         mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);
+        mockRegistrationResponse = mock(RegistrationResponse.class);
+        return new Object[][]{
+                {mockHttpIdentityResponseBuilder, mockRegistrationResponse},
+                {null, mockRegistrationResponse}
+        };
+    }
+
+    @Test(dataProvider = "instanceDataProvider")
+    public void testCreate(Object builder,
+                           Object registrationResponse) throws Exception {
+
+        if (builder == null) {
+            mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);
+        } else {
+            mockHttpIdentityResponseBuilder = (HttpIdentityResponse.HttpIdentityResponseBuilder) builder;
+        }
+        RegistrationResponseProfile registrationRequestProfile = mock(RegistrationResponseProfile.class);
+
         whenNew(HttpIdentityResponse.HttpIdentityResponseBuilder.class).withNoArguments().thenReturn
                 (mockHttpIdentityResponseBuilder);
-        when(mockRegistrationResponse.getRegistrationResponseProfile()).thenReturn(registrationRequestProfile);
+        when(((RegistrationResponse) registrationResponse).getRegistrationResponseProfile()).
+                thenReturn(registrationRequestProfile);
 
-        statusCode = new Integer[1];
+        final Integer[] statusCode = new Integer[1];
         doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -179,7 +178,7 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
             }
         }).when(mockHttpIdentityResponseBuilder).setStatusCode(anyInt());
 
-        header = new String[1];
+        final String[] header = new String[1];
         doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -188,6 +187,15 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
                 return null;
             }
         }).when(mockHttpIdentityResponseBuilder).addHeader(anyString(), anyString());
+
+        if (builder == null) {
+            httpRegistrationResponseFactory.create((IdentityResponse) registrationResponse);
+        } else {
+            httpRegistrationResponseFactory.create((HttpIdentityResponse.HttpIdentityResponseBuilder) builder,
+                    (IdentityResponse) registrationResponse);
+        }
+        assertEquals((int) statusCode[0], HttpServletResponse.SC_CREATED);
+        assertEquals(header[0], MediaType.APPLICATION_JSON);
     }
 
     @Test
@@ -199,23 +207,24 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
         assertEquals(jsonObject.get("error_description"), dummyDescription);
     }
 
-    @Test
-    public void testHandleException() throws Exception {
-
-        FrameworkException exception = handleException();
-        httpRegistrationResponseFactory.handleException(exception);
-
-        assertEquals(header[0], MediaType.APPLICATION_JSON);
-        assertEquals((int) statusCode[0], HttpServletResponse.SC_BAD_REQUEST);
+    @DataProvider(name = "exceptionDataProvider")
+    public Object[][] getExceptionData() {
+        return new Object[][]{
+                {ErrorCodes.FORBIDDEN.toString(), HttpServletResponse.SC_FORBIDDEN},
+                {ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), HttpServletResponse.SC_BAD_REQUEST},
+                {ErrorCodes.GONE.toString(), HttpServletResponse.SC_GONE},
+                {null, HttpServletResponse.SC_BAD_REQUEST}
+        };
     }
 
-    private FrameworkException handleException() throws Exception {
+    @Test(dataProvider = "exceptionDataProvider")
+    public void testHandleException(String errorCode, int response) throws Exception {
 
         mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);
         whenNew(HttpIdentityResponse.HttpIdentityResponseBuilder.class).withNoArguments().thenReturn
                 (mockHttpIdentityResponseBuilder);
 
-        statusCode = new Integer[1];
+        final Integer[] statusCode = new Integer[1];
         doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -225,7 +234,7 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
             }
         }).when(mockHttpIdentityResponseBuilder).setStatusCode(anyInt());
 
-        header = new String[1];
+        final String[] header = new String[1];
         doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -237,36 +246,11 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
 
         FrameworkException exception = mock(FrameworkException.class);
         when(exception.getMessage()).thenReturn(dummyDescription);
-        return exception;
-    }
 
-    @Test
-    public void testHandleExceptionValidationError() throws Exception {
-
-        FrameworkException exception = handleException();
-        when(exception.getErrorCode()).thenReturn(ErrorCodes.META_DATA_VALIDATION_FAILED.toString());
+        when(exception.getErrorCode()).thenReturn(errorCode);
         httpRegistrationResponseFactory.handleException(exception);
 
-        assertEquals(header[0], MediaType.APPLICATION_JSON);
-        assertEquals((int) statusCode[0], HttpServletResponse.SC_BAD_REQUEST);
-    }
-
-    @Test
-    public void testHandleExceptionForbiddenError() throws Exception {
-
-        FrameworkException exception = handleException();
-        when(exception.getErrorCode()).thenReturn(ErrorCodes.FORBIDDEN.toString());
-        httpRegistrationResponseFactory.handleException(exception);
-        assertEquals((int) statusCode[0], HttpServletResponse.SC_FORBIDDEN);
-    }
-
-    @Test
-    public void testHandleExceptionGoneError() throws Exception {
-
-        FrameworkException exception = handleException();
-        when(exception.getErrorCode()).thenReturn(ErrorCodes.GONE.toString());
-        httpRegistrationResponseFactory.handleException(exception);
-        assertEquals((int) statusCode[0], HttpServletResponse.SC_GONE);
+        assertEquals((int) statusCode[0], response);
     }
 
     @Test
