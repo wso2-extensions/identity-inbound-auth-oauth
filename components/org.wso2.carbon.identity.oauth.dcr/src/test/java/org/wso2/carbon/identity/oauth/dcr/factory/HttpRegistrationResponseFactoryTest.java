@@ -148,11 +148,28 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
     @Test
     public void testCreate() throws Exception {
 
+        create();
+        httpRegistrationResponseFactory.create(mockHttpIdentityResponseBuilder, mockRegistrationResponse);
+        assertEquals((int) statusCode[0], HttpServletResponse.SC_CREATED);
+        assertEquals(header[0], MediaType.APPLICATION_JSON);
+    }
+
+    @Test
+    public void createTest() throws Exception {
+        create();
+        httpRegistrationResponseFactory.create(mockRegistrationResponse);
+        assertEquals((int) statusCode[0], HttpServletResponse.SC_CREATED);
+        assertEquals(header[0], MediaType.APPLICATION_JSON);
+    }
+
+    private void create() throws Exception {
         RegistrationResponseProfile registrationRequestProfile = mock(RegistrationResponseProfile.class);
         mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);
+        whenNew(HttpIdentityResponse.HttpIdentityResponseBuilder.class).withNoArguments().thenReturn
+                (mockHttpIdentityResponseBuilder);
         when(mockRegistrationResponse.getRegistrationResponseProfile()).thenReturn(registrationRequestProfile);
 
-        final Integer[] statusCode = new Integer[1];
+        statusCode = new Integer[1];
         doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -162,7 +179,7 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
             }
         }).when(mockHttpIdentityResponseBuilder).setStatusCode(anyInt());
 
-        final String[] header = new String[1];
+        header = new String[1];
         doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -171,10 +188,6 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
                 return null;
             }
         }).when(mockHttpIdentityResponseBuilder).addHeader(anyString(), anyString());
-
-        httpRegistrationResponseFactory.create(mockHttpIdentityResponseBuilder, mockRegistrationResponse);
-        assertEquals((int) statusCode[0], HttpServletResponse.SC_CREATED);
-        assertEquals(header[0], MediaType.APPLICATION_JSON);
     }
 
     @Test
@@ -196,6 +209,7 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
         assertEquals(header[0], MediaType.APPLICATION_JSON);
         assertEquals((int) statusCode[0], HttpServletResponse.SC_BAD_REQUEST);
     }
+
     private FrameworkException handleException() throws Exception {
 
         mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);

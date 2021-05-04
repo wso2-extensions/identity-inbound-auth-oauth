@@ -20,14 +20,17 @@ package org.wso2.carbon.identity.oauth.dcr.factory;
 
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
+import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponse;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityResponse;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dcr.exception.UnRegistrationException;
 import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationResponse;
 
@@ -35,18 +38,24 @@ import javax.servlet.http.HttpServletResponse;
 
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
 import static org.powermock.api.mockito.PowerMockito.doAnswer;
 import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
+import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-
-public class HttpUnregistrationResponseFactoryTest extends PowerMockTestCase {
+@PrepareForTest({HttpUnregistrationResponseFactory.class, HttpIdentityResponse.HttpIdentityResponseBuilder.class})
+public class HttpUnRegistrationResponseFactoryTest extends PowerMockTestCase {
 
     private UnregistrationResponse mockUnregistrationResponse;
     private HttpUnregistrationResponseFactory httpUnregistrationResponseFactory;
     private HttpIdentityResponse.HttpIdentityResponseBuilder mockHttpIdentityResponseBuilder;
+
+    private Integer[] statusCode;
+    private String[] header;
 
     @BeforeMethod
     private void setUp() {
@@ -69,6 +78,7 @@ public class HttpUnregistrationResponseFactoryTest extends PowerMockTestCase {
 
     @Test(dataProvider = "instanceProvider")
     public void testCanHandle(Object identityResponse, Boolean expected) throws Exception {
+
         if (expected) {
             assertTrue(httpUnregistrationResponseFactory.canHandle((UnregistrationResponse) identityResponse));
         } else {
@@ -98,9 +108,55 @@ public class HttpUnregistrationResponseFactoryTest extends PowerMockTestCase {
     }
 
     @Test
-    public void testCreate()  {
+    public void testCreate() throws Exception {
+
+        create();
+        httpUnregistrationResponseFactory.create(mockHttpIdentityResponseBuilder, mockUnregistrationResponse);
+        assertEquals((int) statusCode[0], HttpServletResponse.SC_NO_CONTENT);
+    }
+
+     @Test
+     public void createTest() throws Exception {
+
+        create();
+        httpUnregistrationResponseFactory.create(mockUnregistrationResponse);
+        assertEquals((int) statusCode[0], HttpServletResponse.SC_NO_CONTENT);
+     }
+
+    private void create() throws Exception {
 
         mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);
+        whenNew(HttpIdentityResponse.HttpIdentityResponseBuilder.class).withNoArguments().thenReturn
+                (mockHttpIdentityResponseBuilder);
+        statusCode = new Integer[1];
+        doAnswer(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+
+                statusCode[0] = (Integer) invocation.getArguments()[0];
+                return null;
+            }
+        }).when(mockHttpIdentityResponseBuilder).setStatusCode(anyInt());
+
+        header = new String[1];
+        doAnswer(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+
+                header[0] = (String) invocation.getArguments()[1];
+                return null;
+            }
+        }).when(mockHttpIdentityResponseBuilder).addHeader(anyString(), anyString());
+
+    }
+
+    @Test
+    public void testHandleException() throws Exception {
+
+        mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);
+        whenNew(HttpIdentityResponse.HttpIdentityResponseBuilder.class).withNoArguments().thenReturn
+                (mockHttpIdentityResponseBuilder);
+
         final Integer[] statusCode = new Integer[1];
         doAnswer(new Answer<Object>() {
             @Override
@@ -111,7 +167,7 @@ public class HttpUnregistrationResponseFactoryTest extends PowerMockTestCase {
             }
         }).when(mockHttpIdentityResponseBuilder).setStatusCode(anyInt());
 
-        final String[] header = new String[1];
+        final String[] header = new String[3];
         doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -119,10 +175,27 @@ public class HttpUnregistrationResponseFactoryTest extends PowerMockTestCase {
                 header[0] = (String) invocation.getArguments()[1];
                 return null;
             }
-        }).when(mockHttpIdentityResponseBuilder).addHeader(anyString(), anyString());
+        }).when(mockHttpIdentityResponseBuilder).addHeader(eq(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL),
+                anyString());
 
-        httpUnregistrationResponseFactory.create(mockHttpIdentityResponseBuilder, mockUnregistrationResponse);
-        assertEquals((int) statusCode[0], HttpServletResponse.SC_NO_CONTENT);
+        doAnswer(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+
+                header[1] = (String) invocation.getArguments()[1];
+                return null;
+            }
+        }).when(mockHttpIdentityResponseBuilder).addHeader(eq(OAuthConstants.HTTP_RESP_HEADER_PRAGMA), anyString());
+
+        FrameworkClientException exception = mock(FrameworkClientException.class);
+        when(exception.getMessage()).thenReturn("dummyDescription");
+        httpUnregistrationResponseFactory.handleException(exception);
+
+        assertEquals(header[0], OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE, "Wrong header value " +
+                "for " + OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL);
+        assertEquals(header[1], OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE, "Wrong header value for " +
+                OAuthConstants.HTTP_RESP_HEADER_PRAGMA);
+        assertEquals((int) statusCode[0], HttpServletResponse.SC_METHOD_NOT_ALLOWED, "Status code doesn't match with "
+                + HttpServletResponse.SC_BAD_REQUEST);
     }
-
 }

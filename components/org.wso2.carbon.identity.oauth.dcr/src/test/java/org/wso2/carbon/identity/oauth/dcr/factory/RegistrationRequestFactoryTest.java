@@ -68,6 +68,7 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
     private RegistrationRequestFactory registrationRequestFactory;
     private String dummyDescription = "dummyDescription";
     private String ownerName = "dummyOwnerName";
+    private RegistrationRequestProfile registrationRequestProfile;
 
     @Mock
     private HttpServletRequest mockHttpRequest;
@@ -177,6 +178,41 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
     public void testCreate(Object grantType, Object redirectUrl, Object responseType, String clientName, Object
             scope, Object contact, Object expected) throws Exception {
 
+        create(grantType, redirectUrl, responseType, clientName, scope, contact);
+
+        try {
+            startTenantFlow();
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
+
+            registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
+            checkSimilarity(registrationRequestProfile, grantType, redirectUrl, responseType, clientName,
+                    scope, contact, expected);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    @Test(dataProvider = "jsonObjectDataProvider")
+    private void createTest(Object grantType, Object redirectUrl, Object responseType, String clientName, Object
+            scope, Object contact, Object expected) throws Exception {
+
+        create(grantType, redirectUrl, responseType, clientName, scope, contact);
+        try {
+            startTenantFlow();
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
+
+            registrationRequestFactory.create(mockHttpRequest, mockHttpResponse);
+            checkSimilarity(registrationRequestProfile, grantType, redirectUrl, responseType, clientName,
+                    scope, contact, expected);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+
+    }
+
+    private void create(Object grantType, Object redirectUrl, Object responseType, String clientName, Object
+            scope, Object contact) throws Exception {
+
         JSONObject jsonObject = new JSONObject();
         jsonObject.put(RegistrationRequest.RegisterRequestConstant.GRANT_TYPES, grantType);
         jsonObject.put(RegistrationRequest.RegisterRequestConstant.REDIRECT_URIS, redirectUrl);
@@ -185,7 +221,7 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
         jsonObject.put(RegistrationRequest.RegisterRequestConstant.SCOPE, scope);
         jsonObject.put(RegistrationRequest.RegisterRequestConstant.CONTACTS, contact);
 
-        RegistrationRequestProfile registrationRequestProfile = new RegistrationRequestProfile();
+        registrationRequestProfile = new RegistrationRequestProfile();
 
         whenNew(RegistrationRequestProfile.class).withNoArguments().thenReturn(registrationRequestProfile);
 
@@ -195,48 +231,44 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
         whenNew(JSONParser.class).withNoArguments().thenReturn(jsonParser);
 
         when(jsonParser.parse(mockReader)).thenReturn(jsonObject);
+    }
 
-        try {
-            startTenantFlow();
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
+    private void checkSimilarity(RegistrationRequestProfile registrationRequestProfile, Object grantType,
+                                 Object redirectUrl, Object responseType, String clientName, Object
+            scope, Object contact, Object expected) {
 
-            registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
-
-            if (clientName != null) {
-                assertEquals(registrationRequestProfile.getClientName(), clientName,
-                        "expected client name is not found in registrationRequestProfile");
-            }
-
-            if (!expected.equals("empty")) {
-                if (expected instanceof String) {
-                    assertEquals(registrationRequestProfile.getGrantTypes().get(0), grantType,
-                            "expected grant type is not found in registrationRequestProfile");
-                    assertEquals(registrationRequestProfile.getRedirectUris().get(0), redirectUrl,
-                            "expected redirectUrl is not found in registrationRequestProfile");
-                    assertEquals(registrationRequestProfile.getContacts().get(0), contact,
-                            "expected contact is not found in registrationRequestProfile");
-                    assertEquals(registrationRequestProfile.getScopes().get(0), scope,
-                            "expected scope is not found in registrationRequestProfile");
-                    assertEquals(registrationRequestProfile.getResponseTypes().get(0), responseType,
-                            "expected response type is not found in registrationRequestProfile");
-                } else {
-                    assertEquals(registrationRequestProfile.getGrantTypes(), grantType,
-                            "expected grant type is not found in registrationRequestProfile");
-                    assertEquals(registrationRequestProfile.getRedirectUris(), redirectUrl,
-                            "expected redirect url is not found in registrationRequestProfile");
-                    assertEquals(registrationRequestProfile.getContacts(), contact,
-                            "expected contact is not found in registrationRequestProfile");
-                    assertEquals(registrationRequestProfile.getScopes(), scope,
-                            "expected scope is not found in registrationRequestProfile");
-                    assertEquals(registrationRequestProfile.getResponseTypes(), responseType,
-                            "expected response type is not found in registrationRequestProfile");
-                }
-            }
-            assertEquals(registrationRequestProfile.getOwner(), ownerName,
-                    "expected owner name is not found in registrationRequestProfile");
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
+        if (clientName != null) {
+            assertEquals(registrationRequestProfile.getClientName(), clientName,
+                    "expected client name is not found in registrationRequestProfile");
         }
+
+        if (!expected.equals("empty")) {
+            if (expected instanceof String) {
+                assertEquals(registrationRequestProfile.getGrantTypes().get(0), grantType,
+                        "expected grant type is not found in registrationRequestProfile");
+                assertEquals(registrationRequestProfile.getRedirectUris().get(0), redirectUrl,
+                        "expected redirectUrl is not found in registrationRequestProfile");
+                assertEquals(registrationRequestProfile.getContacts().get(0), contact,
+                        "expected contact is not found in registrationRequestProfile");
+                assertEquals(registrationRequestProfile.getScopes().get(0), scope,
+                        "expected scope is not found in registrationRequestProfile");
+                assertEquals(registrationRequestProfile.getResponseTypes().get(0), responseType,
+                        "expected response type is not found in registrationRequestProfile");
+            } else {
+                assertEquals(registrationRequestProfile.getGrantTypes(), grantType,
+                        "expected grant type is not found in registrationRequestProfile");
+                assertEquals(registrationRequestProfile.getRedirectUris(), redirectUrl,
+                        "expected redirect url is not found in registrationRequestProfile");
+                assertEquals(registrationRequestProfile.getContacts(), contact,
+                        "expected contact is not found in registrationRequestProfile");
+                assertEquals(registrationRequestProfile.getScopes(), scope,
+                        "expected scope is not found in registrationRequestProfile");
+                assertEquals(registrationRequestProfile.getResponseTypes(), responseType,
+                        "expected response type is not found in registrationRequestProfile");
+            }
+        }
+        assertEquals(registrationRequestProfile.getOwner(), ownerName,
+                "expected owner name is not found in registrationRequestProfile");
     }
 
     @Test(expectedExceptions = IdentityException.class)
