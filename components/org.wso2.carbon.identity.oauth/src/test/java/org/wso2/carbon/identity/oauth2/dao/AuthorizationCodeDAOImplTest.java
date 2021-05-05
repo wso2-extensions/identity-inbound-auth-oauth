@@ -19,8 +19,6 @@
 package org.wso2.carbon.identity.oauth2.dao;
 
 import org.apache.commons.dbcp.BasicDataSource;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
@@ -28,7 +26,6 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -86,7 +83,7 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
     @Mock
     private ApplicationManagementService applicationManagementService;
 
-    Connection connection;
+    private Connection connection;
 
     private AuthorizationCodeDAOImpl authorizationCodeDAO;
     private String[] scopes;
@@ -96,7 +93,6 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
     private static final String USER_NAME = "user1";
     private static final String CALLBACK = "http://localhost:8080/redirect";
     private static final String DB_NAME = "testAuthzCODEDB";
-    public static final Log LOG = LogFactory.getLog(AuthorizationCodeDAOImplTest.class);
 
     @BeforeClass
     public void initTest() throws Exception {
@@ -165,58 +161,50 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         return authzCodeDO;
     }
 
-    @DataProvider
-    public static Object[][] dataForSingleAuthzCodePersisting() {
-        return new Object[][]{
-                {UUID.randomUUID().toString(), UUID.randomUUID().toString(), UUID.randomUUID().toString(),
-                }
-        };
-    }
+    @Test
+    public void testInsertAuthorizationCode() throws Exception {
 
-    @Test(dataProvider = "dataForSingleAuthzCodePersisting")
-    public void testInsertAuthorizationCode(String consumerKey1, String authzCodeID1, String authzCode1)
-            throws Exception {
-
+        String consumerKey = UUID.randomUUID().toString();
+        String authzCodeID = UUID.randomUUID().toString();
+        String authzCode = UUID.randomUUID().toString();
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
-        AuthzCodeDO authzCodeDO = persistAuthorizationCode(consumerKey1, authzCodeID1, authzCode1, true,
+        AuthzCodeDO authzCodeDO = persistAuthorizationCode(consumerKey, authzCodeID, authzCode, true,
                 OAuthConstants.AuthorizationCodeState.ACTIVE);
 
-        Assert.assertEquals(authorizationCodeDAO.getCodeIdByAuthorizationCode(authzCode1),
+        Assert.assertEquals(authorizationCodeDAO.getCodeIdByAuthorizationCode(authzCode),
                 authzCodeDO.getAuthzCodeId());
         Assert.assertNull(authorizationCodeDAO.getCodeIdByAuthorizationCode(UUID.randomUUID().toString()));
     }
 
-    @Test(dataProvider = "dataForSingleAuthzCodePersisting")
-    public void testGetAuthorizationCodesByConsumerKey(String consumerKey1, String authzCodeID1, String authzCode1)
-            throws Exception {
+    @Test
+    public void testGetAuthorizationCodesByConsumerKey() throws Exception {
 
+        String consumerKey = UUID.randomUUID().toString();
+        String authzCodeID = UUID.randomUUID().toString();
+        String authzCode = UUID.randomUUID().toString();
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
-        AuthzCodeDO authzCodeDO2 = persistAuthorizationCode(consumerKey1, authzCodeID1, authzCode1,
+        AuthzCodeDO authzCodeDO = persistAuthorizationCode(consumerKey, authzCodeID, authzCode,
                 true, OAuthConstants.AuthorizationCodeState.ACTIVE);
         Set<String> availableAuthzCodes = new HashSet<>();
-        availableAuthzCodes.add(authzCode1);
+        availableAuthzCodes.add(authzCode);
 
-        Assert.assertEquals(authorizationCodeDAO.getAuthorizationCodesByConsumerKey(authzCodeDO2.getConsumerKey()),
+        Assert.assertEquals(authorizationCodeDAO.getAuthorizationCodesByConsumerKey(authzCodeDO.getConsumerKey()),
                     availableAuthzCodes);
         Assert.assertTrue(authorizationCodeDAO.getAuthorizationCodesByConsumerKey(UUID.randomUUID().
                     toString()).isEmpty());
     }
 
-    @DataProvider
-    public static Object[][] dataForDoubleAuthzCodePersisting() {
-        return new Object[][]{
-                {UUID.randomUUID().toString(), UUID.randomUUID().toString(), UUID.randomUUID().toString(),
-                        UUID.randomUUID().toString(), UUID.randomUUID().toString(), UUID.randomUUID().toString(),
-                }
-        };
-    }
+    @Test
+    public void testGetActiveAuthorizationCodesByConsumerKey() throws Exception {
 
-    @Test(dataProvider = "dataForDoubleAuthzCodePersisting")
-    public void testGetActiveAuthorizationCodesByConsumerKey(String consumerKey1, String authzCodeID1,
-                                                             String authzCode1, String consumerKey2,
-                                                             String authzCodeID2, String authzCode2) throws Exception {
+        String consumerKey1 = UUID.randomUUID().toString();
+        String authzCodeID1 = UUID.randomUUID().toString();
+        String authzCode1 = UUID.randomUUID().toString();
+        String consumerKey2 = UUID.randomUUID().toString();
+        String authzCodeID2 = UUID.randomUUID().toString();
+        String authzCode2 = UUID.randomUUID().toString();
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
         AuthzCodeDO authzCodeDO1 = persistAuthorizationCode(consumerKey1, authzCodeID1, authzCode1, true,
@@ -239,10 +227,12 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
                 (authzCodeDO1.getConsumerKey()).isEmpty());
     }
 
-    @Test(dataProvider = "dataForSingleAuthzCodePersisting")
-    public void testGetAuthorizationCodesByUser(String consumerKey1, String authzCodeID1, String authzCode1)
-            throws Exception {
+    @Test
+    public void testGetAuthorizationCodesByUser() throws Exception {
 
+        String consumerKey = UUID.randomUUID().toString();
+        String authzCodeID = UUID.randomUUID().toString();
+        String authzCode = UUID.randomUUID().toString();
         AuthenticatedUser dummyAuthenticatedUser = new AuthenticatedUser();
         dummyAuthenticatedUser.setTenantDomain("super.wso2");
         dummyAuthenticatedUser.setUserName("MockedUser");
@@ -250,7 +240,7 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
         when(OAuth2Util.getUserStoreDomain(any())).thenReturn("PRIMARY");
-        AuthzCodeDO authzCodeDO1 = persistAuthorizationCode(consumerKey1, authzCodeID1, authzCode1, true,
+        AuthzCodeDO authzCodeDO1 = persistAuthorizationCode(consumerKey, authzCodeID, authzCode, true,
                 OAuthConstants.AuthorizationCodeState.ACTIVE);
         mockStatic(OAuth2Util.class);
         mockStatic(IdentityUtil.class);
@@ -265,11 +255,13 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         Assert.assertTrue(authorizationCodeDAO.getAuthorizationCodesByUser(dummyAuthenticatedUser).isEmpty());
     }
 
-    @Test(dataProvider = "dataForSingleAuthzCodePersisting")
-    public void testValidateAuthorizationCode(String consumerKey1, String authzCodeID1, String authzCode1)
-            throws Exception {
+    @Test
+    public void testValidateAuthorizationCode() throws Exception {
 
-    AuthzCodeDO authzCodeDO1 = persistAuthorizationCode(consumerKey1, authzCodeID1, authzCode1, true,
+        String consumerKey1 = UUID.randomUUID().toString();
+        String authzCodeID1 = UUID.randomUUID().toString();
+        String authzCode1 = UUID.randomUUID().toString();
+        AuthzCodeDO authzCodeDO1 = persistAuthorizationCode(consumerKey1, authzCodeID1, authzCode1, true,
             OAuthConstants.AuthorizationCodeState.ACTIVE);
         OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(false);
         OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
@@ -283,12 +275,15 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
                 authzCodeDO1.getAuthorizationCode()));
     }
 
-    @Test(dataProvider = "dataForDoubleAuthzCodePersisting")
-    public void testGetAuthorizationCodeDOSetByConsumerKeyForOpenidScope(String consumerKey1, String authzCodeID1,
-                                                                         String authzCode1, String consumerKey2,
-                                                                         String authzCodeID2, String authzCode2)
-            throws Exception {
+    @Test
+    public void testGetAuthorizationCodeDOSetByConsumerKeyForOpenidScope() throws Exception {
 
+        String consumerKey1 = UUID.randomUUID().toString();
+        String authzCodeID1 = UUID.randomUUID().toString();
+        String authzCode1 = UUID.randomUUID().toString();
+        String consumerKey2 = UUID.randomUUID().toString();
+        String authzCodeID2 = UUID.randomUUID().toString();
+        String authzCode2 = UUID.randomUUID().toString();
         mockStatic(OAuth2Util.class);
         when(getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
         persistAuthorizationCode(consumerKey1, authzCodeID1, authzCode1, true,
@@ -301,11 +296,15 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
                     getConsumerKey()).isEmpty());
     }
 
-    @Test(dataProvider = "dataForDoubleAuthzCodePersisting")
-    public void testGetAuthorizationCodesByUserForOpenidScope(String consumerKey1, String authzCodeID1,
-                                                              String authzCode1, String consumerKey2,
-                                                              String authzCodeID2, String authzCode2) throws Exception {
+    @Test
+    public void testGetAuthorizationCodesByUserForOpenidScope() throws Exception {
 
+        String consumerKey1 = UUID.randomUUID().toString();
+        String authzCodeID1 = UUID.randomUUID().toString();
+        String authzCode1 = UUID.randomUUID().toString();
+        String consumerKey2 = UUID.randomUUID().toString();
+        String authzCodeID2 = UUID.randomUUID().toString();
+        String authzCode2 = UUID.randomUUID().toString();
         AuthenticatedUser dummyAuthenticatorUser = new AuthenticatedUser();
         dummyAuthenticatorUser.setTenantDomain("super.wso2");
         dummyAuthenticatorUser.setUserName("MockedUser");
@@ -332,12 +331,15 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
                 .isEmpty());
     }
 
-    @Test(dataProvider = "dataForDoubleAuthzCodePersisting")
-    public void testDeactivateAuthorizationCode(String consumerKey1, String authzCodeID1,
-                                                String authzCode1,
-                                                String consumerKey2, String authzCodeID2,
-                                                String authzCode2) throws Exception {
+    @Test
+    public void testDeactivateAuthorizationCode() throws Exception {
 
+        String consumerKey1 = UUID.randomUUID().toString();
+        String authzCodeID1 = UUID.randomUUID().toString();
+        String authzCode1 = UUID.randomUUID().toString();
+        String consumerKey2 = UUID.randomUUID().toString();
+        String authzCodeID2 = UUID.randomUUID().toString();
+        String authzCode2 = UUID.randomUUID().toString();
         AuthzCodeDO authzCodeDO1 = persistAuthorizationCode(consumerKey1, authzCodeID1, authzCode1, true,
                 OAuthConstants.AuthorizationCodeState.ACTIVE);
         AuthzCodeDO authzCodeDO2 = persistAuthorizationCode(consumerKey2, authzCodeID2, authzCode2, true,
@@ -356,12 +358,15 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
                 isEmpty());
     }
 
-    @Test(dataProvider = "dataForDoubleAuthzCodePersisting")
-    public void testDeactivateAuthorizationCodes(String consumerKey1, String authzCodeID1,
-                                                 String authzCode1,
-                                                 String consumerKey2, String authzCodeID2,
-                                                 String authzCode2) throws Exception {
+    @Test
+    public void testDeactivateAuthorizationCodes() throws Exception {
 
+        String consumerKey1 = UUID.randomUUID().toString();
+        String authzCodeID1 = UUID.randomUUID().toString();
+        String authzCode1 = UUID.randomUUID().toString();
+        String consumerKey2 = UUID.randomUUID().toString();
+        String authzCodeID2 = UUID.randomUUID().toString();
+        String authzCode2 = UUID.randomUUID().toString();
         AuthzCodeDO authzCodeDO1 = persistAuthorizationCode(consumerKey1, authzCodeID1, authzCode1, true,
                 OAuthConstants.AuthorizationCodeState.ACTIVE);
         AuthzCodeDO authzCodeDO2 = persistAuthorizationCode(consumerKey2, authzCodeID2, authzCode2, true,
@@ -384,11 +389,15 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
                 (authzCodeDO2.getConsumerKey()).isEmpty());
     }
 
-    @Test(dataProvider = "dataForDoubleAuthzCodePersisting")
-    public void testGetLatestAuthorizationCodesByTenant(String consumerKey1, String authzCodeID1, String authzCode1,
-                                                        String consumerKey2, String authzCodeID2, String authzCode2)
-            throws Exception {
+    @Test
+    public void testGetLatestAuthorizationCodesByTenant() throws Exception {
 
+        String consumerKey1 = UUID.randomUUID().toString();
+        String authzCodeID1 = UUID.randomUUID().toString();
+        String authzCode1 = UUID.randomUUID().toString();
+        String consumerKey2 = UUID.randomUUID().toString();
+        String authzCodeID2 = UUID.randomUUID().toString();
+        String authzCode2 = UUID.randomUUID().toString();
         persistAuthorizationCode(consumerKey1, authzCodeID1, authzCode1, true,
                 OAuthConstants.AuthorizationCodeState.ACTIVE);
         // Creating an application outside default tenant.
