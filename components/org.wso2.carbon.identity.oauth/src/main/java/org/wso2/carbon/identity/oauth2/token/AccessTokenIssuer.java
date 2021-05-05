@@ -364,6 +364,11 @@ public class AccessTokenIssuer {
                     tokReqMsgCtx.getAuthorizedUser() + " and scopes: " + tokenRespDTO.getAuthorizedScopes());
         }
 
+        if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
+            // Should add user attributes to the cache before building the ID token.
+            addUserAttributesAgainstAccessToken(tokenReqDTO, tokenRespDTO);
+        }
+
         if (tokReqMsgCtx.getScope() != null && OAuth2Util.isOIDCAuthzRequest(tokReqMsgCtx.getScope())) {
             if (log.isDebugEnabled()) {
                 log.debug("Issuing ID token for client: " + tokenReqDTO.getClientId());
@@ -380,7 +385,6 @@ public class AccessTokenIssuer {
         }
 
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
-            addUserAttributesAgainstAccessToken(tokenReqDTO, tokenRespDTO);
             // Cache entry against the authorization code has no value beyond the token request.
             clearCacheEntryAgainstAuthorizationCode(getAuthorizationCode(tokenReqDTO));
         }
