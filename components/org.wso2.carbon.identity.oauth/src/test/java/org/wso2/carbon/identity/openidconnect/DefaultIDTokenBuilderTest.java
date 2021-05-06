@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.openidconnect;
 import com.nimbusds.jwt.SignedJWT;
 import org.junit.Assert;
 import org.mockito.Mockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.annotations.BeforeClass;
@@ -33,7 +32,6 @@ import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.internal.ApplicationManagementServiceComponent;
-import org.wso2.carbon.identity.application.mgt.internal.ApplicationManagementServiceComponentHolder;
 import org.wso2.carbon.identity.common.testng.WithAxisConfiguration;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
@@ -78,7 +76,7 @@ import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENA
 @WithCarbonHome
 @WithAxisConfiguration
 @WithH2Database(files = { "dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql" })
-@WithRealmService(injectToSingletons = {ApplicationManagementServiceComponentHolder.class})
+@WithRealmService
 @WithKeyStore
 public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
 
