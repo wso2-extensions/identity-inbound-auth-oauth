@@ -105,6 +105,7 @@ public class DCRMUtilsTest extends PowerMockTestCase {
 
         return new Object[][]{
                 {"dummyApplicationName", true},
+                {"", true},
                 {"dummy@ApllicationName", false},
 
         };

@@ -26,6 +26,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.context.RegistryType;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -41,6 +42,7 @@ import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.nio.file.Paths;
+import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -81,21 +83,6 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         dcrManagementService = DCRManagementService.getInstance();
         assertNotNull(dcrManagementService);
         registrationRequestProfile = new RegistrationRequestProfile();
-    }
-
-    @Test
-    public void registerOAuthApplicationExceptionTest() throws DCRException {
-
-        registerOAuthApplication();
-
-        startTenantFlow();
-        try {
-            dcrManagementService.registerOAuthApplication(registrationRequestProfile);
-        } catch (IllegalStateException ex) {
-            assertEquals(ex.getMessage(), "ApplicationManagementService is not initialized properly");
-            return;
-        }
-        fail("Expected exception IdentityException not thrown by registerOAuthApplication");
     }
 
     @Test
@@ -191,7 +178,6 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         fail("Expected exception IdentityException not thrown by registerOAuthApplication");
     }
 
-
     @Test
     public void registerOAuthApplicationWithNewSPNoRedirectUri() throws NoSuchFieldException,
             IllegalAccessException, DCRException, IdentityApplicationManagementException {
@@ -213,16 +199,26 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         fail("Expected exception IdentityException not thrown by registerOAuthApplication");
     }
 
-    @Test
-    public void registerOAuthApplicationWithNewSPWithFragmentRedirectUri() throws NoSuchFieldException,
+    @DataProvider(name = "invalidRedirectUriProvider")
+    public Object[][] getReDirecturi() {
+
+        List<String> redirectUri1 = new ArrayList<>();
+        redirectUri1.add("redirect#Uri1");
+        List<String> redirectUri2 = new ArrayList<>();
+        redirectUri2.add("redirect#Uri1");
+        redirectUri2.add("redirect#Uri2");
+        return new Object[][]{
+                {redirectUri1},
+                {redirectUri2}
+        };
+    }
+
+    @Test(dataProvider = "invalidRedirectUriProvider")
+    public void registerOAuthApplicationWithNewSPWithFragmentRedirectUri(List<String> redirectUri)
+            throws NoSuchFieldException,
             IllegalAccessException, DCRException, IdentityApplicationManagementException, IdentityValidationException {
 
         registerOAuthApplication();
-        List<String> redirectUris = new ArrayList<>();
-
-        redirectUris.add("wvuv#");
-
-        String redirectUri = redirectUris.get(0);
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
         DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
@@ -231,12 +227,12 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         when(mockApplicationManagementService.getServiceProvider(applicationName, tenantDomain)).thenReturn(null,
                 new ServiceProvider());
 
-        registrationRequestProfile.setRedirectUris(redirectUris);
+        registrationRequestProfile.setRedirectUris(redirectUri);
 
         try {
             dcrManagementService.registerOAuthApplication(registrationRequestProfile);
         } catch (IdentityException ex) {
-            assertEquals(ex.getMessage(), "Redirect URI: " + redirectUri + ", is invalid");
+            assertEquals(ex.getMessage(), "Redirect URI: " + redirectUri.get(0) + ", is invalid");
             return;
         }
         fail("Expected exception IdentityException not thrown by registerOAuthApplication");
@@ -269,7 +265,6 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
     @Test(dataProvider = "serviceProviderData")
     public void registerOAuthApplicationWithNewSPWithRedirectUri(String oauthConsumerSecret, List<String> redirectUris,
                                                                  List<String> dummyGrantType) throws Exception {
-
         registerOAuthApplication();
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
@@ -391,6 +386,61 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
                 .getClientName();
 
         startTenantFlow();
+    }
+
+    @DataProvider(name = "outhApplicationDataProvider")
+    public Object[][] getExceptionInstanceType() {
+
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        return new Object[][]{
+                {serviceProvider, true},
+                {null, false}
+        };
+    }
+
+    @Test(dataProvider = "outhApplicationDataProvider")
+    public void oAuthApplicationAvailableTest(Object serviceProvider, boolean expected) throws Exception {
+
+        startTenantFlow();
+        String dummyApplicationName = "dummyApplicationName";
+        mockApplicationManagementService = mock(ApplicationManagementService.class);
+        DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
+        dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
+
+        when(mockApplicationManagementService.getServiceProvider(dummyApplicationName,
+                tenantDomain)).
+                thenReturn((ServiceProvider) serviceProvider);
+        assertEquals(dcrManagementService.isOAuthApplicationAvailable(dummyApplicationName), expected);
+    }
+
+    @Test
+    public void oAuthApplicationAvailableExceptionTest() throws Exception {
+
+        startTenantFlow();
+        mockApplicationManagementService = mock(ApplicationManagementService.class);
+        DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
+        dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
+
+        doThrow(new IdentityApplicationManagementException("")).when(mockApplicationManagementService).
+                getServiceProvider(applicationName, tenantDomain);
+
+        try {
+            dcrManagementService.isOAuthApplicationAvailable(applicationName);
+        } catch (DCRException ex) {
+            assertEquals(ex.getMessage(), "Error occurred while retrieving information of OAuthApp " + applicationName);
+            return;
+        }
+        fail("Expected exception IdentityException not thrown by registerApplication method");
+
+    }
+
+    @Test
+    public void getConfigSystemRegistryTest() {
+        startTenantFlow();
+        Registry registry = (Registry) PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                getRegistry(RegistryType.SYSTEM_CONFIGURATION);
+        assertEquals(dcrManagementService.getConfigSystemRegistry(), registry);
     }
 
     private void startTenantFlow() {

@@ -87,10 +87,16 @@ public class HttpUnRegistrationResponseFactoryTest extends PowerMockTestCase {
     public Object[][] getExceptionInstanceType() {
 
         FrameworkException exception1 = new UnRegistrationException("");
-        FrameworkException exception2 = new FrameworkException("");
+        FrameworkException exception2 = new UnRegistrationException("", "dummyMessage");
+        FrameworkException exception3 = new UnRegistrationException("", new Throwable());
+        FrameworkException exception4 = new UnRegistrationException("", "dummyMessage", new Throwable());
+        FrameworkException exception5 = new FrameworkException("");
         return new Object[][]{
                 {exception1, true},
-                {exception2, false}
+                {exception2, true},
+                {exception3, true},
+                {exception4, true},
+                {exception5, false}
         };
     }
 
