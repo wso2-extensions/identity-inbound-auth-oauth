@@ -280,7 +280,7 @@ public class DCRMService {
         try {
             OAuthConsumerAppDTO dto = oAuthAdminService.getOAuthApplicationData(clientId);
             if (dto == null || StringUtils.isEmpty(dto.getApplicationName())) {
-                diagnosticLog.info("Tenant:" + "t.com" + "| Could not find a valid application with given ID: "
+                diagnosticLog.info("Could not find a valid application with given ID: "
                         + clientId);
                 throw DCRMUtils.generateClientException(
                         DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID, clientId);
@@ -345,7 +345,7 @@ public class DCRMService {
                         "Deleting the service provider: " + spName + " to rollback.");
             }
             diagnosticLog.error("OAuth app: " + spName + " registration failed in tenantDomain: " + tenantDomain +
-                    ".Deleting the service provider: " + spName + " to rollback. Error message: " + ex.getMessage());
+                    ". Deleting the service provider: " + spName + " to rollback. Error message: " + ex.getMessage());
             deleteServiceProvider(spName, tenantDomain, applicationOwner);
             throw ex;
         }

@@ -65,7 +65,8 @@ public class IDTokenResponseValidator extends TokenValidator {
         // for id_token response type, the scope parameter should contain 'openid' as one of the scopes.
         String openIdScope = request.getParameter(SCOPE);
         if (StringUtils.isBlank(openIdScope) || !containOIDCScope(openIdScope)) {
-            diagnosticLog.error("'response_type' contains 'id_token', but 'openid' scope not found.");
+            diagnosticLog.error("The 'response_type' parameter contains 'id_token', but 'openid' scope not found" +
+                    " in the request.");
             throw OAuthProblemException.error(OAuthError.TokenResponse.INVALID_REQUEST)
                     .description("\'response_type\' contains \'id_token\'; but \'openid\' scope not found.");
         }
