@@ -23,15 +23,9 @@ public class OAuthScopeCacheKey extends CacheKey {
 
     private static final long serialVersionUID = -3480330645196653491L;
     private String scopeName;
-    private String tenantID;
 
-    public OAuthScopeCacheKey(String scopeName, String tenantID) {
+    public OAuthScopeCacheKey(String scopeName) {
         this.scopeName = scopeName;
-        this.tenantID = tenantID;
-    }
-
-    public String getTenantID() {
-        return tenantID;
     }
 
     public String getScopeName() {
@@ -43,12 +37,11 @@ public class OAuthScopeCacheKey extends CacheKey {
         if (!(o instanceof OAuthScopeCacheKey)) {
             return false;
         }
-        return ((this.scopeName.equals(((OAuthScopeCacheKey) o).getScopeName())) &&
-                (this.tenantID.equals(((OAuthScopeCacheKey) o).getTenantID())));
+        return (this.scopeName.equals(((OAuthScopeCacheKey) o).getScopeName()));
     }
 
     @Override
     public int hashCode() {
-        return (scopeName + tenantID).hashCode();
+        return (scopeName).hashCode();
     }
 }

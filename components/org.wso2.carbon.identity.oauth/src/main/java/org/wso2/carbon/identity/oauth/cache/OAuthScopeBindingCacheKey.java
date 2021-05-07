@@ -23,17 +23,10 @@ public class OAuthScopeBindingCacheKey extends CacheKey {
 
     private static final long serialVersionUID = -5673700756314713187L;
     private String bindingType;
-    private int tenantID;
 
-    public OAuthScopeBindingCacheKey(String bindingType, int tenantID) {
+    public OAuthScopeBindingCacheKey(String bindingType) {
 
         this.bindingType = bindingType;
-        this.tenantID = tenantID;
-    }
-
-    public int getTenantID() {
-
-        return tenantID;
     }
 
     public String getBindingType() {
@@ -47,13 +40,12 @@ public class OAuthScopeBindingCacheKey extends CacheKey {
         if (!(o instanceof OAuthScopeBindingCacheKey)) {
             return false;
         }
-        return ((this.bindingType.equals(((OAuthScopeBindingCacheKey) o).getBindingType())) &&
-                (this.tenantID == (((OAuthScopeBindingCacheKey) o).getTenantID())));
+        return (this.bindingType.equals(((OAuthScopeBindingCacheKey) o).getBindingType()));
     }
 
     @Override
     public int hashCode() {
 
-        return (bindingType + tenantID).hashCode();
+        return (bindingType).hashCode();
     }
 }
