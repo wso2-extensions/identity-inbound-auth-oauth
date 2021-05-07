@@ -185,6 +185,7 @@
             <class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.RequestObjectServiceTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.DefaultOIDCClaimsCallbackHandlerTest"/>
+            <class name="org.wso2.carbon.identity.openidconnect.OpenIDConnectSystemClaimImplTest"/>
         </classes>
     </test>
 </suite>
