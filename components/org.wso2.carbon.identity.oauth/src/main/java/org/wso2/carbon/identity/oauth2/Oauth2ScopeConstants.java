@@ -29,6 +29,8 @@ public class Oauth2ScopeConstants {
     public static final String SYSTEM_SCOPE = "SYSTEM";
     public static final String SCOPE_TYPE_OAUTH2 = "OAUTH2";
     public static final String SCOPE_TYPE_OIDC = "OIDC";
+    public static final String CONSOLE_SCOPE_PREFIX = "console:";
+    public static final String INTERNAL_SCOPE_PREFIX = "internal_";
 
     /**
      * Enums for error messages.
