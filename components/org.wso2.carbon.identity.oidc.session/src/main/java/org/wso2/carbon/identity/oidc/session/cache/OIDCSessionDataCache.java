@@ -18,13 +18,13 @@
 
 package org.wso2.carbon.identity.oidc.session.cache;
 
+import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationBaseCache;
 import org.wso2.carbon.identity.application.authentication.framework.store.SessionDataStore;
-import org.wso2.carbon.identity.application.common.cache.BaseCache;
 
 /**
  * This is the class used to cache request session.
  */
-public class OIDCSessionDataCache extends BaseCache<OIDCSessionDataCacheKey, OIDCSessionDataCacheEntry> {
+public class OIDCSessionDataCache extends AuthenticationBaseCache<OIDCSessionDataCacheKey, OIDCSessionDataCacheEntry> {
 
     private static final String SESSION_DATA_CACHE_NAME = "OIDCSessionDataCache";
 

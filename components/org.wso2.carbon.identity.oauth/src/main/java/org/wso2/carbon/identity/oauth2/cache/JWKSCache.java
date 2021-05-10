@@ -18,13 +18,13 @@
 
 package org.wso2.carbon.identity.oauth2.cache;
 
-import org.wso2.carbon.identity.application.common.cache.BaseCache;
+import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationBaseCache;
 import org.wso2.carbon.utils.CarbonUtils;
 
 /**
  * JWKS cache enables caching responses from JWK URIs
  */
-public class JWKSCache extends BaseCache<JWKSCacheKey, JWKSCacheEntry> {
+public class JWKSCache extends AuthenticationBaseCache<JWKSCacheKey, JWKSCacheEntry> {
 
     private static final String JWKS_CACHE_NAME = "JWKSCache";
 
