@@ -81,7 +81,7 @@ public class DCRMUtilsTest extends PowerMockTestCase {
         throw DCRMUtils.generateClientException(error, data);
     }
 
-    @DataProvider(name = "BuildRBackchannelLogoutUri")
+    @DataProvider(name = "BuildBackchannelLogoutUri")
     public Object[][] buildBackchannelLogoutUri() {
 
         return new Object[][]{
@@ -93,11 +93,10 @@ public class DCRMUtilsTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "BuildRBackchannelLogoutUri")
+    @Test(dataProvider = "BuildBackchannelLogoutUri")
     public void backChannelURIValidTest(String url, boolean response) {
 
         Assert.assertEquals(DCRMUtils.isBackchannelLogoutUriValid(url), response);
-
     }
 
     @DataProvider(name = "applicationName")
@@ -106,8 +105,7 @@ public class DCRMUtilsTest extends PowerMockTestCase {
         return new Object[][]{
                 {"dummyApplicationName", true},
                 {"", true},
-                {"dummy@ApllicationName", false},
-
+                {"dummy@ApllicationName", false}
         };
     }
 

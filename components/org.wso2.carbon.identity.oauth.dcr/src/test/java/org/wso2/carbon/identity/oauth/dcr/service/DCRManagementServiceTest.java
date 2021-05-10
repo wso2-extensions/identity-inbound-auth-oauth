@@ -45,6 +45,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 import java.nio.file.Paths;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.powermock.api.mockito.PowerMockito.doThrow;
@@ -107,8 +108,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
     }
 
     @Test
-    public void registerOAuthApplicationWithIAMException() throws
-            IdentityApplicationManagementException {
+    public void registerOAuthApplicationWithIAMException() throws IdentityApplicationManagementException {
 
         registerOAuthApplication();
         mockApplicationManagementService = mock(ApplicationManagementService.class);
@@ -129,8 +129,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
     }
 
     @Test
-    public void registerOAuthApplicationWithExistingSP() throws
-            IdentityApplicationManagementException {
+    public void registerOAuthApplicationWithExistingSP() throws IdentityApplicationManagementException {
 
         registerOAuthApplication();
         mockApplicationManagementService = mock(ApplicationManagementService.class);
@@ -178,8 +177,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
     }
 
     @Test
-    public void registerOAuthApplicationWithNewSPNoRedirectUri() throws
-            Exception {
+    public void registerOAuthApplicationWithNewSPNoRedirectUri() throws Exception {
 
         registerOAuthApplication();
         registrationRequestProfile.setRedirectUris(new ArrayList<>());
@@ -201,14 +199,9 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
     @DataProvider(name = "invalidRedirectUriProvider")
     public Object[][] getReDirecturi() {
 
-        List<String> redirectUri1 = new ArrayList<>();
-        redirectUri1.add("redirect#Uri1");
-        List<String> redirectUri2 = new ArrayList<>();
-        redirectUri2.add("redirect#Uri1");
-        redirectUri2.add("redirect#Uri2");
         return new Object[][]{
-                {redirectUri1},
-                {redirectUri2}
+                {new ArrayList<>(Arrays.asList("redirect#Uri1"))},
+                {new ArrayList<>(Arrays.asList("redirect#Uri1", "redirect#Uri2"))}
         };
     }
 
@@ -414,9 +407,8 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         startTenantFlow();
     }
 
-    @DataProvider(name = "outhApplicationDataProvider")
+    @DataProvider(name = "oauthApplicationDataProvider")
     public Object[][] getExceptionInstanceType() {
-
 
         ServiceProvider serviceProvider = new ServiceProvider();
         return new Object[][]{
@@ -425,7 +417,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "outhApplicationDataProvider")
+    @Test(dataProvider = "oauthApplicationDataProvider")
     public void oAuthApplicationAvailableTest(Object serviceProvider, boolean expected) throws Exception {
 
         startTenantFlow();

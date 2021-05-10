@@ -47,6 +47,9 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
+/**
+ * Unit test covering HttpUnregistrationResponseFactory
+ */
 @PrepareForTest({HttpUnregistrationResponseFactory.class, HttpIdentityResponse.HttpIdentityResponseBuilder.class})
 public class HttpUnRegistrationResponseFactoryTest extends PowerMockTestCase {
 
@@ -59,61 +62,47 @@ public class HttpUnRegistrationResponseFactoryTest extends PowerMockTestCase {
 
         mockUnregistrationResponse = mock(UnregistrationResponse.class);
         httpUnregistrationResponseFactory = new HttpUnregistrationResponseFactory();
-
     }
 
-    @DataProvider(name = "instanceProvider")
-    public Object[][] getInstanceType() {
+    @Test
+    public void testCanHandle() throws Exception {
 
-        mockUnregistrationResponse = mock(UnregistrationResponse.class);
         IdentityResponse identityResponse = mock(IdentityResponse.class);
-        return new Object[][]{
-                {mockUnregistrationResponse, true},
-                {identityResponse, false}
-        };
+        assertFalse(httpUnregistrationResponseFactory.canHandle(identityResponse));
     }
 
-    @Test(dataProvider = "instanceProvider")
-    public void testCanHandle(Object identityResponse, Boolean expected) throws Exception {
+    @Test
+    public void testCanHandleFailed() {
 
-        if (expected) {
-            assertTrue(httpUnregistrationResponseFactory.canHandle((UnregistrationResponse) identityResponse));
-        } else {
-            assertFalse(httpUnregistrationResponseFactory.canHandle((IdentityResponse) identityResponse));
-        }
+        assertTrue(httpUnregistrationResponseFactory.canHandle(mockUnregistrationResponse));
     }
 
     @DataProvider(name = "exceptionInstanceProvider")
     public Object[][] getExceptionInstanceType() {
 
-        FrameworkException exception1 = new UnRegistrationException("");
-        FrameworkException exception2 = new UnRegistrationException("", "dummyMessage");
-        FrameworkException exception3 = new UnRegistrationException("", new Throwable());
-        FrameworkException exception4 = new UnRegistrationException("", "dummyMessage", new Throwable());
-        FrameworkException exception5 = new FrameworkException("");
         return new Object[][]{
-                {exception1, true},
-                {exception2, true},
-                {exception3, true},
-                {exception4, true},
-                {exception5, false}
+                {new UnRegistrationException("")},
+                {new UnRegistrationException("", "dummyMessage")},
+                {new UnRegistrationException("", new Throwable())},
+                {new UnRegistrationException("", "dummyMessage", new Throwable())}
         };
     }
 
     @Test(dataProvider = "exceptionInstanceProvider")
-    public void testCanHandleException(Object exception, boolean expected) throws Exception {
+    public void testCanHandleException(Object exception) {
 
-        if (expected) {
-            Assert.assertTrue(httpUnregistrationResponseFactory.canHandle((UnRegistrationException) exception));
-        } else {
-            Assert.assertFalse(httpUnregistrationResponseFactory.canHandle((FrameworkException) exception));
-        }
+        Assert.assertTrue(httpUnregistrationResponseFactory.canHandle((UnRegistrationException) exception));
+    }
+
+    @Test
+    public void testCanHandleExceptionFailed() {
+
+        Assert.assertFalse(httpUnregistrationResponseFactory.canHandle(new FrameworkException("")));
     }
 
     @DataProvider(name = "instanceDataProvider")
     public Object[][] getInstanceData() {
-        mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);
-        mockUnregistrationResponse = mock(UnregistrationResponse.class);
+
         return new Object[][]{
                 {mockHttpIdentityResponseBuilder, mockUnregistrationResponse},
                 {null, mockUnregistrationResponse}
@@ -121,8 +110,7 @@ public class HttpUnRegistrationResponseFactoryTest extends PowerMockTestCase {
     }
 
     @Test(dataProvider = "instanceDataProvider")
-    public void testCreate(Object builder,
-                           Object unregistrationResponse) throws Exception {
+    public void testCreate(Object builder, Object unregistrationResponse) throws Exception {
 
         if (builder == null) {
             mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);

@@ -52,6 +52,6 @@
         <class name="org.wso2.carbon.identity.oauth.dcr.util.HandlerManagerTest"/>
         <class name="org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandlerTest"/>
         <class name="org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandlerTest"/>
-       </classes>
+    </classes>
     </test>
 </suite>

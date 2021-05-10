@@ -303,14 +303,14 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
     public Object[][] getInvalidApplicationData() {
 
         return new Object[][]{
-                {null, "false", "Invalid application owner."},
-                {"", "userStoreException", "Invalid application owner, null"},
-                {"", "false", "Invalid application owner."}
+                {null, false, "Invalid application owner."},
+                {"", true, "Invalid application owner, null"},
+                {"", false, "Invalid application owner."}
         };
     }
 
     @Test(dataProvider = "invalidApplicationDataProvider")
-    public void testCreateWithInvalidApplicationOwner(Object userName, Object isExistingUser,
+    public void testCreateWithInvalidApplicationOwner(Object userName, Boolean isThrowExceptiion,
                                                       String expected) throws Exception {
 
         JSONObject jsonObject = getTestCreateData();
@@ -327,7 +327,7 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
 
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
-            if (isExistingUser == "userStoreException") {
+            if (isThrowExceptiion) {
                 when(mockedUserStoreManager.isExistingUser(anyString())).thenThrow(UserStoreException.class);
             } else {
                 when(mockedUserStoreManager.isExistingUser("dummyParam")).thenReturn(false);
@@ -342,6 +342,7 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
     }
 
     private JSONObject getTestCreateData() throws Exception {
+
         String grantType = "implicit";
         JSONArray redirectUrls = new JSONArray();
         redirectUrls.add("redirectUrl");
@@ -351,16 +352,13 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
         jsonObject.put(RegistrationRequest.RegisterRequestConstant.REDIRECT_URIS, redirectUrls);
 
         RegistrationRequestProfile registrationRequestProfile = new RegistrationRequestProfile();
-
         whenNew(RegistrationRequestProfile.class).withNoArguments().thenReturn(registrationRequestProfile);
-
         suppress(methodsDeclaredIn(HttpIdentityRequestFactory.class));
         return jsonObject;
     }
 
     @Test
     public void testCreateWithServerRequestReadingError() throws Exception {
-
 
         JSONObject jsonObject = getTestCreateData();
         when(mockHttpRequest.getReader()).thenThrow(IOException.class);
@@ -373,7 +371,7 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
         } catch (IdentityException ex) {
         assertEquals(ex.getMessage(), "Error occurred while reading servlet request body, ");
         return;
-    } finally {
+        } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
     }

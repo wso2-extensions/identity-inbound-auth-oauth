@@ -94,26 +94,23 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
     @DataProvider(name = "exceptionInstanceProvider")
     public Object[][] getExceptionInstanceType() {
 
-        FrameworkException exception1 = new RegistrationException("");
-        FrameworkException exception2 = new RegistrationException("", "dummyMessage");
-        FrameworkException exception3 = new RegistrationException("", new Throwable());
-        FrameworkException exception4 = new FrameworkException("");
         return new Object[][]{
-                {exception1, true},
-                {exception2, true},
-                {exception3, true},
-                {exception4, false}
+                {new RegistrationException("")},
+                {new RegistrationException("", "dummyMessage")},
+                {new RegistrationException("", new Throwable())}
         };
     }
 
     @Test(dataProvider = "exceptionInstanceProvider")
-    public void testCanHandleException(Object exception, boolean expected) throws Exception {
+    public void testCanHandleException(Object exception) throws Exception {
 
-        if (expected) {
-            assertTrue(httpRegistrationResponseFactory.canHandle((RegistrationException) exception));
-        } else {
-            assertFalse(httpRegistrationResponseFactory.canHandle((FrameworkException) exception));
-        }
+        assertTrue(httpRegistrationResponseFactory.canHandle((RegistrationException) exception));
+    }
+
+    @Test
+    public void testCanHandleExceptionFailed() {
+
+        assertFalse(httpRegistrationResponseFactory.canHandle(new FrameworkException("")));
     }
 
     @Test
@@ -148,6 +145,7 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
 
     @DataProvider(name = "instanceDataProvider")
     public Object[][] getInstanceData() {
+
         mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);
         mockRegistrationResponse = mock(RegistrationResponse.class);
         return new Object[][]{
@@ -212,6 +210,7 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
 
     @DataProvider(name = "exceptionDataProvider")
     public Object[][] getExceptionData() {
+
         return new Object[][]{
                 {ErrorCodes.FORBIDDEN.toString(), HttpServletResponse.SC_FORBIDDEN},
                 {ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), HttpServletResponse.SC_BAD_REQUEST},

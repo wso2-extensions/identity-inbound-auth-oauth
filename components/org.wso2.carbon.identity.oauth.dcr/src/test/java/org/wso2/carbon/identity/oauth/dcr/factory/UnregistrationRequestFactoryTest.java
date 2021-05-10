@@ -88,6 +88,7 @@ public class UnregistrationRequestFactoryTest extends PowerMockTestCase {
 
     @DataProvider(name = "instanceDataProvider")
     public Object[][] getInstanceData() {
+
         unregisterRequestBuilder = mock(UnregistrationRequest.DCRUnregisterRequestBuilder.class);
         mockHttpResponse = mock(HttpServletResponse.class);
         mockHttpRequest = mock(HttpServletRequest.class);
