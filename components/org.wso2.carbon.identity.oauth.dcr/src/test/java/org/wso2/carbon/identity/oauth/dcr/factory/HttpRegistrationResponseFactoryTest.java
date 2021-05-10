@@ -157,8 +157,7 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
     }
 
     @Test(dataProvider = "instanceDataProvider")
-    public void testCreate(Object builder,
-                           Object registrationResponse) throws Exception {
+    public void testCreate(Object builder, Object registrationResponse) throws Exception {
 
         if (builder == null) {
             mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);

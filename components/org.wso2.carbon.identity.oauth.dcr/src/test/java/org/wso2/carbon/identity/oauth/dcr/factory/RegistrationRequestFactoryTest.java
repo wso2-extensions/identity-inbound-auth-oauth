@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.dcr.factory;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -38,8 +39,12 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
+import org.wso2.carbon.user.api.UserRealm;
+import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.UserStoreManager;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.nio.file.Paths;
 
 import javax.servlet.http.HttpServletRequest;
@@ -86,6 +91,12 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
 
     @Mock
     private JSONParser jsonParser;
+
+    @Mock
+    private UserRealm mockedUserRealm;
+
+    @Mock
+    private UserStoreManager mockedUserStoreManager;
 
     @BeforeMethod
     private void setUp() {
@@ -219,7 +230,6 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
 
             } else {
                 registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
-
             }
 
             if (clientName != null) {
@@ -284,6 +294,104 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
             startTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
             registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    @DataProvider(name = "invalidApplicationDataProvider")
+    public Object[][] getInvalidApplicationData() {
+
+        return new Object[][]{
+                {null, "false", "Invalid application owner."},
+                {"", "userStoreException", "Invalid application owner, null"},
+                {"", "false", "Invalid application owner."}
+        };
+    }
+
+    @Test(dataProvider = "invalidApplicationDataProvider")
+    public void testCreateWithInvalidApplicationOwner(Object userName, Object isExistingUser,
+                                                      String expected) throws Exception {
+
+        JSONObject jsonObject = getTestCreateData();
+        if (userName == "") {
+            jsonObject.put(RegistrationRequest.RegisterRequestConstant.EXT_PARAM_OWNER, "dummyParam");
+        }
+        when(mockHttpRequest.getReader()).thenReturn(mockReader);
+        whenNew(JSONParser.class).withNoArguments().thenReturn(jsonParser);
+        when(jsonParser.parse(mockReader)).thenReturn(jsonObject);
+
+        try {
+            startTenantFlow();
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername((String) userName);
+
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
+            when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+            if (isExistingUser == "userStoreException") {
+                when(mockedUserStoreManager.isExistingUser(anyString())).thenThrow(UserStoreException.class);
+            } else {
+                when(mockedUserStoreManager.isExistingUser("dummyParam")).thenReturn(false);
+            }
+            registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
+        } catch (IdentityException ex) {
+            assertEquals(ex.getMessage(), expected);
+            return;
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    private JSONObject getTestCreateData() throws Exception {
+        String grantType = "implicit";
+        JSONArray redirectUrls = new JSONArray();
+        redirectUrls.add("redirectUrl");
+        JSONObject jsonObject = new JSONObject();
+
+        jsonObject.put(RegistrationRequest.RegisterRequestConstant.GRANT_TYPES, grantType);
+        jsonObject.put(RegistrationRequest.RegisterRequestConstant.REDIRECT_URIS, redirectUrls);
+
+        RegistrationRequestProfile registrationRequestProfile = new RegistrationRequestProfile();
+
+        whenNew(RegistrationRequestProfile.class).withNoArguments().thenReturn(registrationRequestProfile);
+
+        suppress(methodsDeclaredIn(HttpIdentityRequestFactory.class));
+        return jsonObject;
+    }
+
+    @Test
+    public void testCreateWithServerRequestReadingError() throws Exception {
+
+
+        JSONObject jsonObject = getTestCreateData();
+        when(mockHttpRequest.getReader()).thenThrow(IOException.class);
+        whenNew(JSONParser.class).withNoArguments().thenReturn(jsonParser);
+        when(jsonParser.parse(mockReader)).thenReturn(jsonObject);
+        try {
+            startTenantFlow();
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
+            registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
+        } catch (IdentityException ex) {
+        assertEquals(ex.getMessage(), "Error occurred while reading servlet request body, ");
+        return;
+    } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    @Test
+    public void testCreateWithPassingError() throws Exception {
+
+        getTestCreateData();
+        when(mockHttpRequest.getReader()).thenReturn(mockReader);
+        whenNew(JSONParser.class).withNoArguments().thenReturn(jsonParser);
+        when(jsonParser.parse(mockReader)).thenThrow(ParseException.class);
+        try {
+            startTenantFlow();
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
+            registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
+        } catch (IdentityException ex) {
+            assertEquals(ex.getMessage(), "Error occurred while parsing the json object, ");
+            return;
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
