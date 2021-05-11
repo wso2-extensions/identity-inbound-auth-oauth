@@ -19,8 +19,12 @@
 package org.wso2.carbon.identity.oauth.cache;
 
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationBaseCache;
+import org.wso2.carbon.identity.core.cache.AbstractCacheListener;
 import org.wso2.carbon.identity.oauth.listener.OAuthCacheRemoveListener;
 import org.wso2.carbon.utils.CarbonUtils;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * OAuth cache.
@@ -28,12 +32,15 @@ import org.wso2.carbon.utils.CarbonUtils;
 public class OAuthCache extends AuthenticationBaseCache<OAuthCacheKey, CacheEntry> {
 
     private static final String OAUTH_CACHE_NAME = "OAuthCache";
-
+    private static final List<AbstractCacheListener<OAuthCacheKey, CacheEntry>> cacheListeners = new ArrayList<>();
     private static volatile OAuthCache instance;
 
+    static {
+        cacheListeners.add(new OAuthCacheRemoveListener());
+    }
+
     private OAuthCache() {
-        super(OAUTH_CACHE_NAME);
-//        super.addListener(new OAuthCacheRemoveListener());
+        super(OAUTH_CACHE_NAME, cacheListeners);
     }
 
     public static OAuthCache getInstance() {
