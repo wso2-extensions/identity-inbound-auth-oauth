@@ -144,7 +144,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getMessage(), "Invalid client_id");
             return;
         }
-        fail("Expected exception IdentityException not thrown by getApplication method");
+        fail("Expected IdentityException was not thrown by getApplication method");
     }
 
     @Test(dataProvider = "DTOProvider")
@@ -167,7 +167,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by getApplication method");
+        fail("Expected IdentityException was not thrown by getApplication method");
     }
 
     @Test
@@ -184,7 +184,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION_BY_ID.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by getApplication method");
+        fail("Expected IdentityException was not thrown by getApplication method");
     }
 
     @Test
@@ -201,7 +201,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by getApplication method");
+        fail("Expected IdentityException was not thrown by getApplication method");
     }
 
     @Test
@@ -219,7 +219,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by getApplication method");
+        fail("Expected IdentityException was not thrown by getApplication method");
     }
 
     @Test
@@ -239,7 +239,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION_BY_ID.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by getApplication method");
+        fail("Expected IdentityException was not thrown by getApplication method");
     }
 
     @Test
@@ -277,8 +277,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
                     TENANT_DOMAIN_MISMATCH.getMessage(), dummyConsumerKey));
             return;
         }
-        fail("Expected exception IdentityException not thrown by getApplication method");
-
+        fail("Expected IdentityException was not thrown by getApplication method");
     }
 
     @Test
@@ -293,8 +292,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
                     FAILED_TO_VALIDATE_TENANT_DOMAIN.getMessage(), dummyConsumerKey));
             return;
         }
-        fail("Expected exception IdentityException not thrown by getApplication method");
-
+        fail("Expected DCRMException was not thrown by getApplication method");
     }
 
     @Test
@@ -332,7 +330,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.BAD_REQUEST_INSUFFICIENT_DATA.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by getApplication method");
+        fail("Expected IdentityException was not thrown by getApplicationByName method");
     }
 
     @Test
@@ -345,7 +343,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_NAME.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by getApplication method");
+        fail("Expected IdentityException was not thrown by getApplicationByName method");
     }
 
     @Test
@@ -364,7 +362,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by getApplication method");
+        fail("Expected IdentityException was not thrown by getApplicationByName method");
     }
 
     @Test
@@ -384,7 +382,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by getApplication method");
+        fail("Expected IdentityException was not thrown by getApplicationByName method");
     }
 
     @Test
@@ -407,7 +405,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.CONFLICT_EXISTING_APPLICATION.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
     @Test
@@ -434,7 +432,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_GET_SP.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
     @Test
@@ -456,7 +454,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_REGISTER_SP.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
     @Test
@@ -480,7 +478,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.CONFLICT_EXISTING_CLIENT_ID.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
     @DataProvider(name = "RedirectAndGrantTypeProvider")
@@ -532,7 +530,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_INPUT.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
     @DataProvider(name = "redirectUriProvider")
@@ -603,7 +601,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
         assertEquals(application.getClientName(), dummyClientName);
         assertEquals(application.getGrantTypes(), dummyGrantTypes);
         assertEquals(application.toString(), toString);
-
     }
 
     @Test
@@ -635,8 +632,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_REGISTER_APPLICATION.toString());
             return;
         }
-        Assert.fail("Expected exception IdentityException not thrown by registerApplication method");
-
+        Assert.fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
     @Test
@@ -656,7 +652,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
     @Test(dataProvider = "redirectUriProvider")
@@ -701,7 +697,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_REGISTER_APPLICATION.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
     @Test(dataProvider = "redirectUriProvider")
@@ -746,7 +742,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_DELETE_SP.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
     @Test(dataProvider = "redirectUriProvider")
@@ -761,7 +757,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_SP.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
     @Test(dataProvider = "redirectUriProvider")
@@ -779,7 +775,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
                     DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_TEMPLATE_NAME.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
     @Test(dataProvider = "redirectUriProvider")
@@ -812,7 +808,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), ErrorCodes.BAD_REQUEST.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
     @Test
@@ -837,7 +833,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
                     DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION_BY_ID.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
     @Test(dataProvider = "redirectUriProvider")
@@ -854,7 +850,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
                     oAuthConsumerApp.getOauthConsumerKey());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
     private OAuthConsumerAppDTO registerApplicationTestWithFailedToUpdateSP() throws Exception {
@@ -909,7 +905,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
         assertEquals(application.getClientId(), dummyConsumerKey);
         assertEquals(application.getClientName(), dummyClientName);
         assertEquals(application.getClientSecret(), dummyConsumerSecret);
-
     }
 
     @Test
@@ -925,7 +920,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_GET_SP.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException not thrown by updateApplication method");
     }
 
 
@@ -941,7 +936,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by updateApplication method");
     }
 
     @Test
@@ -965,7 +960,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.CONFLICT_EXISTING_APPLICATION.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by updateApplication method");
     }
 
     @Test
@@ -980,7 +975,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_APPLICATION.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by getApplication method");
+        fail("Expected IdentityException was not thrown by updateApplication method");
     }
 
     private OAuthConsumerAppDTO updateApplication()

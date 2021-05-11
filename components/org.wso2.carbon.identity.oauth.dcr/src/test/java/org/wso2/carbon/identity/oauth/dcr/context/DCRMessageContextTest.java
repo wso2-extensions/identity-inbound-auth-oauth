@@ -24,12 +24,17 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.testng.Assert.assertNotNull;
 
+/**
+ * Unit test covering DCRMessageContext
+ */
 public class DCRMessageContextTest {
 
     private DCRMessageContext dcrMessageContext;
     private IdentityRequest mockIdentityRequet;
+
     @Test
     public void testGetIdentityRequest() throws Exception {
+
         mockIdentityRequet = mock(IdentityRequest.class);
         dcrMessageContext = new DCRMessageContext(mockIdentityRequet);
         assertNotNull(dcrMessageContext.getIdentityRequest());

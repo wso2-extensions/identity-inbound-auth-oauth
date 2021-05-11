@@ -104,7 +104,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
             assertEquals(ex.getMessage(), "Couldn't create Service Provider Application " + applicationName);
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerOAuthApplication");
+        fail("Expected IdentityException was not thrown by registerOAuthApplication method");
     }
 
     @Test
@@ -125,7 +125,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
             assertEquals(ex.getMessage(), "Error occurred while reading service provider, " + applicationName);
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerOAuthApplication");
+        fail("Expected IdentityException was not thrown by registerOAuthApplication method");
     }
 
     @Test
@@ -149,7 +149,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
                     " already registered");
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerOAuthApplication");
+        fail("Expected IdentityException was not thrown by registerOAuthApplication method");
     }
 
     @Test
@@ -173,7 +173,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
                     " the regex: " + DCRMUtils.getSPValidatorRegex());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerOAuthApplication");
+        fail("Expected IdentityException was not thrown by registerOAuthApplication method");
     }
 
     @Test
@@ -193,11 +193,11 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
             assertEquals(ex.getMessage(), "RedirectUris property must have at least one URI value.");
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerOAuthApplication");
+        fail("Expected IdentityException was not thrown by registerOAuthApplication method");
     }
 
     @DataProvider(name = "invalidRedirectUriProvider")
-    public Object[][] getReDirecturi() {
+    public Object[][] getRedirecturi() {
 
         return new Object[][]{
                 {new ArrayList<>(Arrays.asList("redirect#Uri1"))},
@@ -226,7 +226,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
             assertEquals(ex.getMessage(), "Redirect URI: " + redirectUri.get(0) + ", is invalid");
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerOAuthApplication");
+        fail("Expected IdentityException was not thrown by registerOAuthApplication");
     }
 
     @DataProvider(name = "serviceProviderData")
@@ -321,7 +321,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
             assertEquals(ex.getErrorCode(), ErrorCodes.META_DATA_VALIDATION_FAILED.toString());
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by registerOAuthApplication method");
 
     }
 
@@ -339,7 +339,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
                     + applicationName + "'");
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by unregisterOAuthApplication method");
     }
 
     @Test
@@ -353,7 +353,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
             assertEquals(ex.getMessage(), "Username, Application Name and Consumer Key cannot be null or empty");
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by unregisterOAuthApplication method");
     }
 
     @Test
@@ -368,7 +368,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
             assertEquals(ex.getMessage(), "Couldn't retrieve Service Provider Application " + applicationName);
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by unregisterOAuthApplication method");
     }
 
     private void unRegister() throws Exception {
@@ -449,7 +449,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
             assertEquals(ex.getMessage(), "Error occurred while retrieving information of OAuthApp " + applicationName);
             return;
         }
-        fail("Expected exception IdentityException not thrown by registerApplication method");
+        fail("Expected IdentityException was not thrown by isOAuthApplicationAvailable method");
     }
 
     @Test

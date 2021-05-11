@@ -310,7 +310,7 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
     }
 
     @Test(dataProvider = "invalidApplicationDataProvider")
-    public void testCreateWithInvalidApplicationOwner(Object userName, Boolean isThrowExceptiion,
+    public void testCreateWithInvalidApplicationOwner(String userName, Boolean isThrowException,
                                                       String expected) throws Exception {
 
         JSONObject jsonObject = getTestCreateData();
@@ -323,11 +323,11 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
 
         try {
             startTenantFlow();
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername((String) userName);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
 
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
-            if (isThrowExceptiion) {
+            if (isThrowException) {
                 when(mockedUserStoreManager.isExistingUser(anyString())).thenThrow(UserStoreException.class);
             } else {
                 when(mockedUserStoreManager.isExistingUser("dummyParam")).thenReturn(false);
@@ -369,8 +369,8 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
             registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
         } catch (IdentityException ex) {
-        assertEquals(ex.getMessage(), "Error occurred while reading servlet request body, ");
-        return;
+            assertEquals(ex.getMessage(), "Error occurred while reading servlet request body, ");
+            return;
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
