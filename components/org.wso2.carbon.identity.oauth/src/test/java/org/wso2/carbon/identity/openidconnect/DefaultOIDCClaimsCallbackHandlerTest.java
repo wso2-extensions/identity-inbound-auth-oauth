@@ -54,7 +54,6 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
-import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -127,7 +126,6 @@ import static org.wso2.carbon.user.core.UserCoreConstants.DOMAIN_SEPARATOR;
         JDBCPersistenceManager.class,
         OAuthServerConfiguration.class
 })
-@WithRealmService
 public class DefaultOIDCClaimsCallbackHandlerTest {
 
     @Spy
@@ -717,6 +715,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(TENANT_DOMAIN)).thenReturn(TENANT_ID);
+        when(IdentityTenantUtil.getTenantDomain(TENANT_ID)).thenReturn(TENANT_DOMAIN);
         when(IdentityTenantUtil.getRealm(TENANT_DOMAIN, username)).thenReturn(userRealm);
     }
 

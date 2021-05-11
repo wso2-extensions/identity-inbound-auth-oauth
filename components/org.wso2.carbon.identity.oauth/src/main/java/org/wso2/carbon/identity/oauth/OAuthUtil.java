@@ -404,7 +404,7 @@ public final class OAuthUtil {
         authenticatedUser.setUserStoreDomain(UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration()));
         ClaimCacheKey cacheKey = new ClaimCacheKey(authenticatedUser);
         if (cacheKey != null) {
-            claimCache.clearCacheEntry(cacheKey);
+            claimCache.clearCacheEntry(cacheKey, userStoreManager.getTenantId());
         }
         return true;
     }

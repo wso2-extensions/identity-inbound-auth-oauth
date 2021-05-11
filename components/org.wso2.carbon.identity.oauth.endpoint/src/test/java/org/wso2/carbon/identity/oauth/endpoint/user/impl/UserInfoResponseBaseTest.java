@@ -23,6 +23,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth.user.UserInfoClaimRetriever;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -218,6 +219,8 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
 
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getClientIdForAccessToken(anyString())).thenReturn("mock_client_id");
+        when(OAuth2Util.getTenantDomainOfOauthApp(any(OAuthAppDO.class))).thenReturn(TENANT_DOT_COM);
+        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(TENANT_DOT_COM);
         ArrayList<String> userAttributesFromCache = new ArrayList<>();
         userAttributesFromCache.add("cachedClaim1");
         userAttributesFromCache.add("cachedClaim2");

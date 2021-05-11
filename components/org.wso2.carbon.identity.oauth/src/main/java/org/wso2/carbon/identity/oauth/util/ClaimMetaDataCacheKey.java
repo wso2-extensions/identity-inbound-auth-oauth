@@ -17,7 +17,7 @@
 package org.wso2.carbon.identity.oauth.util;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.oauth.cache.CacheKey;
+import org.wso2.carbon.identity.core.cache.CacheKey;
 
 /**
  * Claim Meta Data Cache Key.
