@@ -20,7 +20,6 @@
 
 package org.wso2.carbon.identity.openidconnect.dao;
 
-import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.Assert;
@@ -29,8 +28,6 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
-import org.wso2.carbon.identity.common.testng.WithRealmService;
-import org.wso2.carbon.identity.common.testng.WithRegistry;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAOImpl;
@@ -41,16 +38,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * This class contains unit tests for RequestObjectDAOImplTest..
  */
 @WithCarbonHome
-@WithRegistry
-@WithRealmService
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
         files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})
 public class RequestObjectDAOImplTest extends PowerMockTestCase {
@@ -66,16 +59,12 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
     private RequestObjectDAO requestObjectDAO;
     private List<List<RequestedClaim>> requestedEssentialClaims;
 
-    protected Connection connection;
-    protected BasicDataSource dataSource;
-    private static final Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
-
     @BeforeClass
     public void setUp() throws Exception {
 
         requestObjectDAO = new RequestObjectDAOImpl();
         requestedEssentialClaims = new ArrayList<>();
-        List lstRequestedClams = new ArrayList<>();
+        List lstRequestedClaims = new ArrayList<>();
         List values = new ArrayList<>();
 
         RequestedClaim requestedClaim = new RequestedClaim();
@@ -87,8 +76,8 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
         values.add("val1");
         values.add("val2");
         requestedClaim.setValues(values);
-        lstRequestedClams.add(requestedClaim);
-        requestedEssentialClaims.add(lstRequestedClams);
+        lstRequestedClaims.add(requestedClaim);
+        requestedEssentialClaims.add(lstRequestedClaims);
     }
 
     @Test
@@ -96,27 +85,29 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
 
         requestObjectDAO.insertRequestObjectData(consumerKey, sessionDataKey,
                     requestedEssentialClaims);
-        String[] dataMap = getData(sessionDataKey);
-        Assert.assertEquals(dataMap[0], consumerId);
+        Result result = getData(sessionDataKey);
+        Assert.assertEquals(result.consumerId, consumerId);
         Assert.assertEquals(requestObjectDAO.getRequestedClaimsbySessionDataKey(sessionDataKey,
                     true).get(0).getName(), "email");
     }
 
     @Test (dependsOnMethods = {"testInsertRequestObject"})
     public void testUpdateRequestObjectReferenceByToken() throws Exception {
+
         requestObjectDAO.insertRequestObjectData(consumerKey, sessionDataKey,
                 requestedEssentialClaims);
         requestObjectDAO.updateRequestObjectReferencebyTokenId(sessionDataKey, tokenId);
-        Assert.assertEquals(getData(sessionDataKey)[2], tokenId);
+        Assert.assertEquals(getData(sessionDataKey).tokenId, tokenId);
     }
 
     @Test (dependsOnMethods = {"testUpdateRequestObjectReferenceByToken"})
     public void testRefreshRequestObjectReference() throws Exception {
+
         requestObjectDAO.insertRequestObjectData(consumerKey, sessionDataKey,
                 requestedEssentialClaims);
         requestObjectDAO.updateRequestObjectReferencebyTokenId(sessionDataKey, tokenId);
         requestObjectDAO.refreshRequestObjectReference(tokenId, newToken);
-        Assert.assertEquals(getData(sessionDataKey)[2], newToken);
+        Assert.assertEquals(getData(sessionDataKey).tokenId, newToken);
     }
 
     @Test (dependsOnMethods = {"testRefreshRequestObjectReference"})
@@ -138,11 +129,12 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
 
     @Test (dependsOnMethods = {"testDeleteRequestObjectReferenceByTokenId"})
     public void testUpdateRequestObjectReferenceByCodeId() throws Exception {
+
         requestObjectDAO.insertRequestObjectData(consumerKey, sessionDataKey,
                 requestedEssentialClaims);
         insertCodeId(codeId, 1);
         requestObjectDAO.updateRequestObjectReferencebyCodeId(sessionDataKey, codeId);
-        Assert.assertEquals(getData(sessionDataKey)[1], codeId);
+        Assert.assertEquals(getData(sessionDataKey).codeId, codeId);
     }
 
     @Test (dependsOnMethods = {"testUpdateRequestObjectReferenceByCodeId"})
@@ -162,7 +154,8 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
         }
     }
 
-    @Test void testUpdateRequestObjectReferenceCodeToToken() throws Exception {
+    @Test
+    public void testUpdateRequestObjectReferenceCodeToToken() throws Exception {
 
         requestObjectDAO.insertRequestObjectData(consumerKey, sessionDataKey,
                 requestedEssentialClaims);
@@ -183,7 +176,8 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
         }
     }
 
-    protected void insertCodeId(String codeId, int consumerKeyId) throws Exception {
+    private void insertCodeId(String codeId, int consumerKeyId) throws Exception {
+
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
             String sql = "INSERT INTO IDN_OAUTH2_AUTHORIZATION_CODE (CODE_ID, CONSUMER_KEY_ID) VALUES (?,?)";
             PreparedStatement ps = connection.prepareStatement(sql);
@@ -197,25 +191,39 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
         }
     }
 
-    protected String[] getData(String sessionDataKey) throws Exception {
+    private Result getData(String sessionDataKey) throws Exception {
 
-        String[] dataMap = new String[3];
-        ResultSet resultSet = null;
+        Result result = null;
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
             String sql = "SELECT CONSUMER_KEY_ID, CODE_ID, TOKEN_ID FROM IDN_OIDC_REQ_OBJECT_REFERENCE WHERE " +
-                    "SESSION_DATA_KEY=?";
+                    "SESSION_DATA_KEY=? LIMIT 1";
 
             PreparedStatement prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, sessionDataKey);
-            resultSet = prepStmt.executeQuery();
+            ResultSet resultSet = prepStmt.executeQuery();
 
             while (resultSet.next()) {
-                dataMap = new String[]{resultSet.getString(1), resultSet.getString(2), resultSet.getString(3)};
+                result = new Result(resultSet.getString(1), resultSet.getString(2), resultSet.getString(3));
             }
+            return result;
         } catch (SQLException e) {
             log.error("Error when retrieving inserted request object.", e);
             throw new IdentityOAuth2Exception("Error when retrieving request object", e);
         }
-        return dataMap;
+    }
+
+    /**
+     * Store the output from database.
+     */
+   private class Result {
+        private String consumerId;
+        private String codeId;
+        private String tokenId;
+
+        Result(String consumerId, String codeId, String tokenId) {
+            this.consumerId = consumerId;
+            this.codeId = codeId;
+            this.tokenId = tokenId;
+        }
     }
 }
