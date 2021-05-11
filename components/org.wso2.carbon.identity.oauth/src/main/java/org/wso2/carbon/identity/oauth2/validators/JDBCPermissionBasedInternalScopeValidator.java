@@ -58,6 +58,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 
 /**
@@ -72,7 +73,6 @@ public class JDBCPermissionBasedInternalScopeValidator {
     private static final String PERMISSION_BINDING_TYPE = "PERMISSION";
     private static final String ROOT = "/";
     private static final String ADMIN_PERMISSION_ROOT = "/permission/admin";
-    private static final String INTERNAL_SCOPE_PREFIX = "internal_";
     private static final String EVERYONE_PERMISSION = "everyone_permission";
     private static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
 

@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
+import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import org.wso2.carbon.utils.CarbonUtils;
 
@@ -64,6 +65,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 
@@ -289,9 +292,17 @@ public class AccessTokenIssuer {
             tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
         }
 
-        //Execute Internal SCOPE Validation.
+        // Execute Internal SCOPE Validation.
         JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
         String[] authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
+        // Execute internal console scopes validation.
+        if (IdentityUtil.isSystemRolesEnabled()) {
+            RoleBasedInternalScopeValidator roleBasedInternalScopeValidator = new RoleBasedInternalScopeValidator();
+            String[] roleBasedInternalConsoleScopes = roleBasedInternalScopeValidator.validateScope(tokReqMsgCtx);
+            authorizedInternalScopes = (String[]) ArrayUtils
+                    .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
+        }
+
         // Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
         // Those scopes should not send to the other scopes validators.
         // Thus remove the scopes from the tokReqMsgCtx. Will be added to the response after executing
@@ -364,6 +375,11 @@ public class AccessTokenIssuer {
                     tokReqMsgCtx.getAuthorizedUser() + " and scopes: " + tokenRespDTO.getAuthorizedScopes());
         }
 
+        if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
+            // Should add user attributes to the cache before building the ID token.
+            addUserAttributesAgainstAccessToken(tokenReqDTO, tokenRespDTO);
+        }
+
         if (tokReqMsgCtx.getScope() != null && OAuth2Util.isOIDCAuthzRequest(tokReqMsgCtx.getScope())) {
             if (log.isDebugEnabled()) {
                 log.debug("Issuing ID token for client: " + tokenReqDTO.getClientId());
@@ -380,7 +396,6 @@ public class AccessTokenIssuer {
         }
 
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
-            addUserAttributesAgainstAccessToken(tokenReqDTO, tokenRespDTO);
             // Cache entry against the authorization code has no value beyond the token request.
             clearCacheEntryAgainstAuthorizationCode(getAuthorizationCode(tokenReqDTO));
         }
@@ -410,7 +425,8 @@ public class AccessTokenIssuer {
         }
         List<String> scopes = new ArrayList<>();
         for (String scope : tokReqMsgCtx.getScope()) {
-            if (!scope.startsWith("internal_") && !scope.equalsIgnoreCase(SYSTEM_SCOPE)) {
+            if (!scope.startsWith(INTERNAL_SCOPE_PREFIX) && !scope.startsWith(CONSOLE_SCOPE_PREFIX) && !scope
+                    .equalsIgnoreCase(SYSTEM_SCOPE)) {
                 scopes.add(scope);
             }
         }
