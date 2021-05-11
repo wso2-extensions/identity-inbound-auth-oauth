@@ -35,6 +35,9 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUEST_URI;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.SCOPE;
 
 /**
@@ -100,32 +103,32 @@ public class CodeTokenResponseValidatorTest {
 
         Map<String, String> validUriRequest = new HashMap<>();
         validUriRequest.put(SCOPE, OAuthConstants.Scope.OPENID);
-        validUriRequest.put("response_type", getResponseTypeValue());
-        validUriRequest.put("request_uri", "company:domain:urn");
+        validUriRequest.put(RESPONSE_TYPE, getResponseTypeValue());
+        validUriRequest.put(REQUEST_URI, "company:domain:urn");
         validUriRequest.put(CLIENT_ID, CLIENT_ID);
 
         Map<String, String> requestUriLessValidRequest = new HashMap<>();
         requestUriLessValidRequest.put(SCOPE, OAuthConstants.Scope.OPENID);
-        requestUriLessValidRequest.put("response_type", getResponseTypeValue());
-        requestUriLessValidRequest.put("redirect_uri", "www.oidc.test.com");
+        requestUriLessValidRequest.put(RESPONSE_TYPE, getResponseTypeValue());
+        requestUriLessValidRequest.put(REDIRECT_URI, "www.oidc.test.com");
         requestUriLessValidRequest.put(CLIENT_ID, CLIENT_ID);
 
         Map<String, String> clientIDLessRequest = new HashMap<>();
         clientIDLessRequest.put(SCOPE, OAuthConstants.Scope.OPENID);
-        clientIDLessRequest.put("response_type", getResponseTypeValue());
-        clientIDLessRequest.put("request_uri", "company:domain:urn");
+        clientIDLessRequest.put(RESPONSE_TYPE, getResponseTypeValue());
+        clientIDLessRequest.put(REQUEST_URI, "company:domain:urn");
 
         Map<String, String> requestUriLessRequest = new HashMap<>();
         requestUriLessRequest.put(SCOPE, OAuthConstants.Scope.OPENID);
-        requestUriLessRequest.put("response_type", getResponseTypeValue());
+        requestUriLessRequest.put(RESPONSE_TYPE, getResponseTypeValue());
         requestUriLessRequest.put(CLIENT_ID, CLIENT_ID);
 
         Map<String, String> redirectUriWithRedirectUriRequest = new HashMap<>();
         redirectUriWithRedirectUriRequest.put(SCOPE, OAuthConstants.Scope.OPENID);
-        redirectUriWithRedirectUriRequest.put("response_type", getResponseTypeValue());
-        redirectUriWithRedirectUriRequest.put("request_uri", "company:domain:urn");
+        redirectUriWithRedirectUriRequest.put(RESPONSE_TYPE, getResponseTypeValue());
+        redirectUriWithRedirectUriRequest.put(REQUEST_URI, "company:domain:urn");
         redirectUriWithRedirectUriRequest.put(CLIENT_ID, CLIENT_ID);
-        redirectUriWithRedirectUriRequest.put("redirect_uri", "www.oidc.test.com");
+        redirectUriWithRedirectUriRequest.put(REDIRECT_URI, "www.oidc.test.com");
 
         return new Object[][]{
                 {validUriRequest, true},
