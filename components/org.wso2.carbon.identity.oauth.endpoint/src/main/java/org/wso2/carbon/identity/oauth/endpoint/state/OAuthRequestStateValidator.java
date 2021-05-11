@@ -41,6 +41,7 @@ public class OAuthRequestStateValidator {
 
     private static final Log log = LogFactory.getLog(OAuthRequestStateValidator.class);
     private static final String REDIRECT_URI = "redirect_uri";
+    private static final String REQUEST_URI = "request_uri";
 
     public OAuthAuthorizeState validateAndGetState(OAuthMessage oAuthMessage) throws InvalidRequestParentException {
 
@@ -137,7 +138,8 @@ public class OAuthRequestStateValidator {
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT);
         }
 
-        if (StringUtils.isBlank(oAuthMessage.getRequest().getParameter(REDIRECT_URI))) {
+        if (StringUtils.isBlank(oAuthMessage.getRequest().getParameter(REQUEST_URI)) &&
+                StringUtils.isBlank(oAuthMessage.getRequest().getParameter(REDIRECT_URI))) {
             if (log.isDebugEnabled()) {
                 log.debug("Redirect URI is not present in the authorization request");
             }

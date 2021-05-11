@@ -133,6 +133,7 @@ public class EndpointUtil {
     private static final String PROP_ERROR = "error";
     private static final String PROP_ERROR_DESCRIPTION = "error_description";
     private static final String PROP_REDIRECT_URI = "redirect_uri";
+    private static final String REQUEST_URI = "request_uri";
     private static final String NOT_AVAILABLE = "N/A";
     private static final String UNKNOWN_ERROR = "unknown_error";
     private static OAuth2Service oAuth2Service;
@@ -470,8 +471,9 @@ public class EndpointUtil {
         // redirected to a common OAuth Error page.
         if (!OAuthServerConfiguration.getInstance().isRedirectToRequestedRedirectUriEnabled()) {
             return getErrorPageURL(request, errorCode, errorMessage, appName);
-        } else if (subErrorCode.equals(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI) || subErrorCode
-                .equals(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT)) {
+        } else if (subErrorCode.equals(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI) ||
+                subErrorCode.equals(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT) ||
+                StringUtils.isBlank(request.getParameter(PROP_REDIRECT_URI))) {
             return getErrorPageURL(request, errorCode, errorMessage, appName);
         } else {
             String redirectUri = request.getParameter(OAuthConstants.OAuth20Params.REDIRECT_URI);
@@ -681,6 +683,11 @@ public class EndpointUtil {
         String sessionDataKeyConsent = UUID.randomUUID().toString();
         try {
             if (entry != null && entry.getQueryString() != null) {
+
+                if (entry.getQueryString().contains(REQUEST_URI) && params != null) {
+                    entry.setQueryString(entry.getQueryString() +
+                            "&" + PROP_REDIRECT_URI + "=" + params.getRedirectURI());
+                }
                 queryString = URLEncoder.encode(entry.getQueryString(), UTF_8);
             }
 
