@@ -10,6 +10,7 @@ import org.wso2.carbon.identity.application.authentication.framework.handler.req
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentServiceImpl;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
@@ -48,6 +49,7 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
 
     private OpenIDConnectClaimFilterImpl openIDConnectClaimFilter;
     private  ScopeClaimMappingDAOImpl scopeClaimMappingDAO;
+    SSOConsentService ssoConsentService;
     private Set<String> requestedScopes;
     private List  scopeDTOList;
     private Map<String, Object> claims;
@@ -59,18 +61,18 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
         openIDConnectClaimFilter = new OpenIDConnectClaimFilterImpl();
         scopeClaimMappingDAO = new ScopeClaimMappingDAOImpl();
         ServiceProvider serviceProvider = new ServiceProvider();
-        SSOConsentService ssoConsentService = mock(SSOConsentServiceImpl.class);
+        ssoConsentService = mock(SSOConsentServiceImpl.class);
         ClaimMetadataManagementService claimMetadataManagementService =
                 mock(ClaimMetadataManagementService.class);
         ApplicationManagementService applicationMgtService = mock(ApplicationManagementService.class);
         OAuth2ServiceComponentHolder.setApplicationMgtService(applicationMgtService);
         when(applicationMgtService
-                .getServiceProviderByClientId(anyString(), anyString(), anyString()))
+                .getServiceProviderByClientId(CLIENT_ID, IdentityApplicationConstants.OAuth2.NAME,
+                        SP_TENANT_DOMAIN))
                 .thenReturn(serviceProvider);
         OpenIDConnectServiceComponentHolder.getInstance()
                 .setClaimMetadataManagementService(claimMetadataManagementService);
         OpenIDConnectServiceComponentHolder.getInstance().setSsoConsentService(ssoConsentService);
-        when(ssoConsentService.isSSOConsentManagementEnabled(serviceProvider)).thenReturn(true);
         List externalClaims = new ArrayList<>();
         ExternalClaim externalClaim = new ExternalClaim("testUserClaimURI",
                 "testUserClaimURI", "testUserClaimURI");
@@ -114,17 +116,33 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
     @Test
     public void testGetClaimsFilteredByUserConsent() throws Exception {
 
-        claims = new HashMap<>();
-        List scopeDTOList = getScopeDTOList();
-        claims.put("testUserClaimURI", scopeDTOList.get(0));
-        claims.put("testUserClaimURI2", scopeDTOList.get(1));
+        claims = getClaims();
         AuthenticatedUser user = getDefaultAuthenticatedLocalUser();
+        when(ssoConsentService.isSSOConsentManagementEnabled(any())).thenReturn(true);
         Map<String, Object> claimFilter = openIDConnectClaimFilter
                 .getClaimsFilteredByUserConsent(claims, user, CLIENT_ID, SP_TENANT_DOMAIN);
         Assert.assertEquals(((ScopeDTO) claimFilter.get("testUserClaimURI")).getName(), "email");
         Assert.assertEquals(((ScopeDTO) claimFilter.get("testUserClaimURI"))
                 .getDescription(), "emailDescription");
         Assert.assertNull(claimFilter.get("testUserClaimURI2"));
+    }
+
+    @Test
+    public void testGetClaimsFilteredByUserConsentWithManagementServiceDisabled() throws Exception {
+
+        claims = getClaims();
+        AuthenticatedUser user = getDefaultAuthenticatedLocalUser();
+        when(ssoConsentService.isSSOConsentManagementEnabled(any())).thenReturn(false);
+        Map<String, Object> claimFilter = openIDConnectClaimFilter
+                .getClaimsFilteredByUserConsent(claims, user, CLIENT_ID, SP_TENANT_DOMAIN);
+        Assert.assertEquals(((ScopeDTO) claimFilter.get("testUserClaimURI")).getName(),
+                "email");
+        Assert.assertEquals(((ScopeDTO) claimFilter.get("testUserClaimURI"))
+                .getDescription(), "emailDescription");
+        Assert.assertEquals(((ScopeDTO) claimFilter.get("testUserClaimURI2")).getName(),
+                "address");
+        Assert.assertEquals(((ScopeDTO) claimFilter.get("testUserClaimURI2"))
+                .getDescription(), "addressDescription");
     }
 
     @Test
@@ -190,5 +208,13 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
         claimMetaData.setDescription("claimMetaDataDescription");
         claimsWithConsent.add(claimMetaData);
         return claimsWithConsent;
+    }
+
+    private Map<String, Object> getClaims() {
+        Map<String, Object> claims = new HashMap<>();
+        List scopeDTOList = getScopeDTOList();
+        claims.put("testUserClaimURI", scopeDTOList.get(0));
+        claims.put("testUserClaimURI2", scopeDTOList.get(1));
+        return claims;
     }
 }
