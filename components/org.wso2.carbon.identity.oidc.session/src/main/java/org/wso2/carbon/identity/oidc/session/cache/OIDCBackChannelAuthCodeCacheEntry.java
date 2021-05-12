@@ -17,7 +17,7 @@
  */
 package org.wso2.carbon.identity.oidc.session.cache;
 
-import org.wso2.carbon.identity.application.common.cache.CacheEntry;
+import org.wso2.carbon.identity.core.cache.CacheEntry;
 
 /**
  * This class holds sessionID required for Authorization code flow in OIDCBackChannel logout and gets cahched againts

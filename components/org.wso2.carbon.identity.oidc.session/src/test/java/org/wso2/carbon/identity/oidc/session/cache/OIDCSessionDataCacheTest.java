@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oidc.session.cache;
 
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oidc.session.servlet.TestUtil;
 
 import static org.powermock.api.mockito.PowerMockito.mock;
@@ -29,6 +30,7 @@ import static org.testng.Assert.assertNull;
 /**
  * Unit test coverage for OIDCSessionDataCache class.
  */
+@WithRealmService
 public class OIDCSessionDataCacheTest {
 
     @Test
