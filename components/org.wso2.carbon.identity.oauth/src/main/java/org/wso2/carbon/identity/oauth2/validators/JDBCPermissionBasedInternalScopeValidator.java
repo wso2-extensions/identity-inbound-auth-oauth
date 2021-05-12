@@ -327,7 +327,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
     private Set<Scope> getScopesOfPermissionType(int tenantId) throws IdentityOAuth2ScopeServerException {
 
         Scope[] scopesFromCache = OAuthScopeBindingCache.getInstance()
-                .getValueFromCache(new OAuthScopeBindingCacheKey(PERMISSION_BINDING_TYPE, tenantId));
+                .getValueFromCache(new OAuthScopeBindingCacheKey(PERMISSION_BINDING_TYPE), tenantId);
         Set<Scope> allScopes;
         if (scopesFromCache != null) {
             allScopes = Arrays.stream(scopesFromCache).collect(Collectors.toSet());
@@ -335,8 +335,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
             allScopes = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().getScopes(tenantId,
                     PERMISSION_BINDING_TYPE);
             if (CollectionUtils.isNotEmpty(allScopes)) {
-                OAuthScopeBindingCache.getInstance().addToCache(new OAuthScopeBindingCacheKey(PERMISSION_BINDING_TYPE,
-                        tenantId), allScopes.toArray(new Scope[0]));
+                OAuthScopeBindingCache.getInstance().addToCache(new OAuthScopeBindingCacheKey(PERMISSION_BINDING_TYPE
+                ), allScopes.toArray(new Scope[0]), tenantId);
             }
         }
         return allScopes;

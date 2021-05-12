@@ -18,7 +18,7 @@
 
 package org.wso2.carbon.identity.openidconnect.cache;
 
-import org.wso2.carbon.identity.application.common.cache.CacheEntry;
+import org.wso2.carbon.identity.core.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 
 import java.util.List;

@@ -124,8 +124,8 @@ public class OAuth2ScopeServiceTest extends PowerMockIdentityBaseTest {
         Scope dummyScope = new Scope(SCOPE_NAME, SCOPE_NAME, SCOPE_DESCRIPTION);
         oAuth2ScopeService.registerScope(dummyScope);
         if (!existWithinCache) {
-            OAuthScopeCache.getInstance().clearCacheEntry(new OAuthScopeCacheKey(SCOPE_NAME, Integer.toString(
-                    Oauth2ScopeUtils.getTenantID())));
+            OAuthScopeCache.getInstance().clearCacheEntry(new OAuthScopeCacheKey(SCOPE_NAME), Integer.toString(
+                    Oauth2ScopeUtils.getTenantID()));
         }
         assertEquals(oAuth2ScopeService.getScope(SCOPE_NAME).getName(), SCOPE_NAME, "Retrieving registered scope is " +
                 "failed");

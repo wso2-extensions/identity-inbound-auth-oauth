@@ -81,8 +81,7 @@ public class OAuth2ScopeService {
                     ERROR_CODE_FAILED_TO_REGISTER_SCOPE, scope.toString(), e);
         }
 
-        OAuthScopeCache.getInstance().addToCache(new OAuthScopeCacheKey(scope.getName(), Integer.toString(tenantID)),
-                scope);
+        OAuthScopeCache.getInstance().addToCache(new OAuthScopeCacheKey(scope.getName()), scope, tenantID);
         return scope;
     }
 
@@ -159,8 +158,7 @@ public class OAuth2ScopeService {
 
         validateScopeName(name);
 
-        scope = OAuthScopeCache.getInstance().getValueFromCache(new OAuthScopeCacheKey(name,
-                Integer.toString(tenantID)));
+        scope = OAuthScopeCache.getInstance().getValueFromCache(new OAuthScopeCacheKey(name), tenantID);
 
         if (scope == null) {
             try {
@@ -169,8 +167,7 @@ public class OAuth2ScopeService {
                     if (log.isDebugEnabled()) {
                         log.debug("Scope is getting from the database. \n" + scope.toString());
                     }
-                    OAuthScopeCache.getInstance().addToCache(new OAuthScopeCacheKey(name, Integer.toString(tenantID))
-                            , scope);
+                    OAuthScopeCache.getInstance().addToCache(new OAuthScopeCacheKey(name), scope, tenantID);
                 }
 
             } catch (IdentityOAuth2ScopeServerException e) {
@@ -205,7 +202,7 @@ public class OAuth2ScopeService {
         }
 
         Scope scopeFromCache = OAuthScopeCache.getInstance()
-                .getValueFromCache(new OAuthScopeCacheKey(name, Integer.toString(tenantID)));
+                .getValueFromCache(new OAuthScopeCacheKey(name), tenantID);
 
         if (scopeFromCache != null) {
             isScopeExists = true;
@@ -241,7 +238,7 @@ public class OAuth2ScopeService {
         }
 
         Scope scopeFromCache = OAuthScopeCache.getInstance()
-                .getValueFromCache(new OAuthScopeCacheKey(name, Integer.toString(tenantID)));
+                .getValueFromCache(new OAuthScopeCacheKey(name), tenantID);
 
         if (scopeFromCache != null) {
             isScopeExists = true;
@@ -271,7 +268,7 @@ public class OAuth2ScopeService {
         validateScopeExistence(name);
 
         int tenantID = Oauth2ScopeUtils.getTenantID();
-        OAuthScopeCache.getInstance().clearCacheEntry(new OAuthScopeCacheKey(name, Integer.toString(tenantID)));
+        OAuthScopeCache.getInstance().clearCacheEntry(new OAuthScopeCacheKey(name), tenantID);
 
         try {
             OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().deleteScopeByName(name, tenantID);
@@ -305,8 +302,8 @@ public class OAuth2ScopeService {
                     ERROR_CODE_FAILED_TO_UPDATE_SCOPE_BY_NAME, updatedScope.getName(), e);
         }
 
-        OAuthScopeCache.getInstance().addToCache(new OAuthScopeCacheKey(updatedScope.getName(),
-                Integer.toString(tenantID)), updatedScope);
+        OAuthScopeCache.getInstance().addToCache(new OAuthScopeCacheKey(updatedScope.getName()), updatedScope,
+                tenantID);
         OIDCScopeClaimCache.getInstance().clearScopeClaimMap(tenantID);
         return updatedScope;
     }

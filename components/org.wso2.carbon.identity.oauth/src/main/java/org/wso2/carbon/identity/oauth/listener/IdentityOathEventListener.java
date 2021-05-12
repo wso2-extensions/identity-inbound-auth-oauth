@@ -311,10 +311,12 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         authenticatedUser.setUserStoreDomain(UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration()));
 
         ClaimMetaDataCacheEntry cacheEntry = ClaimMetaDataCache.getInstance().getValueFromCache(
-                new ClaimMetaDataCacheKey(authenticatedUser));
+                new ClaimMetaDataCacheKey(authenticatedUser),
+                IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId()));
         if (cacheEntry == null) {
             return;
         }
-        ClaimCache.getInstance().clearCacheEntry(cacheEntry.getClaimCacheKey());
+        ClaimCache.getInstance().clearCacheEntry(cacheEntry.getClaimCacheKey(),
+                IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId()));
     }
 }
