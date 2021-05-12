@@ -1643,7 +1643,8 @@ public class OAuth2AuthzEndpoint {
     }
 
     private void handleOIDCRequestObject(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
-                                         OAuth2Parameters parameters) throws RequestObjectException {
+                                         OAuth2Parameters parameters)
+            throws RequestObjectException, InvalidRequestException {
 
         validateRequestObjectParams(oauthRequest);
         String requestObjValue = null;
@@ -1673,7 +1674,8 @@ public class OAuth2AuthzEndpoint {
     }
 
     private void handleRequestObject(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
-                                     OAuth2Parameters parameters) throws RequestObjectException {
+                                     OAuth2Parameters parameters)
+            throws RequestObjectException, InvalidRequestException {
 
         RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oauthRequest, parameters);
         if (requestObject == null) {
@@ -1686,6 +1688,12 @@ public class OAuth2AuthzEndpoint {
              */
         overrideAuthzParameters(oAuthMessage, parameters, oauthRequest.getParam(REQUEST),
                 oauthRequest.getParam(REQUEST_URI), requestObject);
+
+        // if the redirect uri was not given in auth request, validating if the registration redirect uri was added
+        if (parameters.getRedirectURI().startsWith("regexp")) {
+            throw new InvalidRequestException("Redirect URI is not present in the authorization request",
+                    OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
+        }
         persistRequestObject(parameters, requestObject);
     }
 
