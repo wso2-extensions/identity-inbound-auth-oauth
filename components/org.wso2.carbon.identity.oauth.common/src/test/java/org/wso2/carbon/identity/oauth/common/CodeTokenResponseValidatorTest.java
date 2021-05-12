@@ -86,7 +86,7 @@ public class CodeTokenResponseValidatorTest {
         when(mockRequest.getParameter("redirect_uri")).thenReturn("www.oidc.test.com");
         if (shouldPass) {
             testedResponseValidator.validateRequiredParameters(mockRequest);
-            // Nothing to assert here. The above method will only throw an exception if not valid
+            // Nothing to assert here. The above method will only throw an exception if not valid.
         } else {
             try {
                 testedResponseValidator.validateRequiredParameters(mockRequest);
