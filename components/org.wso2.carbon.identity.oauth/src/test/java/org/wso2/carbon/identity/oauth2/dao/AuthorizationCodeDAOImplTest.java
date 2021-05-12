@@ -151,6 +151,7 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
     private AuthzCodeDO persistAuthorizationCodeWithModifiedScope(String consumerKey, String authzCodeId,
                                                                   String authzCode, boolean createApplication,
                                                                   String status, String[] scope) throws Exception {
+
         if (createApplication) {
             createApplication(consumerKey, UUID.randomUUID().toString(), DEFAULT_TENANT_ID);
         }
@@ -412,6 +413,7 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
     }
 
     protected void createApplication(String consumerKey, String consumerSecret, int tenantId) throws Exception {
+
         try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP)) {
             prepStmt.setString(1, consumerKey);
             prepStmt.setString(2, consumerSecret);
@@ -433,6 +435,7 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
     }
 
     protected void storeIDP() throws Exception {
+
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             String sql = "INSERT INTO IDP (TENANT_ID, NAME, UUID) VALUES (1234, 'LOCAL', 5678)";
             try (PreparedStatement prepStmt = connection.prepareStatement(sql)) {
