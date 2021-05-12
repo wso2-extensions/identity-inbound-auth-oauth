@@ -35,6 +35,9 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUEST_URI;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.SCOPE;
 
 /**
@@ -91,6 +94,69 @@ public class CodeTokenResponseValidatorTest {
             } catch (OAuthProblemException e) {
                 assertTrue(e.getMessage().startsWith(OAuthError.TokenResponse.INVALID_REQUEST), "Invalid error " +
                         "message received");
+            }
+        }
+    }
+
+    @DataProvider(name = "Request Provider Request Uri")
+    public Object[][] getRequestParamsForRequestUri() {
+
+        Map<String, String> validUriRequest = new HashMap<>();
+        validUriRequest.put(SCOPE, OAuthConstants.Scope.OPENID);
+        validUriRequest.put(RESPONSE_TYPE, getResponseTypeValue());
+        validUriRequest.put(REQUEST_URI, "company:domain:urn");
+        validUriRequest.put(CLIENT_ID, CLIENT_ID);
+
+        Map<String, String> requestUriLessValidRequest = new HashMap<>();
+        requestUriLessValidRequest.put(SCOPE, OAuthConstants.Scope.OPENID);
+        requestUriLessValidRequest.put(RESPONSE_TYPE, getResponseTypeValue());
+        requestUriLessValidRequest.put(REDIRECT_URI, "www.oidc.test.com");
+        requestUriLessValidRequest.put(CLIENT_ID, CLIENT_ID);
+
+        Map<String, String> clientIDLessRequest = new HashMap<>();
+        clientIDLessRequest.put(SCOPE, OAuthConstants.Scope.OPENID);
+        clientIDLessRequest.put(RESPONSE_TYPE, getResponseTypeValue());
+        clientIDLessRequest.put(REQUEST_URI, "company:domain:urn");
+
+        Map<String, String> requestUriLessRequest = new HashMap<>();
+        requestUriLessRequest.put(SCOPE, OAuthConstants.Scope.OPENID);
+        requestUriLessRequest.put(RESPONSE_TYPE, getResponseTypeValue());
+        requestUriLessRequest.put(CLIENT_ID, CLIENT_ID);
+
+        Map<String, String> redirectUriWithRedirectUriRequest = new HashMap<>();
+        redirectUriWithRedirectUriRequest.put(SCOPE, OAuthConstants.Scope.OPENID);
+        redirectUriWithRedirectUriRequest.put(RESPONSE_TYPE, getResponseTypeValue());
+        redirectUriWithRedirectUriRequest.put(REQUEST_URI, "company:domain:urn");
+        redirectUriWithRedirectUriRequest.put(CLIENT_ID, CLIENT_ID);
+        redirectUriWithRedirectUriRequest.put(REDIRECT_URI, "www.oidc.test.com");
+
+        return new Object[][]{
+                {validUriRequest, true},
+                {requestUriLessValidRequest, true},
+                {clientIDLessRequest, false},
+                {requestUriLessRequest, false},
+                {redirectUriWithRedirectUriRequest, true},
+        };
+    }
+
+    @Test(dataProvider = "Request Provider Request Uri")
+    public void testValidateRequiredParametersForRequestUri(Map<String, String> headerMap, boolean shouldPass)
+            throws Exception {
+
+        HttpServletRequest mockRequest = mock(HttpServletRequest.class);
+        for (Map.Entry<String, String> entry : headerMap.entrySet()) {
+            when(mockRequest.getParameter(entry.getKey())).thenReturn(entry.getValue());
+        }
+        if (shouldPass) {
+            testedResponseValidator.validateRequiredParameters(mockRequest);
+            // Nothing to assert here. The above method will only throw an exception if not valid.
+        } else {
+            try {
+                testedResponseValidator.validateRequiredParameters(mockRequest);
+                fail("Request validation should have failed");
+            } catch (OAuthProblemException e) {
+                assertTrue(e.getMessage().startsWith(OAuthError.TokenResponse.INVALID_REQUEST),
+                        "Invalid error message received");
             }
         }
     }

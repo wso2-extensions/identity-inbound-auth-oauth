@@ -209,6 +209,8 @@ public class OAuth2AuthzEndpoint {
     private static final String DEFAULT_ERROR_MSG_FOR_FAILURE = "Authentication required";
     private static final String COMMONAUTH_COOKIE = "commonAuthId";
     private static final String SET_COOKIE_HEADER = "Set-Cookie";
+    private static final String REGEX_PATTERN = "regexp";
+
 
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
@@ -1643,7 +1645,8 @@ public class OAuth2AuthzEndpoint {
     }
 
     private void handleOIDCRequestObject(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
-                                         OAuth2Parameters parameters) throws RequestObjectException {
+                                         OAuth2Parameters parameters)
+            throws RequestObjectException, InvalidRequestException {
 
         validateRequestObjectParams(oauthRequest);
         String requestObjValue = null;
@@ -1673,7 +1676,8 @@ public class OAuth2AuthzEndpoint {
     }
 
     private void handleRequestObject(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
-                                     OAuth2Parameters parameters) throws RequestObjectException {
+                                     OAuth2Parameters parameters)
+            throws RequestObjectException, InvalidRequestException {
 
         RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oauthRequest, parameters);
         if (requestObject == null) {
@@ -1686,6 +1690,14 @@ public class OAuth2AuthzEndpoint {
              */
         overrideAuthzParameters(oAuthMessage, parameters, oauthRequest.getParam(REQUEST),
                 oauthRequest.getParam(REQUEST_URI), requestObject);
+
+        // If the redirect uri was not given in auth request the registered redirect uri will be available here,
+        // so validating if the registered redirect uri is a single uri that can be properly redirected.
+        if (StringUtils.isBlank(parameters.getRedirectURI()) ||
+                StringUtils.startsWith(parameters.getRedirectURI(), REGEX_PATTERN)) {
+            throw new InvalidRequestException("Redirect URI is not present in the authorization request.",
+                    OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
+        }
         persistRequestObject(parameters, requestObject);
     }
 

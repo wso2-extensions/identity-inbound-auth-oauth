@@ -226,6 +226,7 @@ public final class OAuthConstants {
         public static final String USERINFO = "userinfo";
         public static final String CLIENT_ID = "client_id";
         public static final String REDIRECT_URI = "redirect_uri";
+        public static final String REQUEST_URI = "request_uri";
         public static final String STATE = "state";
         public static final String RESPONSE_TYPE = "response_type";
         public static final String REQUEST = "request";
