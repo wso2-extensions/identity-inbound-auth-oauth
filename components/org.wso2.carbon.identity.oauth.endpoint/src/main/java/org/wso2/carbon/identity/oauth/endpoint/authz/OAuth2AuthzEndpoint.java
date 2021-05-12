@@ -1693,7 +1693,7 @@ public class OAuth2AuthzEndpoint {
 
         // If the redirect uri was not given in auth request the registered redirect uri will be available here,
         // so validating if the registered redirect uri is a single uri that can be properly redirected.
-        if (StringUtils.startsWith(parameters.getRedirectURI(), REGEX_PATTERN)) {
+        if (StringUtils.isBlank(parameters.getRedirectURI()) || StringUtils.startsWith(parameters.getRedirectURI(), REGEX_PATTERN)) {
             throw new InvalidRequestException("Redirect URI is not present in the authorization request.",
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
