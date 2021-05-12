@@ -209,6 +209,8 @@ public class OAuth2AuthzEndpoint {
     private static final String DEFAULT_ERROR_MSG_FOR_FAILURE = "Authentication required";
     private static final String COMMONAUTH_COOKIE = "commonAuthId";
     private static final String SET_COOKIE_HEADER = "Set-Cookie";
+    private static final String REGEX_PATTERN = "regexp";
+
 
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
@@ -1690,7 +1692,7 @@ public class OAuth2AuthzEndpoint {
                 oauthRequest.getParam(REQUEST_URI), requestObject);
 
         // if the redirect uri was not given in auth request, validating if the registration redirect uri was added
-        if (parameters.getRedirectURI().startsWith("regexp")) {
+        if (parameters.getRedirectURI().startsWith(REGEX_PATTERN)) {
             throw new InvalidRequestException("Redirect URI is not present in the authorization request",
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
