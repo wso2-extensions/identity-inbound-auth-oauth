@@ -685,6 +685,8 @@ public class EndpointUtil {
             if (entry != null && entry.getQueryString() != null) {
 
                 if (entry.getQueryString().contains(REQUEST_URI) && params != null) {
+                    // When request_uri requests come without redirect_uri, we need to append it to the SPQueryParams
+                    // to be used in storing consent data
                     entry.setQueryString(entry.getQueryString() +
                             "&" + PROP_REDIRECT_URI + "=" + params.getRedirectURI());
                 }
