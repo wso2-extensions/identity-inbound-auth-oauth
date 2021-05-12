@@ -25,7 +25,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * cache must be encapsulated with a class deriving from this class.
  */
 @SuppressFBWarnings("NM_SAME_SIMPLE_NAME_AS_SUPERCLASS")
-public abstract class CacheEntry extends org.wso2.carbon.identity.application.common.cache.CacheEntry {
+public abstract class CacheEntry extends org.wso2.carbon.identity.core.cache.CacheEntry {
 
     private static final long serialVersionUID = 1591693579088522864L;
 

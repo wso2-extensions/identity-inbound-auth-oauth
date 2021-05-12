@@ -19,13 +19,13 @@ package org.wso2.carbon.identity.oidc.session.cache;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationBaseCache;
 import org.wso2.carbon.identity.application.authentication.framework.store.SessionDataStore;
-import org.wso2.carbon.identity.application.common.cache.BaseCache;
 
 /**
  * This class is used to cache Authorization code  against session ID (sid) for OIDCBackChannel Logout.
  */
-public class OIDCBackChannelAuthCodeCache extends BaseCache<OIDCBackChannelAuthCodeCacheKey,
+public class OIDCBackChannelAuthCodeCache extends AuthenticationBaseCache<OIDCBackChannelAuthCodeCacheKey,
         OIDCBackChannelAuthCodeCacheEntry> {
 
     private static final Log log = LogFactory.getLog(OIDCBackChannelAuthCodeCache.class);

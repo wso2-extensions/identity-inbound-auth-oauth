@@ -18,14 +18,14 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
-import org.wso2.carbon.identity.application.common.cache.BaseCache;
+import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationBaseCache;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.utils.CarbonUtils;
 
 /**
  * AppInfoCache is used to cache oauth application information.
  */
-public class AppInfoCache extends BaseCache<String, OAuthAppDO> {
+public class AppInfoCache extends AuthenticationBaseCache<String, OAuthAppDO> {
 
     private static final String OAUTH_APP_INFO_CACHE_NAME = "AppInfoCache";
 
