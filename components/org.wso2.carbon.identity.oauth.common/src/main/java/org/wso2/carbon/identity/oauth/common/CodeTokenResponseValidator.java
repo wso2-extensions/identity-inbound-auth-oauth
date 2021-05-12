@@ -65,7 +65,7 @@ public class CodeTokenResponseValidator extends TokenValidator {
     public void validateRequiredParameters(HttpServletRequest request) throws OAuthProblemException {
 
         if (StringUtils.isNotBlank(request.getParameter(REQUEST_URI))) {
-            requiredParams = new ArrayList<>(Arrays.asList(CLIENT_ID, RESPONSE_TYPE, SCOPE, REQUEST_URI));
+            requiredParams = new ArrayList<>(Arrays.asList(CLIENT_ID, RESPONSE_TYPE, REQUEST_URI));
             notAllowedParams.add(REQUEST);
         }
         super.validateRequiredParameters(request);
