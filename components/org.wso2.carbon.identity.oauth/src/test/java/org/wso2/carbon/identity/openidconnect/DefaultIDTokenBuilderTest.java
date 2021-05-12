@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jwt.EncryptedJWT;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.junit.Assert;
 import org.mockito.Mockito;
@@ -144,7 +145,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         authorizationGrantCacheEntry.setMaxAge(10);
         authorizationGrantCacheEntry.setAuthTime(1000);
         authorizationGrantCacheEntry.setSelectedAcrValue("acr");
-        authorizationGrantCacheEntry.setSubjectClaim("carbon.super");
+        authorizationGrantCacheEntry.setSubjectClaim("user@carbon.super");
         AuthorizationGrantCacheKey authorizationGrantCacheKey =
                 new AuthorizationGrantCacheKey(AUTHORIZATION_CODE_VALUE);
         AuthorizationGrantCacheKey authorizationGrantCacheKeyForAccessToken =
@@ -238,19 +239,19 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         IdpMgtServiceComponentHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
 
         String idToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
-
-        Assert.assertEquals(SignedJWT.parse(idToken).getJWTClaimsSet().getAudience().get(0),
+        JWTClaimsSet claims = SignedJWT.parse(idToken).getJWTClaimsSet();
+        Assert.assertEquals(claims.getAudience().get(0),
                 clientId);
-        Assert.assertEquals(SignedJWT.parse(idToken).getJWTClaimsSet().getIssuer(),
+        Assert.assertEquals(claims.getIssuer(),
                 "https://localhost:9443/oauth2/token");
-        Assert.assertEquals(SignedJWT.parse(idToken).getJWTClaimsSet().getSubject(), "carbon.super");
-        Assert.assertEquals(SignedJWT.parse(idToken).getJWTClaimsSet().getClaim("isk"), "idp");
-        Assert.assertEquals(SignedJWT.parse(idToken).getJWTClaimsSet().getClaim("email"), "email");
-        Assert.assertEquals(SignedJWT.parse(idToken).getJWTClaimsSet().getClaim("username"), "username");
-        Assert.assertNotNull(SignedJWT.parse(idToken).getJWTClaimsSet().getClaim("nbf"));
-        Long expirationTime = ((Date) SignedJWT.parse(idToken).getJWTClaimsSet().getClaim("exp")).getTime();
+        Assert.assertEquals(claims.getSubject(), "user@carbon.super");
+        Assert.assertEquals(claims.getClaim("isk"), "idp");
+        Assert.assertEquals(claims.getClaim("email"), "email");
+        Assert.assertEquals(claims.getClaim("username"), "username");
+        Assert.assertNotNull(claims.getClaim("nbf"));
+        Long expirationTime = ((Date) claims.getClaim("exp")).getTime();
         Assert.assertTrue(expirationTime > (new Date()).getTime());
-        Long issueTime = ((Date) SignedJWT.parse(idToken).getJWTClaimsSet().getClaim("iat")).getTime();
+        Long issueTime = ((Date) claims.getClaim("iat")).getTime();
         Assert.assertTrue(issueTime <= (new Date()).getTime());
     }
 
@@ -269,16 +270,15 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         IdpMgtServiceComponentHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
 
         String idToken = defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
-
-        Assert.assertEquals(SignedJWT.parse(idToken).getJWTClaimsSet().getAudience().get(0),
+        JWTClaimsSet claims = SignedJWT.parse(idToken).getJWTClaimsSet();
+        Assert.assertEquals(claims.getAudience().get(0),
                 clientId);
-        Assert.assertEquals(SignedJWT.parse(idToken).getJWTClaimsSet().getIssuer(),
-                "https://localhost:9443/oauth2/token");
-        Assert.assertEquals(SignedJWT.parse(idToken).getJWTClaimsSet().getSubject(),  "carbon.super");
-        Assert.assertEquals(SignedJWT.parse(idToken).getJWTClaimsSet().getClaim("isk"), "wso2.is.com");
-        Long expirationTime = ((Date) SignedJWT.parse(idToken).getJWTClaimsSet().getClaim("exp")).getTime();
+        Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
+        Assert.assertEquals(claims.getSubject(), "user@carbon.super");
+        Assert.assertEquals(claims.getClaim("isk"), "wso2.is.com");
+        Long expirationTime = ((Date) claims.getClaim("exp")).getTime();
         Assert.assertTrue(expirationTime > (new Date()).getTime());
-        Long issueTime = ((Date) SignedJWT.parse(idToken).getJWTClaimsSet().getClaim("iat")).getTime();
+        Long issueTime = ((Date) claims.getClaim("iat")).getTime();
         Assert.assertTrue(issueTime <= (new Date()).getTime());
     }
 
@@ -302,18 +302,17 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
 
         String idToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
         EncryptedJWT encryptedJWT = decryptToken(idToken);
-        Assert.assertEquals(encryptedJWT.getJWTClaimsSet().getAudience().get(0),
-                CLIENT_ID);
-        Assert.assertEquals(encryptedJWT.getJWTClaimsSet().getIssuer(),
-                "https://localhost:9443/oauth2/token");
-        Assert.assertEquals(encryptedJWT.getJWTClaimsSet().getSubject(),   "user1@carbon.super");
-        Assert.assertEquals(encryptedJWT.getJWTClaimsSet().getClaim("acr"),  "acr");
-        Assert.assertEquals(encryptedJWT.getJWTClaimsSet().getClaim("isk"), "idp");
-        Assert.assertEquals(encryptedJWT.getJWTClaimsSet().getClaim("nonce"), "nonce");
-        Assert.assertNotNull(encryptedJWT.getJWTClaimsSet().getClaim("nbf"));
-        Long expirationTime = ((Date) encryptedJWT.getJWTClaimsSet().getClaim("exp")).getTime();
+        JWTClaimsSet claims = encryptedJWT.getJWTClaimsSet();
+        Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
+        Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
+        Assert.assertEquals(claims.getSubject(), "user1@carbon.super");
+        Assert.assertEquals(claims.getClaim("acr"),  "acr");
+        Assert.assertEquals(claims.getClaim("isk"), "idp");
+        Assert.assertEquals(claims.getClaim("nonce"), "nonce");
+        Assert.assertNotNull(claims.getClaim("nbf"));
+        Long expirationTime = ((Date) claims.getClaim("exp")).getTime();
         Assert.assertTrue(expirationTime < (new Date()).getTime());
-        Long issueTime = ((Date) encryptedJWT.getJWTClaimsSet().getClaim("iat")).getTime();
+        Long issueTime = ((Date) claims.getClaim("iat")).getTime();
         Assert.assertTrue(issueTime <= (new Date()).getTime());
     }
 
@@ -334,16 +333,15 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         IdpMgtServiceComponentHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
         String idToken = defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
         EncryptedJWT encryptedJWT = decryptToken(idToken);
-
-        Assert.assertEquals(encryptedJWT.getJWTClaimsSet().getAudience().get(0),
+        JWTClaimsSet claims = encryptedJWT.getJWTClaimsSet();
+        Assert.assertEquals(claims.getAudience().get(0),
                 CLIENT_ID);
-        Assert.assertEquals(encryptedJWT.getJWTClaimsSet().getIssuer(),
-                "https://localhost:9443/oauth2/token");
-        Assert.assertEquals(encryptedJWT.getJWTClaimsSet().getSubject(),  "user1@carbon.super");
-        Assert.assertEquals(encryptedJWT.getJWTClaimsSet().getClaim("isk"), "wso2.is.com");
-        Long expirationTime = ((Date) encryptedJWT.getJWTClaimsSet().getClaim("exp")).getTime();
+        Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
+        Assert.assertEquals(claims.getSubject(),  "user1@carbon.super");
+        Assert.assertEquals(claims.getClaim("isk"), "wso2.is.com");
+        Long expirationTime = ((Date) claims.getClaim("exp")).getTime();
         Assert.assertTrue(expirationTime < (new Date()).getTime());
-        Long issueTime = ((Date) encryptedJWT.getJWTClaimsSet().getClaim("iat")).getTime();
+        Long issueTime = ((Date) claims.getClaim("iat")).getTime();
         Assert.assertTrue(issueTime <= (new Date()).getTime());
     }
 
@@ -369,21 +367,21 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         try {
             String idToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
             EncryptedJWT encryptedJWT = decryptToken(idToken);
-            Assert.assertEquals(encryptedJWT.getJWTClaimsSet().getAudience().get(0),
-                    CLIENT_ID);
-            Assert.assertEquals(encryptedJWT.getJWTClaimsSet().getIssuer(),
-                    "https://localhost:9443/oauth2/token");
-            Assert.assertEquals(encryptedJWT.getJWTClaimsSet().getSubject(),  "user1@carbon.super");
-            Assert.assertEquals(encryptedJWT.getJWTClaimsSet().getClaim("acr"),  "acr");
-            Assert.assertEquals(encryptedJWT.getJWTClaimsSet().getClaim("isk"), "idp");
-            Assert.assertEquals(encryptedJWT.getJWTClaimsSet().getClaim("nonce"), "nonce");
-            Assert.assertNotNull(encryptedJWT.getJWTClaimsSet().getClaim("nbf"));
-            Long expirationTime = ((Date) encryptedJWT.getJWTClaimsSet().getClaim("exp")).getTime();
+            JWTClaimsSet claims = encryptedJWT.getJWTClaimsSet();
+            Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
+            Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
+            Assert.assertEquals(claims.getSubject(),  "user1@carbon.super");
+            Assert.assertEquals(claims.getClaim("acr"),  "acr");
+            Assert.assertEquals(claims.getClaim("isk"), "idp");
+            Assert.assertEquals(claims.getClaim("nonce"), "nonce");
+            Assert.assertNotNull(claims.getClaim("nbf"));
+            Long expirationTime = ((Date) claims.getClaim("exp")).getTime();
             Assert.assertTrue(expirationTime < (new Date()).getTime());
-            Long issueTime = ((Date) encryptedJWT.getJWTClaimsSet().getClaim("iat")).getTime();
+            Long issueTime = ((Date) claims.getClaim("iat")).getTime();
             Assert.assertTrue(issueTime <= (new Date()).getTime());
         } catch (Exception e) {
-            Assert.assertEquals(e.getMessage(), "Provided encryption algorithm: " + algorithm + " is not supported");
+            Assert.assertEquals(e.getMessage(),
+                    "Provided encryption algorithm: " + algorithm + " is not supported");
         }
     }
 
@@ -398,10 +396,9 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         messageContext = getTokenReqMessageContextForUser(getDefaultAuthenticatedLocalUser(), invalidClientId);
         try {
             String authoIDToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
-            Assert.assertEquals(SignedJWT.parse(authoIDToken).getJWTClaimsSet().getAudience().get(0),
-                    CLIENT_ID);
-            Assert.assertEquals(SignedJWT.parse(authoIDToken).getJWTClaimsSet().getIssuer(),
-                    "https://localhost:9443/oauth2/token");
+            JWTClaimsSet claims = SignedJWT.parse(authoIDToken).getJWTClaimsSet();
+            Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
+            Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
         } catch (IdentityOAuth2Exception e) {
             Assert.assertEquals(e.getMessage(),
                     "Error occurred while getting app information for client_id: " +
@@ -459,7 +456,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         authenticatedUser.setAuthenticatedSubjectIdentifier(TestConstants.USER_NAME);
         authenticatedUser.setUserName(TestConstants.USER_NAME);
         authenticatedUser.setUserStoreDomain(TestConstants.USER_STORE_DOMAIN);
-        authenticatedUser.setTenantDomain(TestConstants.TENANT_DOMAIN);
+        authenticatedUser.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
         authenticatedUser.setFederatedUser(true);
         return authenticatedUser;
     }
