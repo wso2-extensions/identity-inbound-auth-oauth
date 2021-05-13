@@ -56,6 +56,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     private static final String AUTHZ_CODE = "AuthorizationCode";
     private static final int ALLOWED_MINIMUM_VALIDITY_PERIOD = 1000;
     private static final Log log = LogFactory.getLog(AuthorizationCodeGrantHandler.class);
+    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
@@ -81,7 +82,9 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                     ", authorized user : " + authzCodeBean.getAuthorizedUser() +
                     ", scope : " + OAuth2Util.buildScopeString(authzCodeBean.getScope()));
         }
-
+        diagnosticLog.info("Found Authorization Code for Client : " + tokenReq.getClientId() +
+                ", authorized user : " + authzCodeBean.getAuthorizedUser() +
+                ", scope : " + OAuth2Util.buildScopeString(authzCodeBean.getScope()));
         return true;
     }
 
@@ -109,6 +112,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                                                    String callbackUrlFromPersistedAuthzCode)
             throws IdentityOAuth2Exception {
         if (StringUtils.isEmpty(callbackUrlFromPersistedAuthzCode)) {
+            diagnosticLog.info("Persisted callback URL is empty. Hence callback URL from request validation is " +
+                    "successful.");
             return true;
         }
 
@@ -117,6 +122,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                 log.debug("Received callback url in the request : " + callbackUrlFromRequest +
                         " is not matching with persisted callback url " + callbackUrlFromPersistedAuthzCode);
             }
+            diagnosticLog.info("Received callback url in the request : " + callbackUrlFromRequest +
+                    " is not matching with persisted callback url " + callbackUrlFromPersistedAuthzCode);
             throw new IdentityOAuth2Exception("Callback url mismatch");
         }
         return true;
@@ -286,6 +293,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                         "active. So revoking the access tokens issued for the authorization code.");
             }
         }
+        diagnosticLog.info("Validated authorization code for client: " + authzCodeDO.getConsumerKey() + " is not " +
+                "active. So revoking the access tokens issued for the authorization code.");
     }
 
     private String buildCacheKeyForToken(String clientId, AuthzCodeDO authzCodeDO) {
@@ -312,15 +321,19 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                 log.debug("Invalid token request for client id: " + clientId +
                         "and couldn't find persisted data for authorization code: " + authzCode);
             }
+            diagnosticLog.info("Invalid token request for client id: " + clientId +
+                    "and couldn't find persisted data for authorization code: " + authzCode);
            throw new IdentityOAuth2Exception("Invalid authorization code received from token request");
         }
 
         if (isInactiveAuthzCode(authzCodeBean)) {
             clearTokenCache(authzCodeBean, clientId);
+            diagnosticLog.info("Inactive authorization code received from token request");
             throw new IdentityOAuth2Exception("Inactive authorization code received from token request");
         }
 
         if (isAuthzCodeExpired(authzCodeBean) || isAuthzCodeRevoked(authzCodeBean)) {
+            diagnosticLog.info("Expired or Revoked authorization code received from token request.");
             throw new IdentityOAuth2Exception("Expired or Revoked authorization code received from token request");
         }
         return true;
@@ -365,6 +378,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                 log.debug("Invalid access token request with Client Id : " + authzCodeBean.getConsumerKey() +
                         ", Inactive authorization code : " + authzCodeBean.getAuthorizationCode());
             }
+            diagnosticLog.info("Invalid access token request with Client Id : " + authzCodeBean.getConsumerKey() +
+                    ", Inactive authorization code : " + authzCodeBean.getAuthorizationCode());
             return true;
         }
         return false;
@@ -376,6 +391,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                 log.debug("Invalid access token request with Client Id : " + authzCodeBean.getConsumerKey() +
                         ", Revoked authorization code : " + authzCodeBean.getAuthorizationCode());
             }
+            diagnosticLog.info("Invalid access token request with Client Id : " + authzCodeBean.getConsumerKey() +
+                    ", Revoked authorization code : " + authzCodeBean.getAuthorizationCode());
             return true;
         }
         return false;
@@ -389,6 +406,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                 log.debug("Invalid access token request with Client Id : " + authzCodeBean.getConsumerKey() +
                         ", Expired authorization code : " + authzCodeBean.getAuthorizationCode());
             }
+            diagnosticLog.info("Invalid access token request with Client Id : " + authzCodeBean.getConsumerKey() +
+                    ", Expired authorization code : " + authzCodeBean.getAuthorizationCode());
             return true;
         }
 
@@ -417,6 +436,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         if (log.isDebugEnabled()) {
             log.debug("Changed state of authorization code : " + authzCodeBean.getAuthorizationCode() + " to expired");
         }
+        diagnosticLog.info("Changed state of authorization code : " + authzCodeBean.getAuthorizationCode() +
+                " to expired");
 
         if (cacheEnabled) {
             // remove the authorization code from the cache
@@ -450,6 +471,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             if (log.isDebugEnabled()) {
                 log.debug("PKCE code verification failed for client : " + authzCodeBean.getConsumerKey());
             }
+            diagnosticLog.info("PKCE code verification failed for Client Id : " + authzCodeBean.getConsumerKey());
             throw new IdentityOAuth2Exception("PKCE validation failed");
         }
         return true;
@@ -461,6 +483,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         if (log.isDebugEnabled()) {
             log.debug("Changed state of authorization code : " + authzCodeBean.getAuthorizationCode() + " to revoked");
         }
+        diagnosticLog.info("Changed state of authorization code : " + authzCodeBean.getAuthorizationCode() +
+                " to revoked.");
         if (cacheEnabled) {
             // remove the authorization code from the cache
             OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(
