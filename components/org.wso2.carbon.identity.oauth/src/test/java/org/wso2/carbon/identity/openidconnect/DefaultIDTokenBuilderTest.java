@@ -22,6 +22,7 @@ import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.json.JSONObject;
 import org.junit.Assert;
 import org.mockito.Mockito;
 import org.powermock.modules.testng.PowerMockTestCase;
@@ -30,6 +31,8 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
+import org.wso2.carbon.identity.application.authentication.framework.internal.impl.AuthenticationMethodNameTranslatorImpl;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
@@ -142,10 +145,10 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         authorizationGrantCacheEntry.setNonceValue("nonce");
         authorizationGrantCacheEntry.addAmr("amr");
         authorizationGrantCacheEntry.setSessionContextIdentifier("idp");
-        authorizationGrantCacheEntry.setMaxAge(10);
         authorizationGrantCacheEntry.setAuthTime(1000);
         authorizationGrantCacheEntry.setSelectedAcrValue("acr");
         authorizationGrantCacheEntry.setSubjectClaim("user@carbon.super");
+        authorizationGrantCacheEntry.setEssentialClaims(getEssentialClaims());
         AuthorizationGrantCacheKey authorizationGrantCacheKey =
                 new AuthorizationGrantCacheKey(AUTHORIZATION_CODE_VALUE);
         AuthorizationGrantCacheKey authorizationGrantCacheKeyForAccessToken =
@@ -192,6 +195,9 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         when(applicationMgtService
                 .getServiceProviderByClientId(anyString(), anyString(), anyString()))
                 .thenReturn(serviceProvider);
+        AuthenticationMethodNameTranslator authenticationMethodNameTranslator =
+                new AuthenticationMethodNameTranslatorImpl();
+        OAuth2ServiceComponentHolder.setAuthenticationMethodNameTranslator(authenticationMethodNameTranslator);
         RealmService realmService = IdentityTenantUtil.getRealmService();
         HashMap<String, String> claims = new HashMap<>();
         claims.put("http://wso2.org/claims/username", TestConstants.USER_NAME);
@@ -233,11 +239,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         AuthenticatedUser user = getDefaultAuthenticatedUserFederatedUser();
         OAuthTokenReqMessageContext messageContext = getTokenReqMessageContextForUser(user, clientId);
 
-        RealmService realmService = IdentityTenantUtil.getRealmService();
-        PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
-        IdpMgtServiceComponentHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
-
+        mockRealmService();
         String idToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
         JWTClaimsSet claims = SignedJWT.parse(idToken).getJWTClaimsSet();
         Assert.assertEquals(claims.getAudience().get(0),
@@ -264,11 +266,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext = getOAuthAuthzReqMessageContextForUser(user, clientId);
         oAuth2AuthorizeRespDTO.setAccessToken("2sa9a678f890877856y66e75f605d456");
 
-        RealmService realmService = IdentityTenantUtil.getRealmService();
-        PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
-        IdpMgtServiceComponentHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
-
+        mockRealmService();
         String idToken = defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
         JWTClaimsSet claims = SignedJWT.parse(idToken).getJWTClaimsSet();
         Assert.assertEquals(claims.getAudience().get(0),
@@ -284,6 +282,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
 
     @DataProvider(name = "testBuildEncryptedIDTokenForSupportedAlgorithm")
     public Object[][] testBuildEncryptedIDTokenForSupportedAlgorithm() {
+
         return new Object[][] {
                 {"RSA-OAEP-256"}, {"RSA-OAEP"}, {"RSA1_5"}
         };
@@ -292,11 +291,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
     @Test(dataProvider = "testBuildEncryptedIDTokenForSupportedAlgorithm")
     public void testBuildEncryptedIDTokenForSupportedAlgorithm(String algorithm) throws Exception {
 
-        RealmService realmService = IdentityTenantUtil.getRealmService();
-        PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
-        IdpMgtServiceComponentHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
-
+        mockRealmService();
         OAuthAppDO entry = getOAuthAppDO(algorithm);
         AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
 
@@ -327,10 +322,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         OAuthAppDO entry = getOAuthAppDO(algorithm);
         AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
 
-        RealmService realmService = IdentityTenantUtil.getRealmService();
-        PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
-        IdpMgtServiceComponentHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
+        mockRealmService();
         String idToken = defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
         EncryptedJWT encryptedJWT = decryptToken(idToken);
         JWTClaimsSet claims = encryptedJWT.getJWTClaimsSet();
@@ -356,11 +348,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
     @Test(dataProvider = "testBuildEncryptedIDTokenForUnSupportedAlgorithm")
     public void testBuildEncryptedIDTokenForUnSupportedAlgorithm(String algorithm) throws Exception {
 
-        RealmService realmService = IdentityTenantUtil.getRealmService();
-        PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
-        IdpMgtServiceComponentHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
-
+        mockRealmService();
         OAuthAppDO entry = getOAuthAppDO(algorithm);
         AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
 
@@ -389,15 +377,34 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
     public void testClientIDNotFoundException() throws Exception {
 
         String invalidClientId = "3f8b04332794d8dabfba9390aa423614";
-        RealmService realmService = IdentityTenantUtil.getRealmService();
-        PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
-        IdpMgtServiceComponentHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
+        mockRealmService();
         messageContext = getTokenReqMessageContextForUser(getDefaultAuthenticatedLocalUser(), invalidClientId);
         try {
             String authoIDToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
             JWTClaimsSet claims = SignedJWT.parse(authoIDToken).getJWTClaimsSet();
             Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
+            Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
+        } catch (IdentityOAuth2Exception e) {
+            Assert.assertEquals(e.getMessage(),
+                    "Error occurred while getting app information for client_id: " +
+                            invalidClientId);
+        }
+    }
+
+    @Test
+    public void testClientIDNotFoundExceptionForAuthorization() throws Exception {
+
+        String invalidClientId = "3f8b04332794d8dabfba9390aa423614";
+        mockRealmService();
+        OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext = getOAuthAuthzReqMessageContextForUser
+                (getDefaultAuthenticatedLocalUser(), invalidClientId);
+        OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO = new OAuth2AuthorizeRespDTO();
+        oAuth2AuthorizeRespDTO.setAccessToken("2sa9a678f890877856y66e75f605d456");
+        try {
+            String idToken = defaultIDTokenBuilder
+                    .buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
+            JWTClaimsSet claims = SignedJWT.parse(idToken).getJWTClaimsSet();
+            Assert.assertEquals(claims.getAudience().get(0), invalidClientId);
             Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
         } catch (IdentityOAuth2Exception e) {
             Assert.assertEquals(e.getMessage(),
@@ -481,10 +488,33 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         authzTokenReqDTO.setConsumerKey(clientId);
         authzTokenReqDTO.setIdpSessionIdentifier(TestConstants.IDP_ENTITY_ID_ALIAS);
         authzTokenReqDTO.setUser(user);
+        authzTokenReqDTO.addProperty("amr", new String[]{"amr"});
+        authzTokenReqDTO.setAuthTime(1000);
+        authzTokenReqDTO.setEssentialClaims(getEssentialClaims());
+        authzTokenReqDTO.setNonce("nonce");
+        authzTokenReqDTO.setSelectedAcr("acr");
 
         OAuthAuthzReqMessageContext authzMessageContext = new OAuthAuthzReqMessageContext(authzTokenReqDTO);
         return authzMessageContext;
     }
 
+    private void mockRealmService() throws Exception {
+
+        RealmService realmService = IdentityTenantUtil.getRealmService();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
+        IdpMgtServiceComponentHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
+    }
+
+    private String getEssentialClaims() {
+
+        JSONObject essentialClaims = new JSONObject();
+        JSONObject claimIdToken = new JSONObject();
+        JSONObject claimValue = new JSONObject();
+        claimValue.put("essential", true);
+        claimIdToken.put("auth_time", claimValue);
+        essentialClaims.put("id_token", claimIdToken);
+        return essentialClaims.toString();
+    }
 
 }
