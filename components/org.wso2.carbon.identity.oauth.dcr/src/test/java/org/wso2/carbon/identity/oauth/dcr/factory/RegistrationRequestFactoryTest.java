@@ -46,6 +46,7 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.Objects;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -314,7 +315,7 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
                                                       String expected) throws Exception {
 
         JSONObject jsonObject = getTestCreateData();
-        if (userName == "") {
+        if (!Objects.isNull(userName)) {
             jsonObject.put(RegistrationRequest.RegisterRequestConstant.EXT_PARAM_OWNER, "dummyParam");
         }
         when(mockHttpRequest.getReader()).thenReturn(mockReader);

@@ -104,13 +104,13 @@ public class HttpUnRegistrationResponseFactoryTest extends PowerMockTestCase {
     public Object[][] getInstanceData() {
 
         return new Object[][]{
-                {mockHttpIdentityResponseBuilder, mockUnregistrationResponse},
-                {null, mockUnregistrationResponse}
+                {mockHttpIdentityResponseBuilder},
+                {null}
         };
     }
 
     @Test(dataProvider = "instanceDataProvider")
-    public void testCreate(Object builder, Object unregistrationResponse) throws Exception {
+    public void testCreate(Object builder) throws Exception {
 
         if (builder == null) {
             mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);
@@ -141,10 +141,9 @@ public class HttpUnRegistrationResponseFactoryTest extends PowerMockTestCase {
         }).when(mockHttpIdentityResponseBuilder).addHeader(anyString(), anyString());
 
         if (builder == null) {
-            httpUnregistrationResponseFactory.create((IdentityResponse) unregistrationResponse);
+            httpUnregistrationResponseFactory.create(mockUnregistrationResponse);
         } else {
-            httpUnregistrationResponseFactory.create(mockHttpIdentityResponseBuilder,
-                    (IdentityResponse) unregistrationResponse);
+            httpUnregistrationResponseFactory.create(mockHttpIdentityResponseBuilder, mockUnregistrationResponse);
         }
         assertEquals((int) statusCode[0], HttpServletResponse.SC_NO_CONTENT);
     }

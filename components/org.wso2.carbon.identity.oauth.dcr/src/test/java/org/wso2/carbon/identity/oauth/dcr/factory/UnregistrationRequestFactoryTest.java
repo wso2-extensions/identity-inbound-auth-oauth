@@ -90,19 +90,18 @@ public class UnregistrationRequestFactoryTest extends PowerMockTestCase {
     public Object[][] getInstanceData() {
 
         unregisterRequestBuilder = mock(UnregistrationRequest.DCRUnregisterRequestBuilder.class);
-        mockHttpResponse = mock(HttpServletResponse.class);
-        mockHttpRequest = mock(HttpServletRequest.class);
         return new Object[][]{
-                {null, mockHttpRequest, mockHttpResponse},
-                {unregisterRequestBuilder, mockHttpRequest, mockHttpResponse}
+                {null},
+                {unregisterRequestBuilder}
 
         };
     }
 
     @Test(dataProvider = "instanceDataProvider")
-    public void testCreate(Object builder, Object request, Object response) throws Exception {
+    public void testCreate(Object builder) throws Exception {
 
-        mockHttpRequest = (HttpServletRequest) request;
+        mockHttpResponse = mock(HttpServletResponse.class);
+        mockHttpRequest = mock(HttpServletRequest.class);
         suppress(methodsDeclaredIn(HttpIdentityRequestFactory.class));
         String dummyConsumerKey = "dummyConsumerKey";
         when(mockHttpRequest.getRequestURI()).thenReturn("dummyVal/identity/register/" + dummyConsumerKey);
@@ -149,10 +148,10 @@ public class UnregistrationRequestFactoryTest extends PowerMockTestCase {
         }).when(unregisterRequestBuilder).setConsumerKey(anyString());
 
         if (builder == null) {
-            registrationRequestFactory.create(mockHttpRequest, (HttpServletResponse) response);
+            registrationRequestFactory.create(mockHttpRequest, mockHttpResponse);
         } else {
             registrationRequestFactory.create(unregisterRequestBuilder,
-                    mockHttpRequest, (HttpServletResponse) response);
+                    mockHttpRequest, mockHttpResponse);
         }
         assertEquals(header[0], dummyApplicationName, "Application name doesn't match with the given " +
                 "application name");

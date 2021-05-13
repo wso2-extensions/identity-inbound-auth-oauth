@@ -484,15 +484,14 @@ public class DCRMServiceTest extends PowerMockTestCase {
     @DataProvider(name = "RedirectAndGrantTypeProvider")
     public Object[][] getListSizeAndGrantType() {
 
-        List<String> redirectUri1 = new ArrayList<>();
         return new Object[][]{
-                {DCRConstants.GrantTypes.IMPLICIT, redirectUri1},
-                {DCRConstants.GrantTypes.AUTHORIZATION_CODE, redirectUri1},
+                {DCRConstants.GrantTypes.IMPLICIT},
+                {DCRConstants.GrantTypes.AUTHORIZATION_CODE},
         };
     }
 
     @Test(dataProvider = "RedirectAndGrantTypeProvider")
-    public void registerApplicationTestWithSPWithFailCallback(String grantTypeVal, List<String> redirectUri)
+    public void registerApplicationTestWithSPWithFailCallback(String grantTypeVal)
             throws Exception {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
@@ -512,8 +511,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
         dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
         when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain)).thenReturn
                 (null, serviceProvider);
-
-        applicationRegistrationRequest.setRedirectUris(redirectUri);
 
         OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
         oAuthConsumerApp.setApplicationName(dummyClientName);
