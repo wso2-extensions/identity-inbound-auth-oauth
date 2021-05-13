@@ -20,7 +20,9 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
+import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
@@ -29,6 +31,7 @@ import org.wso2.carbon.identity.application.authentication.framework.handler.req
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentServiceImpl;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -46,15 +49,21 @@ import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCacheEntry;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.registry.core.Resource;
+import org.wso2.carbon.registry.core.ResourceImpl;
+import org.wso2.carbon.registry.core.service.RegistryService;
+import org.wso2.carbon.registry.core.session.UserRegistry;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
@@ -68,11 +77,13 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
     private static final String CLIENT_ID = TestConstants.CLIENT_ID;
 
     private OpenIDConnectClaimFilterImpl openIDConnectClaimFilter;
+    private ApplicationManagementService applicationMgtService;
     private  ScopeClaimMappingDAOImpl scopeClaimMappingDAO;
     SSOConsentService ssoConsentService;
     private Set<String> requestedScopes;
     private List  scopeDTOList;
     private Map<String, Object> claims;
+    private Resource resource;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -83,7 +94,7 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
         ssoConsentService = mock(SSOConsentServiceImpl.class);
         ClaimMetadataManagementService claimMetadataManagementService =
                 mock(ClaimMetadataManagementService.class);
-        ApplicationManagementService applicationMgtService = mock(ApplicationManagementService.class);
+        applicationMgtService = mock(ApplicationManagementService.class);
         OAuth2ServiceComponentHolder.setApplicationMgtService(applicationMgtService);
         when(applicationMgtService
                 .getServiceProviderByClientId(CLIENT_ID, IdentityApplicationConstants.OAuth2.NAME,
@@ -92,6 +103,14 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
         OpenIDConnectServiceComponentHolder.getInstance()
                 .setClaimMetadataManagementService(claimMetadataManagementService);
         OpenIDConnectServiceComponentHolder.getInstance().setSsoConsentService(ssoConsentService);
+
+        RegistryService registryService = mock(RegistryService.class);
+        UserRegistry userRegistry = mock(UserRegistry.class);
+        resource = new ResourceImpl();
+        OAuth2ServiceComponentHolder.setRegistryService(registryService);
+        when(registryService.getConfigSystemRegistry(anyInt())).thenReturn(userRegistry);
+        when(userRegistry.get(anyString())).thenReturn(resource);
+
         List externalClaims = new ArrayList<>();
         ExternalClaim externalClaim = new ExternalClaim("testUserClaimURI",
                 "testUserClaimURI", "testUserClaimURI");
@@ -183,6 +202,39 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
         Assert.assertNotNull(filteredClaims.get("testUserClaimURI"));
         Assert.assertNull(filteredClaims.get("testUserClaimURI2"));
         Assert.assertEquals(((String) filteredClaims.get("testUserClaimURI")), "value1");
+    }
+
+    @Test
+    public void testGetOIDCScopeProperties() throws Exception {
+
+        resource.setProperty("key", "value");
+        resource.setProperty("key1", "value1");
+        Properties properties = WhiteboxImpl.invokeMethod(openIDConnectClaimFilter, "getOIDCScopeProperties",
+                SUPER_TENANT_DOMAIN_NAME);
+        Assert.assertEquals(properties.getProperty("key"), "value");
+        Assert.assertEquals(properties.getProperty("key1"), "value1");
+    }
+
+    @Test
+    public void testGetClaimsFilteredByUserConsentWithException() throws Exception {
+
+        claims = getClaims();
+        AuthenticatedUser user = getDefaultAuthenticatedLocalUser();
+        when(ssoConsentService.isSSOConsentManagementEnabled(any())).thenReturn(false);
+        Mockito.doThrow(new IdentityApplicationManagementException("")).when(applicationMgtService)
+                .getServiceProviderByClientId("dummy", IdentityApplicationConstants.OAuth2.NAME,
+                        SP_TENANT_DOMAIN);
+        Map<String, Object> claimFilter = openIDConnectClaimFilter
+                    .getClaimsFilteredByUserConsent(claims, user, "dummy", SP_TENANT_DOMAIN);
+        Assert.assertEquals(((ScopeDTO) claimFilter.get("testUserClaimURI")).getName(),
+                "email");
+        Assert.assertEquals(((ScopeDTO) claimFilter.get("testUserClaimURI"))
+                .getDescription(), "emailDescription");
+        Assert.assertEquals(((ScopeDTO) claimFilter.get("testUserClaimURI2")).getName(),
+                "address");
+        Assert.assertEquals(((ScopeDTO) claimFilter.get("testUserClaimURI2"))
+                .getDescription(), "addressDescription");
+
     }
 
     private List<ScopeDTO> getScopeDTOList() {
