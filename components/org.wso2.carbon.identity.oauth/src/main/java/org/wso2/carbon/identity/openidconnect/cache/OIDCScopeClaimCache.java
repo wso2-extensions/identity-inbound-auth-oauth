@@ -18,7 +18,7 @@
 
 package org.wso2.carbon.identity.openidconnect.cache;
 
-import org.wso2.carbon.identity.application.common.cache.BaseCache;
+import org.wso2.carbon.identity.core.cache.BaseCache;
 import org.wso2.carbon.utils.CarbonUtils;
 
 /**
@@ -49,17 +49,17 @@ public class OIDCScopeClaimCache extends BaseCache<Integer, OIDCScopeClaimCacheE
 
     public void addScopeClaimMap(int tenantId, OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry) {
 
-        super.addToCache(tenantId, oidcScopeClaimCacheEntry);
+        super.addToCache(tenantId, oidcScopeClaimCacheEntry, tenantId);
     }
 
     public void clearScopeClaimMap(int tenantId) {
 
-        super.clearCacheEntry(tenantId);
+        super.clearCacheEntry(tenantId, tenantId);
     }
 
     public OIDCScopeClaimCacheEntry getScopeClaimMap(int tenantId) {
 
-        OIDCScopeClaimCacheEntry scopeClaimMap = super.getValueFromCache(tenantId);
+        OIDCScopeClaimCacheEntry scopeClaimMap = super.getValueFromCache(tenantId, tenantId);
         return scopeClaimMap;
     }
 }

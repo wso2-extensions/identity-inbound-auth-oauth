@@ -121,6 +121,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppState
 public class EndpointUtil {
 
     private static final Log log = LogFactory.getLog(EndpointUtil.class);
+    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private static final String OAUTH2 = "oauth2";
     private static final String OPENID = "openid";
     private static final String OIDC = "oidc";
@@ -133,6 +134,7 @@ public class EndpointUtil {
     private static final String PROP_ERROR = "error";
     private static final String PROP_ERROR_DESCRIPTION = "error_description";
     private static final String PROP_REDIRECT_URI = "redirect_uri";
+    private static final String REQUEST_URI = "request_uri";
     private static final String NOT_AVAILABLE = "N/A";
     private static final String UNKNOWN_ERROR = "unknown_error";
     private static OAuth2Service oAuth2Service;
@@ -470,8 +472,9 @@ public class EndpointUtil {
         // redirected to a common OAuth Error page.
         if (!OAuthServerConfiguration.getInstance().isRedirectToRequestedRedirectUriEnabled()) {
             return getErrorPageURL(request, errorCode, errorMessage, appName);
-        } else if (subErrorCode.equals(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI) || subErrorCode
-                .equals(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT)) {
+        } else if (subErrorCode.equals(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI) ||
+                subErrorCode.equals(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT) ||
+                StringUtils.isBlank(request.getParameter(PROP_REDIRECT_URI))) {
             return getErrorPageURL(request, errorCode, errorMessage, appName);
         } else {
             String redirectUri = request.getParameter(OAuthConstants.OAuth20Params.REDIRECT_URI);
@@ -681,6 +684,13 @@ public class EndpointUtil {
         String sessionDataKeyConsent = UUID.randomUUID().toString();
         try {
             if (entry != null && entry.getQueryString() != null) {
+
+                if (entry.getQueryString().contains(REQUEST_URI) && params != null) {
+                    // When request_uri requests come without redirect_uri, we need to append it to the SPQueryParams
+                    // to be used in storing consent data
+                    entry.setQueryString(entry.getQueryString() +
+                            "&" + PROP_REDIRECT_URI + "=" + params.getRedirectURI());
+                }
                 queryString = URLEncoder.encode(entry.getQueryString(), UTF_8);
             }
 
@@ -1066,6 +1076,7 @@ public class EndpointUtil {
                     if (log.isDebugEnabled()) {
                         log.debug("Repeated param found:" + paramEntry.getKey());
                     }
+                    diagnosticLog.info("Invalid request. Repeated param found. Param name: " + paramEntry.getKey());
                     return false;
                 }
             }
@@ -1077,6 +1088,7 @@ public class EndpointUtil {
                     if (log.isDebugEnabled()) {
                         log.debug("Repeated param found:" + entry.getKey());
                     }
+                    diagnosticLog.info("Invalid request. Repeated param found. Param name: " + entry.getKey());
                     return false;
                 }
             }
@@ -1148,6 +1160,7 @@ public class EndpointUtil {
             if (log.isDebugEnabled()) {
                 log.debug("A valid OAuth client could not be found for client_id: " + consumerKey);
             }
+            diagnosticLog.info("A valid OAuth client could not be found for client_id: " + consumerKey);
 
             throw new InvalidApplicationClientException("A valid OAuth client could not be found for client_id: " +
                     Encode.forHtml(consumerKey));
@@ -1157,12 +1170,15 @@ public class EndpointUtil {
             if (log.isDebugEnabled()) {
                 log.debug("App is not in active state in client ID: " + consumerKey + ". App state is:" + appState);
             }
+            diagnosticLog.info("App is not in active state in client ID: " + consumerKey + ". App state is:" +
+                    appState);
             throw new InvalidApplicationClientException("Oauth application is not in active state");
         }
 
         if (log.isDebugEnabled()) {
             log.debug("Oauth App validation success for consumer key: " + consumerKey);
         }
+        diagnosticLog.info("Oauth App validation success for consumer key: " + consumerKey);
     }
 
     private static boolean isNotActiveState(String appState) {
@@ -1176,6 +1192,8 @@ public class EndpointUtil {
             OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
             return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            diagnosticLog.error("Error while getting oauth app for client Id: " + clientId + ". Error message: " +
+                    e.getMessage());
             log.error("Error while getting oauth app for client Id: " + clientId, e);
             return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }

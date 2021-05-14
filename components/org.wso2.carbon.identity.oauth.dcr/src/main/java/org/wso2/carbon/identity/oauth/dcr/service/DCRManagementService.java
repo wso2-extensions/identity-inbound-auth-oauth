@@ -58,6 +58,7 @@ import java.util.List;
 public class DCRManagementService {
 
     private static final Log log = LogFactory.getLog(DCRManagementService.class);
+    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
 
     private static final String AUTH_TYPE_OAUTH_2 = "oauth2";
     private static final String OAUTH_CONSUMER_SECRET = "oauthConsumerSecret";
@@ -94,12 +95,14 @@ public class DCRManagementService {
         }
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(applicationName)) {
+            diagnosticLog.info("The Application name: '" + applicationName + "' is not valid. It is not adhering " +
+                    "to the regex: " + DCRMUtils.getSPValidatorRegex());
             throw new DCRException("The Application name: " + applicationName + " is not valid! It is not adhering to" +
                     " the regex: " + DCRMUtils.getSPValidatorRegex());
         }
 
         RegistrationResponseProfile info = this.createOAuthApplication(profile);
-
+        diagnosticLog.info("DCR OAuth application registration has been successful.");
         return info;
     }
 
@@ -120,6 +123,8 @@ public class DCRManagementService {
         String applicationName = ownerName + "_" + profile.getClientName();
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(applicationName)) {
+            diagnosticLog.info("The Application name: '" + applicationName + "' is not valid. It is not adhering " +
+                    "to the regex: " + DCRMUtils.getSPValidatorRegex());
             throw new DCRException("The Application name: " + applicationName + " is not valid! It is not adhering to" +
                     " the regex: " + DCRMUtils.getSPValidatorRegex());
         }
@@ -161,17 +166,21 @@ public class DCRManagementService {
                 } else {
                     String errorMessage = "Service Provider with name: " + applicationName +
                             " already registered";
+                    diagnosticLog.info(errorMessage);
                     throw IdentityException.error(DCRException.class,
                             ErrorCodes.META_DATA_VALIDATION_FAILED.toString(), errorMessage);
                 }
 
             } catch (IdentityApplicationManagementException e) {
+                diagnosticLog.error("Server error occurred during loading service provider configurations for :" +
+                        applicationName + ". Error message: " + e.getMessage());
                 String errorMessage = "Error occurred while reading service provider, " + applicationName;
                 throw IdentityException.error(DCRException.class, ErrorCodes.BAD_REQUEST.toString(), errorMessage, e);
             }
 
             if (createdServiceProvider == null) {
                 String errorMessage = "Couldn't create Service Provider Application " + applicationName;
+                diagnosticLog.error(errorMessage);
                 throw IdentityException.error(DCRException.class, ErrorCodes.META_DATA_VALIDATION_FAILED.toString(),
                         errorMessage);
             }
@@ -188,6 +197,7 @@ public class DCRManagementService {
                     DCRConstants.GrantTypes.AUTHORIZATION_CODE) || profile.getGrantTypes().
                     contains(DCRConstants.GrantTypes.IMPLICIT))) {
                 String errorMessage = "RedirectUris property must have at least one URI value.";
+                diagnosticLog.info(errorMessage);
                 throw IdentityException.error(DCRException.class, ErrorCodes.META_DATA_VALIDATION_FAILED.toString(),
                         errorMessage);
             } else if (profile.getRedirectUris().size() == 1) {
@@ -198,6 +208,8 @@ public class DCRManagementService {
                             new String[]{IdentityValidationUtil.ValidatorPattern.URL_WITHOUT_FRAGMENT.name()});
                     oAuthConsumerApp.setCallbackUrl(redirectUri);
                 } catch (IdentityValidationException e) {
+                    diagnosticLog.error("Provided redirect URI: '" + redirectUri + "' is invalid. Error message: "
+                            + e.getMessage());
                     //TODO: need to add error code
                     throw IdentityException.error(DCRException.class,
                             "Redirect URI: " + redirectUri + ", is invalid", e);
@@ -252,6 +264,8 @@ public class DCRManagementService {
             try {
                 appMgtService.updateApplication(createdServiceProvider, profile.getTenantDomain(), userName);
             } catch (IdentityApplicationManagementException e) {
+                diagnosticLog.error("Server error occurred during OAuth application update. Error message: " +
+                        e.getMessage());
                 throw IdentityException.error(DCRException.class, ErrorCodes.BAD_REQUEST.toString(), e.getMessage());
             }
 
@@ -286,6 +300,7 @@ public class DCRManagementService {
 
         if (!StringUtils.isNotEmpty(userId) || !StringUtils.isNotEmpty(applicationName) || !StringUtils
                 .isNotEmpty(consumerKey)) {
+            diagnosticLog.info("Username, Application Name and Consumer Key cannot be null or empty");
             throw new DCRException(
                     "Username, Application Name and Consumer Key cannot be null or empty");
         }

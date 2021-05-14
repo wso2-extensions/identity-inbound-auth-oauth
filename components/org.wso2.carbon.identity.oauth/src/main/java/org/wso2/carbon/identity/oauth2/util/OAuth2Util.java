@@ -301,6 +301,7 @@ public class OAuth2Util {
     public static final String APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS = "applicationAccessTokenExpireTime";
 
     private static final Log log = LogFactory.getLog(OAuth2Util.class);
+    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private static final String INTERNAL_LOGIN_SCOPE = "internal_login";
     private static final String IDENTITY_PATH = "identity";
     public static final String NAME = "name";
@@ -3930,12 +3931,17 @@ public class OAuth2Util {
     public static void validateRequestTenantDomain(String tenantDomainOfApp) throws InvalidOAuthClientException {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            diagnosticLog.info("Tenant qualified URL feature is enabled.");
             // In tenant qualified URL mode we would always have the tenant domain in the context.
             String tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
             if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                 // This means the tenant domain sent in the request and app's tenant domain do not match.
+                diagnosticLog.info("Tenant domain sent in the request : ' " + tenantDomainFromContext + "' does not " +
+                        "match with the application tenant domain: '" + tenantDomainOfApp + "'");
                 throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in " +
                         "tenantDomain: " + tenantDomainFromContext);
+            } else {
+                diagnosticLog.info("Tenant domain sent in the request matches with the application tenant domain.");
             }
         }
     }

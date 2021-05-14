@@ -19,20 +19,30 @@
 package org.wso2.carbon.identity.oauth.common;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+
 import javax.servlet.http.HttpServletRequest;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUEST;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUEST_URI;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.SCOPE;
 
 /**
  * Validator for hybrid flow code token requests
  */
 public class CodeTokenResponseValidator extends TokenValidator {
+
+    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
 
     public CodeTokenResponseValidator() {
 
@@ -58,12 +68,20 @@ public class CodeTokenResponseValidator extends TokenValidator {
     @Override
     public void validateRequiredParameters(HttpServletRequest request) throws OAuthProblemException {
 
+        if (StringUtils.isNotBlank(request.getParameter(REQUEST_URI))) {
+            // PAR spec mandates request_uri to have client_id, response_type in accordance to OAuth 2.0. Also
+            // 'request' parameter is disallowed if 'request_uri' parameter is present in the authorization request.
+            requiredParams = new ArrayList<>(Arrays.asList(CLIENT_ID, RESPONSE_TYPE, REQUEST_URI));
+            notAllowedParams.add(REQUEST);
+        }
         super.validateRequiredParameters(request);
 
         // For code token response type, the scope parameter should contain 'openid' as one of the scopes.
         String openIdScope = request.getParameter(SCOPE);
         if (StringUtils.isBlank(openIdScope) || !isContainOIDCScope(openIdScope)) {
             String clientID = request.getParameter(CLIENT_ID);
+            diagnosticLog.error("Request with 'client_id' : '" + clientID + "' has " +
+                    "'response_type' for 'hybrid flow', but 'openid' scope not found.");
             throw OAuthProblemException.error(OAuthError.TokenResponse.INVALID_REQUEST)
                     .description("Request with \'client_id\' = \'" + clientID + "\' has " +
                             "\'response_type\' for \'hybrid flow\'; but \'openid\' scope not found.");
@@ -75,6 +93,7 @@ public class CodeTokenResponseValidator extends TokenValidator {
 
         String method = request.getMethod();
         if (!OAuth.HttpMethod.GET.equals(method) && !OAuth.HttpMethod.POST.equals(method)) {
+            diagnosticLog.info("HTTP method used in the request: '" + method + "' is not correct.");
             throw OAuthProblemException.error(OAuthError.CodeResponse.INVALID_REQUEST)
                     .description("Method not correct.");
         }

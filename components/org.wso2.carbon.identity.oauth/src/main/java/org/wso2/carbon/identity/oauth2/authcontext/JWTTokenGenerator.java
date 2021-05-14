@@ -245,7 +245,7 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
 
             if (requestedClaims != null) {
                 cacheKey = new ClaimCacheKey(authenticatedUser);
-                result = claimsLocalCache.getValueFromCache(cacheKey);
+                result = claimsLocalCache.getValueFromCache(cacheKey, tenantDomain);
             }
 
             SortedMap<String, String> claimValues = null;
@@ -254,10 +254,10 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             } else if (isExistingUser) {
                 claimValues = claimsRetriever.getClaims(authzUser, requestedClaims);
                 UserClaims userClaims = new UserClaims(claimValues);
-                claimsLocalCache.addToCache(cacheKey, userClaims);
+                claimsLocalCache.addToCache(cacheKey, userClaims, tenantDomain);
 
                 ClaimMetaDataCache.getInstance().addToCache(new ClaimMetaDataCacheKey(authenticatedUser),
-                        new ClaimMetaDataCacheEntry(cacheKey));
+                        new ClaimMetaDataCacheEntry(cacheKey), tenantDomain);
             }
 
             if (isExistingUser) {

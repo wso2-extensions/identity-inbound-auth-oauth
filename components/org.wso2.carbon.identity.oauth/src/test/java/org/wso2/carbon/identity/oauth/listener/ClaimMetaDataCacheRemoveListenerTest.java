@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
 import org.wso2.carbon.identity.oauth.util.ClaimCacheKey;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheEntry;
+import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheKey;
 
 import javax.cache.Cache;
 import javax.cache.event.CacheEntryEvent;
@@ -44,15 +45,22 @@ public class ClaimMetaDataCacheRemoveListenerTest {
     @DataProvider(name = "provideParams")
     public Object[][] providePostParams() {
         final Cache cache = mock(Cache.class);
+        ClaimCacheKey claimCacheKey = mock(ClaimCacheKey.class);
+        ClaimMetaDataCacheKey claimMetaDataCacheKey = mock(ClaimMetaDataCacheKey.class);
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setTenantDomain("foo.com");
+        when(claimCacheKey.getAuthenticatedUser()).thenReturn(authenticatedUser);
+        when(claimMetaDataCacheKey.getAuthenticatedUser()).thenReturn(authenticatedUser);
 
-        CacheEntryEvent<? extends ClaimMetaDataCacheEntry,
+
+        CacheEntryEvent<? extends ClaimMetaDataCacheKey,
                 ? extends ClaimMetaDataCacheEntry> cacheEntryEventNullInstance = null;
 
-        CacheEntryEvent<? extends ClaimMetaDataCacheEntry,
+        CacheEntryEvent<? extends ClaimMetaDataCacheKey,
                 ? extends ClaimMetaDataCacheEntry> cacheEntryEventValueNull =
-                new CacheEntryEvent<ClaimMetaDataCacheEntry, ClaimMetaDataCacheEntry>(cache) {
+                new CacheEntryEvent<ClaimMetaDataCacheKey, ClaimMetaDataCacheEntry>(cache) {
                     @Override
-                    public ClaimMetaDataCacheEntry getKey() {
+                    public ClaimMetaDataCacheKey getKey() {
                         return null;
                     }
 
@@ -63,16 +71,14 @@ public class ClaimMetaDataCacheRemoveListenerTest {
 
                 };
 
-        CacheEntryEvent<? extends ClaimMetaDataCacheEntry,
+        CacheEntryEvent<? extends ClaimMetaDataCacheKey,
                 ? extends ClaimMetaDataCacheEntry> cacheEntryEventValueNotnull =
-                new CacheEntryEvent<ClaimMetaDataCacheEntry, ClaimMetaDataCacheEntry>(cache) {
-                    AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-                    ClaimCacheKey claimCacheKey = new ClaimCacheKey(authenticatedUser);
+                new CacheEntryEvent<ClaimMetaDataCacheKey, ClaimMetaDataCacheEntry>(cache) {
                     ClaimMetaDataCacheEntry claimMetaDataCacheEntry = new ClaimMetaDataCacheEntry(claimCacheKey);
 
                     @Override
-                    public ClaimMetaDataCacheEntry getKey() {
-                        return claimMetaDataCacheEntry;
+                    public ClaimMetaDataCacheKey getKey() {
+                        return claimMetaDataCacheKey;
                     }
 
                     @Override
@@ -82,15 +88,14 @@ public class ClaimMetaDataCacheRemoveListenerTest {
                 };
         cacheEntryEventValueNotnull.getValue().setClaimCacheKey(null);
 
-        CacheEntryEvent<? extends ClaimMetaDataCacheEntry,
+        CacheEntryEvent<? extends ClaimMetaDataCacheKey,
                 ? extends ClaimMetaDataCacheEntry> cacheEntryEventQualified =
-                new CacheEntryEvent<ClaimMetaDataCacheEntry, ClaimMetaDataCacheEntry>(cache) {
-                    ClaimCacheKey claimCacheKey = mock(ClaimCacheKey.class);
+                new CacheEntryEvent<ClaimMetaDataCacheKey, ClaimMetaDataCacheEntry>(cache) {
                     ClaimMetaDataCacheEntry claimMetaDataCacheEntry = new ClaimMetaDataCacheEntry(claimCacheKey);
 
                     @Override
-                    public ClaimMetaDataCacheEntry getKey() {
-                        return claimMetaDataCacheEntry;
+                    public ClaimMetaDataCacheKey getKey() {
+                        return claimMetaDataCacheKey;
                     }
 
                     @Override
@@ -118,7 +123,7 @@ public class ClaimMetaDataCacheRemoveListenerTest {
         mockStatic(ClaimCache.class);
         when(ClaimCache.getInstance()).thenReturn(mockedClaimCache);
         ClaimMetaDataCacheRemoveListener claimMetaDataCacheRemoveListener = new ClaimMetaDataCacheRemoveListener();
-        claimMetaDataCacheRemoveListener.entryRemoved((CacheEntryEvent<? extends ClaimMetaDataCacheEntry,
+        claimMetaDataCacheRemoveListener.entryRemoved((CacheEntryEvent<? extends ClaimMetaDataCacheKey,
                 ? extends ClaimMetaDataCacheEntry>) object);
     }
 

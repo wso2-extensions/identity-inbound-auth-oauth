@@ -19,9 +19,13 @@
 package org.wso2.carbon.identity.oauth.util;
 
 
-import org.wso2.carbon.identity.application.common.cache.BaseCache;
+import org.wso2.carbon.identity.core.cache.AbstractCacheListener;
+import org.wso2.carbon.identity.core.cache.BaseCache;
 import org.wso2.carbon.identity.oauth.listener.ClaimCacheRemoveListener;
 import org.wso2.carbon.utils.CarbonUtils;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * User claim cache key.
@@ -29,12 +33,16 @@ import org.wso2.carbon.utils.CarbonUtils;
 public class ClaimCache extends BaseCache<ClaimCacheKey, UserClaims> {
 
     private static final String CLAIM_CACHE_NAME = "ClaimCache";
-
+    private static final List<AbstractCacheListener<ClaimCacheKey, UserClaims>> cacheListeners = new ArrayList<>();
     private static ClaimCache instance;
 
+    static {
+        cacheListeners.add(new ClaimCacheRemoveListener());
+    }
+
     private ClaimCache() {
-        super(CLAIM_CACHE_NAME);
-        super.addListener(new ClaimCacheRemoveListener());
+
+        super(CLAIM_CACHE_NAME, cacheListeners);
     }
 
     public static ClaimCache getInstance() {
