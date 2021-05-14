@@ -28,6 +28,10 @@ import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
+import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.model.Property;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.common.testng.WithAxisConfiguration;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
@@ -41,6 +45,7 @@ import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
+import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
 import java.nio.file.Paths;
 import java.security.Key;
@@ -49,6 +54,7 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.HashMap;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
@@ -69,7 +75,8 @@ import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENA
 @WithAxisConfiguration
 @WithH2Database(jndiName = "jdbc/WSO2CarbonDB", files = {"dbScripts/identity_req_obj.sql"}, dbName = "testdb2")
 @PrepareForTest({RequestObjectValidatorImpl.class, IdentityUtil.class, IdentityTenantUtil.class,
-        OAuthServerConfiguration.class, OAuth2Util.class})
+        OAuthServerConfiguration.class, OAuth2Util.class, IdentityProviderManager.class,
+        IdentityApplicationManagementUtil.class})
 @PowerMockIgnore({"javax.crypto.*"})
 public class RequestObjectValidatorImplTest extends PowerMockTestCase {
 
@@ -160,7 +167,14 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
         when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
 
-        PowerMockito.doReturn(SOME_SERVER_URL).when(requestObjectValidator, "getTokenEpURL", anyString());
+        mockIdentityProviderManager();
+        PowerMockito.mockStatic(IdentityApplicationManagementUtil.class);
+        FederatedAuthenticatorConfig config = new FederatedAuthenticatorConfig();
+        when(IdentityApplicationManagementUtil.getFederatedAuthenticator(any(), any())).thenReturn(config);
+        Property property = new Property();
+        property.setValue(SOME_SERVER_URL);
+        when(IdentityApplicationManagementUtil.getProperty(config.getProperties(), "IdPEntityId"))
+                .thenReturn(property);
 
         RequestObject requestObject = requestParamRequestObjectBuilder.buildRequestObject(jwt, oAuth2Parameters);
 
@@ -181,5 +195,17 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
             validObject = false;
         }
         Assert.assertEquals(validObject, validRequestObj, errorMsg);
+    }
+
+    private void mockIdentityProviderManager() throws Exception {
+
+        IdentityProvider idp = new IdentityProvider();
+        idp.setIdentityProviderName("LOCAL");
+        idp.setEnable(true);
+
+        PowerMockito.mockStatic(IdentityProviderManager.class);
+        IdentityProviderManager identityProviderManager = mock(IdentityProviderManager.class);
+        when(IdentityProviderManager.getInstance()).thenReturn(identityProviderManager);
+        when(identityProviderManager.getResidentIdP(anyString())).thenReturn(idp);
     }
 }
