@@ -505,7 +505,7 @@ public class OAuth2AuthzEndpoint {
         return !getSSOConsentService().isSSOConsentManagementEnabled(sp);
     }
 
-    private void handlePostConsent(OAuthMessage oAuthMessage) throws ConsentHandlingFailedException { // add diag logs
+    private void handlePostConsent(OAuthMessage oAuthMessage) throws ConsentHandlingFailedException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         String tenantDomain = EndpointUtil.getSPTenantDomainFromClientId(oauth2Params.getClientId());
