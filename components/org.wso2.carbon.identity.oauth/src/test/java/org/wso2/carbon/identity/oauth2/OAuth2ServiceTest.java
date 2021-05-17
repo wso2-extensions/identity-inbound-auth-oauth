@@ -62,6 +62,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.user.core.UserRealm;
@@ -351,6 +352,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         refreshTokenValidationDataDO.setAuthorizedUser(authenticatedUser);
         refreshTokenValidationDataDO.setScope(new String[]{"test"});
         refreshTokenValidationDataDO.setRefreshTokenState(tokenState);
+        refreshTokenValidationDataDO.setTokenBindingReference("dummyReference");
 
         OAuthTokenPersistenceFactory oAuthTokenPersistenceFactory = OAuthTokenPersistenceFactory.getInstance();
         TokenManagementDAOImpl mockTokenManagementDAOImpl = mock(TokenManagementDAOImpl.class);
@@ -376,6 +378,9 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
         setUpRevokeToken();
         AccessTokenDO accessTokenDO = getAccessToken();
+        TokenBinding tokenBinding = new TokenBinding();
+        tokenBinding.setBindingReference("dummyReference");
+        accessTokenDO.setTokenBinding(tokenBinding);
         when(OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenReturn(accessTokenDO);
 
         OAuthTokenPersistenceFactory oAuthTokenPersistenceFactory = OAuthTokenPersistenceFactory.getInstance();
@@ -502,6 +507,23 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         assertEquals(oAuth2Service.revokeTokenByOAuthClient(revokeRequestDTO).getErrorMsg(), errorMsg);
     }
 
+    @Test
+    public void testIdentityExceptionForRevokeTokenByOAuthClient() throws Exception {
+
+        setUpRevokeToken();
+        AccessTokenDO accessTokenDO = getAccessToken();
+        TokenBinding tokenBinding = new TokenBinding();
+        tokenBinding.setBindingReference("dummyReference");
+        accessTokenDO.setTokenBinding(tokenBinding);
+        when(OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenThrow(IdentityException.class);
+        OAuthRevocationRequestDTO revokeRequestDTO = getOAuthRevocationRequestDTO();
+
+        OAuthRevocationResponseDTO oAuthRevocationResponseDTO = oAuth2Service
+                    .revokeTokenByOAuthClient(revokeRequestDTO);
+        assertEquals(oAuthRevocationResponseDTO.getErrorMsg(),
+                "Error occurred while revoking authorization grant for applications");
+    }
+
     /**
      * DataProvider: map,claims array,supported claim array, size of expected out put,username
      */
@@ -515,7 +537,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
         Map<String, String> testMap2 = new HashMap<>();
         return new Object[][]{
-                {testMap1, new String[]{"openid"}, new String[]{"test"}, 6, "testUser"},
+                {testMap1, new String[]{"openid"}, new String[]{"test"}, 9, "testUser"},
                 {testMap1, new String[]{"openid"}, new String[]{"test"}, 0, null},
                 {testMap2, new String[]{"openid"}, new String[]{}, 1, "testUser"},
                 {testMap2, new String[]{}, new String[]{"test"}, 0, "testUser"},
@@ -545,7 +567,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getRealm(anyString(), anyString())).thenReturn(testRealm);
 
-        when(oAuthServerConfiguration.getSupportedClaims()).thenReturn(supClaims);
+        WhiteboxImpl.setInternalState(OAuthServerConfiguration.getInstance(), "supportedClaims", supClaims);
         assertEquals(oAuth2Service.getUserClaims("test").length, arraySize);
     }
 
