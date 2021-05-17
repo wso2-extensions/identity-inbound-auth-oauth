@@ -29,6 +29,7 @@ public class ApplicationRegistrationRequest implements Serializable {
 
     private static final long serialVersionUID = -1766289861296661081L;
 
+    private List<String> audiences = new ArrayList<>();
     private List<String> redirectUris = new ArrayList<>();
     private String clientName = null;
     private List<String> grantTypes = new ArrayList<>();
@@ -36,7 +37,20 @@ public class ApplicationRegistrationRequest implements Serializable {
     private String consumerKey = null;
     private String consumerSecret = null;
     private String spTemplateName = null;
+    private String idTokenEncryptionAlgorithm = null;
+    private String idTokenEncryptionMethod = null;
     private String backchannelLogoutUri = null;
+    private String softwareId = null;
+
+    public List<String> getAudiences() {
+
+        return audiences;
+    }
+
+    public void setAudiences(List<String> audiences) {
+
+        this.audiences = audiences;
+    }
 
     public List<String> getRedirectUris() {
 
@@ -98,6 +112,26 @@ public class ApplicationRegistrationRequest implements Serializable {
         this.consumerSecret = consumerSecret;
     }
 
+    public String getIdTokenEncryptionAlgorithm() {
+
+        return  idTokenEncryptionAlgorithm;
+    }
+
+    public void setIdTokenEncryptionAlgorithm(String idTokenEncryptionAlgorithm) {
+
+        this.idTokenEncryptionAlgorithm = idTokenEncryptionAlgorithm;
+    }
+
+    public String getIdTokenEncryptionMethod() {
+
+        return idTokenEncryptionMethod;
+    }
+
+    public void setIdTokenEncryptionMethod(String idTokenEncryptionMethod) {
+
+        this.idTokenEncryptionMethod = idTokenEncryptionMethod;
+    }
+
     public String getBackchannelLogoutUri() {
 
         return backchannelLogoutUri;
@@ -106,6 +140,16 @@ public class ApplicationRegistrationRequest implements Serializable {
     public void setBackchannelLogoutUri(String backchannelLogoutUri) {
 
         this.backchannelLogoutUri = backchannelLogoutUri;
+    }
+
+    public String getSoftwareId() {
+
+        return softwareId;
+    }
+
+    public void setSoftwareId(String softwareId) {
+
+        this.softwareId = softwareId;
     }
 
     /**

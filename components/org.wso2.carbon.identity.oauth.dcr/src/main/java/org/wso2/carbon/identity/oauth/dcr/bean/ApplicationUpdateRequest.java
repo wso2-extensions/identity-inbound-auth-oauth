@@ -34,6 +34,10 @@ public class ApplicationUpdateRequest implements Serializable {
     private List<String> grantTypes = new ArrayList<>();
     private String tokenType = null;
     private String backchannelLogoutUri = null;
+    private List<String> aud = new ArrayList<String>();
+    private String idTokenEncryptionAlgorithm = null;
+    private String idTokenEncryptionMethod = null;
+    private String softwareId = null;
 
     public List<String> getRedirectUris() {
 
@@ -83,5 +87,45 @@ public class ApplicationUpdateRequest implements Serializable {
     public void setBackchannelLogoutUri(String backchannelLogoutUri) {
 
         this.backchannelLogoutUri = backchannelLogoutUri;
+    }
+
+    public List<String> getAud() {
+
+        return aud;
+    }
+
+    public void setAud(List<String> aud) {
+
+        this.aud = aud;
+    }
+
+    public String getIdTokenEncryptionAlgorithm() {
+
+        return idTokenEncryptionAlgorithm;
+    }
+
+    public void setIdTokenEncryptionAlgorithm(String idTokenEncryptionAlgorithm) {
+
+        this.idTokenEncryptionAlgorithm = idTokenEncryptionAlgorithm;
+    }
+
+    public String getIdTokenEncryptionMethod() {
+
+        return idTokenEncryptionMethod;
+    }
+
+    public void setIdTokenEncryptionMethod(String idTokenEncryptionMethod) {
+
+        this.idTokenEncryptionMethod = idTokenEncryptionMethod;
+    }
+
+    public String getSoftwareId() {
+
+        return softwareId;
+    }
+
+    public void setSoftwareId(String softwareId) {
+
+        this.softwareId = softwareId;
     }
 }

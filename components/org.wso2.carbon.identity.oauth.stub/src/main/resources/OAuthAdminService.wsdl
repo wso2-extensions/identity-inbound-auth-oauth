@@ -414,6 +414,7 @@
                     <xs:element minOccurs="0" name="renewRefreshTokenEnabled" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="requestObjectSignatureValidationEnabled" type="xs:boolean"/>
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="scopeValidators" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="softwareId" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="state" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tokenBindingType" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tokenBindingValidationEnabled" type="xs:boolean"/>

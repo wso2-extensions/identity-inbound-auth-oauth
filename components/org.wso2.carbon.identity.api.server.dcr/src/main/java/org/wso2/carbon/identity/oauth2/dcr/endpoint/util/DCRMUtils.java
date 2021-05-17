@@ -67,6 +67,10 @@ public class DCRMUtils {
         appRegistrationRequest.setConsumerSecret(registrationRequestDTO.getClientSecret());
         appRegistrationRequest.setSpTemplateName(registrationRequestDTO.getSpTemplateName());
         appRegistrationRequest.setBackchannelLogoutUri(registrationRequestDTO.getBackchannelLogoutUri());
+        appRegistrationRequest.setAudiences(registrationRequestDTO.getAud());
+        appRegistrationRequest.setIdTokenEncryptionAlgorithm(registrationRequestDTO.getIdTokenEncryptedResponseAlg());
+        appRegistrationRequest.setIdTokenEncryptionMethod(registrationRequestDTO.getIdTokenEncryptedResponseEnc());
+        appRegistrationRequest.setSoftwareId(registrationRequestDTO.getSoftwareId());
         return appRegistrationRequest;
 
     }
@@ -79,6 +83,10 @@ public class DCRMUtils {
         applicationUpdateRequest.setGrantTypes(updateRequestDTO.getGrantTypes());
         applicationUpdateRequest.setTokenType(updateRequestDTO.getTokenType());
         applicationUpdateRequest.setBackchannelLogoutUri(updateRequestDTO.getBackchannelLogoutUri());
+        applicationUpdateRequest.setAud(updateRequestDTO.getAud());
+        applicationUpdateRequest.setIdTokenEncryptionAlgorithm(updateRequestDTO.getIdTokenEncryptionAlgorithm());
+        applicationUpdateRequest.setIdTokenEncryptionMethod(updateRequestDTO.getIdTokenEncryptionMethod());
+        applicationUpdateRequest.setSoftwareId(updateRequestDTO.getSoftwareId());
         return applicationUpdateRequest;
 
     }
@@ -150,6 +158,10 @@ public class DCRMUtils {
         applicationDTO.setClientSecret(application.getClientSecret());
         applicationDTO.setRedirectUris(application.getRedirectUris());
         applicationDTO.setGrantTypes(application.getGrantTypes());
+        applicationDTO.setAud(application.getAud());
+        applicationDTO.setIdTokenEncryptionAlgorithm(application.getIdTokenEncryptionAlgorithm());
+        applicationDTO.setIdTokenEncryptionMethod(application.getIdTokenEncryptionMethod());
+        applicationDTO.setSoftwareId(application.getSoftwareId());
 
         return applicationDTO;
     }

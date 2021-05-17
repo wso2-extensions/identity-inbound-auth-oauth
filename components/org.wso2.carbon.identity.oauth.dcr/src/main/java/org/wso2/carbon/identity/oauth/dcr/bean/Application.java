@@ -33,6 +33,10 @@ public class Application implements Serializable {
     private String clientSecret = null;
     private List<String> redirectUris = null;
     private List<String> grantTypes = null;
+    private List<String> aud = null;
+    private String idTokenEncryptionAlgorithm = null;
+    private String idTokenEncryptionMethod = null;
+    private String softwareId = null;
 
     public String getClientName() {
 
@@ -84,6 +88,46 @@ public class Application implements Serializable {
         this.grantTypes = grantTypes;
     }
 
+    public List<String> getAud() {
+
+        return aud;
+    }
+
+    public void setAud(List<String> aud) {
+
+        this.aud = aud;
+    }
+
+    public String getIdTokenEncryptionAlgorithm() {
+
+        return idTokenEncryptionAlgorithm;
+    }
+
+    public void setIdTokenEncryptionAlgorithm(String idTokenEncryptionAlgorithm) {
+
+        this.idTokenEncryptionAlgorithm = idTokenEncryptionAlgorithm;
+    }
+
+    public String getIdTokenEncryptionMethod() {
+
+        return idTokenEncryptionMethod;
+    }
+
+    public void setIdTokenEncryptionMethod(String idTokenEncryptionMethod) {
+
+        this.idTokenEncryptionMethod = idTokenEncryptionMethod;
+    }
+
+    public String getSoftwareId() {
+
+        return softwareId;
+    }
+
+    public void setSoftwareId(String softwareId) {
+
+        this.softwareId = softwareId;
+    }
+
     @Override
     public String toString() {
 
@@ -93,6 +137,10 @@ public class Application implements Serializable {
                 "  clientSecret: " + this.clientSecret + "\n" +
                 "  redirectUris: " + this.redirectUris + "\n" +
                 "  grantTypes: " + this.grantTypes + "\n" +
+                "  aud: " + this.aud + "\n" +
+                "  idTokenEncryptionAlgorithm: " + this.idTokenEncryptionAlgorithm + "\n" +
+                "  idTokenEncryptionMethod: " + this.idTokenEncryptionMethod + "\n" +
+                "  softwareId: " + this.softwareId + "\n" +
                 "}\n";
     }
 }

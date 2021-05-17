@@ -107,7 +107,7 @@ paths:
         "redirect_uris":["https://client.example.org/callback"],
         "client_name":"application_owner_application_1",
         "grant_types": ["password"]}
-      operationId: getApplicationByName
+      operationId: getApplicationWithName
       parameters:
         - name: client_name
           type: string
@@ -308,6 +308,16 @@ definitions:
         type: string
       backchannel_logout_session_required:
         type: boolean
+      aud:
+        type: array
+        items:
+          type: string
+      id_token_encrypted_response_alg:
+        type: string
+      id_token_encrypted_response_enc:
+        type: string
+      software_id:
+        type: string
 #-----------------------------------------------------
 # The Application Update Request Object
 #-----------------------------------------------------
@@ -332,6 +342,16 @@ definitions:
         type: string
       backchannel_logout_session_required:
         type: boolean
+      aud:
+        type: array
+        items:
+          type: string
+      id_token_encrypted_response_alg:
+        type: string
+      id_token_encrypted_response_enc:
+        type: string
+      software_id:
+        type: string
 #-----------------------------------------------------
 # The OAuth2 Application Object
 #-----------------------------------------------------
@@ -353,6 +373,16 @@ definitions:
         items:
           type: string
       client_name:
+        type: string
+      aud:
+        type: array
+        items:
+          type: string
+      id_token_encrypted_response_alg:
+        type: string
+      id_token_encrypted_response_enc:
+        type: string
+      software_id:
         type: string
 #-----------------------------------------------------
 # The Error Response object

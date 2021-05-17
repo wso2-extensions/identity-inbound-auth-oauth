@@ -14,27 +14,39 @@ import javax.validation.constraints.NotNull;
 
 @ApiModel(description = "")
 public class ApplicationDTO  {
-  
-  
-  
+
+
+
   private String clientId = null;
-  
-  
+
+
   private String clientSecret = null;
-  
-  
+
+
   private String clientSecretExpiresAt = null;
-  
-  
+
+
   private List<String> redirectUris = new ArrayList<String>();
-  
-  
+
+
   private List<String> grantTypes = new ArrayList<String>();
-  
-  
+
+
   private String clientName = null;
 
-  
+
+  private  List<String> aud = new ArrayList<String>();
+
+
+  private String idTokenEncryptionAlgorithm = null;
+
+
+  private String idTokenEncryptionMethod = null;
+
+
+  private String softwareId = null;
+
+
   /**
    **/
   @ApiModelProperty(value = "")
@@ -46,7 +58,7 @@ public class ApplicationDTO  {
     this.clientId = clientId;
   }
 
-  
+
   /**
    **/
   @ApiModelProperty(value = "")
@@ -58,7 +70,7 @@ public class ApplicationDTO  {
     this.clientSecret = clientSecret;
   }
 
-  
+
   /**
    **/
   @ApiModelProperty(value = "")
@@ -70,7 +82,7 @@ public class ApplicationDTO  {
     this.clientSecretExpiresAt = clientSecretExpiresAt;
   }
 
-  
+
   /**
    **/
   @ApiModelProperty(value = "")
@@ -82,7 +94,7 @@ public class ApplicationDTO  {
     this.redirectUris = redirectUris;
   }
 
-  
+
   /**
    **/
   @ApiModelProperty(value = "")
@@ -94,7 +106,7 @@ public class ApplicationDTO  {
     this.grantTypes = grantTypes;
   }
 
-  
+
   /**
    **/
   @ApiModelProperty(value = "")
@@ -106,19 +118,58 @@ public class ApplicationDTO  {
     this.clientName = clientName;
   }
 
-  
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("aud")
+  public List<String> getAud() { return aud; }
+  public void setAud(List<String> aud) {
+    this.aud = aud;
+  }
+
+
+  /**
+  **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("id_token_encrypted_response_alg")
+  public String getIdTokenEncryptionAlgorithm() { return idTokenEncryptionAlgorithm; }
+  public void setIdTokenEncryptionAlgorithm(String idTokenEncryptionAlgorithm) {
+    this.idTokenEncryptionAlgorithm = idTokenEncryptionAlgorithm;
+  }
+
+  /**
+  **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("id_token_encrypted_response_enc")
+  public String getIdTokenEncryptionMethod() { return idTokenEncryptionMethod; }
+  public void setIdTokenEncryptionMethod(String idTokenEncryptionMethod) {
+    this.idTokenEncryptionMethod = idTokenEncryptionMethod;
+  }
+
+  /**
+  **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("software_id")
+  public String getSoftwareId() { return softwareId; }
+  public void setSoftwareId(String softwareId) {
+    this.softwareId = softwareId;
+  }
 
   @Override
   public String toString()  {
     StringBuilder sb = new StringBuilder();
     sb.append("class ApplicationDTO {\n");
-    
+
     sb.append("  client_id: ").append(clientId).append("\n");
     sb.append("  client_secret: ").append(clientSecret).append("\n");
     sb.append("  client_secret_expires_at: ").append(clientSecretExpiresAt).append("\n");
     sb.append("  redirect_uris: ").append(redirectUris).append("\n");
     sb.append("  grant_types: ").append(grantTypes).append("\n");
     sb.append("  client_name: ").append(clientName).append("\n");
+    sb.append("  aud: ").append(aud).append("\n");
+    sb.append("  id_token_encrypted_response_alg: ").append(idTokenEncryptionAlgorithm).append("\n");
+    sb.append("  id_token_encrypted_response_enc: ").append(idTokenEncryptionMethod).append("\n");
+    sb.append("  software_id: ").append(softwareId).append("\n");
     sb.append("}\n");
     return sb.toString();
   }

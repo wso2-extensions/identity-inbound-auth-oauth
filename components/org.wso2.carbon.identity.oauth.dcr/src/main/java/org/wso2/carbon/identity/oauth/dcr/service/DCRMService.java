@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth.dcr.service;
 
 import com.google.gson.Gson;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -50,6 +51,7 @@ import org.wso2.carbon.identity.oauth.dcr.util.DCRMUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
@@ -253,6 +255,35 @@ public class DCRMService {
                 String backChannelLogoutUri = validateBackchannelLogoutURI(updateRequest.getBackchannelLogoutUri());
                 appDTO.setBackChannelLogoutUrl(backChannelLogoutUri);
             }
+            if (CollectionUtils.isNotEmpty(updateRequest.getAud())) {
+                appDTO.setAudiences(updateRequest.getAud().toArray(new String[0]));
+            }
+
+            if (updateRequest.getIdTokenEncryptionAlgorithm() != null ||
+                    updateRequest.getIdTokenEncryptionMethod() != null) {
+                appDTO.setIdTokenEncryptionEnabled(true);
+                if (updateRequest.getIdTokenEncryptionAlgorithm() != null) {
+                    appDTO.setIdTokenEncryptionAlgorithm(updateRequest.getIdTokenEncryptionAlgorithm());
+                }
+                if (updateRequest.getIdTokenEncryptionMethod() != null) {
+                    appDTO.setIdTokenEncryptionMethod(updateRequest.getIdTokenEncryptionMethod());
+                }
+                if (appDTO.getIdTokenEncryptionAlgorithm() == null &&
+                        appDTO.getIdTokenEncryptionMethod() != null) {
+                    throw DCRMUtils.generateClientException(DCRMConstants.
+                            ErrorMessages.BAD_REQUEST_INSUFFICIENT_DATA, null);
+                }
+                if (appDTO.getIdTokenEncryptionAlgorithm() != null &&
+                        appDTO.getIdTokenEncryptionMethod() == null) {
+                    appDTO.setIdTokenEncryptionMethod(OAuthServerConfiguration.getInstance().
+                            getDefaultIdTokenEncryptionMethod());
+                }
+
+            }
+
+            if (updateRequest.getSoftwareId() != null) {
+                appDTO.setSoftwareId(updateRequest.getSoftwareId());
+            }
             oAuthAdminService.updateConsumerApplication(appDTO);
         } catch (IdentityOAuthAdminException e) {
             throw DCRMUtils.generateServerException(
@@ -377,6 +408,16 @@ public class DCRMService {
         }
         application.setGrantTypes(grantTypesList);
 
+        if (createdApp.getAudiences() != null) {
+            List<String> audList = new ArrayList<String>(createdApp.getAudiences().length);
+            CollectionUtils.addAll(audList, createdApp.getAudiences());
+            application.setAud(audList);
+        }
+
+        application.setIdTokenEncryptionAlgorithm(createdApp.getIdTokenEncryptionAlgorithm());
+        application.setIdTokenEncryptionMethod(createdApp.getIdTokenEncryptionMethod());
+        application.setSoftwareId(createdApp.getSoftwareId());
+
         return application;
     }
 
@@ -419,7 +460,28 @@ public class DCRMService {
         oAuthConsumerApp.setTokenType(registrationRequest.getTokenType());
         oAuthConsumerApp.setBackChannelLogoutUrl(
                 validateBackchannelLogoutURI(registrationRequest.getBackchannelLogoutUri()));
+        if (CollectionUtils.isNotEmpty(registrationRequest.getAudiences())) {
+            OAuth2ServiceComponentHolder.setAudienceEnabled(true);
+            oAuthConsumerApp.setAudiences(registrationRequest.getAudiences().toArray(new String[0]));
+        }
 
+        if (registrationRequest.getIdTokenEncryptionAlgorithm() != null) {
+            oAuthConsumerApp.setIdTokenEncryptionEnabled(true);
+            oAuthConsumerApp.setIdTokenEncryptionAlgorithm(registrationRequest.getIdTokenEncryptionAlgorithm());
+            if (registrationRequest.getIdTokenEncryptionMethod() != null) {
+                oAuthConsumerApp.setIdTokenEncryptionMethod(registrationRequest.getIdTokenEncryptionMethod());
+            } else {
+                oAuthConsumerApp.setIdTokenEncryptionMethod(OAuthServerConfiguration.getInstance().
+                        getDefaultIdTokenEncryptionMethod());
+            }
+        } else {
+            if (registrationRequest.getIdTokenEncryptionMethod() != null) {
+                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INSUFFICIENT_DATA,
+                        null);
+            }
+        }
+
+        oAuthConsumerApp.setSoftwareId(registrationRequest.getSoftwareId());
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerKey())) {
             String clientIdRegex = OAuthServerConfiguration.getInstance().getClientIdValidationRegex();
             if (clientIdMatchesRegex(registrationRequest.getConsumerKey(), clientIdRegex)) {
