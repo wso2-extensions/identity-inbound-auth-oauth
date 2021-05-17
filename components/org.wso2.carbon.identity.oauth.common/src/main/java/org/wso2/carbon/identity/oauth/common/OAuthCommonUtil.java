@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth.common;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 
@@ -32,6 +34,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ALLOWED_CONTE
  */
 public class OAuthCommonUtil {
 
+    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
+
     /**
      * Check whether HTTP content type header is an allowed content type.
      *
@@ -41,6 +45,7 @@ public class OAuthCommonUtil {
      */
     public static boolean isAllowedContentType(String contentTypeHeader, List<String> allowedContentTypes) {
 
+        diagnosticLog.info("Content type header: " + contentTypeHeader);
         if (contentTypeHeader == null || allowedContentTypes == null) {
             return false;
         }
@@ -48,9 +53,11 @@ public class OAuthCommonUtil {
         String[] requestContentTypes = contentTypeHeader.split(";");
         for (String requestContentType : requestContentTypes) {
             if (allowedContentTypes.contains(requestContentType)) {
+                diagnosticLog.info("Allowed content types contains the requested content type: " + requestContentType);
                 return true;
             }
         }
+        diagnosticLog.info("Allowed content types do not contain the requested content types.");
         return false;
     }
 

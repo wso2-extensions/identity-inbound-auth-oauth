@@ -59,6 +59,7 @@ import static org.wso2.carbon.identity.oauth.dcr.factory.HttpRegistrationRespons
 public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
 
     private static final Log log = LogFactory.getLog(RegistrationRequestFactory.class);
+    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
 
     @Override
     public boolean canHandle(HttpServletRequest request, HttpServletResponse response)
@@ -229,14 +230,17 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
                 try {
                     UserRealm userRealm = CarbonContext.getThreadLocalCarbonContext().getUserRealm();
                     if (!userRealm.getUserStoreManager().isExistingUser(username)) {
+                        diagnosticLog.info("Invalid application owner: " + username);
                         throw IdentityException.error(FrameworkClientException.class, "Invalid application " +
                                 "owner.");
                     }
                 } catch (UserStoreException e) {
+                    diagnosticLog.error("Invalid application owner. Error message: " + e.getMessage());
                     String errorMessage = "Invalid application owner, " + e.getMessage();
                     throw IdentityException.error(FrameworkClientException.class, errorMessage, e);
                 }
             } else {
+                diagnosticLog.info("Invalid application owner: " + username);
                 throw IdentityException.error(FrameworkClientException.class, "Invalid application owner.");
             }
         }

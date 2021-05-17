@@ -35,6 +35,7 @@ import javax.servlet.http.HttpServletRequest;
 public class OAuthClientAuthnService {
 
     private static final Log log = LogFactory.getLog(OAuthClientAuthnService.class);
+    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
 
     /**
      * Retrieve OAuth2 client authenticators which are reigstered dynamically.
@@ -81,6 +82,8 @@ public class OAuthClientAuthnService {
                 log.debug("Authenticator " + oAuthClientAuthenticator.getName() + " is disabled. Hence not " +
                         "evaluating");
             }
+            diagnosticLog.info("Authenticator " + oAuthClientAuthenticator.getName() + " is disabled. Hence not " +
+                    "evaluating");
             return;
         }
 
@@ -89,12 +92,15 @@ public class OAuthClientAuthnService {
             if (log.isDebugEnabled()) {
                 log.debug(oAuthClientAuthenticator.getName() + " authenticator can handle incoming request.");
             }
+            diagnosticLog.info(oAuthClientAuthenticator.getName() + " authenticator can handle incoming request.");
             // If multiple authenticators are engaged, there is no point in evaluating them.
             if (oAuthClientAuthnContext.isPreviousAuthenticatorEngaged()) {
                 if (log.isDebugEnabled()) {
                     log.debug("Previously an authenticator is evaluated. Hence authenticator " +
                             oAuthClientAuthenticator.getName() + " is not evaluating");
                 }
+                diagnosticLog.info("Previously an authenticator is evaluated. Hence authenticator " +
+                        oAuthClientAuthenticator.getName() + " is not evaluating");
                 addAuthenticatorToContext(oAuthClientAuthenticator, oAuthClientAuthnContext);
                 return;
             }
@@ -111,6 +117,7 @@ public class OAuthClientAuthnService {
             if (log.isDebugEnabled()) {
                 log.debug(oAuthClientAuthenticator.getName() + " authenticator cannot handle this request.");
             }
+            diagnosticLog.info(oAuthClientAuthenticator.getName() + " authenticator cannot handle this request.");
         }
     }
 
@@ -127,6 +134,8 @@ public class OAuthClientAuthnService {
                 log.debug(oAuthClientAuthnContext.getExecutedAuthenticators().size() + " Authenticators were " +
                         "executed previously. Hence failing client authentication");
             }
+            diagnosticLog.info(oAuthClientAuthnContext.getExecutedAuthenticators().size() + " Authenticators were " +
+                    "executed previously. Hence failing client authentication");
             setErrorToContext(OAuth2ErrorCodes.INVALID_REQUEST, "The client MUST NOT use more than one " +
                     "authentication method in each", oAuthClientAuthnContext);
         }
@@ -255,6 +264,7 @@ public class OAuthClientAuthnService {
         if (log.isDebugEnabled()) {
             log.debug("Evaluating canAuthenticate of authenticator : " + oAuthClientAuthenticator.getName());
         }
+        diagnosticLog.info("Evaluating canAuthenticate of authenticator : " + oAuthClientAuthenticator.getName());
 
         return oAuthClientAuthenticator.canAuthenticate(request, bodyContentMap, oAuthClientAuthnContext);
     }

@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth.dcr.handler;
 
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.dcr.context.DCRMessageContext;
@@ -27,7 +28,6 @@ import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponse;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponseProfile;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRManagementService;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -38,7 +38,7 @@ import static org.testng.Assert.assertEquals;
  * Unit test covering RegistrationHandler
  */
 @PrepareForTest({DCRManagementService.class, RegistrationHandler.class})
-public class RegistrationHandlerTest extends PowerMockIdentityBaseTest {
+public class RegistrationHandlerTest extends PowerMockTestCase {
 
     private RegistrationHandler registrationHandler;
 
