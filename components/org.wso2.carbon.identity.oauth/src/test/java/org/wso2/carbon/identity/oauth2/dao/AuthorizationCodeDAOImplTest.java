@@ -119,15 +119,18 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
 
     @AfterMethod
     public void closeup() throws Exception {
+
         connection.close();
     }
 
     @AfterClass
     public void tearDown() throws Exception {
+
         closeH2Base(DB_NAME);
     }
 
     private static void closeH2Base(String databaseName) throws Exception {
+
         BasicDataSource dataSource = dataSourceMap.get(databaseName);
         if (dataSource != null) {
             dataSource.close();
