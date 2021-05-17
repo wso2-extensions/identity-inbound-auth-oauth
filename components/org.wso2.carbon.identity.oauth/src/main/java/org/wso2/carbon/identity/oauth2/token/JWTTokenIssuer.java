@@ -374,10 +374,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
-            String certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
             headerBuilder.keyID(OAuth2Util.getKID(OAuth2Util.getCertificate(tenantDomain, tenantId),
                     (JWSAlgorithm) signatureAlgorithm, tenantDomain));
-            headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
+            headerBuilder.x509CertThumbprint(new Base64URL(OAuth2Util.getSHA1ThumbPrint(tenantDomain, tenantId)));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
             return signedJWT.serialize();

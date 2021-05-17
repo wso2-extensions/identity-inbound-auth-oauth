@@ -2455,7 +2455,7 @@ public class OAuth2Util {
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             headerBuilder.keyID(getKID(getCertificate(tenantDomain, tenantId), signatureAlgorithm, tenantDomain));
-            headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantId)));
+            headerBuilder.x509CertThumbprint(new Base64URL(getSHA1ThumbPrint(tenantDomain, tenantId)));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
             return signedJWT;
@@ -2595,6 +2595,46 @@ public class OAuth2Util {
             throw new IdentityOAuth2Exception(error, e);
         }
 
+    }
+
+    /**
+     * Helper method to add public certificate to JWT_HEADER to signature verification with SHA-1.
+     *
+     * @param tenantDomain The domain of the tenant.
+     * @param tenantId The id of the tenant.
+     * @return the thumbprint as a string.
+     * @throws IdentityOAuth2Exception
+     */
+    public static String getSHA1ThumbPrint(String tenantDomain, int tenantId)
+            throws IdentityOAuth2Exception {
+
+        try {
+            Certificate certificate = getCertificate(tenantDomain, tenantId);
+
+            // Generate the SHA-1 thumbprint of the certificate.
+            MessageDigest digestValue = MessageDigest.getInstance("SHA-1");
+            byte[] der = certificate.getEncoded();
+            digestValue.update(der);
+            byte[] digestInBytes = digestValue.digest();
+
+            String publicCertThumbprint = hexify(digestInBytes);
+            String thumbprint = new String(new Base64(0, null, true).encode(
+                    publicCertThumbprint.getBytes(Charsets.UTF_8)), Charsets.UTF_8);
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Thumbprint value: %s calculated for Certificate: %s using algorithm: %s",
+                        thumbprint, certificate, digestValue.getAlgorithm()));
+            }
+            return thumbprint;
+        } catch (CertificateEncodingException e) {
+            String error = "Error occurred while encoding thumbPrint.";
+            throw new IdentityOAuth2Exception(error, e);
+        } catch (NoSuchAlgorithmException e) {
+            String error = "Error in obtaining SHA-1 thumbprint.";
+            throw new IdentityOAuth2Exception(error, e);
+        } catch (Exception e) {
+            String error = "Error in obtaining certificate for tenant: " + tenantDomain;
+            throw new IdentityOAuth2Exception(error, e);
+        }
     }
 
     private static boolean isRSAAlgorithm(JWEAlgorithm algorithm) {
