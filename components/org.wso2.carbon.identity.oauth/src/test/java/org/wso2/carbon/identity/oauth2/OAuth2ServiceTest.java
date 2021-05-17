@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2021, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -336,6 +336,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         return new Object[][]{
                 {GrantType.REFRESH_TOKEN.toString(), OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE},
                 {GrantType.REFRESH_TOKEN.toString(), null},
+                {null,null},
                 {GrantType.REFRESH_TOKEN.toString(), OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED},
         };
     }
@@ -367,12 +368,25 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         oAuthClientAuthnContext.setAuthenticated(true);
         oAuthClientAuthnContext.setErrorCode("dummyErrorCode");
         revokeRequestDTO.setOauthClientAuthnContext(oAuthClientAuthnContext);
-
         assertFalse(oAuth2Service.revokeTokenByOAuthClient(revokeRequestDTO).isError());
     }
 
+    /**
+     * DataProvider: ErrorMsg, Enable to set Details on revokeRequest,
+     * Enable to throw Identity Exception,
+     * Enable to throw InvalidOAuthClientException.
+     * Enable unauthorized client error
+     */
+    @DataProvider(name = "grantTypesProvider")
+    public Object[][] createGrantTypes() {
 
-    @Test
+        return new Object[][]{
+                {},
+                {},
+                {}
+        };
+    }
+    @Test(dataProvider = "grantTypesProvider")
     public void testRevokeTokenByOAuthClientWithAccessToken() throws Exception {
 
         setUpRevokeToken();
@@ -385,7 +399,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
         Whitebox.setInternalState(oAuthTokenPersistenceFactory, "tokenDAO", mockAccessTokenDAO);
         when(mockAccessTokenDAO.getAccessToken(anyString(), anyBoolean())).thenReturn(accessTokenDO);
-
 
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
@@ -425,7 +438,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
                 .revokeTokenByOAuthClient(revokeRequestDTO);
         assertNotNull(oAuthRevocationResponseDTO);
         assertEquals(oAuthRevocationResponseDTO.getErrorMsg(), "Valid token binding value not present in the request.");
-
     }
 
     @Test
@@ -582,7 +594,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         when(oAuthComponentServiceHolder.getOAuthEventInterceptorProxy()).thenReturn(oAuthEventInterceptorProxy);
         mockStatic(OAuthComponentServiceHolder.class);
         when(OAuthComponentServiceHolder.getInstance()).thenReturn(oAuthComponentServiceHolder);
-
         when(authenticatedUser.toString()).thenReturn("testAuthenticatedUser");
 
         mockStatic(OAuth2Util.class);
