@@ -336,7 +336,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         return new Object[][]{
                 {GrantType.REFRESH_TOKEN.toString(), OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE},
                 {GrantType.REFRESH_TOKEN.toString(), null},
-                {null,null},
+                {null, null},
                 {GrantType.REFRESH_TOKEN.toString(), OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED},
         };
     }
@@ -371,22 +371,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         assertFalse(oAuth2Service.revokeTokenByOAuthClient(revokeRequestDTO).isError());
     }
 
-    /**
-     * DataProvider: ErrorMsg, Enable to set Details on revokeRequest,
-     * Enable to throw Identity Exception,
-     * Enable to throw InvalidOAuthClientException.
-     * Enable unauthorized client error
-     */
-    @DataProvider(name = "grantTypesProvider")
-    public Object[][] createGrantTypes() {
-
-        return new Object[][]{
-                {},
-                {},
-                {}
-        };
-    }
-    @Test(dataProvider = "grantTypesProvider")
+    @Test
     public void testRevokeTokenByOAuthClientWithAccessToken() throws Exception {
 
         setUpRevokeToken();
