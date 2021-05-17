@@ -57,10 +57,8 @@ import java.util.Set;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-import static org.wso2.carbon.identity.application.authentication.framework.util
-        .FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
-import static org.wso2.carbon.identity.application.authentication.framework.util
-        .FrameworkConstants.Config.PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.Config.PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 
 /**
@@ -246,6 +244,12 @@ public final class OAuthUtil {
 
         OAuthCacheKey cacheKey = new OAuthCacheKey(oauthCacheKey);
         OAuthCache.getInstance().clearCacheEntry(cacheKey);
+    }
+
+    public static void clearOAuthCache(AccessTokenDO accessTokenDO) {
+
+        OAuthCacheKey cacheKey = new OAuthCacheKey(accessTokenDO.getAccessToken());
+        OAuthCache.getInstance().clearCacheEntry(cacheKey,  accessTokenDO.getTenantID());
     }
 
     public static AuthenticatedUser getAuthenticatedUser(String fullyQualifiedUserName) {

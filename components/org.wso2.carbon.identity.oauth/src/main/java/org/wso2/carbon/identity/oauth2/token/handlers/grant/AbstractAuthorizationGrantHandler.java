@@ -939,7 +939,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             OAuthUtil.clearOAuthCache(existingTokenBean.getConsumerKey(), existingTokenBean.getAuthzUser(),
                     OAuth2Util.buildScopeString(existingTokenBean.getScope()));
             OAuthUtil.clearOAuthCache(existingTokenBean.getConsumerKey(), existingTokenBean.getAuthzUser());
-            OAuthUtil.clearOAuthCache(existingTokenBean.getAccessToken());
+            OAuthUtil.clearOAuthCache(existingTokenBean);
         }
     }
 

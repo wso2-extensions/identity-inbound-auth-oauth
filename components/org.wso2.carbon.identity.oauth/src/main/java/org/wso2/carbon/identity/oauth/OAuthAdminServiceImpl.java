@@ -1057,7 +1057,7 @@ public class OAuthAdminServiceImpl {
                             OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser,
                                     buildScopeString(accessTokenDO.getScope()));
                             OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser);
-                            OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
+                            OAuthUtil.clearOAuthCache(accessTokenDO);
                             AccessTokenDO scopedToken;
                             try {
                                 // Retrieve latest access token for particular client, user and scope combination if

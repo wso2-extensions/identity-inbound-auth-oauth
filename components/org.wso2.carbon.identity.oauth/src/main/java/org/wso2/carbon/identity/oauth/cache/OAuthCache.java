@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.cache;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationBaseCache;
 import org.wso2.carbon.identity.core.cache.AbstractCacheListener;
 import org.wso2.carbon.identity.oauth.listener.OAuthCacheRemoveListener;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.util.ArrayList;
@@ -53,5 +54,16 @@ public class OAuthCache extends AuthenticationBaseCache<OAuthCacheKey, CacheEntr
             }
         }
         return instance;
+    }
+
+    @Override
+    public void addToCache(OAuthCacheKey key, CacheEntry entry) {
+
+        if (entry instanceof AccessTokenDO) {
+            AccessTokenDO tokenDO = (AccessTokenDO) entry;
+            super.addToCache(key, entry, tokenDO.getTenantID());
+        } else {
+            super.addToCache(key, entry);
+        }
     }
 }
