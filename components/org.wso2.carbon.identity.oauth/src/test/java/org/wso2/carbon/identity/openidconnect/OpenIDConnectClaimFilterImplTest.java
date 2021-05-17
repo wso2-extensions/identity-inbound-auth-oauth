@@ -184,7 +184,7 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
     }
 
     @Test
-    public void testGetClaimsFilteredByEssentialClaims() throws Exception {
+    public void testGetClaimsFilteredByEssentialClaimsWithValues() throws Exception {
 
         claims = new HashMap<>();
         claims.put("testUserClaimURI", "value1");
@@ -205,6 +205,42 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
     }
 
     @Test
+    public void testGetClaimsFilteredByEssentialClaimsWithValue() throws Exception {
+
+        claims = new HashMap<>();
+        claims.put("testUserClaimURI", "value1");
+        claims.put("testUserClaimURI2", "value2");
+        List requestedClaims = new ArrayList<>();
+        RequestedClaim requestedClaim = new RequestedClaim();
+        requestedClaim.setName("testUserClaimURI");
+        requestedClaim.setEssential(true);
+        requestedClaim.setValue("value1");
+        requestedClaims.add(requestedClaim);
+        Map<String, Object> filteredClaims = openIDConnectClaimFilter
+                .getClaimsFilteredByEssentialClaims(claims, requestedClaims);
+        Assert.assertEquals(filteredClaims.size(), 1);
+
+    }
+
+    @Test
+    public void testGetClaimsFilteredByEssentialClaimsWithNullValue() throws Exception {
+
+        claims = new HashMap<>();
+        claims.put("testUserClaimURI", "value1");
+        claims.put("testUserClaimURI2", "value2");
+        List requestedClaims = new ArrayList<>();
+        RequestedClaim requestedClaim = new RequestedClaim();
+        requestedClaim.setName("testUserClaimURI");
+        requestedClaim.setEssential(true);
+        requestedClaims.add(requestedClaim);
+        Map<String, Object> filteredClaims = openIDConnectClaimFilter
+                .getClaimsFilteredByEssentialClaims(claims, requestedClaims);
+        Assert.assertNotNull(filteredClaims.get("testUserClaimURI"));
+        Assert.assertNull(filteredClaims.get("testUserClaimURI2"));
+        Assert.assertEquals(((String) filteredClaims.get("testUserClaimURI")), "value1");
+    }
+
+    @Test
     public void testGetOIDCScopeProperties() throws Exception {
 
         resource.setProperty("key", "value");
@@ -213,6 +249,18 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
                 SUPER_TENANT_DOMAIN_NAME);
         Assert.assertEquals(properties.getProperty("key"), "value");
         Assert.assertEquals(properties.getProperty("key1"), "value1");
+    }
+
+    @Test
+    public void testGetOIDCScopePropertiesWithException() throws Exception {
+
+        resource.setProperty("key", "value");
+        resource.setProperty("key1", "value1");
+        Properties expectedNullProperty = new Properties();
+        OAuth2ServiceComponentHolder.setRegistryService(null);
+        Properties properties = WhiteboxImpl.invokeMethod(openIDConnectClaimFilter, "getOIDCScopeProperties",
+                SUPER_TENANT_DOMAIN_NAME);
+        Assert.assertEquals(properties, expectedNullProperty);
     }
 
     @Test
@@ -225,7 +273,7 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
                 .getServiceProviderByClientId("dummy", IdentityApplicationConstants.OAuth2.NAME,
                         SP_TENANT_DOMAIN);
         Map<String, Object> claimFilter = openIDConnectClaimFilter
-                    .getClaimsFilteredByUserConsent(claims, user, "dummy", SP_TENANT_DOMAIN);
+                .getClaimsFilteredByUserConsent(claims, user, "dummy", SP_TENANT_DOMAIN);
         Assert.assertEquals(((ScopeDTO) claimFilter.get("testUserClaimURI")).getName(),
                 "email");
         Assert.assertEquals(((ScopeDTO) claimFilter.get("testUserClaimURI"))
