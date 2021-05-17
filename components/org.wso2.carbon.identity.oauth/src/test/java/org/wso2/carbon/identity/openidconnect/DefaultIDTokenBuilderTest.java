@@ -78,6 +78,7 @@ import java.security.Key;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.interfaces.RSAPrivateKey;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -228,7 +229,11 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
                 .add(new OpenIDConnectClaimFilterImpl());
         OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
         OAuth2ServiceComponentHolder.setKeyIDProvider(new DefaultKeyIDProviderImpl());
-    }
+        ClaimProvider claimProvider = new OpenIDConnectSystemClaimImpl();
+        List claimProviders = new ArrayList();
+        claimProviders.add(claimProvider);
+        WhiteboxImpl.setInternalState(OpenIDConnectServiceComponentHolder.getInstance(),
+                "claimProviders", claimProviders);    }
 
     @Test
     public void testBuildIDToken() throws Exception {
@@ -434,7 +439,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
 
     private EncryptedJWT decryptToken (String  token) throws Exception {
 
-        InputStream file = new FileInputStream("src/test/resources/keyStore/testkeystore.jks");
+        InputStream file = new FileInputStream("src/test/resources/keyStore/encryption/appKeystore.jks");
         KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
         keystore.load(file, "wso2carbon".toCharArray());
         String alias = "wso2carbon";
@@ -493,7 +498,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         authzTokenReqDTO.setEssentialClaims(getEssentialClaims());
         authzTokenReqDTO.setNonce("nonce");
         authzTokenReqDTO.setSelectedAcr("acr");
-
+        authzTokenReqDTO.setResponseType("token");
         OAuthAuthzReqMessageContext authzMessageContext = new OAuthAuthzReqMessageContext(authzTokenReqDTO);
         return authzMessageContext;
     }
