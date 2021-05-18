@@ -249,7 +249,8 @@ public final class OAuthUtil {
     public static void clearOAuthCache(AccessTokenDO accessTokenDO) {
 
         OAuthCacheKey cacheKey = new OAuthCacheKey(accessTokenDO.getAccessToken());
-        OAuthCache.getInstance().clearCacheEntry(cacheKey,  accessTokenDO.getTenantID());
+        String tenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
+        OAuthCache.getInstance().clearCacheEntry(cacheKey,  tenantDomain);
     }
 
     public static AuthenticatedUser getAuthenticatedUser(String fullyQualifiedUserName) {
@@ -494,7 +495,7 @@ public final class OAuthUtil {
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                         OAuth2Util.buildScopeString(accessTokenDO.getScope()));
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
-                OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
+                OAuthUtil.clearOAuthCache(accessTokenDO);
                 // Get unique scopes list
                 scopes.add(OAuth2Util.buildScopeString(accessTokenDO.getScope()));
                 accessTokens.add(accessTokenDO);

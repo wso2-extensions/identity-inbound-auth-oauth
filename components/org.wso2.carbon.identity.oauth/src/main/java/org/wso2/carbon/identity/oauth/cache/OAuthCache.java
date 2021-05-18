@@ -61,7 +61,8 @@ public class OAuthCache extends AuthenticationBaseCache<OAuthCacheKey, CacheEntr
 
         if (entry instanceof AccessTokenDO) {
             AccessTokenDO tokenDO = (AccessTokenDO) entry;
-            super.addToCache(key, entry, tokenDO.getTenantID());
+            String tenantDomain = tokenDO.getAuthzUser().getTenantDomain();
+            super.addToCache(key, entry, tenantDomain);
         } else {
             super.addToCache(key, entry);
         }
