@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.internal.util.reflection.Whitebox;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.reflect.internal.WhiteboxImpl;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -104,6 +105,7 @@ import static org.testng.AssertJUnit.assertTrue;
         OAuthComponentServiceHolder.class,
         OAuthUtil.class,
         OAuthCache.class,
+        AppInfoCache.class,
         MultitenantUtils.class
 })
 public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
@@ -143,7 +145,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
         oAuth2Service = new OAuth2Service();
         WhiteboxImpl.setInternalState(OAuthServerConfiguration.getInstance(), "timeStampSkewInSeconds", 3600L);
-        AppInfoCache.getInstance().addToCache(clientId, null);
     }
 
     /**
@@ -215,7 +216,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         oAuthAppDO.setCallbackUrl(callbackUrl);
         oAuthAppDO.setAppOwner(new AuthenticatedUser());
         when(oAuthAppDAO.getAppInformation(clientId)).thenReturn(oAuthAppDO);
-        AppInfoCache.getInstance().addToCache(clientId, null);
         when(authenticatedUser.getTenantDomain()).thenReturn(tenantDomain);
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
@@ -249,12 +249,12 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         OAuthAppDO oAuthAppDO = getOAuthAppDO("dummyGrantType", "dummyCallbackUrl",
                 "dummyTenantDomain", "dummyCallbackURI");
         oAuthAppDO.setState(appState);
+        AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
                 validateClientInfo(clientId, "dummyCallbackUrI");
         assertNotNull(oAuth2ClientValidationResponseDTO);
         assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), "invalid_client");
         assertFalse(oAuth2ClientValidationResponseDTO.isValidClient());
-
     }
 
     @Test
@@ -264,6 +264,9 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
         when(oAuthAppDAO.getAppInformation(clientId)).thenThrow
                 (new InvalidOAuthClientException("Cannot find an application associated with the given consumer key"));
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
+
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
                 validateClientInfo(clientId, callbackUrI);
         assertNotNull(oAuth2ClientValidationResponseDTO);
@@ -278,6 +281,9 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
         when(oAuthAppDAO.getAppInformation(clientId)).thenThrow
                 (new IdentityOAuth2Exception("Error while retrieving the app information"));
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
+
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
                 validateClientInfo(clientId, callbackUrI);
         assertNotNull(oAuth2ClientValidationResponseDTO);
@@ -519,7 +525,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         OAuthRevocationRequestDTO revokeRequestDTO = getOAuthRevocationRequestDTO();
 
         OAuthRevocationResponseDTO oAuthRevocationResponseDTO = oAuth2Service
-                    .revokeTokenByOAuthClient(revokeRequestDTO);
+                .revokeTokenByOAuthClient(revokeRequestDTO);
         assertEquals(oAuthRevocationResponseDTO.getErrorMsg(),
                 "Error occurred while revoking authorization grant for applications");
     }
@@ -616,22 +622,31 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     @Test
     public void testGetOauthApplicationState() throws Exception {
 
+        String id = "clientId1";
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setState("ACTIVE");
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
-        when(oAuthAppDAO.getAppInformation(clientId)).thenReturn(oAuthAppDO);
-        assertEquals(oAuth2Service.getOauthApplicationState(clientId), "ACTIVE");
+        when(oAuthAppDAO.getAppInformation(id)).thenReturn(oAuthAppDO);
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
+
+        assertEquals(oAuth2Service.getOauthApplicationState(id), "ACTIVE");
     }
 
     @Test
     public void testGetOauthApplicationStateWithIdentityOAuth2Exception() throws Exception {
 
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
         whenNew(OAuthAppDAO.class).withNoArguments().thenThrow(IdentityOAuth2Exception.class);
         assertNull(oAuth2Service.getOauthApplicationState(clientId));
     }
 
     @Test
     public void testGetOauthApplicationStateWithInvalidOAuthClientExceptionException() throws Exception {
+
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
 
         whenNew(OAuthAppDAO.class).withNoArguments().thenThrow(InvalidOAuthClientException.class);
         assertNull(oAuth2Service.getOauthApplicationState(clientId));
@@ -687,4 +702,5 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         WhiteboxImpl.setInternalState(AuthorizationHandlerManager.getInstance(), "responseHandlers", testMap);
         return mockResponseTypeHander;
     }
+
 }
