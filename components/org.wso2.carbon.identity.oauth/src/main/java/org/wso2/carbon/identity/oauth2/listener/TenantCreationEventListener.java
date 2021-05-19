@@ -126,7 +126,7 @@ public class TenantCreationEventListener implements TenantMgtListener {
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                         OAuth2Util.buildScopeString(accessTokenDO.getScope()));
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
-                OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
+                OAuthUtil.clearOAuthCache(accessTokenDO);
             }
 
             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessTokens(

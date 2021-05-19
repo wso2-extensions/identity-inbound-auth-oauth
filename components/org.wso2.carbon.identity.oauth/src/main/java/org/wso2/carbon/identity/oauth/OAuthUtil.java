@@ -57,10 +57,8 @@ import java.util.Set;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-import static org.wso2.carbon.identity.application.authentication.framework.util
-        .FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
-import static org.wso2.carbon.identity.application.authentication.framework.util
-        .FrameworkConstants.Config.PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.Config.PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 
 /**
@@ -246,6 +244,13 @@ public final class OAuthUtil {
 
         OAuthCacheKey cacheKey = new OAuthCacheKey(oauthCacheKey);
         OAuthCache.getInstance().clearCacheEntry(cacheKey);
+    }
+
+    public static void clearOAuthCache(AccessTokenDO accessTokenDO) {
+
+        OAuthCacheKey cacheKey = new OAuthCacheKey(accessTokenDO.getAccessToken());
+        String tenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
+        OAuthCache.getInstance().clearCacheEntry(cacheKey,  tenantDomain);
     }
 
     public static AuthenticatedUser getAuthenticatedUser(String fullyQualifiedUserName) {
@@ -490,7 +495,7 @@ public final class OAuthUtil {
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                         OAuth2Util.buildScopeString(accessTokenDO.getScope()));
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
-                OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
+                OAuthUtil.clearOAuthCache(accessTokenDO);
                 // Get unique scopes list
                 scopes.add(OAuth2Util.buildScopeString(accessTokenDO.getScope()));
                 accessTokens.add(accessTokenDO);

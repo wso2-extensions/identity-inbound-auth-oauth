@@ -305,7 +305,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser(), OAuth2Util.buildScopeString
                 (accessTokenDO.getScope()));
         OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser());
-        OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
+        OAuthUtil.clearOAuthCache(accessTokenDO);
         OAuthUtil.invokePreRevocationBySystemListeners(accessTokenDO, Collections.emptyMap());
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()}, OAuth2Util.isHashEnabled());
