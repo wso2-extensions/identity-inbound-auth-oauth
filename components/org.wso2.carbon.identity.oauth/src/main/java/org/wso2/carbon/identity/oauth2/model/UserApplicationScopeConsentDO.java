@@ -18,7 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.model;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -41,8 +41,8 @@ public class UserApplicationScopeConsentDO {
     public UserApplicationScopeConsentDO(String appId) {
 
         this.appId = appId;
-        this.deniedScopes = Collections.emptyList();
-        this.approvedScopes = Collections.emptyList();
+        this.deniedScopes = new ArrayList<>();
+        this.approvedScopes = new ArrayList<>();
     }
 
     public String getAppId() {
@@ -63,7 +63,7 @@ public class UserApplicationScopeConsentDO {
     public void setApprovedScopes(List<String> approvedScopes) {
 
         if (approvedScopes == null) {
-            this.approvedScopes = Collections.emptyList();
+            this.approvedScopes = new ArrayList<>();
         } else {
             this.approvedScopes = approvedScopes;
         }
@@ -77,7 +77,7 @@ public class UserApplicationScopeConsentDO {
     public void setDeniedScopes(List<String> deniedScopes) {
 
         if (deniedScopes == null) {
-            this.deniedScopes = Collections.emptyList();
+            this.deniedScopes = new ArrayList<>();
         } else {
             this.deniedScopes = deniedScopes;
         }
