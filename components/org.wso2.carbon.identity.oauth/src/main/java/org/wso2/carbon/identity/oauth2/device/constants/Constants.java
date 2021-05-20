@@ -66,4 +66,14 @@ public class Constants {
     public static final int  INTERVAL_MILLISECONDS = 5000;
     public static final String KEY_SET = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     public static final int DEFAULT_DEVICE_TOKEN_PERSIST_RETRY_COUNT = 5;
+
+    public static final String PROXY_ENABLE = "ProxyConfig.Enable";
+    public static final String PROXY_HOST = "ProxyConfig.Host";
+    public static final String PROXY_PORT = "ProxyConfig.Port";
+    public static final String PROXY_USERNAME = "ProxyConfig.Username";
+    public static final String PROXY_PASSWORD = "ProxyConfig.Password";
+    public static final String PROTOCOL_HTTPS = "HTTPS";
+    public static final String TRUSTSTORE_LOCATION = "Security.TrustStore.Location";
+    public static final String TRUSTSTORE_PASSWORD = "Security.TrustStore.Password";
+    public static final String TRUSTSTORE_TYPE = "JKS";
 }

@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2021, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.identity.oauth2.util;
 
 import org.apache.commons.lang3.StringUtils;
@@ -20,7 +38,9 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.DefaultProxyRoutePlanner;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.FileInputStream;
@@ -67,11 +87,11 @@ public class HttpClientUtil {
      * @return
      */
     public static HttpClient getHttpClient(int port, String protocol) {
-        String proxyEnabled = System.getProperty("apim.proxyEnabled");
-        String proxyHost = System.getProperty("apim.proxyHost");
-        String proxyPort = System.getProperty("apim.proxyPort");
-        String proxyUsername = System.getProperty("apim.proxyUsername");
-        String proxyPassword = System.getProperty("apim.proxyPassword");
+        String proxyEnabled = IdentityUtil.getProperty(Constants.PROXY_ENABLE);
+        String proxyHost = IdentityUtil.getProperty(Constants.PROXY_HOST);
+        String proxyPort = IdentityUtil.getProperty(Constants.PROXY_PORT);
+        String proxyUsername = IdentityUtil.getProperty(Constants.PROXY_USERNAME);
+        String proxyPassword = IdentityUtil.getProperty(Constants.PROXY_PASSWORD);
 
         PoolingHttpClientConnectionManager pool = null;
         try {
@@ -109,11 +129,11 @@ public class HttpClientUtil {
             throws IdentityOAuth2Exception {
 
         PoolingHttpClientConnectionManager poolManager;
-        if ("HTTPS".equals(protocol)) {
+        if (Constants.PROTOCOL_HTTPS.equals(protocol)) {
             SSLConnectionSocketFactory socketFactory = createSocketFactory();
             org.apache.http.config.Registry<ConnectionSocketFactory> socketFactoryRegistry =
                     RegistryBuilder.<ConnectionSocketFactory>create()
-                            .register("HTTPS", socketFactory).build();
+                            .register(Constants.PROTOCOL_HTTPS, socketFactory).build();
             poolManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
         } else {
             poolManager = new PoolingHttpClientConnectionManager();
@@ -125,11 +145,11 @@ public class HttpClientUtil {
         SSLContext sslContext;
 
         String keyStorePath = CarbonUtils.getServerConfiguration()
-                .getFirstProperty("Security.TrustStore.Location");
+                .getFirstProperty(Constants.TRUSTSTORE_LOCATION);
         String keyStorePassword = CarbonUtils.getServerConfiguration()
-                .getFirstProperty("Security.TrustStore.Password");
+                .getFirstProperty(Constants.TRUSTSTORE_PASSWORD);
         try {
-            KeyStore trustStore = KeyStore.getInstance("JKS");
+            KeyStore trustStore = KeyStore.getInstance(Constants.TRUSTSTORE_TYPE);
             trustStore.load(new FileInputStream(keyStorePath), keyStorePassword.toCharArray());
             sslContext = SSLContexts.custom().loadTrustMaterial(trustStore).build();
 
