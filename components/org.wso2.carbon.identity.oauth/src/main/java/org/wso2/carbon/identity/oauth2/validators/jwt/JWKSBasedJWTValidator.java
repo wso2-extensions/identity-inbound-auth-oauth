@@ -90,7 +90,7 @@ public class JWKSBasedJWTValidator implements JWTValidator {
         } catch (MalformedURLException e) {
             throw new IdentityOAuth2Exception("Provided jwks_uri: " + jwksUri + " is malformed.", e);
         } catch (KeySourceException e) {
-            log.info("Error occurred while accessing remote JWKS endpoint: " + jwksUri, e);
+            log.error("Error occurred while accessing remote JWKS endpoint: " + jwksUri, e);
             throw new IdentityOAuth2Exception("Error occurred while accessing remote JWKS endpoint: " + jwksUri, e);
         } catch (CertificateNotYetValidException e) {
             throw new IdentityOAuth2Exception("X509Certificate is not yet valid.", e);

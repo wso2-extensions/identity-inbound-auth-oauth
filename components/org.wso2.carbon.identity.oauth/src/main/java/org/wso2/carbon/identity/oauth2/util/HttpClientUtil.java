@@ -54,11 +54,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 
 import javax.net.ssl.SSLContext;
-
-
 /**
- * HTTP Client related util class
- *
+ * HTTP Client related util class.
  */
 public class HttpClientUtil {
 
@@ -68,25 +65,27 @@ public class HttpClientUtil {
     public static final String ALLOW_ALL = "AllowAll";
 
     /**
-     * Return a http client instance
+     * Return a http client instance.
      *
-     * @param configUrl - server url
+     * @param configUrl Server url.
      * @return
      */
     public static HttpClient getHttpClient(URL configUrl) throws MalformedURLException {
+
         int port = configUrl.getPort();
         String protocol = configUrl.getProtocol();
         return getHttpClient(port, protocol);
     }
 
     /**
-     * Return a http client instance
+     * Return a http client instance.
      *
-     * @param port - server port
+     * @param port     - server port
      * @param protocol - service endpoint protocol http/https
      * @return
      */
     public static HttpClient getHttpClient(int port, String protocol) {
+
         String proxyEnabled = IdentityUtil.getProperty(Constants.PROXY_ENABLE);
         String proxyHost = IdentityUtil.getProperty(Constants.PROXY_HOST);
         String proxyPort = IdentityUtil.getProperty(Constants.PROXY_PORT);
@@ -97,7 +96,7 @@ public class HttpClientUtil {
         try {
             pool = getPoolingHttpClientConnectionManager(protocol);
         } catch (IdentityOAuth2Exception e) {
-            log.error("Error while getting http client connection manager", e);
+            log.error("Error while getting http client connection manager. ", e);
         }
 
         RequestConfig params = RequestConfig.custom().build();
@@ -120,7 +119,7 @@ public class HttpClientUtil {
     }
 
     /**
-     * Return a PoolingHttpClientConnectionManager instance
+     * Return a PoolingHttpClientConnectionManager instance.
      *
      * @param protocol- service endpoint protocol. It can be http/https
      * @return PoolManager
@@ -142,8 +141,8 @@ public class HttpClientUtil {
     }
 
     private static SSLConnectionSocketFactory createSocketFactory() throws IdentityOAuth2Exception {
-        SSLContext sslContext;
 
+        SSLContext sslContext;
         String keyStorePath = CarbonUtils.getServerConfiguration()
                 .getFirstProperty(Constants.TRUSTSTORE_LOCATION);
         String keyStorePassword = CarbonUtils.getServerConfiguration()
@@ -166,15 +165,15 @@ public class HttpClientUtil {
 
             return new SSLConnectionSocketFactory(sslContext, hostnameVerifier);
         } catch (KeyStoreException e) {
-            throw new IdentityOAuth2Exception("Failed to read from Key Store", e);
+            throw new IdentityOAuth2Exception("Failed to read from Key Store. ", e);
         } catch (IOException e) {
             throw new IdentityOAuth2Exception("Key Store not found in " + keyStorePath, e);
         } catch (CertificateException e) {
-            throw new IdentityOAuth2Exception("Failed to read Certificate", e);
+            throw new IdentityOAuth2Exception("Failed to read Certificate. ", e);
         } catch (NoSuchAlgorithmException e) {
             throw new IdentityOAuth2Exception("Failed to load Key Store from " + keyStorePath, e);
         } catch (KeyManagementException e) {
-            throw new IdentityOAuth2Exception("Failed to load key from" + keyStorePath, e);
+            throw new IdentityOAuth2Exception("Failed to load key from " + keyStorePath, e);
         }
     }
 

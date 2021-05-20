@@ -28,12 +28,11 @@ import org.wso2.carbon.identity.oauth2.util.HttpClientUtil;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.Proxy;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Extended method to provide proxy support
+ * Extended method to provide proxy support.
  */
 public class ExtendedDefaultResourceRetriever extends DefaultResourceRetriever {
 
@@ -44,12 +43,6 @@ public class ExtendedDefaultResourceRetriever extends DefaultResourceRetriever {
     private boolean disconnectAfterUse;
 
     /**
-     * The proxy to use when opening the HttpURLConnection. Can be {@code null}.
-     */
-    private Proxy proxy;
-
-
-    /**
      * Creates a new resource retriever. The HTTP timeouts and entity size
      * limit are set to zero (infinite).
      */
@@ -57,7 +50,6 @@ public class ExtendedDefaultResourceRetriever extends DefaultResourceRetriever {
 
         this(0, 0);
     }
-
 
     /**
      * Creates a new resource retriever. The HTTP entity size limit is set
@@ -73,7 +65,6 @@ public class ExtendedDefaultResourceRetriever extends DefaultResourceRetriever {
         this(connectTimeout, readTimeout, 0);
     }
 
-
     /**
      * Creates a new resource retriever.
      *
@@ -88,7 +79,6 @@ public class ExtendedDefaultResourceRetriever extends DefaultResourceRetriever {
 
         this(connectTimeout, readTimeout, sizeLimit, true);
     }
-
 
     /**
      * Creates a new resource retriever.
@@ -118,7 +108,6 @@ public class ExtendedDefaultResourceRetriever extends DefaultResourceRetriever {
         this.disconnectAfterUse = disconnectAfterUse;
     }
 
-
     /**
      * Returns {@code true} if the disconnect method of the underlying
      * {@link HttpURLConnection} will be called after trying to retrieve
@@ -134,7 +123,6 @@ public class ExtendedDefaultResourceRetriever extends DefaultResourceRetriever {
 
         return disconnectAfterUse;
     }
-
 
     /**
      * Controls calling of the disconnect method the underlying
@@ -152,25 +140,9 @@ public class ExtendedDefaultResourceRetriever extends DefaultResourceRetriever {
         this.disconnectAfterUse = disconnectAfterUse;
     }
 
-    /**
-     * Returns the proxy to use when opening the HttpURLConnection to retrieve the resource.
-     *
-     * @return The proxy to use or {@code null} if no proxy should be used.
-     */
-    public Proxy getProxy() {
-        return proxy;
-    }
-
-    /**
-     * Sets the proxy to use when opening the HttpURLConnection to retrieve the resource.
-     * Can be set to {@code null} if no proxy should be used.
-     */
-    public void setProxy(Proxy proxy) {
-        this.proxy = proxy;
-    }
-
     @Override
     public Resource retrieveResource(final URL url) throws IOException {
+
         try {
             HttpGet request = new HttpGet(url.toString());
             HttpClient httpClient = HttpClientUtil.getHttpClient(url);
@@ -181,7 +153,7 @@ public class ExtendedDefaultResourceRetriever extends DefaultResourceRetriever {
             final String statusMessage = httpResponse.getEntity().toString();
             String content = EntityUtils.toString(httpResponse.getEntity(), StandardCharsets.UTF_8);
 
-            // Ensure 2xx status code
+            // Ensure 2xx status code.
             if (statusCode > 299 || statusCode < 200) {
                 throw new IOException("HTTP " + statusCode + ": " + statusMessage);
             }
