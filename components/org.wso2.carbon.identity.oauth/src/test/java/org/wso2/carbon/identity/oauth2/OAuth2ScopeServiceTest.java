@@ -240,6 +240,9 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         String uuid = UUID.randomUUID().toString();
         insertAppId(uuid);
         oAuth2ScopeService.addUserConsentForApplication("user_id", uuid, 1, approvedScopes, deniedScopes);
+
+        assertEquals(oAuth2ScopeService.getUserConsentForApp("user_id", uuid, 1).getApprovedScopes().get(0),
+                approvedScopes.get(0));
     }
 
     private void insertAppId(String uuid) throws Exception {
@@ -254,6 +257,31 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when inserting codeID", e);
+        }
+    }
+
+    @Test
+    public void testAddUserConsentForApplicationWithInvalidUserID() throws Exception {
+
+        List<String> approvedScopes = new ArrayList<>(Collections.singletonList("approvedScopes"));
+        List<String> deniedScopes = new ArrayList<>(Collections.singletonList("deniedScopes"));
+        String appId = UUID.randomUUID().toString();
+        try {
+            oAuth2ScopeService.addUserConsentForApplication(null, appId, 1, approvedScopes, deniedScopes);
+        } catch (IdentityOAuth2ScopeClientException ex) {
+            assertEquals(ex.getMessage(), "User ID can't be null/empty.");
+        }
+    }
+
+    @Test
+    public void testAddUserConsentForApplicationWithInvalidAppID() throws Exception {
+
+        List<String> approvedScopes = new ArrayList<>(Collections.singletonList("approvedScopes"));
+        List<String> deniedScopes = new ArrayList<>(Collections.singletonList("deniedScopes"));
+        try {
+            oAuth2ScopeService.addUserConsentForApplication("userId", null, 1, approvedScopes, deniedScopes);
+        } catch (IdentityOAuth2ScopeClientException ex) {
+            assertEquals(ex.getMessage(), "Application ID can't be null/empty.");
         }
     }
 
@@ -286,6 +314,9 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         List<String> newApprovedScopes = new ArrayList<>(Collections.singletonList("newApprovedScopes"));
         List<String> newDeniedScopes = new ArrayList<>(Collections.singletonList("newDeniedScopes"));
         oAuth2ScopeService.updateUserConsentForApplication("user_id", uuid, 1234, newApprovedScopes, newDeniedScopes);
+
+        assertEquals(oAuth2ScopeService.getUserConsentForApp("user_id", uuid, 1234).getApprovedScopes().size(),
+                2);
     }
 
     @Test
@@ -316,6 +347,8 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         oAuth2ScopeService.addUserConsentForApplication("user_id", uuid, 1234, approvedScopes, deniedScopes);
 
         oAuth2ScopeService.revokeUserConsentForApplication("user_id", uuid, 1234);
+
+        assertEquals(oAuth2ScopeService.getUserConsentForApp("user_id", uuid, 1234).getApprovedScopes().size(), 0);
     }
 
     @Test

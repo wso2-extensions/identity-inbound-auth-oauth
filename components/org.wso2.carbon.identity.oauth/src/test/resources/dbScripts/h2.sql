@@ -79,7 +79,6 @@ CREATE TABLE IF NOT EXISTS SP_APP (
     TENANT_ID         INTEGER       NOT NULL,
     APP_NAME          VARCHAR (255) NOT NULL,
     UUID              CHAR(36),
-
     PRIMARY KEY (ID)
 );
 
