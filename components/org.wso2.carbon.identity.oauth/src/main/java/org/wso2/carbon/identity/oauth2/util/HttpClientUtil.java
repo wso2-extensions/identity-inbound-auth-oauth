@@ -80,8 +80,8 @@ public class HttpClientUtil {
     /**
      * Return a http client instance.
      *
-     * @param port     - server port
-     * @param protocol - service endpoint protocol http/https
+     * @param port     Server port.
+     * @param protocol Service endpoint protocol http/https.
      * @return
      */
     public static HttpClient getHttpClient(int port, String protocol) {
@@ -121,8 +121,8 @@ public class HttpClientUtil {
     /**
      * Return a PoolingHttpClientConnectionManager instance.
      *
-     * @param protocol- service endpoint protocol. It can be http/https
-     * @return PoolManager
+     * @param protocol Service endpoint protocol. It can be http/https.
+     * @return PoolManager.
      */
     private static PoolingHttpClientConnectionManager getPoolingHttpClientConnectionManager(String protocol)
             throws IdentityOAuth2Exception {
