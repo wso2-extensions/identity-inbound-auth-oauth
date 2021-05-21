@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.cache.JWKSCache;
 import org.wso2.carbon.identity.oauth2.cache.JWKSCacheEntry;
 import org.wso2.carbon.identity.oauth2.cache.JWKSCacheKey;
+import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -123,6 +124,7 @@ public class JWKSourceDataProvider {
         int connectionTimeout = readHTTPConnectionConfigValue(HTTP_CONNECTION_TIMEOUT_XPATH);
         int readTimeout = readHTTPConnectionConfigValue(HTTP_READ_TIMEOUT_XPATH);
         int sizeLimit = readHTTPConnectionConfigValue(HTTP_SIZE_LIMIT_XPATH);
+        String proxyEnabled = IdentityUtil.getProperty(Constants.PROXY_ENABLE);
 
         if (connectionTimeout <= 0) {
             connectionTimeout = DEFAULT_HTTP_CONNECTION_TIMEOUT;
@@ -133,11 +135,18 @@ public class JWKSourceDataProvider {
         if (sizeLimit <= 0) {
             sizeLimit = RemoteJWKSet.DEFAULT_HTTP_SIZE_LIMIT;
         }
+
+        if (Boolean.parseBoolean(proxyEnabled)) {
+            ExtendedDefaultResourceRetriever resourceRetriever = new ExtendedDefaultResourceRetriever(
+                    connectionTimeout,
+                    readTimeout,
+                    sizeLimit);
+            return new RemoteJWKSet<>(new URL(jwksUri), resourceRetriever);
+        }
         DefaultResourceRetriever resourceRetriever = new DefaultResourceRetriever(
                 connectionTimeout,
                 readTimeout,
                 sizeLimit);
-
         return new RemoteJWKSet<>(new URL(jwksUri), resourceRetriever);
     }
 

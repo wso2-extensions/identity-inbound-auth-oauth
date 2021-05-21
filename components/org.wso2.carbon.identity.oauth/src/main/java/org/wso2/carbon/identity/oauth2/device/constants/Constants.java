@@ -66,4 +66,14 @@ public class Constants {
     public static final int  INTERVAL_MILLISECONDS = 5000;
     public static final String KEY_SET = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     public static final int DEFAULT_DEVICE_TOKEN_PERSIST_RETRY_COUNT = 5;
+
+    public static final String PROXY_ENABLE = "JWTValidatorConfigs.JWKSEndpoint.HTTPProxy.Enable";
+    public static final String PROXY_HOST = "JWTValidatorConfigs.JWKSEndpoint.HTTPProxy.Host";
+    public static final String PROXY_PORT = "JWTValidatorConfigs.JWKSEndpoint.HTTPProxy.Port";
+    public static final String PROXY_USERNAME = "JWTValidatorConfigs.JWKSEndpoint.HTTPProxy.Username";
+    public static final String PROXY_PASSWORD = "JWTValidatorConfigs.JWKSEndpoint.HTTPProxy.Password";
+    public static final String PROTOCOL_HTTPS = "HTTPS";
+    public static final String TRUSTSTORE_LOCATION = "Security.TrustStore.Location";
+    public static final String TRUSTSTORE_PASSWORD = "Security.TrustStore.Password";
+    public static final String TRUSTSTORE_TYPE = "JKS";
 }
