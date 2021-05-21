@@ -253,6 +253,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
                     requestedScopes, tenantID, includeOIDCScopes));
         }
 
+        // Validate requestedScopes.
         if (StringUtils.isBlank(requestedScopes)) {
             Set<Scope> emptyScopes = new HashSet<>();
             return emptyScopes;
