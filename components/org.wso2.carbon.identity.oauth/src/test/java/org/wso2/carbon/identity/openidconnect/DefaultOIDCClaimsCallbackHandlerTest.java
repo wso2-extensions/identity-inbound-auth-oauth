@@ -934,85 +934,27 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     }
 
     @Test
-    public void testHandleClaimsForOAuthAuthzReqMessageContextNullAccessTokenWithException() throws Exception {
+    public void testHandleClaimsForOAuthTokenReqMessageContextWithAuthorizationCode() throws Exception {
 
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
-
-        AuthenticatedUser authenticatedUser = getDefaultAuthenticatedLocalUser();
-        OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
-        authorizeReqDTO.setUser(authenticatedUser);
-        authorizeReqDTO.setTenantDomain(TENANT_DOMAIN);
-
-        OAuthAuthzReqMessageContext authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
-        authzReqMessageContext.setApprovedScope(APPROVED_SCOPES);
-
-        ServiceProvider serviceProvider = new ServiceProvider();
-        serviceProvider.setApplicationName(SERVICE_PROVIDER_NAME);
-        ClaimMapping claimMap1 =
-                ClaimMapping.build("http://www.wso2.org/claims/email", "email", "sample@abc.com", true);
-        ClaimMapping claimMap2 =
-                ClaimMapping.build("http://www.wso2.org/claims/username", "username", "user123", true);
-
-        ClaimMapping[] requestedLocalClaimMap = {claimMap1, claimMap2};
-
-        ClaimConfig claimConfig = new ClaimConfig();
-        claimConfig.setClaimMappings(requestedLocalClaimMap);
-        serviceProvider.setClaimConfig(claimConfig);
-        serviceProvider.setSpProperties(new ServiceProviderProperty[]{});
-
-        OAuthServerConfiguration mockOAuthServerConfiguration = PowerMockito.mock(OAuthServerConfiguration.class);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
-        when(mockOAuthServerConfiguration.getOpenIDConnectSkipeUserConsentConfig()).thenReturn(true);
-
-        mockApplicationManagementService(serviceProvider);
-
-        try {
-            JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                    authzReqMessageContext);
-            assertEquals(jwtClaimsSet.getClaims().size(), 0, "Claims are not successfully set.");
-        } catch (Exception e) {
-            Assert.assertEquals(e.getMessage(), "Error occurred while getting claims for user " +
-                    authzReqMessageContext.getAuthorizationReqDTO().getUser());
-        }
-    }
-
-    @Test
-    public void testHandleClaimsForOAuthAuthzReqMessageContextWithAuthorizationCode() throws Exception {
-
-        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
-        OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
+        Map<ClaimMapping, String> userAttributes = new HashMap<>();
+        userAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping(COUNTRY), TestConstants.CLAIM_VALUE1);
+        userAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping(EMAIL), TestConstants.CLAIM_VALUE2);
+        OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForFederatedUser(userAttributes);
         requestMsgCtx.addProperty("AuthorizationCode", "dummyAuthorizationCode");
-
-        ServiceProvider serviceProvider = new ServiceProvider();
-        serviceProvider.setApplicationName(SERVICE_PROVIDER_NAME);
-        mockApplicationManagementService();
 
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry = mock(AuthorizationGrantCacheEntry.class);
         mockAuthorizationGrantCache(authorizationGrantCacheEntry);
 
-        ClaimMapping claimMap1 =
-                ClaimMapping.build("http://www.wso2.org/claims/email", "email", "sample@abc.com", true);
-        ClaimMapping claimMap2 =
-                ClaimMapping.build("http://www.wso2.org/claims/username", "username", "user123", true);
-
-        ClaimMapping[] requestedLocalClaimMap = {claimMap1, claimMap2};
-
-        ClaimConfig claimConfig = new ClaimConfig();
-        claimConfig.setClaimMappings(requestedLocalClaimMap);
-        serviceProvider.setClaimConfig(claimConfig);
-        serviceProvider.setSpProperties(new ServiceProviderProperty[]{});
-
-        OAuthServerConfiguration mockOAuthServerConfiguration = PowerMockito.mock(OAuthServerConfiguration.class);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
-        when(mockOAuthServerConfiguration.getOpenIDConnectSkipeUserConsentConfig()).thenReturn(true);
-
-        mockApplicationManagementService(serviceProvider);
-
-        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                requestMsgCtx);
-        assertEquals(jwtClaimsSet.getClaims().size(), 0, "Claims are not successfully set.");
+        UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
+        mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
+        assertNotNull(jwtClaimsSet, "JWT Custom claim handling failed.");
+        assertFalse(jwtClaimsSet.getClaims().isEmpty(), "JWT custom claim handling failed");
+        Assert.assertEquals(jwtClaimsSet.getClaims().size(), 3,
+                "Expected custom claims are not set.");
+        Assert.assertEquals(jwtClaimsSet.getClaim(EMAIL), TestConstants.CLAIM_VALUE2,
+                "OIDC claim " + EMAIL + " is not added with the JWT token");
     }
 
     private AuthenticatedUser getDefaultAuthenticatedLocalUser() {
