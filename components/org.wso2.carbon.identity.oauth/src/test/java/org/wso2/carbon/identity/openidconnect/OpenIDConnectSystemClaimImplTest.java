@@ -18,9 +18,9 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.io.Charsets;
+import com.nimbusds.jose.JWSAlgorithm;
 import org.powermock.modules.testng.PowerMockTestCase;
+import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
@@ -28,7 +28,7 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.common.testng.WithRegistry;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -38,8 +38,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 
 @WithCarbonHome
@@ -50,6 +48,8 @@ public class OpenIDConnectSystemClaimImplTest extends PowerMockTestCase {
     private static final String AUTHORIZATION_CODE = "testAuthorizationCode";
     private static final String EMPTY_VALUE = null;
     private static final String ACCESS_TOKEN = TestConstants.ACCESS_TOKEN;
+    private static final String AT_HASH = OAuthConstants.OIDCClaims.AT_HASH;
+    private static final String C_HASH = OAuthConstants.OIDCClaims.C_HASH;
     private OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO;
     private OAuthTokenReqMessageContext oAuthTokenReqMessageContext;
     private OAuth2AccessTokenRespDTO oAuth2AccessTokenRespDTO;
@@ -91,8 +91,8 @@ public class OpenIDConnectSystemClaimImplTest extends PowerMockTestCase {
         oAuth2AuthorizeRespDTO.setAccessToken(accessToken);
         Map<String, Object> claims = openIDConnectSystemClaim.getAdditionalClaims(oAuthAuthzReqMessageContext,
                 oAuth2AuthorizeRespDTO);
-        Assert.assertEquals(claims.get("at_hash"), hashAccessToken);
-        Assert.assertEquals(claims.get("c_hash"), authorizationHashCode);
+        Assert.assertEquals(claims.get(AT_HASH), hashAccessToken);
+        Assert.assertEquals(claims.get(C_HASH), authorizationHashCode);
     }
 
     @DataProvider(name = "getAdditionalClaims")
@@ -101,7 +101,6 @@ public class OpenIDConnectSystemClaimImplTest extends PowerMockTestCase {
         return new Object[][] {
                 {AUTHORIZATION_CODE, ACCESS_TOKEN, getHashValue(AUTHORIZATION_CODE), getHashValue(ACCESS_TOKEN)},
                 {EMPTY_VALUE, "accessToken", EMPTY_VALUE, getHashValue("accessToken")}
-
         };
     }
 
@@ -113,32 +112,16 @@ public class OpenIDConnectSystemClaimImplTest extends PowerMockTestCase {
         oAuth2AccessTokenRespDTO.setAccessToken(accessToken);
         Map<String, Object> claims = openIDConnectSystemClaim.getAdditionalClaims(oAuthTokenReqMessageContext,
                 oAuth2AccessTokenRespDTO);
-        Assert.assertEquals(claims.get("at_hash"), hashAccessToken);
-        Assert.assertEquals(claims.get("c_hash"), authorizationHashCode);
+        Assert.assertEquals(claims.get(AT_HASH), hashAccessToken);
+        Assert.assertEquals(claims.get(C_HASH), authorizationHashCode);
     }
     
-    private String getHashValue(String value) throws IdentityOAuth2Exception {
+    private String getHashValue(String value) throws Exception {
 
         String signatureAlgorithm = "SHA256withRSA";
-        String digAlg = OAuth2Util.mapDigestAlgorithm
-                (OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(signatureAlgorithm));
-        MessageDigest md;
-        try {
-            md = MessageDigest.getInstance(digAlg);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IdentityOAuth2Exception("Error creating the hash value. Invalid Digest Algorithm: " + digAlg);
-        }
-
-        md.update(value.getBytes(Charsets.UTF_8));
-        byte[] digest = md.digest();
-        int leftHalfBytes = 16;
-        if ("SHA-384".equals(digAlg)) {
-            leftHalfBytes = 24;
-        } else if ("SHA-512".equals(digAlg)) {
-            leftHalfBytes = 32;
-        }
-        byte[] leftmost = new byte[leftHalfBytes];
-        System.arraycopy(digest, 0, leftmost, 0, leftHalfBytes);
-        return new String(Base64.encodeBase64URLSafe(leftmost), Charsets.UTF_8);
+        JWSAlgorithm algorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(signatureAlgorithm);
+        WhiteboxImpl.setInternalState(openIDConnectSystemClaim, "signatureAlgorithm", algorithm);
+        String hashValue = WhiteboxImpl.invokeMethod(openIDConnectSystemClaim, "getHashValue", value);
+        return hashValue;
     }
 }

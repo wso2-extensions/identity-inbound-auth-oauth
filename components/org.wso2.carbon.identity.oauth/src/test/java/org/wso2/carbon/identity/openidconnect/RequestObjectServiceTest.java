@@ -98,21 +98,15 @@ public class RequestObjectServiceTest extends PowerMockTestCase {
         Assert.assertEquals(claims.get(0).getName(), "email");
     }
 
-    @Test
+    @Test(expectedExceptions = {IdentityOAuth2Exception.class})
     public void testGetRequestedClaimsForUserInfoException() throws Exception {
 
-        String tableName = "IDN_OIDC_REQ_OBJECT_REFERENCE";
-        try {
-            RequestObjectDAOImpl requestObjectDAO = new RequestObjectDAOImpl();
-            requestObjectService.addRequestObject(consumerKey, sessionKey, requestedEssentialClaims);
-            requestObjectDAO.updateRequestObjectReferencebyTokenId(sessionKey, invalidTokenId);
-            addToken(token, tokenId);
-            List<RequestedClaim> claims = requestObjectService.getRequestedClaimsForUserInfo(token);
-            Assert.assertEquals(claims.get(0).getName(), "email");
-        } catch (Exception e) {
-            Assert.assertEquals(e.getMessage(), "Can not update code id or the access token id of the " +
-                    "table ." + tableName);
-        }
+        RequestObjectDAOImpl requestObjectDAO = new RequestObjectDAOImpl();
+        requestObjectService.addRequestObject(consumerKey, sessionKey, requestedEssentialClaims);
+        requestObjectDAO.updateRequestObjectReferencebyTokenId(sessionKey, invalidTokenId);
+        addToken(token, tokenId);
+        List<RequestedClaim> claims = requestObjectService.getRequestedClaimsForUserInfo(token);
+        Assert.assertEquals(claims.get(0).getName(), "email");
     }
 
     @Test
