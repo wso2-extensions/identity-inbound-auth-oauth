@@ -1,4 +1,4 @@
-name: pr-builder
+name: Product IS PR Builder
 
 on:
   pull_request_target:
