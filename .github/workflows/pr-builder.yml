@@ -9,6 +9,9 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+
+env:
+  MAVEN_OPTS: -Xmx4g -Xms1g
     
 jobs:
   build:
