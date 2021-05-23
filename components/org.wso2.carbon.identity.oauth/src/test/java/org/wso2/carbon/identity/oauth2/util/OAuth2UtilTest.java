@@ -110,6 +110,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
 
 @WithCarbonHome
@@ -437,7 +438,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
         when(OAuthServerConfiguration.getInstance().isClientSecretHashEnabled()).thenReturn(true);
 
-        assertEquals(OAuth2Util.isHashEnabled(), true);
+        assertTrue(OAuth2Util.isHashEnabled());
     }
 
     @DataProvider(name = "AuthenticateUsername")
@@ -1660,7 +1661,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
             OAuth2Util.validatePKCE(referenceCodeChallenge, verificationCode, challengeMethod, oAuthApp);
         } catch (IdentityOAuth2Exception ex) {
             assertEquals(ex.getMessage(), expected);
+            return;
         }
+        fail("Expected IdentityOAuth2Exception was not thrown by validatePKCE method");
     }
 
     @DataProvider(name = "ImplicitResponseTypeData")
@@ -1972,6 +1975,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
         return new Object[][]{
                 {"", false},
+                {null, false},
                 {OAuthConstants.CODE_TOKEN, true},
                 {OAuthConstants.CODE_IDTOKEN, true},
                 {OAuthConstants.CODE_IDTOKEN_TOKEN, true}
@@ -1982,7 +1986,6 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     public void testisHybridResponseType(String responseType, boolean expected) {
 
         assertEquals(OAuth2Util.isHybridResponseType(responseType), expected);
-
     }
 
     @Test
@@ -2021,6 +2024,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
         return new Object[][]{
                 {"dummyTokenType"},
+                {""},
                 {null}};
     }
 
@@ -2055,7 +2059,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
             OAuth2Util.getOAuthTokenIssuerForOAuthApp(clientId);
         } catch (IdentityOAuth2Exception ex) {
             assertEquals(ex.getMessage(), "Error while retrieving app information for clientId: " + clientId);
+            return;
         }
+        fail("Expected IdentityOAuth2Exception was not thrown by getOAuthTokenIssuerForOAuthApp method");
     }
 
     @Test
@@ -2092,7 +2098,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         } catch (InvalidOAuthClientException ex) {
             assertEquals(ex.getMessage(), "Unable to retrieve app information for consumer key: "
                     + clientId);
+            return;
         }
+        fail("Expected InvalidOAuthClientException was not thrown by getClientSecret method");
     }
 
     @DataProvider(name = "authenticatedIDPProvider")
@@ -2102,7 +2110,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         return new Object[][]{
                 {authenticatedIDP, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX +
                         OAuthConstants.UserType.FEDERATED_USER_DOMAIN_SEPARATOR + authenticatedIDP},
-                {null, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX}};
+                {null, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX},
+                {"", OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX}};
     }
 
     @Test(dataProvider = "authenticatedIDPProvider")
@@ -2118,9 +2127,10 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
-    public void testGetTokenBindingReferenceWithNullValue() {
+    public void testGetTokenBindingReferenceWithInvalidBindingValue() {
 
         assertNull(OAuth2Util.getTokenBindingReference(null));
+        assertNull(OAuth2Util.getTokenBindingReference(""));
     }
 
     @DataProvider(name = "accessTokenData")
@@ -2149,7 +2159,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
             OAuth2Util.getAccessTokenDOfromTokenIdentifier("dummyIdentifier");
         } catch (IllegalArgumentException ex) {
             assertEquals(ex.getMessage(), "Invalid Access Token. Access token is not ACTIVE.");
+            return;
         }
+        fail("Expected IllegalArgumentException was not thrown by getAccessTokenDOfromTokenIdentifier method");
     }
 
     @Test(dataProvider = "accessTokenData")
@@ -2203,7 +2215,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         } catch (IdentityOAuth2Exception ex) {
             assertEquals(ex.getMessage(), "Error while obtaining the service provider for client_id: " +
                     clientId + " of tenantDomain: " + MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            return;
         }
+        fail("Expected IdentityOAuth2Exception was not thrown by getServiceProvider method");
     }
 
     private void setCache() {
@@ -2232,7 +2246,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
             OAuth2Util.getServiceProvider(clientId);
         } catch (IdentityOAuth2Exception ex) {
             assertEquals(ex.getMessage(), "Could not find an existing app for clientId: " + clientId);
+            return;
         }
+        fail("Expected IdentityOAuth2Exception was not thrown by getServiceProvider method");
     }
 
     @Test
@@ -2260,6 +2276,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         } catch (IdentityOAuth2Exception ex) {
             assertEquals(ex.getMessage(), "Error while obtaining the service provider for client_id: " +
                     clientId + " of tenantDomain: " + MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            return;
         }
+        fail("Expected IdentityOAuth2Exception was not thrown by getServiceProvider method");
     }
 }
