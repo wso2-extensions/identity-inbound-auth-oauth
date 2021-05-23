@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
+import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAOImpl;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 
@@ -50,7 +51,7 @@ public class RequestObjectServiceTest extends PowerMockTestCase {
     private static final String consumerKey = TestConstants.CLIENT_ID;
     private static final String sessionKey = "d43e8da324a33bdc941b9b95cad6a6a2";
     private static final String token = "4bdc941b93e8da324dc941b93ea2d";
-    private static final String tokenId = "2sa9a678f890877856y66e75f605d456";
+    private static final String tokenId = "2sa9a678f890877856y66e75f605d457";
     private static final String invalidTokenId = "77856y6690875f605d456e2sa9a678f8";
     RequestedClaim requestedClaim = new RequestedClaim();
 
@@ -92,8 +93,8 @@ public class RequestObjectServiceTest extends PowerMockTestCase {
 
         RequestObjectDAOImpl requestObjectDAO = new RequestObjectDAOImpl();
         requestObjectService.addRequestObject(consumerKey, sessionKey, requestedEssentialClaims);
-        requestObjectDAO.updateRequestObjectReferencebyTokenId(sessionKey, tokenId);
         addToken(token, tokenId);
+        requestObjectDAO.updateRequestObjectReferencebyTokenId(sessionKey, tokenId);
         List<RequestedClaim> claims = requestObjectService.getRequestedClaimsForUserInfo(token);
         Assert.assertEquals(claims.get(0).getName(), "email");
     }
@@ -113,10 +114,10 @@ public class RequestObjectServiceTest extends PowerMockTestCase {
     public void testGetRequestedClaimsForIDToken() throws Exception {
 
         RequestObjectDAOImpl requestObjectDAO = new RequestObjectDAOImpl();
+        addToken(token, tokenId);
         requestObjectService.addRequestObject(consumerKey, sessionKey, requestedEssentialClaims);
         requestObjectDAO.updateRequestObjectReferencebyTokenId(sessionKey, tokenId);
         updateUserInfo(sessionKey, false);
-        addToken(token, tokenId);
         List<RequestedClaim> claims = requestObjectService.getRequestedClaimsForIDToken(token);
         Assert.assertEquals(claims.get(0).getName(), "email");
     }
@@ -125,14 +126,31 @@ public class RequestObjectServiceTest extends PowerMockTestCase {
 
         TokenPersistenceProcessor hashingPersistenceProcessor = new HashingPersistenceProcessor();
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
-            String sql = "UPDATE IDN_OAUTH2_ACCESS_TOKEN SET ACCESS_TOKEN_HASH=? WHERE TOKEN_ID=?";
+            String sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN;
             PreparedStatement prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(token));
-            prepStmt.setString(2, tokenId);
-            prepStmt.executeUpdate();
+            prepStmt.setString(2, "refreshToken");
+            prepStmt.setString(3, "username");
+            prepStmt.setInt(4, 1234);
+            prepStmt.setString(5, "PRIMARY");
+            prepStmt.setString(6, null);
+            prepStmt.setString(7, null);
+            prepStmt.setLong(8, 36000);
+            prepStmt.setLong(9, 36000);
+            prepStmt.setString(10, "scope");
+            prepStmt.setString(11, "ACTIVE");
+            prepStmt.setString(12, "TOKEN");
+            prepStmt.setString(13, tokenId);
+            prepStmt.setString(14, null);
+            prepStmt.setString(15, "TOKEN_ID");
+            prepStmt.setString(16, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(token));
+            prepStmt.setString(17, "refreshToken");
+            prepStmt.setString(18, null);
+            prepStmt.setString(19, consumerKey);
+            prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
-            String errorMsg = "Error occurred while inserting tokenID: " + token;
+            String errorMsg = "Error occurred while inserting tokenID: " + tokenId;
             throw new IdentityOAuth2Exception(errorMsg, e);
         }
     }
