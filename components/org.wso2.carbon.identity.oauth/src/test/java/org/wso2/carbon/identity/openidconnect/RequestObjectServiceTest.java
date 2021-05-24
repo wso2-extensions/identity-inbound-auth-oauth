@@ -53,7 +53,8 @@ public class RequestObjectServiceTest extends PowerMockTestCase {
     private static final String token = "4bdc941b93e8da324dc941b93ea2d";
     private static final String tokenId = "2sa9a678f890877856y66e75f605d457";
     private static final String invalidTokenId = "77856y6690875f605d456e2sa9a678f8";
-    RequestedClaim requestedClaim = new RequestedClaim();
+    RequestedClaim requestedClaimForEmail = new RequestedClaim();
+    RequestedClaim requestedClaimForAddress = new RequestedClaim();
 
     private RequestObjectService requestObjectService;
     private List<List<RequestedClaim>> requestedEssentialClaims;
@@ -67,15 +68,20 @@ public class RequestObjectServiceTest extends PowerMockTestCase {
         List values = new ArrayList<>();
         requestedEssentialClaims = new ArrayList<>();
 
-        requestedClaim.setName("email");
-        requestedClaim.setType("userinfo");
-        requestedClaim.setValue("value1");
-        requestedClaim.setEssential(true);
-        requestedClaim.setValues(values);
+        requestedClaimForEmail.setName("email");
+        requestedClaimForEmail.setType("userinfo");
+        requestedClaimForEmail.setValue("value1");
+        requestedClaimForEmail.setEssential(true);
+        requestedClaimForEmail.setValues(values);
         values.add("val1");
         values.add("val2");
-        requestedClaim.setValues(values);
-        lstRequestedClams.add(requestedClaim);
+        requestedClaimForAddress.setName("address");
+        requestedClaimForAddress.setType("id_token");
+        requestedClaimForAddress.setValue("value1");
+        requestedClaimForAddress.setEssential(true);
+        requestedClaimForAddress.setValues(values);
+        lstRequestedClams.add(requestedClaimForEmail);
+        lstRequestedClams.add(requestedClaimForAddress);
         requestedEssentialClaims.add(lstRequestedClams);
     }
 
@@ -117,9 +123,8 @@ public class RequestObjectServiceTest extends PowerMockTestCase {
         addToken(token, tokenId);
         requestObjectService.addRequestObject(consumerKey, sessionKey, requestedEssentialClaims);
         requestObjectDAO.updateRequestObjectReferencebyTokenId(sessionKey, tokenId);
-        updateUserInfo(sessionKey, false);
         List<RequestedClaim> claims = requestObjectService.getRequestedClaimsForIDToken(token);
-        Assert.assertEquals(claims.get(0).getName(), "email");
+        Assert.assertEquals(claims.get(0).getName(), "address");
     }
 
     protected void addToken(String token, String tokenId) throws Exception {
@@ -151,22 +156,6 @@ public class RequestObjectServiceTest extends PowerMockTestCase {
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
             String errorMsg = "Error occurred while inserting tokenID: " + tokenId;
-            throw new IdentityOAuth2Exception(errorMsg, e);
-        }
-    }
-
-    protected void updateUserInfo(String sessionKey, boolean isUserInfo) throws Exception {
-
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
-            String sql = "UPDATE IDN_OIDC_REQ_OBJECT_CLAIMS SET IS_USERINFO=? WHERE REQ_OBJECT_ID=" +
-                    "(SELECT ID FROM IDN_OIDC_REQ_OBJECT_REFERENCE WHERE SESSION_DATA_KEY=?)";
-            PreparedStatement prepStmt = connection.prepareStatement(sql);
-            prepStmt.setString(1, isUserInfo ? "1" : "0");
-            prepStmt.setString(2, sessionKey);
-            prepStmt.executeUpdate();
-            IdentityDatabaseUtil.commitTransaction(connection);
-        } catch (SQLException e) {
-            String errorMsg = "Error occurred while inserting tokenID: " + token;
             throw new IdentityOAuth2Exception(errorMsg, e);
         }
     }
