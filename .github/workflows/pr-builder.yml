@@ -25,4 +25,4 @@ jobs:
           java-version: "8"
           distribution: "adopt"
       - name: Build with Maven
-        run: mvn clean install -U
+        run: mvn clean install -U -B
