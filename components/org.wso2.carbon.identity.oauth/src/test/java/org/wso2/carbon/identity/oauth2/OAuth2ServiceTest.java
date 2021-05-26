@@ -72,6 +72,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -153,12 +154,10 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     public Object[][] validateClientDataProvider() {
 
         return new Object[][]{
-                {null, null, null, null},
-                {"dummyGrantType", "dummyCallBackUrl", "carbon.super", null},
-                {"dummyGrantType", "dummyCallBackUrl", "carbon.super", "dummyCallBackURI"},
-                {"dummyGrantType", "regexp=dummyCallBackUrl", "carbon.super", "dummyCallBackURI"},
-                {"dummyGrantType", "regexp=dummyCallBackUrl", "carbon.super", "dummyCallBackUrl"},
-                {"dummyGrantType", "dummyCallBackUrl", "carbon.super", "dummyCallBackUrl"}
+                {UUID.randomUUID().toString(), "dummyGrantType", "dummyCallBackUrl", "carbon.super", null},
+                {UUID.randomUUID().toString(), "dummyGrantType", "regexp=dummyCallBackUrl", "carbon.super",
+                        "dummyCallBackUrl"},
+                {UUID.randomUUID().toString(), "dummyGrantType", "dummyCallBackUrl", "carbon.super", "dummyCallBackUrl"}
         };
     }
 
@@ -187,37 +186,51 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     }
 
     @Test(dataProvider = "ValidateClientInfoDataProvider")
-    public void testValidateClientInfo(String grantType, String callbackUrl, String tenantDomain, String callbackURI)
-            throws Exception {
+    public void testValidateClientInfo(String clientId, String grantType, String callbackUrl, String tenantDomain,
+                                       String callbackURI) throws Exception {
 
-        getOAuthAppDO(grantType, callbackUrl, tenantDomain, callbackURI);
+        OAuthAppDO oAuthAppDO = getOAuthAppDO(clientId, grantType, callbackUrl, tenantDomain);
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
                 validateClientInfo(clientId, callbackURI);
         assertNotNull(oAuth2ClientValidationResponseDTO);
+        assertTrue(oAuth2ClientValidationResponseDTO.isValidClient());
+        assertEquals(oAuth2ClientValidationResponseDTO.getApplicationName(), oAuthAppDO.getApplicationName());
+        assertEquals(oAuth2ClientValidationResponseDTO.isPkceMandatory(), oAuthAppDO.isPkceMandatory());
+    }
+
+    @Test
+    public void testValidateClientInfoWithInvalidCallbackURL() throws Exception {
+
+        String clientId = UUID.randomUUID().toString();
+        getOAuthAppDO(clientId, "dummyGrantType", "dummyCallBackUrl", "carbon.super");
+        OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
+                validateClientInfo(clientId, "dummyCallBackURI");
+        assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), OAuth2ErrorCodes.INVALID_CALLBACK);
     }
 
     @Test
     public void testValidateClientInfoWithEmptyGrantTypes() throws Exception {
 
-        getOAuthAppDO(null, "dummyCallbackUrl", "dummyTenantDomain", "dummyCallbackURI");
+        getOAuthAppDO(clientId, null, "dummyCallbackUrl", "dummyTenantDomain");
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
                 validateClientInfo(clientId, "dummyCallBackUrl");
-        assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), "unauthorized_client");
+        assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), OAuth2ErrorCodes.UNAUTHORIZED_CLIENT);
     }
 
-    private OAuthAppDO getOAuthAppDO(String grantType, String callbackUrl, String tenantDomain, String callbackURI)
+    private OAuthAppDO getOAuthAppDO(String clientId, String grantType, String callbackUrl, String tenantDomain)
             throws Exception {
 
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setGrantTypes(grantType);
+        oAuthAppDO.setApplicationName("dummyName");
         oAuthAppDO.setState("ACTIVE");
         oAuthAppDO.setCallbackUrl(callbackUrl);
         oAuthAppDO.setAppOwner(new AuthenticatedUser());
-        when(oAuthAppDAO.getAppInformation(clientId)).thenReturn(oAuthAppDO);
-        when(authenticatedUser.getTenantDomain()).thenReturn(tenantDomain);
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
+        when(oAuthAppDAO.getAppInformation(clientId)).thenReturn(oAuthAppDO);
+        when(authenticatedUser.getTenantDomain()).thenReturn(tenantDomain);
         return oAuthAppDO;
     }
 
@@ -245,14 +258,14 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "InvalidAppStatDataProvider")
     public void testValidateClientInfoWithInvalidAppState(String appState) throws Exception {
 
-        OAuthAppDO oAuthAppDO = getOAuthAppDO("dummyGrantType", "dummyCallbackUrl",
-                "dummyTenantDomain", "dummyCallbackURI");
+        OAuthAppDO oAuthAppDO = getOAuthAppDO(clientId, "dummyGrantType", "dummyCallbackUrl",
+                "dummyTenantDomain");
         oAuthAppDO.setState(appState);
         AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
                 validateClientInfo(clientId, "dummyCallbackUrI");
         assertNotNull(oAuth2ClientValidationResponseDTO);
-        assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), "invalid_client");
+        assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), OAuth2ErrorCodes.INVALID_CLIENT);
         assertFalse(oAuth2ClientValidationResponseDTO.isValidClient());
     }
 
@@ -269,7 +282,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
                 validateClientInfo(clientId, callbackUrI);
         assertNotNull(oAuth2ClientValidationResponseDTO);
-        assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), "invalid_client");
+        assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), OAuth2ErrorCodes.INVALID_CLIENT);
         assertFalse(oAuth2ClientValidationResponseDTO.isValidClient());
     }
 
@@ -286,7 +299,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
                 validateClientInfo(clientId, callbackUrI);
         assertNotNull(oAuth2ClientValidationResponseDTO);
-        assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), "server_error");
+        assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), OAuth2ErrorCodes.SERVER_ERROR);
         assertFalse(oAuth2ClientValidationResponseDTO.isValidClient());
     }
 
