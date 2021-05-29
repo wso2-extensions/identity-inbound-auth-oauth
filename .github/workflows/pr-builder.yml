@@ -24,9 +24,6 @@ jobs:
         with:
           java-version: "8"
           distribution: "adopt"
-      - name: Set current week
-        run: |
-          echo "CURRENT_WEEK=$(date +%Y-%U)" >> ${GITHUB_ENV}
       - name: Cache local Maven repository
         id: cache-maven-m2
         uses: actions/cache@v2
@@ -34,6 +31,10 @@ jobs:
           cache-name: cache-m2
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ env.cache-name }}-${{ env.CURRENT_WEEK }}
+          key: ${{ runner.os }}-maven-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-${{ env.cache-name }}-
+            ${{ runner.os }}-maven-
+            ${{ runner.os }}-
       - name: Build with Maven
         run: mvn clean install -U -B
