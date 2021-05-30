@@ -114,29 +114,14 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         oAuth2ScopeService.registerScope(scope);
     }
 
-  /*  @Test
-    public void testRegisterScopeWithExistingScopeName() throws Exception {
-
-        Scope dummyScope = new Scope(SCOPE_NAME, SCOPE_NAME, SCOPE_DESCRIPTION);
-        oAuth2ScopeService.registerScope(dummyScope);
-        try {
-            oAuth2ScopeService.registerScope(dummyScope);
-        } catch (IdentityOAuth2ScopeClientException e) {
-            assertEquals(e.getMessage(), "Scope with the name dummyScopeName already exists in the system."
-                    + " Please use a different scope name.");
-            return;
-        }
-        fail("Expected IdentityOAuth2ScopeClientException was not thrown by registerScope method");
-        oAuth2ScopeService.deleteScope(SCOPE_NAME);
-    }
-*/
     @DataProvider(name = "invalidScopeNameProvider")
     public static Object[][] provideInvalidScopeName() {
 
         return new Object[][]{
-                {"invalid Scope Name", "Scope name: %s contains white spaces."},
-                {"invalid?scopeName", "Invalid scope name. Scope name %s cannot " +
-                        "contain special characters ?,#,/,( or )"}
+                {"invalid Scope Name", Oauth2ScopeConstants.ErrorMessages.
+                        ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES.getMessage()},
+                {"invalid?scopeName", Oauth2ScopeConstants.ErrorMessages.
+                        ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SATIFIED_THE_REGEX.getMessage()}
         };
     }
 
@@ -177,7 +162,8 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         try {
             oAuth2ScopeService.isScopeExists(null);
         } catch (IdentityException ex) {
-            assertEquals(ex.getMessage(), "Scope Name is not specified.");
+            assertEquals(ex.getMessage(), Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED.getMessage());
             return;
         }
         fail("Expected IdentityException was not thrown by isScopeExists method");
@@ -189,7 +175,8 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         try {
             oAuth2ScopeService.isScopeExists(null, true);
         } catch (IdentityException ex) {
-            assertEquals(ex.getMessage(), "Scope Name is not specified.");
+            assertEquals(ex.getMessage(), Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED.getMessage());
             return;
         }
         fail("Expected IdentityException was not thrown by isScopeExists method");
@@ -327,8 +314,8 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
             oAuth2ScopeService.addUserConsentForApplication(userId, invalidAppId, tenantId, approvedScopes,
                     deniedScopes);
         } catch (IdentityOAuth2ScopeServerException e) {
-            String expected = String.format("Error occurred while adding user consent for "
-                            + "OAuth scopes for user : %s, application : %s and tenant Id : %d.", userId, invalidAppId,
+            String expected = String.format(Oauth2ScopeConstants.ErrorMessages.
+                            ERROR_CODE_FAILED_TO_ADD_USER_CONSENT_FOR_APP.getMessage(), userId, invalidAppId,
                     tenantId);
             assertEquals(e.getMessage(), expected);
             return;
@@ -376,8 +363,8 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
             oAuth2ScopeService.updateUserConsentForApplication(userId, appId, tenantId, newApprovedScopes,
                     newDeniedScopes);
         } catch (IdentityOAuth2ScopeServerException e) {
-            String expected = String.format("Error occurred while updating user consent for OAuth scopes for user"
-                    + " : %s, application : %s and tenant Id : %d.", userId, appId, tenantId);
+            String expected = String.format(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_FAILED_TO_UPDATE_USER_CONSENT_FOR_APP.getMessage(), userId, appId, tenantId);
             assertEquals(e.getMessage(), expected);
             return;
         }
@@ -469,4 +456,41 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
 
         assertEquals(oAuth2ScopeService.isUserHasAnExistingConsentForApp(userId, appId, tenantId), expected);
     }
+
+    @Test
+    public void testGetUserConsents() throws Exception {
+
+        List<String> approvedScopes = new ArrayList<>(Arrays.asList("read", "write"));
+        List<String> deniedScopes = new ArrayList<>(Arrays.asList("delete"));
+        String appId = UUID.randomUUID().toString();
+        insertAppId(appId);
+        int tenantId = 1234;
+        String userId = "dummyUserId";
+        oAuth2ScopeService.addUserConsentForApplication(userId, appId, tenantId, approvedScopes, deniedScopes);
+
+        List<OAuth2ScopeConsentResponse> response = oAuth2ScopeService.getUserConsents(userId,
+                tenantId);
+        assertEquals(response.get(0).getAppId(), appId);
+        assertEquals(response.get(0).getUserId(), userId);
+        assertEquals(response.get(0).getApprovedScopes().size(), approvedScopes.size());
+        assertEquals(response.get(0).getDeniedScopes().size(), deniedScopes.size());
+    }
+
+    @Test
+    public void testRevokeUserConsents() throws Exception {
+
+        List<String> approvedScopes = new ArrayList<>(Arrays.asList("read", "write"));
+        List<String> deniedScopes = new ArrayList<>(Arrays.asList("delete"));
+        String appId = UUID.randomUUID().toString();
+        insertAppId(appId);
+        int tenantId = 1234;
+        String userId = "dummyUserId";
+        oAuth2ScopeService.addUserConsentForApplication(userId, appId, tenantId, approvedScopes, deniedScopes);
+
+        oAuth2ScopeService.revokeUserConsents(userId, tenantId);
+
+        List<OAuth2ScopeConsentResponse> response = oAuth2ScopeService.getUserConsents(userId,
+                tenantId);
+        assertEquals(response.size(), 0);
+        }
 }
