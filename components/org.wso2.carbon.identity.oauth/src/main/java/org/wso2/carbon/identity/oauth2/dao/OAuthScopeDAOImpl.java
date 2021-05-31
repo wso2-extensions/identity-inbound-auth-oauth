@@ -270,7 +270,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
         final StringBuilder sb = new StringBuilder(String.join(", ",
                 Collections.nCopies(requestedScopeList.size(), "?")));
 
-        sql = sql.replace("(_SCOPE_LIST_)", "(" + sb + ")");
+        sql = sql.replace("(" + Oauth2ScopeConstants.SQLPlaceholders.SCOPE_LIST + ")", "(" + sb + ")");
 
         Set<Scope> scopes = new HashSet<>();
         Map<Integer, Scope> scopeMap = new HashMap<>();
