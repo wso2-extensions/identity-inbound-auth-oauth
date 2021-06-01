@@ -2615,7 +2615,7 @@ public class OAuth2Util {
     /**
      * @deprecated replaced by
      * {@link #encryptWithPublicKey(Key, SignedJWT, JWEAlgorithm, EncryptionMethod, String, String, String)}
-     * <p>
+     *
      * Encrypt the JWT token with with given public key.
      *
      * @param publicKey           public key used to encrypt
@@ -2626,10 +2626,6 @@ public class OAuth2Util {
      * @param thumbPrint          value used as 'kid'
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
-     * @deprecated replaced by
-     * {@link #encryptWithPublicKey(Key, SignedJWT, JWEAlgorithm, EncryptionMethod, String, String, String)}
-     * <p>
-     * Encrypt the JWT token with with given public key.
      */
     @Deprecated
     private static JWT encryptWithPublicKey(Key publicKey, JWTClaimsSet jwtClaimsSet,
@@ -4112,6 +4108,7 @@ public class OAuth2Util {
     }
 
     /**
+     * @deprecated replased with {@link #getEncryptionJWKFromJWKS(String)}
      * Get public certificate from JWKS when kid and JWKS Uri is given.
      *
      * @param jwksUri - JWKS Uri
