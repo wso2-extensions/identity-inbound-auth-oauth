@@ -81,7 +81,6 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         }
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             String codeId = UUID.randomUUID().toString();
-            storeIntoDeviceFlow(codeId, deviceCode, userCode, consumerKey, expiresIn, interval, connection);
             storeIntoScopes(codeId, deviceCode, scopes, connection);
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
@@ -535,49 +534,6 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             return userCode;
         }
         throw new IdentityOAuth2Exception("user_code for consumer_key: " + consumerKey + " already exists.");
-    }
-
-    /**
-     * Store into device flow database.
-     *
-     * @param codeId      Internal mapping UUID.
-     * @param deviceCode  Code that is used to identify the device.
-     * @param userCode    Code that is used to correlate user and device.
-     * @param consumerKey Consumer key of the client application.
-     * @param expiresIn   Expiry time.
-     * @param interval    Interval between poll requests.
-     * @param connection  Database connection.
-     * @throws IdentityOAuth2Exception Error while storing parameters.
-     */
-    @Deprecated
-    private void storeIntoDeviceFlow(String codeId, String deviceCode, String userCode, String consumerKey,
-        long expiresIn, long interval, Connection connection) throws IdentityOAuth2Exception {
-
-        try (PreparedStatement prepStmt = connection.prepareStatement(
-                SQLQueries.DeviceFlowDAOSQLQueries.STORE_DEVICE_CODE_WITHOUT_QUANTIFIER)) {
-            Date date = new Date();
-            Timestamp timeCreated = new Timestamp(date.getTime());
-            long timeExpired = timeCreated.getTime() + expiresIn;
-            Timestamp expiredTime = new Timestamp(timeExpired);
-            prepStmt.setString(1, codeId);
-            prepStmt.setString(2, deviceCode);
-            prepStmt.setString(3, userCode);
-            prepStmt.setTimestamp(4, timeCreated, Calendar.getInstance(TimeZone
-                    .getTimeZone(Constants.UTC)));
-            prepStmt.setTimestamp(5, timeCreated, Calendar.getInstance(TimeZone
-                    .getTimeZone(Constants.UTC)));
-            prepStmt.setTimestamp(6, expiredTime, Calendar.getInstance(TimeZone
-                    .getTimeZone(Constants.UTC)));
-            prepStmt.setLong(7, interval);
-            prepStmt.setString(8, Constants.PENDING);
-            prepStmt.setString(9, consumerKey);
-            prepStmt.execute();
-
-        } catch (SQLException e) {
-            IdentityDatabaseUtil.rollbackTransaction(connection);
-            throw new IdentityOAuth2Exception("Error when storing the device flow parameters for consumer_key: " +
-                    consumerKey, e);
-        }
     }
 
     /**

@@ -45,11 +45,14 @@ public interface DeviceFlowDAO {
     default String insertDeviceFlowParametersWithQuantifier(String deviceCode, String userCode, long quantifier,
         String consumerKey, String scopes) throws IdentityOAuth2Exception {
 
-        throw new NotImplementedException("Not Implemented");
+        throw new NotImplementedException("Not Implemented.");
     }
 
     /**
      * This will be used to enter the value to the database tables.
+     * @deprecated
+     * This method is no longer acceptable.
+     * @link DeviceFlowDAO#insertDeviceFlowParametersWithQuantifier(String, String, long, String, String).
      *
      * @param deviceCode  Code that is used to identify the device.
      * @param userCode    Code that is used to correlate user and device.
@@ -59,6 +62,7 @@ public interface DeviceFlowDAO {
      * @param scopes      Requested scopes.
      * @throws IdentityOAuth2Exception Error while inserting device flow parameters.
      */
+    @Deprecated
     void insertDeviceFlowParameters(String deviceCode, String userCode, String consumerKey, Long expiresIn,
                                     int interval, String scopes) throws IdentityOAuth2Exception;
 
@@ -79,16 +83,20 @@ public interface DeviceFlowDAO {
      */
     default void setAuthenticationStatus(String userCode) throws IdentityOAuth2Exception {
 
-        throw new NotImplementedException("Not Implemented");
+        throw new NotImplementedException("Not Implemented.");
     }
 
     /**
      * Set the status of the user code and device code.
+     * @deprecated
+     * This method is no longer acceptable.
+     * @link DeviceFlowDAO#setAuthenticationStatus(String).
      *
      * @param userCode Code that is used to correlate user and device.
      * @param status   Status of the device and user codes.
      * @throws IdentityOAuth2Exception Error while setting authentication status.
      */
+    @Deprecated
     void setAuthenticationStatus(String userCode, String status) throws IdentityOAuth2Exception;
 
     /**
@@ -101,16 +109,20 @@ public interface DeviceFlowDAO {
      */
     default DeviceFlowDO getAuthenticationDetails(String deviceCode, String clientId) throws IdentityOAuth2Exception {
 
-        throw new NotImplementedException("Not Implemented");
+        throw new NotImplementedException("Not Implemented.");
     }
 
     /**
      * Get the authentication status for device code.
+     * @deprecated
+     * This method is no longer acceptable.
+     * @link DeviceFlowDAO#getAuthenticationDetails(String, String).
      *
      * @param deviceCode Code that is used to identify the device.
      * @return Map of values.
      * @throws IdentityOAuth2Exception Error while getting authentication details.
      */
+    @Deprecated
     DeviceFlowDO getAuthenticationDetails(String deviceCode) throws IdentityOAuth2Exception;
 
     /**
@@ -196,6 +208,6 @@ public interface DeviceFlowDAO {
      */
     default DeviceFlowDO getDetailsForUserCode(String userCode) throws IdentityOAuth2Exception {
 
-        throw new NotImplementedException("Not Implemented");
+        throw new NotImplementedException("Not Implemented.");
     }
 }

@@ -41,11 +41,14 @@ public interface DeviceAuthService {
     default String generateDeviceResponse(String deviceCode, String userCode, long quantifier, String clientId,
                                           String scopes) throws IdentityOAuth2Exception {
 
-        throw new NotImplementedException("Not Implemented");
+        throw new NotImplementedException("Not Implemented.");
     }
 
     /**
      * Store device flow parameters and scopes in different tables.
+     * @deprecated
+     * This method is no longer acceptable.
+     * @link DeviceAuthService#generateDeviceResponse(String, String, long, String, String).
      *
      * @param deviceCode Code that is used to identify the device.
      * @param userCode   Code that is used to correlate two devices.
@@ -53,6 +56,7 @@ public interface DeviceAuthService {
      * @param scopes     Requested scopes.
      * @throws IdentityOAuth2Exception Error while storing device flow parameters.
      */
+    @Deprecated
     void generateDeviceResponse(String deviceCode, String userCode, String clientId, String scopes)
             throws IdentityOAuth2Exception;
 
@@ -65,7 +69,7 @@ public interface DeviceAuthService {
      */
     default DeviceFlowDO getDetailsByUserCode(String userCode) throws IdentityOAuth2Exception {
 
-        throw new NotImplementedException("Not Implemented");
+        throw new NotImplementedException("Not Implemented.");
     }
 
     /**
