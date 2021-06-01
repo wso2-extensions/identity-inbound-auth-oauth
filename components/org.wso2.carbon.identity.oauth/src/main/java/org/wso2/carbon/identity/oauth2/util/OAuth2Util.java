@@ -2461,6 +2461,17 @@ public class OAuth2Util {
         }
     }
 
+    /**
+     * Encrypt jwt using service provider's configured X509 certificate
+     *
+     * @param signedJwt           contains signed JWT body
+     * @param encryptionAlgorithm JWT signing algorithm
+     * @param encryptionMethod    Encryption method
+     * @param spTenantDomain      Service provider tenant domain
+     * @param clientId            ID of the client
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
     private static JWT encryptUsingSPX509Certificate(SignedJWT signedJwt, JWEAlgorithm encryptionAlgorithm,
                                                      EncryptionMethod encryptionMethod, String spTenantDomain,
                                                      String clientId) throws IdentityOAuth2Exception {
@@ -2472,6 +2483,20 @@ public class OAuth2Util {
                 spTenantDomain, clientId, kid);
     }
 
+    /**
+     * Encrypt jwt using publickey fetched from jwks
+     *
+     * @param signedJwt           contains signed JWT body
+     * @param encryptionAlgorithm JWT signing algorithm
+     * @param encryptionMethod    Encryption method
+     * @param spTenantDomain      Service provider tenant domain
+     * @param clientId            ID of the client
+     * @param jwksUri             jwks url
+     * @return
+     * @throws IdentityOAuth2Exception
+     * @throws JOSEException
+     * @throws ParseException
+     */
     private static JWT encryptUsingJwksPublicKey(SignedJWT signedJwt, JWEAlgorithm encryptionAlgorithm,
                                                  EncryptionMethod encryptionMethod, String spTenantDomain,
                                                  String clientId, String jwksUri)
@@ -2484,6 +2509,12 @@ public class OAuth2Util {
                 spTenantDomain, clientId, kid);
     }
 
+    /**
+     * Get kid value from the jwk
+     *
+     * @param encryptionJwk Encryption jwk
+     * @return
+     */
     private static String getKidValueFromJwk(JWK encryptionJwk) {
 
         String kid;
