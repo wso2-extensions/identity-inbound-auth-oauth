@@ -2438,37 +2438,50 @@ public class OAuth2Util {
                 }
             }
             String jwksUri = getSPJwksUrl(clientId, spTenantDomain);
-            Certificate publicCert;
-            JWK encryptionJwk;
-            Key publicKey;
-            String kid;
 
             if (StringUtils.isBlank(jwksUri)) {
                 if (log.isDebugEnabled()) {
                     log.debug(String.format("Jwks uri is not configured for the service provider associated with " +
                             "client_id: %s. Checking for x509 certificate", clientId));
                 }
-                publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
-                kid = getThumbPrint(publicCert);
-                publicKey = publicCert.getPublicKey();
+                return encryptUsingSPX509Certificate(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain,
+                        clientId);
             } else {
                 if (log.isDebugEnabled()) {
-                    log.debug(String.format("Fetching public keys for the client %s from jwks uri %s",
-                            clientId, jwksUri));
+                    log.debug(String.format("Jwks uri is configured for the service provider associated with" +
+                            " client %s from jwks uri %s", clientId, jwksUri));
                 }
-                encryptionJwk = getEncryptionJWKFromJWKS(jwksUri);
-                RSAKey rsaKey = RSAKey.parse(encryptionJwk.toJSONString());
-                publicKey = rsaKey.toRSAPublicKey();
-                kid = getKidValueFromJwk(encryptionJwk);
+                return encryptUsingJwksPublicKey(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain,
+                        clientId, jwksUri);
             }
-
-            return encryptWithPublicKey(publicKey, signedJwt, encryptionAlgorithm, encryptionMethod,
-                    spTenantDomain, clientId, kid);
 
         } catch (JOSEException | ParseException e) {
             throw new IdentityOAuth2Exception("Error occurred while encrypting JWT for the client_id: " + clientId
                     + " with the tenant domain: " + spTenantDomain, e);
         }
+    }
+
+    private static JWT encryptUsingSPX509Certificate(SignedJWT signedJwt, JWEAlgorithm encryptionAlgorithm,
+                                                     EncryptionMethod encryptionMethod, String spTenantDomain,
+                                                     String clientId) throws IdentityOAuth2Exception {
+
+        Certificate publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
+        Key publicKey = publicCert.getPublicKey();
+        String kid = getThumbPrint(publicCert);
+        return encryptWithPublicKey(publicKey, signedJwt, encryptionAlgorithm, encryptionMethod,
+                spTenantDomain, clientId, kid);
+    }
+
+    private static JWT encryptUsingJwksPublicKey(SignedJWT signedJwt, JWEAlgorithm encryptionAlgorithm,
+                                                 EncryptionMethod encryptionMethod, String spTenantDomain,
+                                                 String clientId, String jwksUri)
+            throws IdentityOAuth2Exception, JOSEException, ParseException {
+
+        JWK encryptionJwk = getEncryptionJWKFromJWKS(jwksUri);
+        Key publicKey = RSAKey.parse(encryptionJwk.toJSONString()).toRSAPublicKey();
+        String kid = getKidValueFromJwk(encryptionJwk);
+        return encryptWithPublicKey(publicKey, signedJwt, encryptionAlgorithm, encryptionMethod,
+                spTenantDomain, clientId, kid);
     }
 
     private static String getKidValueFromJwk(JWK encryptionJwk) {
@@ -2477,7 +2490,7 @@ public class OAuth2Util {
         Certificate publicCert;
         if (encryptionJwk.getKeyID() != null) {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("Kid value is fetched from jwk %s", encryptionJwk.getKeyID()));
+                log.debug(String.format("Kid value is available in jwk %s", encryptionJwk.getKeyID()));
             }
             kid = encryptionJwk.getKeyID();
         } else {
