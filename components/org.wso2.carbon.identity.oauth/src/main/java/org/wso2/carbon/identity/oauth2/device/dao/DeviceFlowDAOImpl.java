@@ -76,17 +76,8 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     public void insertDeviceFlowParameters(String deviceCode, String userCode, String consumerKey, Long expiresIn,
                                            int interval, String scopes) throws IdentityOAuth2Exception {
 
-        if (log.isDebugEnabled()) {
-            log.debug("Persisting device_code: " + deviceCode + " for client: " + consumerKey);
-        }
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
-            String codeId = UUID.randomUUID().toString();
-            storeIntoScopes(codeId, deviceCode, scopes, connection);
-            IdentityDatabaseUtil.commitTransaction(connection);
-        } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error when storing the device flow parameters for consumer_key: " +
-                    consumerKey, e);
-        }
+        insertDeviceFlowParametersWithQuantifier(deviceCode, userCode, GenerateKeys.getCurrentQuantifier(), consumerKey,
+                scopes);
     }
 
     @Override

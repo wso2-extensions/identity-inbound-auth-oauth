@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth2.device.api;
 
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.device.constants.Constants;
+import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 
@@ -41,8 +41,7 @@ public class DeviceAuthServiceImpl implements DeviceAuthService {
     public void generateDeviceResponse(String deviceCode, String userCode, String clientId, String scopes)
             throws IdentityOAuth2Exception {
 
-        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().insertDeviceFlowParameters(deviceCode,
-                userCode, clientId, Constants.EXPIRES_IN_MILLISECONDS, Constants.INTERVAL_MILLISECONDS, scopes);
+        generateDeviceResponse(deviceCode, userCode, GenerateKeys.getCurrentQuantifier(), clientId, scopes);
     }
 
     @Override
