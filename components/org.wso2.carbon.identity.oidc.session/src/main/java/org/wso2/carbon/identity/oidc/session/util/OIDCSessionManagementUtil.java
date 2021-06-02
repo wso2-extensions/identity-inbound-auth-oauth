@@ -228,12 +228,12 @@ public class OIDCSessionManagementUtil {
      * @return tenantDomain
      */
     private static String resolveTenantDomain(HttpServletRequest request) {
+
         String tenantDomain = request.getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
         if (StringUtils.isBlank(tenantDomain)) {
             return IdentityTenantUtil.getTenantDomainFromContext();
-        } else {
-            return tenantDomain;
         }
+        return tenantDomain;
     }
 
     /**

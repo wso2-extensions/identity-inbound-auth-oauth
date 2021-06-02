@@ -1725,9 +1725,8 @@ public class OAuth2AuthzEndpoint {
                 oAuthMessage.getRequest().getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
         if (StringUtils.isBlank(loginTenantDomain)) {
             return getSpTenantDomain(clientId);
-        } else {
-            return loginTenantDomain;
         }
+        return loginTenantDomain;
     }
 
     private void handleMaxAgeParameter(OAuthAuthzRequest oauthRequest,

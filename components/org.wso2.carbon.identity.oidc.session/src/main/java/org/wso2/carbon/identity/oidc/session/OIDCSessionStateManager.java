@@ -41,6 +41,9 @@ public interface OIDCSessionStateManager {
      *
      * @param response
      * @return Cookie
+     *
+     * @deprecated This method was deprecated to enable tenanted paths for opbs cookie.
+     * Use {@link #addOPBrowserStateCookie(HttpServletResponse, String)} instead.
      */
     @Deprecated
     Cookie addOPBrowserStateCookie(HttpServletResponse response);
