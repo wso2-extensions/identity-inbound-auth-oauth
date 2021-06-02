@@ -49,6 +49,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.DEFAULT_SCOPE_BINDING;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SQLPlaceholders.SCOPE_LIST_PLACEHOLDER;
 
 /**
  * OAuth scope management data access object implementation.
@@ -255,8 +256,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
 
         // Validate requestedScopes.
         if (StringUtils.isBlank(requestedScopes)) {
-            Set<Scope> emptyScopes = new HashSet<>();
-            return emptyScopes;
+            return new HashSet<>();
         }
 
         String sql;
@@ -267,10 +267,9 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
         }
 
         List<String> requestedScopeList = Arrays.asList(requestedScopes.split("\\s+"));
-        final StringBuilder sb = new StringBuilder(String.join(", ",
-                Collections.nCopies(requestedScopeList.size(), "?")));
 
-        sql = sql.replace("(" + Oauth2ScopeConstants.SQLPlaceholders.SCOPE_LIST + ")", "(" + sb + ")");
+        String placeholder = String.join(", ", Collections.nCopies(requestedScopeList.size(), "?"));
+        sql = sql.replace(SCOPE_LIST_PLACEHOLDER, placeholder);
 
         Set<Scope> scopes = new HashSet<>();
         Map<Integer, Scope> scopeMap = new HashMap<>();
@@ -281,7 +280,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
                 int scopeIndex = 2;
                 if (!includeOIDCScopes) {
                     ps.setString(2, Oauth2ScopeConstants.SCOPE_TYPE_OAUTH2);
-                    scopeIndex = 3;
+                    scopeIndex++;
                 }
                 for (String scope : requestedScopeList) {
                     ps.setString(scopeIndex, scope);

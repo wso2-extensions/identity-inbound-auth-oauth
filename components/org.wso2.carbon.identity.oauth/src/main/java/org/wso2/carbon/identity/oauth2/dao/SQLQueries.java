@@ -20,6 +20,8 @@ package org.wso2.carbon.identity.oauth2.dao;
 
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SQLPlaceholders.SCOPE_LIST_PLACEHOLDER;
+
 /**
  * Access token related sql queries
  */
@@ -958,14 +960,13 @@ public class SQLQueries {
                     "SCOPEBINDINGS.SCOPE_BINDING, SCOPEBINDINGS.BINDING_TYPE FROM IDN_OAUTH2_SCOPE SCOPES " +
                     "LEFT JOIN IDN_OAUTH2_SCOPE_BINDING SCOPEBINDINGS ON SCOPES.SCOPE_ID=SCOPEBINDINGS.SCOPE_ID " +
                     "WHERE SCOPES.TENANT_ID=? AND SCOPES.SCOPE_TYPE=? AND SCOPES.NAME IN (" +
-                    Oauth2ScopeConstants.SQLPlaceholders.SCOPE_LIST + ")";
+                    SCOPE_LIST_PLACEHOLDER + ")";
 
     public static final String RETRIEVE_REQUESTED_ALL_SCOPES_WITHOUT_SCOPE_TYPE =
             "SELECT SCOPES.SCOPE_ID, SCOPES.NAME, SCOPES.DISPLAY_NAME, SCOPES.DESCRIPTION, " +
                     "SCOPEBINDINGS.SCOPE_BINDING, SCOPEBINDINGS.BINDING_TYPE FROM IDN_OAUTH2_SCOPE SCOPES " +
                     "LEFT JOIN IDN_OAUTH2_SCOPE_BINDING SCOPEBINDINGS ON SCOPES.SCOPE_ID=SCOPEBINDINGS.SCOPE_ID " +
-                    "WHERE SCOPES.TENANT_ID=? AND SCOPES.NAME IN (" +
-                    Oauth2ScopeConstants.SQLPlaceholders.SCOPE_LIST + ")";
+                    "WHERE SCOPES.TENANT_ID=? AND SCOPES.NAME IN (" + SCOPE_LIST_PLACEHOLDER + ")";
 
     public static final String RETRIEVE_SCOPES_WITH_PAGINATION_MYSQL =
             "SELECT FILTEREDSCOPES.SCOPE_ID, FILTEREDSCOPES.NAME, FILTEREDSCOPES.DISPLAY_NAME, " +
