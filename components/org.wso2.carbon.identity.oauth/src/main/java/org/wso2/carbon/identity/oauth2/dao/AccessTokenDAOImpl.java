@@ -236,9 +236,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     addScopePrepStmt.setString(1, accessTokenId);
                     addScopePrepStmt.setString(2, scope);
                     addScopePrepStmt.setInt(3, tenantId);
-                    addScopePrepStmt.execute();
+                    addScopePrepStmt.addBatch();
                 }
             }
+            addScopePrepStmt.executeBatch();
 
             if (tokenBindingAvailable) {
                 if (log.isDebugEnabled()) {
