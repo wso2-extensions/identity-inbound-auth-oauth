@@ -169,8 +169,8 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
         when(DeviceFlowPersistenceFactory.getInstance()).thenReturn(deviceFlowPersistenceFactory);
         when(deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
         when(deviceFlowDAO.checkClientIdExist(anyString())).thenReturn(status);
-        response = deviceEndpoint.authorize(httpServletRequest,
-                new MultivaluedHashMap<String, String>(), httpServletResponse);
+        response = deviceEndpoint.authorize(httpServletRequest, new MultivaluedHashMap<String, String>(),
+                httpServletResponse);
         Assert.assertEquals(expectedStatus, response.getStatus());
     }
 }
