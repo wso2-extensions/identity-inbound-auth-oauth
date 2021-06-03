@@ -80,7 +80,7 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
             authStatus = true;
             DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setDeviceCodeExpired(deviceCode,
                     Constants.EXPIRED);
-            this.setPropertiesForTokenGeneration(oAuthTokenReqMessageContext, deviceFlowDO);
+            setPropertiesForTokenGeneration(oAuthTokenReqMessageContext, deviceFlowDO);
         } else if (Constants.USED.equals(deviceStatus) || Constants.PENDING.equals(deviceStatus)) {
             Timestamp newPollTime = new Timestamp(date.getTime());
             if (isValidPollTime(newPollTime, deviceFlowDO)) {

@@ -25,7 +25,8 @@ import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.json.JSONObject;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -83,14 +84,16 @@ public class DeviceEndpoint {
             String deviceCode = UUID.randomUUID().toString();
             String scopes = request.getParameter(Constants.SCOPE);
             String userCode = getUniqueUserCode(deviceCode, oAuthClientAuthnContext.getClientId(), scopes);
-            String redirectionUri = IdentityUtil.getServerURL(Constants.DEVICE_ENDPOINT_PATH,
-                    false, false);
+            String redirectionUri = ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH).build()
+                    .getAbsolutePublicURL();
             String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
             return buildResponseObject(deviceCode, userCode, redirectionUri, redirectionUriComplete);
         } catch (IdentityOAuth2Exception e) {
             return handleIdentityOAuth2Exception(e);
         } catch (TokenEndpointBadRequestException e) {
             return handleTokenEndpointBadRequestException(e);
+        } catch (URLBuilderException e) {
+            return handleURLBuilderException(e);
         }
     }
 
@@ -171,6 +174,16 @@ public class DeviceEndpoint {
         OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST).
                 setError(OAuth2ErrorCodes.INVALID_REQUEST)
                 .setErrorDescription("Invalid request with repeated parameters.")
+                .buildJSONMessage();
+        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
+    }
+
+    private Response handleURLBuilderException(URLBuilderException e) throws OAuthSystemException {
+
+        log.error("Error occurred while sending request to authentication framework.", e);
+        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
+                setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error.")
                 .buildJSONMessage();
         return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
                 EndpointUtil.getRealmInfo()).entity(response.getBody()).build();

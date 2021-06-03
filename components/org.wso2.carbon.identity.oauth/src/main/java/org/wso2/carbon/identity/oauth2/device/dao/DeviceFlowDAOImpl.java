@@ -162,7 +162,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         AuthenticatedUser user;
         int tenantId = 0;
         String userName = null;
-        boolean checked = false; // Check for valid deviceCode and clientId.
+        boolean isMatchingDeviceCodeAndClientId = false; // Check for matching deviceCode and clientId.
         String userDomain = null;
         String authenticatedIDP = null;
         DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
@@ -183,9 +183,9 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                     tenantId = resultSet.getInt(6);
                     userDomain = resultSet.getString(7);
                     authenticatedIDP = resultSet.getString(8);
-                    checked = true;
+                    isMatchingDeviceCodeAndClientId = true;
                 }
-                if (checked) {
+                if (isMatchingDeviceCodeAndClientId) {
                     if (StringUtils.isNotBlank(userName) && tenantId != 0 && StringUtils.isNotBlank(userDomain)) {
                         String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
                         user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain, authenticatedIDP);
@@ -214,7 +214,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             AuthenticatedUser user;
             int tenantId = 0;
             String userName = null;
-            boolean checked = false;
+            boolean isMatchingDeviceCodeAndClientId = false; // Check for matching deviceCode and clientId.
             String userDomain = null;
             String authenticatedIDP = null;
             DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
@@ -234,9 +234,9 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                     tenantId = resultSet.getInt(6);
                     userDomain = resultSet.getString(7);
                     authenticatedIDP = resultSet.getString(8);
-                    checked = true;
+                    isMatchingDeviceCodeAndClientId = true;
                 }
-                if (checked) {
+                if (isMatchingDeviceCodeAndClientId) {
                     if (userName != null && tenantId != 0 && userDomain != null) {
                         String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
                         user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain, authenticatedIDP);

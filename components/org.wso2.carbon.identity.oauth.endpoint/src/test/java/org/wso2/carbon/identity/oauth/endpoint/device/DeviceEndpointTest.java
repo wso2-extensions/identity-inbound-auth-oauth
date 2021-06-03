@@ -173,40 +173,4 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
                 new MultivaluedHashMap<String, String>(), httpServletResponse);
         Assert.assertEquals(expectedStatus, response.getStatus());
     }
-
-    @DataProvider(name = "dataValuesForCorrectPath")
-    public Object[][] dataValuesForCorrectPath() {
-
-        return new Object[][]{
-                {"testClientId", HttpServletResponse.SC_OK, false},
-                {null, HttpServletResponse.SC_OK, false},
-                {"testClientId", HttpServletResponse.SC_OK, true}
-        };
-    }
-
-    @Test(dataProvider = "dataValuesForCorrectPath")
-    public void testDeviceCorrectPath(String clientId, int expectedStatus, boolean status)
-            throws IdentityOAuth2Exception, OAuthSystemException {
-
-        mockStatic(HttpServletRequest.class);
-        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
-        oAuthClientAuthnContext.setClientId(clientId);
-        oAuthClientAuthnContext.setAuthenticated(true);
-        when(request.getAttribute(anyString())).thenReturn(oAuthClientAuthnContext);
-        DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
-        deviceEndpoint.setDeviceAuthService(deviceAuthService);
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection);
-        when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
-        when(httpServletRequest.getParameter(anyString())).thenReturn(clientId);
-        Response response;
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(TEST_URL);
-        mockStatic(DeviceFlowPersistenceFactory.class);
-        when(DeviceFlowPersistenceFactory.getInstance()).thenReturn(deviceFlowPersistenceFactory);
-        when(deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
-        when(deviceFlowDAO.checkClientIdExist(anyString())).thenReturn(status);
-        response = deviceEndpoint.authorize(request, new MultivaluedHashMap<String, String>(), httpServletResponse);
-        Assert.assertEquals(expectedStatus, response.getStatus());
-    }
 }
