@@ -86,7 +86,8 @@ public class DeviceEndpoint {
             String userCode = getUniqueUserCode(deviceCode, oAuthClientAuthnContext.getClientId(), scopes);
             String redirectionUri = ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH).build()
                     .getAbsolutePublicURL();
-            String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
+            String redirectionUriComplete = ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH)
+                    .addParameter("user_code", userCode).build().getAbsolutePublicURL();
             return buildResponseObject(deviceCode, userCode, redirectionUri, redirectionUriComplete);
         } catch (IdentityOAuth2Exception e) {
             return handleIdentityOAuth2Exception(e);
