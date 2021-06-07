@@ -18,7 +18,9 @@
 
 package org.wso2.carbon.identity.oauth2.device.api;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 
 /**
  * Device authentication service.
@@ -30,12 +32,45 @@ public interface DeviceAuthService {
      *
      * @param deviceCode Code that is used to identify the device.
      * @param userCode   Code that is used to correlate two devices.
+     * @param quantifier Quantized time period user_code belongs.
+     * @param clientId   Consumer key of the application.
+     * @param scopes     Requested scopes.
+     * @return Unique user_code.
+     * @throws IdentityOAuth2Exception Error while storing device flow parameters.
+     */
+    default String generateDeviceResponse(String deviceCode, String userCode, long quantifier, String clientId,
+                                          String scopes) throws IdentityOAuth2Exception {
+
+        throw new NotImplementedException("Not Implemented.");
+    }
+
+    /**
+     * Store device flow parameters and scopes in different tables.
+     * @deprecated
+     * This method is no longer acceptable.
+     * @link DeviceAuthService#generateDeviceResponse(String, String, long, String, String).
+     *
+     * @param deviceCode Code that is used to identify the device.
+     * @param userCode   Code that is used to correlate two devices.
      * @param clientId   Consumer key of the application.
      * @param scopes     Requested scopes.
      * @throws IdentityOAuth2Exception Error while storing device flow parameters.
      */
+    @Deprecated
     void generateDeviceResponse(String deviceCode, String userCode, String clientId, String scopes)
             throws IdentityOAuth2Exception;
+
+    /**
+     * Get details for user_code.
+     *
+     * @param userCode Code that is used to correlate user and device.
+     * @return Map of values.
+     * @throws IdentityOAuth2Exception Error while getting details for user code.
+     */
+    default DeviceFlowDO getDetailsByUserCode(String userCode) throws IdentityOAuth2Exception {
+
+        throw new NotImplementedException("Not Implemented.");
+    }
 
     /**
      * Store scopes in a different table.

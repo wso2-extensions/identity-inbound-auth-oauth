@@ -19,8 +19,9 @@
 package org.wso2.carbon.identity.oauth2.device.api;
 
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.device.constants.Constants;
+import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 
 /**
  * Service layer to talk with DAO.
@@ -28,18 +29,31 @@ import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 public class DeviceAuthServiceImpl implements DeviceAuthService {
 
     @Override
+    public String generateDeviceResponse(String deviceCode, String userCode, long quantifier, String clientId,
+                                         String scopes) throws IdentityOAuth2Exception {
+
+        return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().
+                insertDeviceFlowParametersWithQuantifier(deviceCode, userCode, quantifier, clientId, scopes);
+    }
+
+    @Override
+    @Deprecated
     public void generateDeviceResponse(String deviceCode, String userCode, String clientId, String scopes)
             throws IdentityOAuth2Exception {
 
-        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().insertDeviceFlowParameters(deviceCode,
-                userCode, clientId, Constants.EXPIRES_IN_MILLISECONDS, Constants.INTERVAL_MILLISECONDS, scopes);
+        generateDeviceResponse(deviceCode, userCode, GenerateKeys.getCurrentQuantifier(), clientId, scopes);
+    }
+
+    @Override
+    public DeviceFlowDO getDetailsByUserCode(String userCode) throws IdentityOAuth2Exception {
+
+        return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getDetailsForUserCode(userCode);
     }
 
     @Override
     public void setAuthenticationStatus(String userCode) throws IdentityOAuth2Exception {
 
-        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setAuthenticationStatus(userCode,
-                Constants.USED);
+        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setAuthenticationStatus(userCode);
     }
 
     @Override
