@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.model;
 
+import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ConsentClaimsData;
+
 import java.io.Serializable;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -51,6 +53,7 @@ public class OAuth2Parameters implements Serializable {
     private String essentialClaims;
     private String displayName;
     private String sessionDataKey;
+    private ConsentClaimsData consentClaimsData;
 
     public String getSessionDataKey() {
         return sessionDataKey;
@@ -258,5 +261,15 @@ public class OAuth2Parameters implements Serializable {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+    }
+
+    public ConsentClaimsData getConsentClaimsData() {
+
+        return consentClaimsData;
+    }
+
+    public void setConsentClaimsData(ConsentClaimsData consentClaimsData) {
+
+        this.consentClaimsData = consentClaimsData;
     }
 }

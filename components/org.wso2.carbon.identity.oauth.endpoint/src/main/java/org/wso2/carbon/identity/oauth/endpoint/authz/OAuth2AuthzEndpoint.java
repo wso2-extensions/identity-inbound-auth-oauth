@@ -546,7 +546,10 @@ public class OAuth2AuthzEndpoint {
                 The API on the SSO Consent Service will be improved to avoid having to send the original
                 ConsentClaimsData object.
              */
-            ConsentClaimsData value = getConsentRequiredClaims(loggedInUser, serviceProvider, oauth2Params);
+            ConsentClaimsData value = oauth2Params.getConsentClaimsData();
+            if (value == null) {
+                value = getConsentRequiredClaims(loggedInUser, serviceProvider, oauth2Params);
+            }
             // Call framework and create the consent receipt.
             if (log.isDebugEnabled()) {
                 log.debug("Creating user consent receipt for user: " + loggedInUser.toFullQualifiedUsername() +
@@ -2115,6 +2118,7 @@ public class OAuth2AuthzEndpoint {
 
         try {
             ConsentClaimsData claimsForApproval = getConsentRequiredClaims(user, serviceProvider, useExistingConsents);
+            oauth2Params.setConsentClaimsData(claimsForApproval);
             if (claimsForApproval != null) {
                 String requestClaimsQueryParam = null;
                 List<ClaimMetaData> requestedOidcClaimsList = new ArrayList<>();
