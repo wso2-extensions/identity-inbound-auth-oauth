@@ -49,7 +49,7 @@ public class OAuthTokenPersistenceFactory {
         this.requestObjectDAO = new RequestObjectDAOImpl();
         this.scopeClaimMappingDAO = new CacheBackedScopeClaimMappingDAOImpl();
         this.tokenBindingMgtDAO = new TokenBindingMgtDAOImpl();
-        this.oauthUserConsentedScopesDAO = new OAuthUserConsentedScopesDAOImpl();
+        this.oauthUserConsentedScopesDAO = new CacheBackedOAuthUserConsentedScopesDAOImpl();
     }
 
     public static OAuthTokenPersistenceFactory getInstance() {
