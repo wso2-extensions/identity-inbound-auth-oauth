@@ -25,16 +25,19 @@ import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.json.JSONObject;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
+import org.wso2.carbon.identity.oauth2.device.util.DeviceFlowUtil;
 
 import java.util.UUID;
 
@@ -76,23 +79,45 @@ public class DeviceEndpoint {
             return handleErrorResponse(oAuthClientAuthnContext);
         }
 
-        String userCode = GenerateKeys.getKey(Constants.KEY_LENGTH);
-        String deviceCode = UUID.randomUUID().toString();
-        String scopes = request.getParameter(Constants.SCOPE);
-        String redirectionUri = IdentityUtil.getServerURL("/authenticationendpoint/device.do",
-                false, false);
-        String redirectionUriComplete = redirectionUri + "?user_code=" + userCode;
-        deviceAuthService.generateDeviceResponse(deviceCode, userCode, oAuthClientAuthnContext.getClientId(), scopes);
-        return buildResponseObject(deviceCode, userCode, redirectionUri, redirectionUriComplete);
+        try {
+            validateRepeatedParams(request, paramMap);
+            String deviceCode = UUID.randomUUID().toString();
+            String scopes = request.getParameter(Constants.SCOPE);
+            String userCode = getUniqueUserCode(deviceCode, oAuthClientAuthnContext.getClientId(), scopes);
+            String redirectionUri = ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH).build()
+                    .getAbsolutePublicURL();
+            String redirectionUriComplete = ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH)
+                    .addParameter("user_code", userCode).build().getAbsolutePublicURL();
+            return buildResponseObject(deviceCode, userCode, redirectionUri, redirectionUriComplete);
+        } catch (IdentityOAuth2Exception e) {
+            return handleIdentityOAuth2Exception(e);
+        } catch (TokenEndpointBadRequestException e) {
+            return handleTokenEndpointBadRequestException(e);
+        } catch (URLBuilderException e) {
+            return handleURLBuilderException(e);
+        }
+    }
+
+    private String getUniqueUserCode(String deviceCode, String clientId, String scopes) throws IdentityOAuth2Exception {
+
+        String temporaryUserCode = GenerateKeys.getKey(Constants.KEY_LENGTH);
+        long quantifier = GenerateKeys.getCurrentQuantifier();
+        return deviceAuthService.generateDeviceResponse(deviceCode, temporaryUserCode, quantifier, clientId, scopes);
+    }
+
+    private void validateRepeatedParams(HttpServletRequest request, MultivaluedMap<String, String> paramMap)
+            throws TokenEndpointBadRequestException {
+
+        if (!EndpointUtil.validateParams(request, paramMap)) {
+            throw new TokenEndpointBadRequestException("Invalid request with repeated parameters.");
+        }
     }
 
     private Response handleErrorResponse(OAuthClientAuthnContext oAuthClientAuthnContext) throws OAuthSystemException {
 
-        if (OAuth2ErrorCodes.INVALID_CLIENT.equals(oAuthClientAuthnContext.getErrorMessage())) {
-            return handleBasicAuthFailure(oAuthClientAuthnContext.getErrorCode(),
-                    oAuthClientAuthnContext.getErrorMessage());
+        if (OAuth2ErrorCodes.INVALID_CLIENT.equals(oAuthClientAuthnContext.getErrorCode())) {
+            return handleInvalidClient(oAuthClientAuthnContext);
         } else if (OAuth2ErrorCodes.SERVER_ERROR.equals(oAuthClientAuthnContext.getErrorMessage())) {
-
             return handleServerError();
         } else {
             // Otherwise send back HTTP 400 Status Code.
@@ -131,11 +156,53 @@ public class DeviceEndpoint {
                 EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
     }
 
-    private Response handleBasicAuthFailure(String errorCode, String errorMessage) throws OAuthSystemException {
+    private Response handleIdentityOAuth2Exception(IdentityOAuth2Exception e) throws OAuthSystemException {
 
-        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
-                .setError(OAuth2ErrorCodes.INVALID_CLIENT)
-                .setErrorDescription("Client Authentication failed.").buildJSONMessage();
+        log.error("Error while checking for unique user_code", e);
+        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
+                setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error.")
+                .buildJSONMessage();
+        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
+    }
+
+    private Response handleTokenEndpointBadRequestException(TokenEndpointBadRequestException e)
+            throws OAuthSystemException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Error in the request with repeated parameters", e);
+        }
+        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST).
+                setError(OAuth2ErrorCodes.INVALID_REQUEST)
+                .setErrorDescription("Invalid request with repeated parameters.")
+                .buildJSONMessage();
+        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
+    }
+
+    private Response handleURLBuilderException(URLBuilderException e) throws OAuthSystemException {
+
+        log.error("Error occurred while sending request to authentication framework.", e);
+        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
+                setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error.")
+                .buildJSONMessage();
+        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
+    }
+
+    private Response handleInvalidClient(OAuthClientAuthnContext oAuthClientAuthnContext)
+            throws OAuthSystemException {
+
+        OAuthResponse response;
+        if (oAuthClientAuthnContext.getClientId() != null) {
+            response = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
+                    .setError(OAuth2ErrorCodes.INVALID_CLIENT)
+                    .setErrorDescription("Client Authentication failed").buildJSONMessage();
+        } else {
+            response = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
+                    .setError(OAuth2ErrorCodes.INVALID_REQUEST)
+                    .setErrorDescription("Missing parameters: client_id").buildJSONMessage();
+        }
         return Response.status(response.getResponseStatus())
                 .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, EndpointUtil.getRealmInfo())
                 .entity(response.getBody()).build();
@@ -169,8 +236,8 @@ public class DeviceEndpoint {
                 .put(Constants.USER_CODE, userCode)
                 .put(Constants.VERIFICATION_URI, redirectionUri)
                 .put(Constants.VERIFICATION_URI_COMPLETE, redirectionUriComplete)
-                .put(Constants.EXPIRES_IN, stringValueInSeconds(Constants.EXPIRES_IN_MILLISECONDS))
-                .put(Constants.INTERVAL, stringValueInSeconds(Constants.INTERVAL_MILLISECONDS));
+                .put(Constants.EXPIRES_IN, DeviceFlowUtil.getConfiguredExpiryTime())
+                .put(Constants.INTERVAL, DeviceFlowUtil.getIntervalValue());
         Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_OK);
         return respBuilder.entity(jsonObject.toString()).build();
     }
