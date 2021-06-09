@@ -31,11 +31,13 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
+import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.time.Instant;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -71,17 +73,21 @@ public class UserAuthenticationEndpoint {
             throws URISyntaxException, InvalidRequestParentException, IdentityOAuth2Exception, IOException {
 
         String userCode = request.getParameter(Constants.USER_CODE);
+        // True when input(user_code) is not REQUIRED.
         if (StringUtils.isBlank(userCode)) {
             if (log.isDebugEnabled()) {
                 log.debug("user_code is missing in the request.");
             }
             response.sendRedirect(IdentityUtil.
-                    getServerURL("/authenticationendpoint/device.do?error=invalidRequest", false, false));
+                    getServerURL(Constants.DEVICE_ENDPOINT_PATH + "?error=invalidRequest",
+                            false, false));
             return null;
         }
         String clientId = deviceAuthService.getClientId(userCode);
-        if (StringUtils.isNotBlank(clientId) && StringUtils.equals(getUserCodeStatus(userCode), Constants.PENDING)) {
-
+        DeviceFlowDO deviceFlowDODetails =
+                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getDetailsForUserCode(userCode);
+        if (StringUtils.isNotBlank(clientId) && deviceFlowDODetails != null &&
+                !isExpiredUserCode(deviceFlowDODetails)) {
             setCallbackURI(clientId);
             deviceAuthService.setAuthenticationStatus(userCode);
             CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request);
@@ -99,7 +105,8 @@ public class UserAuthenticationEndpoint {
                 log.debug("Incorrect user_code: " + userCode);
             }
             response.sendRedirect(IdentityUtil
-                    .getServerURL("/authenticationendpoint/device.do?error=invalidUserCode", false, false));
+                    .getServerURL(Constants.DEVICE_ENDPOINT_PATH + "?error=invalidUserCode",
+                            false, false));
             return null;
         }
     }
@@ -117,18 +124,6 @@ public class UserAuthenticationEndpoint {
     }
 
     /**
-     * Get the user code status.
-     *
-     * @param userCode User code that has delivered to the device.
-     * @return Status
-     * @throws IdentityOAuth2Exception
-     */
-    private String getUserCodeStatus(String userCode) throws IdentityOAuth2Exception {
-
-        return deviceAuthService.getStatus(userCode);
-    }
-
-    /**
      * This method is used to generate the redirection URI.
      *
      * @param appName Service provider name.
@@ -136,7 +131,7 @@ public class UserAuthenticationEndpoint {
      */
     private String getRedirectionURI(String appName) throws URISyntaxException {
 
-        String pageURI = IdentityUtil.getServerURL("/authenticationendpoint/device_success.do",
+        String pageURI = IdentityUtil.getServerURL(Constants.DEVICE_SUCCESS_ENDPOINT_PATH,
                 false, false);
         URIBuilder uriBuilder = new URIBuilder(pageURI);
         uriBuilder.addParameter(Constants.APP_NAME, appName);
@@ -166,5 +161,18 @@ public class UserAuthenticationEndpoint {
             String errorMsg = String.format("Error when getting app details for client id : %s", clientId);
             throw new IdentityOAuth2Exception(errorMsg, e);
         }
+    }
+
+    private boolean isExpiredUserCode(DeviceFlowDO deviceFlowDO) throws IdentityOAuth2Exception {
+
+        // If status changed from PENDING (!PENDING) , then that user_code CANNOT be reused.
+        if (!StringUtils.equals(deviceFlowDO.getStatus(), Constants.PENDING)) {
+            return true;
+        } else if (Instant.now().toEpochMilli() > deviceFlowDO.getExpiryTime().getTime()) {
+            DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().
+                    setDeviceCodeExpired(deviceFlowDO.getDeviceCode(), Constants.EXPIRED);
+            return true;
+        }
+        return false;
     }
 }
