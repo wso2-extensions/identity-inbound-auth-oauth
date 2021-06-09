@@ -198,6 +198,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         clientId = "myClientId";
         user = new AuthenticatedUser();
         user.setFederatedUser(false);
+        user.setUserId("4b4414e1-916b-4475-aaee-6b0751c29ff6");
         oAuth2ScopeConsentResponse = new OAuth2ScopeConsentResponse("sampleUser", "sampleApp",
                 -1234, new ArrayList<>(), new ArrayList<>());
     }

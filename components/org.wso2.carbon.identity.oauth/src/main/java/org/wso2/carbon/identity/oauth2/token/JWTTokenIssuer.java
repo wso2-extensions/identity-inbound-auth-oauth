@@ -57,7 +57,7 @@ import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHa
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.user.core.UserStoreException;
-import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.security.Key;
@@ -97,9 +97,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String TOKEN_BINDING_REF = "binding_ref";
     private static final String TOKEN_BINDING_TYPE = "binding_type";
 
-    // To keep track of the expiry time provided in the original jwt assertion, when JWT grant type is used.
-    private static final String EXPIRY_TIME_JWT = "EXPIRY_TIME_JWT";
-
     private static final Log log = LogFactory.getLog(JWTTokenIssuer.class);
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
 
@@ -125,7 +122,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         if (log.isDebugEnabled()) {
             log.debug("Access token request with token request message context. Authorized user " +
-                    oAuthTokenReqMessageContext.getAuthorizedUser().toString());
+                    oAuthTokenReqMessageContext.getAuthorizedUser().getLoggableUserId());
         }
 
         try {
@@ -140,7 +137,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         if (log.isDebugEnabled()) {
             log.debug("Access token request with authorization request message context message context. Authorized " +
-                    "user " + oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getUser().toString());
+                    "user " + oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getUser().getLoggableUserId());
         }
 
         try {
@@ -713,13 +710,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private String getSubjectClaimFromUserStore(String subjectClaimUri, AuthenticatedUser authenticatedUser)
             throws UserStoreException, IdentityException {
 
-        UserStoreManager userStoreManager = IdentityTenantUtil
+        AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager) IdentityTenantUtil
                 .getRealm(authenticatedUser.getTenantDomain(), authenticatedUser.toFullQualifiedUsername())
                 .getUserStoreManager();
 
         return userStoreManager
-                .getSecondaryUserStoreManager(authenticatedUser.getUserStoreDomain())
-                .getUserClaimValue(authenticatedUser.getUserName(), subjectClaimUri, null);
+                .getUserClaimValueWithID(authenticatedUser.getUserId(), subjectClaimUri, null);
     }
 
     /**

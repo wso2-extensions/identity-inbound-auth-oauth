@@ -551,13 +551,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         String scope = "testScope";
         String authenticatedIDP = "testAuthenticatedIDP";
         mockStatic(IdentityUtil.class);
-        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser)).thenReturn(isCaseSensitive);
-        String expected;
-        if (isCaseSensitive) {
-            expected = clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP;
-        } else {
-            expected = clientId + ":" + authorizedUser.toLowerCase() + ":" + scope + ":" + authenticatedIDP;
-        }
+        when(IdentityUtil.isUserStoreCaseSensitive(anyString(), anyInt())).thenReturn(isCaseSensitive);
+        String expected = clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP;
+
         assertEquals(OAuth2Util.buildCacheKeyStringForToken(clientId, scope, authorizedUser, authenticatedIDP),
                 expected);
     }
@@ -570,15 +566,10 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         String authenticatedIDP = "testAuthenticatedIDP";
         String tokenBindingReference = "testTokenBindingReference";
         mockStatic(IdentityUtil.class);
-        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser)).thenReturn(isCaseSensitive);
-        String expected;
-        if (isCaseSensitive) {
-            expected = clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP + ":"
-                    + tokenBindingReference;
-        } else {
-            expected = clientId + ":" + authorizedUser.toLowerCase() + ":" + scope + ":" + authenticatedIDP + ":"
-                    + tokenBindingReference;
-        }
+        when(IdentityUtil.isUserStoreCaseSensitive(anyString(), anyInt())).thenReturn(isCaseSensitive);
+        String expected = clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP + ":"
+                + tokenBindingReference;
+
         assertEquals(OAuth2Util.buildCacheKeyStringForToken(clientId, scope, authorizedUser,
                 authenticatedIDP, tokenBindingReference), expected);
     }

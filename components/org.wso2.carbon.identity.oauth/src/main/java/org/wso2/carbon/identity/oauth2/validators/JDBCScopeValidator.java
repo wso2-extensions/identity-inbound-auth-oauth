@@ -170,13 +170,13 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
         }
 
         try {
-            User authzUser = accessTokenDO.getAuthzUser();
+            AuthenticatedUser authzUser = accessTokenDO.getAuthzUser();
             int tenantId = getTenantId(authzUser);
             String[] userRoles = getUserRoles(authzUser);
 
             if (ArrayUtils.isEmpty(userRoles)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("No roles associated for the user " + authzUser.getUserName());
+                    log.debug("No roles associated for the user " + authzUser.getLoggableUserId());
                 }
                 return false;
             }
@@ -275,7 +275,7 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
                 }
                 if (!isUserAuthorizedForScope(scope, userRoles, tenantId)) {
                     if (log.isDebugEnabled()) {
-                        log.debug("User " + user.getUserName() + "in not authorised for scope " + scope);
+                        log.debug("User " + user.getLoggableUserId() + "in not authorised for scope " + scope);
                     }
                     return false;
                 }
@@ -438,7 +438,7 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
         return false;
     }
 
-    private String[] getUserRoles(User user) throws UserStoreException {
+    private String[] getUserRoles(AuthenticatedUser user) throws UserStoreException {
 
         UserStoreManager userStoreManager;
         String[] userRoles;
@@ -465,11 +465,9 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
 
         if (ArrayUtils.isNotEmpty(userRoles)) {
             if (log.isDebugEnabled()) {
-                StringBuilder logMessage = new StringBuilder("Found roles of user ");
-                logMessage.append(user.getUserName());
-                logMessage.append(" ");
-                logMessage.append(String.join(",", userRoles));
-                log.debug(logMessage.toString());
+                String logMessage = "Found roles of user " + user.getLoggableUserId() + " "
+                        + String.join(",", userRoles);
+                log.debug(logMessage);
             }
         }
         return userRoles;
@@ -478,10 +476,6 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
     private int getTenantId (User user) throws UserStoreException {
 
         int tenantId = IdentityTenantUtil.getTenantId(user.getTenantDomain());
-
-        if (tenantId == 0 || tenantId == -1) {
-            tenantId = IdentityTenantUtil.getTenantIdOfUser(user.getUserName());
-        }
 
         return tenantId;
     }

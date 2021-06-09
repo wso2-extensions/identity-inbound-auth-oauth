@@ -24,6 +24,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -221,10 +222,18 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         return true;
     }
 
-    private void removeIfCached(OAuth2AccessTokenReqDTO tokenReq, RefreshTokenValidationDataDO validationBean) {
+    private void removeIfCached(OAuth2AccessTokenReqDTO tokenReq, RefreshTokenValidationDataDO validationBean)
+            throws IdentityOAuth2Exception {
 
         if (cacheEnabled) {
-            clearCache(tokenReq.getClientId(), validationBean.getAuthorizedUser().toString(),
+            String userId;
+            try {
+                userId = validationBean.getAuthorizedUser().getUserId();
+            } catch (UserIdNotFoundException e) {
+                throw new IdentityOAuth2Exception("User id not found for user:"
+                        + validationBean.getAuthorizedUser().getLoggableUserId(), e);
+            }
+            clearCache(tokenReq.getClientId(), userId,
                     validationBean.getScope(), validationBean.getAccessToken(),
                     validationBean.getAuthorizedUser().getFederatedIdPName(),
                     validationBean.getTokenBindingReference());
@@ -323,9 +332,15 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         if (isHashDisabled && cacheEnabled) {
             // Remove old access token from the OAuthCache
             String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
-            String authorizedUser = tokReqMsgCtx.getAuthorizedUser().toString();
+            String userId;
+            try {
+                userId = tokReqMsgCtx.getAuthorizedUser().getUserId();
+            } catch (UserIdNotFoundException e) {
+                throw new IdentityOAuth2Exception("User id is not available for user: "
+                        + tokReqMsgCtx.getAuthorizedUser().getLoggableUserId(), e);
+            }
             String authenticatedIDP = tokReqMsgCtx.getAuthorizedUser().getFederatedIdPName();
-            String cacheKeyString = buildCacheKeyStringForToken(clientId, scope, authorizedUser,
+            String cacheKeyString = buildCacheKeyStringForToken(clientId, scope, userId,
                     authenticatedIDP, oldAccessToken.getTokenBindingReference());
             OAuthCacheKey oauthCacheKey = new OAuthCacheKey(cacheKeyString);
             OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);

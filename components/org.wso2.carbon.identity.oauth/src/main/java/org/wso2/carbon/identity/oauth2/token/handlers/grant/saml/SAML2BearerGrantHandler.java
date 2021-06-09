@@ -1354,9 +1354,11 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         if (log.isDebugEnabled()) {
             log.debug("Building local user with assertion subject : " + subjectIdentifier);
         }
-        authenticatedUser.setUserStoreDomain(UserCoreUtil.extractDomainFromName(subjectIdentifier));
-        authenticatedUser.setUserName(MultitenantUtils.getTenantAwareUsername(UserCoreUtil.removeDomainFromName
-                (subjectIdentifier)));
+        String userStoreDomain = UserCoreUtil.extractDomainFromName(subjectIdentifier);
+        authenticatedUser.setUserStoreDomain(userStoreDomain);
+        String tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(UserCoreUtil.removeDomainFromName
+                (subjectIdentifier));
+        authenticatedUser.setUserName(tenantAwareUsername);
 
         userTenantDomain = MultitenantUtils.getTenantDomain(subjectIdentifier);
         // From above method userTenantDomain cannot be empty.
@@ -1370,6 +1372,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         authenticatedUser.setAuthenticatedSubjectIdentifier(authenticatedUser.getUserName(), serviceProvider);
         authenticatedUser.setFederatedIdPName(getIdentityProvider(assertion, getTenantDomain(tokReqMsgCtx))
                 .getIdentityProviderName());
+
         return authenticatedUser;
     }
 

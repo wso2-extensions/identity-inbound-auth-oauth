@@ -61,7 +61,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -131,6 +133,7 @@ import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -667,21 +670,16 @@ public class OAuth2Util {
      *
      * @param clientId         ClientId of the App.
      * @param scope            Scopes used.
-     * @param authorizedUser   Authorised user.
+     * @param authorizedUserId   Authorised user.
      * @param authenticatedIDP Authenticated IdP.
      * @return Cache key string combining the input parameters.
      * @deprecated use {@link #buildCacheKeyStringForToken(String, String, String, String, String)} instead.
      */
     @Deprecated
-    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser,
+    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUserId,
                                                      String authenticatedIDP) {
 
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (isUsernameCaseSensitive) {
-            return clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP;
-        } else {
-            return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope + ":" + authenticatedIDP;
-        }
+        return clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP;
     }
 
     /**
@@ -689,21 +687,15 @@ public class OAuth2Util {
      *
      * @param clientId         ClientId of the App.
      * @param scope            Scopes used.
-     * @param authorizedUser   Authorised user.
+     * @param authorizedUserId   Authorised user.
      * @param authenticatedIDP Authenticated IdP.
      * @param tokenBindingReference Token binding reference.
      * @return Cache key string combining the input parameters.
      */
-    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser,
+    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUserId,
             String authenticatedIDP, String tokenBindingReference) {
 
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (isUsernameCaseSensitive) {
-            return clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
-        } else {
-            return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope + ":" + authenticatedIDP + ":"
-                    + tokenBindingReference;
-        }
+        return clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
     }
 
     @SuppressFBWarnings("WEAK_MESSAGE_DIGEST_MD5")
@@ -3573,7 +3565,7 @@ public class OAuth2Util {
      * @return an instance of AuthenticatedUser{@link AuthenticatedUser}
      */
     public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String
-            tenantDomain, String idpName) {
+            tenantDomain, String idpName) throws IdentityOAuth2Exception {
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(username);
@@ -3604,6 +3596,24 @@ public class OAuth2Util {
         } else {
             authenticatedUser.setUserStoreDomain(userStoreDomain);
             authenticatedUser.setFederatedIdPName(idpName);
+        }
+
+        try {
+            String userId;
+            RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+            int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
+            if (authenticatedUser.isFederatedUser()) {
+                int idpId = UserSessionStore.getInstance().getIdPId(authenticatedUser.getFederatedIdPName(), tenantId);
+                userId = UserSessionStore.getInstance()
+                        .getFederatedUserId(authenticatedUser.getUserName(), tenantId, idpId);
+            } else {
+                AbstractUserStoreManager userStoreManager
+                        = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
+                userId = userStoreManager.getUserIDFromUserName(authenticatedUser.getUserName());
+            }
+            authenticatedUser.setUserId(userId);
+        } catch (UserStoreException | UserSessionException e) {
+            throw new IdentityOAuth2Exception("Error occurred while resolving the user id from username");
         }
 
         return authenticatedUser;
@@ -3887,20 +3897,21 @@ public class OAuth2Util {
                 authenticatedIDP = user.getFederatedIdPName();
                 if (log.isDebugEnabled()) {
                     log.debug("IDP_ID column is available. User is federated and not mapped to local users. " +
-                            "Authenticated IDP is set to:" + authenticatedIDP + " for user:" + user.toString());
+                            "Authenticated IDP is set to:" + authenticatedIDP + " for user:"
+                            + user.getLoggableUserId());
                 }
             } else {
                 authenticatedIDP = FrameworkConstants.LOCAL_IDP_NAME;
                 if (log.isDebugEnabled()) {
                     log.debug("IDP_ID column is available. Authenticated IDP is set to:" + authenticatedIDP +
-                            " for user:" + user.toString());
+                            " for user:" + user.getLoggableUserId());
                 }
             }
         } else {
             authenticatedIDP = user.getFederatedIdPName();
             if (log.isDebugEnabled()) {
                 log.debug("IDP_ID column is not available. Authenticated IDP is set to:" + authenticatedIDP +
-                        " for user:" + user.toString());
+                        " for user:" + user.getLoggableUserId());
             }
         }
 
@@ -3942,7 +3953,7 @@ public class OAuth2Util {
         }
         String sanitizedUserDomain = OAuth2Util.getSanitizedUserStoreDomain(userDomain);
         if (log.isDebugEnabled()) {
-            log.debug("User domain is set to:" + sanitizedUserDomain  + " for user:" + user.toString());
+            log.debug("User domain is set to:" + sanitizedUserDomain  + " for user:" + user.getLoggableUserId());
         }
 
         return sanitizedUserDomain;
@@ -4365,5 +4376,15 @@ public class OAuth2Util {
         } catch (IdentityOAuth2ScopeServerException e) {
             throw new IdentityOAuth2Exception("Error occurred while retrieving registered scopes.", e);
         }
+    }
+
+    public static String resolveUsernameFromUserId(String tenantDomain, String userId) throws UserStoreException {
+        RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+
+        int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
+
+        AbstractUserStoreManager userStoreManager
+                = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
+        return userStoreManager.getUserNameFromUserID(userId);
     }
 }

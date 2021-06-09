@@ -52,7 +52,7 @@ import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserRealm;
-import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
@@ -106,7 +106,7 @@ public class ClaimUtil {
             throws UserInfoEndpointException {
 
         try {
-            String username;
+            String userId;
             String userTenantDomain;
             UserRealm realm;
             List<String> claimURIList = new ArrayList<>();
@@ -116,12 +116,12 @@ public class ClaimUtil {
             try {
                 AccessTokenDO accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(
                         OAuth2Util.getAccessTokenIdentifier(tokenResponse));
-                username = accessTokenDO.getAuthzUser().getUserName();
+                userId = accessTokenDO.getAuthzUser().getUserId();
                 userTenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
 
                 // If the authenticated user is a federated user and had not mapped to local users, no requirement to
                 // retrieve claims from local userstore.
-                if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && accessTokenDO != null) {
+                if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal()) {
                     AuthenticatedUser authenticatedUser = accessTokenDO.getAuthzUser();
                     if (isNotEmpty(authenticatedUser.getUserStoreDomain())) {
                         String userstoreDomain = authenticatedUser.getUserStoreDomain();
@@ -164,15 +164,14 @@ public class ClaimUtil {
                             (SP_DIALECT, null, userTenantDomain, true);
 
                     realm = getUserRealm(null, userTenantDomain);
-                    Map<String, String> userClaims = getUserClaimsFromUserStore(username, accessTokenDO.getAuthzUser
-                            ().getUserStoreDomain(), realm, claimURIList);
+                    Map<String, String> userClaims = getUserClaimsFromUserStore(userId, realm, claimURIList);
 
                     if (isNotEmpty(userClaims)) {
                         for (Map.Entry<String, String> entry : userClaims.entrySet()) {
                             //set local2sp role mappings
                             if (IdentityUtil.getRoleGroupClaims().stream().anyMatch(roleGroupClaimURI ->
                                     roleGroupClaimURI.equals(entry.getKey()))) {
-                                String claimSeparator = getMultiAttributeSeparator(username, realm);
+                                String claimSeparator = getMultiAttributeSeparator(userId, realm);
                                 entry.setValue(getSpMappedRoleClaim(serviceProvider, entry, claimSeparator));
                             }
 
@@ -272,17 +271,16 @@ public class ClaimUtil {
         return claimSeparator;
     }
 
-    private static Map<String, String> getUserClaimsFromUserStore(String username, String userStoreDomain,
+    private static Map<String, String> getUserClaimsFromUserStore(String userId,
                                                                   UserRealm realm,
                                                                   List<String> claimURIList) throws UserStoreException {
 
-        // Retrieve the UserStoreManager for the authenticated user's user-store domain.
-        UserStoreManager userstore = realm.getUserStoreManager().getSecondaryUserStoreManager(userStoreDomain);
+        AbstractUserStoreManager userstore = (AbstractUserStoreManager) realm.getUserStoreManager();
         if (userstore == null) {
-            throw new UserStoreException("Unable to retrieve UserStoreManager for the domain name: " + userStoreDomain);
+            throw new UserStoreException("Unable to retrieve UserStoreManager");
         }
         Map<String, String> userClaims =
-                userstore.getUserClaimValues(username, claimURIList.toArray(new String[claimURIList.size()]), null);
+                userstore.getUserClaimValuesWithID(userId, claimURIList.toArray(new String[0]), null);
         if (log.isDebugEnabled()) {
             log.debug("User claims retrieved from user store: " + userClaims.size());
         }

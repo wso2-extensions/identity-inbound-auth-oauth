@@ -93,6 +93,7 @@ public class AbstractAuthorizationGrantHandlerTest {
         authenticatedUser.setUserName("randomUser");
         authenticatedUser.setTenantDomain("Homeless");
         authenticatedUser.setUserStoreDomain("Street");
+        authenticatedUser.setUserId("4b4414e1-916b-4475-aaee-6b0751c29ff6");
 
         clientId = UUID.randomUUID().toString();
         tokenId = clientId;

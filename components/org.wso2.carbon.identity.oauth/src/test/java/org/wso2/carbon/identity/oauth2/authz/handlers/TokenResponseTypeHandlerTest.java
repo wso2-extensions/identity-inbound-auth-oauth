@@ -84,6 +84,7 @@ public class TokenResponseTypeHandlerTest {
         authorizationReqDTO.setConsumerKey(clientId);
 
         authenticatedUser.setUserName(TEST_USER_ID);
+        authenticatedUser.setUserId("4b4414e1-916b-4475-aaee-6b0751c29ff6");
         authenticatedUser.setTenantDomain("carbon.super");
         authenticatedUser.setUserStoreDomain("PTEST");
         authenticatedUser.setFederatedIdPName(TestConstants.LOCAL_IDP);
@@ -103,10 +104,6 @@ public class TokenResponseTypeHandlerTest {
         accessTokenDO.setAuthzUser(authenticatedUser);
 
         new OAuthAppDAO().addOAuthApplication(oAuthAppDO);
-
-        //        PowerMockito.when(OAuth2Util
-        //                .isOIDCAuthzRequest(new String[]{"scope1", "scope2",
-        //                        OAuthConstants.Scope.OPENID})).thenReturn(true);
 
         OAuth2AuthorizeRespDTO auth2AuthorizeReqDTO = tokenResponseTypeHandler.
                 issue(authAuthzReqMessageContext);

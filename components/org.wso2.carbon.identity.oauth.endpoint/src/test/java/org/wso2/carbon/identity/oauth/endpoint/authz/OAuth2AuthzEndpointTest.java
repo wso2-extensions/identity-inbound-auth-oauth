@@ -243,6 +243,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     private static final String SECRET = "87n9a540f544777860e44e75f605d435";
     private static final String INACTIVE_APP_NAME = "inactiveApp";
     private static final String USERNAME = "user1";
+    public static final String USER_ID = "4b4414e1-916b-4475-aaee-6b0751c29ff6";
     private static final String APP_REDIRECT_URL = "http://localhost:8080/redirect";
     private static final String APP_REDIRECT_URL_JSON = "{\"url\":\"http://localhost:8080/redirect\"}";
     private static final String SP_DISPLAY_NAME = "DisplayName";
@@ -1846,6 +1847,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         subject.setAuthenticatedSubjectIdentifier(USERNAME);
         subject.setUserName(USERNAME);
         subject.setUserAttributes(attributes);
+        subject.setUserId(USER_ID);
         authResult.setSubject(subject);
 
         return authResult;

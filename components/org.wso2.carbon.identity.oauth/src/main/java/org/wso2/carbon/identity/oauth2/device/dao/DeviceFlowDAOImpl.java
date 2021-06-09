@@ -332,8 +332,8 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.debug("Setting authorize user: " + authenticatedUser.getUserName() + " and status: " + status +
-                    " for user_code: " + userCode);
+            log.debug("Setting authorize user: " + authenticatedUser.getLoggableUserId() + " and status: " + status
+                    + " for user_code: " + userCode);
         }
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             try (PreparedStatement prepStmt =

@@ -129,13 +129,14 @@ public class RequestObjectServiceTest extends PowerMockTestCase {
 
     protected void addToken(String token, String tokenId) throws Exception {
 
+        // TODO this is not good :(
         TokenPersistenceProcessor hashingPersistenceProcessor = new HashingPersistenceProcessor();
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
             String sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN;
             PreparedStatement prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(token));
             prepStmt.setString(2, "refreshToken");
-            prepStmt.setString(3, "username");
+            prepStmt.setString(3, "userid");
             prepStmt.setInt(4, 1234);
             prepStmt.setString(5, "PRIMARY");
             prepStmt.setString(6, null);

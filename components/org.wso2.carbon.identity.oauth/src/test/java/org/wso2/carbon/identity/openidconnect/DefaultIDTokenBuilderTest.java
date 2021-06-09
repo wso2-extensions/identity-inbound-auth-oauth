@@ -23,10 +23,10 @@ import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.json.JSONObject;
-import org.junit.Assert;
 import org.mockito.Mockito;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.powermock.reflect.internal.WhiteboxImpl;
+import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -331,8 +332,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         String idToken = defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
         EncryptedJWT encryptedJWT = decryptToken(idToken);
         JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
-        Assert.assertEquals(claims.getAudience().get(0),
-                CLIENT_ID);
+        Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
         Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
         Assert.assertEquals(claims.getSubject(),  "user1@carbon.super");
         Assert.assertEquals(claims.getClaim("isk"), "wso2.is.com");
@@ -456,6 +456,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setAuthenticatedSubjectIdentifier(TestConstants.USER_NAME);
         authenticatedUser.setUserName(TestConstants.USER_NAME);
+        authenticatedUser.setUserId("4b4414e1-916b-4475-aaee-6b0751c29ff6");
         authenticatedUser.setUserStoreDomain(TestConstants.USER_STORE_DOMAIN);
         authenticatedUser.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
         authenticatedUser.setFederatedUser(false);
@@ -508,7 +509,8 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         RealmService realmService = IdentityTenantUtil.getRealmService();
         PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
-        IdpMgtServiceComponentHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
+        IdpMgtServiceComponentHolder.getInstance().setRealmService(realmService);
+        OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
     }
 
     private String getEssentialClaims() {
