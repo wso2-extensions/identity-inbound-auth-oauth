@@ -90,14 +90,13 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
                     (String) oAuthClientAuthnContext.getParameter(OAuth.OAUTH_CLIENT_SECRET));
         } catch (IdentityOAuthAdminException e) {
             diagnosticLog.error("Error while authenticating client. Error message: " + e.getMessage());
-            throw new OAuthClientAuthnException(OAuth2ErrorCodes.INVALID_CLIENT, "Error while authenticating " +
-                    "client", e);
+            throw new OAuthClientAuthnException("Error while authenticating client",
+                    OAuth2ErrorCodes.INVALID_CLIENT, e);
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
             diagnosticLog.error("Invalid client. Error message: " + e.getMessage());
-            throw new OAuthClientAuthnException(OAuth2ErrorCodes.INVALID_CLIENT,
-                    "Invalid Client : " + oAuthClientAuthnContext.getClientId(), e);
+            throw new OAuthClientAuthnException("Invalid Client : " + oAuthClientAuthnContext.getClientId(),
+                    OAuth2ErrorCodes.INVALID_CLIENT, e);
         }
-
     }
 
     private void validateAuthenticationInfo(HttpServletRequest request, Map<String, List> contentMap)
@@ -268,5 +267,4 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
         context.setClientId(stringContent.get(OAuth.OAUTH_CLIENT_ID));
         context.addParameter(OAuth.OAUTH_CLIENT_SECRET, stringContent.get(OAuth.OAUTH_CLIENT_SECRET));
     }
-
 }

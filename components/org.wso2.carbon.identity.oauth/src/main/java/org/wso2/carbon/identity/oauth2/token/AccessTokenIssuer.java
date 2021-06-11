@@ -280,7 +280,7 @@ public class AccessTokenIssuer {
                 log.debug("Invalid Grant provided by the client Id: " + tokenReqDTO.getClientId());
             }
             diagnosticLog.info("Invalid Grant provided by the client Id: " + tokenReqDTO.getClientId());
-            tokenRespDTO = handleError(OAuthError.TokenResponse.INVALID_GRANT, error, tokenReqDTO);
+            tokenRespDTO = handleError(errorCode, error, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
