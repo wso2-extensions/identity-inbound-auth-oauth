@@ -115,15 +115,21 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
     private static final String CLIENT_ID_VALUE = "ca19a540f544777860e44e75f605d927";
 
     private static final Date date = new Date();
-    private static DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
+    private static DeviceFlowDO deviceFlowDOAsNotExpired = new DeviceFlowDO();
+    private static DeviceFlowDO deviceFlowDOAsExpired = new DeviceFlowDO();
     private static final String[] scopes = {"openid"};
+    private static final String TEST_DEVICE_CODE = "testDeviceCode";
 
     @BeforeTest
     public void setUp() {
 
-        deviceFlowDO.setStatus(PENDING);
-        deviceFlowDO.setExpiryTime(new Timestamp(date.getTime() + 400000));
-        deviceFlowDO.setDeviceCode("testDeviceCode");
+        deviceFlowDOAsNotExpired.setStatus(PENDING);
+        deviceFlowDOAsNotExpired.setExpiryTime(new Timestamp(date.getTime() + 400000000));
+        deviceFlowDOAsNotExpired.setDeviceCode(TEST_DEVICE_CODE);
+
+        deviceFlowDOAsExpired.setStatus(PENDING);
+        deviceFlowDOAsExpired.setExpiryTime(new Timestamp(date.getTime() - 400000000));
+        deviceFlowDOAsExpired.setDeviceCode(TEST_DEVICE_CODE);
 
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
@@ -165,7 +171,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
         when(DeviceFlowPersistenceFactory.getInstance()).thenReturn(deviceFlowPersistenceFactory);
         when(deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
         when(deviceFlowDAO.getClientIdByUserCode(anyString())).thenReturn(clientId);
-        when(deviceFlowDAO.getDetailsForUserCode(anyString())).thenReturn(deviceFlowDO);
+        when(deviceFlowDAO.getDetailsForUserCode(anyString())).thenReturn(deviceFlowDOAsNotExpired);
         when(deviceFlowDAO.getScopesForUserCode(anyString())).thenReturn(scopes);
         when(httpServletRequest.getParameter(anyString())).thenReturn(userCode);
         mockStatic(OAuth2Util.class);
@@ -212,4 +218,64 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
         });
     }
 
+    @DataProvider(name = "providePostParamsForExpiredUserCodePath")
+    public Object[][] providePostParamsForExpiredUserCodePath() {
+
+        return new Object[][]{
+                {TEST_USER_CODE, null, 0, USED, TEST_URL},
+                {null, null, 0, USED, null},
+                {TEST_USER_CODE, CLIENT_ID_VALUE, 0, PENDING, TEST_URL},
+                {TEST_USER_CODE, CLIENT_ID_VALUE, 0, PENDING, null}
+        };
+    }
+
+    /**
+     * Test device endpoint with expired user_code.
+     *
+     * @param userCode      User code of the user.
+     * @param clientId      Consumer key of the application.
+     * @param expectedValue Expected http status.
+     * @param status        Status of user code.
+     * @param uri           Redirection uri.
+     * @throws Exception Error while testing device endpoint.
+     */
+    @Test(dataProvider = "providePostParamsForExpiredUserCodePath")
+    public void testDeviceAuthorizeForExpiredUserCodePath(String userCode, String clientId, int expectedValue,
+        String status, String uri) throws Exception {
+
+        mockOAuthServerConfiguration();
+
+        WhiteboxImpl.setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
+        mockStatic(IdentityDatabaseUtil.class);
+        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+        mockStatic(DeviceFlowPersistenceFactory.class);
+        when(DeviceFlowPersistenceFactory.getInstance()).thenReturn(deviceFlowPersistenceFactory);
+        when(deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
+        when(deviceFlowDAO.getClientIdByUserCode(anyString())).thenReturn(clientId);
+        when(deviceFlowDAO.getDetailsForUserCode(anyString())).thenReturn(deviceFlowDOAsExpired);
+        when(deviceFlowDAO.getScopesForUserCode(anyString())).thenReturn(scopes);
+        when(httpServletRequest.getParameter(anyString())).thenReturn(userCode);
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+        when(oAuthAppDO.getCallbackUrl()).thenReturn(uri);
+        Response response1;
+        mockStatic(IdentityUtil.class);
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+        when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(TEST_URL);
+        when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class), any(HttpServletResponse.class)))
+                .thenReturn(response);
+        DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
+        userAuthenticationEndpoint = new UserAuthenticationEndpoint();
+        userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
+        WhiteboxImpl.setInternalState(userAuthenticationEndpoint, OAuth2AuthzEndpoint.class, oAuth2AuthzEndpoint);
+        response1 = userAuthenticationEndpoint.deviceAuthorize(httpServletRequest, httpServletResponse);
+        if (expectedValue == HttpServletResponse.SC_ACCEPTED) {
+            Assert.assertNotNull(response1);
+        } else {
+            Assert.assertNull(response1);
+        }
+    }
 }
