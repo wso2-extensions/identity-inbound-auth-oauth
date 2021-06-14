@@ -2312,9 +2312,6 @@ public class OAuth2Util {
     }
 
     /**
-     * @deprecated replaced by
-     * {@link #encryptJWT(JWTClaimsSet, JWSAlgorithm, String, JWEAlgorithm, EncryptionMethod, String, String)}
-     *
      * This is the generic Encryption function which calls algorithm specific encryption function
      * depending on the algorithm name.
      *
@@ -2324,6 +2321,8 @@ public class OAuth2Util {
      * @param clientId            ID of the client
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
+     * @deprecated replaced by
+     * {@link #encryptJWT(JWTClaimsSet, JWSAlgorithm, String, JWEAlgorithm, EncryptionMethod, String, String)}
      */
     @Deprecated
     public static JWT encryptJWT(JWTClaimsSet jwtClaimsSet, JWEAlgorithm encryptionAlgorithm,
@@ -2369,7 +2368,6 @@ public class OAuth2Util {
     }
 
     /**
-     * @deprecated replaced by {@link #encryptWithRSA(SignedJWT, JWEAlgorithm, EncryptionMethod, String, String)}
      * Encrypt JWT id token using RSA algorithm.
      *
      * @param jwtClaimsSet        contains JWT body
@@ -2378,6 +2376,7 @@ public class OAuth2Util {
      * @param clientId            ID of the client
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
+     * @deprecated replaced by {@link #encryptWithRSA(SignedJWT, JWEAlgorithm, EncryptionMethod, String, String)}
      */
     @Deprecated
     private static JWT encryptWithRSA(JWTClaimsSet jwtClaimsSet, JWEAlgorithm encryptionAlgorithm,
@@ -2596,26 +2595,18 @@ public class OAuth2Util {
             log.debug(String.format("Attempting to retrieve public certificate from the Jwk kid: %s.", jwk.getKeyID()));
         }
         X509Certificate certificate;
-        if (jwk != null) {
-            if (jwk.getParsedX509CertChain() != null) {
-                certificate = jwk.getParsedX509CertChain().get(0);
-                if (log.isDebugEnabled()) {
-                    log.debug(String.format("Retrieved the public signing certificate successfully from the " +
-                            "jwk : %s", jwk));
-                }
-                return certificate;
-            } else {
-                throw new IdentityOAuth2Exception("Failed to retrieve public certificate from jwk");
+        if (jwk != null && jwk.getParsedX509CertChain() != null) {
+            certificate = jwk.getParsedX509CertChain().get(0);
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Retrieved the public signing certificate successfully from the " +
+                        "jwk : %s", jwk));
             }
-        } else {
-            throw new IdentityOAuth2Exception("Failed to retrieve public certificate from jwk due to null");
+            return certificate;
         }
+        throw new IdentityOAuth2Exception("Failed to retrieve public certificate from jwk due to null");
     }
 
     /**
-     * @deprecated replaced by
-     * {@link #encryptWithPublicKey(Key, SignedJWT, JWEAlgorithm, EncryptionMethod, String, String, String)}
-     *
      * Encrypt the JWT token with with given public key.
      *
      * @param publicKey           public key used to encrypt
@@ -2626,6 +2617,8 @@ public class OAuth2Util {
      * @param thumbPrint          value used as 'kid'
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
+     * @deprecated replaced by
+     * {@link #encryptWithPublicKey(Key, SignedJWT, JWEAlgorithm, EncryptionMethod, String, String, String)}
      */
     @Deprecated
     private static JWT encryptWithPublicKey(Key publicKey, JWTClaimsSet jwtClaimsSet,
@@ -2674,7 +2667,7 @@ public class OAuth2Util {
         JWEHeader.Builder headerBuilder = new JWEHeader.Builder(encryptionAlgorithm, encryptionMethod);
 
         try {
-            if (kid != null) {
+            if (StringUtils.isNotBlank(kid)) {
                 headerBuilder.keyID(kid);
             }
             headerBuilder.contentType("JWT"); // required to indicate nested JWT
@@ -4108,12 +4101,12 @@ public class OAuth2Util {
     }
 
     /**
-     * @deprecated replased with {@link #getEncryptionJWKFromJWKS(String)}
      * Get public certificate from JWKS when kid and JWKS Uri is given.
      *
      * @param jwksUri - JWKS Uri
      * @return - X509Certificate
      * @throws IdentityOAuth2Exception - IdentityOAuth2Exception
+     * @deprecated replaced with {@link #getEncryptionJWKFromJWKS(String)}
      */
     @Deprecated
     private static X509Certificate getPublicCertFromJWKS(String jwksUri) throws IdentityOAuth2Exception {
