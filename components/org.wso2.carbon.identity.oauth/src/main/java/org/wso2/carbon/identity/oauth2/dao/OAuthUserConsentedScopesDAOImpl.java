@@ -142,29 +142,24 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
     }
 
     @Override
-    public void updateExistingConsentForApplication(String userId, int tenantId,
-                                                    UserApplicationScopeConsentDO updatedUserConsents)
+    public void updateExistingConsentForApplication(String userId, String appId, int tenantId,
+                                                    UserApplicationScopeConsentDO consentsToBeAdded,
+                                                    UserApplicationScopeConsentDO consentsToBeUpdated)
             throws IdentityOAuth2ScopeConsentException {
 
         if (log.isDebugEnabled()) {
             log.debug("Update scope consents for userId : " + userId + " and appId: "
-                    + updatedUserConsents.getAppId() + " and tenantId : " + tenantId);
+                    + appId + " and tenantId : " + tenantId);
         }
-        UserApplicationScopeConsentDO existingConsent =
-                getUserConsentForApplication(userId, updatedUserConsents.getAppId(), tenantId);
-        UserApplicationScopeConsentDO consentsToBeUpdated =
-                getConsentsToBeUpdated(existingConsent, updatedUserConsents);
-        UserApplicationScopeConsentDO consentsToBeAdded =
-                getConsentsToBeAdded(consentsToBeUpdated, updatedUserConsents);
         try (Connection conn = IdentityDatabaseUtil.getDBConnection(true)) {
-            String consentId = getConsentId(conn, userId, updatedUserConsents.getAppId(), tenantId);
+            String consentId = getConsentId(conn, userId, appId, tenantId);
             if (StringUtils.isBlank(consentId)) {
                 if (log.isDebugEnabled()) {
                     log.debug("Unable to find an existing consent for user : " + userId + ", app : " +
-                            updatedUserConsents.getAppId() + " and tenant with id : " + tenantId);
+                            appId + " and tenant with id : " + tenantId);
                 }
                 throw new IdentityOAuth2ScopeConsentException("Unable to find an existing consent for user : " +
-                        userId + ", app : " + updatedUserConsents.getAppId() + " and tenant with id : " + tenantId);
+                        userId + ", app : " + appId + " and tenant with id : " + tenantId);
             }
             if (CollectionUtils.isNotEmpty(consentsToBeAdded.getApprovedScopes()) ||
                     CollectionUtils.isNotEmpty(consentsToBeAdded.getDeniedScopes())) {
@@ -177,7 +172,7 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
             IdentityDatabaseUtil.commitTransaction(conn);
         } catch (SQLException e) {
             String msg = "Error occurred while updating scope consents for  userId : " + userId + " and appId : " +
-                    updatedUserConsents.getAppId() + " and tenantId : " + tenantId;
+                    appId + " and tenantId : " + tenantId;
             throw new IdentityOAuth2ScopeConsentException(msg, e);
         }
     }
@@ -217,41 +212,6 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
                     + "tenantId : " + tenantId;
             throw new IdentityOAuth2ScopeConsentException(msg, e);
         }
-    }
-
-    private UserApplicationScopeConsentDO getConsentsToBeUpdated(UserApplicationScopeConsentDO existingConsent,
-                                                                 UserApplicationScopeConsentDO updatedConsent) {
-        UserApplicationScopeConsentDO consentToBeUpdated =
-                new UserApplicationScopeConsentDO(updatedConsent.getAppId());
-        List<String> approvedScopes = new ArrayList<>();
-        List<String> disapprovedScopes = new ArrayList<>();
-        approvedScopes.addAll(updatedConsent.getApprovedScopes().stream()
-                .filter(scope -> existingConsent.getDeniedScopes().contains(scope))
-                .collect(Collectors.toSet()));
-        disapprovedScopes.addAll(updatedConsent.getDeniedScopes().stream()
-                .filter(scope -> existingConsent.getApprovedScopes().contains(scope))
-                .collect(Collectors.toSet()));
-        consentToBeUpdated.setApprovedScopes(approvedScopes);
-        consentToBeUpdated.setDeniedScopes(disapprovedScopes);
-        return consentToBeUpdated;
-    }
-
-    private UserApplicationScopeConsentDO getConsentsToBeAdded(UserApplicationScopeConsentDO consentToBeUpdated,
-                                                               UserApplicationScopeConsentDO updatedConsent) {
-
-        UserApplicationScopeConsentDO consentToBeAdded =
-                new UserApplicationScopeConsentDO(updatedConsent.getAppId());
-        List<String> approvedScopes = new ArrayList<String>() {{
-            addAll(updatedConsent.getApprovedScopes());
-        }};
-        List<String> disapprovedScopes = new ArrayList<String>() {{
-            addAll(updatedConsent.getDeniedScopes());
-        }};
-        approvedScopes.removeAll(consentToBeUpdated.getApprovedScopes());
-        disapprovedScopes.removeAll(consentToBeUpdated.getDeniedScopes());
-        consentToBeAdded.setApprovedScopes(approvedScopes);
-        consentToBeAdded.setDeniedScopes(disapprovedScopes);
-        return consentToBeAdded;
     }
 
     private void updateUserConsentedScopes(Connection connection, String userId, int tenantId,

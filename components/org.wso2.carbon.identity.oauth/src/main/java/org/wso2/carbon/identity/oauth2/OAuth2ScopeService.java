@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.oauth2.model.UserApplicationScopeConsentDO;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCache;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -427,8 +428,16 @@ public class OAuth2ScopeService {
         try {
             UserApplicationScopeConsentDO updatedUserApplicationScopeConsents =
                     new UserApplicationScopeConsentDO(appId, approvedScopes, deniedScopes);
+            UserApplicationScopeConsentDO existingConsent = OAuthTokenPersistenceFactory.getInstance()
+                    .getOAuthUserConsentedScopesDAO()
+                    .getUserConsentForApplication(userId, updatedUserApplicationScopeConsents.getAppId(), userTenantId);
+            UserApplicationScopeConsentDO consentsToBeUpdated =
+                    getConsentsToBeUpdated(existingConsent, updatedUserApplicationScopeConsents);
+            UserApplicationScopeConsentDO consentsToBeAdded =
+                    getConsentsToBeAdded(consentsToBeUpdated, updatedUserApplicationScopeConsents);
             OAuthTokenPersistenceFactory.getInstance().getOAuthUserConsentedScopesDAO()
-                    .updateExistingConsentForApplication(userId, userTenantId, updatedUserApplicationScopeConsents);
+                    .updateExistingConsentForApplication(userId, appId, userTenantId, consentsToBeAdded,
+                            consentsToBeUpdated);
             if (log.isDebugEnabled()) {
                 log.debug("Successfully updated the user consent for OAuth scopes for user : " + userId +
                         " and application : " + appId + " in tenant with Id : " + userTenantId);
@@ -728,5 +737,40 @@ public class OAuth2ScopeService {
             throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
                     ERROR_CODE_NOT_FOUND_SCOPE, scopeName);
         }
+    }
+
+    private UserApplicationScopeConsentDO getConsentsToBeUpdated(UserApplicationScopeConsentDO existingConsent,
+                                                                 UserApplicationScopeConsentDO updatedConsent) {
+        UserApplicationScopeConsentDO consentToBeUpdated =
+                new UserApplicationScopeConsentDO(updatedConsent.getAppId());
+        List<String> approvedScopes = new ArrayList<>();
+        List<String> disapprovedScopes = new ArrayList<>();
+        approvedScopes.addAll(updatedConsent.getApprovedScopes().stream()
+                .filter(scope -> existingConsent.getDeniedScopes().contains(scope))
+                .collect(Collectors.toSet()));
+        disapprovedScopes.addAll(updatedConsent.getDeniedScopes().stream()
+                .filter(scope -> existingConsent.getApprovedScopes().contains(scope))
+                .collect(Collectors.toSet()));
+        consentToBeUpdated.setApprovedScopes(approvedScopes);
+        consentToBeUpdated.setDeniedScopes(disapprovedScopes);
+        return consentToBeUpdated;
+    }
+
+    private UserApplicationScopeConsentDO getConsentsToBeAdded(UserApplicationScopeConsentDO consentToBeUpdated,
+                                                               UserApplicationScopeConsentDO updatedConsent) {
+
+        UserApplicationScopeConsentDO consentToBeAdded =
+                new UserApplicationScopeConsentDO(updatedConsent.getAppId());
+        List<String> approvedScopes = new ArrayList<String>() {{
+            addAll(updatedConsent.getApprovedScopes());
+        }};
+        List<String> disapprovedScopes = new ArrayList<String>() {{
+            addAll(updatedConsent.getDeniedScopes());
+        }};
+        approvedScopes.removeAll(consentToBeUpdated.getApprovedScopes());
+        disapprovedScopes.removeAll(consentToBeUpdated.getDeniedScopes());
+        consentToBeAdded.setApprovedScopes(approvedScopes);
+        consentToBeAdded.setDeniedScopes(disapprovedScopes);
+        return consentToBeAdded;
     }
 }

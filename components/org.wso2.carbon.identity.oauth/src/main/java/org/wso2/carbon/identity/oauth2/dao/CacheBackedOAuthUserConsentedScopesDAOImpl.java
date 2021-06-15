@@ -62,12 +62,13 @@ public class CacheBackedOAuthUserConsentedScopesDAOImpl implements OAuthUserCons
     }
 
     @Override
-    public void updateExistingConsentForApplication(String userId, int tenantId,
-                                                    UserApplicationScopeConsentDO updatedUserConsents)
+    public void updateExistingConsentForApplication(String userId, String appId, int tenantId,
+                                                    UserApplicationScopeConsentDO consentsToBeAdded,
+                                                    UserApplicationScopeConsentDO consentsToBeUpdated)
             throws IdentityOAuth2ScopeConsentException {
 
         cache.clearCacheEntry(userId, tenantId);
-        dao.updateExistingConsentForApplication(userId, tenantId, updatedUserConsents);
+        dao.updateExistingConsentForApplication(userId, appId, tenantId, consentsToBeAdded, consentsToBeUpdated);
     }
 
     @Override

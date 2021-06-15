@@ -68,10 +68,32 @@ public interface OAuthUserConsentedScopesDAO {
      * @param userId                User identifier.
      * @param tenantId              Tenant Id.
      * @param updatedUserConsents   Updated user consent {@link UserApplicationScopeConsentDO}.
+     *
+     * @deprecated use {@link #updateExistingConsentForApplication(String, String, int,
+     *      UserApplicationScopeConsentDO, UserApplicationScopeConsentDO)} instead.
+     *
+     * Deprecated - Use
+     */
+    @Deprecated
+    default void updateExistingConsentForApplication(String userId, int tenantId,
+                                             UserApplicationScopeConsentDO updatedUserConsents)
+            throws IdentityOAuth2ScopeConsentException {
+
+    }
+
+    /**
+     * Update users consent given for OAuth scopes for a given application.
+     *
+     * @param userId                User identifier.
+     * @param appId                 Application Id.
+     * @param tenantId              Tenant Id.
+     * @param consentsToBeAdded     Added user consent {@link UserApplicationScopeConsentDO}.
+     * @param consentsToBeUpdated   Updated user consent {@link UserApplicationScopeConsentDO}.
      * @throws IdentityOAuth2ScopeConsentException
      */
-    void updateExistingConsentForApplication(String userId, int tenantId,
-                                             UserApplicationScopeConsentDO updatedUserConsents)
+    void updateExistingConsentForApplication(String userId, String appId, int tenantId,
+                                             UserApplicationScopeConsentDO consentsToBeAdded,
+                                             UserApplicationScopeConsentDO consentsToBeUpdated)
             throws IdentityOAuth2ScopeConsentException;
 
     /**
