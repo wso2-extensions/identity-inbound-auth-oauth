@@ -2476,6 +2476,10 @@ public class OAuth2Util {
                                                      String clientId) throws IdentityOAuth2Exception {
 
         Certificate publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
+        if (publicCert == null) {
+            throw new IdentityOAuth2Exception("Error while retrieving X509 cert from oauth app with "
+                    + "client_id: " + clientId + " of tenantDomain: " + spTenantDomain);
+        }
         Key publicKey = publicCert.getPublicKey();
         if (publicKey == null) {
             throw new IdentityOAuth2Exception("Error while retrieving public key from X509 cert of oauth app with "
