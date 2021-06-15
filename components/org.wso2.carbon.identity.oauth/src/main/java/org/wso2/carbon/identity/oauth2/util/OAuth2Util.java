@@ -2535,7 +2535,7 @@ public class OAuth2Util {
                 publicCert = getPublicCertFromJWK(encryptionJwk);
                 kid = getJwkThumbPrint(publicCert);
             } catch (IdentityOAuth2Exception e) {
-                log.error(String.format("Failed to set x5c thumbprint as kid value due to %s", e));
+                log.error("Failed to set x5c thumbprint as kid value.", e);
                 kid = null;
             }
         }
