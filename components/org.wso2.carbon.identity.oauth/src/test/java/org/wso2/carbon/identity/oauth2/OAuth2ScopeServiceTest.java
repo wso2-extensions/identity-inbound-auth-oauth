@@ -23,6 +23,8 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.caching.impl.DataHolder;
+import org.wso2.carbon.caching.impl.TenantCacheManager;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
@@ -73,6 +75,9 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
 
         oAuth2ScopeService = new OAuth2ScopeService();
         IdentityUtil.populateProperties();
+        // Removing the cache manager for tenant to reset the caches added by other tenants.
+        ((TenantCacheManager) DataHolder.getInstance().getCachingProvider().getCacheManagerFactory())
+                .removeCacheManagerMap("carbon.super");
     }
 
     @AfterMethod
@@ -254,7 +259,7 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
             String sql = "INSERT INTO SP_APP (TENANT_ID, APP_NAME, UUID) VALUES (?,?,?)";
             PreparedStatement ps = connection.prepareStatement(sql);
-            ps.setInt(1, 1234);
+            ps.setInt(1, 1);
             ps.setString(2, "dummyAppName");
             ps.setString(3, uuid);
             ps.execute();
@@ -308,7 +313,7 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         List<String> approvedScopes = new ArrayList<>(Arrays.asList("read", "write"));
         List<String> deniedScopes = new ArrayList<>(Arrays.asList("delete"));
         String invalidAppId = UUID.randomUUID().toString();
-        int tenantId = 1234;
+        int tenantId = 1;
         String userId = "dummyUserId";
         try {
             oAuth2ScopeService.addUserConsentForApplication(userId, invalidAppId, tenantId, approvedScopes,
@@ -341,12 +346,12 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         List<String> deniedScopes = new ArrayList<>(Arrays.asList("write"));
         String uuid = UUID.randomUUID().toString();
         insertAppId(uuid);
-        oAuth2ScopeService.addUserConsentForApplication("user_id", uuid, 1234, approvedScopes, deniedScopes);
+        oAuth2ScopeService.addUserConsentForApplication("user_id", uuid, 1, approvedScopes, deniedScopes);
 
-        oAuth2ScopeService.updateUserConsentForApplication("user_id", uuid, 1234, newApprovedScopes, newDeniedScopes);
+        oAuth2ScopeService.updateUserConsentForApplication("user_id", uuid, 1, newApprovedScopes, newDeniedScopes);
 
         OAuth2ScopeConsentResponse oAuth2ScopeConsentResponse = oAuth2ScopeService
-                .getUserConsentForApp("user_id", uuid, 1234);
+                .getUserConsentForApp("user_id", uuid, 1);
         assertEquals(oAuth2ScopeConsentResponse.getApprovedScopes().size(), approvedScopeSize);
         assertEquals(oAuth2ScopeConsentResponse.getDeniedScopes().size(), deniedScopeSize);
     }
@@ -357,7 +362,7 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         List<String> newApprovedScopes = new ArrayList<>(Arrays.asList("read", "create"));
         List<String> newDeniedScopes = new ArrayList<>(Arrays.asList("delete"));
         String appId = UUID.randomUUID().toString();
-        int tenantId = 1234;
+        int tenantId = 1;
         String userId = "dummyUserId";
         try {
             oAuth2ScopeService.updateUserConsentForApplication(userId, appId, tenantId, newApprovedScopes,
@@ -378,12 +383,12 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         List<String> deniedScopes = new ArrayList<>(Arrays.asList("delete"));
         String uuid = UUID.randomUUID().toString();
         insertAppId(uuid);
-        oAuth2ScopeService.addUserConsentForApplication("user_id", uuid, 1234, approvedScopes, deniedScopes);
+        oAuth2ScopeService.addUserConsentForApplication("user_id", uuid, 1, approvedScopes, deniedScopes);
 
-        oAuth2ScopeService.revokeUserConsentForApplication("user_id", uuid, 1234);
+        oAuth2ScopeService.revokeUserConsentForApplication("user_id", uuid, 1);
 
         OAuth2ScopeConsentResponse oAuth2ScopeConsentResponse = oAuth2ScopeService
-                .getUserConsentForApp("user_id", uuid, 1234);
+                .getUserConsentForApp("user_id", uuid, 1);
         assertEquals(oAuth2ScopeConsentResponse.getApprovedScopes().size(), 0);
     }
 
@@ -394,7 +399,7 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         List<String> deniedScopes = new ArrayList<>(Arrays.asList("delete"));
         String appId = UUID.randomUUID().toString();
         insertAppId(appId);
-        int tenantId = 1234;
+        int tenantId = 1;
         String userId = "dummyUserId";
         oAuth2ScopeService.addUserConsentForApplication(userId, appId, tenantId, approvedScopes, deniedScopes);
 
@@ -424,7 +429,7 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         List<String> deniedScopes = new ArrayList<>(Arrays.asList("delete"));
         String appId = UUID.randomUUID().toString();
         insertAppId(appId);
-        int tenantId = 1234;
+        int tenantId = 1;
         String userId = "dummyUserId1";
         oAuth2ScopeService.addUserConsentForApplication(userId, appId, tenantId, approvedScopes, deniedScopes);
 
@@ -450,7 +455,7 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
 
         String appId = UUID.randomUUID().toString();
         insertAppId(appId);
-        int tenantId = 1234;
+        int tenantId = 1;
         String userId = "dummyUserId1";
         oAuth2ScopeService.addUserConsentForApplication(userId, appId, tenantId, approvedScopes, deniedScopes);
 
@@ -464,7 +469,7 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         List<String> deniedScopes = new ArrayList<>(Arrays.asList("delete"));
         String appId = UUID.randomUUID().toString();
         insertAppId(appId);
-        int tenantId = 1234;
+        int tenantId = 1;
         String userId = "dummyUserId";
         oAuth2ScopeService.addUserConsentForApplication(userId, appId, tenantId, approvedScopes, deniedScopes);
 
@@ -483,7 +488,7 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         List<String> deniedScopes = new ArrayList<>(Arrays.asList("delete"));
         String appId = UUID.randomUUID().toString();
         insertAppId(appId);
-        int tenantId = 1234;
+        int tenantId = 1;
         String userId = "dummyUserId";
         oAuth2ScopeService.addUserConsentForApplication(userId, appId, tenantId, approvedScopes, deniedScopes);
 
