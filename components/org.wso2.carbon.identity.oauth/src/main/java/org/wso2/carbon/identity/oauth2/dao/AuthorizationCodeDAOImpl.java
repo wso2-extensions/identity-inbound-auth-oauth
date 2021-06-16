@@ -168,15 +168,14 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             }
             prepStmt.executeBatch();
             IdentityDatabaseUtil.commitTransaction(connection);
-
-            // To revoke request objects which are persisted against the code.
-            OAuth2TokenUtil.postRevokeCodes(authzCodeDOs, OAuthConstants.AuthorizationCodeState.INACTIVE);
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error when deactivating authorization code", e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
+        // To revoke request objects which are persisted against the code.
+        OAuth2TokenUtil.postRevokeCodes(authzCodeDOs, OAuthConstants.AuthorizationCodeState.INACTIVE);
     }
 
     @Override
@@ -319,10 +318,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             prepStmt.setString(2, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCode));
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
-
-            //If the code state is updated to inactive or expired request object which is persisted against the code
-            // should be updated/removed.
-            OAuth2TokenUtil.postRevokeCode(authzCode, newState, null);
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while updating the state of Authorization Code : " +
@@ -330,6 +325,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
+        // If the code state is updated to inactive or expired request object which is persisted against the code
+        // should be updated/removed.
+        OAuth2TokenUtil.postRevokeCode(authzCode, newState, null);
     }
 
     @Override
@@ -355,16 +353,15 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     getHashingPersistenceProcessor().getProcessedAuthzCode(authzCodeDO.getAuthorizationCode()));
             prepStmt.executeUpdate();
             IdentityDatabaseUtil.commitTransaction(connection);
-
-            // To revoke the request object which is persisted against the code.
-            OAuth2TokenUtil.postRevokeCode(authzCodeDO.getAuthzCodeId(), OAuthConstants.
-                    AuthorizationCodeState.INACTIVE, authzCodeDO.getOauthTokenId());
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error when deactivating authorization code", e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
+        // To revoke the request object which is persisted against the code.
+        OAuth2TokenUtil.postRevokeCode(authzCodeDO.getAuthzCodeId(), OAuthConstants.
+                AuthorizationCodeState.INACTIVE, authzCodeDO.getOauthTokenId());
     }
 
     /**
