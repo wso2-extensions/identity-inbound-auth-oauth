@@ -22,8 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.client.utils.URIBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
-import org.wso2.carbon.identity.core.ServiceURLBuilder;
-import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -73,15 +72,15 @@ public class UserAuthenticationEndpoint {
     public Response deviceAuthorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
             throws URISyntaxException, InvalidRequestParentException, IdentityOAuth2Exception, IOException {
 
-        try {
             String userCode = request.getParameter(Constants.USER_CODE);
             // True when input(user_code) is not REQUIRED.
             if (StringUtils.isBlank(userCode)) {
                 if (log.isDebugEnabled()) {
                     log.debug("user_code is missing in the request.");
                 }
-                response.sendRedirect(ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH).
-                        addParameter("error", "invalidRequest").build().getAbsolutePublicURL());
+                response.sendRedirect(IdentityUtil.
+                        getServerURL(Constants.DEVICE_ENDPOINT_PATH + "?error=invalidRequest",
+                                false, false));
                 return null;
             }
             String clientId = deviceAuthService.getClientId(userCode);
@@ -105,19 +104,11 @@ public class UserAuthenticationEndpoint {
                 if (log.isDebugEnabled()) {
                     log.debug("Incorrect user_code: " + userCode);
                 }
-                response.sendRedirect(ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH).
-                        addParameter("error", "invalidUserCode").build().getAbsolutePublicURL());
+                response.sendRedirect(IdentityUtil
+                        .getServerURL(Constants.DEVICE_ENDPOINT_PATH + "?error=invalidUserCode",
+                                false, false));
                 return null;
             }
-        } catch (URLBuilderException e) {
-            return handleURLBuilderException(e);
-        }
-    }
-
-    private Response handleURLBuilderException(URLBuilderException e) {
-
-        log.error("Error occurred while sending request to authentication framework.", e);
-        return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
     }
 
     /**
@@ -138,18 +129,13 @@ public class UserAuthenticationEndpoint {
      * @param appName Service provider name.
      * @return Redirection URI
      */
-    private String getRedirectionURI(String appName) throws URISyntaxException, URLBuilderException {
+    private String getRedirectionURI(String appName) throws URISyntaxException {
 
-        try {
-            String pageURI = ServiceURLBuilder.create().addPath(Constants.DEVICE_SUCCESS_ENDPOINT_PATH)
-                    .build().getAbsolutePublicURL();
-            URIBuilder uriBuilder = new URIBuilder(pageURI);
-            uriBuilder.addParameter(Constants.APP_NAME, appName);
-            return uriBuilder.build().toString();
-        } catch (URLBuilderException e) {
-            log.error("Error occurred while sending request to authentication framework.", e);
-            throw new URLBuilderException("Error occurred while sending request to authentication framework.", e);
-        }
+        String pageURI = IdentityUtil.getServerURL(Constants.DEVICE_SUCCESS_ENDPOINT_PATH,
+                false, false);
+        URIBuilder uriBuilder = new URIBuilder(pageURI);
+        uriBuilder.addParameter(Constants.APP_NAME, appName);
+        return uriBuilder.build().toString();
     }
 
     /**
@@ -158,7 +144,7 @@ public class UserAuthenticationEndpoint {
      * @param clientId Consumer key of the application.
      * @throws IdentityOAuth2Exception
      */
-    private void setCallbackURI(String clientId) throws IdentityOAuth2Exception, URLBuilderException {
+    private void setCallbackURI(String clientId) throws IdentityOAuth2Exception {
 
         try {
             OAuthAppDO oAuthAppDO;
@@ -171,8 +157,6 @@ public class UserAuthenticationEndpoint {
                 AppInfoCache.getInstance().clearCacheEntry(clientId);
             }
             deviceFlowDO.setCallbackUri(redirectURI);
-        } catch (URLBuilderException e) {
-            throw new URLBuilderException(e.getMessage(), e);
         } catch (InvalidOAuthClientException | URISyntaxException | IdentityOAuth2Exception e) {
             String errorMsg = String.format("Error when getting app details for client id : %s", clientId);
             throw new IdentityOAuth2Exception(errorMsg, e);
