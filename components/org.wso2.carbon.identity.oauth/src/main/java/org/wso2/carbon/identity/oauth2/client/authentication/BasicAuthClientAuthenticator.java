@@ -97,6 +97,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
             throw new OAuthClientAuthnException(OAuth2ErrorCodes.INVALID_CLIENT,
                     "Invalid Client : " + oAuthClientAuthnContext.getClientId(), e);
         }
+
     }
 
     private void validateAuthenticationInfo(HttpServletRequest request, Map<String, List> contentMap)
