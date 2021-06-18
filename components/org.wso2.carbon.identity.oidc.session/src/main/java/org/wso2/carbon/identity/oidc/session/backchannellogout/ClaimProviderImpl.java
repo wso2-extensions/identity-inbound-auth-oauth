@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oidc.session.backchannellogout;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -86,6 +87,12 @@ public class ClaimProviderImpl implements ClaimProvider {
         Map<String, Object> additionalClaims = new HashMap<>();
         String claimValue = null;
         String accessCode = oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getAuthorizationCode();
+        if (StringUtils.isBlank(accessCode)) {
+            if (log.isDebugEnabled()) {
+                log.debug("AccessCode is null. Possibly a back end grant");
+            }
+            return additionalClaims;
+        }
         AuthorizationGrantCacheEntry authzGrantCacheEntry =
                 getAuthorizationGrantCacheEntryFromCode(accessCode);
         if (authzGrantCacheEntry != null) {
