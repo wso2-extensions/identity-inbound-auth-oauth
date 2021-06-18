@@ -38,6 +38,7 @@ public class OAuth2AuthorizeRespDTO {
     private String codeId;
     private String pkceCodeChallenge;
     private String pkceCodeChallengeMethod;
+    private String oidcSessionId;
 
     public String getAuthorizationCode() {
 
@@ -167,5 +168,15 @@ public class OAuth2AuthorizeRespDTO {
     public void setPkceCodeChallengeMethod(String pkceCodeChallengeMethod) {
 
         this.pkceCodeChallengeMethod = pkceCodeChallengeMethod;
+    }
+
+    public void setOidcSessionId(String oidcSessionId) {
+
+        this.oidcSessionId = oidcSessionId;
+    }
+
+    public String getOidcSessionId() {
+
+        return oidcSessionId;
     }
 }

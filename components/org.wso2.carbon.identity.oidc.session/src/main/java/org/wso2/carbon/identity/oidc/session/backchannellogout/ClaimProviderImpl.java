@@ -17,23 +17,19 @@
  */
 package org.wso2.carbon.identity.oidc.session.backchannellogout;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
-import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCache;
-import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCacheEntry;
-import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCacheKey;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 
@@ -72,38 +68,14 @@ public class ClaimProviderImpl implements ClaimProvider {
             }
         }
         additionalClaims.put(OAuthConstants.OIDCClaims.SESSION_ID_CLAIM, claimValue);
-        addSidToCacheWhenIDTokenIsEncrypted(oAuthAuthzReqMessageContext, claimValue);
+        oAuth2AuthorizeRespDTO.setOidcSessionId(claimValue);
         return additionalClaims;
     }
 
-    /**
-     * Add session id to cache when ID token encryption is enabled.
-     *
-     * @param oAuthAuthzReqMessageContext OAuthAuthzReqMessageContext object.
-     * @param claimValue                  Session ID to be inserted to the cache.
-     * @throws IdentityOAuth2Exception
-     */
-    private void addSidToCacheWhenIDTokenIsEncrypted(OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext,
-                                                     String claimValue) throws IdentityOAuth2Exception {
+    private AuthorizationGrantCacheEntry getAuthorizationGrantCacheEntryFromCode(String authorizationCode) {
 
-        try {
-            OAuthAppDO app = OAuth2Util.getAppInformationByClientId(
-                    oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getConsumerKey());
-            if (app.isIdTokenEncryptionEnabled()) {
-                // Add sid to cache for the instances where id token is encrypted.
-                OIDCBackChannelAuthCodeCacheKey authCacheKey = new OIDCBackChannelAuthCodeCacheKey(
-                        OAuthConstants.OIDCClaims.SESSION_ID_CLAIM);
-                OIDCBackChannelAuthCodeCacheEntry sidCacheEntry = new OIDCBackChannelAuthCodeCacheEntry();
-                sidCacheEntry.setSessionId(claimValue);
-                OIDCBackChannelAuthCodeCache.getInstance().addToCache(authCacheKey, sidCacheEntry);
-                if (log.isDebugEnabled()) {
-                    log.debug("Adding sid to OIDCBackChannelAuthCodeCache since id token encryption is enabled.");
-                }
-            }
-        } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception("Retrieving OAuthAppDO failed for the client id: " +
-                    oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getConsumerKey(), e);
-        }
+        AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(authorizationCode);
+        return AuthorizationGrantCache.getInstance().getValueFromCacheByCode(authorizationGrantCacheKey);
     }
 
     @Override
@@ -114,9 +86,10 @@ public class ClaimProviderImpl implements ClaimProvider {
         Map<String, Object> additionalClaims = new HashMap<>();
         String claimValue = null;
         String accessCode = oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getAuthorizationCode();
-        OIDCBackChannelAuthCodeCacheEntry cacheEntry = getOIDCBackChannelAuthCodeCacheEntry(accessCode);
-        if (cacheEntry != null) {
-            claimValue = cacheEntry.getSessionId();
+        AuthorizationGrantCacheEntry authzGrantCacheEntry =
+                getAuthorizationGrantCacheEntryFromCode(accessCode);
+        if (authzGrantCacheEntry != null) {
+            claimValue = authzGrantCacheEntry.getOidcSessionId();
         }
         if (claimValue != null) {
             if (log.isDebugEnabled()) {
@@ -146,25 +119,5 @@ public class ClaimProviderImpl implements ClaimProvider {
             }
         }
         return null;
-    }
-
-    /**
-     * Return OIDCBackChannelAuthCodeCacheEntry for a authorization code.
-     *
-     * @param authCode
-     * @return OIDCBackChannelAuthCodeCacheEntry
-     */
-    private OIDCBackChannelAuthCodeCacheEntry getOIDCBackChannelAuthCodeCacheEntry(String authCode) {
-
-        if (StringUtils.isBlank(authCode)) {
-            if (log.isDebugEnabled()) {
-                log.debug("getOIDCBackChannelAuthCodeCacheEntry returned null.");
-            }
-            return null;
-        }
-        OIDCBackChannelAuthCodeCacheKey cacheKey = new OIDCBackChannelAuthCodeCacheKey(authCode);
-        OIDCBackChannelAuthCodeCacheEntry cacheEntry =
-                OIDCBackChannelAuthCodeCache.getInstance().getValueFromCache(cacheKey);
-        return cacheEntry;
     }
 }
