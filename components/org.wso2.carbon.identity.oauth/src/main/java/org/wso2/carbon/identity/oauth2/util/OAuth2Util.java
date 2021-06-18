@@ -310,6 +310,7 @@ public class OAuth2Util {
     private static final String DISPLAY_NAME = "displayName";
     private static final String DESCRIPTION = "description";
     private static final String PERMISSION = "Permission";
+    public static final String JWT = "JWT";
     private static long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
     private static ThreadLocal<Integer> clientTenantId = new ThreadLocal<>();
     private static ThreadLocal<OAuthTokenReqMessageContext> tokenRequestContext = new ThreadLocal<>();
@@ -2357,7 +2358,8 @@ public class OAuth2Util {
 
         if (isRSAAlgorithm(encryptionAlgorithm)) {
             if (log.isDebugEnabled()) {
-                log.debug("Signing JWT before encryption using the algorithm: " + signatureAlgorithm);
+                log.debug(String.format("Signing JWT before encryption using the algorithm: %s ."
+                        , signatureAlgorithm));
             }
             SignedJWT signedJwt = (SignedJWT) OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain);
             return encryptWithRSA(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId);
@@ -2432,8 +2434,8 @@ public class OAuth2Util {
             if (StringUtils.isBlank(spTenantDomain)) {
                 spTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
                 if (log.isDebugEnabled()) {
-                    log.debug("Assigned super tenant domain as signing domain when encrypting id token for " +
-                            "client_id: " + clientId);
+                    log.debug(String.format("Assigned super tenant domain as signing domain when encrypting id token " +
+                            "for client_id: %s .", clientId));
                 }
             }
             String jwksUri = getSPJwksUrl(clientId, spTenantDomain);
@@ -2441,14 +2443,14 @@ public class OAuth2Util {
             if (StringUtils.isBlank(jwksUri)) {
                 if (log.isDebugEnabled()) {
                     log.debug(String.format("Jwks uri is not configured for the service provider associated with " +
-                            "client_id: %s. Checking for x509 certificate", clientId));
+                            "client_id: %s , Checking for x509 certificate.", clientId));
                 }
                 return encryptUsingSPX509Certificate(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain,
                         clientId);
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug(String.format("Jwks uri is configured for the service provider associated with" +
-                            " client %s from jwks uri %s", clientId, jwksUri));
+                            " client %s from jwks uri %s .", clientId, jwksUri));
                 }
                 return encryptUsingJwksPublicKey(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain,
                         clientId, jwksUri);
@@ -2528,12 +2530,12 @@ public class OAuth2Util {
         Certificate publicCert;
         if (encryptionJwk.getKeyID() != null) {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("Kid value is available in jwk %s", encryptionJwk.getKeyID()));
+                log.debug(String.format("Kid value is available in jwk %s .", encryptionJwk.getKeyID()));
             }
             kid = encryptionJwk.getKeyID();
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("Kid value is not available in jwk, attempting to set x5c thumbprint as kid");
+                log.debug("Kid value is not available in jwk, attempting to set x5c thumbprint as kid.");
             }
             try {
                 publicCert = getPublicCertFromJWK(encryptionJwk);
@@ -2556,7 +2558,7 @@ public class OAuth2Util {
     private static JWK getEncryptionJWKFromJWKS(String jwksUri) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.debug(String.format("Attempting to retrieve encryption jwk from the Jwks uri: %s.", jwksUri));
+            log.debug(String.format("Attempting to retrieve encryption jwk from the Jwks uri: %s .", jwksUri));
         }
         try {
             JWKSet publicKeys = JWKSet.load(new URL(jwksUri));
@@ -2600,18 +2602,19 @@ public class OAuth2Util {
     private static X509Certificate getPublicCertFromJWK(JWK jwk) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.debug(String.format("Attempting to retrieve public certificate from the Jwk kid: %s.", jwk.getKeyID()));
+            log.debug(String.format("Attempting to retrieve public certificate from the Jwk kid: %s ."
+                    , jwk.getKeyID()));
         }
         X509Certificate certificate;
         if (jwk != null && jwk.getParsedX509CertChain() != null) {
             certificate = jwk.getParsedX509CertChain().get(0);
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Retrieved the public signing certificate successfully from the " +
-                        "jwk : %s", jwk));
+                        "jwk : %s .", jwk));
             }
             return certificate;
         }
-        throw new IdentityOAuth2Exception("Failed to retrieve public certificate from jwk due to null");
+        throw new IdentityOAuth2Exception("Failed to retrieve public certificate from jwk due to null.");
     }
 
     /**
@@ -2678,11 +2681,11 @@ public class OAuth2Util {
             if (StringUtils.isNotBlank(kid)) {
                 headerBuilder.keyID(kid);
             }
-            headerBuilder.contentType("JWT"); // required to indicate nested JWT
+            headerBuilder.contentType(JWT); // Required to indicate nested JWT.
             JWEHeader header = headerBuilder.build();
 
             JWEObject jweObject = new JWEObject(header, new Payload(signedJwt));
-            // Encrypt with the recipient's public key
+            // Encrypt with the recipient's public key.
             jweObject.encrypt(new RSAEncrypter((RSAPublicKey) publicKey));
 
             EncryptedJWT encryptedJWT = EncryptedJWT.parse(jweObject.serialize());
