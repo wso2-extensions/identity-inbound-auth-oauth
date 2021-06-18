@@ -414,7 +414,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         long issuedTime = authzCodeBean.getIssuedTime().getTime();
         long validityPeriod = authzCodeBean.getValidityPeriod();
 
-            // If the code is not valid for more than 1 sec, it is considered to be expired
+        // If the code is not valid for more than 1 sec, it is considered to be expired
         if (getTimeToExpire(issuedTime, validityPeriod) < ALLOWED_MINIMUM_VALIDITY_PERIOD) {
             markAsExpired(authzCodeBean);
             if (log.isDebugEnabled()) {
