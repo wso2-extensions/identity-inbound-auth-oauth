@@ -42,6 +42,19 @@ public interface OIDCSessionStateManager {
      * @param response
      * @return Cookie
      */
+    @Deprecated
     Cookie addOPBrowserStateCookie(HttpServletResponse response);
+
+    /**
+     * Adds the browser state cookie with tenant qualified path to the response.
+     *
+     * @param response
+     * @param tenantDomain
+     * @return Cookie
+     */
+    default Cookie addOPBrowserStateCookie(HttpServletResponse response, String tenantDomain) {
+
+        return addOPBrowserStateCookie(response);
+    }
 
 }

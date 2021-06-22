@@ -61,6 +61,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataExcept
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -1645,6 +1646,10 @@ public class OAuth2AuthzEndpoint {
         // Set the service provider tenant domain.
         params.setTenantDomain(getSpTenantDomain(clientId));
 
+        // Set the login tenant domain.
+        String loginTenantDomain = getLoginTenantDomain(oAuthMessage, clientId);
+        params.setLoginTenantDomain(loginTenantDomain);
+
         if (StringUtils.isNotBlank(oauthRequest.getParam(ACR_VALUES)) && !"null".equals(oauthRequest.getParam
                 (ACR_VALUES))) {
             List acrValuesList = Arrays.asList(oauthRequest.getParam(ACR_VALUES).split(" "));
@@ -1704,6 +1709,21 @@ public class OAuth2AuthzEndpoint {
             throw new InvalidRequestException("Error retrieving Service Provider tenantDomain for client_id: "
                     + clientId, OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
                     .UNEXPECTED_SERVER_ERROR);
+        }
+    }
+
+    private String getLoginTenantDomain(OAuthMessage oAuthMessage, String clientId) throws InvalidRequestException {
+
+        if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
+            return getSpTenantDomain(clientId);
+        }
+
+        String loginTenantDomain =
+                oAuthMessage.getRequest().getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
+        if (StringUtils.isBlank(loginTenantDomain)) {
+            return getSpTenantDomain(clientId);
+        } else {
+            return loginTenantDomain;
         }
     }
 
@@ -2647,7 +2667,8 @@ public class OAuth2AuthzEndpoint {
                 if (log.isDebugEnabled()) {
                     log.debug("User authenticated. Initiate OIDC browser session.");
                 }
-                opBrowserStateCookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
+                opBrowserStateCookie = OIDCSessionManagementUtil.
+                        addOPBrowserStateCookie(response, oAuth2Parameters.getLoginTenantDomain());
                 // Adding sid claim in the IDtoken to OIDCSessionState class.
                 storeSidClaim(redirectURL, sessionStateObj, oAuth2Parameters);
                 storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
@@ -2666,7 +2687,8 @@ public class OAuth2AuthzEndpoint {
                             log.debug("User is authenticated to a new client. Restore browser session state.");
                         }
                         String oldOPBrowserStateCookieId = opBrowserStateCookie.getValue();
-                        opBrowserStateCookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
+                        opBrowserStateCookie = OIDCSessionManagementUtil
+                                .addOPBrowserStateCookie(response, oAuth2Parameters.getLoginTenantDomain());
                         String newOPBrowserStateCookieId = opBrowserStateCookie.getValue();
                         previousSessionState.addSessionParticipant(oAuth2Parameters.getClientId());
                         storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
@@ -2679,7 +2701,8 @@ public class OAuth2AuthzEndpoint {
                     if (log.isDebugEnabled()) {
                         log.debug("Restore browser session state.");
                     }
-                    opBrowserStateCookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
+                    opBrowserStateCookie = OIDCSessionManagementUtil
+                            .addOPBrowserStateCookie(response, oAuth2Parameters.getLoginTenantDomain());
                     sessionStateObj.setAuthenticatedUser(authenticatedUser);
                     sessionStateObj.addSessionParticipant(oAuth2Parameters.getClientId());
                     storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
