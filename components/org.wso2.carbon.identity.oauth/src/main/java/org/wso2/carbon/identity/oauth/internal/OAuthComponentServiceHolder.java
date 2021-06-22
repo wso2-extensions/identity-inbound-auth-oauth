@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.internal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
@@ -54,7 +55,7 @@ public class OAuthComponentServiceHolder {
     private OAuthAdminServiceImpl oAuthAdminService;
     private List<ScopeValidator> scopeValidators = new ArrayList<>();
     private Map<Integer, OAuthApplicationMgtListener> oAuthApplicationMgtListeners = new TreeMap<>();
-
+    private IdentityEventService identityEventService;
 
     /**
      * Get the list of scope validator implementations available.
@@ -197,5 +198,15 @@ public class OAuthComponentServiceHolder {
 
         this.oAuthApplicationMgtListeners
                 .remove(oAuthApplicationMgtListener.getExecutionOrder(), oAuthApplicationMgtListener);
+    }
+
+    public IdentityEventService getIdentityEventService() {
+
+        return this.identityEventService;
+    }
+
+    public void setIdentityEventService(IdentityEventService identityEventService) {
+
+        this.identityEventService = identityEventService;
     }
 }

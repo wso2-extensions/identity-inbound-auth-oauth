@@ -549,7 +549,9 @@ public class OAuthAdminServiceImpl {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
+            OAuthScopeEventPublisherProxy.getInstance().publishPreAddScope(tenantId, scope);
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(scope, tenantId);
+            OAuthScopeEventPublisherProxy.getInstance().publishPostAddScope(tenantId, scope);
         } catch (IdentityOAuth2Exception e) {
             throw handleErrorWithExceptionType(String.format("Error while inserting OIDC scope: %s, %s",
                     scope.getName(), e.getMessage()), e);
@@ -623,10 +625,12 @@ public class OAuthAdminServiceImpl {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
+            OAuthScopeEventPublisherProxy.getInstance().publishPreDeleteScope(tenantId, scope);
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().deleteScope(scope, tenantId);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Scope: " + scope + " is deleted from the database.");
             }
+            OAuthScopeEventPublisherProxy.getInstance().publishPostDeleteScope(tenantId, scope);
         } catch (IdentityOAuth2Exception e) {
             throw handleErrorWithExceptionType("Error while deleting OIDC scope: " + scope, e);
         }
@@ -720,8 +724,10 @@ public class OAuthAdminServiceImpl {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
+            OAuthScopeEventPublisherProxy.getInstance().publishPreUpdateScope(tenantId, updatedScope);
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
                     updateScope(updatedScope, tenantId);
+            OAuthScopeEventPublisherProxy.getInstance().publishPostUpdateScope(tenantId, updatedScope);
         } catch (IdentityOAuth2Exception e) {
             throw handleErrorWithExceptionType(String.format("Error while updating the scope: %s in tenant: %s",
                     updatedScope.getName(), tenantId), e);

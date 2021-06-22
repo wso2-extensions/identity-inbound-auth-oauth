@@ -28,6 +28,7 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -38,6 +39,7 @@ import org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener;
 import org.wso2.carbon.identity.oauth.listener.IdentityOauthEventHandler;
 import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth.listener.OAuthTokenSessionMappingEventHandler;
+import org.wso2.carbon.identity.oauth.listener.ScopeManagementAuditLogger;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -93,6 +95,12 @@ public class OAuthServiceComponent {
                     new OAuthTokenSessionMappingEventHandler(), null);
             if (log.isDebugEnabled()) {
                 log.debug("OAuthTokenSessionMapping Event Handler is enabled");
+            }
+            // Register scope operation event handler implementation.
+            context.getBundleContext().registerService(AbstractEventHandler.class.getName(),
+                    new ScopeManagementAuditLogger(), null);
+            if (log.isDebugEnabled()) {
+                log.debug("ScopeManagementAuditLogger is successfully registered.");
             }
 
             if (log.isDebugEnabled()) {
@@ -282,5 +290,28 @@ public class OAuthServiceComponent {
             log.debug("Removing OAuthApplicationMgtListener: " + oAuthApplicationMgtListener.getClass().getName());
         }
         OAuthComponentServiceHolder.getInstance().removeOAuthApplicationMgtListener(oAuthApplicationMgtListener);
+    }
+
+    @Reference(
+            name = "identity.event.service",
+            service = IdentityEventService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIdentityEventService"
+    )
+    protected void setIdentityEventService(IdentityEventService identityEventService) {
+
+        OAuthComponentServiceHolder.getInstance().setIdentityEventService(identityEventService);
+        if (log.isDebugEnabled()) {
+            log.debug("Setting IdentityEventService.");
+        }
+    }
+
+    protected void unsetIdentityEventService(IdentityEventService identityEventService) {
+
+        OAuthComponentServiceHolder.getInstance().setIdentityEventService(null);
+        if (log.isDebugEnabled()) {
+            log.debug("Unsetting IdentityEventService.");
+        }
     }
 }
