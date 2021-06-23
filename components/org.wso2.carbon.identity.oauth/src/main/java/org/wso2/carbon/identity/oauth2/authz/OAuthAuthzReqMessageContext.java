@@ -47,8 +47,6 @@ public class OAuthAuthzReqMessageContext {
 
     private String[] authorizedInternalScopes;
 
-    private String oidcSessionId;
-
     private Properties properties = new Properties();
 
     public OAuthAuthzReqMessageContext(OAuth2AuthorizeReqDTO authorizationReqDTO) {
@@ -170,15 +168,5 @@ public class OAuthAuthzReqMessageContext {
 
     public void setAuthorizedInternalScopes(String[] authorizedInternalScopes) {
         this.authorizedInternalScopes = authorizedInternalScopes;
-    }
-
-    public String getOidcSessionId() {
-
-        return oidcSessionId;
-    }
-
-    public void setOidcSessionId(String oidcSessionId) {
-
-        this.oidcSessionId = oidcSessionId;
     }
 }
