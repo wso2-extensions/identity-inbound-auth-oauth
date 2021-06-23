@@ -24,7 +24,10 @@ import org.wso2.carbon.identity.application.authentication.framework.store.Sessi
 
 /**
  * This class is used to cache Authorization code  against session ID (sid) for OIDCBackChannel Logout.
+ *
+ * Deprecated to move Session ID (sid) for OIDCBackChannel Logout is added with AuthorizationGrantCache
  */
+@Deprecated
 public class OIDCBackChannelAuthCodeCache extends AuthenticationBaseCache<OIDCBackChannelAuthCodeCacheKey,
         OIDCBackChannelAuthCodeCacheEntry> {
 

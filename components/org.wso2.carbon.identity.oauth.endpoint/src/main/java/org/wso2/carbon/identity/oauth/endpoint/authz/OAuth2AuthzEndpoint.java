@@ -96,9 +96,6 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
-import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCache;
-import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCacheEntry;
-import org.wso2.carbon.identity.oidc.session.cache.OIDCBackChannelAuthCodeCacheKey;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
@@ -210,11 +207,10 @@ public class OAuth2AuthzEndpoint {
     private static final String COMMONAUTH_COOKIE = "commonAuthId";
     private static final String SET_COOKIE_HEADER = "Set-Cookie";
     private static final String REGEX_PATTERN = "regexp";
+    private static final String OIDC_SESSION_ID = "OIDC_SESSION_ID";
 
 
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
-
-    private String sessionId;
 
     private OpenIDConnectClaimFilterImpl openIDConnectClaimFilter;
     private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
@@ -343,6 +339,12 @@ public class OAuth2AuthzEndpoint {
             if (retainCache == null) {
                 clearCacheEntry(sessionDataKeyFromConsent);
             }
+        }
+
+        AuthorizationGrantCacheEntry entry = oAuthMessage.getAuthorizationGrantCacheEntry();
+        if (entry != null) {
+            AuthorizationGrantCache.getInstance().addToCacheByCode(
+                    new AuthorizationGrantCacheKey(entry.getAuthorizationCode()), entry);
         }
     }
 
@@ -646,7 +648,7 @@ public class OAuth2AuthzEndpoint {
         boolean isOIDCRequest = OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes());
         if (isOIDCRequest) {
             sessionState.setAddSessionState(true);
-            return manageOIDCSessionState(oAuthMessage.getRequest(), oAuthMessage.getResponse(), sessionState,
+            return manageOIDCSessionState(oAuthMessage, sessionState,
                     oauth2Params,
                     getLoggedInUser(oAuthMessage).getAuthenticatedSubjectIdentifier(), redirectURL,
                     oAuthMessage.getSessionDataCacheEntry());
@@ -664,7 +666,7 @@ public class OAuth2AuthzEndpoint {
         String sessionStateValue = null;
         if (isOIDCRequest) {
             sessionState.setAddSessionState(true);
-            sessionStateValue = manageOIDCSessionState(oAuthMessage.getRequest(), oAuthMessage.getResponse(),
+            sessionStateValue = manageOIDCSessionState(oAuthMessage,
                     sessionState, oauth2Params, getLoggedInUser(oAuthMessage).getAuthenticatedSubjectIdentifier(),
                     redirectURL, oAuthMessage.getSessionDataCacheEntry());
         }
@@ -782,7 +784,7 @@ public class OAuth2AuthzEndpoint {
         }
 
         if (isOIDCRequest) {
-            redirectURL = manageOIDCSessionState(oAuthMessage.getRequest(), oAuthMessage.getResponse(),
+            redirectURL = manageOIDCSessionState(oAuthMessage,
                     sessionState, oauth2Params, authenticatedUser.getAuthenticatedSubjectIdentifier(),
                     redirectURL, oAuthMessage.getSessionDataCacheEntry());
         }
@@ -839,7 +841,7 @@ public class OAuth2AuthzEndpoint {
         String sessionStateValue = null;
         if (isOIDCRequest) {
             sessionState.setAddSessionState(true);
-            sessionStateValue = manageOIDCSessionState(oAuthMessage.getRequest(), oAuthMessage.getResponse(),
+            sessionStateValue = manageOIDCSessionState(oAuthMessage,
                     sessionState,
                     oauth2Params,
                     getLoggedInUser(oAuthMessage).getAuthenticatedSubjectIdentifier(),
@@ -1166,6 +1168,7 @@ public class OAuth2AuthzEndpoint {
         if (isIdTokenExists(authzRespDTO)) {
             diagnosticLog.info("Response type contains 'id_token'. Setting id_token to the response.");
             setIdToken(authzRespDTO, builder);
+            oAuthMessage.setProperty(OIDC_SESSION_ID, authzRespDTO.getOidcSessionId());
         }
         if (StringUtils.isNotBlank(oauth2Params.getState())) {
             builder.setParam(OAuth.OAUTH_STATE, oauth2Params.getState());
@@ -1251,8 +1254,8 @@ public class OAuth2AuthzEndpoint {
                                       String tokenBindingValue) {
 
         builder.setCode(authzRespDTO.getAuthorizationCode());
-        addUserAttributesToCache(oAuthMessage.getSessionDataCacheEntry(), authzRespDTO.getAuthorizationCode(),
-                authzRespDTO.getCodeId(), tokenBindingValue);
+        addUserAttributesToOAuthMessage(oAuthMessage, authzRespDTO.getAuthorizationCode(), authzRespDTO.getCodeId(),
+                tokenBindingValue);
     }
 
     private void setAccessToken(OAuth2AuthorizeRespDTO authzRespDTO,
@@ -1263,10 +1266,10 @@ public class OAuth2AuthzEndpoint {
         builder.setParam(OAuth.OAUTH_TOKEN_TYPE, BEARER);
     }
 
-    private void addUserAttributesToCache(SessionDataCacheEntry sessionDataCacheEntry, String code, String codeId,
-                                          String tokenBindingValue) {
+    private void addUserAttributesToOAuthMessage(OAuthMessage oAuthMessage, String code, String codeId,
+                                                 String tokenBindingValue) {
 
-        AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(code);
+        SessionDataCacheEntry sessionDataCacheEntry = oAuthMessage.getSessionDataCacheEntry();
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry = new AuthorizationGrantCacheEntry(
                 sessionDataCacheEntry.getLoggedInUser().getUserAttributes());
 
@@ -1326,8 +1329,8 @@ public class OAuth2AuthzEndpoint {
                 authorizationGrantCacheEntry.addAmr(amrEntry);
             }
         }
-        AuthorizationGrantCache.getInstance().addToCacheByCode(
-                authorizationGrantCacheKey, authorizationGrantCacheEntry);
+        authorizationGrantCacheEntry.setAuthorizationCode(code);
+        oAuthMessage.setAuthorizationGrantCacheEntry(authorizationGrantCacheEntry);
     }
 
     /**
@@ -2636,11 +2639,13 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private String manageOIDCSessionState(HttpServletRequest request, HttpServletResponse response,
+    private String manageOIDCSessionState(OAuthMessage oAuthMessage,
                                           OIDCSessionState sessionStateObj, OAuth2Parameters oAuth2Parameters,
                                           String authenticatedUser, String redirectURL, SessionDataCacheEntry
                                                   sessionDataCacheEntry)  {
 
+        HttpServletRequest request = oAuthMessage.getRequest();
+        HttpServletResponse response = oAuthMessage.getResponse();
         Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
         if (sessionStateObj.isAuthenticated()) { // successful user authentication
             if (opBrowserStateCookie == null) { // new browser session
@@ -2649,7 +2654,7 @@ public class OAuth2AuthzEndpoint {
                 }
                 opBrowserStateCookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
                 // Adding sid claim in the IDtoken to OIDCSessionState class.
-                storeSidClaim(redirectURL, sessionStateObj, oAuth2Parameters);
+                storeSidClaim(oAuthMessage, sessionStateObj, redirectURL);
                 storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
                 sessionStateObj.setAuthenticatedUser(authenticatedUser);
                 sessionStateObj.addSessionParticipant(oAuth2Parameters.getClientId());
@@ -2672,8 +2677,9 @@ public class OAuth2AuthzEndpoint {
                         storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
                         OIDCSessionManagementUtil.getSessionManager().restoreOIDCSessionState
                                 (oldOPBrowserStateCookieId, newOPBrowserStateCookieId, previousSessionState);
-                        storeSidClaim(redirectURL, previousSessionState, oAuth2Parameters);
                     }
+                    // Storing the oidc session id.
+                    storeSidClaim(oAuthMessage, previousSessionState, redirectURL);
                 } else {
                     log.warn("No session state found for the received Session ID : " + opBrowserStateCookie.getValue());
                     if (log.isDebugEnabled()) {
@@ -2683,7 +2689,7 @@ public class OAuth2AuthzEndpoint {
                     sessionStateObj.setAuthenticatedUser(authenticatedUser);
                     sessionStateObj.addSessionParticipant(oAuth2Parameters.getClientId());
                     storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
-                    storeSidClaim(redirectURL, sessionStateObj, oAuth2Parameters);
+                    storeSidClaim(oAuthMessage, sessionStateObj, redirectURL);
                     OIDCSessionManagementUtil.getSessionManager()
                             .storeOIDCSessionState(opBrowserStateCookie.getValue(), sessionStateObj);
                 }
@@ -2878,50 +2884,18 @@ public class OAuth2AuthzEndpoint {
 
     /**
      * Store sessionID using the redirect URl.
-     *
-     * @param redirectURL
+     * @param oAuthMessage
      * @param sessionState
+     * @param redirectURL
      */
-    private void storeSidClaim(String redirectURL, OIDCSessionState sessionState, OAuth2Parameters oAuth2Parameters) {
+    private void storeSidClaim(OAuthMessage oAuthMessage, OIDCSessionState sessionState, String redirectURL) {
 
-        String idToken;
-        String code;
         if (redirectURL.contains(ID_TOKEN)) {
-
-            try {
-                if (isFormPostResponseMode(oAuth2Parameters, redirectURL)) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("form_post response mode is enabled and redirectURL is in valid JSON format for " +
-                                "clientID : " + oAuth2Parameters.getClientId());
-                    }
-                    JSONObject jsonData = new JSONObject(redirectURL);
-                    idToken = (String) jsonData.get(ID_TOKEN);
-                } else {
-                    idToken = getIdTokenFromRedirectURL(redirectURL);
-                }
-                if (!idToken.isEmpty()) {
-                    addSidToSessionStateFromIdToken(idToken, sessionState);
-                }
-            } catch (URISyntaxException e) {
-                log.error("Error while getting ID token from redirectURL ", e);
-            }
+            String oidcSessionState = (String) oAuthMessage.getProperty(OIDC_SESSION_ID);
+            sessionState.setSidClaim(oidcSessionState);
         } else if (redirectURL.contains(ACCESS_CODE)) {
-            try {
-                setSidToSessionState(sessionState);
-                if (isFormPostResponseMode(oAuth2Parameters, redirectURL)) {
-                    JSONObject jsonData = new JSONObject(redirectURL);
-                    code = (String) jsonData.get(ACCESS_CODE);
-                } else {
-                    code = getAuthCodeFromRedirectURL(redirectURL);
-                }
-                if (StringUtils.isNotEmpty(code)) {
-                    addToBCLogoutSessionCache(code);
-                } else {
-                    log.debug("Authorization code is not found in the redirect URL");
-                }
-            } catch (URISyntaxException e) {
-                log.error("Error while getting authorization code from redirectURL ", e);
-            }
+            setSidToSessionState(sessionState);
+            addToBCLogoutSessionToOAuthMessage(oAuthMessage, sessionState.getSidClaim());
         }
     }
 
@@ -2932,38 +2906,11 @@ public class OAuth2AuthzEndpoint {
      */
     private void setSidToSessionState(OIDCSessionState sessionState) {
 
-        sessionId = sessionState.getSidClaim();
+        String sessionId = sessionState.getSidClaim();
         if (sessionId == null) {
             // Generating sid claim for authorization code flow.
             sessionId = UUID.randomUUID().toString();
-            setSidClaimToSessionState(sessionState);
-        }
-    }
-
-    /**
-     * Store sessionID from ID Token when ID Token comes as URL Fragment in redirectURL.
-     *
-     * @param idToken
-     * @param sessionState
-     */
-    private void addSidToSessionStateFromIdToken(String idToken, OIDCSessionState sessionState) {
-
-        try {
-            if (isIDTokenEncrypted(idToken)) {
-                // ID token is encrypted.
-                OIDCBackChannelAuthCodeCacheKey authCacheKey =
-                        new OIDCBackChannelAuthCodeCacheKey(OAuthConstants.OIDCClaims.SESSION_ID_CLAIM);
-                OIDCBackChannelAuthCodeCacheEntry sidEntry =
-                        OIDCBackChannelAuthCodeCache.getInstance().getValueFromCache(authCacheKey);
-                sessionId = sidEntry.getSessionId();
-            } else {
-                sessionId = (String) SignedJWT.parse(idToken).getJWTClaimsSet().getClaim(
-                        OAuthConstants.OIDCClaims.SESSION_ID_CLAIM);
-            }
-
-            setSidClaimToSessionState(sessionState);
-        } catch (ParseException e) {
-            log.error("Error while decoding the ID Token ", e);
+            sessionState.setSidClaim(sessionId);
         }
     }
 
@@ -2976,16 +2923,6 @@ public class OAuth2AuthzEndpoint {
     private boolean isIDTokenEncrypted(String idToken) {
         // Encrypted ID token contains 5 base64 encoded components separated by periods.
         return StringUtils.countMatches(idToken, ".") == 4;
-    }
-
-    /**
-     * Set sid claim to session state.
-     *
-     * @param sessionState
-     */
-    private void setSidClaimToSessionState(OIDCSessionState sessionState) {
-
-        sessionState.setSidClaim(sessionId);
     }
 
     /**
@@ -3033,14 +2970,17 @@ public class OAuth2AuthzEndpoint {
     /**
      * Store Authorization Code and SessionID for back-channel logout in the cache.
      *
-     * @param authorizationCode
+     * @param oAuthMessage
+     * @param sessionId
      */
-    private void addToBCLogoutSessionCache(String authorizationCode) {
+    private void addToBCLogoutSessionToOAuthMessage(OAuthMessage oAuthMessage, String sessionId) {
 
-        OIDCBackChannelAuthCodeCacheKey authCacheKey = new OIDCBackChannelAuthCodeCacheKey(authorizationCode);
-        OIDCBackChannelAuthCodeCacheEntry sidCacheEntry = new OIDCBackChannelAuthCodeCacheEntry();
-        sidCacheEntry.setSessionId(sessionId);
-        OIDCBackChannelAuthCodeCache.getInstance().addToCache(authCacheKey, sidCacheEntry);
+        AuthorizationGrantCacheEntry entry = oAuthMessage.getAuthorizationGrantCacheEntry();
+        if (entry == null) {
+            log.debug("Authorization code is not found in the redirect URL");
+            return;
+        }
+        entry.setOidcSessionId(sessionId);
     }
 
     private void setSPAttributeToRequest(HttpServletRequest req, String spName, String tenantDomain) {

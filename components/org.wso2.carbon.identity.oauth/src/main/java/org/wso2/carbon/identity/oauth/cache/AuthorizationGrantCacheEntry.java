@@ -36,6 +36,8 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     private String codeId;
 
+    private String authorizationCode;
+
     private String tokenId;
 
     private Map<ClaimMapping, String> userAttributes;
@@ -71,6 +73,8 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     private String tokenBindingValue;
 
     private String sessionContextIdentifier;
+
+    private String oidcSessionId;
 
     public String getSubjectClaim() {
         return subjectClaim;
@@ -257,5 +261,35 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     public void setSessionContextIdentifier(String sessionContextIdentifier) {
 
         this.sessionContextIdentifier = sessionContextIdentifier;
+    }
+
+    /**
+     * Set OIDC session Id value. This can be used to add sid claim into the id_token for the back channel logout.
+     *
+     * @param oidcSessionId OIDC session Id value.
+     */
+    public void setOidcSessionId(String oidcSessionId) {
+
+        this.oidcSessionId = oidcSessionId;
+    }
+
+    /**
+     *  Get OIDC session Id value.
+     *
+     * @return  OIDC session Id value.
+     */
+    public String getOidcSessionId() {
+
+        return oidcSessionId;
+    }
+
+    public void setAuthorizationCode(String code) {
+
+        this.authorizationCode = code;
+    }
+
+    public String getAuthorizationCode() {
+
+        return authorizationCode;
     }
 }
