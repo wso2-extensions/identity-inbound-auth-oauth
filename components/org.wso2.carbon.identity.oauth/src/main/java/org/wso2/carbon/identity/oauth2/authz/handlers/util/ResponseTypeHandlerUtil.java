@@ -332,6 +332,7 @@ public class ResponseTypeHandlerUtil {
             newRespDTO.setAuthorizationCode(respDTO.getAuthorizationCode());
             buildIdToken(oauthAuthzMsgCtx, newRespDTO);
             respDTO.setIdToken(newRespDTO.getIdToken());
+            respDTO.setOidcSessionId(newRespDTO.getOidcSessionId());
         }
         return  respDTO;
     }

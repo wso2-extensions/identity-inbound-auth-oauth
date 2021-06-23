@@ -24,10 +24,12 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWEEncrypter;
 import com.nimbusds.jose.JWEHeader;
+import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
@@ -308,6 +310,7 @@ public class OAuth2Util {
     private static final String DISPLAY_NAME = "displayName";
     private static final String DESCRIPTION = "description";
     private static final String PERMISSION = "Permission";
+    public static final String JWT = "JWT";
     private static long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
     private static ThreadLocal<Integer> clientTenantId = new ThreadLocal<>();
     private static ThreadLocal<OAuthTokenReqMessageContext> tokenRequestContext = new ThreadLocal<>();
@@ -2319,13 +2322,47 @@ public class OAuth2Util {
      * @param clientId            ID of the client
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
+     * @deprecated replaced by
+     * {@link #encryptJWT(JWTClaimsSet, JWSAlgorithm, String, JWEAlgorithm, EncryptionMethod, String, String)}
      */
+    @Deprecated
     public static JWT encryptJWT(JWTClaimsSet jwtClaimsSet, JWEAlgorithm encryptionAlgorithm,
                                  EncryptionMethod encryptionMethod, String spTenantDomain, String clientId)
             throws IdentityOAuth2Exception {
 
         if (isRSAAlgorithm(encryptionAlgorithm)) {
             return encryptWithRSA(jwtClaimsSet, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId);
+        } else {
+            throw new RuntimeException("Provided encryption algorithm: " + encryptionAlgorithm +
+                    " is not supported");
+        }
+    }
+
+    /**
+     * This is the generic Encryption function which calls algorithm specific encryption function
+     * depending on the algorithm name.
+     *
+     * @param jwtClaimsSet        JwtClaimsSet to encrypt
+     * @param signatureAlgorithm  Signature algorithm
+     * @param signingTenantDomain Tenant Domain for signing
+     * @param encryptionAlgorithm JWT encryption algorithm
+     * @param spTenantDomain      Service provider tenant domain
+     * @param clientId            ID of the client
+     * @return encrypted JWT token
+     * @throws IdentityOAuth2Exception
+     */
+    public static JWT encryptJWT(JWTClaimsSet jwtClaimsSet, JWSAlgorithm signatureAlgorithm, String signingTenantDomain,
+                                 JWEAlgorithm encryptionAlgorithm, EncryptionMethod encryptionMethod,
+                                 String spTenantDomain, String clientId)
+            throws IdentityOAuth2Exception {
+
+        if (isRSAAlgorithm(encryptionAlgorithm)) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Signing JWT before encryption using the algorithm: %s ."
+                        , signatureAlgorithm));
+            }
+            SignedJWT signedJwt = (SignedJWT) OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain);
+            return encryptWithRSA(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId);
         } else {
             throw new RuntimeException("Provided encryption algorithm: " + encryptionAlgorithm +
                     " is not supported");
@@ -2341,7 +2378,9 @@ public class OAuth2Util {
      * @param clientId            ID of the client
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
+     * @deprecated replaced by {@link #encryptWithRSA(SignedJWT, JWEAlgorithm, EncryptionMethod, String, String)}
      */
+    @Deprecated
     private static JWT encryptWithRSA(JWTClaimsSet jwtClaimsSet, JWEAlgorithm encryptionAlgorithm,
                                       EncryptionMethod encryptionMethod, String spTenantDomain, String clientId)
             throws IdentityOAuth2Exception {
@@ -2378,6 +2417,207 @@ public class OAuth2Util {
     }
 
     /**
+     * Encrypt JWT id token using RSA algorithm.
+     *
+     * @param signedJwt           contains signed JWT body
+     * @param encryptionAlgorithm JWT signing algorithm
+     * @param spTenantDomain      Service provider tenant domain
+     * @param clientId            ID of the client
+     * @return encrypted JWT token
+     * @throws IdentityOAuth2Exception
+     */
+    private static JWT encryptWithRSA(SignedJWT signedJwt, JWEAlgorithm encryptionAlgorithm,
+                                      EncryptionMethod encryptionMethod, String spTenantDomain, String clientId)
+            throws IdentityOAuth2Exception {
+
+        try {
+            if (StringUtils.isBlank(spTenantDomain)) {
+                spTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Assigned super tenant domain as signing domain when encrypting id token " +
+                            "for client_id: %s .", clientId));
+                }
+            }
+            String jwksUri = getSPJwksUrl(clientId, spTenantDomain);
+
+            if (StringUtils.isBlank(jwksUri)) {
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Jwks uri is not configured for the service provider associated with " +
+                            "client_id: %s , Checking for x509 certificate.", clientId));
+                }
+                return encryptUsingSPX509Certificate(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain,
+                        clientId);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Jwks uri is configured for the service provider associated with" +
+                            " client %s from jwks uri %s .", clientId, jwksUri));
+                }
+                return encryptUsingJwksPublicKey(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain,
+                        clientId, jwksUri);
+            }
+
+        } catch (JOSEException | ParseException e) {
+            throw new IdentityOAuth2Exception("Error occurred while encrypting JWT for the client_id: " + clientId
+                    + " with the tenant domain: " + spTenantDomain, e);
+        }
+    }
+
+    /**
+     * Encrypt jwt using service provider's configured X509 certificate
+     *
+     * @param signedJwt           contains signed JWT body
+     * @param encryptionAlgorithm JWT signing algorithm
+     * @param encryptionMethod    Encryption method
+     * @param spTenantDomain      Service provider tenant domain
+     * @param clientId            ID of the client
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    private static JWT encryptUsingSPX509Certificate(SignedJWT signedJwt, JWEAlgorithm encryptionAlgorithm,
+                                                     EncryptionMethod encryptionMethod, String spTenantDomain,
+                                                     String clientId) throws IdentityOAuth2Exception {
+
+        Certificate publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
+        if (publicCert == null) {
+            throw new IdentityOAuth2Exception("Error while retrieving X509 cert from oauth app with "
+                    + "client_id: " + clientId + " of tenantDomain: " + spTenantDomain);
+        }
+        Key publicKey = publicCert.getPublicKey();
+        if (publicKey == null) {
+            throw new IdentityOAuth2Exception("Error while retrieving public key from X509 cert of oauth app with "
+                   + "client_id: " + clientId + " of tenantDomain: " + spTenantDomain);
+        }
+        String kid = getThumbPrint(publicCert);
+        return encryptWithPublicKey(publicKey, signedJwt, encryptionAlgorithm, encryptionMethod,
+                spTenantDomain, clientId, kid);
+    }
+
+    /**
+     * Encrypt jwt using publickey fetched from jwks
+     *
+     * @param signedJwt           contains signed JWT body
+     * @param encryptionAlgorithm JWT signing algorithm
+     * @param encryptionMethod    Encryption method
+     * @param spTenantDomain      Service provider tenant domain
+     * @param clientId            ID of the client
+     * @param jwksUri             jwks url
+     * @return
+     * @throws IdentityOAuth2Exception
+     * @throws JOSEException
+     * @throws ParseException
+     */
+    private static JWT encryptUsingJwksPublicKey(SignedJWT signedJwt, JWEAlgorithm encryptionAlgorithm,
+                                                 EncryptionMethod encryptionMethod, String spTenantDomain,
+                                                 String clientId, String jwksUri)
+            throws IdentityOAuth2Exception, JOSEException, ParseException {
+
+        JWK encryptionJwk = getEncryptionJWKFromJWKS(jwksUri);
+        Key publicKey = RSAKey.parse(encryptionJwk.toJSONString()).toRSAPublicKey();
+        String kid = getKidValueFromJwk(encryptionJwk);
+        return encryptWithPublicKey(publicKey, signedJwt, encryptionAlgorithm, encryptionMethod,
+                spTenantDomain, clientId, kid);
+    }
+
+    /**
+     * Get kid value from the jwk
+     *
+     * @param encryptionJwk Encryption jwk
+     * @return
+     */
+    private static String getKidValueFromJwk(JWK encryptionJwk) {
+
+        String kid;
+        Certificate publicCert;
+        if (encryptionJwk.getKeyID() != null) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Kid value is available in jwk %s .", encryptionJwk.getKeyID()));
+            }
+            kid = encryptionJwk.getKeyID();
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Kid value is not available in jwk, attempting to set x5c thumbprint as kid.");
+            }
+            try {
+                publicCert = getPublicCertFromJWK(encryptionJwk);
+                kid = getJwkThumbPrint(publicCert);
+            } catch (IdentityOAuth2Exception e) {
+                log.error("Failed to set x5c thumbprint as kid value.", e);
+                kid = null;
+            }
+        }
+        return kid;
+    }
+
+    /**
+     * Get encryption jwk from JWKS list when JWKS Uri is given.
+     *
+     * @param jwksUri - JWKS Uri
+     * @return - encryption JWK from the jwks url
+     * @throws IdentityOAuth2Exception - IdentityOAuth2Exception
+     */
+    private static JWK getEncryptionJWKFromJWKS(String jwksUri) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Attempting to retrieve encryption jwk from the Jwks uri: %s .", jwksUri));
+        }
+        try {
+            JWKSet publicKeys = JWKSet.load(new URL(jwksUri));
+            JWK jwk = null;
+            //Get the first encryption JWK from the list
+            List<JWK> jwkList = publicKeys.getKeys();
+
+            for (JWK currentJwk : jwkList) {
+                if (KeyUse.ENCRYPTION == currentJwk.getKeyUse()) {
+                    jwk = currentJwk;
+                    break;
+                }
+            }
+            // if no jwk found for encryption, check for jwk with sig
+            if (jwk == null) {
+                for (JWK currentJwk : jwkList) {
+                    if (KeyUse.SIGNATURE == currentJwk.getKeyUse()) {
+                        jwk = currentJwk;
+                        break;
+                    }
+                }
+            }
+            if (jwk == null) {
+                throw new IdentityOAuth2Exception(String.format("Failed to retrieve valid jwk from " +
+                        "jwks uri: %s", jwksUri));
+            }
+            return jwk;
+        } catch (ParseException | IOException e) {
+            throw new IdentityOAuth2Exception(String.format("Failed to retrieve jwk from " +
+                    "jwks uri: %s", jwksUri), e);
+        }
+    }
+
+    /**
+     * Get public certificate from JWK
+     *
+     * @param jwk
+     * @return
+     * @throws IdentityOAuth2Exception
+     */
+    private static X509Certificate getPublicCertFromJWK(JWK jwk) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Attempting to retrieve public certificate from the Jwk kid: %s ."
+                    , jwk.getKeyID()));
+        }
+        X509Certificate certificate;
+        if (jwk != null && jwk.getParsedX509CertChain() != null) {
+            certificate = jwk.getParsedX509CertChain().get(0);
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Retrieved the public signing certificate successfully from the " +
+                        "jwk : %s .", jwk));
+            }
+            return certificate;
+        }
+        throw new IdentityOAuth2Exception("Failed to retrieve public certificate from jwk due to null.");
+    }
+
+    /**
      * Encrypt the JWT token with with given public key.
      *
      * @param publicKey           public key used to encrypt
@@ -2388,7 +2628,10 @@ public class OAuth2Util {
      * @param thumbPrint          value used as 'kid'
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
+     * @deprecated replaced by
+     * {@link #encryptWithPublicKey(Key, SignedJWT, JWEAlgorithm, EncryptionMethod, String, String, String)}
      */
+    @Deprecated
     private static JWT encryptWithPublicKey(Key publicKey, JWTClaimsSet jwtClaimsSet,
                                             JWEAlgorithm encryptionAlgorithm, EncryptionMethod encryptionMethod,
                                             String spTenantDomain, String clientId,
@@ -2410,6 +2653,50 @@ public class OAuth2Util {
             encryptedJWT.encrypt(encrypter);
             return encryptedJWT;
         } catch (JOSEException e) {
+            throw new IdentityOAuth2Exception("Error occurred while encrypting JWT for the client_id: " + clientId
+                    + " with the tenant domain: " + spTenantDomain, e);
+        }
+    }
+
+    /**
+     * Encrypt the JWT token with with given public key.
+     *
+     * @param publicKey           public key used to encrypt
+     * @param signedJwt           contains signed JWT body
+     * @param encryptionAlgorithm JWT signing algorithm
+     * @param spTenantDomain      Service provider tenant domain
+     * @param clientId            ID of the client
+     * @param kid                 value used as 'kid'
+     * @return encrypted JWT token
+     * @throws IdentityOAuth2Exception
+     */
+    private static JWT encryptWithPublicKey(Key publicKey, SignedJWT signedJwt,
+                                            JWEAlgorithm encryptionAlgorithm, EncryptionMethod encryptionMethod,
+                                            String spTenantDomain, String clientId,
+                                            String kid) throws IdentityOAuth2Exception {
+
+        JWEHeader.Builder headerBuilder = new JWEHeader.Builder(encryptionAlgorithm, encryptionMethod);
+
+        try {
+            if (StringUtils.isNotBlank(kid)) {
+                headerBuilder.keyID(kid);
+            }
+            headerBuilder.contentType(JWT); // Required to indicate nested JWT.
+            JWEHeader header = headerBuilder.build();
+
+            JWEObject jweObject = new JWEObject(header, new Payload(signedJwt));
+            // Encrypt with the recipient's public key.
+            jweObject.encrypt(new RSAEncrypter((RSAPublicKey) publicKey));
+
+            EncryptedJWT encryptedJWT = EncryptedJWT.parse(jweObject.serialize());
+
+            if (log.isDebugEnabled()) {
+                log.debug("Encrypting JWT using the algorithm: " + encryptionAlgorithm + ", method: " +
+                        encryptionMethod + ", tenant: " + spTenantDomain + " & header: " + header.toString());
+            }
+
+            return encryptedJWT;
+        } catch (JOSEException | ParseException e) {
             throw new IdentityOAuth2Exception("Error occurred while encrypting JWT for the client_id: " + clientId
                     + " with the tenant domain: " + spTenantDomain, e);
         }
@@ -3830,7 +4117,9 @@ public class OAuth2Util {
      * @param jwksUri - JWKS Uri
      * @return - X509Certificate
      * @throws IdentityOAuth2Exception - IdentityOAuth2Exception
+     * @deprecated replaced with {@link #getEncryptionJWKFromJWKS(String)}
      */
+    @Deprecated
     private static X509Certificate getPublicCertFromJWKS(String jwksUri) throws IdentityOAuth2Exception {
         if (log.isDebugEnabled()) {
             log.debug(String.format("Attempting to retrieve public certificate from the Jwks uri: %s.", jwksUri));

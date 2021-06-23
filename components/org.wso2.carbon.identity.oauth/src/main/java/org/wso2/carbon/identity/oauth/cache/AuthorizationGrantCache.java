@@ -188,8 +188,16 @@ public class AuthorizationGrantCache extends
      * @param key Key to clear cache.
      */
     public void clearCacheEntryByCode(AuthorizationGrantCacheKey key) {
-        super.clearCacheEntry(key);
-        clearFromSessionStore(replaceFromCodeId(key.getUserAttributesId()));
+
+        AuthorizationGrantCacheEntry valueFromCacheByCode = super.getValueFromCache(key);
+        String codeId;
+        if (valueFromCacheByCode != null) {
+            codeId = valueFromCacheByCode.getCodeId();
+            super.clearCacheEntry(key);
+        } else {
+            codeId = replaceFromCodeId(key.getUserAttributesId());
+        }
+        clearFromSessionStore(codeId);
     }
 
     /**

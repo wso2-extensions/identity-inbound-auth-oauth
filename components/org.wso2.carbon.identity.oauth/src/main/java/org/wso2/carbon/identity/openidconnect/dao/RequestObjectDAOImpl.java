@@ -343,11 +343,11 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
         List<RequestedClaim> essentialClaims = new ArrayList<>();
+        String tokenId = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().
+                getTokenIdByAccessToken(token);
         try {
             connection = IdentityDatabaseUtil.getDBConnection(false);
             String sql = SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_TOKEN;
-            String tokenId = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().
-                    getTokenIdByAccessToken(token);
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, tokenId);
@@ -402,7 +402,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         PreparedStatement ps = null;
         try {
             connection = IdentityDatabaseUtil.getDBConnection();
-            deleteRequestObjectReferenceforCode(tokenId);
+            deleteRequestObjectReferenceforCode(connection, tokenId);
             String sql = SQLQueries.UPDATE_REQUEST_OBJECT_TOKEN_FOR_CODE;
             ps = connection.prepareStatement(sql);
             ps.setString(1, tokenId);
@@ -422,20 +422,17 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         }
     }
 
-    private void deleteRequestObjectReferenceforCode(String tokenId) throws IdentityOAuthAdminException {
+    private void deleteRequestObjectReferenceforCode(Connection connection, String tokenId)
+            throws IdentityOAuthAdminException {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
-            try (PreparedStatement prepStmt = connection
-                    .prepareStatement(SQLQueries.DELETE_REQ_OBJECT_TOKEN_FOR_CODE)) {
-                prepStmt.setString(1, tokenId);
-                prepStmt.execute();
-                IdentityDatabaseUtil.commitTransaction(connection);
-            } catch (SQLException e1) {
-                IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw handleError("Can not delete existing entry for the same token id" + tokenId, e1);
-            }
-        } catch (SQLException e) {
-            throw handleError("Can not delete existing entry for the same token id" + tokenId, e);
+        try (PreparedStatement prepStmt = connection
+                .prepareStatement(SQLQueries.DELETE_REQ_OBJECT_TOKEN_FOR_CODE)) {
+            prepStmt.setString(1, tokenId);
+            prepStmt.execute();
+            IdentityDatabaseUtil.commitTransaction(connection);
+        } catch (SQLException e1) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
+            throw handleError("Can not delete existing entry for the same token id" + tokenId, e1);
         }
     }
 

@@ -10,7 +10,7 @@
             }
 
             var stat = '';
-            if (e.data === null || e.data == 'null' || e.data.length == 0) {
+            if (e.data === null || e.data == 'null' || !e.data.length) {
                 stat = 'error';
             } else {
                 var client_id = e.data.split(' ')[0];

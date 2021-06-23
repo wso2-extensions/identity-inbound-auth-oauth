@@ -399,6 +399,11 @@ public class OIDCSessionManagementUtil {
      */
     public static String extractClientIDFromDecryptedIDToken(JWT decryptedIDToken) throws ParseException {
 
+        /*
+        Based in the OpenId spec, decryptedIDToken is suppose to be a signedJWT.
+        However here for the sake of backward compatibility we are ignoring this,
+        as there are clients who send encrypted claimSet.
+        */
         String clientId = (String) decryptedIDToken.getJWTClaimsSet().getClaims()
                 .get(OIDCSessionConstants.OIDC_ID_TOKEN_AZP_CLAIM);
         if (StringUtils.isBlank(clientId)) {

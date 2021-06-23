@@ -302,7 +302,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
 
         String idToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
         EncryptedJWT encryptedJWT = decryptToken(idToken);
-        JWTClaimsSet claims = encryptedJWT.getJWTClaimsSet();
+        JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
         Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
         Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
         Assert.assertEquals(claims.getSubject(), "user1@carbon.super");
@@ -330,7 +330,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         mockRealmService();
         String idToken = defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
         EncryptedJWT encryptedJWT = decryptToken(idToken);
-        JWTClaimsSet claims = encryptedJWT.getJWTClaimsSet();
+        JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
         Assert.assertEquals(claims.getAudience().get(0),
                 CLIENT_ID);
         Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
@@ -360,7 +360,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         try {
             String idToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
             EncryptedJWT encryptedJWT = decryptToken(idToken);
-            JWTClaimsSet claims = encryptedJWT.getJWTClaimsSet();
+            JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
             Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
             Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
             Assert.assertEquals(claims.getSubject(),  "user1@carbon.super");
