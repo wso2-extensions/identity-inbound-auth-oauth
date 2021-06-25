@@ -17,9 +17,7 @@
 -->
 <Scopes>
     <Scope id="openid" displayName="Open ID" description="Indicate the use of OpenID Connect protocol.">
-        <Claim>
-            sub,email,email_verified,name,family_name,given_name,middle_name,nickname,preferred_username,upn,groups,profile,picture,website,gender,birthdate,zoneinfo,locale,updated_at,phone_number,phone_number_verified,address,street_address,country,formatted,postal_code,locality,region,roles
-        </Claim>
+        <Claim></Claim>
     </Scope>
     <Scope id="email" displayName="Email" description="View information related to email address of the user.">
         <Claim>email,email_verified</Claim>
