@@ -2023,7 +2023,7 @@ public class OAuth2Util {
         } else {
             claim = new String[0];
         }
-        return (claim);
+        return claim;
     }
 
     /**
