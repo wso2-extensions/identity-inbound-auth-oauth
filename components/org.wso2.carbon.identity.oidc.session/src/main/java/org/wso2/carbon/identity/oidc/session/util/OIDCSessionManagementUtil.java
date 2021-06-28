@@ -180,12 +180,14 @@ public class OIDCSessionManagementUtil {
      * Adds the browser state cookie with tenant qualified path to the response.
      *
      * @param response
+     * @param request
      * @param tenantDomain
      * @return Cookie
      */
-    public static Cookie addOPBrowserStateCookie(HttpServletResponse response, String tenantDomain) {
+    public static Cookie addOPBrowserStateCookie(HttpServletResponse response, HttpServletRequest request,
+                                                 String tenantDomain) {
 
-        return getOIDCessionStateManager().addOPBrowserStateCookie(response, tenantDomain);
+        return getOIDCessionStateManager().addOPBrowserStateCookie(response, request, tenantDomain);
     }
 
     /**
@@ -206,8 +208,13 @@ public class OIDCSessionManagementUtil {
                     servletCookie.setSecure(true);
 
                     if (IdentityTenantUtil.isTenantedSessionsEnabled()) {
-                        String tenantDomain = resolveTenantDomain(request);
-                        servletCookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
+                        // check weather the opbs cookie has a tenanted path.
+                        if (cookie.getValue().endsWith(OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX)) {
+                            String tenantDomain = resolveTenantDomain(request);
+                            servletCookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
+                        } else {
+                            servletCookie.setPath("/");
+                        }
                     } else {
                         servletCookie.setPath("/");
                     }

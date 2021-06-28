@@ -2672,7 +2672,7 @@ public class OAuth2AuthzEndpoint {
                     log.debug("User authenticated. Initiate OIDC browser session.");
                 }
                 opBrowserStateCookie = OIDCSessionManagementUtil.
-                        addOPBrowserStateCookie(response, oAuth2Parameters.getLoginTenantDomain());
+                        addOPBrowserStateCookie(response, request, oAuth2Parameters.getLoginTenantDomain());
                 // Adding sid claim in the IDtoken to OIDCSessionState class.
                 storeSidClaim(oAuthMessage, sessionStateObj, redirectURL);
                 storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
@@ -2692,7 +2692,7 @@ public class OAuth2AuthzEndpoint {
                         }
                         String oldOPBrowserStateCookieId = opBrowserStateCookie.getValue();
                         opBrowserStateCookie = OIDCSessionManagementUtil
-                                .addOPBrowserStateCookie(response, oAuth2Parameters.getLoginTenantDomain());
+                                .addOPBrowserStateCookie(response, request, oAuth2Parameters.getLoginTenantDomain());
                         String newOPBrowserStateCookieId = opBrowserStateCookie.getValue();
                         previousSessionState.addSessionParticipant(oAuth2Parameters.getClientId());
                         storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
@@ -2707,7 +2707,7 @@ public class OAuth2AuthzEndpoint {
                         log.debug("Restore browser session state.");
                     }
                     opBrowserStateCookie = OIDCSessionManagementUtil
-                            .addOPBrowserStateCookie(response, oAuth2Parameters.getLoginTenantDomain());
+                            .addOPBrowserStateCookie(response, request, oAuth2Parameters.getLoginTenantDomain());
                     sessionStateObj.setAuthenticatedUser(authenticatedUser);
                     sessionStateObj.addSessionParticipant(oAuth2Parameters.getClientId());
                     storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());

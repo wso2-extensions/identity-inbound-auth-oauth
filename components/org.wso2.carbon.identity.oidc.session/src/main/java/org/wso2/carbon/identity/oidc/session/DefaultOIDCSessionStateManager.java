@@ -31,6 +31,7 @@ import java.security.SecureRandom;
 import java.util.UUID;
 
 import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import static org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil.getOrigin;
@@ -87,22 +88,58 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
      * Adds the browser state cookie with tenant qualified path to the response.
      *
      * @param response
+     * @param request
      * @param tenantDomain
      * @return Cookie
      */
     @Override
-    public Cookie addOPBrowserStateCookie(HttpServletResponse response, String tenantDomain) {
+    public Cookie addOPBrowserStateCookie(HttpServletResponse response, HttpServletRequest request,
+                                          String tenantDomain) {
 
-        ServletCookie cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, UUID.randomUUID().toString());
-        cookie.setSecure(true);
+        ServletCookie cookie;
         if (IdentityTenantUtil.isTenantedSessionsEnabled()) {
+            // Invalidate the old opbs cookies which haven't tenanted paths.
+            removeOPBrowserStateCookiesInRoot(request, response);
+
+            cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, UUID.randomUUID().toString() +
+                    OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX);
+            cookie.setSecure(true);
             cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
         } else {
+            cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, UUID.randomUUID().toString());
+            cookie.setSecure(true);
             cookie.setPath("/");
         }
         cookie.setSameSite(SameSiteCookie.NONE);
         response.addCookie(cookie);
         return cookie;
+    }
+
+    /**
+     * Invalidate the old opbs cookies which haven't tenanted paths.
+     *
+     * @param request
+     * @param response
+     */
+    private static void removeOPBrowserStateCookiesInRoot (HttpServletRequest request, HttpServletResponse response) {
+
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (cookie != null && cookie.getName().equals(OIDCSessionConstants.OPBS_COOKIE_ID)) {
+                    if (cookie.getValue().endsWith(OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX)) {
+                        continue;
+                    } else {
+                        ServletCookie oldCookie = new ServletCookie(cookie.getName(), cookie.getValue());
+                        oldCookie.setMaxAge(0);
+                        oldCookie.setSecure(true);
+                        oldCookie.setPath("/");
+                        oldCookie.setSameSite(SameSiteCookie.NONE);
+                        response.addCookie(oldCookie);
+                    }
+                }
+            }
+        }
     }
 
     private static String generateSaltValue() throws NoSuchAlgorithmException {

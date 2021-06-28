@@ -24,6 +24,7 @@ package org.wso2.carbon.identity.oidc.session;
 public class OIDCSessionConstants {
 
     public static final String OPBS_COOKIE_ID = "opbs";
+    public static final String TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX = "_v2";
 
     // Request Parameters
     public static final String OIDC_CLIENT_ID_PARAM = "client_id";
