@@ -21,13 +21,20 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.oltu.oauth2.as.response.OAuthASResponse;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
+import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
@@ -70,17 +77,17 @@ public class UserAuthenticationEndpoint {
     @Consumes("application/x-www-form-urlencoded")
     @Produces("text/html")
     public Response deviceAuthorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
-            throws URISyntaxException, InvalidRequestParentException, IdentityOAuth2Exception, IOException {
+            throws OAuthSystemException {
 
+        try {
             String userCode = request.getParameter(Constants.USER_CODE);
             // True when input(user_code) is not REQUIRED.
             if (StringUtils.isBlank(userCode)) {
                 if (log.isDebugEnabled()) {
                     log.debug("user_code is missing in the request.");
                 }
-                response.sendRedirect(IdentityUtil.
-                        getServerURL(Constants.DEVICE_ENDPOINT_PATH + "?error=invalidRequest",
-                                false, false));
+                response.sendRedirect(ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH)
+                        .addParameter("error", "invalidRequest").build().getAbsolutePublicURL());
                 return null;
             }
             String clientId = deviceAuthService.getClientId(userCode);
@@ -104,11 +111,73 @@ public class UserAuthenticationEndpoint {
                 if (log.isDebugEnabled()) {
                     log.debug("Incorrect user_code: " + userCode);
                 }
-                response.sendRedirect(IdentityUtil
-                        .getServerURL(Constants.DEVICE_ENDPOINT_PATH + "?error=invalidUserCode",
-                                false, false));
+                response.sendRedirect(ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH)
+                        .addParameter("error", "invalidUserCode").build().getAbsolutePublicURL());
                 return null;
             }
+        } catch (URISyntaxException e) {
+            return handleURISyntaxException(e);
+        } catch (InvalidRequestParentException e) {
+            return handleInvalidRequestParentException(e);
+        } catch (IdentityOAuth2Exception e) {
+            return handleIdentityOAuth2Exception(e);
+        } catch (IOException e) {
+            return handleIOException(e);
+        } catch (URLBuilderException e) {
+            return handleURLBuilderException(e);
+        }
+    }
+
+    private Response handleURISyntaxException(URISyntaxException e) throws OAuthSystemException {
+
+        log.error("Error while parsing string as an URI reference.", e);
+        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
+                setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error")
+                .buildJSONMessage();
+        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
+    }
+
+    private Response handleInvalidRequestParentException(InvalidRequestParentException e) throws OAuthSystemException {
+
+        if (log.isDebugEnabled()) {
+            log.debug(e.getErrorMessage(), e);
+        }
+        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST).
+                setError(OAuth2ErrorCodes.INVALID_REQUEST).setErrorDescription("Invalid Request").buildJSONMessage();
+        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
+    }
+
+    private Response handleIdentityOAuth2Exception(IdentityOAuth2Exception e) throws OAuthSystemException {
+
+        if (log.isDebugEnabled()) {
+            log.debug(e.getMessage(), e);
+        }
+        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST).
+                setError(OAuth2ErrorCodes.INVALID_REQUEST).setErrorDescription("Invalid Request").buildJSONMessage();
+        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
+    }
+
+    private Response handleIOException(IOException e) throws OAuthSystemException {
+
+        log.error("Error occurred while sending redirect response.", e);
+        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
+                setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error")
+                .buildJSONMessage();
+        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
+    }
+
+    private Response handleURLBuilderException(URLBuilderException e) throws OAuthSystemException {
+
+        log.error("Error occurred while sending request to authentication framework.", e);
+        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
+                setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error")
+                .buildJSONMessage();
+        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
     }
 
     /**
@@ -129,13 +198,18 @@ public class UserAuthenticationEndpoint {
      * @param appName Service provider name.
      * @return Redirection URI
      */
-    private String getRedirectionURI(String appName) throws URISyntaxException {
+    private String getRedirectionURI(String appName) throws URISyntaxException, URLBuilderException {
 
-        String pageURI = IdentityUtil.getServerURL(Constants.DEVICE_SUCCESS_ENDPOINT_PATH,
-                false, false);
-        URIBuilder uriBuilder = new URIBuilder(pageURI);
-        uriBuilder.addParameter(Constants.APP_NAME, appName);
-        return uriBuilder.build().toString();
+        try {
+            String pageURI = ServiceURLBuilder.create().addPath(Constants.DEVICE_SUCCESS_ENDPOINT_PATH)
+                    .build().getAbsolutePublicURL();
+            URIBuilder uriBuilder = new URIBuilder(pageURI);
+            uriBuilder.addParameter(Constants.APP_NAME, appName);
+            return uriBuilder.build().toString();
+        } catch (URLBuilderException e) {
+            log.error("Error occurred when getting the redirection URI.", e);
+            throw new URLBuilderException("Error occurred while sending request to authentication framework.", e);
+        }
     }
 
     /**
@@ -157,7 +231,7 @@ public class UserAuthenticationEndpoint {
                 AppInfoCache.getInstance().clearCacheEntry(clientId);
             }
             deviceFlowDO.setCallbackUri(redirectURI);
-        } catch (InvalidOAuthClientException | URISyntaxException | IdentityOAuth2Exception e) {
+        } catch (InvalidOAuthClientException | URISyntaxException | URLBuilderException | IdentityOAuth2Exception e) {
             String errorMsg = String.format("Error when getting app details for client id : %s", clientId);
             throw new IdentityOAuth2Exception(errorMsg, e);
         }
