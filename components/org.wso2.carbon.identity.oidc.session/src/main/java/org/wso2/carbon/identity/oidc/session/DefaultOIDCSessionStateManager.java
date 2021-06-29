@@ -19,6 +19,8 @@
 package org.wso2.carbon.identity.oidc.session;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -43,6 +45,8 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
 
     private static final String RANDOM_ALG_SHA1 = "SHA1PRNG";
     private static final String DIGEST_ALG_SHA256 = "SHA-256";
+
+    private static final Log log = LogFactory.getLog(OIDCSessionStateManager.class);
 
     /**
      * Generates a session state using the provided client id, client callback url and browser state cookie id.
@@ -103,13 +107,12 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
 
             cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, UUID.randomUUID().toString() +
                     OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX);
-            cookie.setSecure(true);
             cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
         } else {
             cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, UUID.randomUUID().toString());
-            cookie.setSecure(true);
             cookie.setPath("/");
         }
+        cookie.setSecure(true);
         cookie.setSameSite(SameSiteCookie.NONE);
         response.addCookie(cookie);
         return cookie;
@@ -121,21 +124,27 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
      * @param request
      * @param response
      */
-    private static void removeOPBrowserStateCookiesInRoot (HttpServletRequest request, HttpServletResponse response) {
+    private static void removeOPBrowserStateCookiesInRoot(HttpServletRequest request, HttpServletResponse response) {
 
         Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if (cookie != null && cookie.getName().equals(OIDCSessionConstants.OPBS_COOKIE_ID)) {
-                    if (cookie.getValue().endsWith(OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX)) {
-                        continue;
-                    } else {
-                        ServletCookie oldCookie = new ServletCookie(cookie.getName(), cookie.getValue());
-                        oldCookie.setMaxAge(0);
-                        oldCookie.setSecure(true);
-                        oldCookie.setPath("/");
-                        oldCookie.setSameSite(SameSiteCookie.NONE);
-                        response.addCookie(oldCookie);
+        if (cookies == null) {
+            return;
+        }
+
+        for (Cookie cookie : cookies) {
+            if (cookie != null && cookie.getName().equals(OIDCSessionConstants.OPBS_COOKIE_ID)) {
+                if (cookie.getValue().endsWith(OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX)) {
+                    continue;
+                } else {
+                    ServletCookie oldCookie = new ServletCookie(cookie.getName(), cookie.getValue());
+                    oldCookie.setMaxAge(0);
+                    oldCookie.setSecure(true);
+                    oldCookie.setPath("/");
+                    oldCookie.setSameSite(SameSiteCookie.NONE);
+                    response.addCookie(oldCookie);
+
+                    if (log.isDebugEnabled()) {
+                        log.debug("OPBS cookie was found with the root path and Invalidated it.");
                     }
                 }
             }

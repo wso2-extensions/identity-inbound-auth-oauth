@@ -208,7 +208,7 @@ public class OIDCSessionManagementUtil {
                     servletCookie.setSecure(true);
 
                     if (IdentityTenantUtil.isTenantedSessionsEnabled()) {
-                        // check weather the opbs cookie has a tenanted path.
+                        // check whether the opbs cookie has a tenanted path.
                         if (cookie.getValue().endsWith(OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX)) {
                             String tenantDomain = resolveTenantDomain(request);
                             servletCookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
