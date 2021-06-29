@@ -97,7 +97,7 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
                                           String tenantDomain) {
 
         ServletCookie cookie;
-        if (IdentityTenantUtil.isTenantedSessionsEnabled()) {
+        if (IdentityTenantUtil.isTenantedSessionsEnabled() && tenantDomain != null) {
             // Invalidate the old opbs cookies which haven't tenanted paths.
             removeOPBrowserStateCookiesInRoot(request, response);
 
