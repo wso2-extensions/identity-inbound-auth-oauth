@@ -537,7 +537,6 @@ public class OAuth2AuthzEndpoint {
             }
 
             List<Integer> approvedClaimIds = getUserConsentClaimIds(oAuthMessage);
-
             serviceProvider = getServiceProvider(clientId);
             /*
                 With the current implementation of the SSOConsentService we need to send back the original
@@ -549,11 +548,18 @@ public class OAuth2AuthzEndpoint {
                 ConsentClaimsData object.
              */
             ConsentClaimsData value = getConsentRequiredClaims(loggedInUser, serviceProvider, oauth2Params);
+            if (value != null) {
+                List<ClaimMetaData> requestedOidcClaimsList = getRequestedOidcClaimsList(value, oauth2Params,
+                        spTenantDomain);
+                value.setRequestedClaims(requestedOidcClaimsList);
+            }
+
             // Call framework and create the consent receipt.
             if (log.isDebugEnabled()) {
                 log.debug("Creating user consent receipt for user: " + loggedInUser.toFullQualifiedUsername() +
                         " for client_id: " + clientId + " of tenantDomain: " + spTenantDomain);
             }
+
             if (hasPromptContainsConsent(oauth2Params)) {
                 diagnosticLog.info("Prompt param contains the value 'consent'. Hence previously granted consent " +
                         "will be overridden.");
@@ -565,12 +571,15 @@ public class OAuth2AuthzEndpoint {
                 getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
                         loggedInUser, value, false);
             }
-        } catch (OAuthSystemException | SSOConsentServiceException e) {
+
+        } catch (OAuthSystemException | SSOConsentServiceException | RequestObjectException |
+                ClaimMetadataException e) {
             String msg = "Error while processing consent of user: " + loggedInUser.toFullQualifiedUsername() + " for " +
                     "client_id: " + clientId + " of tenantDomain: " + spTenantDomain;
             diagnosticLog.error("Error while processing consent of user. Error message: " + e.getMessage());
             throw new ConsentHandlingFailedException(msg, e);
         }
+
     }
 
     private ConsentClaimsData getConsentRequiredClaims(AuthenticatedUser user, ServiceProvider serviceProvider,
@@ -2120,82 +2129,15 @@ public class OAuth2AuthzEndpoint {
             ConsentClaimsData claimsForApproval = getConsentRequiredClaims(user, serviceProvider, useExistingConsents);
             if (claimsForApproval != null) {
                 String requestClaimsQueryParam = null;
-                List<ClaimMetaData> requestedOidcClaimsList = new ArrayList<>();
-                List<String> localClaimsOfOidcClaims = new ArrayList<>();
-                List<String> localClaimsOfEssentialClaims = new ArrayList<>();
-
-                // Get the claims uri list of all the requested scopes. Eg:- country, email
-                List<String> claimListOfScopes = openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oauth2Params.
-                        getScopes(), spTenantDomain);
-
-                // Get the requested claims came through request object
-                List<RequestedClaim> requestedClaimsOfIdToken = EndpointUtil.getRequestObjectService()
-                        .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), false);
-
-                List<RequestedClaim> requestedClaimsOfUserInfo = EndpointUtil.getRequestObjectService()
-                        .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), true);
-
-                List<String> essentialRequestedClaims = new ArrayList<>();
-
-                // Get the list of id token's essential claims.
-                for (RequestedClaim requestedClaim : requestedClaimsOfIdToken) {
-                    if (requestedClaim.isEssential()) {
-                        essentialRequestedClaims.add(requestedClaim.getName());
-                    }
-                }
-
-                // Get the list of user info's essential claims.
-                for (RequestedClaim requestedClaim : requestedClaimsOfUserInfo) {
-                    if (requestedClaim.isEssential()) {
-                        essentialRequestedClaims.add(requestedClaim.getName());
-                    }
-                }
-
-                if (CollectionUtils.isNotEmpty(claimListOfScopes)) {
-                    // Get the external claims relevant to all oidc scope claims and essential claims
-                    Set<ExternalClaim> externalClaimSetOfOidcClaims = ClaimMetadataHandler.getInstance()
-                            .getMappingsFromOtherDialectToCarbon
-                                    (OIDC_DIALECT, new HashSet<String>(claimListOfScopes), spTenantDomain);
-
-                /* Get the locally mapped claims for all the external claims of requested scope and essential claims.
-                Eg:- http://wso2.org/claims/country, http://wso2.org/claims/emailaddress
-                 */
-                    for (ExternalClaim externalClaim : externalClaimSetOfOidcClaims) {
-                        localClaimsOfOidcClaims.add(externalClaim.getMappedLocalClaim());
-                    }
-                }
-
-                if (CollectionUtils.isNotEmpty(essentialRequestedClaims)) {
-                    // Get the external claims relevant to all essential requested claims.
-                    Set<ExternalClaim> externalClaimSetOfEssentialClaims = ClaimMetadataHandler.getInstance()
-                            .getMappingsFromOtherDialectToCarbon
-                                    (OIDC_DIALECT, new HashSet<String>(essentialRequestedClaims), spTenantDomain);
-
-                    /* Get the locally mapped claims for all the external claims of essential claims.
-                    Eg:- http://wso2.org/claims/country, http://wso2.org/claims/emailaddress
-                     */
-                    for (ExternalClaim externalClaim : externalClaimSetOfEssentialClaims) {
-                        localClaimsOfEssentialClaims.add(externalClaim.getMappedLocalClaim());
-                    }
-                }
-
-                /* Check whether the local claim of oidc claims contains the requested claims or essential claims of
-                 request object contains the requested claims, If it contains add it as requested claim.
-                 */
-                for (ClaimMetaData claimMetaData : claimsForApproval.getRequestedClaims()) {
-                    if (localClaimsOfOidcClaims.contains(claimMetaData.getClaimUri()) || localClaimsOfEssentialClaims
-                            .contains(claimMetaData.getClaimUri())) {
-                        requestedOidcClaimsList.add(claimMetaData);
-                    }
-                }
-
+                // Get the mandatory claims and append as query param.
+                String mandatoryClaimsQueryParam = null;
+                List<ClaimMetaData> requestedOidcClaimsList = getRequestedOidcClaimsList(claimsForApproval,
+                        oauth2Params, spTenantDomain);
                 if (CollectionUtils.isNotEmpty(requestedOidcClaimsList)) {
                     requestClaimsQueryParam = REQUESTED_CLAIMS + "=" +
                             buildConsentClaimString(requestedOidcClaimsList);
                 }
 
-                // Get the mandatory claims and append as query param.
-                String mandatoryClaimsQueryParam = null;
                 if (CollectionUtils.isNotEmpty(claimsForApproval.getMandatoryClaims())) {
                     mandatoryClaimsQueryParam = MANDATORY_CLAIMS + "=" +
                             buildConsentClaimString(claimsForApproval.getMandatoryClaims());
@@ -2220,6 +2162,91 @@ public class OAuth2AuthzEndpoint {
         }
 
         return additionalQueryParam;
+    }
+
+    /**
+     * Filter requested claims based on OIDC claims and return the claims which includes in OIDC.
+     *
+     * @param claimsForApproval
+     * @param oauth2Params
+     * @param spTenantDomain
+     * @return
+     * @throws RequestObjectException
+     * @throws ClaimMetadataException
+     */
+    private List<ClaimMetaData> getRequestedOidcClaimsList(ConsentClaimsData claimsForApproval,
+                                                           OAuth2Parameters oauth2Params, String spTenantDomain)
+            throws RequestObjectException, ClaimMetadataException {
+        List<ClaimMetaData> requestedOidcClaimsList = new ArrayList<>();
+        List<String> localClaimsOfOidcClaims = new ArrayList<>();
+        List<String> localClaimsOfEssentialClaims = new ArrayList<>();
+
+        // Get the claims uri list of all the requested scopes. Eg:- country, email
+        List<String> claimListOfScopes = openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oauth2Params.
+                getScopes(), spTenantDomain);
+
+        // Get the requested claims came through request object
+        List<RequestedClaim> requestedClaimsOfIdToken = EndpointUtil.getRequestObjectService()
+                .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), false);
+
+        List<RequestedClaim> requestedClaimsOfUserInfo = EndpointUtil.getRequestObjectService()
+                .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), true);
+
+        List<String> essentialRequestedClaims = new ArrayList<>();
+
+        // Get the list of id token's essential claims.
+        for (RequestedClaim requestedClaim : requestedClaimsOfIdToken) {
+            if (requestedClaim.isEssential()) {
+                essentialRequestedClaims.add(requestedClaim.getName());
+            }
+        }
+
+        // Get the list of user info's essential claims.
+        for (RequestedClaim requestedClaim : requestedClaimsOfUserInfo) {
+            if (requestedClaim.isEssential()) {
+                essentialRequestedClaims.add(requestedClaim.getName());
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(claimListOfScopes)) {
+            // Get the external claims relevant to all oidc scope claims and essential claims
+            Set<ExternalClaim> externalClaimSetOfOidcClaims = ClaimMetadataHandler.getInstance()
+                    .getMappingsFromOtherDialectToCarbon
+                            (OIDC_DIALECT, new HashSet<String>(claimListOfScopes), spTenantDomain);
+
+                /* Get the locally mapped claims for all the external claims of requested scope and essential claims.
+                Eg:- http://wso2.org/claims/country, http://wso2.org/claims/emailaddress
+                 */
+            for (ExternalClaim externalClaim : externalClaimSetOfOidcClaims) {
+                localClaimsOfOidcClaims.add(externalClaim.getMappedLocalClaim());
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(essentialRequestedClaims)) {
+            // Get the external claims relevant to all essential requested claims.
+            Set<ExternalClaim> externalClaimSetOfEssentialClaims = ClaimMetadataHandler.getInstance()
+                    .getMappingsFromOtherDialectToCarbon
+                            (OIDC_DIALECT, new HashSet<String>(essentialRequestedClaims), spTenantDomain);
+
+                    /* Get the locally mapped claims for all the external claims of essential claims.
+                    Eg:- http://wso2.org/claims/country, http://wso2.org/claims/emailaddress
+                     */
+            for (ExternalClaim externalClaim : externalClaimSetOfEssentialClaims) {
+                localClaimsOfEssentialClaims.add(externalClaim.getMappedLocalClaim());
+            }
+        }
+
+        /* Check whether the local claim of oidc claims contains the requested claims or essential claims of
+         request object contains the requested claims, If it contains add it as requested claim.
+         */
+        for (ClaimMetaData claimMetaData : claimsForApproval.getRequestedClaims()) {
+            if (localClaimsOfOidcClaims.contains(claimMetaData.getClaimUri()) || localClaimsOfEssentialClaims
+                    .contains(claimMetaData.getClaimUri())) {
+                requestedOidcClaimsList.add(claimMetaData);
+            }
+        }
+
+        return requestedOidcClaimsList;
     }
 
     private ConsentClaimsData getConsentRequiredClaims(AuthenticatedUser user,
