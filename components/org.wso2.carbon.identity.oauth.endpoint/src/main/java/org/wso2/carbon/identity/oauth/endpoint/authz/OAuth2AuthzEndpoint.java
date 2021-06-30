@@ -573,12 +573,19 @@ public class OAuth2AuthzEndpoint {
                         loggedInUser, value, false);
             }
 
-        } catch (OAuthSystemException | SSOConsentServiceException | RequestObjectException |
-                ClaimMetadataException e) {
+        } catch (OAuthSystemException | SSOConsentServiceException e) {
             String msg = "Error while processing consent of user: " + loggedInUser.toFullQualifiedUsername() + " for " +
                     "client_id: " + clientId + " of tenantDomain: " + spTenantDomain;
             diagnosticLog.error("Error while processing consent of user. Error message: " + e.getMessage());
             throw new ConsentHandlingFailedException(msg, e);
+        } catch (ClaimMetadataException e) {
+            diagnosticLog.error("Error while getting claim mappings. Error message: " + e.getMessage());
+            throw new ConsentHandlingFailedException("Error while getting claim mappings for " + OIDC_DIALECT, e);
+        } catch (RequestObjectException e) {
+            diagnosticLog.error("Error while getting essential claims for the session data key. " + "Error message: "
+                    + e.getMessage());
+            throw new ConsentHandlingFailedException("Error while getting essential claims for the session data key " +
+                    ": " + oauth2Params.getSessionDataKey(), e);
         }
 
     }
@@ -2216,9 +2223,9 @@ public class OAuth2AuthzEndpoint {
                     .getMappingsFromOtherDialectToCarbon
                             (OIDC_DIALECT, new HashSet<String>(claimListOfScopes), spTenantDomain);
 
-                /* Get the locally mapped claims for all the external claims of requested scope and essential claims.
-                Eg:- http://wso2.org/claims/country, http://wso2.org/claims/emailaddress
-                 */
+            /* Get the locally mapped claims for all the external claims of requested scope and essential claims.
+            Eg:- http://wso2.org/claims/country, http://wso2.org/claims/emailaddress
+             */
             for (ExternalClaim externalClaim : externalClaimSetOfOidcClaims) {
                 localClaimsOfOidcClaims.add(externalClaim.getMappedLocalClaim());
             }
@@ -2230,9 +2237,9 @@ public class OAuth2AuthzEndpoint {
                     .getMappingsFromOtherDialectToCarbon
                             (OIDC_DIALECT, new HashSet<String>(essentialRequestedClaims), spTenantDomain);
 
-                    /* Get the locally mapped claims for all the external claims of essential claims.
-                    Eg:- http://wso2.org/claims/country, http://wso2.org/claims/emailaddress
-                     */
+            /* Get the locally mapped claims for all the external claims of essential claims.
+            Eg:- http://wso2.org/claims/country, http://wso2.org/claims/emailaddress
+             */
             for (ExternalClaim externalClaim : externalClaimSetOfEssentialClaims) {
                 localClaimsOfEssentialClaims.add(externalClaim.getMappedLocalClaim());
             }
