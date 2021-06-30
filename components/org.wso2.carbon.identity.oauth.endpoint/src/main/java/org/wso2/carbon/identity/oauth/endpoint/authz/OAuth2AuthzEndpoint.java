@@ -2175,12 +2175,12 @@ public class OAuth2AuthzEndpoint {
     /**
      * Filter requested claims based on OIDC claims and return the claims which includes in OIDC.
      *
-     * @param claimsForApproval Consent required claims.
-     * @param oauth2Params OAuth parameters.
-     * @param spTenantDomain Tenant domain.
-     * @return List of claims.
-     * @throws RequestObjectException
-     * @throws ClaimMetadataException
+     * @param claimsForApproval         Consent required claims.
+     * @param oauth2Params              OAuth parameters.
+     * @param spTenantDomain            Tenant domain.
+     * @return                          Requested OIDC claim list.
+     * @throws RequestObjectException   If an error occurred while getting essential claims for the session data key.
+     * @throws ClaimMetadataException   If an error occurred while getting claim mappings.
      */
     private List<ClaimMetaData> getRequestedOidcClaimsList(ConsentClaimsData claimsForApproval,
                                                            OAuth2Parameters oauth2Params, String spTenantDomain)
