@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
@@ -2167,25 +2168,26 @@ public class OAuth2AuthzEndpoint {
     /**
      * Filter requested claims based on OIDC claims and return the claims which includes in OIDC.
      *
-     * @param claimsForApproval
-     * @param oauth2Params
-     * @param spTenantDomain
-     * @return
+     * @param claimsForApproval Consent required claims.
+     * @param oauth2Params OAuth parameters.
+     * @param spTenantDomain Tenant domain.
+     * @return List of claims.
      * @throws RequestObjectException
      * @throws ClaimMetadataException
      */
     private List<ClaimMetaData> getRequestedOidcClaimsList(ConsentClaimsData claimsForApproval,
                                                            OAuth2Parameters oauth2Params, String spTenantDomain)
             throws RequestObjectException, ClaimMetadataException {
+
         List<ClaimMetaData> requestedOidcClaimsList = new ArrayList<>();
         List<String> localClaimsOfOidcClaims = new ArrayList<>();
         List<String> localClaimsOfEssentialClaims = new ArrayList<>();
 
-        // Get the claims uri list of all the requested scopes. Eg:- country, email
+        // Get the claims uri list of all the requested scopes. Eg:- country, email.
         List<String> claimListOfScopes = openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oauth2Params.
                 getScopes(), spTenantDomain);
 
-        // Get the requested claims came through request object
+        // Get the requested claims came through request object.
         List<RequestedClaim> requestedClaimsOfIdToken = EndpointUtil.getRequestObjectService()
                 .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), false);
 
@@ -2209,7 +2211,7 @@ public class OAuth2AuthzEndpoint {
         }
 
         if (CollectionUtils.isNotEmpty(claimListOfScopes)) {
-            // Get the external claims relevant to all oidc scope claims and essential claims
+            // Get the external claims relevant to all oidc scope claims and essential claims.
             Set<ExternalClaim> externalClaimSetOfOidcClaims = ClaimMetadataHandler.getInstance()
                     .getMappingsFromOtherDialectToCarbon
                             (OIDC_DIALECT, new HashSet<String>(claimListOfScopes), spTenantDomain);
