@@ -29,7 +29,9 @@ import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
 import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -182,12 +184,33 @@ public class OIDCSessionManagementUtil {
      * @param response
      * @param request
      * @param tenantDomain
+     * @param sessionContextIdentifier
      * @return Cookie
      */
     public static Cookie addOPBrowserStateCookie(HttpServletResponse response, HttpServletRequest request,
-                                                 String tenantDomain) {
+                                                 String tenantDomain, String sessionContextIdentifier) {
 
-        return getOIDCessionStateManager().addOPBrowserStateCookie(response, request, tenantDomain);
+        SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextIdentifier);
+        if (sessionContext != null) {
+            Object opbsValue = sessionContext.getProperty(OIDCSessionConstants.OPBS_COOKIE_ID);
+            if (opbsValue != null) {
+                return getOIDCessionStateManager().addOPBrowserStateCookie(response, request,
+                        tenantDomain, (String) opbsValue);
+            }
+        }
+        return getOIDCessionStateManager().addOPBrowserStateCookie(response, request,
+                tenantDomain, generateOPBrowserStateCookieValue(tenantDomain));
+    }
+
+    /**
+     * Generate OPBrowserState Cookie Value.
+     *
+     * @param tenantDomain
+     * @return
+     */
+    public static String generateOPBrowserStateCookieValue(String tenantDomain) {
+
+        return getOIDCessionStateManager().generateOPBrowserStateCookieValue(tenantDomain);
     }
 
     /**

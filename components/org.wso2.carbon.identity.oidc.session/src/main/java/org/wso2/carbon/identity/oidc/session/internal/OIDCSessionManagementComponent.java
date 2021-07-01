@@ -27,10 +27,12 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.http.HttpService;
+import org.wso2.carbon.identity.application.authentication.framework.listener.SessionContextMgtListener;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.oidc.session.OIDCInboundSessionContextMgtListener;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.backchannellogout.ClaimProviderImpl;
 import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutEventHandler;
@@ -104,6 +106,9 @@ public class OIDCSessionManagementComponent {
             log.error(msg, e);
             throw new RuntimeException(msg, e);
         }
+
+        context.getBundleContext().registerService(SessionContextMgtListener.class.getName(),
+                new OIDCInboundSessionContextMgtListener(), null);
     }
 
     protected void deactivate(ComponentContext context) {

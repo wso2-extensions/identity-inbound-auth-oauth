@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oidc.session;
 
+import java.util.UUID;
+
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -44,23 +46,35 @@ public interface OIDCSessionStateManager {
      * @return Cookie
      *
      * @deprecated This method was deprecated to enable tenanted paths for opbs cookie.
-     * Use {@link #addOPBrowserStateCookie(HttpServletResponse, HttpServletRequest, String)} instead.
+     * Use {@link #addOPBrowserStateCookie(HttpServletResponse, HttpServletRequest, String, String)} instead.
      */
     @Deprecated
     Cookie addOPBrowserStateCookie(HttpServletResponse response);
 
     /**
-     * Adds the browser state cookie with tenant qualified path to the response.
+     * Adds the browser state cookie with tenant qualified path to the response. e with
+     * an already generated opbs cookie value.
      *
      * @param response
      * @param request
      * @param tenantDomain
+     * @param opbsValue
      * @return Cookie
      */
     default Cookie addOPBrowserStateCookie(HttpServletResponse response, HttpServletRequest request,
-                                           String tenantDomain) {
+                                           String tenantDomain, String opbsValue) {
 
         return addOPBrowserStateCookie(response);
     }
 
+    /**
+     * Generate OPBrowserState Cookie Value.
+     *
+     * @param tenantDomain  Tenant Domain.
+     * @return              OPBrowserState Cookie Value.
+     */
+    default String generateOPBrowserStateCookieValue(String tenantDomain) {
+
+        return UUID.randomUUID().toString();
+    }
 }

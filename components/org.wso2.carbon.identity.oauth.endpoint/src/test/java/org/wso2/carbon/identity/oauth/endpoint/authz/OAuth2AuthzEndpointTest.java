@@ -1318,7 +1318,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(OIDCSessionManagementUtil.addOPBrowserStateCookie(any(HttpServletResponse.class)))
                 .thenReturn(newOpBrowserStateCookie);
         when(OIDCSessionManagementUtil.addOPBrowserStateCookie(any(HttpServletResponse.class),
-                any(HttpServletRequest.class), any(String.class))).thenReturn(newOpBrowserStateCookie);
+                any(HttpServletRequest.class), any(String.class), any(String.class))).thenReturn(newOpBrowserStateCookie);
         when(OIDCSessionManagementUtil.getSessionManager()).thenReturn(oidcSessionManager);
         when(oidcSessionManager.getOIDCSessionState(anyString())).thenReturn(previousSessionState);
         when(OIDCSessionManagementUtil.getSessionStateParam(anyString(), anyString(), anyString()))
