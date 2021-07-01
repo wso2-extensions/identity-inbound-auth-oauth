@@ -1405,8 +1405,7 @@ public class OAuth2AuthzEndpoint {
             oAuthMessage.getRequest().setAttribute(FrameworkConstants.SESSION_DATA_KEY, sessionDataKey);
             return getLoginPageURL(oAuthMessage.getClientId(), sessionDataKey, oAuthMessage.isForceAuthenticate(),
                     oAuthMessage.isPassiveAuthentication(), oauthRequest.getScopes(),
-                    oAuthMessage.getRequest().getParameterMap());
-
+                    oAuthMessage.getRequest().getParameterMap(), oAuthMessage.getRequest());
         } catch (IdentityOAuth2Exception e) {
             return handleException(e);
         }
