@@ -550,8 +550,8 @@ public class OAuth2AuthzEndpoint {
              */
             ConsentClaimsData value = getConsentRequiredClaims(loggedInUser, serviceProvider, oauth2Params);
             if (value != null) {
-                List<ClaimMetaData> requestedOidcClaimsList = getRequestedOidcClaimsList(value, oauth2Params,
-                        spTenantDomain);
+                List<ClaimMetaData> requestedOidcClaimsList =
+                        getRequestedOidcClaimsList(value, oauth2Params, spTenantDomain);
                 value.setRequestedClaims(requestedOidcClaimsList);
             }
 
@@ -2139,8 +2139,8 @@ public class OAuth2AuthzEndpoint {
                 String requestClaimsQueryParam = null;
                 // Get the mandatory claims and append as query param.
                 String mandatoryClaimsQueryParam = null;
-                List<ClaimMetaData> requestedOidcClaimsList = getRequestedOidcClaimsList(claimsForApproval,
-                        oauth2Params, spTenantDomain);
+                List<ClaimMetaData> requestedOidcClaimsList =
+                        getRequestedOidcClaimsList(claimsForApproval, oauth2Params, spTenantDomain);
                 if (CollectionUtils.isNotEmpty(requestedOidcClaimsList)) {
                     requestClaimsQueryParam = REQUESTED_CLAIMS + "=" +
                             buildConsentClaimString(requestedOidcClaimsList);
@@ -2191,8 +2191,8 @@ public class OAuth2AuthzEndpoint {
         List<String> localClaimsOfEssentialClaims = new ArrayList<>();
 
         // Get the claims uri list of all the requested scopes. Eg:- country, email.
-        List<String> claimListOfScopes = openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oauth2Params.
-                getScopes(), spTenantDomain);
+        List<String> claimListOfScopes =
+                openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oauth2Params.getScopes(), spTenantDomain);
 
         // Get the requested claims came through request object.
         List<RequestedClaim> requestedClaimsOfIdToken = EndpointUtil.getRequestObjectService()
@@ -2220,8 +2220,8 @@ public class OAuth2AuthzEndpoint {
         if (CollectionUtils.isNotEmpty(claimListOfScopes)) {
             // Get the external claims relevant to all oidc scope claims and essential claims.
             Set<ExternalClaim> externalClaimSetOfOidcClaims = ClaimMetadataHandler.getInstance()
-                    .getMappingsFromOtherDialectToCarbon
-                            (OIDC_DIALECT, new HashSet<String>(claimListOfScopes), spTenantDomain);
+                    .getMappingsFromOtherDialectToCarbon(OIDC_DIALECT, new HashSet<String>(claimListOfScopes),
+                            spTenantDomain);
 
             /* Get the locally mapped claims for all the external claims of requested scope and essential claims.
             Eg:- http://wso2.org/claims/country, http://wso2.org/claims/emailaddress
@@ -2234,8 +2234,8 @@ public class OAuth2AuthzEndpoint {
         if (CollectionUtils.isNotEmpty(essentialRequestedClaims)) {
             // Get the external claims relevant to all essential requested claims.
             Set<ExternalClaim> externalClaimSetOfEssentialClaims = ClaimMetadataHandler.getInstance()
-                    .getMappingsFromOtherDialectToCarbon
-                            (OIDC_DIALECT, new HashSet<String>(essentialRequestedClaims), spTenantDomain);
+                    .getMappingsFromOtherDialectToCarbon(OIDC_DIALECT, new HashSet<String>(essentialRequestedClaims),
+                            spTenantDomain);
 
             /* Get the locally mapped claims for all the external claims of essential claims.
             Eg:- http://wso2.org/claims/country, http://wso2.org/claims/emailaddress
@@ -2249,8 +2249,8 @@ public class OAuth2AuthzEndpoint {
          request object contains the requested claims, If it contains add it as requested claim.
          */
         for (ClaimMetaData claimMetaData : claimsForApproval.getRequestedClaims()) {
-            if (localClaimsOfOidcClaims.contains(claimMetaData.getClaimUri()) || localClaimsOfEssentialClaims
-                    .contains(claimMetaData.getClaimUri())) {
+            if (localClaimsOfOidcClaims.contains(claimMetaData.getClaimUri()) ||
+                    localClaimsOfEssentialClaims.contains(claimMetaData.getClaimUri())) {
                 requestedOidcClaimsList.add(claimMetaData);
             }
         }
