@@ -1316,6 +1316,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 .thenReturn(opBrowserStateCookie);
         when(OIDCSessionManagementUtil.addOPBrowserStateCookie(any(HttpServletResponse.class)))
                 .thenReturn(newOpBrowserStateCookie);
+        when(OIDCSessionManagementUtil.addOPBrowserStateCookie(any(HttpServletResponse.class),
+                any(HttpServletRequest.class), any(String.class))).thenReturn(newOpBrowserStateCookie);
         when(OIDCSessionManagementUtil.getSessionManager()).thenReturn(oidcSessionManager);
         when(oidcSessionManager.getOIDCSessionState(anyString())).thenReturn(previousSessionState);
         when(OIDCSessionManagementUtil.getSessionStateParam(anyString(), anyString(), anyString()))
@@ -1993,5 +1995,47 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         mockStatic(ServiceURLBuilder.class);
         when(ServiceURLBuilder.create()).thenReturn(builder);
+    }
+
+    @DataProvider(name = "provideGetLoginTenantDomainData")
+    public Object[][] provideGetLoginTenantDomainData() {
+        return new Object[][]{
+                {true, "loginTenantDomain", "loginTenantDomain"},
+                {true, "", MultitenantConstants.SUPER_TENANT_DOMAIN_NAME},
+                {false, "domain", MultitenantConstants.SUPER_TENANT_DOMAIN_NAME},
+        };
+    }
+
+    @Test(dataProvider = "provideGetLoginTenantDomainData")
+    public void testGetLoginTenantDomain(boolean isTenantedSessionsEnabled, String loginDomain, String expectedDomain)
+            throws Exception {
+
+        mockOAuthServerConfiguration();
+
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        if (isTenantedSessionsEnabled) {
+            when(IdentityTenantUtil.isTenantedSessionsEnabled()).thenReturn(true);
+        } else {
+            when(IdentityTenantUtil.isTenantedSessionsEnabled()).thenReturn(false);
+        }
+
+        mockStatic(IdentityDatabaseUtil.class);
+        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+
+        Map<String, String[]> requestParams = new HashMap();
+        Map<String, Object> requestAttributes = new HashMap();
+
+        requestParams.put(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN, new String[]{loginDomain});
+        mockHttpRequest(requestParams, requestAttributes, HttpMethod.POST);
+
+        when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+
+        Method getLoginTenantDomain = authzEndpointObject.getClass().getDeclaredMethod(
+                "getLoginTenantDomain", OAuthMessage.class, String.class);
+        getLoginTenantDomain.setAccessible(true);
+
+        String tenantDomain = (String) getLoginTenantDomain.invoke(authzEndpointObject, oAuthMessage, CLIENT_ID_VALUE);
+        assertEquals(tenantDomain, expectedDomain);
     }
 }
