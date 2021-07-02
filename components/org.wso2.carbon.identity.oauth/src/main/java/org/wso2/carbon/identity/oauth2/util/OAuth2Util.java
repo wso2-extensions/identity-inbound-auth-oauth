@@ -2016,7 +2016,14 @@ public class OAuth2Util {
                 }
             }
         }
-        return (claimConfig.toString().split(","));
+
+        String[] claim;
+        if (claimConfig.length() > 0) {
+            claim = claimConfig.toString().split(",");
+        } else {
+            claim = new String[0];
+        }
+        return claim;
     }
 
     /**
