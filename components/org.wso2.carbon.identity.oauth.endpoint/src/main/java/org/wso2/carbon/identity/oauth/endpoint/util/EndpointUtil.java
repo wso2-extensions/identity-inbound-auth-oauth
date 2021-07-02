@@ -569,7 +569,7 @@ public class EndpointUtil {
                     .getValueFromCache(new SessionDataCacheKey(sessionDataKey));
 
             return getLoginPageURL(clientId, sessionDataKey, forceAuthenticate,
-                    checkAuthentication, scopes, entry.getParamMap(), null);
+                    checkAuthentication, scopes, entry.getParamMap());
         } finally {
             OAuth2Util.clearClientTenantId();
         }
