@@ -29,6 +29,7 @@ import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
 import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -176,6 +177,20 @@ public class OIDCSessionManagementUtil {
     }
 
     /**
+     * Adds the browser state cookie with tenant qualified path to the response.
+     *
+     * @param response
+     * @param request
+     * @param tenantDomain
+     * @return Cookie
+     */
+    public static Cookie addOPBrowserStateCookie(HttpServletResponse response, HttpServletRequest request,
+                                                 String tenantDomain) {
+
+        return getOIDCessionStateManager().addOPBrowserStateCookie(response, request, tenantDomain);
+    }
+
+    /**
      * Invalidate the browser state cookie.
      *
      * @param request
@@ -191,7 +206,18 @@ public class OIDCSessionManagementUtil {
                     ServletCookie servletCookie = new ServletCookie(cookie.getName(), cookie.getValue());
                     servletCookie.setMaxAge(0);
                     servletCookie.setSecure(true);
-                    servletCookie.setPath("/");
+
+                    if (IdentityTenantUtil.isTenantedSessionsEnabled()) {
+                        // check whether the opbs cookie has a tenanted path.
+                        if (cookie.getValue().endsWith(OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX)) {
+                            String tenantDomain = resolveTenantDomain(request);
+                            servletCookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
+                        } else {
+                            servletCookie.setPath("/");
+                        }
+                    } else {
+                        servletCookie.setPath("/");
+                    }
                     servletCookie.setSameSite(SameSiteCookie.NONE);
                     response.addCookie(servletCookie);
                     return cookie;
@@ -200,6 +226,21 @@ public class OIDCSessionManagementUtil {
         }
 
         return null;
+    }
+
+    /**
+     * Resolve the user login tenant domain.
+     *
+     * @param request
+     * @return tenantDomain
+     */
+    private static String resolveTenantDomain(HttpServletRequest request) {
+
+        String tenantDomain = request.getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
+        if (StringUtils.isBlank(tenantDomain)) {
+            return IdentityTenantUtil.getTenantDomainFromContext();
+        }
+        return tenantDomain;
     }
 
     /**

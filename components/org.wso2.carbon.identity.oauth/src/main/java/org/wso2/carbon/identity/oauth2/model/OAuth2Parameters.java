@@ -51,6 +51,7 @@ public class OAuth2Parameters implements Serializable {
     private String essentialClaims;
     private String displayName;
     private String sessionDataKey;
+    private String loginTenantDomain;
 
     public String getSessionDataKey() {
         return sessionDataKey;
@@ -258,5 +259,23 @@ public class OAuth2Parameters implements Serializable {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+    }
+
+    /**
+     * @return the tenant domain the user's session should be created.
+     */
+    public String getLoginTenantDomain() {
+
+        return loginTenantDomain;
+    }
+
+    /**
+     * Sets the tenant domain where the user's session should be created.
+     *
+     * @param loginTenantDomain the tenant domain where the user's session is created.
+     */
+    public void setLoginTenantDomain(String loginTenantDomain) {
+
+        this.loginTenantDomain = loginTenantDomain;
     }
 }
