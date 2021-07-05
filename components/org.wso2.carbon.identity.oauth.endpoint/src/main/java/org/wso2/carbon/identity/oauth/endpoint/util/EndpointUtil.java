@@ -694,9 +694,26 @@ public class EndpointUtil {
      * @param params
      * @param loggedInUser
      * @return
+     * @deprecated use {{@link #getUserConsentURL(OAuth2Parameters, String, String, boolean, OAuthMessage)}}
      */
+    @Deprecated
     public static String getUserConsentURL(OAuth2Parameters params, String loggedInUser, String sessionDataKey,
                                            boolean isOIDC) throws OAuthSystemException {
+
+        return getUserConsentURL(params, loggedInUser, sessionDataKey, isOIDC, null);
+    }
+
+    /**
+     * Returns the consent page URL.
+     *
+     * @param params            OAuth2 Parameters.
+     * @param loggedInUser      The logged in user
+     * @param isOIDC            Whether the flow is an OIDC or not.
+     * @param oAuthMessage      oAuth Message.
+     * @return                  The consent url.
+     */
+    public static String getUserConsentURL(OAuth2Parameters params, String loggedInUser, String sessionDataKey,
+                                           boolean isOIDC, OAuthMessage oAuthMessage) throws OAuthSystemException {
 
         String queryString = "";
         if (log.isDebugEnabled()) {
@@ -706,7 +723,13 @@ public class EndpointUtil {
             }
         }
         SessionDataCache sessionDataCache = SessionDataCache.getInstance();
-        SessionDataCacheEntry entry = sessionDataCache.getValueFromCache(new SessionDataCacheKey(sessionDataKey));
+        SessionDataCacheEntry entry;
+        if (oAuthMessage != null) {
+            entry = oAuthMessage.getResultFromLogin();
+        } else {
+            entry = sessionDataCache.getValueFromCache(new SessionDataCacheKey(sessionDataKey));
+        }
+
         AuthenticatedUser user = null;
         String consentPage = null;
         String sessionDataKeyConsent = UUID.randomUUID().toString();
