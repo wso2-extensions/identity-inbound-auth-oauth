@@ -85,6 +85,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
     private static final String AUTHORIZATION_CODE = "AuthorizationCode";
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
+    private static final String ENABLE_ID_TOKEN_SIGNING_BEFORE_ENCRYPTION =
+            "OAuth.OpenIDConnect.SignIDTokenBeforeEncryption";
+
 
     private static final Log log = LogFactory.getLog(DefaultIDTokenBuilder.class);
     private JWSAlgorithm signatureAlgorithm;
@@ -289,8 +292,14 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         if (oAuthAppDO.isIdTokenEncryptionEnabled()) {
             setupEncryptionAlgorithms(oAuthAppDO, clientId);
-            return OAuth2Util.encryptJWT(jwtClaimsSet, encryptionAlgorithm, encryptionMethod, spTenantDomain,
-                    clientId).serialize();
+            if (isSignIdTokenBeforeEncryptionEnabled()) {
+                return OAuth2Util.encryptJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain,
+                        encryptionAlgorithm, encryptionMethod, spTenantDomain,
+                        clientId).serialize();
+            } else {
+                return OAuth2Util.encryptJWT(jwtClaimsSet, encryptionAlgorithm, encryptionMethod, spTenantDomain,
+                        clientId).serialize();
+            }
         } else {
             return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
         }
@@ -899,5 +908,15 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             }
             jwtClaimsSetBuilder.claim(OAuthConstants.OIDCClaims.REALM, realm);
         }
+    }
+
+    /**
+     * Checks whether the id token signing before encryption enabled
+     *
+     * @return Id token signing before encryption status
+     */
+    private boolean isSignIdTokenBeforeEncryptionEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_ID_TOKEN_SIGNING_BEFORE_ENCRYPTION));
     }
 }
