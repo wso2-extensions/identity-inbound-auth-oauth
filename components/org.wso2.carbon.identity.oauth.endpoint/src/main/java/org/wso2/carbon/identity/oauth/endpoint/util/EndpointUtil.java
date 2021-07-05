@@ -586,16 +586,44 @@ public class EndpointUtil {
      * @param scopes
      * @return LoginPageURL
      * @throws java.io.UnsupportedEncodingException
+     * @deprecated use {@link #getLoginPageURL(String, String, boolean, boolean, Set, Map, HttpServletRequest)} instead.
+     */
+    @Deprecated
+    public static String getLoginPageURL(String clientId, String sessionDataKey,
+                                         boolean forceAuthenticate, boolean checkAuthentication, Set<String> scopes,
+                                         Map<String, String[]> reqParams)
+            throws IdentityOAuth2Exception {
+
+            return getLoginPageURL(clientId, sessionDataKey, forceAuthenticate, checkAuthentication, scopes,
+                    reqParams, null);
+    }
+
+    /**
+     * Returns the login page URL.
+     *
+     * @param clientId                  Client id of the application.
+     * @param sessionDataKey            Session Data key.
+     * @param reqParams                 Parameters from the authentication request.
+     * @param forceAuthenticate         Whether it is a force authentication or not.
+     * @param checkAuthentication       Whether to check the authentication or not.
+     * @param scopes                    Request scopes.
+     * @return                          Login Page URL.
+     * @throws IdentityOAuth2Exception  IdentityOAuth2Exception.
      */
     public static String getLoginPageURL(String clientId, String sessionDataKey,
                                          boolean forceAuthenticate, boolean checkAuthentication, Set<String> scopes,
-                                         Map<String, String[]> reqParams) throws IdentityOAuth2Exception {
+                                         Map<String, String[]> reqParams, HttpServletRequest request)
+            throws IdentityOAuth2Exception {
 
         try {
 
             AuthenticationRequestCacheEntry authRequest = buildAuthenticationRequestCacheEntry(clientId,
                     forceAuthenticate, checkAuthentication, reqParams);
-            FrameworkUtils.addAuthenticationRequestToCache(sessionDataKey, authRequest);
+            if (request != null) {
+                request.setAttribute(FrameworkConstants.RequestAttribute.AUTH_REQUEST, authRequest);
+            } else {
+                FrameworkUtils.addAuthenticationRequestToCache(sessionDataKey, authRequest);
+            }
             // Build new query param with only type and session data key
             return buildQueryString(sessionDataKey, scopes);
         } catch (UnsupportedEncodingException | URLBuilderException e) {

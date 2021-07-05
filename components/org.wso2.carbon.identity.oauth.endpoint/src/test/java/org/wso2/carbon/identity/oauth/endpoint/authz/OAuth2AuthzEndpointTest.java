@@ -924,7 +924,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(oAuth2Service.isPKCESupportEnabled()).thenReturn(pkceEnabled);
         if (ERROR_PAGE_URL.equals(expectedLocation) && OAuthConstants.Prompt.NONE.equals(prompt)) {
             doThrow(new IdentityOAuth2Exception("error")).when(EndpointUtil.class, "getLoginPageURL", anyString(),
-                    anyString(), anyBoolean(), anyBoolean(), anySet(), anyMap());
+                    anyString(), anyBoolean(), anyBoolean(), anySet(), anyMap(), any());
             checkErrorCode = false;
         }
 
@@ -1810,7 +1810,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         doReturn(USER_CONSENT_URL).when(EndpointUtil.class, "getUserConsentURL", any(OAuth2Parameters.class),
                 anyString(), anyString(), anyBoolean());
         doReturn(LOGIN_PAGE_URL).when(EndpointUtil.class, "getLoginPageURL", anyString(), anyString(), anyBoolean(),
-                anyBoolean(), anySet(), anyMap());
+                anyBoolean(), anySet(), anyMap(), any());
         doReturn(requestObjectService).when(EndpointUtil.class, "getRequestObjectService");
         EndpointUtil.setOAuthAdminService(oAuthAdminService);
         EndpointUtil.setOAuth2ScopeService(oAuth2ScopeService);
