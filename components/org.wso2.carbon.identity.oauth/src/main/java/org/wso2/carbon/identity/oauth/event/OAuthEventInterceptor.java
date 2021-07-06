@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -224,6 +225,30 @@ public interface OAuthEventInterceptor extends IdentityHandler {
      */
     default void onPostTokenRevocationBySystem(AccessTokenDO accessTokenDO, Map<String, Object> params)
             throws IdentityOAuth2Exception {
+
+    }
+
+    /**
+     * This will be called after when Tokens Revoked by consumer.
+     *
+     * @param accessTokenDOs
+     * @throws IdentityOAuth2Exception
+     */
+    default void onPostTokenRevocationByConsumer(
+            org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO revokeRespDTO,
+            List<AccessTokenDO> accessTokenDOs, Map<String, Object> params) throws IdentityOAuth2Exception {
+
+    }
+
+    /**
+     * This will be called before when Tokens Revoked by consumer.
+     *
+     * @param consumerKey
+     * @param accessTokenDOs
+     * @throws IdentityOAuth2Exception
+     */
+    default void onPreTokenRevocationByConsumer(String consumerKey, List<AccessTokenDO> accessTokenDOs,
+                                                Map<String, Object> params) throws IdentityOAuth2Exception {
 
     }
 }
