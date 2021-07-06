@@ -550,6 +550,10 @@ public class OAuth2AuthzEndpoint {
                 ConsentClaimsData object.
              */
             ConsentClaimsData value = getConsentRequiredClaims(loggedInUser, serviceProvider, oauth2Params);
+            /*
+                It is needed to pitch the consent required claims with the OIDC claims. otherwise the consent of the
+                the claims which are not in the OIDC claims will be saved as consent denied.
+            */
             if (value != null) {
                 List<ClaimMetaData> requestedOidcClaimsList =
                         getRequestedOidcClaimsList(value, oauth2Params, spTenantDomain);
