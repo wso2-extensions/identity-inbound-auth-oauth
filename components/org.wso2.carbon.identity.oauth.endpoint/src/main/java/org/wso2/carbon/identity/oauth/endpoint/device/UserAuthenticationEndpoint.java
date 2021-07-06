@@ -77,7 +77,7 @@ public class UserAuthenticationEndpoint {
     @Consumes("application/x-www-form-urlencoded")
     @Produces("text/html")
     public Response deviceAuthorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
-            throws OAuthSystemException {
+            throws OAuthSystemException, InvalidRequestParentException {
 
         try {
             String userCode = request.getParameter(Constants.USER_CODE);
@@ -87,7 +87,7 @@ public class UserAuthenticationEndpoint {
                     log.debug("user_code is missing in the request.");
                 }
                 response.sendRedirect(ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH)
-                        .addParameter("error", "invalidRequest").build().getAbsolutePublicURL());
+                        .addParameter("error", "invalid_request").build().getAbsolutePublicURL());
                 return null;
             }
             String clientId = deviceAuthService.getClientId(userCode);
@@ -109,16 +109,14 @@ public class UserAuthenticationEndpoint {
                 return oAuth2AuthzEndpoint.authorize(commonAuthRequestWrapper, response);
             } else {
                 if (log.isDebugEnabled()) {
-                    log.debug("Incorrect user_code: " + userCode);
+                    log.debug("Incorrect user_code.");
                 }
                 response.sendRedirect(ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH)
-                        .addParameter("error", "invalidUserCode").build().getAbsolutePublicURL());
+                        .addParameter("error", "invalid_request").build().getAbsolutePublicURL());
                 return null;
             }
         } catch (URISyntaxException e) {
             return handleURISyntaxException(e);
-        } catch (InvalidRequestParentException e) {
-            return handleInvalidRequestParentException(e);
         } catch (IdentityOAuth2Exception e) {
             return handleIdentityOAuth2Exception(e);
         } catch (IOException e) {
@@ -134,17 +132,6 @@ public class UserAuthenticationEndpoint {
         OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
                 setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error")
                 .buildJSONMessage();
-        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
-                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
-    }
-
-    private Response handleInvalidRequestParentException(InvalidRequestParentException e) throws OAuthSystemException {
-
-        if (log.isDebugEnabled()) {
-            log.debug(e.getErrorMessage(), e);
-        }
-        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST).
-                setError(OAuth2ErrorCodes.INVALID_REQUEST).setErrorDescription("Invalid Request").buildJSONMessage();
         return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
                 EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
     }
