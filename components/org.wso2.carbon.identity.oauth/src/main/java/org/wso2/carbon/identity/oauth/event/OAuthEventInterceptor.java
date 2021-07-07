@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth.event;
 
 import org.wso2.carbon.identity.core.handler.IdentityHandler;
+import org.wso2.carbon.identity.oauth.dto.OAuthAppRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -229,26 +230,30 @@ public interface OAuthEventInterceptor extends IdentityHandler {
     }
 
     /**
-     * This will be called after when Tokens Revoked by consumer.
+     * This will be called before tokens are revoked by application.
      *
-     * @param accessTokenDOs
-     * @throws IdentityOAuth2Exception
+     * @param revokeRequestDTO {@link OAuthAppRevocationRequestDTO}
+     * @param params           Additional parameters
+     * @throws IdentityOAuth2Exception If an unexpected error occurs
      */
-    default void onPostTokenRevocationByConsumer(
-            org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO revokeRespDTO,
-            List<AccessTokenDO> accessTokenDOs, Map<String, Object> params) throws IdentityOAuth2Exception {
+    default void onPreTokenRevocationByApplication(OAuthAppRevocationRequestDTO revokeRequestDTO,
+                                                   Map<String, Object> params) throws IdentityOAuth2Exception {
 
     }
 
     /**
-     * This will be called before when Tokens Revoked by consumer.
+     * This will be called after tokens are revoked by application.
      *
-     * @param consumerKey
-     * @param accessTokenDOs
-     * @throws IdentityOAuth2Exception
+     * @param revokeRequestDTO  {@link OAuthAppRevocationRequestDTO}
+     * @param revokeResponseDTO {@link org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO}
+     * @param accessTokenDOs    {@link AccessTokenDO}
+     * @param params            Additional parameters
+     * @throws IdentityOAuth2Exception If an unexpected error occurs
      */
-    default void onPreTokenRevocationByConsumer(String consumerKey, List<AccessTokenDO> accessTokenDOs,
-                                                Map<String, Object> params) throws IdentityOAuth2Exception {
+    default void onPostTokenRevocationByApplication(
+            OAuthAppRevocationRequestDTO revokeRequestDTO,
+            org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO revokeResponseDTO,
+            List<AccessTokenDO> accessTokenDOs, Map<String, Object> params) throws IdentityOAuth2Exception {
 
     }
 }

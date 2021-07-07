@@ -47,6 +47,18 @@ public interface TokenManagementDAO {
     void revokeOAuthConsentByApplicationAndUser(String username, String tenantDomain, String applicationName)
             throws IdentityOAuth2Exception;
 
+    /**
+     * Revoke the OAuth consents by the application name and tenant domain.
+     *
+     * @param applicationName Name of the OAuth application
+     * @param tenantDomain    Tenant domain of the application
+     * @throws IdentityOAuth2Exception If an unexpected error occurs
+     */
+    default void revokeOAuthConsentsByApplication(String applicationName, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+    }
+
     void updateApproveAlwaysForAppConsentByResourceOwner(String tenantAwareUserName,
                                                          String tenantDomain, String applicationName,
                                                          String state) throws IdentityOAuth2Exception;
