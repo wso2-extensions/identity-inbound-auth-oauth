@@ -1142,8 +1142,7 @@ public class OAuthAdminServiceImpl {
         AuthenticatedUser authzUser;
         for (AccessTokenDO detailToken : activeDetailedTokens) {
             String token = detailToken.getAccessToken();
-            accessTokens[countToken] = token;
-            countToken++;
+            accessTokens[countToken++] = token;
 
             OAuthCacheKey cacheKeyToken = new OAuthCacheKey(token);
             String scope = buildScopeString(detailToken.getScope());
@@ -1230,8 +1229,8 @@ public class OAuthAdminServiceImpl {
         OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
                 .getOAuthEventInterceptorProxy();
         if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            Map<String, Object> paramMap = new HashMap<>();
             try {
-                Map<String, Object> paramMap = new HashMap<>();
                 oAuthEventInterceptorProxy.onPostTokenRevocationByConsumer(revokeRespDTO, accessTokenDOs, paramMap);
             } catch (IdentityOAuth2Exception e) {
                 LOG.error("Error occurred when triggering onPostTokenRevocationByConsumer() " +
@@ -1245,8 +1244,8 @@ public class OAuthAdminServiceImpl {
         OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
                 .getOAuthEventInterceptorProxy();
         if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            Map<String, Object> paramMap = new HashMap<>();
             try {
-                Map<String, Object> paramMap = new HashMap<>();
                 oAuthEventInterceptorProxy.onPreTokenRevocationByConsumer(consumerKey, accessTokenDOs, paramMap);
             } catch (IdentityOAuth2Exception e) {
                 LOG.error("Error occurred when triggering onPreTokenRevocationByConsumer() " +
