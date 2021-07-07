@@ -1808,7 +1808,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         doReturn(oAuthServerConfiguration).when(EndpointUtil.class, "getOAuthServerConfiguration");
         doReturn(USER_CONSENT_URL).when(EndpointUtil.class, "getUserConsentURL", any(OAuth2Parameters.class),
-                anyString(), anyString(), anyBoolean());
+                anyString(), anyString(), anyBoolean(), any(OAuthMessage.class));
         doReturn(LOGIN_PAGE_URL).when(EndpointUtil.class, "getLoginPageURL", anyString(), anyString(), anyBoolean(),
                 anyBoolean(), anySet(), anyMap(), any());
         doReturn(requestObjectService).when(EndpointUtil.class, "getRequestObjectService");

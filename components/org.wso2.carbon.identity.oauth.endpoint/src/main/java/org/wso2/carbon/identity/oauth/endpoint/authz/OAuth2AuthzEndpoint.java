@@ -785,7 +785,7 @@ public class OAuth2AuthzEndpoint {
             authenticatedUser.setUserAttributes(new ConcurrentHashMap<>(authenticatedUser.getUserAttributes()));
         }
 
-        addToSessionDataCache(oAuthMessage, authenticationResult, authenticatedUser);
+        addToAuthenticationResultDetailsToOAuthMessage(oAuthMessage, authenticationResult, authenticatedUser);
 
         OIDCSessionState sessionState = new OIDCSessionState();
         String redirectURL = null;
@@ -874,17 +874,13 @@ public class OAuth2AuthzEndpoint {
                 StringUtils.EMPTY, sessionStateValue)).build();
     }
 
-    private void addToSessionDataCache(OAuthMessage oAuthMessage, AuthenticationResult authnResult,
-                                       AuthenticatedUser authenticatedUser) {
+    private void addToAuthenticationResultDetailsToOAuthMessage(OAuthMessage oAuthMessage,
+                AuthenticationResult authnResult, AuthenticatedUser authenticatedUser) {
 
         oAuthMessage.getSessionDataCacheEntry().setLoggedInUser(authenticatedUser);
         oAuthMessage.getSessionDataCacheEntry().setAuthenticatedIdPs(authnResult.getAuthenticatedIdPs());
-        oAuthMessage.getSessionDataCacheEntry().setValidityPeriod(
-                TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
         oAuthMessage.getSessionDataCacheEntry().setSessionContextIdentifier((String)
                 authnResult.getProperty(FrameworkConstants.AnalyticsAttributes.SESSION_ID));
-        SessionDataCacheKey cacheKey = new SessionDataCacheKey(getSessionDataKeyFromLogin(oAuthMessage));
-        SessionDataCache.getInstance().addToCache(cacheKey, oAuthMessage.getSessionDataCacheEntry());
     }
 
     private void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) {
@@ -1991,7 +1987,7 @@ public class OAuth2AuthzEndpoint {
                     authenticatedUser.toFullQualifiedUsername() + " for oauth app with clientId: " + clientId +
                     " are revoked and user will be prompted to give consent again.");
             // Need to prompt for consent and get user consent for claims as well.
-            return promptUserForConsent(sessionDataKeyFromLogin, oauth2Params, authenticatedUser, true);
+            return promptUserForConsent(sessionDataKeyFromLogin, oauth2Params, authenticatedUser, true, oAuthMessage);
         } else if (isPromptNone(oauth2Params)) {
             diagnosticLog.info("Prompt none is configured for the application. Hence consent prompt will be " +
                     "disabled for the user.");
@@ -2029,7 +2025,7 @@ public class OAuth2AuthzEndpoint {
         } else if (hasUserApproved) {
             return handleApproveAlwaysWithPromptForNewConsent(oAuthMessage, sessionState, oauth2Params);
         } else {
-            return promptUserForConsent(sessionDataKey, oauth2Params, authenticatedUser, false);
+            return promptUserForConsent(sessionDataKey, oauth2Params, authenticatedUser, false, oAuthMessage);
         }
     }
 
@@ -2044,7 +2040,8 @@ public class OAuth2AuthzEndpoint {
     }
 
     private String promptUserForConsent(String sessionDataKey, OAuth2Parameters oauth2Params,
-                                        AuthenticatedUser user, boolean ignoreExistingConsents)
+                                        AuthenticatedUser user, boolean ignoreExistingConsents,
+                                        OAuthMessage oAuthMessage)
             throws ConsentHandlingFailedException, OAuthSystemException {
 
         String clientId = oauth2Params.getClientId();
@@ -2066,7 +2063,7 @@ public class OAuth2AuthzEndpoint {
             preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, user);
         }
 
-        return getUserConsentURL(sessionDataKey, oauth2Params, user, preConsent);
+        return getUserConsentURL(sessionDataKey, oauth2Params, user, preConsent, oAuthMessage);
     }
 
     private String handlePromptNone(OAuthMessage oAuthMessage,
@@ -2388,7 +2385,8 @@ public class OAuth2AuthzEndpoint {
             String sessionDataKeyFromLogin = getSessionDataKeyFromLogin(oAuthMessage);
             preConsent = buildQueryParamString(preConsent, USER_CLAIMS_CONSENT_ONLY + "=true");
 
-            return getUserConsentURL(sessionDataKeyFromLogin, oauth2Params, authenticatedUser, preConsent);
+            return getUserConsentURL(sessionDataKeyFromLogin, oauth2Params,
+                    authenticatedUser, preConsent, oAuthMessage);
         } else {
             sessionState.setAddSessionState(true);
             return handleUserConsent(oAuthMessage, APPROVE, sessionState);
@@ -2453,19 +2451,20 @@ public class OAuth2AuthzEndpoint {
 
     private String getUserConsentURL(String sessionDataKey,
                                      OAuth2Parameters oauth2Params,
-                                     AuthenticatedUser user) throws OAuthSystemException {
+                                     AuthenticatedUser user, OAuthMessage oAuthMessage) throws OAuthSystemException {
 
         String loggedInUser = user.getAuthenticatedSubjectIdentifier();
         return EndpointUtil.getUserConsentURL(oauth2Params, loggedInUser, sessionDataKey,
-                OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes()));
+                OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes()), oAuthMessage);
     }
 
     private String getUserConsentURL(String sessionDataKey,
                                      OAuth2Parameters oauth2Params,
                                      AuthenticatedUser authenticatedUser,
-                                     String additionalQueryParams) throws OAuthSystemException {
+                                     String additionalQueryParams, OAuthMessage oAuthMessage)
+            throws OAuthSystemException {
 
-        String userConsentURL = getUserConsentURL(sessionDataKey, oauth2Params, authenticatedUser);
+        String userConsentURL = getUserConsentURL(sessionDataKey, oauth2Params, authenticatedUser, oAuthMessage);
         return FrameworkUtils.appendQueryParamsStringToUrl(userConsentURL, additionalQueryParams);
     }
 
