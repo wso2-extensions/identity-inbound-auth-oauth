@@ -196,7 +196,6 @@ public class OAuth2AuthzEndpoint {
 
     private static final String RESPONSE_MODE_FORM_POST = "form_post";
     private static final String RESPONSE_MODE = "response_mode";
-    private static final String RETAIN_CACHE = "retainCache";
     private static final String REQUEST = "request";
     private static final String REQUEST_URI = "request_uri";
 
@@ -277,7 +276,7 @@ public class OAuth2AuthzEndpoint {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
             return handleOAuthSystemException(oAuthMessage, e);
         } finally {
-            handleRetainCache(oAuthMessage);
+            handleCachePersistence(oAuthMessage);
             PrivilegedCarbonContext.endTenantFlow();
         }
     }
@@ -327,21 +326,7 @@ public class OAuth2AuthzEndpoint {
                         oAuth2Parameters))).build();
     }
 
-    private void handleRetainCache(OAuthMessage oAuthMessage) {
-
-        String sessionDataKeyFromConsent =
-                oAuthMessage.getRequest().getParameter(OAuthConstants.SESSION_DATA_KEY_CONSENT);
-        if (sessionDataKeyFromConsent != null) {
-            /*
-             * TODO Cache retaining is a temporary fix. Remove after Google fixes
-             * http://code.google.com/p/gdata-issues/issues/detail?id=6628
-             */
-            String retainCache = System.getProperty(RETAIN_CACHE);
-
-            if (retainCache == null) {
-                clearCacheEntry(sessionDataKeyFromConsent);
-            }
-        }
+    private void handleCachePersistence(OAuthMessage oAuthMessage) {
 
         AuthorizationGrantCacheEntry entry = oAuthMessage.getAuthorizationGrantCacheEntry();
         if (entry != null) {
@@ -2519,17 +2504,6 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setHttpRequestHeaders(httpRequestHeaderHandler.getHttpRequestHeaders());
         authzReqDTO.setCookie(httpRequestHeaderHandler.getCookies());
         return authzReqDTO;
-    }
-
-    private void clearCacheEntry(String sessionDataKey) {
-
-        if (sessionDataKey != null) {
-            SessionDataCacheKey cacheKey = new SessionDataCacheKey(sessionDataKey);
-            SessionDataCacheEntry result = SessionDataCache.getInstance().getValueFromCache(cacheKey);
-            if (result != null) {
-                SessionDataCache.getInstance().clearCacheEntry(cacheKey);
-            }
-        }
     }
 
     private AuthenticationResult getAuthenticationResult(OAuthMessage oAuthMessage, String sessionDataKey) {
