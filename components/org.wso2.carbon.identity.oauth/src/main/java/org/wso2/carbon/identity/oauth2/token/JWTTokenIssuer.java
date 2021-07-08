@@ -34,8 +34,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
@@ -67,11 +65,10 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getPrivateKey;
 
 /**
  * Self contained access token builder.
@@ -90,7 +87,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String SHA384_WITH_EC = "SHA384withEC";
     private static final String SHA512_WITH_EC = "SHA512withEC";
 
-    private static final String KEY_STORE_EXTENSION = ".jks";
     private static final String AUTHORIZATION_PARTY = "azp";
     private static final String AUDIENCE = "aud";
     private static final String SCOPE = "scope";
@@ -102,10 +98,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
     private static final Log log = LogFactory.getLog(JWTTokenIssuer.class);
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
-
-    // We are keeping a private key map which will have private key for each tenant domain. We are keeping this as a
-    // static Map since then we don't need to read the key from keystore every time.
-    private static Map<Integer, Key> privateKeys = new ConcurrentHashMap<>();
     private Algorithm signatureAlgorithm = null;
 
     public JWTTokenIssuer() throws IdentityOAuth2Exception {
@@ -342,36 +334,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             String tenantDomain = resolveSigningTenantDomain(tokenContext, authorizationContext);
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
 
-            Key privateKey;
-            if (privateKeys.containsKey(tenantId)) {
-
-                // PrivateKey will not be null because containsKey() true says given key is exist and ConcurrentHashMap
-                // does not allow to store null values.
-                privateKey = privateKeys.get(tenantId);
-            } else {
-
-                // Get tenant's key store manager.
-                KeyStoreManager tenantKSM = KeyStoreManager.getInstance(tenantId);
-                if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
-                    try {
-                        privateKey = tenantKSM.getDefaultPrivateKey();
-                    } catch (Exception e) {
-                        throw new IdentityOAuth2Exception("Error while obtaining private key for super tenant", e);
-                    }
-                } else {
-
-                    // Derive key store name.
-                    String ksName = tenantDomain.trim().replace(".", "-");
-                    String jksName = ksName + KEY_STORE_EXTENSION;
-
-                    // Obtain private key.
-                    privateKey = tenantKSM.getPrivateKey(jksName, tenantDomain);
-                }
-
-                // Add the private key to the static concurrent hash map for later uses.
-                privateKeys.put(tenantId, privateKey);
-            }
-
+            Key privateKey = getPrivateKey(tenantDomain, tenantId);
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             String certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
