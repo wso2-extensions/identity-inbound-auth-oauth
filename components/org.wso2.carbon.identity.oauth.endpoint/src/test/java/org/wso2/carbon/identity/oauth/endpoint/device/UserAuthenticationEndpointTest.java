@@ -57,7 +57,6 @@ import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.Date;
@@ -350,70 +349,6 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
 
         when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class), any(HttpServletResponse.class)))
                 .thenReturn(response);
-        DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
-        userAuthenticationEndpoint = new UserAuthenticationEndpoint();
-        userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
-        WhiteboxImpl.setInternalState(userAuthenticationEndpoint, OAuth2AuthzEndpoint.class, oAuth2AuthzEndpoint);
-        response1 = userAuthenticationEndpoint.deviceAuthorize(httpServletRequest, httpServletResponse);
-        if (expectedValue == HttpServletResponse.SC_ACCEPTED) {
-            Assert.assertNotNull(response1);
-        } else {
-            Assert.assertNull(response1);
-        }
-    }
-
-    @DataProvider(name = "providePostParamsForURISyntaxExceptionPath")
-    public Object[][] providePostParamsForURISyntaxExceptionPath() {
-
-        return new Object[][]{
-                {TEST_USER_CODE, CLIENT_ID_VALUE, HttpServletResponse.SC_ACCEPTED, PENDING, TEST_URL},
-                {TEST_USER_CODE, CLIENT_ID_VALUE, HttpServletResponse.SC_ACCEPTED, PENDING, null}
-        };
-    }
-
-    /**
-     * Test device endpoint throwing URISyntaxException.
-     *
-     * @param userCode      User code of the user.
-     * @param clientId      Consumer key of the application.
-     * @param expectedValue Expected http status.
-     * @param status        Status of user code.
-     * @param uri           Redirection uri.
-     * @throws Exception Error while testing device endpoint throwing URISyntaxException.
-     */
-    @Test(dataProvider = "providePostParamsForURISyntaxExceptionPath")
-    public void testDeviceAuthorizeForURISyntaxExceptionPath(String userCode, String clientId, int expectedValue,
-                                                             String status, String uri) throws Exception {
-
-        mockOAuthServerConfiguration();
-
-        WhiteboxImpl.setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-        mockStatic(DeviceFlowPersistenceFactory.class);
-        when(DeviceFlowPersistenceFactory.getInstance()).thenReturn(deviceFlowPersistenceFactory);
-        when(deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
-        when(deviceFlowDAO.getClientIdByUserCode(anyString())).thenReturn(clientId);
-        when(deviceFlowDAO.getDetailsForUserCode(anyString())).thenReturn(deviceFlowDOAsNotExpired);
-        when(deviceFlowDAO.getScopesForUserCode(anyString())).thenReturn(scopes);
-        when(httpServletRequest.getParameter(anyString())).thenReturn(userCode);
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
-        when(oAuthAppDO.getCallbackUrl()).thenReturn(uri);
-        Response response1;
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
-
-        mockStatic(ServiceURLBuilder.class);
-        when(ServiceURLBuilder.create()).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.addPath(any())).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.addParameter(any(), any())).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.build()).thenReturn(serviceURL);
-        when(serviceURL.getAbsolutePublicURL()).thenReturn(TEST_URL);
-
-        when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class), any(HttpServletResponse.class)))
-                .thenThrow(new URISyntaxException("Creating URISyntaxException.", "Throwing URISyntaxException."));
         DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
         userAuthenticationEndpoint = new UserAuthenticationEndpoint();
         userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
