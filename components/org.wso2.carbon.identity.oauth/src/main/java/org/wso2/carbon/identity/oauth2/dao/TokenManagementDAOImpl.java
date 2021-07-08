@@ -425,6 +425,44 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
     }
 
     /**
+     * Revoke the OAuth Consent which is recorded in the IDN_OPENID_USER_RPS table against the Application
+     *
+     * @param applicationName - Name of the OAuth App
+     * @throws IdentityOAuth2Exception - If an unexpected error occurs.
+     */
+    @Override
+    public void revokeOAuthConsentByApplication(String applicationName) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Revoking OAuth consent for application: " + applicationName);
+        }
+
+        if (applicationName == null) {
+            log.error("Could not remove user consents for application " + applicationName);
+            return;
+        }
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement ps = null;
+
+        try {
+            String sql = SQLQueries.DELETE_USER_RPS_OF_APPLICATION;
+
+            ps = connection.prepareStatement(sql);
+            ps.setString(1, applicationName);
+            ps.execute();
+            IdentityDatabaseUtil.commitTransaction(connection);
+
+        } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
+            String errorMsg = "Error deleting OAuth consent of Application" + applicationName;
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+        }
+    }
+
+    /**
      * Update the OAuth Consent Approve Always which is recorded in the IDN_OPENID_USER_RPS table against
      * the user for a particular Application
      *

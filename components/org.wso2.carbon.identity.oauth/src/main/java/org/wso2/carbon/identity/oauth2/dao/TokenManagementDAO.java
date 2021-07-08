@@ -47,6 +47,8 @@ public interface TokenManagementDAO {
     void revokeOAuthConsentByApplicationAndUser(String username, String tenantDomain, String applicationName)
             throws IdentityOAuth2Exception;
 
+    void revokeOAuthConsentByApplication(String applicationName) throws IdentityOAuth2Exception;
+
     void updateApproveAlwaysForAppConsentByResourceOwner(String tenantAwareUserName,
                                                          String tenantDomain, String applicationName,
                                                          String state) throws IdentityOAuth2Exception;
