@@ -73,19 +73,17 @@ import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME
 public class UserInfoResponseBaseTest extends PowerMockTestCase {
 
     public static final String AUTHORIZED_USER_FULL_QUALIFIED = "JDBC/peter@tenant.com";
-    public static final String AUTHORIZED_USER_ID_FULL_QUALIFIED
-            = "JDBC/4b4414e1-916b-4475-aaee-6b0751c29ff6@tenant.com";
     public static final String AUTHORIZED_USER_NAME = "peter";
     public static final String AUTHORIZED_USER_ID = "4b4414e1-916b-4475-aaee-6b0751c29ff6";
-    public static final String AUTHORIZED_USER_WITH_TENANT = "4b4414e1-916b-4475-aaee-6b0751c29ff6@tenant.com";
-    public static final String AUTHORIZED_USER_WITH_DOMAIN = "JDBC/4b4414e1-916b-4475-aaee-6b0751c29ff6";
+    public static final String AUTHORIZED_USER_WITH_TENANT = "peter@tenant.com";
+    public static final String AUTHORIZED_USER_WITH_DOMAIN = "JDBC/peter";
     public static final String TENANT_DOT_COM = "tenant.com";
     public static final String JDBC_DOMAIN = "JDBC";
 
     public static final String PRIMARY_USER_FULL_QUALIFIED = "PRIMARY/john@carbon.super";
     public static final String PRIMARY_USER_NAME = "john";
+    public static final String PRIMARY_USER_WITH_TENANT = "john@carbon.super";
     public static final String PRIMARY_USER_ID = "4b4414e1-916b-4475-aaee-6b0751c29ff2";
-    public static final String PRIMARY_USER_ID_WITH_TENANT = "4b4414e1-916b-4475-aaee-6b0751c29ff2@carbon.super";
 
     public static final String SUBJECT_FULL_QUALIFIED = "JDBC/subject@tenant.com";
     public static final String SUBJECT = "subject";
@@ -273,10 +271,8 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
     }
 
     protected Object[][] getSubjectClaimTestData() {
-
         final Map<String, Object> claimMapWithSubject = new HashMap<>();
         claimMapWithSubject.put(OAuth2Util.SUB, SUBJECT);
-
         AuthenticatedUser authzUserJDBCDomain = new AuthenticatedUser();
         authzUserJDBCDomain.setUserName(AUTHORIZED_USER_NAME);
         authzUserJDBCDomain.setTenantDomain(TENANT_DOT_COM);
@@ -291,16 +287,16 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
 
         return new Object[][]{
                 // User claims, Authz user, Append Tenant Domain, Append User Store Domain, Expected Subject Claim
-                {Collections.emptyMap(), authzUserJDBCDomain, true, true, AUTHORIZED_USER_ID_FULL_QUALIFIED},
+                {Collections.emptyMap(), authzUserJDBCDomain, true, true, AUTHORIZED_USER_FULL_QUALIFIED},
                 {Collections.emptyMap(), authzUserJDBCDomain, true, false, AUTHORIZED_USER_WITH_TENANT},
                 {Collections.emptyMap(), authzUserJDBCDomain, false, true, AUTHORIZED_USER_WITH_DOMAIN},
-                {Collections.emptyMap(), authzUserJDBCDomain, false, false, AUTHORIZED_USER_ID},
+                {Collections.emptyMap(), authzUserJDBCDomain, false, false, AUTHORIZED_USER_NAME},
 
                 // Authorized user is from PRIMARY userstore domain
-                {Collections.emptyMap(), authzUserPrimaryDomain, true, true, PRIMARY_USER_ID_WITH_TENANT},
-                {Collections.emptyMap(), authzUserPrimaryDomain, true, false, PRIMARY_USER_ID_WITH_TENANT},
-                {Collections.emptyMap(), authzUserPrimaryDomain, false, true, PRIMARY_USER_ID},
-                {Collections.emptyMap(), authzUserPrimaryDomain, false, false, PRIMARY_USER_ID},
+                {Collections.emptyMap(), authzUserPrimaryDomain, true, true, PRIMARY_USER_WITH_TENANT},
+                {Collections.emptyMap(), authzUserPrimaryDomain, true, false, PRIMARY_USER_WITH_TENANT},
+                {Collections.emptyMap(), authzUserPrimaryDomain, false, true, PRIMARY_USER_NAME},
+                {Collections.emptyMap(), authzUserPrimaryDomain, false, false, PRIMARY_USER_NAME},
 
                 // Subject claim is in user claims
                 {claimMapWithSubject, authzUserJDBCDomain, true, true, SUBJECT_FULL_QUALIFIED},

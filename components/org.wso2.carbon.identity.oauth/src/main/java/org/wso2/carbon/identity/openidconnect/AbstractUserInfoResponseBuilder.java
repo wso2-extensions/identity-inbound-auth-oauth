@@ -21,7 +21,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -174,13 +173,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
             if (authenticatedUser.isFederatedUser()) {
                 subjectClaim = authenticatedUser.getAuthenticatedSubjectIdentifier();
             } else {
-                try {
-                    subjectClaim = authenticatedUser.getUserId();
-                } catch (UserIdNotFoundException e) {
-                    // We don't have anything to fallback to. So we have to throw an exception.
-                    throw new OAuthSystemException("User id not found for user: "
-                            + authenticatedUser.getLoggableUserId());
-                }
+                subjectClaim = authenticatedUser.getUserName();
             }
         }
 
