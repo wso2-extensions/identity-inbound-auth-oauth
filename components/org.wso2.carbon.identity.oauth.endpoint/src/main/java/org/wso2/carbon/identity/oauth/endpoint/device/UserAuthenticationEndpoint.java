@@ -77,7 +77,7 @@ public class UserAuthenticationEndpoint {
     @Consumes("application/x-www-form-urlencoded")
     @Produces("text/html")
     public Response deviceAuthorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
-            throws URISyntaxException, InvalidRequestParentException, OAuthSystemException {
+            throws InvalidRequestParentException, OAuthSystemException {
 
         try {
             String userCode = request.getParameter(Constants.USER_CODE);
@@ -121,6 +121,8 @@ public class UserAuthenticationEndpoint {
             return handleIOException(e);
         } catch (URLBuilderException e) {
             return handleURLBuilderException(e);
+        } catch (URISyntaxException e) {
+            return handleURISyntaxException(e);
         }
     }
 
@@ -148,6 +150,16 @@ public class UserAuthenticationEndpoint {
     private Response handleURLBuilderException(URLBuilderException e) throws OAuthSystemException {
 
         log.error("Error occurred while sending request to authentication framework.", e);
+        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
+                setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error")
+                .buildJSONMessage();
+        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
+    }
+
+    private Response handleURISyntaxException(URISyntaxException e) throws OAuthSystemException {
+
+        log.error("Error while parsing string as an URI reference.", e);
         OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
                 setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error")
                 .buildJSONMessage();
