@@ -321,7 +321,8 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
         mockStatic(OIDCSessionManager.class);
         when(OIDCSessionManagementUtil.getSessionManager()).thenReturn(oidcSessionManager);
-        when(oidcSessionManager.sessionExists(OPBROWSER_STATE)).thenReturn(sessionExists);
+        when(oidcSessionManager.sessionExists(OPBROWSER_STATE, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).
+                thenReturn(sessionExists);
 
         when(request.getParameter("consent")).thenReturn(consent);
         when(request.getHeaderNames()).thenReturn(Collections.enumeration(Arrays.asList(new String[]{"cookie"})));
@@ -479,7 +480,8 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         when(OIDCSessionManagementUtil.getErrorPageURL(anyString(), anyString())).thenReturn(errorPageURL);
         when(OIDCSessionManagementUtil.getOIDCLogoutURL()).thenReturn(oidcLogoutURL);
         when(OIDCSessionManagementUtil.getSessionManager()).thenReturn(oidcSessionManager);
-        when(oidcSessionManager.sessionExists(OPBROWSER_STATE)).thenReturn(sessionExists);
+        when(oidcSessionManager.sessionExists(OPBROWSER_STATE, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).
+                thenReturn(sessionExists);
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);

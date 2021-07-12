@@ -53,6 +53,8 @@ public class OAuth2AuthorizeReqDTO {
     private String sessionDataKey;
     // Identifier of the authenticated framework session. This will be included as a claim in the ID token.
     private String idpSessionIdentifier;
+    // Set the login tenant domain.
+    private String loginTenantDomain;
 
     public String getSessionDataKey() {
         return sessionDataKey;
@@ -231,5 +233,13 @@ public class OAuth2AuthorizeReqDTO {
 
     public void setIdpSessionIdentifier(String idpSessionIdentifier) {
         this.idpSessionIdentifier = idpSessionIdentifier;
+    }
+
+    public String getLoginTenantDomain() {
+        return this.loginTenantDomain;
+    }
+
+    public void setLoginTenantDomain(String loginTenantDomain) {
+        this.loginTenantDomain = loginTenantDomain;
     }
 }

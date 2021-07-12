@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oidc.session.cache;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.store.SessionDataStore;
-import org.wso2.carbon.identity.application.common.cache.BaseCache;
+import org.wso2.carbon.identity.core.cache.BaseCache;
 
 /**
  * This is the class which caches OIDC session state information.
@@ -66,9 +66,10 @@ public class OIDCSessionParticipantCache
      * @param entry Actual object where cache entry is placed.
      */
     @Override
-    public void addToCache(OIDCSessionParticipantCacheKey key, OIDCSessionParticipantCacheEntry entry) {
+    public void addToCache(OIDCSessionParticipantCacheKey key, OIDCSessionParticipantCacheEntry entry,
+                           String tenantDomain) {
 
-        super.addToCache(key, entry);
+        super.addToCache(key, entry, tenantDomain);
         SessionDataStore.getInstance().storeSessionData(key.getSessionID(), OIDC_SESSION_PARTICIPANT_CACHE_NAME, entry);
         if (log.isDebugEnabled()) {
             log.debug("Session corresponding to the key : " + key.getSessionID() + " added to cache and persistence "
@@ -84,9 +85,9 @@ public class OIDCSessionParticipantCache
      * @return Cache entry
      */
     @Override
-    public OIDCSessionParticipantCacheEntry getValueFromCache(OIDCSessionParticipantCacheKey key) {
+    public OIDCSessionParticipantCacheEntry getValueFromCache(OIDCSessionParticipantCacheKey key, String tenantDomain) {
 
-        OIDCSessionParticipantCacheEntry entry = super.getValueFromCache(key);
+        OIDCSessionParticipantCacheEntry entry = super.getValueFromCache(key, tenantDomain);
         if (entry == null) {
             if (log.isDebugEnabled()) {
                 log.debug("Session corresponding to the key : " + key.getSessionID() + " cannot be found. Retrieving " +
@@ -105,9 +106,9 @@ public class OIDCSessionParticipantCache
      * @param key Key to clear cache.
      */
     @Override
-    public void clearCacheEntry(OIDCSessionParticipantCacheKey key) {
+    public void clearCacheEntry(OIDCSessionParticipantCacheKey key, String tenantDomain) {
 
-        super.clearCacheEntry(key);
+        super.clearCacheEntry(key, tenantDomain);
         SessionDataStore.getInstance().clearSessionData(key.getSessionID(), OIDC_SESSION_PARTICIPANT_CACHE_NAME);
         if (log.isDebugEnabled()) {
             log.debug("Session corresponding to the key : " + key.getSessionID() + " cleared from cache and " +

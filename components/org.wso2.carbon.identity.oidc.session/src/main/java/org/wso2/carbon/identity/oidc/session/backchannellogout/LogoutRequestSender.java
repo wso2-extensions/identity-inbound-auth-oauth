@@ -28,6 +28,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -73,12 +74,17 @@ public class LogoutRequestSender {
      * Sends logout requests to all service providers.
      *
      * @param request
+     *
+     * @deprecated This method was deprecated to move OIDC SessionParticipantCache to the tenant space.
+     * Use {@link #sendLogoutRequests(String, String)} instead.
      */
+    @Deprecated
     public void sendLogoutRequests(HttpServletRequest request) {
 
         Cookie opbsCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
         if (opbsCookie != null) {
-            sendLogoutRequests(opbsCookie.getValue());
+            // For backward compatibility, SUPER_TENANT_DOMAIN_NAME was added as the cache maintained tenant.
+            sendLogoutRequests(opbsCookie.getValue(), MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         } else {
             log.error("No opbscookie exists in the request");
         }
@@ -89,9 +95,9 @@ public class LogoutRequestSender {
      *
      * @param opbsCookieId
      */
-    public void sendLogoutRequests(String opbsCookieId) {
+    public void sendLogoutRequests(String opbsCookieId, String tenantDomain) {
 
-        Map<String, String> logoutTokenList = getLogoutTokenList(opbsCookieId);
+        Map<String, String> logoutTokenList = getLogoutTokenList(opbsCookieId, tenantDomain);
         if (MapUtils.isNotEmpty(logoutTokenList)) {
             // For each logoutReq, create a new task and submit it to the thread pool.
             for (Map.Entry<String, String> logoutTokenMap : logoutTokenList.entrySet()) {
@@ -113,12 +119,12 @@ public class LogoutRequestSender {
      * @param opbsCookie OpbsCookie.
      * @return Map with logoutToken, back-channel logout Url.
      */
-    private Map<String, String> getLogoutTokenList(String opbsCookie) {
+    private Map<String, String> getLogoutTokenList(String opbsCookie, String tenantDomain) {
 
         Map<String, String> logoutTokenList = null;
         try {
             DefaultLogoutTokenBuilder logoutTokenBuilder = new DefaultLogoutTokenBuilder();
-            logoutTokenList = logoutTokenBuilder.buildLogoutToken(opbsCookie);
+            logoutTokenList = logoutTokenBuilder.buildLogoutToken(opbsCookie, tenantDomain);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             log.error("Error while initializing " + DefaultLogoutTokenBuilder.class, e);
         }

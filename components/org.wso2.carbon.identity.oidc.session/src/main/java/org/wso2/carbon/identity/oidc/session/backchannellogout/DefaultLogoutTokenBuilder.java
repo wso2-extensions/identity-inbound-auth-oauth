@@ -86,7 +86,9 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
         Map<String, String> logoutTokenList = new HashMap<>();
         // Send logout token to all RPs.
         Cookie opbsCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
-        OIDCSessionState sessionState = getSessionState(opbsCookie != null ? opbsCookie.getValue() : null);
+        // For backward compatibility, SUPER_TENANT_DOMAIN_NAME was added as the cache maintained tenant.
+        OIDCSessionState sessionState = getSessionState(opbsCookie != null ? opbsCookie.getValue() : null,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         if (sessionState != null) {
             Set<String> sessionParticipants = getSessionParticipants(sessionState);
             if (!sessionParticipants.isEmpty()) {
@@ -110,7 +112,26 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
 
         Map<String, String> logoutTokenList = new HashMap<>();
         // Send logout token to all RPs.
-        OIDCSessionState sessionState = getSessionState(opbscookie);
+        // For backward compatibility, SUPER_TENANT_DOMAIN_NAME was added as the cache maintained tenant.
+        OIDCSessionState sessionState = getSessionState(opbscookie, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        if (sessionState != null) {
+            Set<String> sessionParticipants = getSessionParticipants(sessionState);
+            if (!sessionParticipants.isEmpty()) {
+                for (String clientID : sessionParticipants) {
+                    addToLogoutTokenList(logoutTokenList, sessionState, clientID);
+                }
+            }
+        }
+        return logoutTokenList;
+    }
+
+    @Override
+    public Map<String, String> buildLogoutToken(String opbscookie, String tenantDomain) throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
+
+        Map<String, String> logoutTokenList = new HashMap<>();
+        // Send logout token to all RPs.
+        OIDCSessionState sessionState = getSessionState(opbscookie, tenantDomain);
         if (sessionState != null) {
             Set<String> sessionParticipants = getSessionParticipants(sessionState);
             if (!sessionParticipants.isEmpty()) {
@@ -241,11 +262,11 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
      * @param opbscookie OpbsCookie.
      * @return OIDCSessionState
      */
-    private OIDCSessionState getSessionState(String opbscookie) {
+    private OIDCSessionState getSessionState(String opbscookie, String tenantDomain) {
 
         if (StringUtils.isNotEmpty(opbscookie)) {
             OIDCSessionState sessionState =
-                    OIDCSessionManagementUtil.getSessionManager().getOIDCSessionState(opbscookie);
+                    OIDCSessionManagementUtil.getSessionManager().getOIDCSessionState(opbscookie, tenantDomain);
             return sessionState;
         }
         return null;
