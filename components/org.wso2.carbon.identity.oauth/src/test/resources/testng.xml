@@ -89,7 +89,6 @@
             <class name="org.wso2.carbon.identity.oauth2.dao.AccessContextTokenDOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.AuthContextTokenDOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.ScopeMgtDAOTest"/>
-            <class name="org.wso2.carbon.identity.oauth2.dao.TokenMgtDAOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAOImplTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth2.internal.OAuthApplicationMgtListenerTest"/>-->
             <!--<class name="org.wso2.carbon.identity.oauth2.internal.OAuthTenantMgtListenerImplTest"/>-->
@@ -161,7 +160,6 @@
             <class name="org.wso2.carbon.identity.oauth2.dao.AccessContextTokenDOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.AuthContextTokenDOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.ScopeMgtDAOTest"/>
-            <class name="org.wso2.carbon.identity.oauth2.dao.TokenMgtDAOTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth2.internal.OAuthApplicationMgtListenerTest"/>-->
             <!--<class name="org.wso2.carbon.identity.oauth2.internal.OAuthTenantMgtListenerImplTest"/>-->
             <!--<class name="org.wso2.carbon.identity.oauth2.internal.OAuthUserStoreConfigListenerImplTest"/>-->
