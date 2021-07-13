@@ -21,17 +21,17 @@ package org.wso2.carbon.identity.oauth2.validators;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.base.IdentityException;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
-import org.wso2.carbon.user.core.UserStoreException;
-import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
@@ -146,17 +146,25 @@ public class RoleBasedInternalScopeValidator {
     private List<String> getRolesOfTheUser(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception {
 
         try {
-            UserStoreManager userStoreManager = IdentityTenantUtil
-                    .getRealm(authenticatedUser.getTenantDomain(), authenticatedUser.toFullQualifiedUsername())
-                    .getUserStoreManager();
+            RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+            int tenantId = realmService.getTenantManager().getTenantId(authenticatedUser.getTenantDomain());
 
-            return ((AbstractUserStoreManager) userStoreManager)
-                    .getHybridRoleListOfUser(authenticatedUser.getUserName(), authenticatedUser.getUserStoreDomain());
+            AbstractUserStoreManager userStoreManager
+                    = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
 
-        } catch (UserStoreException | IdentityException e) {
+            String userName = authenticatedUser.getUserName();
+            if (userName == null) {
+                userName = userStoreManager.getUserNameFromUserID(authenticatedUser.getUserId());
+            }
+            return userStoreManager.getHybridRoleListOfUser(userName, authenticatedUser.getUserStoreDomain());
+
+        } catch (UserStoreException e) {
             String error =
-                    "Error occurred while getting roles of the user: " + authenticatedUser.toFullQualifiedUsername();
+                    "Error occurred while getting roles of the user: " + authenticatedUser.getLoggableUserId();
             throw new IdentityOAuth2Exception(error, e);
+        } catch (UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception("User id not available for user: "
+                    + authenticatedUser.getLoggableUserId(), e);
         }
     }
 

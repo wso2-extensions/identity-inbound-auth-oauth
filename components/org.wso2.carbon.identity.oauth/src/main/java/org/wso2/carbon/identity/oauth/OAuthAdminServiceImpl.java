@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -839,7 +840,7 @@ public class OAuthAdminServiceImpl {
                 OAuthCache.getInstance().clearCacheEntry(cacheKeyToken);
 
                 String scope = buildScopeString(detailToken.getScope());
-                String authorizedUser = detailToken.getAuthzUser().toString();
+                String authorizedUser = detailToken.getAuthzUser().getUserId();
                 String authenticatedIDP = detailToken.getAuthzUser().getFederatedIdPName();
                 boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
                 String cacheKeyString;
@@ -871,9 +872,9 @@ public class OAuthAdminServiceImpl {
             OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
                     .updateAppAndRevokeTokensAndAuthzCodes(
                             consumerKey, properties, authorizationCodes.toArray(
-                                    new String[authorizationCodes.size()]), accessTokens);
+                                    new String[0]), accessTokens);
 
-        } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
+        } catch (IdentityOAuth2Exception | IdentityApplicationManagementException | UserIdNotFoundException e) {
             throw handleError("Error in updating oauth app & revoking access tokens and authz " +
                     "codes for OAuth App with consumerKey: " + consumerKey, e);
         }

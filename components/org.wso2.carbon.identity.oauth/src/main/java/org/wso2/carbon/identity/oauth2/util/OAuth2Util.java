@@ -61,6 +61,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -131,6 +132,7 @@ import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -649,17 +651,19 @@ public class OAuth2Util {
      * @param authorizedUser
      * @return
      * @deprecated To make the cache key completely unique the authenticated IDP should also be introduced.
-     * Use {@link #buildCacheKeyStringForToken(String, String, String, String)} instead.
+     * Use {@link #buildCacheKeyStringForTokenWithUserId(String, String, String, String, String)} instead.
      */
     @Deprecated
     public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser) {
 
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (isUsernameCaseSensitive) {
-            return clientId + ":" + authorizedUser + ":" + scope;
-        } else {
-            return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope;
+
+        AuthenticatedUser authenticatedUser = OAuth2Util.getUserFromUserName(authorizedUser);
+        try {
+            return clientId + ":" + authenticatedUser.getUserId() + ":" + scope;
+        } catch (UserIdNotFoundException e) {
+            log.error("Cache could not be built for user: " + authorizedUser, e);
         }
+        return null;
     }
 
     /**
@@ -670,22 +674,24 @@ public class OAuth2Util {
      * @param authorizedUser   Authorised user.
      * @param authenticatedIDP Authenticated IdP.
      * @return Cache key string combining the input parameters.
-     * @deprecated use {@link #buildCacheKeyStringForToken(String, String, String, String, String)} instead.
+     * @deprecated use {@link #buildCacheKeyStringForTokenWithUserId(String, String, String, String, String)} instead.
      */
     @Deprecated
     public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser,
                                                      String authenticatedIDP) {
 
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (isUsernameCaseSensitive) {
-            return clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP;
-        } else {
-            return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope + ":" + authenticatedIDP;
+        AuthenticatedUser authenticatedUser = OAuth2Util.getUserFromUserName(authorizedUser);
+        try {
+            return clientId + ":" + authenticatedUser.getUserId() + ":" + scope + ":" + authenticatedIDP;
+        } catch (UserIdNotFoundException e) {
+            log.error("Cache could not be built for user: " + authorizedUser, e);
         }
+        return null;
     }
 
     /**
      * Build the cache key string when storing token info in cache.
+     * Use {@link #buildCacheKeyStringForTokenWithUserId(String, String, String, String, String)} instead.
      *
      * @param clientId         ClientId of the App.
      * @param scope            Scopes used.
@@ -694,16 +700,34 @@ public class OAuth2Util {
      * @param tokenBindingReference Token binding reference.
      * @return Cache key string combining the input parameters.
      */
+    @Deprecated
     public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser,
             String authenticatedIDP, String tokenBindingReference) {
 
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (isUsernameCaseSensitive) {
-            return clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
-        } else {
-            return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope + ":" + authenticatedIDP + ":"
+        AuthenticatedUser authenticatedUser = OAuth2Util.getUserFromUserName(authorizedUser);
+        try {
+            return clientId + ":" + authenticatedUser.getUserId() + ":" + scope + ":" + authenticatedIDP + ":"
                     + tokenBindingReference;
+        } catch (UserIdNotFoundException e) {
+            log.error("Cache could not be built for user: " + authorizedUser, e);
         }
+        return null;
+    }
+
+    /**
+     * Build the cache key string when storing token info in cache.
+     *
+     * @param clientId         ClientId of the App.
+     * @param scope            Scopes used.
+     * @param authorizedUserId   Authorised user.
+     * @param authenticatedIDP Authenticated IdP.
+     * @param tokenBindingReference Token binding reference.
+     * @return Cache key string combining the input parameters.
+     */
+    public static String buildCacheKeyStringForTokenWithUserId(String clientId, String scope, String authorizedUserId,
+                                                     String authenticatedIDP, String tokenBindingReference) {
+
+        return clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
     }
 
     @SuppressFBWarnings("WEAK_MESSAGE_DIGEST_MD5")
@@ -3887,20 +3911,21 @@ public class OAuth2Util {
                 authenticatedIDP = user.getFederatedIdPName();
                 if (log.isDebugEnabled()) {
                     log.debug("IDP_ID column is available. User is federated and not mapped to local users. " +
-                            "Authenticated IDP is set to:" + authenticatedIDP + " for user:" + user.toString());
+                            "Authenticated IDP is set to:" + authenticatedIDP + " for user:"
+                            + user.getLoggableUserId());
                 }
             } else {
                 authenticatedIDP = FrameworkConstants.LOCAL_IDP_NAME;
                 if (log.isDebugEnabled()) {
                     log.debug("IDP_ID column is available. Authenticated IDP is set to:" + authenticatedIDP +
-                            " for user:" + user.toString());
+                            " for user:" + user.getLoggableUserId());
                 }
             }
         } else {
             authenticatedIDP = user.getFederatedIdPName();
             if (log.isDebugEnabled()) {
                 log.debug("IDP_ID column is not available. Authenticated IDP is set to:" + authenticatedIDP +
-                        " for user:" + user.toString());
+                        " for user:" + user.getLoggableUserId());
             }
         }
 
@@ -3942,7 +3967,7 @@ public class OAuth2Util {
         }
         String sanitizedUserDomain = OAuth2Util.getSanitizedUserStoreDomain(userDomain);
         if (log.isDebugEnabled()) {
-            log.debug("User domain is set to:" + sanitizedUserDomain  + " for user:" + user.toString());
+            log.debug("User domain is set to:" + sanitizedUserDomain  + " for user:" + user.getLoggableUserId());
         }
 
         return sanitizedUserDomain;
@@ -4365,5 +4390,16 @@ public class OAuth2Util {
         } catch (IdentityOAuth2ScopeServerException e) {
             throw new IdentityOAuth2Exception("Error occurred while retrieving registered scopes.", e);
         }
+    }
+
+    public static String resolveUsernameFromUserId(String tenantDomain, String userId) throws UserStoreException {
+
+        RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+
+        int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
+
+        AbstractUserStoreManager userStoreManager
+                = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
+        return userStoreManager.getUserNameFromUserID(userId);
     }
 }

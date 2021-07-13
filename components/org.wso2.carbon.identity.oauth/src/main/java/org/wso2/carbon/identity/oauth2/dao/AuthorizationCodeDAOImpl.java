@@ -75,10 +75,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)) {
                 log.debug("Persisting authorization code (hashed): " + DigestUtils.sha256Hex(authzCode) + " for " +
-                        "client: " + consumerKey + " user: " + authzCodeDO.getAuthorizedUser().toString());
+                        "client: " + consumerKey + " user: " + authzCodeDO.getAuthorizedUser().getLoggableUserId());
             } else {
                 log.debug("Persisting authorization code for client: " + consumerKey + " user: " + authzCodeDO
-                        .getAuthorizedUser().toString());
+                        .getAuthorizedUser().getLoggableUserId());
             }
         }
         Connection connection = IdentityDatabaseUtil.getDBConnection();
@@ -143,7 +143,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                             .append(DigestUtils.sha256Hex(authzCodeDO.getAuthorizationCode()))
                             .append(" client: ")
                             .append(authzCodeDO.getConsumerKey()).append(" user: ")
-                            .append(authzCodeDO.getAuthorizedUser().toString())
+                            .append(authzCodeDO.getAuthorizedUser().getLoggableUserId())
                             .append("\n");
                 }
                 log.debug(stringBuilder.toString());
@@ -152,7 +152,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 for (AuthzCodeDO authzCodeDO : authzCodeDOs) {
                     stringBuilder.append("Deactivating authorization code client: ")
                             .append(authzCodeDO.getConsumerKey()).append(" user: ")
-                            .append(authzCodeDO.getAuthorizedUser().toString())
+                            .append(authzCodeDO.getAuthorizedUser().getLoggableUserId())
                             .append("\n");
                 }
                 log.debug(stringBuilder.toString());
@@ -311,9 +311,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
         try {
-            String sqlQuery = SQLQueries.UPDATE_AUTHORIZATION_CODE_STATE.replace(IDN_OAUTH2_AUTHORIZATION_CODE,
-                    authCodeStoreTable);
-            prepStmt = connection.prepareStatement(sqlQuery);
+            prepStmt = connection.prepareStatement(SQLQueries.UPDATE_AUTHORIZATION_CODE_STATE);
             prepStmt.setString(1, newState);
             prepStmt.setString(2, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCode));
             prepStmt.execute();
@@ -440,7 +438,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement ps = null;
-        ResultSet rs = null;
+        ResultSet rs;
         List<AuthzCodeDO> authorizationCodes = new ArrayList<>();
         String authzUser = authenticatedUser.getUserName();
         String tenantDomain = authenticatedUser.getTenantDomain();
@@ -471,11 +469,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 String[] scope = OAuth2Util.buildScopeArray(rs.getString(5));
                 String callbackUrl = rs.getString(6);
                 String consumerKey = rs.getString(7);
+                String idpName = rs.getString(8);
 
-                AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userStoreDomain, tenantDomain);
-                user.setUserName(authzUser);
-                user.setUserStoreDomain(userStoreDomain);
-                user.setTenantDomain(tenantDomain);
+                AuthenticatedUser user = OAuth2Util
+                        .createAuthenticatedUser(authzUser, userStoreDomain, tenantDomain, idpName);
 
                 //Authorization codes returned by this method will be used to clear claims cached against them.
                 // We will only return authz codes that would contain such cached clams in order to improve performance.
@@ -605,9 +602,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
                 AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userStoreDomain, OAuth2Util
                         .getTenantDomain(tenantId), authenticatedIDP);
-                user.setUserName(authzUser);
-                user.setUserStoreDomain(userStoreDomain);
-                user.setTenantDomain(OAuth2Util.getTenantDomain(tenantId));
 
                 // If the scope value is empty. It could have stored in the IDN_OAUTH2_AUTHZ_CODE_SCOPE table
                 // for on demand scope migration.
@@ -826,8 +820,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     }
 
     private AuthzCodeDO createAuthzCodeDo(String consumerKey, String authorizationKey, AuthenticatedUser user,
-            String codeState, String scopeString, String callbackUrl, String codeId, String pkceCodeChallenge,
-            String pkceCodeChallengeMethod, Timestamp issuedTime, long validityPeriod, String tokenBindingReference) {
+                                          String codeState, String scopeString, String callbackUrl, String codeId,
+                                          String pkceCodeChallenge, String pkceCodeChallengeMethod,
+                                          Timestamp issuedTime, long validityPeriod, String tokenBindingReference) {
 
         return new AuthzCodeDO(user, OAuth2Util.buildScopeArray(scopeString), issuedTime, validityPeriod, callbackUrl,
                 consumerKey, authorizationKey, codeId, codeState, pkceCodeChallenge, pkceCodeChallengeMethod,
@@ -835,7 +830,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     }
 
     private boolean isActiveAuthzCodeIssuedForOidcFlow(String[] scope, long issuedTimeInMillis,
-            long validityPeriodInMillis) {
+                                                       long validityPeriodInMillis) {
 
         return isAuthorizationCodeIssuedForOpenidScope(scope) && (
                 OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodInMillis) > 0);

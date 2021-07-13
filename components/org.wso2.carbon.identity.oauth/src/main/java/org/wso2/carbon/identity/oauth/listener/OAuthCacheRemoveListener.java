@@ -19,8 +19,8 @@ package org.wso2.carbon.identity.oauth.listener;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.core.cache.AbstractCacheListener;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -53,25 +53,24 @@ public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKe
             log.debug("OAuth cache removed for consumer id : " + accessTokenDO.getConsumerKey());
         }
 
-        String userName = accessTokenDO.getAuthzUser().toString();
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(userName);
-        String cacheKeyString;
-        if (isUsernameCaseSensitive) {
-            cacheKeyString = accessTokenDO.getConsumerKey() + ":" + userName + ":" +
-                    OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":" +
-                    accessTokenDO.getAuthzUser().getFederatedIdPName();
-        } else {
-            cacheKeyString = accessTokenDO.getConsumerKey() + ":" + userName.toLowerCase() + ":" +
-                    OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":" +
-                    accessTokenDO.getAuthzUser().getFederatedIdPName();
-        }
-
-        OAuthCacheKey oauthcacheKey = new OAuthCacheKey(cacheKeyString);
         OAuthCache oauthCache = OAuthCache.getInstance();
 
+        OAuthCacheKey oauthcacheKey = new OAuthCacheKey(accessTokenDO.getAccessToken());
         oauthCache.clearCacheEntry(oauthcacheKey);
-        oauthcacheKey = new OAuthCacheKey(accessTokenDO.getAccessToken());
 
-        oauthCache.clearCacheEntry(oauthcacheKey);
+        try {
+            String userId = accessTokenDO.getAuthzUser().getUserId();
+            String cacheKeyString;
+            cacheKeyString = accessTokenDO.getConsumerKey() + ":" + userId + ":" +
+                    OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":" +
+                    accessTokenDO.getAuthzUser().getFederatedIdPName();
+
+            oauthcacheKey = new OAuthCacheKey(cacheKeyString);
+
+            oauthCache.clearCacheEntry(oauthcacheKey);
+        } catch (UserIdNotFoundException e) {
+            throw new CacheEntryListenerException("User id not found for user: "
+                    + accessTokenDO.getAuthzUser().getLoggableUserId());
+        }
     }
 }

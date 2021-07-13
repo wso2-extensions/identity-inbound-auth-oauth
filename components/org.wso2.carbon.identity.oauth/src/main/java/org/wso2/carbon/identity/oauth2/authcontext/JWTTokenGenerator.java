@@ -198,14 +198,11 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             appDO = appDAO.getAppInformation(clientId);
             // Adding the OAuthAppDO as a context property for further use
             messageContext.addProperty("OAuthAppDO", appDO);
-        } catch (IdentityOAuth2Exception e) {
-            log.debug(e.getMessage(), e);
-            throw new IdentityOAuth2Exception(e.getMessage());
-        } catch (InvalidOAuthClientException e) {
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             log.debug(e.getMessage(), e);
             throw new IdentityOAuth2Exception(e.getMessage());
         }
-        String subscriber = appDO.getUser().toString();
+        String subscriber = appDO.getAppOwner().toString();
         String applicationName = appDO.getApplicationName();
 
         //generating expiring timestamp

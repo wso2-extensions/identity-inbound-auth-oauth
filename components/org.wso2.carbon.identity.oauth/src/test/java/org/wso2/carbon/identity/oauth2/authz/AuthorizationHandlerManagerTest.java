@@ -67,6 +67,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         authzReqDTO.setScopes(TestConstants.SCOPE_STRING.split(" "));
         AuthenticatedUser user = new AuthenticatedUser();
         user.setUserName(TestConstants.USER_NAME);
+        user.setUserId("4b4414e1-916b-4475-aaee-6b0751c29ff6");
         user.setTenantDomain(TestConstants.TENANT_DOMAIN);
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
@@ -104,6 +105,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         authzReqDTO.setScopes(TestConstants.SCOPE_STRING.split(" "));
         AuthenticatedUser user = new AuthenticatedUser();
         user.setUserName(TestConstants.USER_NAME);
+        user.setUserId("4b4414e1-916b-4475-aaee-6b0751c29ff6");
         user.setTenantDomain(TestConstants.TENANT_DOMAIN);
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
@@ -141,6 +143,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         authzReqDTO.setScopes(TestConstants.SCOPE_STRING.split(" "));
         AuthenticatedUser user = new AuthenticatedUser();
         user.setUserName(TestConstants.USER_NAME);
+        user.setUserId("4b4414e1-916b-4475-aaee-6b0751c29ff6");
         user.setTenantDomain(TestConstants.TENANT_DOMAIN);
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
@@ -227,6 +230,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         authzReqDTO.setScopes(new String[0]);
         AuthenticatedUser user = new AuthenticatedUser();
         user.setUserName(TestConstants.USER_NAME);
+        user.setUserId("4b4414e1-916b-4475-aaee-6b0751c29ff6");
         user.setTenantDomain(TestConstants.TENANT_DOMAIN);
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);

@@ -24,6 +24,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -59,7 +60,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForToken;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserId;
 
 /**
  * Grant Type handler for Grant Type refresh_token which is used to get a new access token.
@@ -221,10 +222,18 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         return true;
     }
 
-    private void removeIfCached(OAuth2AccessTokenReqDTO tokenReq, RefreshTokenValidationDataDO validationBean) {
+    private void removeIfCached(OAuth2AccessTokenReqDTO tokenReq, RefreshTokenValidationDataDO validationBean)
+            throws IdentityOAuth2Exception {
 
         if (cacheEnabled) {
-            clearCache(tokenReq.getClientId(), validationBean.getAuthorizedUser().toString(),
+            String userId;
+            try {
+                userId = validationBean.getAuthorizedUser().getUserId();
+            } catch (UserIdNotFoundException e) {
+                throw new IdentityOAuth2Exception("User id not found for user:"
+                        + validationBean.getAuthorizedUser().getLoggableUserId(), e);
+            }
+            clearCache(tokenReq.getClientId(), userId,
                     validationBean.getScope(), validationBean.getAccessToken(),
                     validationBean.getAuthorizedUser().getFederatedIdPName(),
                     validationBean.getTokenBindingReference());
@@ -323,9 +332,15 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         if (isHashDisabled && cacheEnabled) {
             // Remove old access token from the OAuthCache
             String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
-            String authorizedUser = tokReqMsgCtx.getAuthorizedUser().toString();
+            String userId;
+            try {
+                userId = tokReqMsgCtx.getAuthorizedUser().getUserId();
+            } catch (UserIdNotFoundException e) {
+                throw new IdentityOAuth2Exception("User id is not available for user: "
+                        + tokReqMsgCtx.getAuthorizedUser().getLoggableUserId(), e);
+            }
             String authenticatedIDP = tokReqMsgCtx.getAuthorizedUser().getFederatedIdPName();
-            String cacheKeyString = buildCacheKeyStringForToken(clientId, scope, authorizedUser,
+            String cacheKeyString = buildCacheKeyStringForTokenWithUserId(clientId, scope, userId,
                     authenticatedIDP, oldAccessToken.getTokenBindingReference());
             OAuthCacheKey oauthCacheKey = new OAuthCacheKey(cacheKeyString);
             OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
@@ -411,11 +426,11 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         return tokenRespDTO;
     }
 
-    private void clearCache(String clientId, String authorizedUser, String[] scopes, String accessToken,
+    private void clearCache(String clientId, String authorizedUserId, String[] scopes, String accessToken,
                             String authenticatedIDP, String tokenBindingReference) {
 
-        String cacheKeyString = buildCacheKeyStringForToken(clientId, OAuth2Util.buildScopeString(scopes),
-                authorizedUser, authenticatedIDP, tokenBindingReference);
+        String cacheKeyString = buildCacheKeyStringForTokenWithUserId(clientId, OAuth2Util.buildScopeString(scopes),
+                authorizedUserId, authenticatedIDP, tokenBindingReference);
 
         // Remove the old access token from the OAuthCache
         OAuthCacheKey oauthCacheKey = new OAuthCacheKey(cacheKeyString);

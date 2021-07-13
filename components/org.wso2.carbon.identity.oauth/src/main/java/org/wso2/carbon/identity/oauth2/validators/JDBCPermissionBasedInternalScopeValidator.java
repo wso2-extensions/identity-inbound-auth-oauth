@@ -25,6 +25,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
@@ -33,7 +34,6 @@ import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.RoleMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeBindingCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeBindingCacheKey;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -227,6 +227,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
             log.error("Error while accessing identity provider manager.", e);
         } catch (IdentityOAuth2ScopeServerException e) {
             log.error("Error while retrieving oAuth2 scopes.", e);
+        } catch (UserIdNotFoundException e) {
+            log.error("User id not available for user: " + authenticatedUser.getLoggableUserId(), e);
         } finally {
             endTenantFlow();
         }
@@ -317,10 +319,16 @@ public class JDBCPermissionBasedInternalScopeValidator {
     }
 
     private String[] getAllowedUIResourcesOfUser(AuthenticatedUser authenticatedUser,
-                                                 AuthorizationManager authorizationManager) throws UserStoreException {
+                                                 AuthorizationManager authorizationManager)
+            throws UserStoreException, UserIdNotFoundException {
 
-        String[] allowedUIResourcesForUser = authorizationManager.getAllowedUIResourcesForUser(IdentityUtil
-                .addDomainToName(authenticatedUser.getUserName(), authenticatedUser.getUserStoreDomain()), "/");
+        String username = authenticatedUser.getUserName();
+        if (username == null) {
+            username = OAuth2Util
+                    .resolveUsernameFromUserId(authenticatedUser.getTenantDomain(), authenticatedUser.getUserId());
+        }
+        String[] allowedUIResourcesForUser =
+                authorizationManager.getAllowedUIResourcesForUser(username, "/");
         return (String[]) ArrayUtils.add(allowedUIResourcesForUser, EVERYONE_PERMISSION);
     }
 

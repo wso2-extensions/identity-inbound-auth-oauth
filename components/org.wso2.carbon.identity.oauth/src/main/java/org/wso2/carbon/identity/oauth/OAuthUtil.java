@@ -23,6 +23,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.xml.security.utils.Base64;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -99,145 +100,216 @@ public final class OAuthUtil {
         }
     }
 
+    /**
+     * @deprecated use {@link #clearOAuthCache(String, AuthenticatedUser)} instead.
+     * @param consumerKey
+     * @param authorizedUser
+     */
+    @Deprecated
     public static void clearOAuthCache(String consumerKey, User authorizedUser) {
 
-        String user = UserCoreUtil.addDomainToName(authorizedUser.getUserName(), authorizedUser.getUserStoreDomain());
-        user = UserCoreUtil.addTenantDomainToEntry(user, authorizedUser.getTenantDomain());
-        String authenticatedIDP;
         if (authorizedUser instanceof AuthenticatedUser) {
-            authenticatedIDP = ((AuthenticatedUser) authorizedUser).getFederatedIdPName();
+            clearOAuthCache(consumerKey, (AuthenticatedUser) authorizedUser);
         } else {
-            authenticatedIDP = null;
             if (LOG.isDebugEnabled()) {
                 LOG.debug("User object is not an instance of AuthenticatedUser therefore cannot resolve " +
                         "authenticatedIDP name.");
             }
-            clearOAuthCache(consumerKey, user);
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser(authorizedUser);
+            String userId;
+            try {
+                userId = authenticatedUser.getUserId();
+            } catch (UserIdNotFoundException e) {
+                LOG.error("User id cannot be found for user: " + authenticatedUser.getLoggableUserId());
+                return;
+            }
+            clearOAuthCache(consumerKey, userId);
+            clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, null);
         }
-
-        clearOAuthCacheWithAuthenticatedIDP(consumerKey, user, authenticatedIDP);
     }
 
+    /**
+     * Clear OAuth cache based on the application and authorized user.
+     *
+     * @param consumerKey       Client id of the application the token issued to.
+     * @param authorizedUser    authorized user.
+     */
+    public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser) {
+
+        String authenticatedIDP = authorizedUser.getFederatedIdPName();
+        String userId;
+        try {
+            userId = authorizedUser.getUserId();
+        } catch (UserIdNotFoundException e) {
+            LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
+            return;
+        }
+        clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, authenticatedIDP);
+    }
+
+    /**
+     * @deprecated use {@link #clearOAuthCache(String, AuthenticatedUser, String)} instead.
+     * @param consumerKey
+     * @param authorizedUser
+     * @param scope
+     */
+    @Deprecated
     public static void clearOAuthCache(String consumerKey, User authorizedUser, String scope) {
 
-        String user = UserCoreUtil.addDomainToName(authorizedUser.getUserName(), authorizedUser.getUserStoreDomain());
-        user = UserCoreUtil.addTenantDomainToEntry(user, authorizedUser.getTenantDomain());
         String authenticatedIDP;
         if (authorizedUser instanceof AuthenticatedUser) {
-            authenticatedIDP = ((AuthenticatedUser) authorizedUser).getFederatedIdPName();
+            clearOAuthCache(consumerKey, (AuthenticatedUser) authorizedUser, scope);
         } else {
             authenticatedIDP = null;
             if (LOG.isDebugEnabled()) {
                 LOG.debug("User object is not an instance of AuthenticatedUser therefore cannot resolve " +
                         "authenticatedIDP name.");
             }
-            clearOAuthCache(consumerKey, user, scope);
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser(authorizedUser);
+            String userId;
+            try {
+                userId = authenticatedUser.getUserId();
+            } catch (UserIdNotFoundException e) {
+                LOG.error("User id cannot be found for user: " + authenticatedUser.getLoggableUserId());
+                return;
+            }
+            clearOAuthCache(consumerKey, userId, scope);
+            clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, scope, authenticatedIDP);
         }
+    }
 
-        clearOAuthCacheWithAuthenticatedIDP(consumerKey, user, scope, authenticatedIDP);
+    /**
+     * Clear OAuth cache based on the application, authorized user and scope list.
+     *
+     * @param consumerKey       Client id of the application the token issued to.
+     * @param authorizedUser    authorized user.
+     * @param scope             scope string.
+     */
+    public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser, String scope) {
+
+        String authenticatedIDP = authorizedUser.getFederatedIdPName();
+
+        String userId;
+        try {
+            userId = authorizedUser.getUserId();
+        } catch (UserIdNotFoundException e) {
+            LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
+            return;
+        }
+        clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, scope, authenticatedIDP);
     }
 
     /**
      * Clear OAuth cache.
+     * @deprecated use {@link #clearOAuthCache(String, AuthenticatedUser, String, String)} instead.
      *
      * @param consumerKey consumer key.
      * @param authorizedUser authorized user.
      * @param scope scope.
      * @param tokenBindingReference token binding reference.
      */
+    @Deprecated
     public static void clearOAuthCache(String consumerKey, User authorizedUser, String scope,
             String tokenBindingReference) {
 
-        String user = UserCoreUtil.addDomainToName(authorizedUser.getUserName(), authorizedUser.getUserStoreDomain());
-        user = UserCoreUtil.addTenantDomainToEntry(user, authorizedUser.getTenantDomain());
-        String authenticatedIDP;
         if (authorizedUser instanceof AuthenticatedUser) {
-            authenticatedIDP = ((AuthenticatedUser) authorizedUser).getFederatedIdPName();
+            clearOAuthCache(consumerKey, (AuthenticatedUser) authorizedUser, scope, tokenBindingReference);
         } else {
-            authenticatedIDP = null;
             if (LOG.isDebugEnabled()) {
                 LOG.debug("User is not an instance of AuthenticatedUser therefore cannot resolve authenticatedIDP "
                         + "name");
             }
-            clearOAuthCache(consumerKey, user, scope);
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser(authorizedUser);
+            String userId;
+            try {
+                userId = authenticatedUser.getUserId();
+            } catch (UserIdNotFoundException e) {
+                LOG.error("User id cannot be found for user: " + authenticatedUser.getLoggableUserId());
+                return;
+            }
+            clearOAuthCache(consumerKey, userId, scope);
+            clearOAuthCache(buildCacheKeyStringForToken(consumerKey, scope, userId, null,
+                    tokenBindingReference));
         }
-
-        clearOAuthCache(buildCacheKeyStringForToken(consumerKey, scope, user, authenticatedIDP, tokenBindingReference));
     }
 
-    @Deprecated
-    public static void clearOAuthCache(String consumerKey, String authorizedUser) {
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (!isUsernameCaseSensitive) {
-            authorizedUser = authorizedUser.toLowerCase();
+    /**
+     * Clear OAuth cache based on the application, authorized user, scope list and token binding reference.
+     *
+     * @param consumerKey           Client id of the application the token issued to.
+     * @param authorizedUser        Authorized user.
+     * @param scope                 Scope list.
+     * @param tokenBindingReference Token binding reference.
+     */
+    public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser, String scope,
+                                       String tokenBindingReference) {
+
+        String authenticatedIDP = authorizedUser.getFederatedIdPName();
+
+        String userId;
+        try {
+            userId = authorizedUser.getUserId();
+        } catch (UserIdNotFoundException e) {
+            LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
+            return;
         }
-        clearOAuthCache(consumerKey + ":" + authorizedUser);
+        clearOAuthCache(buildCacheKeyStringForToken(consumerKey, scope, userId,
+                authenticatedIDP, tokenBindingReference));
+    }
+
+    private static void clearOAuthCache(String consumerKey, String authorizedUserId) {
+
+        clearOAuthCache(consumerKey + ":" + authorizedUserId);
     }
 
     /**
      * Clear OAuth cache.
      *
      * @param consumerKey      Consumer key.
-     * @param authorizedUser   Authorized user.
+     * @param authorizedUserId   Authorized user.
      * @param authenticatedIDP Authenticated IdP.
      */
-    private static void clearOAuthCacheWithAuthenticatedIDP(String consumerKey, String authorizedUser,
+    private static void clearOAuthCacheWithAuthenticatedIDP(String consumerKey, String authorizedUserId,
                                                             String authenticatedIDP) {
 
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (!isUsernameCaseSensitive) {
-            authorizedUser = authorizedUser.toLowerCase();
-        }
-        clearOAuthCache(consumerKey + ":" + authorizedUser + ":" + authenticatedIDP);
+        clearOAuthCache(consumerKey + ":" + authorizedUserId + ":" + authenticatedIDP);
     }
 
-    @Deprecated
-    public static void clearOAuthCache(String consumerKey, String authorizedUser, String scope) {
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (!isUsernameCaseSensitive) {
-            authorizedUser = authorizedUser.toLowerCase();
-        }
-        clearOAuthCache(consumerKey + ":" + authorizedUser + ":" + scope);
+    private static void clearOAuthCache(String consumerKey, String authorizedUserId, String scope) {
+
+        clearOAuthCache(consumerKey + ":" + authorizedUserId + ":" + scope);
     }
 
     /**
      * Clear OAuth cache.
      *
      * @param consumerKey      Consumer key.
-     * @param authorizedUser   Authorized user.
+     * @param authorizedUserId   Authorized user.
      * @param scope            Scopes.
      * @param authenticatedIDP Authenticated IdP.
      */
-    private static void clearOAuthCacheWithAuthenticatedIDP(String consumerKey, String authorizedUser, String scope,
+    private static void clearOAuthCacheWithAuthenticatedIDP(String consumerKey, String authorizedUserId, String scope,
                                                            String authenticatedIDP) {
 
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (!isUsernameCaseSensitive) {
-            authorizedUser = authorizedUser.toLowerCase();
-        }
-        clearOAuthCache(consumerKey + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP);
+        clearOAuthCache(consumerKey + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP);
     }
 
     /**
      * Build the cache key string when storing token info in cache.
+     * @deprecated use {@link #clearOAuthCache(String, AuthenticatedUser, String, String)} instead.
      *
      * @param clientId         ClientId of the App.
      * @param scope            Scopes used.
-     * @param authorizedUser   Authorised user.
+     * @param authorizedUserId   Authorised user.
      * @param authenticatedIDP Authenticated IdP.
      * @param tokenBindingReference Token binding reference.
      * @return Cache key string combining the input parameters.
      */
-    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser,
+    @Deprecated
+    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUserId,
             String authenticatedIDP, String tokenBindingReference) {
 
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (isUsernameCaseSensitive) {
-            return clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
-        } else {
-            return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope + ":" + authenticatedIDP + ":"
-                    + tokenBindingReference;
-        }
+        return clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
     }
 
     public static void clearOAuthCache(String oauthCacheKey) {

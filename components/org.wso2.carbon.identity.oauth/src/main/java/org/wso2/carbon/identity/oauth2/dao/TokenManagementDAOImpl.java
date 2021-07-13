@@ -683,8 +683,8 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         try {
             int tenantId = OAuth2Util.getTenantId(tenantDomain);
 
-            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserId(SQLQueries.
-                    GET_DISTINCT_APPS_AUTHORIZED_BY_USER_ALL_TIME, authzUser.toString());
+            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(SQLQueries.
+                    GET_DISTINCT_APPS_AUTHORIZED_BY_USER_ALL_TIME, authzUser.getUserStoreDomain());
 
             if (!isUsernameCaseSensitive) {
                 sqlQuery = sqlQuery.replace(AUTHZ_USER, LOWER_AUTHZ_USER);

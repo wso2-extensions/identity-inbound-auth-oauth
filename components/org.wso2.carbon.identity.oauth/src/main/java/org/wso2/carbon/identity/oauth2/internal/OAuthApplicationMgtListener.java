@@ -233,7 +233,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         User owner = serviceProvider.getOwner();
                         OAuthAppDO oAuthAppDO = marshelOAuthDO(authConfig.getInboundConfiguration(),
                                 serviceProvider.getApplicationName(), owner.getTenantDomain());
-                        oAuthAppDO.setAppOwner(buildAuthenticatedUser(owner));
+                        oAuthAppDO.setAppOwner(new AuthenticatedUser(owner));
 
                         OAuthConsumerAppDTO oAuthConsumerAppDTO = OAuthUtil.buildConsumerAppDTO(oAuthAppDO);
                         OAuthAppDAO dao = new OAuthAppDAO();
@@ -725,21 +725,6 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         "server configuration. ", validator));
             }
         });
-    }
-
-    /**
-     * Creates authenticated user obj from user obj.
-     *
-     * @param user user
-     * @return authenticated user
-     */
-    private AuthenticatedUser buildAuthenticatedUser(User user) {
-
-        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-        authenticatedUser.setUserName(user.getUserName());
-        authenticatedUser.setTenantDomain(user.getTenantDomain());
-        authenticatedUser.setUserStoreDomain(user.getUserStoreDomain());
-        return authenticatedUser;
     }
 
     /**

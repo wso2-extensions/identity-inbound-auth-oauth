@@ -36,14 +36,12 @@ import org.owasp.encoder.Encode;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
-import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationRequest;
-import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
-import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -88,7 +86,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
-import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
@@ -963,43 +960,11 @@ public class EndpointUtil {
 
     private static String getUserIdOfAuthenticatedUser(AuthenticatedUser user) throws OAuthSystemException {
 
-        if (!user.isFederatedUser()) {
-            return resolveLocalUserUID(user);
-        } else {
-            return resolveFederatedUserUID(user);
-        }
-    }
-
-    private static String resolveLocalUserUID(AuthenticatedUser user) throws OAuthSystemException {
-
-        String userId;
         try {
-            userId = FrameworkUtils.resolveUserIdFromUsername(
-                    IdentityTenantUtil.getTenantId(user.getTenantDomain()),
-                    user.getUserStoreDomain(), user.getUserName());
-        } catch (UserSessionException e) {
-            throw new OAuthSystemException("Error occurred while resolving user id from authenticated user with " +
-                    "username : " + user.getUserName(), e);
+            return user.getUserId();
+        } catch (UserIdNotFoundException e) {
+            throw new OAuthSystemException("User id not found for user: " + user.getLoggableUserId(), e);
         }
-        return userId;
-    }
-
-    private static String resolveFederatedUserUID(AuthenticatedUser user) throws OAuthSystemException {
-
-        String userId;
-        try {
-            IdentityProvider idp = idpManager.getIdPByName(user.getFederatedIdPName(), user.getTenantDomain());
-            int idpId = Integer.parseInt(idp.getId());
-            userId = UserSessionStore.getInstance().getUserId(user.getUserName(),
-                    IdentityTenantUtil.getTenantId(user.getTenantDomain()), null, idpId);
-        } catch (NumberFormatException | IdentityProviderManagementException e) {
-            throw new OAuthSystemException("Error occurred while retrieving IDP id for the federated IDP : " +
-                    user.getFederatedIdPName() + " in tenant : " + user.getTenantDomain(), e);
-        } catch (UserSessionException e) {
-            throw new OAuthSystemException("Error occurred while retrieving user id of the federated user " +
-                    "for IDP : " + user.getFederatedIdPName() + " in tenant : " + user.getTenantDomain());
-        }
-        return userId;
     }
 
     private static String getAppIdFromClientId(String clientId) throws OAuthSystemException {

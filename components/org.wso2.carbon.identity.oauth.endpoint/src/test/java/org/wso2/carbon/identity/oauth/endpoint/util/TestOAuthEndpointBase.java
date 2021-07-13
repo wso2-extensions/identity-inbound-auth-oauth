@@ -45,6 +45,7 @@ public class TestOAuthEndpointBase extends PowerMockIdentityBaseTest {
         dataSource.setUsername("username");
         dataSource.setPassword("password");
         dataSource.setUrl("jdbc:h2:mem:test");
+        dataSource.setMaxActive(20);
 
         connection = dataSource.getConnection();
         connection.createStatement().executeUpdate("RUNSCRIPT FROM 'src/test/resources/dbscripts/h2.sql'");

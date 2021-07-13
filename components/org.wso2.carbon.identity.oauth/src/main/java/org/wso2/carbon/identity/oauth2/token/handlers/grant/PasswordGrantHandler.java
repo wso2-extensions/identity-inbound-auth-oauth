@@ -50,10 +50,12 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreClientException;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.common.AuthenticationResult;
 import org.wso2.carbon.user.core.config.UserStorePreferenceOrderSupplier;
+import org.wso2.carbon.user.core.constants.UserCoreClaimConstants;
 import org.wso2.carbon.user.core.model.UserMgtContext;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -88,20 +90,22 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
+
         super.validateGrant(tokReqMsgCtx);
         OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         ServiceProvider serviceProvider = getServiceProvider(tokenReq);
 
         validateUserTenant(tokenReq, serviceProvider);
-        validateUserCredentials(tokenReq, serviceProvider);
-        setPropertiesForTokenGeneration(tokReqMsgCtx, tokenReq, serviceProvider);
+        AuthenticatedUser authenticatedUser = validateUserCredentials(tokenReq, serviceProvider);
+        setPropertiesForTokenGeneration(tokReqMsgCtx, tokenReq, authenticatedUser);
         return true;
     }
 
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,
-                                                 OAuth2AccessTokenReqDTO tokenReq, ServiceProvider serviceProvider) {
-        AuthenticatedUser user = getAuthenticatedUser(tokenReq, serviceProvider);
-        tokReqMsgCtx.setAuthorizedUser(user);
+                                                 OAuth2AccessTokenReqDTO tokenReq,
+                                                 AuthenticatedUser authenticatedUser) {
+
+        tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
         tokReqMsgCtx.setScope(tokenReq.getScope());
     }
 
@@ -191,10 +195,9 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         return serviceProvider;
     }
 
-    private boolean validateUserCredentials(OAuth2AccessTokenReqDTO tokenReq, ServiceProvider serviceProvider) throws
-            IdentityOAuth2Exception {
+    private AuthenticatedUser validateUserCredentials(OAuth2AccessTokenReqDTO tokenReq, ServiceProvider serviceProvider)
+            throws IdentityOAuth2Exception {
 
-        boolean authenticated;
         boolean isPublishPasswordGrantLoginEnabled = Boolean.parseBoolean(
                 IdentityUtil.getProperty(PUBLISH_PASSWORD_GRANT_LOGIN));
         try {
@@ -209,21 +212,45 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                     log.debug("UserMgtContext had been set as the thread local.");
                 }
             }
-            UserStoreManager userStoreManager = getUserStoreManager(tokenReq);
+            AbstractUserStoreManager userStoreManager = getUserStoreManager(tokenReq);
             String tenantAwareUserName = MultitenantUtils.getTenantAwareUsername(tokenReq.getResourceOwnerUsername());
             String userTenantDomain = MultitenantUtils.getTenantDomain(tokenReq.getResourceOwnerUsername());
             ResolvedUserResult resolvedUserResult =
                     FrameworkUtils.processMultiAttributeLoginIdentification(tenantAwareUserName, userTenantDomain);
+            String userId = null;
             if (resolvedUserResult != null &&
                     ResolvedUserResult.UserResolvedStatus.SUCCESS.equals(resolvedUserResult.getResolvedStatus())) {
                 tenantAwareUserName = resolvedUserResult.getUser().getUsername();
+                userId = resolvedUserResult.getUser().getUserID();
                 tokenReq.setResourceOwnerUsername(tenantAwareUserName + "@" + userTenantDomain);
             }
-            authenticated = userStoreManager.authenticate(tenantAwareUserName, tokenReq.getResourceOwnerPassword());
+
+            AuthenticationResult authenticationResult;
+            if (userId != null) {
+                authenticationResult = userStoreManager.authenticateWithID(userId, tokenReq.getResourceOwnerPassword());
+            } else {
+                authenticationResult = userStoreManager.authenticateWithID(
+                        UserCoreClaimConstants.USERNAME_CLAIM_URI, tenantAwareUserName,
+                        tokenReq.getResourceOwnerPassword(), UserCoreConstants.DEFAULT_PROFILE);
+            }
+
+            boolean authenticated = AuthenticationResult.AuthenticationStatus.SUCCESS
+                    == authenticationResult.getAuthenticationStatus()
+                    && authenticationResult.getAuthenticatedUser().isPresent();
             if (log.isDebugEnabled()) {
                 log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: " + authenticated);
             }
-            if (!authenticated) {
+
+            if (authenticated) {
+
+                AuthenticatedUser authenticatedUser
+                        = new AuthenticatedUser(authenticationResult.getAuthenticatedUser().get());
+                if (isPublishPasswordGrantLoginEnabled) {
+                    publishAuthenticationData(tokenReq, true, serviceProvider, authenticatedUser);
+                }
+                return authenticatedUser;
+
+            } else {
                 if (isPublishPasswordGrantLoginEnabled) {
                     publishAuthenticationData(tokenReq, false, serviceProvider);
                 }
@@ -237,8 +264,6 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                     username = tenantAwareUserName;
                 }
                 throw new IdentityOAuth2Exception("Authentication failed for " + username);
-            } else if (isPublishPasswordGrantLoginEnabled) {
-                publishAuthenticationData(tokenReq, true, serviceProvider);
             }
         } catch (UserStoreClientException e) {
             if (isPublishPasswordGrantLoginEnabled) {
@@ -272,26 +297,41 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 }
             }
             throw new IdentityOAuth2Exception(message, e);
-        }  finally {
+        } finally {
             UserCoreUtil.removeUserMgtContextInThreadLocal();
             if (log.isDebugEnabled()) {
                 log.debug("UserMgtContext had been remove from the thread local.");
             }
         }
-        return true;
     }
 
     /**
      * This method will publish the Password Grant Authentication data.
      *
-     * @param tokenReq Token request which contains all the details of the request.
-     * @param authenticated Boolean value which determines whether the user is authenticated or not.
+     * @param tokenReq        Token request which contains all the details of the request.
+     * @param authenticated   Boolean value which determines whether the user is authenticated or not.
      * @param serviceProvider Service provider which contains the details of the application.
      */
     protected void publishAuthenticationData(OAuth2AccessTokenReqDTO tokenReq, boolean authenticated,
-                                           ServiceProvider serviceProvider) {
+                                             ServiceProvider serviceProvider) {
 
+        //Since the user id/user object is not already resolved when the user id not authenticated, we have to
+        // resolve it from here.
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(tokenReq, serviceProvider);
+        publishAuthenticationData(tokenReq, authenticated, serviceProvider, authenticatedUser);
+    }
+
+    /**
+     * This method will publish the Password Grant Authentication data.
+     *
+     * @param tokenReq          Token request which contains all the details of the request.
+     * @param authenticated     Boolean value which determines whether the user is authenticated or not.
+     * @param serviceProvider   Service provider which contains the details of the application.
+     * @param authenticatedUser authenticated user.
+     */
+    protected void publishAuthenticationData(OAuth2AccessTokenReqDTO tokenReq, boolean authenticated,
+                                             ServiceProvider serviceProvider, AuthenticatedUser authenticatedUser) {
+
         AuthenticationContext authenticationContext = initializeAuthContext(authenticatedUser, serviceProvider);
         AuthenticationDataPublisher authnDataPublisherProxy =
                 OAuth2ServiceComponentHolder.getAuthenticationDataPublisherProxy();
@@ -362,13 +402,15 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         return authenticationContext;
     }
 
-    private UserStoreManager getUserStoreManager(OAuth2AccessTokenReqDTO tokenReq)
+    private AbstractUserStoreManager getUserStoreManager(OAuth2AccessTokenReqDTO tokenReq)
             throws IdentityOAuth2Exception {
+
         int tenantId = getTenantId(tokenReq);
         RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
-        UserStoreManager userStoreManager;
+        AbstractUserStoreManager userStoreManager;
         try {
-            userStoreManager = realmService.getTenantUserRealm(tenantId).getUserStoreManager();
+            userStoreManager
+                    = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
         } catch (UserStoreException e) {
             throw new IdentityOAuth2Exception(e.getMessage(), e);
         }
