@@ -61,9 +61,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.util.KeyStoreManager;
-import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -3565,7 +3563,7 @@ public class OAuth2Util {
      * @return an instance of AuthenticatedUser{@link AuthenticatedUser}
      */
     public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String
-            tenantDomain, String idpName) throws IdentityOAuth2Exception {
+            tenantDomain, String idpName) {
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(username);
@@ -3596,24 +3594,6 @@ public class OAuth2Util {
         } else {
             authenticatedUser.setUserStoreDomain(userStoreDomain);
             authenticatedUser.setFederatedIdPName(idpName);
-        }
-
-        try {
-            String userId;
-            RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
-            int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
-            if (authenticatedUser.isFederatedUser()) {
-                int idpId = UserSessionStore.getInstance().getIdPId(authenticatedUser.getFederatedIdPName(), tenantId);
-                userId = UserSessionStore.getInstance()
-                        .getFederatedUserId(authenticatedUser.getUserName(), tenantId, idpId);
-            } else {
-                AbstractUserStoreManager userStoreManager
-                        = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
-                userId = userStoreManager.getUserIDFromUserName(authenticatedUser.getUserName());
-            }
-            authenticatedUser.setUserId(userId);
-        } catch (UserStoreException | UserSessionException e) {
-            throw new IdentityOAuth2Exception("Error occurred while resolving the user id from username");
         }
 
         return authenticatedUser;
@@ -4379,6 +4359,7 @@ public class OAuth2Util {
     }
 
     public static String resolveUsernameFromUserId(String tenantDomain, String userId) throws UserStoreException {
+
         RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
 
         int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
