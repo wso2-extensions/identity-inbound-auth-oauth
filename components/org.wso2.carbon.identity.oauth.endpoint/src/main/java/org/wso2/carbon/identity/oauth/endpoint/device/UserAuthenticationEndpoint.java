@@ -87,7 +87,7 @@ public class UserAuthenticationEndpoint {
                     log.debug("user_code is missing in the request.");
                 }
                 response.sendRedirect(ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH)
-                        .addParameter("error", "invalid_request").build().getAbsolutePublicURL());
+                        .addParameter("error", OAuth2ErrorCodes.INVALID_REQUEST).build().getAbsolutePublicURL());
                 return null;
             }
             String clientId = deviceAuthService.getClientId(userCode);
@@ -112,7 +112,7 @@ public class UserAuthenticationEndpoint {
                     log.debug("Incorrect user_code.");
                 }
                 response.sendRedirect(ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH)
-                        .addParameter("error", "invalid_request").build().getAbsolutePublicURL());
+                        .addParameter("error", OAuth2ErrorCodes.INVALID_REQUEST).build().getAbsolutePublicURL());
                 return null;
             }
         } catch (IdentityOAuth2Exception e) {
