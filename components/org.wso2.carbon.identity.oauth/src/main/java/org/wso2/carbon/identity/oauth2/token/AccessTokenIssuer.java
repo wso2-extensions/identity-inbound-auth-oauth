@@ -255,11 +255,15 @@ public class AccessTokenIssuer {
         }
         boolean isValidGrant = false;
         error = "Provided Authorization Grant is invalid";
+        String errorCode = OAuthError.TokenResponse.INVALID_GRANT;
         try {
             isValidGrant = authzGrantHandler.validateGrant(tokReqMsgCtx);
         } catch (IdentityOAuth2Exception e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while validating grant", e);
+            }
+            if (e.getErrorCode() != null) {
+                errorCode = e.getErrorCode();
             }
             error = e.getMessage();
             diagnosticLog.error("Error occurred while validating grant. Error message: " + error);
@@ -276,7 +280,7 @@ public class AccessTokenIssuer {
                 log.debug("Invalid Grant provided by the client Id: " + tokenReqDTO.getClientId());
             }
             diagnosticLog.info("Invalid Grant provided by the client Id: " + tokenReqDTO.getClientId());
-            tokenRespDTO = handleError(OAuthError.TokenResponse.INVALID_GRANT, error, tokenReqDTO);
+            tokenRespDTO = handleError(errorCode, error, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;

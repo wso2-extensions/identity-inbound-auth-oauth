@@ -213,17 +213,17 @@ public class OAuth2AuthzEndpoint {
 
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
-    private OpenIDConnectClaimFilterImpl openIDConnectClaimFilter;
+    private static OpenIDConnectClaimFilterImpl openIDConnectClaimFilter;
     private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
 
-    public OpenIDConnectClaimFilterImpl getOpenIDConnectClaimFilter() {
+    public static OpenIDConnectClaimFilterImpl getOpenIDConnectClaimFilter() {
 
         return openIDConnectClaimFilter;
     }
 
-    public void setOpenIDConnectClaimFilter(OpenIDConnectClaimFilterImpl openIDConnectClaimFilter) {
+    public static void setOpenIDConnectClaimFilter(OpenIDConnectClaimFilterImpl openIDConnectClaimFilter) {
 
-        this.openIDConnectClaimFilter = openIDConnectClaimFilter;
+        OAuth2AuthzEndpoint.openIDConnectClaimFilter = openIDConnectClaimFilter;
     }
 
     @GET
