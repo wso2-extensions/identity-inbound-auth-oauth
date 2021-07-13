@@ -579,6 +579,7 @@ public class OAuth2Util {
      * @deprecated Authenticate the OAuth consumer and return the username of user which own the provided client id
      * and client secret.
      */
+    @Deprecated
     public static String getAuthenticatedUsername(String clientId, String clientSecretProvided)
             throws IdentityOAuthAdminException, IdentityOAuth2Exception, InvalidOAuthClientException {
 
@@ -728,6 +729,21 @@ public class OAuth2Util {
                                                      String authenticatedIDP, String tokenBindingReference) {
 
         return clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
+    }
+
+    /**
+     * Build the cache key string when storing token info in cache.
+     *
+     * @param clientId         ClientId of the App.
+     * @param scope            Scopes used.
+     * @param authorizedUserId   Authorised user.
+     * @param authenticatedIDP Authenticated IdP.
+     * @return Cache key string combining the input parameters.
+     */
+    public static String buildCacheKeyStringForTokenWithUserId(String clientId, String scope, String authorizedUserId,
+                                                               String authenticatedIDP) {
+
+        return clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP;
     }
 
     @SuppressFBWarnings("WEAK_MESSAGE_DIGEST_MD5")

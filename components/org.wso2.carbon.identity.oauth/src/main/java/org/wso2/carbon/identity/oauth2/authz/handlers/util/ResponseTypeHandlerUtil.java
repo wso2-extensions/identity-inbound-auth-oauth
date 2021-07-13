@@ -907,7 +907,7 @@ public class ResponseTypeHandlerUtil {
                                                   String authenticatedIDP) {
 
         String cacheKeyString = OAuth2Util.buildCacheKeyStringForTokenWithUserId(consumerKey, scope, authorizedUserId,
-                authenticatedIDP, NONE);
+                authenticatedIDP);
         return new OAuthCacheKey(cacheKeyString);
     }
 
