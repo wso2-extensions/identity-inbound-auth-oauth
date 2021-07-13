@@ -60,7 +60,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForToken;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserId;
 
 /**
  * Grant Type handler for Grant Type refresh_token which is used to get a new access token.
@@ -340,7 +340,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                         + tokReqMsgCtx.getAuthorizedUser().getLoggableUserId(), e);
             }
             String authenticatedIDP = tokReqMsgCtx.getAuthorizedUser().getFederatedIdPName();
-            String cacheKeyString = buildCacheKeyStringForToken(clientId, scope, userId,
+            String cacheKeyString = buildCacheKeyStringForTokenWithUserId(clientId, scope, userId,
                     authenticatedIDP, oldAccessToken.getTokenBindingReference());
             OAuthCacheKey oauthCacheKey = new OAuthCacheKey(cacheKeyString);
             OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
@@ -426,11 +426,11 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         return tokenRespDTO;
     }
 
-    private void clearCache(String clientId, String authorizedUser, String[] scopes, String accessToken,
+    private void clearCache(String clientId, String authorizedUserId, String[] scopes, String accessToken,
                             String authenticatedIDP, String tokenBindingReference) {
 
-        String cacheKeyString = buildCacheKeyStringForToken(clientId, OAuth2Util.buildScopeString(scopes),
-                authorizedUser, authenticatedIDP, tokenBindingReference);
+        String cacheKeyString = buildCacheKeyStringForTokenWithUserId(clientId, OAuth2Util.buildScopeString(scopes),
+                authorizedUserId, authenticatedIDP, tokenBindingReference);
 
         // Remove the old access token from the OAuthCache
         OAuthCacheKey oauthCacheKey = new OAuthCacheKey(cacheKeyString);

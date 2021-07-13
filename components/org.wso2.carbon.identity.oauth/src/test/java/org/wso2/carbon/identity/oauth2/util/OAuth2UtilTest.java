@@ -37,6 +37,7 @@ import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
@@ -78,6 +79,7 @@ import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -118,7 +120,7 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
         OAuth2Util.class, OAuthComponentServiceHolder.class, AppInfoCache.class, IdentityConfigParser.class,
         PrivilegedCarbonContext.class, IdentityTenantUtil.class, CarbonUtils.class,
         IdentityCoreServiceComponent.class, NetworkUtils.class, IdentityApplicationManagementUtil.class,
-        IdentityProviderManager.class, FederatedAuthenticatorConfig.class})
+        IdentityProviderManager.class, FederatedAuthenticatorConfig.class, FrameworkUtils.class})
 public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
@@ -519,58 +521,50 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         assertEquals(OAuth2Util.buildCacheKeyStringForAuthzCode(clientId, authzCode), testAuthzCode);
     }
 
-    @DataProvider(name = "buildCacheKeyStringForToken")
-    public Object[][] buildCacheKeyStringForToken() {
-
-        return new Object[][]{
-                {true},
-                {false}
-        };
-    }
-
-    @Test(dataProvider = "buildCacheKeyStringForToken")
-    public void testBuildCacheKeyStringForToken(boolean isCaseSensitive) throws Exception {
+    @Test
+    public void testBuildCacheKeyStringForToken() throws Exception {
 
         String authorizedUser = "testAuthzUser";
         String scope = "testScope";
+        String userId = "4d458e40-afa4-466f-b668-b01cfbfba827";
         mockStatic(IdentityUtil.class);
-        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser)).thenReturn(isCaseSensitive);
-        String expected;
-        if (isCaseSensitive) {
-            expected = clientId + ":" + authorizedUser + ":" + scope;
-        } else {
-            expected = clientId + ":" + authorizedUser.toLowerCase() + ":" + scope;
-        }
+        mockStatic(FrameworkUtils.class);
+        when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
+        when(IdentityUtil.getPrimaryDomainName()).thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+        when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString())).thenReturn(userId);
+        String expected = clientId + ":" + userId + ":" + scope;
         assertEquals(OAuth2Util.buildCacheKeyStringForToken(clientId, scope, authorizedUser), expected);
     }
 
-    @Test(dataProvider = "buildCacheKeyStringForToken")
-    public void testBuildCacheKeyStringForTokenWithAuthenticatedIDP(boolean isCaseSensitive) throws Exception {
+    @Test
+    public void testBuildCacheKeyStringForTokenWithAuthenticatedIDP() throws Exception {
 
         String authorizedUser = "testAuthzUser";
         String scope = "testScope";
         String authenticatedIDP = "testAuthenticatedIDP";
+        String userId = "4d458e40-afa4-466f-b668-b01cfbfba827";
         mockStatic(IdentityUtil.class);
-        when(IdentityUtil.isUserStoreCaseSensitive(anyString(), anyInt())).thenReturn(isCaseSensitive);
-        String expected = clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP;
+        mockStatic(FrameworkUtils.class);
+        when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
+        when(IdentityUtil.getPrimaryDomainName()).thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+        when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString())).thenReturn(userId);
+        String expected = clientId + ":" + userId + ":" + scope + ":" + authenticatedIDP;
 
         assertEquals(OAuth2Util.buildCacheKeyStringForToken(clientId, scope, authorizedUser, authenticatedIDP),
                 expected);
     }
 
-    @Test(dataProvider = "buildCacheKeyStringForToken")
-    public void testBuildCacheKeyStringForTokenWithTokenBindingReference(boolean isCaseSensitive) throws Exception {
+    @Test
+    public void testBuildCacheKeyStringForTokenWithTokenBindingReference() throws Exception {
 
         String authorizedUser = "testAuthzUser";
         String scope = "testScope";
         String authenticatedIDP = "testAuthenticatedIDP";
         String tokenBindingReference = "testTokenBindingReference";
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.isUserStoreCaseSensitive(anyString(), anyInt())).thenReturn(isCaseSensitive);
         String expected = clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP + ":"
                 + tokenBindingReference;
 
-        assertEquals(OAuth2Util.buildCacheKeyStringForToken(clientId, scope, authorizedUser,
+        assertEquals(OAuth2Util.buildCacheKeyStringForTokenWithUserId(clientId, scope, authorizedUser,
                 authenticatedIDP, tokenBindingReference), expected);
     }
 

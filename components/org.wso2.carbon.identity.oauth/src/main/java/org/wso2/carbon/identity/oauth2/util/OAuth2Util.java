@@ -61,6 +61,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -650,17 +651,19 @@ public class OAuth2Util {
      * @param authorizedUser
      * @return
      * @deprecated To make the cache key completely unique the authenticated IDP should also be introduced.
-     * Use {@link #buildCacheKeyStringForToken(String, String, String, String)} instead.
+     * Use {@link #buildCacheKeyStringForTokenWithUserId(String, String, String, String, String)} instead.
      */
     @Deprecated
     public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser) {
 
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (isUsernameCaseSensitive) {
-            return clientId + ":" + authorizedUser + ":" + scope;
-        } else {
-            return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope;
+
+        AuthenticatedUser authenticatedUser = OAuth2Util.getUserFromUserName(authorizedUser);
+        try {
+            return clientId + ":" + authenticatedUser.getUserId() + ":" + scope;
+        } catch (UserIdNotFoundException e) {
+            log.error("Cache could not be built for user: " + authorizedUser, e);
         }
+        return null;
     }
 
     /**
@@ -668,16 +671,47 @@ public class OAuth2Util {
      *
      * @param clientId         ClientId of the App.
      * @param scope            Scopes used.
-     * @param authorizedUserId   Authorised user.
+     * @param authorizedUser   Authorised user.
      * @param authenticatedIDP Authenticated IdP.
      * @return Cache key string combining the input parameters.
-     * @deprecated use {@link #buildCacheKeyStringForToken(String, String, String, String, String)} instead.
+     * @deprecated use {@link #buildCacheKeyStringForTokenWithUserId(String, String, String, String, String)} instead.
      */
     @Deprecated
-    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUserId,
+    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser,
                                                      String authenticatedIDP) {
 
-        return clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP;
+        AuthenticatedUser authenticatedUser = OAuth2Util.getUserFromUserName(authorizedUser);
+        try {
+            return clientId + ":" + authenticatedUser.getUserId() + ":" + scope + ":" + authenticatedIDP;
+        } catch (UserIdNotFoundException e) {
+            log.error("Cache could not be built for user: " + authorizedUser, e);
+        }
+        return null;
+    }
+
+    /**
+     * Build the cache key string when storing token info in cache.
+     * Use {@link #buildCacheKeyStringForTokenWithUserId(String, String, String, String, String)} instead.
+     *
+     * @param clientId         ClientId of the App.
+     * @param scope            Scopes used.
+     * @param authorizedUser   Authorised user.
+     * @param authenticatedIDP Authenticated IdP.
+     * @param tokenBindingReference Token binding reference.
+     * @return Cache key string combining the input parameters.
+     */
+    @Deprecated
+    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser,
+            String authenticatedIDP, String tokenBindingReference) {
+
+        AuthenticatedUser authenticatedUser = OAuth2Util.getUserFromUserName(authorizedUser);
+        try {
+            return clientId + ":" + authenticatedUser.getUserId() + ":" + scope + ":" + authenticatedIDP + ":"
+                    + tokenBindingReference;
+        } catch (UserIdNotFoundException e) {
+            log.error("Cache could not be built for user: " + authorizedUser, e);
+        }
+        return null;
     }
 
     /**
@@ -690,8 +724,8 @@ public class OAuth2Util {
      * @param tokenBindingReference Token binding reference.
      * @return Cache key string combining the input parameters.
      */
-    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUserId,
-            String authenticatedIDP, String tokenBindingReference) {
+    public static String buildCacheKeyStringForTokenWithUserId(String clientId, String scope, String authorizedUserId,
+                                                     String authenticatedIDP, String tokenBindingReference) {
 
         return clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
     }

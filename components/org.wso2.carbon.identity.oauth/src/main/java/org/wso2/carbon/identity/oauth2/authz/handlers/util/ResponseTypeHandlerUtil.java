@@ -64,6 +64,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
 
 /**
@@ -905,8 +906,8 @@ public class ResponseTypeHandlerUtil {
     private static OAuthCacheKey getOAuthCacheKey(String consumerKey, String scope, String authorizedUserId,
                                                   String authenticatedIDP) {
 
-        String cacheKeyString = OAuth2Util.buildCacheKeyStringForToken(consumerKey, scope, authorizedUserId,
-                authenticatedIDP);
+        String cacheKeyString = OAuth2Util.buildCacheKeyStringForTokenWithUserId(consumerKey, scope, authorizedUserId,
+                authenticatedIDP, NONE);
         return new OAuthCacheKey(cacheKeyString);
     }
 
