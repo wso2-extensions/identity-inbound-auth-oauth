@@ -61,10 +61,14 @@ public interface LogoutTokenBuilder {
      * Returns logout token and back-channel logout uri map.
      *
      * @param opbsCookie Opbscookie value.
-     * @param tenantDomain String
+     * @param tenantDomain Tenant Domain.
      * @return A map of logout tokens and corresponding back-channel logout URLs.
      * @throws IdentityOAuth2Exception
+     * @throws InvalidOAuthClientException
      */
-    Map<String, String> buildLogoutToken(String opbsCookie, String tenantDomain)
-            throws IdentityOAuth2Exception, InvalidOAuthClientException;
+    default Map<String, String> buildLogoutToken(String opbsCookie, String tenantDomain)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        return buildLogoutToken(opbsCookie);
+    }
 }

@@ -53,7 +53,7 @@ public class OIDCSessionParticipantCacheEntry extends CacheEntry {
     }
 
     /**
-     * @return tenantDomain
+     * @return Tenant Domian where cache was added.
      */
     public String getTenantDomain() {
 
@@ -63,7 +63,7 @@ public class OIDCSessionParticipantCacheEntry extends CacheEntry {
     /**
      * Sets the tenantDomain.
      *
-     * @param tenantDomain String instance
+     * @param tenantDomain Tenant Domian where cache will add.
      */
     public void setTenantDomain(String tenantDomain) {
 

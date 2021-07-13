@@ -86,7 +86,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
         Map<String, String> logoutTokenList = new HashMap<>();
         // Send logout token to all RPs.
         Cookie opbsCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
-        // For backward compatibility, SUPER_TENANT_DOMAIN_NAME was added as the cache maintained tenant.
+        // For backward compatibility, SUPER_TENANT_DOMAIN was added as the cache maintained tenant.
         OIDCSessionState sessionState = getSessionState(opbsCookie != null ? opbsCookie.getValue() : null,
                 MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         if (sessionState != null) {
@@ -110,19 +110,8 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     public Map<String, String> buildLogoutToken(String opbscookie) throws IdentityOAuth2Exception,
             InvalidOAuthClientException {
 
-        Map<String, String> logoutTokenList = new HashMap<>();
-        // Send logout token to all RPs.
-        // For backward compatibility, SUPER_TENANT_DOMAIN_NAME was added as the cache maintained tenant.
-        OIDCSessionState sessionState = getSessionState(opbscookie, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        if (sessionState != null) {
-            Set<String> sessionParticipants = getSessionParticipants(sessionState);
-            if (!sessionParticipants.isEmpty()) {
-                for (String clientID : sessionParticipants) {
-                    addToLogoutTokenList(logoutTokenList, sessionState, clientID);
-                }
-            }
-        }
-        return logoutTokenList;
+        // For backward compatibility, SUPER_TENANT_DOMAIN was added as the cache maintained tenant.
+        return buildLogoutToken(opbscookie, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
     }
 
     @Override

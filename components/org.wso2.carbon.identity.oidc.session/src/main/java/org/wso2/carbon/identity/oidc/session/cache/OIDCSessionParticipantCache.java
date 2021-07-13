@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oidc.session.cache;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.store.SessionDataStore;
 import org.wso2.carbon.identity.core.cache.BaseCache;
 
@@ -64,6 +65,58 @@ public class OIDCSessionParticipantCache
      *
      * @param key   Key which cache entry is indexed.
      * @param entry Actual object where cache entry is placed.
+     *
+     * @deprecated This method was deprecated to move OIDCSessionParticipantCache to the tenant space.
+     * Use {@link #addToCache(OIDCSessionParticipantCacheKey, OIDCSessionParticipantCacheEntry, String))} instead.
+     */
+    @Deprecated
+    public void addToCache(OIDCSessionParticipantCacheKey key, OIDCSessionParticipantCacheEntry entry) {
+
+        // For backward compatibility, SUPER_TENANT_DOMAIN was added as the cache maintained tenant.
+        addToCache(key, entry, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    /**
+     * Retrieve the session information from the cache.
+     * At a cache miss data is loaded from the persistence store
+     *
+     * @param key CacheKey Key which cache entry is indexed.
+     * @return Cache entry
+     *
+     * @deprecated This method was deprecated to move OIDCSessionParticipantCache to the tenant space.
+     * Use {@link #getValueFromCache(OIDCSessionParticipantCacheKey, String))} instead.
+     */
+    @Deprecated
+    public OIDCSessionParticipantCacheEntry getValueFromCache(OIDCSessionParticipantCacheKey key) {
+
+        // For backward compatibility, SUPER_TENANT_DOMAIN was added as the cache maintained tenant.
+        return getValueFromCache(key, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    /**
+     * Clears the session information from the cache and remove from persistence store.
+     *
+     * @param key Key to clear cache.
+     *
+     * @deprecated This method was deprecated to move OIDCSessionParticipantCache to the tenant space.
+     * Use {@link #clearCacheEntry(OIDCSessionParticipantCacheKey, String))} instead.
+     */
+    @Deprecated
+    public void clearCacheEntry(OIDCSessionParticipantCacheKey key) {
+
+        // For backward compatibility, SUPER_TENANT_DOMAIN was added as the cache maintained tenant.
+        clearCacheEntry(key, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    /**
+     * Adds session information to the cache.
+     * Cache key includes the browser state cookie id.
+     * Cache entry includes the authenticated user, and clients authenticated for that user who participates in the
+     * same browser session, and tenant domain.
+     *
+     * @param key   Key which cache entry is indexed.
+     * @param entry Actual object where cache entry is placed.
+     * @param tenantDomain Tenant Domian where cache will add.
      */
     @Override
     public void addToCache(OIDCSessionParticipantCacheKey key, OIDCSessionParticipantCacheEntry entry,
@@ -82,6 +135,7 @@ public class OIDCSessionParticipantCache
      * At a cache miss data is loaded from the persistence store
      *
      * @param key CacheKey Key which cache entry is indexed.
+     * @param tenantDomain Tenant Domain where cache was added.
      * @return Cache entry
      */
     @Override
@@ -104,6 +158,7 @@ public class OIDCSessionParticipantCache
      * Clears the session information from the cache and remove from persistence store.
      *
      * @param key Key to clear cache.
+     * @param tenantDomain Tenant Domain where cache was added.
      */
     @Override
     public void clearCacheEntry(OIDCSessionParticipantCacheKey key, String tenantDomain) {

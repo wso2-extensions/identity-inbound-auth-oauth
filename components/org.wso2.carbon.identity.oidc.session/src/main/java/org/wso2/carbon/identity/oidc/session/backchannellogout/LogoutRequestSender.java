@@ -83,8 +83,7 @@ public class LogoutRequestSender {
 
         Cookie opbsCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
         if (opbsCookie != null) {
-            // For backward compatibility, SUPER_TENANT_DOMAIN_NAME was added as the cache maintained tenant.
-            sendLogoutRequests(opbsCookie.getValue(), MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            sendLogoutRequests(opbsCookie.getValue());
         } else {
             log.error("No opbscookie exists in the request");
         }
@@ -94,6 +93,22 @@ public class LogoutRequestSender {
      * Sends logout requests to all service providers.
      *
      * @param opbsCookieId
+     *
+     * @deprecated This method was deprecated to move OIDCSessionParticipantCache to the tenant space.
+     * Use {@link #sendLogoutRequests(String, String)} instead.
+     */
+    @Deprecated
+    public void sendLogoutRequests(String opbsCookieId) {
+
+        // For backward compatibility, SUPER_TENANT_DOMAIN was added as the cache maintained tenant.
+        sendLogoutRequests(opbsCookieId, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    /**
+     * Sends logout requests to all service providers.
+     *
+     * @param opbsCookieId OPBS Cookie ID value
+     * @param tenantDomain Tenant Domain
      */
     public void sendLogoutRequests(String opbsCookieId, String tenantDomain) {
 
@@ -111,7 +126,6 @@ public class LogoutRequestSender {
             }
         }
     }
-
 
     /**
      * Returns a Map with logout tokens and back-channel logut Url of Service providers.

@@ -34,6 +34,85 @@ public class OIDCSessionManager {
      *
      * @param sessionId    session id value
      * @param sessionState OIDCSessionState instance
+     *
+     * @deprecated This method was deprecated to move OIDCSessionParticipantCache to the tenant space.
+     * Use {@link #storeOIDCSessionState(String, OIDCSessionState, String)} instead.
+     */
+    @Deprecated
+    public void storeOIDCSessionState(String sessionId, OIDCSessionState sessionState) {
+
+        // For backward compatibility, SUPER_TENANT_DOMAIN was added as the cache maintained tenant.
+        storeOIDCSessionState(sessionId, sessionState, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    /**
+     * Retrieves session state for the given session id.
+     *
+     * @param sessionId session id value
+     * @return OIDCSessionState instance
+     *
+     * @deprecated This method was deprecated to move OIDCSessionParticipantCache to the tenant space.
+     * Use {@link #getOIDCSessionState(String, String)} instead.
+     */
+    @Deprecated
+    public OIDCSessionState getOIDCSessionState(String sessionId) {
+
+        // For backward compatibility, SUPER_TENANT_DOMAIN was added as the cache maintained tenant.
+        return getOIDCSessionState(sessionId, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    /**
+     * Removes the session against the old session id and restore against the provided new session id.
+     *
+     * @param oldSessionId
+     * @param newSessionId
+     * @param sessionState
+     *
+     * @deprecated This method was deprecated to move OIDCSessionParticipantCache to the tenant space.
+     * Use {@link #restoreOIDCSessionState(String, String, OIDCSessionState, String)} instead.
+     */
+    @Deprecated
+    public void restoreOIDCSessionState(String oldSessionId, String newSessionId, OIDCSessionState sessionState) {
+
+        // For backward compatibility, SUPER_TENANT_DOMAIN was added as the cache maintained tenant.
+        restoreOIDCSessionState(oldSessionId, newSessionId, sessionState,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    /**
+     * Removes the session against the given session id.
+     *
+     * @param sessionId session id value
+     *
+     * @deprecated This method was deprecated to move OIDCSessionParticipantCache to the tenant space.
+     * Use {@link #removeOIDCSessionState(String, String)} instead.
+     */
+    @Deprecated
+    public void removeOIDCSessionState(String sessionId) {
+
+        // For backward compatibility, SUPER_TENANT_DOMAIN was added as the cache maintained tenant.
+        removeOIDCSessionState(sessionId, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    /**
+     * Checks if there is a session exists for the gives session id.
+     *
+     * @param sessionId session id value
+     * @return true if session exists
+     */
+    @Deprecated
+    public boolean sessionExists(String sessionId) {
+
+        // For backward compatibility, SUPER_TENANT_DOMAIN was added as the cache maintained tenant.
+        return sessionExists(sessionId, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    /**
+     * Stores the session state against the provided session id.
+     *
+     * @param sessionId    session id value
+     * @param sessionState OIDCSessionState instance
+     * @param loginTenantDomain login tenant domain
      */
     public void storeOIDCSessionState(String sessionId, OIDCSessionState sessionState, String loginTenantDomain) {
 
@@ -52,6 +131,7 @@ public class OIDCSessionManager {
      * Retrieves session state for the given session id.
      *
      * @param sessionId session id value
+     * @param loginTenantDomain login tenant domain
      * @return OIDCSessionState instance
      */
     public OIDCSessionState getOIDCSessionState(String sessionId, String loginTenantDomain) {
@@ -69,9 +149,10 @@ public class OIDCSessionManager {
     /**
      * Removes the session against the old session id and restore against the provided new session id.
      *
-     * @param oldSessionId
-     * @param newSessionId
-     * @param sessionState
+     * @param oldSessionId old session id value
+     * @param newSessionId new session id value
+     * @param sessionState OIDCSessionState instance
+     * @param loginTenantDomain login tenant domain
      */
     public void restoreOIDCSessionState(String oldSessionId, String newSessionId, OIDCSessionState sessionState,
                                         String loginTenantDomain) {
@@ -85,6 +166,7 @@ public class OIDCSessionManager {
      * Removes the session against the given session id.
      *
      * @param sessionId session id value
+     * @param loginTenantDomain login tenant domain
      */
     public void removeOIDCSessionState(String sessionId, String loginTenantDomain) {
 
@@ -99,6 +181,7 @@ public class OIDCSessionManager {
      * Checks if there is a session exists for the gives session id.
      *
      * @param sessionId session id value
+     * @param loginTenantDomain login tenant domain
      * @return true if session exists
      */
     public boolean sessionExists(String sessionId, String loginTenantDomain) {
