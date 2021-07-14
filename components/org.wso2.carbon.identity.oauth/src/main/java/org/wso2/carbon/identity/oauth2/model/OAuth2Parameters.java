@@ -52,6 +52,7 @@ public class OAuth2Parameters implements Serializable {
     private String displayName;
     private String sessionDataKey;
     private String loginTenantDomain;
+    private boolean isContainsRequestObject;
 
     public String getSessionDataKey() {
         return sessionDataKey;
@@ -277,5 +278,24 @@ public class OAuth2Parameters implements Serializable {
     public void setLoginTenantDomain(String loginTenantDomain) {
 
         this.loginTenantDomain = loginTenantDomain;
+    }
+
+    /**
+     *
+     * @return  Whether the flow has request object or not.
+     */
+    public boolean isContainsRequestObject() {
+
+        return isContainsRequestObject;
+    }
+
+    /**
+     * Sets whether the the flow has request object or not.
+     *
+     * @param isContainsRequestObject   Is flow has request object or not.
+     */
+    public void setContainsRequestObject(boolean isContainsRequestObject) {
+
+        this.isContainsRequestObject = isContainsRequestObject;
     }
 }

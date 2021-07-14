@@ -49,6 +49,7 @@ public class OIDCConstants {
         public static final String NEW_ACCESS_TOKEN = "NEW_ACCESS_TOKEN";
         public static final String OLD_ACCESS_TOKEN = "OLD_ACCESS_TOKEN";
         public static final String POST_REFRESH_TOKEN = "POST_REFRESH_TOKEN";
+        public static final String IS_CONTAINS_REQUEST_OBJECT = "IS_CONTAINS_REQUEST_OBJECT";
     }
 }
 

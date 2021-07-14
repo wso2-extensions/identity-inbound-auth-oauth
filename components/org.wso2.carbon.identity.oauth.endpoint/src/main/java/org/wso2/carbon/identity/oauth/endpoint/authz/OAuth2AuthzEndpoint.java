@@ -1333,6 +1333,8 @@ public class OAuth2AuthzEndpoint {
             }
         }
         authorizationGrantCacheEntry.setAuthorizationCode(code);
+        boolean isContainsRequestObject = sessionDataCacheEntry.getoAuth2Parameters().isContainsRequestObject();
+        authorizationGrantCacheEntry.setContainsRequestObject(isContainsRequestObject);
         oAuthMessage.setAuthorizationGrantCacheEntry(authorizationGrantCacheEntry);
     }
 
@@ -1454,6 +1456,7 @@ public class OAuth2AuthzEndpoint {
             if (requestObject != null && MapUtils.isNotEmpty(requestObject.getRequestedClaims())) {
                 EndpointUtil.getRequestObjectService().addRequestObject(params.getClientId(), sessionDataKey,
                         new ArrayList(requestObject.getRequestedClaims().values()));
+                params.setContainsRequestObject(true);
             }
         }
     }
@@ -2190,6 +2193,10 @@ public class OAuth2AuthzEndpoint {
                                                            OAuth2Parameters oauth2Params, String spTenantDomain)
             throws RequestObjectException, ClaimMetadataException {
 
+        if (!oauth2Params.isContainsRequestObject()) {
+            return new ArrayList<>();
+        }
+
         List<ClaimMetaData> requestedOidcClaimsList = new ArrayList<>();
         List<String> localClaimsOfOidcClaims = new ArrayList<>();
         List<String> localClaimsOfEssentialClaims = new ArrayList<>();
@@ -2486,6 +2493,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setMaxAge(oauth2Params.getMaxAge());
         authzReqDTO.setEssentialClaims(oauth2Params.getEssentialClaims());
         authzReqDTO.setSessionDataKey(oauth2Params.getSessionDataKey());
+        authzReqDTO.setContainsRequestObject(oauth2Params.isContainsRequestObject());
         authzReqDTO.setIdpSessionIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {

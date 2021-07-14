@@ -325,7 +325,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         }
         // If the code state is updated to inactive or expired request object which is persisted against the code
         // should be updated/removed.
-        OAuth2TokenUtil.postRevokeCode(authzCode, newState, null);
+        OAuth2TokenUtil.postRevokeCode(authzCode, newState, null, null);
     }
 
     @Override
@@ -359,7 +359,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         }
         // To revoke the request object which is persisted against the code.
         OAuth2TokenUtil.postRevokeCode(authzCodeDO.getAuthzCodeId(), OAuthConstants.
-                AuthorizationCodeState.INACTIVE, authzCodeDO.getOauthTokenId());
+                AuthorizationCodeState.INACTIVE, authzCodeDO.getOauthTokenId(), authzCodeDO.getAuthorizationCode());
     }
 
     /**

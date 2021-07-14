@@ -53,6 +53,7 @@ public class OAuth2AuthorizeReqDTO {
     private String sessionDataKey;
     // Identifier of the authenticated framework session. This will be included as a claim in the ID token.
     private String idpSessionIdentifier;
+    private boolean isContainsRequestObject;
 
     public String getSessionDataKey() {
         return sessionDataKey;
@@ -231,5 +232,25 @@ public class OAuth2AuthorizeReqDTO {
 
     public void setIdpSessionIdentifier(String idpSessionIdentifier) {
         this.idpSessionIdentifier = idpSessionIdentifier;
+    }
+
+
+    /**
+     *
+     * @return  Whether the flow has request object or not.
+     */
+    public boolean isContainsRequestObject() {
+
+        return isContainsRequestObject;
+    }
+
+    /**
+     * Sets whether the the flow has request object or not.
+     *
+     * @param isContainsRequestObject   Is flow has request object or not.
+     */
+    public void setContainsRequestObject(boolean isContainsRequestObject) {
+
+        this.isContainsRequestObject = isContainsRequestObject;
     }
 }

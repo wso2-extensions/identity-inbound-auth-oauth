@@ -76,6 +76,8 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     private String oidcSessionId;
 
+    private boolean isContainsRequestObject;
+
     public String getSubjectClaim() {
         return subjectClaim;
     }
@@ -291,5 +293,25 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     public String getAuthorizationCode() {
 
         return authorizationCode;
+    }
+
+
+    /**
+     *
+     * @return  Whether the flow has request object or not.
+     */
+    public boolean isContainsRequestObject() {
+
+        return isContainsRequestObject;
+    }
+
+    /**
+     * Sets whether the the flow has request object or not.
+     *
+     * @param isContainsRequestObject   Is flow has request object or not.
+     */
+    public void setContainsRequestObject(boolean isContainsRequestObject) {
+
+        this.isContainsRequestObject = isContainsRequestObject;
     }
 }
