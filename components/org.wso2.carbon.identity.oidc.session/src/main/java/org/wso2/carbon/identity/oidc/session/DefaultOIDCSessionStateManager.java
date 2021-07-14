@@ -94,28 +94,38 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
      * @param response
      * @param request
      * @param tenantDomain
+     * @param opbsValue
      * @return Cookie
      */
     @Override
     public Cookie addOPBrowserStateCookie(HttpServletResponse response, HttpServletRequest request,
-                                          String tenantDomain) {
+                                          String tenantDomain, String opbsValue) {
 
         ServletCookie cookie;
         if (IdentityTenantUtil.isTenantedSessionsEnabled() && tenantDomain != null) {
             // Invalidate the old opbs cookies which haven't tenanted paths.
             removeOPBrowserStateCookiesInRoot(request, response);
 
-            cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, UUID.randomUUID().toString() +
-                    OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX);
+            cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
             cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
         } else {
-            cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, UUID.randomUUID().toString());
+            cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
             cookie.setPath("/");
         }
         cookie.setSecure(true);
         cookie.setSameSite(SameSiteCookie.NONE);
         response.addCookie(cookie);
         return cookie;
+    }
+
+    @Override
+    public String generateOPBrowserStateCookieValue(String tenantDomain) {
+
+        if (IdentityTenantUtil.isTenantedSessionsEnabled() && tenantDomain != null) {
+            // Invalidate the old opbs cookies which haven't tenanted paths.
+           return UUID.randomUUID() + OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX;
+        }
+        return UUID.randomUUID().toString();
     }
 
     /**

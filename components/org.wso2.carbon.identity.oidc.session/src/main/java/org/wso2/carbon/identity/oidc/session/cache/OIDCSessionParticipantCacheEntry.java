@@ -18,7 +18,7 @@
 
 package org.wso2.carbon.identity.oidc.session.cache;
 
-import org.wso2.carbon.identity.application.common.cache.CacheEntry;
+import org.wso2.carbon.identity.core.cache.CacheEntry;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 
 /**
@@ -29,6 +29,7 @@ public class OIDCSessionParticipantCacheEntry extends CacheEntry {
     private static final long serialVersionUID = -4119009067955456678L;
 
     private OIDCSessionState sessionState;
+    private String tenantDomain;
 
     /**
      * Returns session state information which includes authenticated user, and clients authenticated for that user
@@ -49,5 +50,23 @@ public class OIDCSessionParticipantCacheEntry extends CacheEntry {
     public void setSessionState(OIDCSessionState sessionState) {
 
         this.sessionState = sessionState;
+    }
+
+    /**
+     * @return Tenant Domian where cache was added.
+     */
+    public String getTenantDomain() {
+
+        return tenantDomain;
+    }
+
+    /**
+     * Sets the tenantDomain.
+     *
+     * @param tenantDomain Tenant Domian where cache will add.
+     */
+    public void setTenantDomain(String tenantDomain) {
+
+        this.tenantDomain = tenantDomain;
     }
 }

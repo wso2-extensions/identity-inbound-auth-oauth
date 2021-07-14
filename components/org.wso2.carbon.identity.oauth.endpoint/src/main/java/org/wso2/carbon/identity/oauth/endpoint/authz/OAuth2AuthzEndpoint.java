@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
@@ -96,7 +95,6 @@ import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
@@ -2495,6 +2493,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setSessionDataKey(oauth2Params.getSessionDataKey());
         authzReqDTO.setContainsRequestObject(oauth2Params.isContainsRequestObject());
         authzReqDTO.setIdpSessionIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
+        authzReqDTO.setLoginTenantDomain(oauth2Params.getLoginTenantDomain());
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {
             authzReqDTO.addProperty(OAuthConstants.AMR, sessionDataCacheEntry.getParamMap().get(OAuthConstants.AMR));
@@ -2692,18 +2691,18 @@ public class OAuth2AuthzEndpoint {
                     log.debug("User authenticated. Initiate OIDC browser session.");
                 }
                 opBrowserStateCookie = OIDCSessionManagementUtil.
-                        addOPBrowserStateCookie(response, request, oAuth2Parameters.getLoginTenantDomain());
+                        addOPBrowserStateCookie(response, request, oAuth2Parameters.getLoginTenantDomain(),
+                                sessionDataCacheEntry.getSessionContextIdentifier());
                 // Adding sid claim in the IDtoken to OIDCSessionState class.
                 storeSidClaim(oAuthMessage, sessionStateObj, redirectURL);
-                storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
                 sessionStateObj.setAuthenticatedUser(authenticatedUser);
                 sessionStateObj.addSessionParticipant(oAuth2Parameters.getClientId());
-                OIDCSessionManagementUtil.getSessionManager()
-                        .storeOIDCSessionState(opBrowserStateCookie.getValue(), sessionStateObj);
+                OIDCSessionManagementUtil.getSessionManager().storeOIDCSessionState(opBrowserStateCookie.getValue(),
+                        sessionStateObj, oAuth2Parameters.getLoginTenantDomain());
             } else { // browser session exists
                 OIDCSessionState previousSessionState =
-                        OIDCSessionManagementUtil.getSessionManager()
-                                .getOIDCSessionState(opBrowserStateCookie.getValue());
+                        OIDCSessionManagementUtil.getSessionManager().getOIDCSessionState
+                                (opBrowserStateCookie.getValue(), oAuth2Parameters.getLoginTenantDomain());
                 if (previousSessionState != null) {
                     if (!previousSessionState.getSessionParticipants().contains(oAuth2Parameters.getClientId())) {
                         // User is authenticated to a new client. Restore browser session state
@@ -2712,12 +2711,13 @@ public class OAuth2AuthzEndpoint {
                         }
                         String oldOPBrowserStateCookieId = opBrowserStateCookie.getValue();
                         opBrowserStateCookie = OIDCSessionManagementUtil
-                                .addOPBrowserStateCookie(response, request, oAuth2Parameters.getLoginTenantDomain());
+                                .addOPBrowserStateCookie(response, request, oAuth2Parameters.getLoginTenantDomain(),
+                                        sessionDataCacheEntry.getSessionContextIdentifier());
                         String newOPBrowserStateCookieId = opBrowserStateCookie.getValue();
                         previousSessionState.addSessionParticipant(oAuth2Parameters.getClientId());
-                        storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
                         OIDCSessionManagementUtil.getSessionManager().restoreOIDCSessionState
-                                (oldOPBrowserStateCookieId, newOPBrowserStateCookieId, previousSessionState);
+                                (oldOPBrowserStateCookieId, newOPBrowserStateCookieId, previousSessionState,
+                                        oAuth2Parameters.getLoginTenantDomain());
                     }
                     // Storing the oidc session id.
                     storeSidClaim(oAuthMessage, previousSessionState, redirectURL);
@@ -2727,13 +2727,13 @@ public class OAuth2AuthzEndpoint {
                         log.debug("Restore browser session state.");
                     }
                     opBrowserStateCookie = OIDCSessionManagementUtil
-                            .addOPBrowserStateCookie(response, request, oAuth2Parameters.getLoginTenantDomain());
+                            .addOPBrowserStateCookie(response, request, oAuth2Parameters.getLoginTenantDomain(),
+                                    sessionDataCacheEntry.getSessionContextIdentifier());
                     sessionStateObj.setAuthenticatedUser(authenticatedUser);
                     sessionStateObj.addSessionParticipant(oAuth2Parameters.getClientId());
-                    storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
                     storeSidClaim(oAuthMessage, sessionStateObj, redirectURL);
-                    OIDCSessionManagementUtil.getSessionManager()
-                            .storeOIDCSessionState(opBrowserStateCookie.getValue(), sessionStateObj);
+                    OIDCSessionManagementUtil.getSessionManager().storeOIDCSessionState(opBrowserStateCookie.getValue(),
+                            sessionStateObj, oAuth2Parameters.getLoginTenantDomain());
                 }
             }
         }
@@ -2772,53 +2772,6 @@ public class OAuth2AuthzEndpoint {
             }
         }
         return redirectURL;
-    }
-
-    /**
-     * Store opbscookie in session context.
-     *
-     * @param sessionDataCacheEntry SessionDataCacheEntry.
-     * @param opbscookie            opbscookie value.
-     */
-    private void storeOpbsInSessionContext(SessionDataCacheEntry sessionDataCacheEntry, String opbscookie) {
-
-        String sessionContextIdentifier = getSessionContextIdentifier(sessionDataCacheEntry);
-        if (StringUtils.isNotBlank(sessionContextIdentifier)) {
-            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextIdentifier);
-            if (sessionContext != null) {
-                if (sessionDataCacheEntry.getLoggedInUser() != null) {
-                    sessionContext.addProperty(OIDCSessionConstants.OPBS_COOKIE_ID, opbscookie);
-                    String tenantDomain = sessionDataCacheEntry.getLoggedInUser().getTenantDomain();
-                    FrameworkUtils.addSessionContextToCache(sessionContextIdentifier, sessionContext, tenantDomain);
-                } else {
-                    if (log.isDebugEnabled()) {
-                        log.debug("LoggedIn user attribute is not found in the sessionDataCacheEntry");
-                    }
-                }
-            } else {
-                if (log.isDebugEnabled()) {
-                    log.debug("Session context is not found for the session identifier: " + sessionContextIdentifier);
-                }
-            }
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("SessionContextIdentifier is not found in the authentication result.");
-            }
-        }
-    }
-
-    /**
-     * Get getSessionContextIdentifier from sessionDataCacheEntry.
-     *
-     * @param sessionDataCacheEntry sessionDataCacheEntry.
-     * @return SessionContextIdentifier.
-     */
-    private String getSessionContextIdentifier(SessionDataCacheEntry sessionDataCacheEntry) {
-
-        if (sessionDataCacheEntry != null) {
-            return sessionDataCacheEntry.getSessionContextIdentifier();
-        }
-        return null;
     }
 
     /**

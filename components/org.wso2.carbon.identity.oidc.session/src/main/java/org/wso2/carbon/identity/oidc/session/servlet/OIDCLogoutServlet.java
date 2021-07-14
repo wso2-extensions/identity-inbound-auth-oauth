@@ -152,7 +152,8 @@ public class OIDCLogoutServlet extends HttpServlet {
             }
         }
 
-        if (!OIDCSessionManagementUtil.getSessionManager().sessionExists(opBrowserState)) {
+        if (!OIDCSessionManagementUtil.getSessionManager().sessionExists(opBrowserState,
+                resolveTenantDomain(request))) {
             String msg = "No valid session found for the received session state.";
             if (log.isDebugEnabled()) {
                 log.debug(msg);
@@ -682,6 +683,7 @@ public class OIDCLogoutServlet extends HttpServlet {
         String sessionDataKey = request.getParameter(FrameworkConstants.SESSION_DATA_KEY);
         OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(sessionDataKey);
         String obpsCookieValue = getOPBrowserState(request);
+        String tenantDomain = resolveTenantDomain(request);
 
         if (cacheEntry != null) {
             if (log.isDebugEnabled()) {
@@ -691,7 +693,7 @@ public class OIDCLogoutServlet extends HttpServlet {
 
                 if (StringUtils.isNotBlank(obpsCookieValue)) {
                     OIDCSessionState sessionState = OIDCSessionManagementUtil.getSessionManager()
-                            .getOIDCSessionState(obpsCookieValue);
+                            .getOIDCSessionState(obpsCookieValue, tenantDomain);
                     if (sessionState != null) {
                         sidClaim = sessionState.getSidClaim();
                         log.debug("Logout request received for sessionId: " + sidClaim);
@@ -699,7 +701,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 }
             }
             // BackChannel logout request.
-            doBackChannelLogout(obpsCookieValue);
+            doBackChannelLogout(obpsCookieValue, tenantDomain);
             String redirectURL = cacheEntry.getPostLogoutRedirectUri();
             if (redirectURL == null) {
                 redirectURL = OIDCSessionManagementUtil.getOIDCLogoutURL();
@@ -718,7 +720,7 @@ public class OIDCLogoutServlet extends HttpServlet {
 
             redirectURL = appendStateQueryParam(redirectURL, cacheEntry.getState());
             removeSessionDataFromCache(sessionDataKey);
-            OIDCSessionManagementUtil.getSessionManager().removeOIDCSessionState(obpsCookieValue);
+            OIDCSessionManagementUtil.getSessionManager().removeOIDCSessionState(obpsCookieValue, tenantDomain);
             // Clear binding elements from the response.
             clearTokenBindingElements(cacheEntry.getParamMap().get(OIDCSessionConstants.OIDC_CACHE_CLIENT_ID_PARAM),
                     request, response);
@@ -857,9 +859,9 @@ public class OIDCLogoutServlet extends HttpServlet {
      *
      * @param opbsCookieValue OP browser state cookie value.
      */
-    private void doBackChannelLogout(String opbsCookieValue) {
+    private void doBackChannelLogout(String opbsCookieValue, String tenantDomain) {
 
-        LogoutRequestSender.getInstance().sendLogoutRequests(opbsCookieValue);
+        LogoutRequestSender.getInstance().sendLogoutRequests(opbsCookieValue, tenantDomain);
         if (log.isDebugEnabled()) {
             log.debug("Sending backchannel logout request.");
         }
@@ -972,5 +974,17 @@ public class OIDCLogoutServlet extends HttpServlet {
 
         tokenBinders.stream().filter(t -> oAuthAppDO.getTokenBindingType().equals(t.getBindingType())).findAny()
                 .ifPresent(t -> t.clearTokenBindingElements(request, response));
+    }
+
+    private String resolveTenantDomain(HttpServletRequest request) {
+
+        if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
+            return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+        String tenantDomain = request.getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
+        if (StringUtils.isBlank(tenantDomain)) {
+            return IdentityTenantUtil.getTenantDomainFromContext();
+        }
+        return tenantDomain;
     }
 }

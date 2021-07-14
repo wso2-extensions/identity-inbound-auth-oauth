@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oidc.session.cache;
 
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oidc.session.servlet.TestUtil;
 
@@ -30,6 +31,7 @@ import static org.testng.Assert.assertNull;
 /**
  * Unit test coverage for OIDCSessionDataCache class.
  */
+@WithCarbonHome
 @WithRealmService
 public class OIDCSessionDataCacheTest {
 
