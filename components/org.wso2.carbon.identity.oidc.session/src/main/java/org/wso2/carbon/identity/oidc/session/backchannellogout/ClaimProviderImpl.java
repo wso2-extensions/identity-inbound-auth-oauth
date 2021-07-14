@@ -120,7 +120,8 @@ public class ClaimProviderImpl implements ClaimProvider {
             for (Cookie cookie : cookies) {
                 if (OIDCSessionConstants.OPBS_COOKIE_ID.equals(cookie.getName())) {
                     OIDCSessionState previousSessionState = OIDCSessionManagementUtil.getSessionManager()
-                            .getOIDCSessionState(cookie.getValue());
+                            .getOIDCSessionState(cookie.getValue(), oAuthAuthzReqMessageContext.
+                                    getAuthorizationReqDTO().getLoginTenantDomain());
                     return previousSessionState;
                 }
             }

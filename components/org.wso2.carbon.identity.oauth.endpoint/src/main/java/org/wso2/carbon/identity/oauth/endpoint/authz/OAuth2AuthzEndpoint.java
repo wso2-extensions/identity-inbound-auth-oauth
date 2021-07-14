@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
@@ -2487,6 +2486,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setEssentialClaims(oauth2Params.getEssentialClaims());
         authzReqDTO.setSessionDataKey(oauth2Params.getSessionDataKey());
         authzReqDTO.setIdpSessionIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
+        authzReqDTO.setLoginTenantDomain(oauth2Params.getLoginTenantDomain());
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {
             authzReqDTO.addProperty(OAuthConstants.AMR, sessionDataCacheEntry.getParamMap().get(OAuthConstants.AMR));
@@ -2690,12 +2690,12 @@ public class OAuth2AuthzEndpoint {
                 storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
                 sessionStateObj.setAuthenticatedUser(authenticatedUser);
                 sessionStateObj.addSessionParticipant(oAuth2Parameters.getClientId());
-                OIDCSessionManagementUtil.getSessionManager()
-                        .storeOIDCSessionState(opBrowserStateCookie.getValue(), sessionStateObj);
+                OIDCSessionManagementUtil.getSessionManager().storeOIDCSessionState(opBrowserStateCookie.getValue(),
+                        sessionStateObj, oAuth2Parameters.getLoginTenantDomain());
             } else { // browser session exists
                 OIDCSessionState previousSessionState =
-                        OIDCSessionManagementUtil.getSessionManager()
-                                .getOIDCSessionState(opBrowserStateCookie.getValue());
+                        OIDCSessionManagementUtil.getSessionManager().getOIDCSessionState
+                                (opBrowserStateCookie.getValue(), oAuth2Parameters.getLoginTenantDomain());
                 if (previousSessionState != null) {
                     if (!previousSessionState.getSessionParticipants().contains(oAuth2Parameters.getClientId())) {
                         // User is authenticated to a new client. Restore browser session state
@@ -2709,7 +2709,8 @@ public class OAuth2AuthzEndpoint {
                         previousSessionState.addSessionParticipant(oAuth2Parameters.getClientId());
                         storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
                         OIDCSessionManagementUtil.getSessionManager().restoreOIDCSessionState
-                                (oldOPBrowserStateCookieId, newOPBrowserStateCookieId, previousSessionState);
+                                (oldOPBrowserStateCookieId, newOPBrowserStateCookieId, previousSessionState,
+                                        oAuth2Parameters.getLoginTenantDomain());
                     }
                     // Storing the oidc session id.
                     storeSidClaim(oAuthMessage, previousSessionState, redirectURL);
@@ -2724,8 +2725,8 @@ public class OAuth2AuthzEndpoint {
                     sessionStateObj.addSessionParticipant(oAuth2Parameters.getClientId());
                     storeOpbsInSessionContext(sessionDataCacheEntry, opBrowserStateCookie.getValue());
                     storeSidClaim(oAuthMessage, sessionStateObj, redirectURL);
-                    OIDCSessionManagementUtil.getSessionManager()
-                            .storeOIDCSessionState(opBrowserStateCookie.getValue(), sessionStateObj);
+                    OIDCSessionManagementUtil.getSessionManager().storeOIDCSessionState(opBrowserStateCookie.getValue(),
+                            sessionStateObj, oAuth2Parameters.getLoginTenantDomain());
                 }
             }
         }
