@@ -38,11 +38,12 @@ import javax.servlet.http.HttpServletResponse;
 public class OIDCInboundSessionContextMgtListener implements SessionContextMgtListener {
 
     private static final Log log = LogFactory.getLog(OIDCInboundSessionContextMgtListener.class);
-    private static final String inboundType = "oidc";
+    private static final String INBOUND_TYPE = "oidc";
 
     @Override
     public String getInboundType() {
-        return inboundType;
+
+        return INBOUND_TYPE;
     }
 
     @Override
@@ -50,6 +51,9 @@ public class OIDCInboundSessionContextMgtListener implements SessionContextMgtLi
                                                   HttpServletResponse httpServletResponse,
                                                   AuthenticationContext context) {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Handling onPreCreateSession for oidc.");
+        }
         Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(httpServletRequest);
         String clientId = context.getAuthenticationRequest().getRelyingParty();
         String obpsValue;
@@ -98,6 +102,9 @@ public class OIDCInboundSessionContextMgtListener implements SessionContextMgtLi
                                                HttpServletResponse httpServletResponse,
                                                AuthenticationContext authenticationContext) {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Handling onPreUpdateSession for oidc.");
+        }
         return this.onPreCreateSession(sessionId, httpServletRequest, httpServletResponse, authenticationContext);
     }
 }
