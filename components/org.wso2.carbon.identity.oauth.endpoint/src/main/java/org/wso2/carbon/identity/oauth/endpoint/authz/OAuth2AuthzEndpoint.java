@@ -2191,10 +2191,6 @@ public class OAuth2AuthzEndpoint {
                                                            OAuth2Parameters oauth2Params, String spTenantDomain)
             throws RequestObjectException, ClaimMetadataException {
 
-        if (!oauth2Params.isContainsRequestObject()) {
-            return new ArrayList<>();
-        }
-
         List<ClaimMetaData> requestedOidcClaimsList = new ArrayList<>();
         List<String> localClaimsOfOidcClaims = new ArrayList<>();
         List<String> localClaimsOfEssentialClaims = new ArrayList<>();
@@ -2203,26 +2199,30 @@ public class OAuth2AuthzEndpoint {
         List<String> claimListOfScopes =
                 openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oauth2Params.getScopes(), spTenantDomain);
 
-        // Get the requested claims came through request object.
-        List<RequestedClaim> requestedClaimsOfIdToken = EndpointUtil.getRequestObjectService()
-                .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), false);
-
-        List<RequestedClaim> requestedClaimsOfUserInfo = EndpointUtil.getRequestObjectService()
-                .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), true);
-
         List<String> essentialRequestedClaims = new ArrayList<>();
 
-        // Get the list of id token's essential claims.
-        for (RequestedClaim requestedClaim : requestedClaimsOfIdToken) {
-            if (requestedClaim.isEssential()) {
-                essentialRequestedClaims.add(requestedClaim.getName());
-            }
-        }
+        if (oauth2Params.isContainsRequestObject()) {
 
-        // Get the list of user info's essential claims.
-        for (RequestedClaim requestedClaim : requestedClaimsOfUserInfo) {
-            if (requestedClaim.isEssential()) {
-                essentialRequestedClaims.add(requestedClaim.getName());
+            // Get the requested claims came through request object.
+            List<RequestedClaim> requestedClaimsOfIdToken = EndpointUtil.getRequestObjectService()
+                    .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), false);
+
+            List<RequestedClaim> requestedClaimsOfUserInfo = EndpointUtil.getRequestObjectService()
+                    .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), true);
+
+
+            // Get the list of id token's essential claims.
+            for (RequestedClaim requestedClaim : requestedClaimsOfIdToken) {
+                if (requestedClaim.isEssential()) {
+                    essentialRequestedClaims.add(requestedClaim.getName());
+                }
+            }
+
+            // Get the list of user info's essential claims.
+            for (RequestedClaim requestedClaim : requestedClaimsOfUserInfo) {
+                if (requestedClaim.isEssential()) {
+                    essentialRequestedClaims.add(requestedClaim.getName());
+                }
             }
         }
 
