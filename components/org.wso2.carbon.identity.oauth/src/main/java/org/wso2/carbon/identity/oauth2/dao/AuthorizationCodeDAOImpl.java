@@ -726,9 +726,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
         try (PreparedStatement addScopePrepStmt = connection.prepareStatement(SQLQueries.INSERT_OAUTH2_CODE_SCOPE)) {
             String authzCodeId = authzCodeDO.getAuthzCodeId();
-
-            if (authzCodeDO.getScope() != null && authzCodeDO.getScope().length > 0) {
-                for (String scope : authzCodeDO.getScope()) {
+            if (authzCodeDO.getScope() != null) {
+                // Get the distinct set of scopes.
+                Set<String> scopes = new HashSet<>(Arrays.asList(authzCodeDO.getScope()));
+                for (String scope : scopes) {
                     addScopePrepStmt.setString(1, authzCodeId);
                     addScopePrepStmt.setString(2, scope);
                     addScopePrepStmt.setInt(3, tenantId);

@@ -35,6 +35,7 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -77,8 +78,8 @@ public class RoleBasedInternalScopeValidator {
         // Get the intersection of the configured system roles and users roles.
         rolesWithoutInternalDomain.retainAll(systemRolesWithScopes.keySet());
 
-        // Get the allowed console scopes based on the user roles.
-        List<String> userAllowedScopes = new ArrayList<>();
+        // Get the distinct set of allowed console scopes based on the user roles.
+        Set<String> userAllowedScopes = new HashSet<>();
         for (String role : rolesWithoutInternalDomain) {
             userAllowedScopes.addAll(systemRolesWithScopes.get(role));
         }
@@ -88,7 +89,7 @@ public class RoleBasedInternalScopeValidator {
             return userAllowedScopes.toArray(new String[0]);
         }
 
-        List<String> scopesToRespond = new ArrayList<>();
+        Set<String> scopesToRespond = new HashSet<>();
         for (String scope : requestedScopes) {
             if (userAllowedScopes.contains(scope)) {
                 scopesToRespond.add(scope);
@@ -123,8 +124,8 @@ public class RoleBasedInternalScopeValidator {
         // Get the intersection of the configured system roles and users roles.
         rolesWithoutInternalDomain.retainAll(systemRolesWithScopes.keySet());
 
-        // Get the allowed console scopes based on the user roles.
-        List<String> userAllowedScopes = new ArrayList<>();
+        // Get the distinct set of allowed console scopes based on the user roles.
+        Set<String> userAllowedScopes = new HashSet<>();
         for (String role : rolesWithoutInternalDomain) {
             userAllowedScopes.addAll(systemRolesWithScopes.get(role));
         }
@@ -134,7 +135,7 @@ public class RoleBasedInternalScopeValidator {
             return userAllowedScopes.toArray(new String[0]);
         }
 
-        List<String> scopesToRespond = new ArrayList<>();
+        Set<String> scopesToRespond = new HashSet<>();
         for (String scope : requestedScopes) {
             if (userAllowedScopes.contains(scope)) {
                 scopesToRespond.add(scope);
