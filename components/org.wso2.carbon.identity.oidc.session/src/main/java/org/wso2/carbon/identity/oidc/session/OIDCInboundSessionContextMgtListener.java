@@ -52,7 +52,7 @@ public class OIDCInboundSessionContextMgtListener implements SessionContextMgtLi
                                                   AuthenticationContext context) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Handling onPreCreateSession for oidc.");
+            log.debug("Handling onPreCreateSession for oidc for session " + sessionId);
         }
         Cookie opBrowserStateCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(httpServletRequest);
         String clientId = context.getAuthenticationRequest().getRelyingParty();
@@ -103,7 +103,7 @@ public class OIDCInboundSessionContextMgtListener implements SessionContextMgtLi
                                                AuthenticationContext authenticationContext) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Handling onPreUpdateSession for oidc.");
+            log.debug("Handling onPreUpdateSession for oidc for session " + sessionId);
         }
         return this.onPreCreateSession(sessionId, httpServletRequest, httpServletResponse, authenticationContext);
     }
