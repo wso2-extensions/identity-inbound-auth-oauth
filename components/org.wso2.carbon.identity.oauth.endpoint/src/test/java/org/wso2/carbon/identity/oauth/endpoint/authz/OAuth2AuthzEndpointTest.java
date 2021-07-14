@@ -36,7 +36,6 @@ import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.Assert;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
@@ -151,7 +150,6 @@ import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.FileAssert.fail;
 
@@ -1318,7 +1316,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(OIDCSessionManagementUtil.addOPBrowserStateCookie(any(HttpServletResponse.class)))
                 .thenReturn(newOpBrowserStateCookie);
         when(OIDCSessionManagementUtil.addOPBrowserStateCookie(any(HttpServletResponse.class),
-                any(HttpServletRequest.class), any(String.class))).thenReturn(newOpBrowserStateCookie);
+                any(HttpServletRequest.class), any(String.class), any(String.class)))
+                .thenReturn(newOpBrowserStateCookie);
         when(OIDCSessionManagementUtil.getSessionManager()).thenReturn(oidcSessionManager);
         when(oidcSessionManager.getOIDCSessionState(anyString(), anyString())).thenReturn(previousSessionState);
         when(OIDCSessionManagementUtil.getSessionStateParam(anyString(), anyString(), anyString()))
@@ -1392,37 +1391,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     public Object[][] provideSessionContextData() {
 
         return new Object[][]{{"1234", "1234"}, {null, null}, {"1234", ""}};
-    }
-
-    @Test(dataProvider = "provideSessionContextData")
-    public void testStoreOpbsInSessionContext(String identifier, String opbs) throws Exception {
-
-        AuthenticationResult result = setAuthenticationResult(true, null, null, null, null);
-        result.addProperty(FrameworkConstants.AnalyticsAttributes.SESSION_ID, identifier);
-        mockStatic(SessionDataCache.class);
-        when(SessionDataCache.getInstance()).thenReturn(sessionDataCache);
-        SessionDataCacheKey loginDataCacheKey = new SessionDataCacheKey(SESSION_DATA_KEY_VALUE);
-        when(sessionDataCache.getValueFromCache(loginDataCacheKey)).thenReturn(loginCacheEntry);
-        when(loginCacheEntry.getLoggedInUser()).thenReturn(result.getSubject());
-        when(loginCacheEntry.getSessionContextIdentifier()).thenReturn(identifier);
-        String sessionContextIdentifier = WhiteboxImpl.invokeMethod(authzEndpointObject, "getSessionContextIdentifier"
-                , loginCacheEntry);
-        if (identifier != null) {
-            assertNotNull(sessionContextIdentifier, "Session context identifier should not be null");
-        } else {
-            assertNull(sessionContextIdentifier, "Session context identifier should be null");
-        }
-        SessionContext sessionContext = new SessionContext();
-        mockStatic(FrameworkUtils.class);
-        when(FrameworkUtils.getSessionContextFromCache(anyString())).thenReturn(sessionContext);
-        sessionContext.addProperty("opbs", opbs);
-        Assert.assertNull(WhiteboxImpl.invokeMethod(authzEndpointObject, "storeOpbsInSessionContext",
-                loginCacheEntry, opbs));
-        if (opbs != null) {
-            assertNotNull(sessionContext.getProperty("opbs"), "OpbsCookie is null in the context");
-        } else {
-            assertNull(sessionContext.getProperty("opbs"), "OpbsCookie is not null in the context");
-        }
     }
 
     @DataProvider(name = "providePathExistsData")
