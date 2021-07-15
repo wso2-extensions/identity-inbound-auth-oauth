@@ -52,7 +52,7 @@ public class HybridResponseTypeHandler extends AbstractResponseTypeHandler {
             String sessionDataKey = oauthAuthzMsgCtx.getAuthorizationReqDTO().getSessionDataKey();
             // Trigger an event to update request_object_reference table.
             OAuth2TokenUtil.postIssueCode(authzCodeDO.getAuthzCodeId(), sessionDataKey,
-                    oauthAuthzMsgCtx.getAuthorizationReqDTO().isContainsRequestObject());
+                    oauthAuthzMsgCtx.getAuthorizationReqDTO().isRequestObjectFlow());
             ResponseTypeHandlerUtil.buildAuthorizationCodeResponseDTO(respDTO, authzCodeDO);
         }
 

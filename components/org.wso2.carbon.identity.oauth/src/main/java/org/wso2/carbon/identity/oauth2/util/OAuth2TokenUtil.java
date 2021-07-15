@@ -170,13 +170,13 @@ public class OAuth2TokenUtil {
     public static void postRevokeCode(String codeId, String tokenState, String tokenId, String authorizationCode)
             throws IdentityOAuth2Exception {
 
-        boolean isContainsRequestObject = true;
+        boolean isRequestObjectFlow = true;
         if (StringUtils.isNotBlank(authorizationCode)) {
             AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(authorizationCode);
             AuthorizationGrantCacheEntry cacheEntry =
                     AuthorizationGrantCache.getInstance().getValueFromCacheByCode(cacheKey);
             if (cacheEntry != null) {
-                isContainsRequestObject = cacheEntry.isContainsRequestObject();
+                isRequestObjectFlow = cacheEntry.isRequestObjectFlow();
             }
         }
         String eventName = null;
@@ -185,7 +185,7 @@ public class OAuth2TokenUtil {
             properties.put(OIDCConstants.Event.TOKEN_STATE, tokenState);
             properties.put(OIDCConstants.Event.TOKEN_ID, tokenId);
             properties.put(OIDCConstants.Event.CODE_ID, codeId);
-            properties.put(OIDCConstants.Event.IS_CONTAINS_REQUEST_OBJECT, isContainsRequestObject);
+            properties.put(OIDCConstants.Event.IS_REQUEST_OBJECT_FLOW, isRequestObjectFlow);
             eventName = OIDCConstants.Event.POST_REVOKE_CODE_BY_ID;
         }
 
@@ -257,17 +257,17 @@ public class OAuth2TokenUtil {
      *
      * @param codeId                    code id
      * @param sessionDataKey            session data key
-     * @param isContainsRequestObject   whether the request object is included.
+     * @param isRequestObjectFlow       whether the request object is included.
      * @throws IdentityOAuth2Exception
      */
-    public static void postIssueCode(String codeId, String sessionDataKey, boolean isContainsRequestObject)
+    public static void postIssueCode(String codeId, String sessionDataKey, boolean isRequestObjectFlow)
             throws IdentityOAuth2Exception {
 
         String eventName = OIDCConstants.Event.POST_ISSUE_CODE;
         HashMap<String, Object> properties = new HashMap<>();
         properties.put(OIDCConstants.Event.CODE_ID, codeId);
         properties.put(OIDCConstants.Event.SESSION_DATA_KEY, sessionDataKey);
-        properties.put(OIDCConstants.Event.IS_CONTAINS_REQUEST_OBJECT, isContainsRequestObject);
+        properties.put(OIDCConstants.Event.IS_REQUEST_OBJECT_FLOW, isRequestObjectFlow);
         triggerEvent(eventName, properties);
     }
 }

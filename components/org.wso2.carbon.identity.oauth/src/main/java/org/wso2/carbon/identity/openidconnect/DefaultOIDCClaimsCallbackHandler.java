@@ -196,7 +196,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                 AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(authorizationCode);
                 AuthorizationGrantCacheEntry cacheEntry =
                         AuthorizationGrantCache.getInstance().getValueFromCacheByCode(cacheKey);
-                if (cacheEntry != null && cacheEntry.isContainsRequestObject()) {
+                if (cacheEntry != null && cacheEntry.isRequestObjectFlow()) {
                     // Handle essential claims of the request object
                     Map<String, Object> claimsFromRequestObject =
                             filterClaimsFromRequestObject(userClaimsInOIDCDialect, accessToken);

@@ -54,7 +54,7 @@ public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
         }
         // Trigger an event to update request_object_reference table.
         OAuth2TokenUtil.postIssueCode(authorizationCode.getAuthzCodeId(), sessionDataKey,
-                oauthAuthzMsgCtx.getAuthorizationReqDTO().isContainsRequestObject());
+                oauthAuthzMsgCtx.getAuthorizationReqDTO().isRequestObjectFlow());
         return buildResponseDTO(oauthAuthzMsgCtx, authorizationCode);
     }
 

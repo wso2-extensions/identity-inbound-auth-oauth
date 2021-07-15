@@ -1331,8 +1331,8 @@ public class OAuth2AuthzEndpoint {
             }
         }
         authorizationGrantCacheEntry.setAuthorizationCode(code);
-        boolean isContainsRequestObject = sessionDataCacheEntry.getoAuth2Parameters().isContainsRequestObject();
-        authorizationGrantCacheEntry.setContainsRequestObject(isContainsRequestObject);
+        boolean isRequestObjectFlow = sessionDataCacheEntry.getoAuth2Parameters().isRequestObjectFlow();
+        authorizationGrantCacheEntry.setRequestObjectFlow(isRequestObjectFlow);
         oAuthMessage.setAuthorizationGrantCacheEntry(authorizationGrantCacheEntry);
     }
 
@@ -1454,7 +1454,7 @@ public class OAuth2AuthzEndpoint {
             if (requestObject != null && MapUtils.isNotEmpty(requestObject.getRequestedClaims())) {
                 EndpointUtil.getRequestObjectService().addRequestObject(params.getClientId(), sessionDataKey,
                         new ArrayList(requestObject.getRequestedClaims().values()));
-                params.setContainsRequestObject(true);
+                params.setRequestObjectFlow(true);
             }
         }
     }
@@ -2201,8 +2201,7 @@ public class OAuth2AuthzEndpoint {
 
         List<String> essentialRequestedClaims = new ArrayList<>();
 
-        if (oauth2Params.isContainsRequestObject()) {
-
+        if (oauth2Params.isRequestObjectFlow()) {
             // Get the requested claims came through request object.
             List<RequestedClaim> requestedClaimsOfIdToken = EndpointUtil.getRequestObjectService()
                     .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), false);
@@ -2491,7 +2490,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setMaxAge(oauth2Params.getMaxAge());
         authzReqDTO.setEssentialClaims(oauth2Params.getEssentialClaims());
         authzReqDTO.setSessionDataKey(oauth2Params.getSessionDataKey());
-        authzReqDTO.setContainsRequestObject(oauth2Params.isContainsRequestObject());
+        authzReqDTO.setRequestObjectFlow(oauth2Params.isRequestObjectFlow());
         authzReqDTO.setIdpSessionIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
         authzReqDTO.setLoginTenantDomain(oauth2Params.getLoginTenantDomain());
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants

@@ -54,7 +54,7 @@ public class RequestObjectHandler extends AbstractEventHandler {
         Map<String, Object> eventProperties = event.getEventProperties();
         String eventName = event.getEventName();
         try {
-             Object isRequestObject = eventProperties.get(OIDCConstants.Event.IS_CONTAINS_REQUEST_OBJECT);
+             Object isRequestObject = eventProperties.get(OIDCConstants.Event.IS_REQUEST_OBJECT_FLOW);
              if (isRequestObject != null && !(boolean) isRequestObject) {
                  if (log.isDebugEnabled()) {
                      log.debug("The request does not contains request object. So skipping RequestObjectHandler");

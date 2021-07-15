@@ -55,7 +55,7 @@ public class OAuth2AuthorizeReqDTO {
     private String idpSessionIdentifier;
     // Set the login tenant domain.
     private String loginTenantDomain;
-    private boolean isContainsRequestObject;
+    private boolean isRequestObjectFlow;
 
     public String getSessionDataKey() {
         return sessionDataKey;
@@ -249,18 +249,18 @@ public class OAuth2AuthorizeReqDTO {
      *
      * @return  Whether the flow has request object or not.
      */
-    public boolean isContainsRequestObject() {
+    public boolean isRequestObjectFlow() {
 
-        return isContainsRequestObject;
+        return isRequestObjectFlow;
     }
 
     /**
      * Sets whether the the flow has request object or not.
      *
-     * @param isContainsRequestObject   Is flow has request object or not.
+     * @param isRequestObjectFlow   Is flow has request object or not.
      */
-    public void setContainsRequestObject(boolean isContainsRequestObject) {
+    public void setRequestObjectFlow(boolean isRequestObjectFlow) {
 
-        this.isContainsRequestObject = isContainsRequestObject;
+        this.isRequestObjectFlow = isRequestObjectFlow;
     }
 }
