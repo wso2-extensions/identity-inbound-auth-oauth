@@ -22,11 +22,11 @@ package org.wso2.carbon.identity.oauth.dto;
  * OAuth application token revocation request dto.
  */
 public class OAuthAppRevocationRequestDTO {
+
     private String applicationName;
-
     private String consumerKey;
-
     private String consumerSecret;
+    private String tenantDomain;
 
     public String getApplicationName() {
         return applicationName;
@@ -50,5 +50,13 @@ public class OAuthAppRevocationRequestDTO {
 
     public void setConsumerSecret(String consumerSecret) {
         this.consumerSecret = consumerSecret;
+    }
+
+    public String getTenantDomain() {
+        return tenantDomain;
+    }
+
+    public void setTenantDomain(String tenantDomain) {
+        this.tenantDomain = tenantDomain;
     }
 }

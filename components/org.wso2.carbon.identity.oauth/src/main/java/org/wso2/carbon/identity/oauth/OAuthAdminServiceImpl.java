@@ -25,6 +25,7 @@ import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -1134,14 +1135,16 @@ public class OAuthAdminServiceImpl {
 
         String consumerKey = application.getConsumerKey();
         String applicationName = application.getApplicationName();
-        if (consumerKey != null && applicationName != null) {
+        int tenantId = IdentityTenantUtil.getTenantId(application.getTenantDomain());
+        if (StringUtils.isNotBlank(consumerKey) && StringUtils.isNotBlank(applicationName)) {
             List<AccessTokenDO> activeDetailedTokens;
             try {
                 //Get active access tokens by application id
                 activeDetailedTokens = new ArrayList<>(OAuthTokenPersistenceFactory
                         .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(consumerKey));
             } catch (IdentityOAuth2Exception e) {
-                String errorMsg = "Error occurred while retrieving access tokens issued for Client ID : " + consumerKey;
+                String errorMsg = "Error occurred while retrieving access tokens issued for " +
+                        "consumer key: " + consumerKey;
                 throw handleError(errorMsg, e);
             }
             if (activeDetailedTokens.size() > 0) {
@@ -1151,10 +1154,8 @@ public class OAuthAdminServiceImpl {
                 for (AccessTokenDO detailToken : activeDetailedTokens) {
                     String token = detailToken.getAccessToken();
                     accessTokens[countToken++] = token;
-
                     OAuthCacheKey cacheKeyToken = new OAuthCacheKey(token);
                     String scope = buildScopeString(detailToken.getScope());
-                    String accessToken = detailToken.getAccessToken();
 
                     //Clear cache with AccessTokenDO
                     authzUser = detailToken.getAuthzUser();
@@ -1164,32 +1165,31 @@ public class OAuthAdminServiceImpl {
                             tokenBinding.getBindingReference() : NONE;
 
                     OAuthCache.getInstance().clearCacheEntry(cacheKeyToken);
-                    OAuthUtil.clearOAuthCache(detailToken.getConsumerKey(), authzUser, scope, tokenBindingReference);
-                    OAuthUtil.clearOAuthCache(detailToken.getConsumerKey(), authzUser, scope);
-                    OAuthUtil.clearOAuthCache(detailToken.getConsumerKey(), authzUser);
-                    OAuthUtil.clearOAuthCache(accessToken);
+                    OAuthUtil.clearOAuthCache(consumerKey, authzUser, scope, tokenBindingReference);
+                    OAuthUtil.clearOAuthCache(consumerKey, authzUser, scope);
+                    OAuthUtil.clearOAuthCache(consumerKey, authzUser);
+                    OAuthUtil.clearOAuthCache(token);
                 }
 
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("Access tokens and token of users are removed from the cache for OAuth App with " +
-                            "consumerKey: " + consumerKey);
+                    LOG.debug("Access tokens and token of users are removed from the cache for OAuth application " +
+                            "with consumerKey: " + consumerKey);
                 }
 
                 //Revoking token from database
                 try {
                     OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessTokens(accessTokens);
                 } catch (IdentityOAuth2Exception e) {
-                    String errorMsg = "Error occurred while revoking access Tokens for OAuth App with consumerKey : "
-                            + consumerKey;
+                    String errorMsg = "Error occurred while revoking access tokens for OAuth application with " +
+                            "consumerKey: " + consumerKey;
                     throw handleError(errorMsg, e);
                 }
                 //Revoking the oauth consent from database.
                 try {
                     OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
-                            .revokeOAuthConsentByApplication(application.getApplicationName());
+                            .revokeOAuthConsentByApplicationAndTenant(applicationName, tenantId);
                 } catch (IdentityOAuth2Exception e) {
-                    String errorMsg = "Error occurred while removing OAuth Consent of Application: " +
-                            application.getApplicationName();
+                    String errorMsg = "Error occurred while removing OAuth consent of application: " + applicationName;
                     throw handleError(errorMsg, e);
                 }
             }
