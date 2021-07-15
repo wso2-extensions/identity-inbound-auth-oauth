@@ -53,7 +53,8 @@ public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
             log.debug("Issued code: " + authorizationCode + " for the session data key: " + sessionDataKey);
         }
         // Trigger an event to update request_object_reference table.
-        OAuth2TokenUtil.postIssueCode(authorizationCode.getAuthzCodeId(), sessionDataKey);
+        OAuth2TokenUtil.postIssueCode(authorizationCode.getAuthzCodeId(), sessionDataKey,
+                oauthAuthzMsgCtx.getAuthorizationReqDTO().isRequestObjectFlow());
         return buildResponseDTO(oauthAuthzMsgCtx, authorizationCode);
     }
 

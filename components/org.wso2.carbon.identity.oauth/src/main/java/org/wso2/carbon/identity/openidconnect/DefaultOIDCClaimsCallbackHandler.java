@@ -169,14 +169,16 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         String spTenantDomain = requestMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
         String[] approvedScopes = requestMsgCtx.getScope();
         String token = getAccessToken(requestMsgCtx);
+        String authorizationCode = getAuthorizationCode(requestMsgCtx);
         String grantType = requestMsgCtx.getOauth2AccessTokenReqDTO().getGrantType();
 
-        return filterOIDCClaims(token, grantType, userClaimsInOIDCDialect, user, approvedScopes, clientId,
-                spTenantDomain);
+        return filterOIDCClaims(token, authorizationCode, grantType, userClaimsInOIDCDialect, user, approvedScopes,
+                clientId, spTenantDomain);
     }
 
 
     private Map<String, Object> filterOIDCClaims(String accessToken,
+                                                 String authorizationCode,
                                                  String grantType,
                                                  Map<String, Object> userClaimsInOIDCDialect,
                                                  AuthenticatedUser authenticatedUser,
@@ -190,10 +192,22 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         // https://github.com/wso2/product-is/issues/2680
 
         if (accessToken != null) {
-            // Handle essential claims of the request object
-            Map<String, Object> claimsFromRequestObject =
-                    filterClaimsFromRequestObject(userClaimsInOIDCDialect, accessToken);
-            filteredUserClaimsByOIDCScopes.putAll(claimsFromRequestObject);
+            if (StringUtils.isNotBlank(authorizationCode)) {
+                AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(authorizationCode);
+                AuthorizationGrantCacheEntry cacheEntry =
+                        AuthorizationGrantCache.getInstance().getValueFromCacheByCode(cacheKey);
+                if (cacheEntry != null && cacheEntry.isRequestObjectFlow()) {
+                    // Handle essential claims of the request object
+                    Map<String, Object> claimsFromRequestObject =
+                            filterClaimsFromRequestObject(userClaimsInOIDCDialect, accessToken);
+                    filteredUserClaimsByOIDCScopes.putAll(claimsFromRequestObject);
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("The request does not contains request object. So skipping " +
+                                "filterClaimsFromRequestObject");
+                    }
+                }
+            }
         }
 
         // Restrict the claims based on user consent given
@@ -395,8 +409,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         String accessToken = getAccessToken(authzReqMessageContext);
         String grantType = OAuthConstants.GrantTypes.IMPLICIT;
 
-        return filterOIDCClaims(accessToken, grantType, userClaimsInOIDCDialect, user, approvedScopes,
-                clientId, spTenantDomain);
+        return filterOIDCClaims(accessToken, StringUtils.EMPTY, grantType, userClaimsInOIDCDialect, user,
+                approvedScopes, clientId, spTenantDomain);
     }
 
     private Map<String, Object> retrieveClaimsForLocalUser(OAuthAuthzReqMessageContext authzReqMessageContext)

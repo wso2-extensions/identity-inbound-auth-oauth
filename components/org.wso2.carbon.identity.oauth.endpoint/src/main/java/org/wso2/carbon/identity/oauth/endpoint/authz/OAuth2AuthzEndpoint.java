@@ -1331,6 +1331,8 @@ public class OAuth2AuthzEndpoint {
             }
         }
         authorizationGrantCacheEntry.setAuthorizationCode(code);
+        boolean isRequestObjectFlow = sessionDataCacheEntry.getoAuth2Parameters().isRequestObjectFlow();
+        authorizationGrantCacheEntry.setRequestObjectFlow(isRequestObjectFlow);
         oAuthMessage.setAuthorizationGrantCacheEntry(authorizationGrantCacheEntry);
     }
 
@@ -1452,6 +1454,7 @@ public class OAuth2AuthzEndpoint {
             if (requestObject != null && MapUtils.isNotEmpty(requestObject.getRequestedClaims())) {
                 EndpointUtil.getRequestObjectService().addRequestObject(params.getClientId(), sessionDataKey,
                         new ArrayList(requestObject.getRequestedClaims().values()));
+                params.setRequestObjectFlow(true);
             }
         }
     }
@@ -2196,26 +2199,29 @@ public class OAuth2AuthzEndpoint {
         List<String> claimListOfScopes =
                 openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oauth2Params.getScopes(), spTenantDomain);
 
-        // Get the requested claims came through request object.
-        List<RequestedClaim> requestedClaimsOfIdToken = EndpointUtil.getRequestObjectService()
-                .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), false);
-
-        List<RequestedClaim> requestedClaimsOfUserInfo = EndpointUtil.getRequestObjectService()
-                .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), true);
-
         List<String> essentialRequestedClaims = new ArrayList<>();
 
-        // Get the list of id token's essential claims.
-        for (RequestedClaim requestedClaim : requestedClaimsOfIdToken) {
-            if (requestedClaim.isEssential()) {
-                essentialRequestedClaims.add(requestedClaim.getName());
-            }
-        }
+        if (oauth2Params.isRequestObjectFlow()) {
+            // Get the requested claims came through request object.
+            List<RequestedClaim> requestedClaimsOfIdToken = EndpointUtil.getRequestObjectService()
+                    .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), false);
 
-        // Get the list of user info's essential claims.
-        for (RequestedClaim requestedClaim : requestedClaimsOfUserInfo) {
-            if (requestedClaim.isEssential()) {
-                essentialRequestedClaims.add(requestedClaim.getName());
+            List<RequestedClaim> requestedClaimsOfUserInfo = EndpointUtil.getRequestObjectService()
+                    .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), true);
+
+
+            // Get the list of id token's essential claims.
+            for (RequestedClaim requestedClaim : requestedClaimsOfIdToken) {
+                if (requestedClaim.isEssential()) {
+                    essentialRequestedClaims.add(requestedClaim.getName());
+                }
+            }
+
+            // Get the list of user info's essential claims.
+            for (RequestedClaim requestedClaim : requestedClaimsOfUserInfo) {
+                if (requestedClaim.isEssential()) {
+                    essentialRequestedClaims.add(requestedClaim.getName());
+                }
             }
         }
 
@@ -2484,6 +2490,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setMaxAge(oauth2Params.getMaxAge());
         authzReqDTO.setEssentialClaims(oauth2Params.getEssentialClaims());
         authzReqDTO.setSessionDataKey(oauth2Params.getSessionDataKey());
+        authzReqDTO.setRequestObjectFlow(oauth2Params.isRequestObjectFlow());
         authzReqDTO.setIdpSessionIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
         authzReqDTO.setLoginTenantDomain(oauth2Params.getLoginTenantDomain());
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
