@@ -63,6 +63,7 @@ public class UserInfoUserStoreClaimRetriever implements UserInfoClaimRetriever {
      * @return Whether it is multi attribute or not.
      */
     private boolean isMultiValuedAttribute(String claimValue) {
+
         return StringUtils.contains(claimValue, ATTRIBUTE_SEPARATOR);
     }
 

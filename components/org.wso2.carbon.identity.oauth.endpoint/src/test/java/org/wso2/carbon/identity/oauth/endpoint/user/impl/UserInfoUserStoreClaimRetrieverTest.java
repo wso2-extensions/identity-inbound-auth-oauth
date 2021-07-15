@@ -31,6 +31,7 @@ public class UserInfoUserStoreClaimRetrieverTest {
 
     @DataProvider
     public Object[][] getUserAttributes() {
+
         ClaimMapping map1 = ClaimMapping.build("localClaimUri1", "remoteClaimUri1", "defaultValue1", true);
         ClaimMapping map2 = ClaimMapping.build("localClaimUri2", "remoteClaimUri2", "defaultValue1", true);
         Map<ClaimMapping, Object> claims1 = new HashMap<ClaimMapping, Object>();
@@ -45,6 +46,7 @@ public class UserInfoUserStoreClaimRetrieverTest {
 
     @Test(dataProvider = "getUserAttributes")
     public void testUserInfoUserStoreClaimRetriever(HashMap<ClaimMapping, String> claims) {
+
         UserInfoUserStoreClaimRetriever claimsRetriever = new UserInfoUserStoreClaimRetriever();
         assertNotNull(claimsRetriever.getClaimsMap(claims));
     }
