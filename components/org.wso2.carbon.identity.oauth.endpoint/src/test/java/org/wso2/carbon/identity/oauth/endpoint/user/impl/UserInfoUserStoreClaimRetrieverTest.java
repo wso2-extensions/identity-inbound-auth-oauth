@@ -48,5 +48,4 @@ public class UserInfoUserStoreClaimRetrieverTest {
         UserInfoUserStoreClaimRetriever claimsRetriever = new UserInfoUserStoreClaimRetriever();
         assertNotNull(claimsRetriever.getClaimsMap(claims));
     }
-
 }
