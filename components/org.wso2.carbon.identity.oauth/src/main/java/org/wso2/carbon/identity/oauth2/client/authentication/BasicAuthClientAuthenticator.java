@@ -45,7 +45,6 @@ import javax.servlet.http.HttpServletRequest;
 public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticator {
 
     private static final Log log = LogFactory.getLog(BasicAuthClientAuthenticator.class);
-    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private static final String CREDENTIAL_SEPARATOR = ":";
     private static final String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
     private static final String BASIC_PREFIX = "Basic";
@@ -84,16 +83,12 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
                 log.debug("Authenticating client : " + oAuthClientAuthnContext.getClientId() + " with client " +
                         "secret.");
             }
-            diagnosticLog.info("Authenticating client : " + oAuthClientAuthnContext.getClientId() + " with client " +
-                    "secret.");
             return OAuth2Util.authenticateClient(oAuthClientAuthnContext.getClientId(),
                     (String) oAuthClientAuthnContext.getParameter(OAuth.OAUTH_CLIENT_SECRET));
         } catch (IdentityOAuthAdminException e) {
-            diagnosticLog.error("Error while authenticating client. Error message: " + e.getMessage());
             throw new OAuthClientAuthnException(OAuth2ErrorCodes.INVALID_CLIENT, "Error while authenticating " +
                     "client", e);
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
-            diagnosticLog.error("Invalid client. Error message: " + e.getMessage());
             throw new OAuthClientAuthnException(OAuth2ErrorCodes.INVALID_CLIENT,
                     "Invalid Client : " + oAuthClientAuthnContext.getClientId(), e);
         }
@@ -127,21 +122,17 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
             if (log.isDebugEnabled()) {
                 log.debug("Basic auth credentials exists as Authorization header. Hence returning true.");
             }
-            diagnosticLog.info("Basic auth credentials exists as Authorization header. Hence returning true.");
             return true;
         } else if (isClientCredentialsExistsAsParams(bodyParams)) {
             if (log.isDebugEnabled()) {
                 log.debug("Basic auth credentials present as body params. Hence returning true");
             }
-            diagnosticLog.info("Basic auth credentials present as body params. Hence returning true");
             return true;
         }
         if (log.isDebugEnabled()) {
             log.debug("Client id and secret neither present as Authorization header nor as body params. Hence " +
                     "returning false");
         }
-        diagnosticLog.info("Client id and secret neither present as Authorization header nor as body params. Hence " +
-                "returning false");
         return false;
     }
 
@@ -198,8 +189,6 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
                 log.debug("Client Id and Client Secret found in request body and Authorization header" +
                         ". Credentials should be sent in either request body or Authorization header, not both");
             }
-            diagnosticLog.info("Client Id and Client Secret found in request body and Authorization header" +
-                    ". Credentials should be sent in either request body or Authorization header, not both");
             throw new OAuthClientAuthnException("Request body and headers contain authorization information",
                     OAuth2ErrorCodes.INVALID_REQUEST);
         }

@@ -18,8 +18,6 @@
 
 package org.wso2.carbon.identity.oauth.common;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
@@ -32,14 +30,11 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class NoneResponseTypeValidator extends AbstractValidator<HttpServletRequest> {
 
-    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
-
     @Override
     public void validateMethod(HttpServletRequest request) throws OAuthProblemException {
 
         String method = request.getMethod();
         if (!OAuth.HttpMethod.GET.equals(method) && !OAuth.HttpMethod.POST.equals(method)) {
-            diagnosticLog.info("HTTP method used in the request: '" + method + "' is not correct.");
             throw OAuthProblemException.error(OAuthError.CodeResponse.INVALID_REQUEST)
                     .description("Method not correct.");
         }

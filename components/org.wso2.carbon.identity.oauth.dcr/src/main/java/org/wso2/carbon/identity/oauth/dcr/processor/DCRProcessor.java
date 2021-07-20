@@ -45,7 +45,6 @@ import java.util.regex.Matcher;
 public class DCRProcessor extends IdentityProcessor {
 
     private static final Log log = LogFactory.getLog(DCRProcessor.class);
-    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
 
     @Override
     public IdentityResponse.IdentityResponseBuilder process(IdentityRequest identityRequest) throws DCRException {
@@ -90,10 +89,7 @@ public class DCRProcessor extends IdentityProcessor {
             RegistrationHandler registrationHandler =
                     HandlerManager.getInstance().getRegistrationHandler(dcrMessageContext);
             identityResponseBuilder = registrationHandler.handle(dcrMessageContext);
-            diagnosticLog.info("DCR OAuth application registration is successful.");
         } catch (DCRException e) {
-            diagnosticLog.info("Server error occurred during DCR OAuth application registration: Error message: " +
-                    e.getMessage());
             if (StringUtils.isBlank(e.getErrorCode())) {
                 throw IdentityException.error(RegistrationException.class,
                         ErrorCodes.BAD_REQUEST.toString(), e.getMessage(), e);
@@ -113,10 +109,7 @@ public class DCRProcessor extends IdentityProcessor {
             UnRegistrationHandler unRegistrationHandler =
                     HandlerManager.getInstance().getUnRegistrationHandler(dcrMessageContext);
             identityResponseBuilder = unRegistrationHandler.handle(dcrMessageContext);
-            diagnosticLog.info("DCR OAuth application un-registration is successful.");
         } catch (DCRException e) {
-            diagnosticLog.info("Server error occurred during DCR OAuth application un-registration: Error message: " +
-                    e.getMessage());
             if (StringUtils.isBlank(e.getErrorCode())) {
                 throw IdentityException.error(UnRegistrationException.class, ErrorCodes.BAD_REQUEST.toString(), e);
             } else {

@@ -19,8 +19,6 @@
 package org.wso2.carbon.identity.oauth.common;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.error.OAuthError;
@@ -34,8 +32,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params
  * Validator for IDtoken response.
  */
 public class IDTokenResponseValidator extends TokenValidator {
-
-    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
 
     public IDTokenResponseValidator() {
 
@@ -65,8 +61,6 @@ public class IDTokenResponseValidator extends TokenValidator {
         // for id_token response type, the scope parameter should contain 'openid' as one of the scopes.
         String openIdScope = request.getParameter(SCOPE);
         if (StringUtils.isBlank(openIdScope) || !containOIDCScope(openIdScope)) {
-            diagnosticLog.error("The 'response_type' parameter contains 'id_token', but 'openid' scope not found" +
-                    " in the request.");
             throw OAuthProblemException.error(OAuthError.TokenResponse.INVALID_REQUEST)
                     .description("\'response_type\' contains \'id_token\'; but \'openid\' scope not found.");
         }
@@ -78,7 +72,6 @@ public class IDTokenResponseValidator extends TokenValidator {
 
         String method = request.getMethod();
         if (!OAuth.HttpMethod.GET.equals(method) && !OAuth.HttpMethod.POST.equals(method)) {
-            diagnosticLog.info("HTTP method used in the request: '" + method + "' is not correct.");
             throw OAuthProblemException.error(OAuthError.CodeResponse.INVALID_REQUEST)
                     .description("Method not correct.");
         }

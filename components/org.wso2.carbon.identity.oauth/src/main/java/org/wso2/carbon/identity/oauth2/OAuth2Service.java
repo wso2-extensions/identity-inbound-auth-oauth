@@ -77,7 +77,6 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTen
 public class OAuth2Service extends AbstractAdmin {
 
     private static final Log log = LogFactory.getLog(OAuth2Service.class);
-    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private static final String APP_STATE_ACTIVE = "ACTIVE";
 
     /**
@@ -251,10 +250,6 @@ public class OAuth2Service extends AbstractAdmin {
                     tokenReqDTO.getClientId() + ", User ID " + tokenReqDTO.getResourceOwnerUsername() +
                     ", Scope : " + Arrays.toString(tokenReqDTO.getScope()) + " and Grant Type : " +
                     tokenReqDTO.getGrantType());
-            diagnosticLog.info("Access Token request received for Client ID " +
-                    tokenReqDTO.getClientId() + ", User ID " + tokenReqDTO.getResourceOwnerUsername() +
-                    ", Scope : " + Arrays.toString(tokenReqDTO.getScope()) + " and Grant Type : " +
-                    tokenReqDTO.getGrantType());
         }
 
         try {
@@ -267,10 +262,6 @@ public class OAuth2Service extends AbstractAdmin {
                         ", Scope : " + Arrays.toString(tokenReqDTO.getScope()) + " and Grant Type : " +
                         tokenReqDTO.getGrantType(), e);
             }
-            diagnosticLog.error("Error occurred while issuing access token for Client ID : " +
-                    tokenReqDTO.getClientId() + ", User ID: " + tokenReqDTO.getResourceOwnerUsername() +
-                    ", Scope : " + Arrays.toString(tokenReqDTO.getScope()) + " and Grant Type : " +
-                    tokenReqDTO.getGrantType() + ", Error message: " + e.getMessage());
             OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
             tokenRespDTO.setError(true);
             tokenRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
@@ -281,10 +272,6 @@ public class OAuth2Service extends AbstractAdmin {
                     tokenReqDTO.getClientId() + ", User ID " + tokenReqDTO.getResourceOwnerUsername() +
                     ", Scope : " + Arrays.toString(tokenReqDTO.getScope()) + " and Grant Type : " +
                     tokenReqDTO.getGrantType(), e);
-            diagnosticLog.error("Error occurred while issuing the access token for Client ID : " +
-                    tokenReqDTO.getClientId() + ", User ID " + tokenReqDTO.getResourceOwnerUsername() +
-                    ", Scope : " + Arrays.toString(tokenReqDTO.getScope()) + " and Grant Type : " +
-                    tokenReqDTO.getGrantType() + ", Error message: " + e.getMessage());
             OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
             tokenRespDTO.setError(true);
             if (e.getCause() != null && e.getCause().getCause() != null &&

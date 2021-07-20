@@ -50,7 +50,6 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.triggerOnIntrospec
 public class OAuth2IntrospectionEndpoint {
 
     private static final Log log = LogFactory.getLog(OAuth2IntrospectionEndpoint.class);
-    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private static final String DEFAULT_TOKEN_TYPE_HINT = "bearer";
     private static final String DEFAULT_TOKEN_TYPE = "Bearer";
     private static final String JWT_TOKEN_TYPE = "JWT";
@@ -81,17 +80,14 @@ public class OAuth2IntrospectionEndpoint {
             introspectionResponse = new OAuth2IntrospectionResponseDTO();
             introspectionResponse.setError(INVALID_INPUT);
             triggerOnIntrospectionExceptionListeners(null, introspectionResponse);
-            diagnosticLog.info("Inlvalid request. Token is empty.");
             return Response.status(Response.Status.BAD_REQUEST).
                     entity("{\"error\": \"" + INVALID_INPUT + "\"}").build();
         }
 
         String[] claimsUris = null;
         if (StringUtils.isNotEmpty(requiredClaims)) {
-            diagnosticLog.info("Found 'required_claims' param in request. Value: " + requiredClaims);
             claimsUris = requiredClaims.split(",");
         } else if (requiredClaims != null && requiredClaims.length() == 0) {
-            diagnosticLog.info("'required_claims' param is empty.");
             claimsUris = new String[0];
         }
 
@@ -100,10 +96,8 @@ public class OAuth2IntrospectionEndpoint {
         OAuth2TokenValidationRequestDTO.OAuth2AccessToken oAuth2Token = introspectionRequest.new OAuth2AccessToken();
 
         if (tokenTypeHint == null || StringUtils.equals(tokenTypeHint, ACCESS_TOKEN_HINT)) {
-            diagnosticLog.info("'token_type_hint' param is empty. Setting default value: " + DEFAULT_TOKEN_TYPE_HINT);
             oAuth2Token.setTokenType(DEFAULT_TOKEN_TYPE_HINT);
         } else {
-            diagnosticLog.info("Found 'token_type_hint' param in request. Value: " + tokenTypeHint);
             oAuth2Token.setTokenType(tokenTypeHint);
         }
 
@@ -120,8 +114,6 @@ public class OAuth2IntrospectionEndpoint {
             if (log.isDebugEnabled()) {
                 log.debug("The error why token is made inactive: " + introspectionResponse.getError());
             }
-            diagnosticLog.error("Error occurred during token validation. Hence token is made inactive. Error message: "
-                    + introspectionResponse.getError());
             return Response.status(Response.Status.OK).entity("{\"active\":false}").build();
         }
 

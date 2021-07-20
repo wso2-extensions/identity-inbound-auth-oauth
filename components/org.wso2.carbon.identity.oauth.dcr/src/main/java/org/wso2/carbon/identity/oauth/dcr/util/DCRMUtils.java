@@ -38,7 +38,6 @@ import static org.wso2.carbon.identity.oauth.dcr.util.DCRConstants.APP_NAME_VALI
 public class DCRMUtils {
 
     private static final Log log = LogFactory.getLog(DCRMUtils.class);
-    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private static Pattern spNameRegexPattern = null;
     private static final String SERVICE_PROVIDERS_NAME_REGEX = "ServiceProviders.SPNameRegex";
     private static final String APPLICATION_ROLE_PERMISSION_REQUIRED =
@@ -52,7 +51,6 @@ public class DCRMUtils {
 
         if (IdentityUtil.isBlank(redirectUri)) {
             log.error("The redirection URI is either null or blank.");
-            diagnosticLog.info("Redirection URI validation failed. URI is null or empty.");
             return false;
         }
 
@@ -64,18 +62,14 @@ public class DCRMUtils {
                 String errorMessage = "The redirection URI: " + redirectUri + ", is not a valid URI.";
                 log.debug(errorMessage, e);
             }
-            diagnosticLog.error("The redirection URI: " + redirectUri + ", is not a valid URI. Error message: " +
-                    e.getMessage());
             return false;
         }
-        diagnosticLog.info("Validation is successful for the redirect URI: " + redirectUri);
         return true;
     }
 
     public static boolean isBackchannelLogoutUriValid(String backchannelLogoutUri) {
 
         if (StringUtils.isBlank(backchannelLogoutUri)) {
-            diagnosticLog.info("Backchannel logout URI validation is skipped as URI is empty.");
             return true;
         }
 
@@ -89,8 +83,6 @@ public class DCRMUtils {
                         + ", contains a fragment component.";
                 log.debug(errorMessage);
             }
-            diagnosticLog.info("Backchannel logout URI validation failed. The back-channel logout URI: " +
-                            backchannelLogoutUri + ", contains a fragment component.");
             return false;
         }
 
@@ -102,8 +94,6 @@ public class DCRMUtils {
                 String errorMessage = "The back-channel logout URI: " + backchannelLogoutUri + ", is not a valid URI.";
                 log.debug(errorMessage, e);
             }
-            diagnosticLog.info("Backchannel logout URI validation failed. The back-channel logout URI: " +
-                    backchannelLogoutUri + ", is not a valid URI.");
             return false;
         }
 
@@ -113,12 +103,9 @@ public class DCRMUtils {
                         + ", is not an absolute URI.";
                 log.debug(errorMessage);
             }
-            diagnosticLog.info("Backchannel logout URI validation failed. The back-channel logout URI: " +
-                            backchannelLogoutUri + ", is not an absolute URI.");
             return false;
         }
 
-        diagnosticLog.info("Validation is successful for the backchannel logout URI: " + backchannelLogoutUri);
         return true;
     }
 
