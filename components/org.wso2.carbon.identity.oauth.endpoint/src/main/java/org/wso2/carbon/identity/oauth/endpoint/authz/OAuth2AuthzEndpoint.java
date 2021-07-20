@@ -2188,11 +2188,11 @@ public class OAuth2AuthzEndpoint {
     /**
      * Filter out the requested claims with the user attributes.
      *
-     * @param requestedClaims List of requested claims metadata.
-     * @param userAttributes  Authenticated users' attributes.
-     * @param spTenantDomain  Tenant domain.
+     * @param requestedClaims           List of requested claims metadata.
+     * @param userAttributes            Authenticated users' attributes.
+     * @param spTenantDomain            Tenant domain.
+     * @return                          Filtered claims with user attributes.
      * @throws ClaimMetadataException   If an error occurred while getting claim mappings.
-     * @return                Filtered claims with user attributes.
      */
     private List<ClaimMetaData> removeClaimsNotInUserAttributes(List<ClaimMetaData> requestedClaims,
                                                                 Map<ClaimMapping, String> userAttributes,
