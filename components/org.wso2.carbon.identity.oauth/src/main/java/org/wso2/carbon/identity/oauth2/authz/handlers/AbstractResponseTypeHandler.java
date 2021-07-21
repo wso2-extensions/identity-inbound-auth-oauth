@@ -48,7 +48,6 @@ import java.util.List;
 public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler {
 
     private static final Log log = LogFactory.getLog(AbstractResponseTypeHandler.class);
-    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
 
     public static final String IMPLICIT = "implicit";
     protected OauthTokenIssuer oauthIssuerImpl;
@@ -131,7 +130,6 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
             if (log.isDebugEnabled()) {
                 log.debug("Could not find authorized grant types for client id: " + consumerKey);
             }
-            diagnosticLog.info("Could not find authorized grant types for client id: " + consumerKey);
             return false;
         }
 

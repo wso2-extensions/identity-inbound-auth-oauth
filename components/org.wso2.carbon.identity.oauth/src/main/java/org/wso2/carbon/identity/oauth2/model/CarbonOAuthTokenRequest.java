@@ -42,7 +42,6 @@ import javax.servlet.http.HttpServletRequest;
 public class CarbonOAuthTokenRequest extends OAuthTokenRequest {
 
     private static final Log log = LogFactory.getLog(CarbonOAuthTokenRequest.class);
-    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
 
     private String assertion;
     private String windowsToken;
@@ -113,7 +112,6 @@ public class CarbonOAuthTokenRequest extends OAuthTokenRequest {
 
         String requestTypeValue = getParam(OAuth.OAUTH_GRANT_TYPE);
         if (OAuthUtils.isEmpty(requestTypeValue)) {
-            diagnosticLog.info("Missing 'grant_type' parameter value");
             throw OAuthUtils.handleOAuthProblemException("Missing grant_type parameter value");
         }
 
@@ -126,8 +124,6 @@ public class CarbonOAuthTokenRequest extends OAuthTokenRequest {
                 log.debug("Unsupported Grant Type : " + requestTypeValue +
                         " for client id : " + getClientId());
             }
-            diagnosticLog.info("Unsupported Grant Type : " + requestTypeValue +
-                    " for client id : " + getClientId());
             throw OAuthProblemException.error(OAuthError.TokenResponse.UNSUPPORTED_GRANT_TYPE)
                     .description("Unsupported grant_type value");
         }

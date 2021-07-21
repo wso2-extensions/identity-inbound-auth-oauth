@@ -75,7 +75,6 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validate
 public class OAuth2TokenEndpoint {
 
     private static final Log log = LogFactory.getLog(OAuth2TokenEndpoint.class);
-    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     public static final String BEARER = "Bearer";
     private static final String SQL_ERROR = "sql_error";
 
@@ -123,16 +122,11 @@ public class OAuth2TokenEndpoint {
             OAuth2AccessTokenRespDTO oauth2AccessTokenResp = issueAccessToken(oauthRequest, httpRequest);
 
             if (oauth2AccessTokenResp.getErrorMsg() != null) {
-                diagnosticLog.info("Error occurred during token generation. Error message: " +
-                        oauth2AccessTokenResp.getErrorMsg());
                 return handleErrorResponse(oauth2AccessTokenResp);
             } else {
-                diagnosticLog.info("Token generation is successful.");
                 return buildTokenResponse(oauth2AccessTokenResp);
             }
         } catch (TokenEndpointBadRequestException | OAuthSystemException | InvalidApplicationClientException e) {
-            diagnosticLog.error("Error occurred during token generation. Error message: " +
-                    e.getMessage());
             triggerOnTokenExceptionListeners(e, request, paramMap);
             throw e;
 

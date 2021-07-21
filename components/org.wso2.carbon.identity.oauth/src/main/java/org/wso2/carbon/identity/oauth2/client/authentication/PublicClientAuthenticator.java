@@ -40,7 +40,6 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
 
     public static final String PUBLIC_CLIENT_AUTHENTICATOR = "PublicClientAuthenticator";
     private static final Log log = LogFactory.getLog(PublicClientAuthenticator.class);
-    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
 
     /**
      * Returns the execution order of this authenticator.
@@ -89,9 +88,6 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
                     if (clientId != null) {
                         context.setClientId(clientId);
                     }
-                    diagnosticLog.info("The Application (Service Provider) with client ID : " + clientId
-                            + " has enabled the option \"Allow authentication without the client secret\" "
-                            + "and valid Authorization Header exists in the request. Hence returning true.");
                     return true;
                 } else {
                     if (log.isDebugEnabled()) {
@@ -99,30 +95,21 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
                                 + " has not enabled the option \"Allow authentication without the client secret\" "
                                 + "and no valid Authorization Header exists in the request.");
                     }
-                    diagnosticLog.info("The Application (Service Provider) with client ID : " + clientId
-                            + " has not enabled the option \"Allow authentication without the client secret\" "
-                            + "and no valid Authorization Header exists in the request.");
                 }
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Application with the given client ID " + clientId + " is not found");
                 }
-                diagnosticLog.info("Application with the given client ID " + clientId + " is not found");
             }
         } catch (InvalidOAuthClientException e) {
             log.error("Error in retrieving an Application (Service Provider) with client ID : " + clientId, e);
-            diagnosticLog.error("Error in retrieving an Application (Service Provider) with client ID : " + clientId +
-                    ", Error message: " + e.getMessage());
         } catch (IdentityOAuth2Exception e) {
             log.error("Error in Application (Service Provider) with client ID : " + clientId, e);
-            diagnosticLog.error("Error in Application (Service Provider) with client ID : " + clientId + ", Error " +
-                    "message: " + e.getMessage());
         }
 
         if (log.isDebugEnabled()) {
             log.debug("The Client ID is not present in the request.");
         }
-        diagnosticLog.info("The Client ID is not present in the request.");
 
         return false;
     }

@@ -63,7 +63,6 @@ import java.util.regex.Pattern;
 public class DCRMService {
 
     private static final Log log = LogFactory.getLog(DCRMService.class);
-    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private static OAuthAdminService oAuthAdminService = new OAuthAdminService();
 
     private static final String AUTH_TYPE_OAUTH_2 = "oauth2";
@@ -94,15 +93,12 @@ public class DCRMService {
     public Application getApplicationByName(String clientName) throws DCRMException {
 
         if (StringUtils.isEmpty(clientName)) {
-            diagnosticLog.info(("Insufficient information. Client name is empty."));
             throw DCRMUtils.generateClientException(
                     DCRMConstants.ErrorMessages.BAD_REQUEST_INSUFFICIENT_DATA, null);
         }
 
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         if (!isServiceProviderExist(clientName, tenantDomain)) {
-            diagnosticLog.info("Could not find a valid application with the name: '" + clientName + "' in the " +
-                    "given tenant domain: " + tenantDomain);
             throw DCRMUtils.generateClientException(
                     DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_NAME, clientName);
         }
@@ -111,13 +107,11 @@ public class DCRMService {
             OAuthConsumerAppDTO oAuthConsumerAppDTO =
                     oAuthAdminService.getOAuthApplicationDataByAppName(clientName);
             if (!isUserAuthorized(oAuthConsumerAppDTO.getOauthConsumerKey())) {
-                diagnosticLog.info("User is not authorized to use the application: " + clientName);
                 throw DCRMUtils.generateClientException(
                         DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER, clientName);
             }
             return buildResponse(oAuthConsumerAppDTO);
         } catch (IdentityOAuthAdminException e) {
-            diagnosticLog.error("Failed to retrieve application information. Error message: " + e.getMessage());
             throw DCRMUtils.generateServerException(
                     DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION, clientName, e);
         }
@@ -153,8 +147,6 @@ public class DCRMService {
             spName = DCRDataHolder.getInstance().getApplicationManagementService()
                     .getServiceProviderNameByClientId(appDTO.getOauthConsumerKey(), DCRMConstants.OAUTH2, tenantDomain);
         } catch (IdentityApplicationManagementException e) {
-            diagnosticLog.error("Error while retrieving service provider for client ID: " + clientId + ", " +
-                    "Error message: " + e.getMessage());
             throw new DCRMException("Error while retrieving the service provider.", e);
         }
 
@@ -164,16 +156,12 @@ public class DCRMService {
                 log.debug("The application with consumer key: " + appDTO.getOauthConsumerKey() +
                         " has an association with the service provider: " + spName);
             }
-            diagnosticLog.info("The application with consumer key: " + appDTO.getOauthConsumerKey() +
-                    " has an association with the service provider: " + spName);
             deleteServiceProvider(spName, tenantDomain, applicationOwner);
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("The application with consumer key: " + appDTO.getOauthConsumerKey() +
                         " doesn't have an associated service provider.");
             }
-            diagnosticLog.info("The application with consumer key: " + appDTO.getOauthConsumerKey() +
-                    " doesn't have an associated service provider.");
             deleteOAuthApplicationWithoutAssociatedSP(appDTO, tenantDomain, applicationOwner);
         }
     }
@@ -200,14 +188,12 @@ public class DCRMService {
             // Check whether a service provider already exists for the name we are trying
             // to register the OAuth app with.
             if (!appDTO.getApplicationName().equals(clientName) && isServiceProviderExist(clientName, tenantDomain)) {
-                diagnosticLog.info("An application already exists with the given name: " + clientName);
                 throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.CONFLICT_EXISTING_APPLICATION,
                         clientName);
             }
 
             // Regex validation of the application name.
             if (!DCRMUtils.isRegexValidated(clientName)) {
-                diagnosticLog.info("Application name regex validation failed for the name: " + clientName);
                 throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
                         DCRMUtils.getSPValidatorRegex(), null);
             }
@@ -220,8 +206,6 @@ public class DCRMService {
             ServiceProvider clonedSP = cloneServiceProvider(sp);
             clonedSP.setApplicationName(clientName);
             updateServiceProvider(clonedSP, tenantDomain, applicationOwner);
-        } else {
-            diagnosticLog.info("Insufficient information. Client name is empty.");
         }
 
         // Update application
@@ -229,13 +213,10 @@ public class DCRMService {
             if (StringUtils.isNotEmpty(clientName)) {
                 // Regex validation of the application name.
                 if (!DCRMUtils.isRegexValidated(clientName)) {
-                    diagnosticLog.info("Application name regex validation failed.");
                     throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
                             DCRMUtils.getSPValidatorRegex(), null);
                 }
                 appDTO.setApplicationName(clientName);
-            } else {
-                diagnosticLog.info("Insufficient information. Client name is empty.");
             }
             if (!updateRequest.getGrantTypes().isEmpty()) {
                 String grantType = StringUtils.join(updateRequest.getGrantTypes(), GRANT_TYPE_SEPARATOR);
@@ -271,7 +252,6 @@ public class DCRMService {
             throws DCRMException {
 
         if (StringUtils.isEmpty(clientId)) {
-            diagnosticLog.info("Insufficient information. Client ID is empty.");
             String errorMessage = "Invalid client_id";
             throw DCRMUtils.generateClientException(
                     DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_INPUT, errorMessage);
@@ -280,23 +260,18 @@ public class DCRMService {
         try {
             OAuthConsumerAppDTO dto = oAuthAdminService.getOAuthApplicationData(clientId);
             if (dto == null || StringUtils.isEmpty(dto.getApplicationName())) {
-                diagnosticLog.info("Could not find a valid application with given ID: "
-                        + clientId);
                 throw DCRMUtils.generateClientException(
                         DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID, clientId);
             } else if (isApplicationRolePermissionRequired && !isUserAuthorized(clientId)) {
-                diagnosticLog.info("User is not authorized to view the application with ID: " + clientId);
                 throw DCRMUtils.generateClientException(
                         DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER, clientId);
             }
             return dto;
         } catch (IdentityOAuthAdminException e) {
             if (e.getCause() instanceof InvalidOAuthClientException) {
-                diagnosticLog.error("Unable to find an application with given ID: " + clientId);
                 throw DCRMUtils
                         .generateClientException(DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID, clientId);
             }
-            diagnosticLog.error("Server error occurred while fetching application. Error message: " + e.getMessage());
             throw DCRMUtils.generateServerException(
                     DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION_BY_ID, clientId, e);
         }
@@ -312,22 +287,17 @@ public class DCRMService {
 
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(spName)) {
-            diagnosticLog.info("Application name regex validation failed for the name: " + spName);
             throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
                     DCRMUtils.getSPValidatorRegex(), null);
         }
 
         // Check whether a service provider already exists for the name we are trying to register the OAuth app with.
         if (isServiceProviderExist(spName, tenantDomain)) {
-            diagnosticLog.info("A valid application exists with the given name: " + spName + ", in tenant domain: "
-                    + tenantDomain);
             throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.CONFLICT_EXISTING_APPLICATION, spName);
         }
 
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerKey()) && isClientIdExist(
                 registrationRequest.getConsumerKey())) {
-            diagnosticLog.info("An application with given client ID already exists. Client ID: " +
-                    registrationRequest.getConsumerKey());
             throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.CONFLICT_EXISTING_CLIENT_ID,
                     registrationRequest.getConsumerKey());
         }
@@ -344,8 +314,6 @@ public class DCRMService {
                 log.debug("OAuth app: " + spName + " registration failed in tenantDomain: " + tenantDomain + ". " +
                         "Deleting the service provider: " + spName + " to rollback.");
             }
-            diagnosticLog.error("OAuth app: " + spName + " registration failed in tenantDomain: " + tenantDomain +
-                    ". Deleting the service provider: " + spName + " to rollback. Error message: " + ex.getMessage());
             deleteServiceProvider(spName, tenantDomain, applicationOwner);
             throw ex;
         }

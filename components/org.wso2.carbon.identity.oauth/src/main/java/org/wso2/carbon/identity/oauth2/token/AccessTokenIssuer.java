@@ -77,7 +77,6 @@ public class AccessTokenIssuer {
 
     private static AccessTokenIssuer instance;
     private static final Log log = LogFactory.getLog(AccessTokenIssuer.class);
-    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private Map<String, AuthorizationGrantHandler> authzGrantHandlers;
     public static final String OAUTH_APP_DO = "OAuthAppDO";
 
@@ -141,7 +140,6 @@ public class AccessTokenIssuer {
         OAuthClientAuthnContext oAuthClientAuthnContext = tokenReqDTO.getoAuthClientAuthnContext();
 
         if (oAuthClientAuthnContext == null) {
-            diagnosticLog.info("Client authentication failed for client ID: " + tokenReqDTO.getClientId());
             oAuthClientAuthnContext = new OAuthClientAuthnContext();
             oAuthClientAuthnContext.setAuthenticated(false);
             oAuthClientAuthnContext.setErrorMessage("Client Authentication Failed");
@@ -151,7 +149,6 @@ public class AccessTokenIssuer {
         // Will return an invalid request response if multiple authentication mechanisms are engaged irrespective of
         // whether the grant type is confidential or not.
         if (oAuthClientAuthnContext.isMultipleAuthenticatorsEngaged()) {
-            diagnosticLog.info("Invalid request. Client has used more than one authentication methods.");
             tokenRespDTO = handleError(OAuth2ErrorCodes.INVALID_REQUEST, "The client MUST NOT use more than one " +
                     "authentication method in each", tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
@@ -161,15 +158,11 @@ public class AccessTokenIssuer {
 
         boolean isAuthenticated = oAuthClientAuthnContext.isAuthenticated();
 
-        if (isAuthenticated) {
-            diagnosticLog.info("Client authentication is successful for the client ID: " + tokenReqDTO.getClientId());
-        }
         if (authzGrantHandler == null) {
             String errorMsg = "Unsupported grant type : " + grantType + ", is used.";
             if (log.isDebugEnabled()) {
                 log.debug(errorMsg);
             }
-            diagnosticLog.info(errorMsg);
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNSUPPORTED_GRANT_TYPE,
                     errorMsg, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
@@ -180,13 +173,11 @@ public class AccessTokenIssuer {
         // If the client is not confidential then there is no need to authenticate the client.
         if (!authzGrantHandler.isConfidentialClient() && StringUtils.isNotEmpty
                 (oAuthClientAuthnContext.getClientId())) {
-            diagnosticLog.info("Client is not confidential. Hence client authentication will be skipped.");
             isAuthenticated = true;
         }
 
         if (!isAuthenticated && !oAuthClientAuthnContext.isPreviousAuthenticatorEngaged() && authzGrantHandler
                 .isConfidentialClient()) {
-            diagnosticLog.info("Unsupported client authentication method.");
             tokenRespDTO = handleError(
                     OAuth2ErrorCodes.INVALID_CLIENT,
                     "Unsupported Client Authentication Method!", tokenReqDTO);
@@ -195,7 +186,6 @@ public class AccessTokenIssuer {
             return tokenRespDTO;
         }
         if (!isAuthenticated) {
-            diagnosticLog.info("Client authentication failed. " + oAuthClientAuthnContext.getErrorMessage());
             tokenRespDTO = handleError(
                     oAuthClientAuthnContext.getErrorCode(),
                     oAuthClientAuthnContext.getErrorMessage(), tokenReqDTO);
@@ -237,7 +227,6 @@ public class AccessTokenIssuer {
                 log.debug("Error occurred while validating client for authorization", e);
             }
             error = e.getMessage();
-            diagnosticLog.error("Error occurred while validating client for authorization. Error message: " + error);
         }
 
         if (!isAuthorizedClient) {
@@ -246,8 +235,6 @@ public class AccessTokenIssuer {
                 log.debug("Client Id: " + tokenReqDTO.getClientId() + " is not authorized to use grant type: " +
                         grantType);
             }
-            diagnosticLog.info("Client Id: " + tokenReqDTO.getClientId() + " is not authorized to use grant type: " +
-                    grantType);
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT, error, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
@@ -266,12 +253,9 @@ public class AccessTokenIssuer {
                 errorCode = e.getErrorCode();
             }
             error = e.getMessage();
-            diagnosticLog.error("Error occurred while validating grant. Error message: " + error);
         }
 
         if (tokReqMsgCtx.getAuthorizedUser() != null && tokReqMsgCtx.getAuthorizedUser().isFederatedUser()) {
-            diagnosticLog.info("Authorized user is a federated user. Setting application tenant domain : "
-                    + tenantDomainOfApp + " as user tenant domain.");
             tokReqMsgCtx.getAuthorizedUser().setTenantDomain(tenantDomainOfApp);
         }
 
@@ -279,7 +263,6 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid Grant provided by the client Id: " + tokenReqDTO.getClientId());
             }
-            diagnosticLog.info("Invalid Grant provided by the client Id: " + tokenReqDTO.getClientId());
             tokenRespDTO = handleError(errorCode, error, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
@@ -291,7 +274,6 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid authorization for client Id : " + tokenReqDTO.getClientId());
             }
-            diagnosticLog.info("Unauthorized client. Client Id : " + tokenReqDTO.getClientId());
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT,
                     "Unauthorized Client!", tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
@@ -347,8 +329,6 @@ public class AccessTokenIssuer {
 
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
         if (isValidScope) {
-            diagnosticLog.info("Provided scopes are valid. Hence adding scopes to the request object for sending in " +
-                    "the response.");
             // Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
             addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
@@ -356,7 +336,6 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid scope provided by client Id: " + tokenReqDTO.getClientId());
             }
-            diagnosticLog.info("Invalid scope provided by client Id: " + tokenReqDTO.getClientId());
             tokenRespDTO = handleError(OAuthError.TokenResponse.INVALID_SCOPE, "Invalid Scope!", tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
@@ -404,20 +383,16 @@ public class AccessTokenIssuer {
             // Should add user attributes to the cache before building the ID token.
             addUserAttributesAgainstAccessToken(tokenReqDTO, tokenRespDTO);
         }
-        diagnosticLog.info("Access token issued to client Id: " + tokenReqDTO.getClientId() + " username: " +
-                tokReqMsgCtx.getAuthorizedUser() + " and scopes: " + tokenRespDTO.getAuthorizedScopes());
         if (tokReqMsgCtx.getScope() != null && OAuth2Util.isOIDCAuthzRequest(tokReqMsgCtx.getScope())) {
             if (log.isDebugEnabled()) {
                 log.debug("Issuing ID token for client: " + tokenReqDTO.getClientId());
             }
-            diagnosticLog.info("Issuing ID token for client Id: " + tokenReqDTO.getClientId());
             IDTokenBuilder builder = OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenBuilder();
             try {
                 String idToken = builder.buildIDToken(tokReqMsgCtx, tokenRespDTO);
                 tokenRespDTO.setIDToken(idToken);
             } catch (IDTokenValidationFailureException e) {
                 log.error(e.getMessage());
-                diagnosticLog.error("Server error occurred. Error message: " + e.getMessage());
                 tokenRespDTO = handleError(OAuth2ErrorCodes.SERVER_ERROR, "Server Error", tokenReqDTO);
                 return tokenRespDTO;
             }
@@ -482,8 +457,6 @@ public class AccessTokenIssuer {
         Optional<TokenBinder> tokenBinderOptional = OAuth2ServiceComponentHolder.getInstance()
                 .getTokenBinder(oAuthAppDO.getTokenBindingType());
         if (!tokenBinderOptional.isPresent()) {
-            diagnosticLog.error("Token binder for the binding type: " + oAuthAppDO.getTokenBindingType() +
-                    " is not registered.");
             throw new IdentityOAuth2Exception(
                     "Token binder for the binding type: " + oAuthAppDO.getTokenBindingType() + " is not registered.");
         }
@@ -502,8 +475,6 @@ public class AccessTokenIssuer {
 
         Optional<String> tokenBindingValueOptional = tokenBinder.getTokenBindingValue(tokenReqDTO);
         if (!tokenBindingValueOptional.isPresent()) {
-            diagnosticLog.error("Token binding reference cannot be retrieved form the token binder: " + tokenBinder
-                    .getBindingType());
             throw new IdentityOAuth2Exception(
                     "Token binding reference cannot be retrieved form the token binder: " + tokenBinder
                             .getBindingType());
@@ -670,7 +641,6 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("A valid OAuth client could not be found for client_id: " + consumerKey);
             }
-            diagnosticLog.error("A valid OAuth client could not be found for client_id: " + consumerKey);
             throw new InvalidOAuthClientException("A valid OAuth client could not be found for client_id: " +
                     Encode.forHtml(consumerKey));
         }
@@ -679,15 +649,12 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("App is not in active state in client ID: " + consumerKey + ". App state is:" + appState);
             }
-            diagnosticLog.error("App is not in active state in client ID: " + consumerKey + ". App state is:" +
-                    appState);
             throw new InvalidOAuthClientException("Oauth application is not in active state");
         }
 
         if (log.isDebugEnabled()) {
             log.debug("Oauth App validation success for consumer key: " + consumerKey);
         }
-        diagnosticLog.info("Oauth App validation success for consumer key: " + consumerKey);
         return authAppDO;
     }
 
