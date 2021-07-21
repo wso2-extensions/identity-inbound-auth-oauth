@@ -539,9 +539,8 @@ public class OAuth2AuthzEndpoint {
             */
             if (value != null) {
                 // Remove the claims which dont have values given by the user.
-                value.setRequestedClaims(
-                        removeConsentRequestedNullUserAttributes(value.getRequestedClaims(), loggedInUser.getUserAttributes(),
-                                spTenantDomain));
+                value.setRequestedClaims(removeConsentRequestedNullUserAttributes(value.getRequestedClaims(),
+                        loggedInUser.getUserAttributes(), spTenantDomain));
                 List<ClaimMetaData> requestedOidcClaimsList =
                         getRequestedOidcClaimsList(value, oauth2Params, spTenantDomain);
                 value.setRequestedClaims(requestedOidcClaimsList);
@@ -2196,7 +2195,8 @@ public class OAuth2AuthzEndpoint {
      */
     private List<ClaimMetaData> removeConsentRequestedNullUserAttributes(List<ClaimMetaData> requestedClaims,
                                                                          Map<ClaimMapping, String> userAttributes,
-                                                                         String spTenantDomain) throws ClaimMetadataException {
+                                                                         String spTenantDomain)
+            throws ClaimMetadataException {
 
         List<String> localClaims = new ArrayList<>();
         List<ClaimMetaData> filteredRequestedClaims = new ArrayList<>();
