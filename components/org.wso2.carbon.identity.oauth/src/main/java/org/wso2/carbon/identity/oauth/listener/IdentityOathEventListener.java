@@ -187,8 +187,9 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
-    public boolean doPostUpdateInternalRoleListOfUser(String userName, String[] deletedInternalRoles, String[] newInternalRoles,
-                                              UserStoreManager userStoreManager) throws UserStoreException {
+    public boolean doPostUpdateInternalRoleListOfUser(String userName, String[] deletedInternalRoles,
+                                                      String[] newInternalRoles, UserStoreManager userStoreManager)
+            throws UserStoreException {
 
         if (!isEnable()) {
             return true;
