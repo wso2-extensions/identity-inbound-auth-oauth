@@ -403,7 +403,7 @@ public class OAuthServerConfiguration {
         // Read the value of UseSPTenantDomain config.
         parseUseSPTenantDomainConfig(oauthElem);
 
-        // Read the value of InvokeTokenRevocationEventOnRenewal config
+        // Read the value of InvokeTokenRevocationEventOnRenewal config.
         parseInvokeTokenRevocationEventOnRenewalConfig(oauthElem);
 
         parseRevokeResponseHeadersEnableConfig(oauthElem);
@@ -1313,6 +1313,7 @@ public class OAuthServerConfiguration {
     }
 
     public boolean isInvokeTokenRevocationEventOnRenewal() {
+
         return isInvokeTokenRevocationEventOnRenewal;
     }
 
@@ -3150,7 +3151,7 @@ public class OAuthServerConfiguration {
         private static final String ENABLE_REVOKE_RESPONSE_HEADERS = "EnableRevokeResponseHeaders";
         private static final String IDENTITY_OAUTH_SHOW_DISPLAY_NAME_IN_CONSENT_PAGE = "ShowDisplayNameInConsentPage";
         private static final String REFRESH_TOKEN_ALLOWED = "IsRefreshTokenAllowed";
-        // To invoke token revocation events on Access token renewal
+        // To invoke token revocation events on Access token renewal.
         private static final String INVOKE_TOKEN_REVOCATION_EVENT_ON_RENEWAL = "InvokeTokenRevocationEventOnRenewal";
 
         // Oauth access token value generator related.
