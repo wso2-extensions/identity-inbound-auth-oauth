@@ -93,21 +93,21 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
      *
      * @param response
      * @param request
-     * @param tenantDomain
+     * @param loginTenantDomain
      * @param opbsValue
      * @return Cookie
      */
     @Override
     public Cookie addOPBrowserStateCookie(HttpServletResponse response, HttpServletRequest request,
-                                          String tenantDomain, String opbsValue) {
+                                          String loginTenantDomain, String opbsValue) {
 
         ServletCookie cookie;
-        if (IdentityTenantUtil.isTenantedSessionsEnabled() && tenantDomain != null) {
+        if (IdentityTenantUtil.isTenantedSessionsEnabled() && loginTenantDomain != null) {
             // Invalidate the old opbs cookies which haven't tenanted paths.
             removeOPBrowserStateCookiesInRoot(request, response);
 
             cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
-            cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
+            cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/");
         } else {
             cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
             cookie.setPath("/");

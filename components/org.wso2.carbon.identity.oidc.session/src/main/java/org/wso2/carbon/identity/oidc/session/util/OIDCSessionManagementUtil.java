@@ -183,23 +183,24 @@ public class OIDCSessionManagementUtil {
      *
      * @param response
      * @param request
-     * @param tenantDomain
+     * @param loginTenantDomain
      * @param sessionContextIdentifier
      * @return Cookie
      */
     public static Cookie addOPBrowserStateCookie(HttpServletResponse response, HttpServletRequest request,
-                                                 String tenantDomain, String sessionContextIdentifier) {
+                                                 String loginTenantDomain, String sessionContextIdentifier) {
 
-        SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextIdentifier);
+        SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextIdentifier,
+                loginTenantDomain);
         if (sessionContext != null) {
             Object opbsValue = sessionContext.getProperty(OIDCSessionConstants.OPBS_COOKIE_ID);
             if (opbsValue != null) {
                 return getOIDCessionStateManager().addOPBrowserStateCookie(response, request,
-                        tenantDomain, (String) opbsValue);
+                        loginTenantDomain, (String) opbsValue);
             }
         }
         return getOIDCessionStateManager().addOPBrowserStateCookie(response, request,
-                tenantDomain, generateOPBrowserStateCookieValue(tenantDomain));
+                loginTenantDomain, generateOPBrowserStateCookieValue(loginTenantDomain));
     }
 
     /**

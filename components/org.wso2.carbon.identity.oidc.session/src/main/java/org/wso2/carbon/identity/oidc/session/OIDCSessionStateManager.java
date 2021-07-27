@@ -57,12 +57,12 @@ public interface OIDCSessionStateManager {
      *
      * @param response
      * @param request
-     * @param tenantDomain
+     * @param loginTenantDomain
      * @param opbsValue
      * @return Cookie
      */
     default Cookie addOPBrowserStateCookie(HttpServletResponse response, HttpServletRequest request,
-                                           String tenantDomain, String opbsValue) {
+                                           String loginTenantDomain, String opbsValue) {
 
         return addOPBrowserStateCookie(response);
     }
