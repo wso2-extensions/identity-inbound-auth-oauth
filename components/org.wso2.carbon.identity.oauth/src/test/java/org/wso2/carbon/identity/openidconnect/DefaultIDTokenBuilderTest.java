@@ -306,7 +306,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
         Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
         Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
-        Assert.assertEquals(claims.getSubject(), "user1@carbon.super");
+        Assert.assertEquals(claims.getSubject(), "4b4414e1-916b-4475-aaee-6b0751c29ff6@carbon.super");
         Assert.assertEquals(claims.getClaim("acr"),  "acr");
         Assert.assertEquals(claims.getClaim("isk"), "idp");
         Assert.assertEquals(claims.getClaim("nonce"), "nonce");
@@ -334,7 +334,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
         Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
         Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
-        Assert.assertEquals(claims.getSubject(),  "user1@carbon.super");
+        Assert.assertEquals(claims.getSubject(),  "4b4414e1-916b-4475-aaee-6b0751c29ff6@carbon.super");
         Assert.assertEquals(claims.getClaim("isk"), "wso2.is.com");
         Long expirationTime = ((Date) claims.getClaim("exp")).getTime();
         Assert.assertTrue(expirationTime < (new Date()).getTime());
