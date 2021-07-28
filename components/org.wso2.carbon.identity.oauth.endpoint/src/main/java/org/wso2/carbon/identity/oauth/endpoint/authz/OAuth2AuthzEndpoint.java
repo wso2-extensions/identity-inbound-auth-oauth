@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.application.authentication.framework.CommonAuthe
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthHistory;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ClaimMetaData;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ConsentClaimsData;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.exception.SSOConsentServiceException;
@@ -1195,7 +1196,7 @@ public class OAuth2AuthzEndpoint {
 
     private void setAuthorizationCode(OAuthMessage oAuthMessage, OAuth2AuthorizeRespDTO authzRespDTO,
                                       OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
-                                      String tokenBindingValue) {
+                                      String tokenBindingValue) throws OAuthSystemException {
 
         builder.setCode(authzRespDTO.getAuthorizationCode());
         addUserAttributesToOAuthMessage(oAuthMessage, authzRespDTO.getAuthorizationCode(), authzRespDTO.getCodeId(),
@@ -1211,7 +1212,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private void addUserAttributesToOAuthMessage(OAuthMessage oAuthMessage, String code, String codeId,
-                                                 String tokenBindingValue) {
+                                                 String tokenBindingValue) throws OAuthSystemException {
 
         SessionDataCacheEntry sessionDataCacheEntry = oAuthMessage.getSessionDataCacheEntry();
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry = new AuthorizationGrantCacheEntry(
@@ -1224,7 +1225,12 @@ public class OAuth2AuthzEndpoint {
         String sub = sessionDataCacheEntry.getLoggedInUser().getUserAttributes().get(key);
 
         if (StringUtils.isBlank(sub)) {
-            sub = sessionDataCacheEntry.getLoggedInUser().getAuthenticatedSubjectIdentifier();
+            try {
+                sub = sessionDataCacheEntry.getLoggedInUser().getUserId();
+            } catch (UserIdNotFoundException e) {
+                throw new OAuthSystemException("User id could not be resolved for user:"
+                        + sessionDataCacheEntry.getLoggedInUser().getLoggableUserId());
+            }
         }
         if (StringUtils.isNotBlank(sub)) {
             if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
