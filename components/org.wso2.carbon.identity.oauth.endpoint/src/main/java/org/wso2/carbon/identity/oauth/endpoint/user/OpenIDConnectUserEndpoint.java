@@ -102,6 +102,7 @@ public class OpenIDConnectUserEndpoint {
     @POST
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
+    @Produces("application/json")
     public Response getUserClaimsPost(@Context HttpServletRequest request) throws OAuthSystemException {
 
         return getUserClaims(request);
