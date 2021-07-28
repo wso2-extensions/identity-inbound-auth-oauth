@@ -48,7 +48,6 @@ import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
@@ -339,8 +338,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 validateRequestTenantDomain(appTenantDomain);
             }
 
-            OAuthAppDAO appDAO = new OAuthAppDAO();
-            OAuthAppDO oAuthAppDO = appDAO.getAppInformation(clientId);
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
             String spName = getServiceProviderName(clientId, appTenantDomain);
             setSPAttributeToRequest(request, spName, appTenantDomain);
 
@@ -932,7 +930,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             return;
         }
         try {
-            String callbackUrl = new OAuthAppDAO().getAppInformation(clientId).getCallbackUrl();
+            String callbackUrl = OAuth2Util.getAppInformationByClientId(clientId).getCallbackUrl();
             if (validatePostLogoutUri(postLogoutRedirectUri, callbackUrl)) {
                 redirectURL = postLogoutRedirectUri;
             } else {

@@ -381,7 +381,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         mockStatic(IdentityDatabaseUtil.class);
         when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
         mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+        when(OAuth2Util.getAppInformationByClientId(anyString())).thenCallRealMethod();
         when(OAuth2Util.getTenantDomainOfOauthApp(anyString())).thenReturn("wso2.com");
         when(OAuth2Util.getTenantDomainOfOauthApp(any(oAuthAppDO.getClass()))).thenReturn("wso2.com");
         when(keyStoreManager.getKeyStore(anyString())).thenReturn(TestUtil.loadKeyStoreFromFileSystem(TestUtil
@@ -491,7 +491,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
                 invocation -> invocation.getArguments()[0]);
 
         mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+        when(OAuth2Util.getAppInformationByClientId(anyString())).thenCallRealMethod();
         when(OAuth2Util.getTenantDomainOfOauthApp(any(oAuthAppDO.getClass()))).thenReturn("wso2.com");
 
         mockStatic(IdentityTenantUtil.class);
