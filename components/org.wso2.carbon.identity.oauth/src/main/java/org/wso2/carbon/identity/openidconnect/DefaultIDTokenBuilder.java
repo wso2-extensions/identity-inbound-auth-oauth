@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
@@ -368,7 +369,12 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                         "application: " + clientId + " of tenantDomain: " + spTenantDomain);
             }
         } else {
-            subjectClaim = authorizedUser.getAuthenticatedSubjectIdentifier();
+            try {
+                subjectClaim = authorizedUser.getUserId(); // todo: Is this correct?
+            } catch (UserIdNotFoundException e) {
+                throw new IdentityOAuth2Exception("User id not found for user: " + authorizedUser.getLoggableUserId(),
+                        e);
+            }
             if (log.isDebugEnabled()) {
                 log.debug("Subject claim: " + subjectClaim + " set for federated user: " + authorizedUser + " for " +
                         "application: " + clientId + " of tenantDomain: " + spTenantDomain);
@@ -436,7 +442,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     private String getSubjectClaimForLocalUser(ServiceProvider serviceProvider,
                                                AuthenticatedUser authorizedUser) throws IdentityOAuth2Exception {
         String subject;
-        String username = authorizedUser.getUserName();
         String userStoreDomain = authorizedUser.getUserStoreDomain();
         String userTenantDomain = authorizedUser.getTenantDomain();
 
@@ -446,10 +451,10 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             try {
                 subject = getSubjectClaimFromUserStore(subjectClaimUri, authorizedUser);
                 if (StringUtils.isBlank(subject)) {
-                    // Set username as the subject claim since we have no other option
-                    subject = username;
+                    // Set userId as the subject claim since we have no other option
+                    subject = authorizedUser.getUserId();
                     log.warn("Cannot find subject claim: " + subjectClaimUri + " for user:" + fullQualifiedUsername
-                            + ". Defaulting to username: " + subject + " as the subject identifier.");
+                            + ". Defaulting to userId: " + subject + " as the subject identifier.");
                 }
                 // Get the subject claim in the correct format (ie. tenantDomain or userStoreDomain appended)
                 subject = getFormattedSubjectClaim(serviceProvider, subject, userStoreDomain, userTenantDomain);
@@ -463,10 +468,16 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 throw new IdentityOAuth2Exception(error, e);
             }
         } else {
-            subject = getFormattedSubjectClaim(serviceProvider, username, userStoreDomain, userTenantDomain);
+            try {
+                subject = getFormattedSubjectClaim(serviceProvider, authorizedUser.getUserId(), userStoreDomain,
+                        userTenantDomain);
+            } catch (UserIdNotFoundException e) {
+                throw new IdentityOAuth2Exception("User id not found for user: " + authorizedUser.getLoggableUserId(),
+                        e);
+            }
             if (log.isDebugEnabled()) {
                 log.debug("No subject claim defined for service provider: " + serviceProvider.getApplicationName()
-                        + ". Using username as the subject claim.");
+                        + ". Using userId as the subject claim.");
             }
         }
         return subject;
