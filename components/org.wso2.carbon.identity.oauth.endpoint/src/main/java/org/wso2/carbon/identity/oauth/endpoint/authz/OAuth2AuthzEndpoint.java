@@ -823,7 +823,8 @@ public class OAuth2AuthzEndpoint {
     private void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) {
 
         Cookie cookie = FrameworkUtils.getAuthCookie(oAuthMessage.getRequest());
-        long authTime = getAuthenticatedTimeFromCommonAuthCookie(cookie);
+        long authTime = getAuthenticatedTimeFromCommonAuthCookie(cookie,
+                oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters().getLoginTenantDomain());
 
         if (authTime > 0) {
             oAuthMessage.getSessionDataCacheEntry().setAuthTime(authTime);
@@ -1256,7 +1257,8 @@ public class OAuth2AuthzEndpoint {
         String[] sessionIds = sessionDataCacheEntry.getParamMap().get(FrameworkConstants.SESSION_DATA_KEY);
         if (ArrayUtils.isNotEmpty(sessionIds)) {
             String commonAuthSessionId = sessionIds[0];
-            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(commonAuthSessionId);
+            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(commonAuthSessionId,
+                    sessionDataCacheEntry.getoAuth2Parameters().getLoginTenantDomain());
             if (sessionContext != null) {
                 String selectedAcr = sessionContext.getSessionAuthHistory().getSelectedAcrValue();
                 authorizationGrantCacheEntry.setSelectedAcrValue(selectedAcr);
@@ -2400,7 +2402,8 @@ public class OAuth2AuthzEndpoint {
         String[] sessionIds = sessionDataCacheEntry.getParamMap().get(FrameworkConstants.SESSION_DATA_KEY);
         if (ArrayUtils.isNotEmpty(sessionIds)) {
             String commonAuthSessionId = sessionIds[0];
-            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(commonAuthSessionId);
+            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(commonAuthSessionId,
+                    oauth2Params.getLoginTenantDomain());
             if (sessionContext != null && sessionContext.getSessionAuthHistory() != null) {
                 authzReqDTO.setSelectedAcr(sessionContext.getSessionAuthHistory().getSelectedAcrValue());
             }
@@ -2682,7 +2685,8 @@ public class OAuth2AuthzEndpoint {
      */
     private void associateAuthenticationHistory(SessionDataCacheEntry resultFromLogin, Cookie cookie) {
 
-        SessionContext sessionContext = getSessionContext(cookie);
+        SessionContext sessionContext = getSessionContext(cookie,
+                resultFromLogin.getoAuth2Parameters().getLoginTenantDomain());
         if (sessionContext != null && sessionContext.getSessionAuthHistory() != null
                 && sessionContext.getSessionAuthHistory().getHistory() != null) {
             List<String> authMethods = new ArrayList<>();
@@ -2697,13 +2701,14 @@ public class OAuth2AuthzEndpoint {
      * Returns the SessionContext associated with the cookie, if there is a one.
      *
      * @param cookie
+     * @param loginTenantDomain Login tenant domain.
      * @return the associate SessionContext or null.
      */
-    private SessionContext getSessionContext(Cookie cookie) {
+    private SessionContext getSessionContext(Cookie cookie, String loginTenantDomain) {
 
         if (cookie != null) {
             String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
-            return FrameworkUtils.getSessionContextFromCache(sessionContextKey);
+            return FrameworkUtils.getSessionContextFromCache(sessionContextKey, loginTenantDomain);
         }
         return null;
     }
@@ -2712,14 +2717,16 @@ public class OAuth2AuthzEndpoint {
      * Gets the last authenticated value from the commonAuthId cookie
      *
      * @param cookie CommonAuthId cookie
+     * @param loginTenantDomain Login tenant domain
      * @return the last authenticated timestamp
      */
-    private long getAuthenticatedTimeFromCommonAuthCookie(Cookie cookie) {
+    private long getAuthenticatedTimeFromCommonAuthCookie(Cookie cookie, String loginTenantDomain) {
 
         long authTime = 0;
         if (cookie != null) {
             String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
-            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextKey);
+            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextKey,
+                    loginTenantDomain);
             if (sessionContext != null) {
                 if (sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
                     authTime = Long.parseLong(

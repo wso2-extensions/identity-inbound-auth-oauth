@@ -1535,12 +1535,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         }
 
         mockStatic(FrameworkUtils.class);
-        when(FrameworkUtils.getSessionContextFromCache(anyString())).thenReturn(sessionContext);
+        when(FrameworkUtils.getSessionContextFromCache(anyString(), anyString())).thenReturn(sessionContext);
 
         Method getAuthenticatedTimeFromCommonAuthCookie = authzEndpointObject.getClass().
-                getDeclaredMethod("getAuthenticatedTimeFromCommonAuthCookie", Cookie.class);
+                getDeclaredMethod("getAuthenticatedTimeFromCommonAuthCookie", Cookie.class, String.class);
         getAuthenticatedTimeFromCommonAuthCookie.setAccessible(true);
-        long timestamp = (long) getAuthenticatedTimeFromCommonAuthCookie.invoke(authzEndpointObject, commonAuthCookie);
+        long timestamp = (long) getAuthenticatedTimeFromCommonAuthCookie.invoke(authzEndpointObject, commonAuthCookie,
+                "abc");
 
         if (sessionContext == null) {
             assertEquals(timestamp, 0, "Authenticated time should be 0 when session context is null");
