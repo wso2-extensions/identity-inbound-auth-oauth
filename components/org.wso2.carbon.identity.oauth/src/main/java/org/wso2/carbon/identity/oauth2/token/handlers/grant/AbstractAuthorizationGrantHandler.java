@@ -57,6 +57,7 @@ import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -340,10 +341,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             throws IdentityOAuth2Exception {
 
         // Revoke the existing token and generate new access and refresh tokens.
+        OAuthUtil.invokePreRevocationBySystemListeners(existingTokenBean, Collections.emptyMap());
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .updateAccessTokenState(existingTokenBean.getTokenId(), OAuthConstants.TokenStates
                         .TOKEN_STATE_REVOKED);
         clearExistingTokenFromCache(tokReqMsgCtx, existingTokenBean);
+        OAuthUtil.invokePostRevocationBySystemListeners(existingTokenBean, Collections.emptyMap());
 
         return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean, false,
                 oauthTokenIssuer);
