@@ -83,6 +83,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String SHA256_WITH_RSA = "SHA256withRSA";
     private static final String SHA384_WITH_RSA = "SHA384withRSA";
     private static final String SHA512_WITH_RSA = "SHA512withRSA";
+    private static final String SHA256_WITH_PS = "SHA256withPS";
     private static final String SHA256_WITH_HMAC = "SHA256withHMAC";
     private static final String SHA384_WITH_HMAC = "SHA384withHMAC";
     private static final String SHA512_WITH_HMAC = "SHA512withHMAC";
@@ -237,7 +238,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                              OAuthAuthzReqMessageContext authorizationContext) throws IdentityOAuth2Exception {
 
         if (JWSAlgorithm.RS256.equals(signatureAlgorithm) || JWSAlgorithm.RS384.equals(signatureAlgorithm) ||
-                JWSAlgorithm.RS512.equals(signatureAlgorithm)) {
+                JWSAlgorithm.RS512.equals(signatureAlgorithm) || JWSAlgorithm.PS256.equals(signatureAlgorithm)) {
             return signJWTWithRSA(jwtClaimsSet, tokenContext, authorizationContext);
         } else if (JWSAlgorithm.HS256.equals(signatureAlgorithm) || JWSAlgorithm.HS384.equals(signatureAlgorithm) ||
                 JWSAlgorithm.HS512.equals(signatureAlgorithm)) {
@@ -423,6 +424,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                     return JWSAlgorithm.RS384;
                 case SHA512_WITH_RSA:
                     return JWSAlgorithm.RS512;
+                case SHA256_WITH_PS:
+                    return JWSAlgorithm.PS256;
                 case SHA256_WITH_HMAC:
                     return JWSAlgorithm.HS256;
                 case SHA384_WITH_HMAC:
