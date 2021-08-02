@@ -516,6 +516,9 @@ public class OAuth2AuthzEndpoint {
                 the claims which are not in the OIDC claims will be saved as consent denied.
             */
             if (value != null) {
+                // Remove the claims which dont have values given by the user.
+                value.setRequestedClaims(removeConsentRequestedNullUserAttributes(value.getRequestedClaims(),
+                        loggedInUser.getUserAttributes(), spTenantDomain));
                 List<ClaimMetaData> requestedOidcClaimsList =
                         getRequestedOidcClaimsList(value, oauth2Params, spTenantDomain);
                 value.setRequestedClaims(requestedOidcClaimsList);
@@ -2045,6 +2048,10 @@ public class OAuth2AuthzEndpoint {
                 String requestClaimsQueryParam = null;
                 // Get the mandatory claims and append as query param.
                 String mandatoryClaimsQueryParam = null;
+                // Remove the claims which dont have values given by the user.
+                claimsForApproval.setRequestedClaims(
+                        removeConsentRequestedNullUserAttributes(claimsForApproval.getRequestedClaims(),
+                                user.getUserAttributes(), spTenantDomain));
                 List<ClaimMetaData> requestedOidcClaimsList =
                         getRequestedOidcClaimsList(claimsForApproval, oauth2Params, spTenantDomain);
                 if (CollectionUtils.isNotEmpty(requestedOidcClaimsList)) {
@@ -2076,6 +2083,45 @@ public class OAuth2AuthzEndpoint {
         }
 
         return additionalQueryParam;
+    }
+
+    /**
+     * Filter out the requested claims with the user attributes.
+     *
+     * @param requestedClaims List of requested claims metadata.
+     * @param userAttributes  Authenticated users' attributes.
+     * @param spTenantDomain  Tenant domain.
+     * @return Filtered claims with user attributes.
+     * @throws ClaimMetadataException If an error occurred while getting claim mappings.
+     */
+    private List<ClaimMetaData> removeConsentRequestedNullUserAttributes(List<ClaimMetaData> requestedClaims,
+                                                                         Map<ClaimMapping, String> userAttributes,
+                                                                         String spTenantDomain)
+            throws ClaimMetadataException {
+
+        List<String> localClaims = new ArrayList<>();
+        List<ClaimMetaData> filteredRequestedClaims = new ArrayList<>();
+        List<String> localClaimUris = new ArrayList<>();
+
+        if (requestedClaims != null && userAttributes != null) {
+            for (Map.Entry<ClaimMapping, String> attribute : userAttributes.entrySet()) {
+                localClaims.add(attribute.getKey().getLocalClaim().getClaimUri());
+            }
+            if (CollectionUtils.isNotEmpty(localClaims)) {
+                Set<ExternalClaim> externalClaimSetOfOidcClaims = ClaimMetadataHandler.getInstance()
+                        .getMappingsFromOtherDialectToCarbon(OIDC_DIALECT, new HashSet<String>(localClaims),
+                                spTenantDomain);
+                for (ExternalClaim externalClaim : externalClaimSetOfOidcClaims) {
+                    localClaimUris.add(externalClaim.getMappedLocalClaim());
+                }
+            }
+            for (ClaimMetaData claimMetaData : requestedClaims) {
+                if (localClaimUris.contains(claimMetaData.getClaimUri())) {
+                    filteredRequestedClaims.add(claimMetaData);
+                }
+            }
+        }
+        return filteredRequestedClaims;
     }
 
     /**
