@@ -83,7 +83,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String SHA256_WITH_RSA = "SHA256withRSA";
     private static final String SHA384_WITH_RSA = "SHA384withRSA";
     private static final String SHA512_WITH_RSA = "SHA512withRSA";
-    private static final String SHA256_WITH_PS = "SHA256withPS";
+    private static final String PS256 = "PS256";
     private static final String SHA256_WITH_HMAC = "SHA256withHMAC";
     private static final String SHA384_WITH_HMAC = "SHA384withHMAC";
     private static final String SHA512_WITH_HMAC = "SHA512withHMAC";
@@ -424,7 +424,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                     return JWSAlgorithm.RS384;
                 case SHA512_WITH_RSA:
                     return JWSAlgorithm.RS512;
-                case SHA256_WITH_PS:
+                case PS256:
                     return JWSAlgorithm.PS256;
                 case SHA256_WITH_HMAC:
                     return JWSAlgorithm.HS256;
