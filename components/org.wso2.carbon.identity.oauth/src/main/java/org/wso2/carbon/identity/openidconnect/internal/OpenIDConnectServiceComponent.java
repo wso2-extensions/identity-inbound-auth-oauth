@@ -59,7 +59,9 @@ public class OpenIDConnectServiceComponent {
             bundleContext.registerService(RequestObjectService.class.getName(),
                     new RequestObjectService(), null);
         } catch (Throwable e) {
-            log.error("Error while activating OpenIDConnectServiceComponent.", e);
+            String errMsg = "Error while activating OpenIDConnectServiceComponent.";
+            log.error(errMsg, e);
+            throw new RuntimeException(errMsg, e);
         }
     }
 
