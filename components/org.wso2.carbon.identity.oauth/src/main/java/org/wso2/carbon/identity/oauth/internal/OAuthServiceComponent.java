@@ -99,7 +99,9 @@ public class OAuthServiceComponent {
                 log.debug("Identity OAuth bundle is activated");
             }
         } catch (Throwable e) {
-            log.error("Error occurred while activating OAuth Service Component", e);
+            String errMsg = "Error occurred while activating OAuth Service Component";
+            log.error(errMsg, e);
+            throw new RuntimeException(errMsg, e);
         }
     }
 

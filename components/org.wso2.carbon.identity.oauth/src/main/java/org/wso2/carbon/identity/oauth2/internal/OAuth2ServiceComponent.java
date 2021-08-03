@@ -220,7 +220,9 @@ public class OAuth2ServiceComponent {
             }
 
         } catch (Throwable e) {
-            log.error("Error while activating OAuth2ServiceComponent.", e);
+            String errMsg = "Error while activating OAuth2ServiceComponent.";
+            log.error(errMsg, e);
+            throw new RuntimeException(errMsg, e);
         }
         if (checkAudienceEnabled()) {
             if (log.isDebugEnabled()) {
