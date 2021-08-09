@@ -343,7 +343,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         if (OAuthServerConfiguration.getInstance().isInvokeTokenRevocationEventOnRenewal()) {
             OAuthUtil.invokePostRevocationBySystemListeners(existingTokenBean, Collections.emptyMap());
         }
-        return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, null, oauthTokenIssuer);
+        return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean, oauthTokenIssuer);
     }
 
     private OAuth2AccessTokenRespDTO issueExistingAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
@@ -856,6 +856,17 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private boolean isRefreshTokenValid(AccessTokenDO existingAccessTokenDO, long validityPeriod, String consumerKey) {
+
+        // A new token needs to be generated when isTokenRenewalPerRequestEnabled is set to true.
+        if (OAuthServerConfiguration.getInstance().isTokenRenewalPerRequestEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("`RenewTokenPerRequest` property is enabled. Current " +
+                        "refresh token: " + existingAccessTokenDO.getRefreshToken() + " will be " +
+                        "invalidated and new refresh token will be issued.");
+            }
+            return false;
+        }
+
         if (isHashDisabled && existingAccessTokenDO != null) {
             long refreshTokenExpireTime = OAuth2Util.getRefreshTokenExpireTimeMillis(existingAccessTokenDO);
             if (TOKEN_STATE_ACTIVE.equals(existingAccessTokenDO.getTokenState())) {
