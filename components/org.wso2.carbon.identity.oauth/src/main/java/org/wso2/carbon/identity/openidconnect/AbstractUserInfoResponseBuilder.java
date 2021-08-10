@@ -17,7 +17,6 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
@@ -157,33 +156,9 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                      String spTenantDomain,
                                      OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException, OAuthSystemException {
-        // Get sub claim from AuthorizationGrantCache.
-        String subjectClaim = OIDCClaimUtil.getSubjectClaimCachedAgainstAccessToken(
-                OAuth2Util.getAccessTokenIdentifier(tokenResponse));
-        if (StringUtils.isNotBlank(subjectClaim)) {
-            // We expect the subject claim cached to have the correct format.
-            return subjectClaim;
-        }
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(OAuth2Util.getAccessTokenIdentifier(tokenResponse));
-        // Subject claim returned among claims user claims.
-        subjectClaim = (String) userClaims.get(OAuth2Util.SUB);
-        if (StringUtils.isBlank(subjectClaim)) {
-            // Subject claim was not found among user claims too. Let's send back some sensible defaults.
-            if (authenticatedUser.isFederatedUser()) {
-                subjectClaim = authenticatedUser.getAuthenticatedSubjectIdentifier();
-            } else {
-                subjectClaim = authenticatedUser.getUserName();
-            }
-        }
-
-        if (isLocalUser(authenticatedUser)) {
-            // For a local user we need to do format the subject claim to honour the SP configurations to append
-            // userStoreDomain and tenantDomain.
-            subjectClaim = buildSubjectClaim(subjectClaim, authenticatedUser.getTenantDomain(),
-                    authenticatedUser.getUserStoreDomain(), clientId, spTenantDomain);
-        }
-        return subjectClaim;
+        return authenticatedUser.getAuthenticatedSubjectIdentifier();
     }
 
     /**
@@ -291,33 +266,6 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
     }
 
-    private String buildSubjectClaim(String sub,
-                                     String userTenantDomain,
-                                     String userStoreDomain,
-                                     String clientId,
-                                     String spTenantDomain) throws UserInfoEndpointException {
-
-        ServiceProvider serviceProvider = getServiceProvider(spTenantDomain, clientId);
-
-        if (serviceProvider != null) {
-            boolean isUseTenantDomainInLocalSubject = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
-                    .isUseTenantDomainInLocalSubjectIdentifier();
-            boolean isUseUserStoreDomainInLocalSubject = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
-                    .isUseUserstoreDomainInLocalSubjectIdentifier();
-
-            if (isNotEmpty(sub)) {
-                // Build subject in accordance with Local and Outbound Authentication Configuration preferences
-                if (isUseUserStoreDomainInLocalSubject) {
-                    sub = IdentityUtil.addDomainToName(sub, userStoreDomain);
-                }
-                if (isUseTenantDomainInLocalSubject) {
-                    sub = UserCoreUtil.addTenantDomainToEntry(sub, userTenantDomain);
-                }
-            }
-        }
-        return sub;
-    }
-
     private String getClientId(String accessToken) throws UserInfoEndpointException {
 
         try {
@@ -356,10 +304,5 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
             }
         }
         return new ArrayList<>();
-    }
-
-    private boolean isLocalUser(AuthenticatedUser authenticatedUser) {
-
-        return !authenticatedUser.isFederatedUser();
     }
 }
