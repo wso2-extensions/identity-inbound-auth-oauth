@@ -34,6 +34,8 @@ import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKMatcher;
+import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -2477,7 +2479,7 @@ public class OAuth2Util {
                                                  String clientId, String jwksUri)
             throws IdentityOAuth2Exception, JOSEException, ParseException {
 
-        JWK encryptionJwk = getEncryptionJWKFromJWKS(jwksUri);
+        JWK encryptionJwk = getEncryptionJWKFromJWKS(jwksUri, encryptionAlgorithm);
         Key publicKey = RSAKey.parse(encryptionJwk.toJSONString()).toRSAPublicKey();
         String kid = getKidValueFromJwk(encryptionJwk);
         return encryptWithPublicKey(publicKey, signedJwt, encryptionAlgorithm, encryptionMethod,
@@ -2518,40 +2520,43 @@ public class OAuth2Util {
      * Get encryption jwk from JWKS list when JWKS Uri is given.
      *
      * @param jwksUri - JWKS Uri
+     * @param encryptionAlgorithm encryption algorithm
      * @return - encryption JWK from the jwks url
      * @throws IdentityOAuth2Exception - IdentityOAuth2Exception
      */
-    private static JWK getEncryptionJWKFromJWKS(String jwksUri) throws IdentityOAuth2Exception {
+    private static JWK getEncryptionJWKFromJWKS(String jwksUri, JWEAlgorithm encryptionAlgorithm)
+            throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.debug(String.format("Attempting to retrieve encryption jwk from the Jwks uri: %s .", jwksUri));
+            log.debug(String.format("Attempting to retrieve encryption jwk from the Jwks uri: %s , algorithm : %s",
+                    jwksUri, encryptionAlgorithm));
         }
         try {
             JWKSet publicKeys = JWKSet.load(new URL(jwksUri));
-            JWK jwk = null;
-            //Get the first encryption JWK from the list
-            List<JWK> jwkList = publicKeys.getKeys();
+            // Get the first key, use as enc and alg from the list
+            JWKMatcher keyMatcherWithAlgAndEncryptionUse =
+                    new JWKMatcher.Builder().algorithm(encryptionAlgorithm).keyUse(KeyUse.ENCRYPTION).build();
+            List<JWK> jwkList = new JWKSelector(keyMatcherWithAlgAndEncryptionUse).select(publicKeys);
 
-            for (JWK currentJwk : jwkList) {
-                if (KeyUse.ENCRYPTION == currentJwk.getKeyUse()) {
-                    jwk = currentJwk;
-                    break;
+            if (jwkList.isEmpty()) {
+                // If empty, then get the first key, use as enc from the list
+                JWKMatcher keyMatcherWithEncryptionUse = new JWKMatcher.Builder().keyUse(KeyUse.ENCRYPTION).build();
+                jwkList = new JWKSelector(keyMatcherWithEncryptionUse).select(publicKeys);
+
+                if (jwkList.isEmpty()) {
+                    // failover defaults to ->, then get the first key, use as sig from the list
+                    JWKMatcher keyMatcherWithSignatureUse = new JWKMatcher.Builder().keyUse(KeyUse.SIGNATURE).build();
+                    jwkList = new JWKSelector(keyMatcherWithSignatureUse).select(publicKeys);
                 }
             }
-            // if no jwk found for encryption, check for jwk with sig
-            if (jwk == null) {
-                for (JWK currentJwk : jwkList) {
-                    if (KeyUse.SIGNATURE == currentJwk.getKeyUse()) {
-                        jwk = currentJwk;
-                        break;
-                    }
-                }
-            }
-            if (jwk == null) {
+
+            if (jwkList.isEmpty()) {
+                log.error(String.format("Failed to retrieve valid jwk from jwks uri: %s", jwksUri));
                 throw new IdentityOAuth2Exception(String.format("Failed to retrieve valid jwk from " +
                         "jwks uri: %s", jwksUri));
+            } else {
+                return jwkList.get(0);
             }
-            return jwk;
         } catch (ParseException | IOException e) {
             throw new IdentityOAuth2Exception(String.format("Failed to retrieve jwk from " +
                     "jwks uri: %s", jwksUri), e);
@@ -4123,7 +4128,7 @@ public class OAuth2Util {
      * @param jwksUri - JWKS Uri
      * @return - X509Certificate
      * @throws IdentityOAuth2Exception - IdentityOAuth2Exception
-     * @deprecated replaced with {@link #getEncryptionJWKFromJWKS(String)}
+     * @deprecated replaced with {@link #getEncryptionJWKFromJWKS(String, JWEAlgorithm)}
      */
     @Deprecated
     private static X509Certificate getPublicCertFromJWKS(String jwksUri) throws IdentityOAuth2Exception {
