@@ -99,7 +99,6 @@ public class DCRManagementService {
         }
 
         RegistrationResponseProfile info = this.createOAuthApplication(profile);
-
         return info;
     }
 

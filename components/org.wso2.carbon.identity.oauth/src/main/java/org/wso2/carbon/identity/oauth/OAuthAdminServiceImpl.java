@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -44,6 +45,7 @@ import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -91,6 +93,7 @@ public class OAuthAdminServiceImpl {
     static String[] allowedScopeValidators = null;
 
     protected static final Log LOG = LogFactory.getLog(OAuthAdminServiceImpl.class);
+    private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
 
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single
@@ -266,6 +269,8 @@ public class OAuthAdminServiceImpl {
                     app.setGrantTypes(application.getGrantTypes());
 
                     app.setScopeValidators(filterScopeValidators(application));
+
+                    validateAudiences(application);
                     app.setAudiences(application.getAudiences());
                     app.setPkceMandatory(application.getPkceMandatory());
                     app.setPkceSupportPlain(application.getPkceSupportPlain());
@@ -329,6 +334,20 @@ public class OAuthAdminServiceImpl {
         return OAuthUtil.buildConsumerAppDTO(app);
     }
 
+    private void validateAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
+
+        if (application.getAudiences() != null) {
+            // Filter out any duplicates and empty audiences here.
+            long filteredAudienceSize = Arrays.stream(application.getAudiences()).filter(StringUtils::isNotBlank)
+                    .distinct().count();
+
+            if (filteredAudienceSize != application.getAudiences().length) {
+                // This means we had duplicates and empty strings.
+                throw handleClientError(INVALID_REQUEST, "Audience values cannot contain duplicates or empty values.");
+            }
+        }
+    }
+
     private void validateGrantTypes(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
 
         String[] requestGrants = application.getGrantTypes().split("\\s");
@@ -386,6 +405,11 @@ public class OAuthAdminServiceImpl {
      * @throws IdentityOAuthAdminException Error when updating the underlying identity persistence store.
      */
     public void updateConsumerApplication(OAuthConsumerAppDTO consumerAppDTO) throws IdentityOAuthAdminException {
+
+        for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
+                .getOAuthApplicationMgtListeners()) {
+            oAuthApplicationMgtListener.doPreUpdateConsumerApplication(consumerAppDTO);
+        }
 
         String errorMessage = "Error while updating the app information.";
         String oauthConsumerKey = consumerAppDTO.getOauthConsumerKey();
@@ -453,6 +477,7 @@ public class OAuthAdminServiceImpl {
             validateGrantTypes(consumerAppDTO);
             oauthappdo.setGrantTypes(consumerAppDTO.getGrantTypes());
 
+            validateAudiences(consumerAppDTO);
             oauthappdo.setAudiences(consumerAppDTO.getAudiences());
             oauthappdo.setScopeValidators(filterScopeValidators(consumerAppDTO));
             oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
@@ -503,6 +528,7 @@ public class OAuthAdminServiceImpl {
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
             if (StringUtils.isNotEmpty(scope)) {
+                validateRegex(scope);
                 OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(tenantId, scope, claims);
             } else {
                 throw handleClientError(INVALID_REQUEST, "The scope can not be empty.");
@@ -727,6 +753,11 @@ public class OAuthAdminServiceImpl {
      */
     public void updateConsumerAppState(String consumerKey, String newState) throws IdentityOAuthAdminException {
 
+        for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
+                .getOAuthApplicationMgtListeners()) {
+            oAuthApplicationMgtListener.doPreUpdateConsumerApplicationState(consumerKey, newState);
+        }
+
         try {
             OAuthAppDO oAuthAppDO = getOAuthApp(consumerKey);
             // change the state
@@ -809,7 +840,7 @@ public class OAuthAdminServiceImpl {
                 OAuthCache.getInstance().clearCacheEntry(cacheKeyToken);
 
                 String scope = buildScopeString(detailToken.getScope());
-                String authorizedUser = detailToken.getAuthzUser().toString();
+                String authorizedUser = detailToken.getAuthzUser().getUserId();
                 String authenticatedIDP = detailToken.getAuthzUser().getFederatedIdPName();
                 boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
                 String cacheKeyString;
@@ -841,9 +872,9 @@ public class OAuthAdminServiceImpl {
             OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
                     .updateAppAndRevokeTokensAndAuthzCodes(
                             consumerKey, properties, authorizationCodes.toArray(
-                                    new String[authorizationCodes.size()]), accessTokens);
+                                    new String[0]), accessTokens);
 
-        } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
+        } catch (IdentityOAuth2Exception | IdentityApplicationManagementException | UserIdNotFoundException e) {
             throw handleError("Error in updating oauth app & revoking access tokens and authz " +
                     "codes for OAuth App with consumerKey: " + consumerKey, e);
         }
@@ -856,6 +887,11 @@ public class OAuthAdminServiceImpl {
      * @throws IdentityOAuthAdminException Error when removing the consumer information from the database.
      */
     public void removeOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException {
+
+        for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
+                .getOAuthApplicationMgtListeners()) {
+            oAuthApplicationMgtListener.doPreRemoveOAuthApplicationData(consumerKey);
+        }
 
         OAuthAppDAO dao = new OAuthAppDAO();
         dao.removeConsumerApplication(consumerKey);
@@ -1022,7 +1058,7 @@ public class OAuthAdminServiceImpl {
                             OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser,
                                     buildScopeString(accessTokenDO.getScope()));
                             OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser);
-                            OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
+                            OAuthUtil.clearOAuthCache(accessTokenDO);
                             AccessTokenDO scopedToken;
                             try {
                                 // Retrieve latest access token for particular client, user and scope combination if
@@ -1462,6 +1498,7 @@ public class OAuthAdminServiceImpl {
     private void addScopePreValidation(ScopeDTO scope) throws IdentityOAuthClientException {
 
         validateScopeName(scope.getName());
+        validateRegex(scope.getName());
         validateDisplayName(scope.getDisplayName());
     }
 
@@ -1491,6 +1528,16 @@ public class OAuthAdminServiceImpl {
                     ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED.getMessage());
         }
         validateWhiteSpaces(scopeName);
+    }
+
+    private void validateRegex(String scopeName) throws IdentityOAuthClientException {
+
+        Pattern regexPattern = Pattern.compile(SCOPE_VALIDATION_REGEX);
+        if (!regexPattern.matcher(scopeName).matches()) {
+            String message = "Invalid scope name. Scope name : " + scopeName + " cannot contain special characters " +
+                    "?,#,/,( or )";
+            throw handleClientError(INVALID_REQUEST, message);
+        }
     }
 
     /**

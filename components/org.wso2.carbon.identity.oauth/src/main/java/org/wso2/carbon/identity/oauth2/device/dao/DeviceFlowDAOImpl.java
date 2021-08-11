@@ -18,19 +18,24 @@
 
 package org.wso2.carbon.identity.oauth2.device.dao;
 
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
+import org.wso2.carbon.identity.oauth2.device.util.DeviceFlowUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -47,21 +52,32 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     private static final Log log = LogFactory.getLog(DeviceFlowDAOImpl.class);
 
     @Override
-    public void insertDeviceFlowParameters(String deviceCode, String userCode, String consumerKey, Long expiresIn,
-                                           int interval, String scopes) throws IdentityOAuth2Exception {
+    public String insertDeviceFlowParametersWithQuantifier(String deviceCode, String userCode, long quantifier,
+        String consumerKey, String scopes) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
             log.debug("Persisting device_code: " + deviceCode + " for client: " + consumerKey);
         }
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             String codeId = UUID.randomUUID().toString();
-            storeIntoDeviceFlow(codeId, deviceCode, userCode, consumerKey, expiresIn, interval, connection);
+            String uniqueUserCode = storeIntoDeviceFlow(codeId, deviceCode, userCode, quantifier, consumerKey,
+                    connection, 0);
             storeIntoScopes(codeId, deviceCode, scopes, connection);
             IdentityDatabaseUtil.commitTransaction(connection);
+            return uniqueUserCode;
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when storing the device flow parameters for consumer_key: " +
                     consumerKey, e);
         }
+    }
+
+    @Override
+    @Deprecated
+    public void insertDeviceFlowParameters(String deviceCode, String userCode, String consumerKey, Long expiresIn,
+                                           int interval, String scopes) throws IdentityOAuth2Exception {
+
+        insertDeviceFlowParametersWithQuantifier(deviceCode, userCode, GenerateKeys.getCurrentQuantifier(), consumerKey,
+                scopes);
     }
 
     @Override
@@ -89,6 +105,31 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     }
 
     @Override
+    public void setAuthenticationStatus(String userCode) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Set authentication status: " + Constants.USED + " for user_code: " + userCode);
+        }
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            try (PreparedStatement prepStmt =
+                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.SET_AUTHENTICATION_STATUS)) {
+                prepStmt.setString(1, Constants.USED);
+                prepStmt.setString(2, userCode);
+                prepStmt.execute();
+                IdentityDatabaseUtil.commitTransaction(connection);
+            } catch (SQLException e) {
+                IdentityDatabaseUtil.rollbackTransaction(connection);
+                throw new IdentityOAuth2Exception("Error when setting the authentication status for the user_code: " +
+                        DigestUtils.sha256Hex(userCode), e);
+            }
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error when setting the authentication status for the user_code: " +
+                    DigestUtils.sha256Hex(userCode), e);
+        }
+    }
+
+    @Override
+    @Deprecated
     public void setAuthenticationStatus(String userCode, String status) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
@@ -103,16 +144,66 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new IdentityOAuth2Exception("Error when setting user has authenticated for user_code: " +
-                                                  userCode, e);
+                throw new IdentityOAuth2Exception("Error when setting the authentication status for the user_code: " +
+                        userCode, e);
             }
         } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error when setting user has authenticated for user_code: " + userCode,
-                                              e);
+            throw new IdentityOAuth2Exception("Error when setting the authentication status for the user_code: " +
+                    userCode, e);
         }
     }
 
     @Override
+    public DeviceFlowDO getAuthenticationDetails(String deviceCode, String clientId) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Getting authentication details for device_code: " + deviceCode);
+        }
+        AuthenticatedUser user;
+        int tenantId = 0;
+        String userName = null;
+        boolean isMatchingDeviceCodeAndClientId = false; // Check for matching deviceCode and clientId.
+        String userDomain = null;
+        String authenticatedIDP = null;
+        DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+             PreparedStatement prepStmt =
+                     connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.GET_AUTHENTICATION_STATUS)) {
+            prepStmt.setString(1, deviceCode);
+            prepStmt.setString(2, clientId);
+            try (ResultSet resultSet = prepStmt.executeQuery()) {
+                while (resultSet.next()) {
+                    deviceFlowDO.setStatus(resultSet.getString(1));
+                    deviceFlowDO.setLastPollTime(resultSet.getTimestamp(2,
+                            Calendar.getInstance(TimeZone.getTimeZone(Constants.UTC))));
+                    deviceFlowDO.setPollTime(resultSet.getLong(3));
+                    deviceFlowDO.setExpiryTime(resultSet.getTimestamp(4,
+                            Calendar.getInstance(TimeZone.getTimeZone(Constants.UTC))));
+                    userName = resultSet.getString(5);
+                    tenantId = resultSet.getInt(6);
+                    userDomain = resultSet.getString(7);
+                    authenticatedIDP = resultSet.getString(8);
+                    isMatchingDeviceCodeAndClientId = true;
+                }
+                if (isMatchingDeviceCodeAndClientId) {
+                    if (StringUtils.isNotBlank(userName) && tenantId != 0 && StringUtils.isNotBlank(userDomain)) {
+                        String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
+                        user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain, authenticatedIDP);
+                        deviceFlowDO.setAuthorizedUser(user);
+                    }
+                } else {
+                    deviceFlowDO.setStatus(Constants.NOT_EXIST);
+                }
+                return deviceFlowDO;
+            }
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error when getting authentication status for device_code: " +
+                    deviceCode, e);
+        }
+    }
+
+    @Override
+    @Deprecated
     public DeviceFlowDO getAuthenticationDetails(String deviceCode) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
@@ -123,7 +214,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             AuthenticatedUser user;
             int tenantId = 0;
             String userName = null;
-            boolean checked = false;
+            boolean isMatchingDeviceCodeAndClientId = false; // Check for matching deviceCode and clientId.
             String userDomain = null;
             String authenticatedIDP = null;
             DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
@@ -143,9 +234,9 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                     tenantId = resultSet.getInt(6);
                     userDomain = resultSet.getString(7);
                     authenticatedIDP = resultSet.getString(8);
-                    checked = true;
+                    isMatchingDeviceCodeAndClientId = true;
                 }
-                if (checked) {
+                if (isMatchingDeviceCodeAndClientId) {
                     if (userName != null && tenantId != 0 && userDomain != null) {
                         String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
                         user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain, authenticatedIDP);
@@ -241,8 +332,8 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.debug("Setting authorize user: " + authenticatedUser.getUserName() + " and status: " + status + " for" +
-                    " user_code: " + userCode);
+            log.debug("Setting authorize user: " + authenticatedUser.getLoggableUserId() + " and status: " + status
+                    + " for user_code: " + userCode);
         }
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             try (PreparedStatement prepStmt =
@@ -369,40 +460,97 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
      * @param codeId      Internal mapping UUID.
      * @param deviceCode  Code that is used to identify the device.
      * @param userCode    Code that is used to correlate user and device.
+     * @param quantifier  Quantized time period user_code belongs.
      * @param consumerKey Consumer key of the client application.
-     * @param expiresIn   Expiry time.
-     * @param interval    Interval between poll requests.
-     * @param connection  Database connection.
+     * @param retryAttempt No. of times user_code uniqueness checks.
+     * @return Unique user_code.
      * @throws IdentityOAuth2Exception Error while storing parameters.
      */
-    private void storeIntoDeviceFlow(String codeId, String deviceCode, String userCode, String consumerKey,
-                                     long expiresIn, long interval, Connection connection) throws
-            IdentityOAuth2Exception {
+    private String storeIntoDeviceFlow(String codeId, String deviceCode, String userCode, long quantifier,
+        String consumerKey, Connection connection, int retryAttempt) throws IdentityOAuth2Exception, SQLException {
 
-        try (PreparedStatement prepStmt =
-                     connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.STORE_DEVICE_CODE)) {
-            Date date = new Date();
-            Timestamp timeCreated = new Timestamp(date.getTime());
-            long timeExpired = timeCreated.getTime() + expiresIn;
-            Timestamp expiredTime = new Timestamp(timeExpired);
-            prepStmt.setString(1, codeId);
-            prepStmt.setString(2, deviceCode);
-            prepStmt.setString(3, userCode);
-            prepStmt.setTimestamp(4, timeCreated, Calendar.getInstance(TimeZone
-                    .getTimeZone(Constants.UTC)));
-            prepStmt.setTimestamp(5, timeCreated, Calendar.getInstance(TimeZone
-                    .getTimeZone(Constants.UTC)));
-            prepStmt.setTimestamp(6, expiredTime, Calendar.getInstance(TimeZone
-                    .getTimeZone(Constants.UTC)));
-            prepStmt.setLong(7, interval);
-            prepStmt.setString(8, Constants.PENDING);
-            prepStmt.setString(9, consumerKey);
-            prepStmt.execute();
+        if (retryAttempt < Constants.DEFAULT_DEVICE_TOKEN_PERSIST_RETRY_COUNT) {
+            String tempUserCode;
+            long currentQuantifier;
+            long timeExpired;
+            PreparedStatement prepStmt = null;
+            ResultSet rs = null;
+            try {
+                if (isUserCodeAndQuantifierExists(userCode, quantifier, connection)) {
+                    tempUserCode = GenerateKeys.getKey(Constants.KEY_LENGTH);
+                    currentQuantifier = GenerateKeys.getCurrentQuantifier();
+                    return storeIntoDeviceFlow(codeId, deviceCode, tempUserCode, currentQuantifier, consumerKey,
+                            connection, ++retryAttempt);
+                }
+                prepStmt = connection.prepareStatement(
+                        SQLQueries.DeviceFlowDAOSQLQueries.STORE_DEVICE_CODE_WITH_QUANTIFIER);
+                Date date = new Date();
+                Timestamp timeCreated = new Timestamp(date.getTime());
+                timeExpired = timeCreated.getTime() + (DeviceFlowUtil.getConfiguredExpiryTime() * 1000);
+                Timestamp expiredTime = new Timestamp(timeExpired);
+                prepStmt.setString(1, codeId);
+                prepStmt.setString(2, deviceCode);
+                prepStmt.setString(3, userCode);
+                prepStmt.setTimestamp(4, timeCreated, Calendar.getInstance(TimeZone
+                        .getTimeZone(Constants.UTC)));
+                prepStmt.setTimestamp(5, timeCreated, Calendar.getInstance(TimeZone
+                        .getTimeZone(Constants.UTC)));
+                prepStmt.setTimestamp(6, expiredTime, Calendar.getInstance(TimeZone
+                        .getTimeZone(Constants.UTC)));
+                prepStmt.setLong(7, Constants.INTERVAL_MILLISECONDS);
+                prepStmt.setString(8, Constants.PENDING);
+                prepStmt.setLong(9, quantifier);
+                prepStmt.setString(10, consumerKey);
+                prepStmt.execute();
+                IdentityDatabaseUtil.commitTransaction(connection);
+            } catch (SQLException e) {
+                IdentityDatabaseUtil.rollbackTransaction(connection);
+                // Handle constrain violation issue in JDBC drivers which does not throw
+                // SQLIntegrityConstraintViolationException.
+                if (e instanceof SQLIntegrityConstraintViolationException ||
+                        StringUtils.containsIgnoreCase(e.getMessage(), Constants.USERCODE_QUANTIFIER_CONSTRAINT)) {
+                    tempUserCode = GenerateKeys.getKey(Constants.KEY_LENGTH);
+                    currentQuantifier = GenerateKeys.getCurrentQuantifier();
+                    return storeIntoDeviceFlow(codeId, deviceCode, tempUserCode, currentQuantifier, consumerKey,
+                            connection, ++retryAttempt);
+                }
+                throw new IdentityOAuth2Exception("Error when storing the device flow parameters for consumer_key: "
+                        + consumerKey, e);
+            } finally {
+                if (prepStmt != null && rs != null) {
+                    prepStmt.close();
+                    rs.close();
+                }
+            }
+            return userCode;
+        }
+        throw new IdentityOAuth2Exception("user_code for consumer_key: " + consumerKey + " already exists.");
+    }
 
+    /**
+     * Check the existence of userCode and quantifier.
+     *
+     * @param userCode   Code that is used to correlate user and device.
+     * @param quantifier Quantized time period user_code belongs.
+     * @throws IdentityOAuth2Exception Error while comparing parameters.
+     */
+    private boolean isUserCodeAndQuantifierExists(String userCode, long quantifier, Connection connection)
+            throws IdentityOAuth2Exception {
+
+        try {
+            ResultSet resultSet;
+            PreparedStatement prepStmt = connection.prepareStatement(
+                    SQLQueries.DeviceFlowDAOSQLQueries.CHECK_UNIQUE_USER_CODE_AND_QUANTIFIER);
+            prepStmt.setString(1, userCode);
+            prepStmt.setLong(2, quantifier);
+            resultSet = prepStmt.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getBoolean(1);
+            }
+            return false;
         } catch (SQLException e) {
-            IdentityDatabaseUtil.rollbackTransaction(connection);
-            throw new IdentityOAuth2Exception("Error when storing the device flow parameters for consumer_key: " +
-                    consumerKey, e);
+            throw new IdentityOAuth2Exception("Error when checking the existence for user_code: " +
+                    DigestUtils.sha256Hex(userCode) + " and quantifier: " + quantifier, e);
         }
     }
 
@@ -411,7 +559,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
      *
      * @param codeId     Internal mapping UUID.
      * @param deviceCode Code that is used to identify the device.
-     * @param scope Scopes to be stored
+     * @param scope      Scopes to be stored
      * @param connection Database connection.  @throws IdentityOAuth2Exception Error while storing scopes.
      */
     private void storeIntoScopes(String codeId, String deviceCode, String scope, Connection connection) throws
@@ -430,6 +578,35 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error when storing scopes for device_code: " +
                     deviceCode, e);
+        }
+    }
+
+    @Override
+    public DeviceFlowDO getDetailsForUserCode(String userCode) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Getting authentication details for user_code: " + userCode);
+        }
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            ResultSet resultSet;
+            DeviceFlowDO deviceFlowDO = null;
+            try (PreparedStatement prepStmt =
+                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.GET_AUTHENTICATION_DETAILS)) {
+                prepStmt.setString(1, userCode);
+                resultSet = prepStmt.executeQuery();
+
+                while (resultSet.next()) {
+                    deviceFlowDO = new DeviceFlowDO();
+                    deviceFlowDO.setStatus(resultSet.getString(1));
+                    deviceFlowDO.setExpiryTime(resultSet.getTimestamp(2,
+                            Calendar.getInstance(TimeZone.getTimeZone(Constants.UTC))));
+                    deviceFlowDO.setDeviceCode(resultSet.getString(3));
+                }
+            }
+            return deviceFlowDO;
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error when getting authentication details for user_code(hashed): " +
+                    DigestUtils.sha256Hex(userCode), e);
         }
     }
 }

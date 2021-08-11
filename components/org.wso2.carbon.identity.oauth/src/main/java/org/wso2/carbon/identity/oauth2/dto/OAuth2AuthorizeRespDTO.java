@@ -38,6 +38,7 @@ public class OAuth2AuthorizeRespDTO {
     private String codeId;
     private String pkceCodeChallenge;
     private String pkceCodeChallengeMethod;
+    private String oidcSessionId;
 
     public String getAuthorizationCode() {
 
@@ -167,5 +168,25 @@ public class OAuth2AuthorizeRespDTO {
     public void setPkceCodeChallengeMethod(String pkceCodeChallengeMethod) {
 
         this.pkceCodeChallengeMethod = pkceCodeChallengeMethod;
+    }
+
+    /**
+     * Set OIDC session Id value. This can be used to add sid claim into the id_token for the back channel logout.
+     *
+     * @param oidcSessionId OIDC session Id value.
+     */
+    public void setOidcSessionId(String oidcSessionId) {
+
+        this.oidcSessionId = oidcSessionId;
+    }
+
+    /**
+     *  Get OIDC session Id value.
+     *
+     * @return  OIDC session Id value.
+     */
+    public String getOidcSessionId() {
+
+        return oidcSessionId;
     }
 }

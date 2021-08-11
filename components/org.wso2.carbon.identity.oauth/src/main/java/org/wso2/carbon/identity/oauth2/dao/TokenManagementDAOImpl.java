@@ -96,34 +96,37 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         String sql;
 
         try {
+            String driverName = connection.getMetaData().getDriverName();
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                if (connection.getMetaData().getDriverName().contains("MySQL")
-                        || connection.getMetaData().getDriverName().contains("H2")) {
+                if (driverName.contains("MySQL")
+                        || driverName.contains("MariaDB")
+                        || driverName.contains("H2")) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MYSQL;
                 } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_DB2SQL;
-                } else if (connection.getMetaData().getDriverName().contains("MS SQL")
-                        || connection.getMetaData().getDriverName().contains("Microsoft")) {
+                } else if (driverName.contains("MS SQL")
+                        || driverName.contains("Microsoft")) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MSSQL;
-                } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
+                } else if (driverName.contains("PostgreSQL")) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_POSTGRESQL;
-                } else if (connection.getMetaData().getDriverName().contains("INFORMIX")) {
+                } else if (driverName.contains("INFORMIX")) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_INFORMIX;
                 } else {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_ORACLE;
                 }
             } else {
-                if (connection.getMetaData().getDriverName().contains("MySQL")
-                        || connection.getMetaData().getDriverName().contains("H2")) {
+                if (driverName.contains("MySQL")
+                        || driverName.contains("MariaDB")
+                        || driverName.contains("H2")) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_MYSQL;
                 } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_DB2SQL;
-                } else if (connection.getMetaData().getDriverName().contains("MS SQL")
-                        || connection.getMetaData().getDriverName().contains("Microsoft")) {
+                } else if (driverName.contains("MS SQL")
+                        || driverName.contains("Microsoft")) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_MSSQL;
-                } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
+                } else if (driverName.contains("PostgreSQL")) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_POSTGRESQL;
-                } else if (connection.getMetaData().getDriverName().contains("INFORMIX")) {
+                } else if (driverName.contains("INFORMIX")) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_INFORMIX;
                 } else {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_ORACLE;
@@ -680,8 +683,8 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         try {
             int tenantId = OAuth2Util.getTenantId(tenantDomain);
 
-            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserId(SQLQueries.
-                    GET_DISTINCT_APPS_AUTHORIZED_BY_USER_ALL_TIME, authzUser.toString());
+            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(SQLQueries.
+                    GET_DISTINCT_APPS_AUTHORIZED_BY_USER_ALL_TIME, authzUser.getUserStoreDomain());
 
             if (!isUsernameCaseSensitive) {
                 sqlQuery = sqlQuery.replace(AUTHZ_USER, LOWER_AUTHZ_USER);

@@ -184,7 +184,7 @@ public class TokenValidationHandler {
         responseDTO.setExpiryTime(getAccessTokenExpirationTime(accessTokenDO));
 
         // Adding the AccessTokenDO as a context property for further use
-        messageContext.addProperty("AccessTokenDO", accessTokenDO);
+        messageContext.addProperty(OAuthConstants.ACCESS_TOKEN_DO, accessTokenDO);
 
         if (!tokenValidator.validateAccessDelegation(messageContext)) {
             return buildClientAppErrorResponse("Invalid access delegation");
@@ -303,7 +303,7 @@ public class TokenValidationHandler {
             responseDTO.setAuthorizedUser(introResp.getUsername());
         }
 
-        if (tokenGenerator != null) {
+        if (tokenGenerator != null && validationRequest.getRequiredClaimURIs() != null) {
             // add user attributes to the introspection response.
             tokenGenerator.generateToken(messageContext);
             if (log.isDebugEnabled()) {
@@ -354,6 +354,9 @@ public class TokenValidationHandler {
         introResp.setClientId(refreshTokenDataDO.getConsumerKey());
         // Adding the AccessTokenDO as a context property for further use.
         messageContext.addProperty("RefreshTokenDO", refreshTokenDataDO);
+        // Add authenticated user object since username attribute may not have the domain appended if the
+        // subject identifier is built based in the SP config.
+        introResp.setAuthorizedUser(refreshTokenDataDO.getAuthzUser());
 
         // Validate access delegation.
         if (!tokenValidator.validateAccessDelegation(messageContext)) {
@@ -459,8 +462,15 @@ public class TokenValidationHandler {
                 introResp.setBindingType(accessTokenDO.getTokenBinding().getBindingType());
                 introResp.setBindingReference(accessTokenDO.getTokenBinding().getBindingReference());
             }
+            // add authorized user type
+            if (accessTokenDO.getTokenType() != null) {
+                introResp.setAut(accessTokenDO.getTokenType());
+            }
             // adding the AccessTokenDO as a context property for further use
             messageContext.addProperty("AccessTokenDO", accessTokenDO);
+            // Add authenticated user object since username attribute may not have the domain appended if the
+            // subject identifier is built based in the SP config.
+            introResp.setAuthorizedUser(accessTokenDO.getAuthzUser());
         }
 
         if (messageContext.getProperty(OAuth2Util.JWT_ACCESS_TOKEN) != null
@@ -618,7 +628,7 @@ public class TokenValidationHandler {
      * @return
      */
     private long getAccessTokenExpirationTime(AccessTokenDO accessTokenDO) {
-        long expiryTime = OAuth2Util.getAccessTokenExpireMillis(accessTokenDO);
+        long expiryTime = OAuth2Util.getAccessTokenExpireMillis(accessTokenDO, false);
 
         if (OAuthConstants.UserType.APPLICATION_USER.equals(accessTokenDO.getTokenType())
                 && OAuthServerConfiguration.getInstance().getUserAccessTokenValidityPeriodInSeconds() < 0) {
@@ -645,7 +655,7 @@ public class TokenValidationHandler {
                 log.debug("Access Token has infinite lifetime");
             }
         } else {
-            if (OAuth2Util.getAccessTokenExpireMillis(accessTokenDO) == 0) {
+            if (OAuth2Util.getTokenExpireTimeMillis(accessTokenDO, true) == 0) {
                 if (log.isDebugEnabled()) {
                     log.debug("Access Token has expired");
                 }

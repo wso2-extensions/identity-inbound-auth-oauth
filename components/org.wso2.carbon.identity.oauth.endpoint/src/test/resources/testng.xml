@@ -82,6 +82,7 @@
         <classes>
             <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoEndpointConfigTest"/>
             <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoISAccessTokenValidatorTest"/>
+            <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoUserStoreClaimRetrieverTest"/>
             <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilderTest"/>
             <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJWTResponseTest"/>
         </classes>

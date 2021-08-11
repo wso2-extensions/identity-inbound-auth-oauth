@@ -54,6 +54,13 @@ public class RequestObjectHandler extends AbstractEventHandler {
         Map<String, Object> eventProperties = event.getEventProperties();
         String eventName = event.getEventName();
         try {
+             Object isRequestObject = eventProperties.get(OIDCConstants.Event.IS_REQUEST_OBJECT_FLOW);
+             if (isRequestObject != null && !(boolean) isRequestObject) {
+                 if (log.isDebugEnabled()) {
+                     log.debug("The request does not contains request object. So skipping RequestObjectHandler");
+                 }
+                 return;
+             }
             String tokenState = (String) eventProperties.get(OIDCConstants.Event.TOKEN_STATE);
             String sessionDataKey = (String) eventProperties.get(OIDCConstants.Event.SESSION_DATA_KEY);
 

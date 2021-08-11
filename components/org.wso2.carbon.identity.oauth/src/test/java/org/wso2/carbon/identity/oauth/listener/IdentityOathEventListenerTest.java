@@ -36,7 +36,6 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCache;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
@@ -48,7 +47,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
@@ -72,9 +70,6 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
 
     @Mock
     private UserStoreManager userStoreManager;
-
-    @Mock
-    private TokenMgtDAO tokenMgtDAO;
 
     @Mock
     private AuthenticatedUser authenticatedUser;
@@ -140,7 +135,6 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         when(claimCache.isEnabled()).thenReturn(false);
         when(ClaimMetaDataCache.getInstance()).thenReturn(claimMetaDataCache);
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockedServerConfig);
-        whenNew(TokenMgtDAO.class).withNoArguments().thenReturn(tokenMgtDAO);
 
         IdentityOathEventListener listener2 = new IdentityOathEventListener();
         assertTrue(listener2.doPreDeleteUser(username, userStoreManager));
@@ -154,9 +148,7 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
 
         when(UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration())).thenReturn("DOMAIN_NAME");
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn("TENANT_DOMAIN_NAME");
-        whenNew(TokenMgtDAO.class).withNoArguments().thenReturn(tokenMgtDAO);
         whenNew(AuthenticatedUser.class).withNoArguments().thenReturn(authenticatedUser);
-        when(tokenMgtDAO.getAccessTokensForUser(authenticatedUser)).thenReturn(accessToken);
         when(AuthorizationGrantCache.getInstance()).thenReturn(authorizationGrantCache);
 
         IdentityOathEventListener identityOathEventListener = new IdentityOathEventListener();
@@ -175,10 +167,7 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
 
         when(UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration())).thenReturn("DOMAIN_NAME");
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn("TENANT_DOMAIN_NAME");
-        whenNew(TokenMgtDAO.class).withNoArguments().thenReturn(tokenMgtDAO);
         whenNew(AuthenticatedUser.class).withNoArguments().thenReturn(authenticatedUser);
-        when(tokenMgtDAO.getAccessTokensForUser(authenticatedUser)).thenReturn(accessToken);
-        when(tokenMgtDAO.getAuthorizationCodesForUser(any(AuthenticatedUser.class))).thenReturn(authorizationCodes);
 
         when(AuthorizationGrantCache.getInstance()).thenReturn(authorizationGrantCache);
 
@@ -191,10 +180,7 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
     public void testRemoveTokensFromCacheExceptionalFlow() throws Exception {
         when(UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration())).thenReturn("DOMAIN_NAME");
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn("TENANT_DOMAIN_NAME");
-        whenNew(TokenMgtDAO.class).withNoArguments().thenReturn(tokenMgtDAO);
         whenNew(AuthenticatedUser.class).withNoArguments().thenReturn(authenticatedUser);
-        when(tokenMgtDAO.getAccessTokensForUser(authenticatedUser)).
-                thenThrow(new IdentityOAuth2Exception("Error occrued"));
 
         IdentityOathEventListener identityOathEventListener = new IdentityOathEventListener();
         assertTrue(identityOathEventListener.doPreSetUserClaimValue(username, claimUri, claimValue, profileName,
@@ -209,9 +195,7 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
 
         when(UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration())).thenReturn("DOMAIN_NAME");
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn("TENANT_DOMAIN_NAME");
-        whenNew(TokenMgtDAO.class).withNoArguments().thenReturn(tokenMgtDAO);
         whenNew(AuthenticatedUser.class).withNoArguments().thenReturn(authenticatedUser);
-        when(tokenMgtDAO.getAccessTokensForUser(authenticatedUser)).thenReturn(accessToken);
         when(AuthorizationGrantCache.getInstance()).thenReturn(authorizationGrantCache);
 
         IdentityOathEventListener identityOathEventListener = new IdentityOathEventListener();
@@ -296,7 +280,6 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         when(claimCache.isEnabled()).thenReturn(false);
 
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockedServerConfig);
-        whenNew(TokenMgtDAO.class).withNoArguments().thenReturn(tokenMgtDAO);
         IdentityOathEventListener listener = new IdentityOathEventListener();
         assertTrue(listener.doPostUpdateCredential(username, new Object(), userStoreManager));
     }
@@ -319,7 +302,6 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         when(claimCache.isEnabled()).thenReturn(false);
 
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockedServerConfig);
-        whenNew(TokenMgtDAO.class).withNoArguments().thenReturn(tokenMgtDAO);
         IdentityOathEventListener listener = new IdentityOathEventListener();
         assertTrue(listener.doPostUpdateCredentialByAdmin(username, new Object(), userStoreManager));
     }
@@ -339,7 +321,6 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         when(claimCache.isEnabled()).thenReturn(false);
 
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockedServerConfig);
-        whenNew(TokenMgtDAO.class).withNoArguments().thenReturn(tokenMgtDAO);
 
         Set<String> clientIds = new HashSet<String>();
         clientIds.add("CLIENT_ID_ONE");
@@ -349,13 +330,6 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         accessTokenDO.setAuthzUser(authenticatedUser);
         accessTokenDO.setScope(new String[]{"OPEN_ID", "PROFILE"});
         accessTokenDO.setAccessToken("ACCESS_TOKEN  ");
-
-        Set<AccessTokenDO> accessTokens = new HashSet<AccessTokenDO>();
-        accessTokens.add(accessTokenDO);
-
-        when(tokenMgtDAO.getAllTimeAuthorizedClientIds(any(AuthenticatedUser.class))).thenReturn(clientIds);
-        when(tokenMgtDAO.retrieveAccessTokens(anyString(), any(AuthenticatedUser.class), anyString(),
-                anyBoolean())).thenReturn(accessTokens);
 
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
         IdentityOathEventListener listener = new IdentityOathEventListener();
@@ -369,7 +343,6 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         when(OAuth2Util.getUserStoreForFederatedUser(any(AuthenticatedUser.class))).
                 thenThrow(new IdentityOAuth2Exception("message"));
         when(UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration())).thenReturn("DOMAIN_NAME");
-        whenNew(TokenMgtDAO.class).withNoArguments().thenReturn(tokenMgtDAO);
 
         IdentityOathEventListener listener = new IdentityOathEventListener();
         assertTrue(listener.doPostUpdateCredentialByAdmin(username, new Object(), userStoreManager));
@@ -378,9 +351,6 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
     @Test
     public void testForExceptionInTokenRevocationPath2() throws Exception {
         when(UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration())).thenReturn("DOMAIN_NAME");
-        whenNew(TokenMgtDAO.class).withNoArguments().thenReturn(tokenMgtDAO);
-        when(tokenMgtDAO.getAllTimeAuthorizedClientIds(any(AuthenticatedUser.class)))
-                .thenThrow(new IdentityOAuth2Exception("message"));
 
         IdentityOathEventListener listener = new IdentityOathEventListener();
         assertTrue(listener.doPostUpdateCredentialByAdmin(username, new Object(), userStoreManager));
@@ -392,10 +362,6 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         clientIds.add("CLIENT_ID_ONE");
 
         when(UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration())).thenReturn("DOMAIN_NAME");
-        whenNew(TokenMgtDAO.class).withNoArguments().thenReturn(tokenMgtDAO);
-        when(tokenMgtDAO.getAllTimeAuthorizedClientIds(any(AuthenticatedUser.class))).thenReturn(clientIds);
-        when(tokenMgtDAO.retrieveAccessTokens(anyString(), any(AuthenticatedUser.class), anyString(), anyBoolean())).
-                thenThrow(new IdentityOAuth2Exception("message"));
 
         IdentityOathEventListener listener = new IdentityOathEventListener();
         assertTrue(listener.doPostUpdateCredentialByAdmin(username, new Object(), userStoreManager));
@@ -408,7 +374,6 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         when(IdentityUtil.readEventListenerProperty(anyString(), anyString())).thenReturn(null);
         when(UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration())).thenReturn("DOMAIN_NAME");
         when(IdentityUtil.getIdentityCacheConfig(anyString(), anyString())).thenReturn(identityCacheConfig);
-        whenNew(TokenMgtDAO.class).withNoArguments().thenReturn(tokenMgtDAO);
 
         Set<String> clientIds = new HashSet<String>();
         clientIds.add("CLIENT_ID_ONE");
@@ -418,14 +383,7 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         accessTokenDO.setAuthzUser(authenticatedUser);
         accessTokenDO.setScope(new String[]{"OPEN_ID", "PROFILE"});
         accessTokenDO.setAccessToken("ACCESS_TOKEN  ");
-        Set<AccessTokenDO> accessTokens = new HashSet<AccessTokenDO>();
-        accessTokens.add(accessTokenDO);
 
-        when(tokenMgtDAO.getAllTimeAuthorizedClientIds(any(AuthenticatedUser.class))).thenReturn(clientIds);
-        when(tokenMgtDAO.retrieveAccessTokens(anyString(), any(AuthenticatedUser.class), anyString(),
-                anyBoolean())).thenReturn(accessTokens);
-        when(tokenMgtDAO.retrieveLatestAccessToken(anyString(), any(AuthenticatedUser.class), anyString(), anyString()
-                , anyBoolean())).thenThrow(new IdentityOAuth2Exception("Error Occured"));
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
 
         IdentityOathEventListener listener = new IdentityOathEventListener();

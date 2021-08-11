@@ -41,7 +41,6 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
-import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
@@ -82,7 +81,6 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
     private Timestamp refreshTokenIssuedTime;
     private long validityPeriodInMillis;
     private long refreshTokenValidityPeriodInMillis;
-    private TokenMgtDAO tokenMgtDAO;
     private static final String DEFAULT_TOKEN_TYPE = "Default";
     private static final String JWT_TOKEN_TYPE = "JWT";
     private static final String DB_NAME = "jdbc/WSO2IdentityDB";
@@ -107,7 +105,6 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
     @BeforeMethod
     public void setUp() {
         authzUser = new AuthenticatedUser();
-        tokenMgtDAO = new TokenMgtDAO();
         issuedTime = new Timestamp(System.currentTimeMillis());
         refreshTokenIssuedTime = new Timestamp(System.currentTimeMillis());
         validityPeriodInMillis = 3600000L;
@@ -198,8 +195,6 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         oAuthAppDO.setApplicationName("testApp");
         AppInfoCache appInfoCache = AppInfoCache.getInstance();
         appInfoCache.addToCache("testConsumerKey", oAuthAppDO);
-        tokenMgtDAO.persistAccessToken("testAccessToken", "testConsumerKey", accessTokenDO, accessTokenDO,
-                "TESTDOMAIN");
         oAuth2TokenValidationRequestDTO.setAccessToken(accessToken);
         when(OAuth2Util.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
 

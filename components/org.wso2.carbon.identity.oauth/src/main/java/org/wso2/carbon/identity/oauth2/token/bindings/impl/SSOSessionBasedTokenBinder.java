@@ -21,7 +21,11 @@ package org.wso2.carbon.identity.oauth2.token.bindings.impl;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 
@@ -44,6 +48,7 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
 
     private List<String> supportedGrantTypes = Collections.singletonList(AUTHORIZATION_CODE);
     private static final String COMMONAUTH_COOKIE = "commonAuthId";
+    private static final Log log = LogFactory.getLog(SSOSessionBasedTokenBinder.class);
 
     @Override
     public String getDisplayName() {
@@ -90,12 +95,17 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
 
         Optional<Cookie> commonAuthCookieOptional = Arrays.stream(cookies)
                 .filter(t -> COMMONAUTH_COOKIE.equals(t.getName())).findAny();
-        if (!commonAuthCookieOptional.isPresent() || StringUtils.isBlank(commonAuthCookieOptional.get().getValue())) {
+        String commonAuthCookieValueFromRequestAttribute = (String) request.getAttribute(COMMONAUTH_COOKIE);
+
+        if ((!commonAuthCookieOptional.isPresent() || StringUtils.isBlank(commonAuthCookieOptional.get().getValue()))
+                && StringUtils.isEmpty(commonAuthCookieValueFromRequestAttribute)) {
             throw new OAuthSystemException("Failed to retrieve token binding value.");
         }
 
         // Get the session context key value form common auth cookie value.
-        return DigestUtils.sha256Hex(commonAuthCookieOptional.get().getValue());
+        return commonAuthCookieOptional
+                .map(cookie -> DigestUtils.sha256Hex(cookie.getValue()))
+                .orElseGet(() -> DigestUtils.sha256Hex(commonAuthCookieValueFromRequestAttribute));
     }
 
     @Override
@@ -113,6 +123,28 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
     @Override
     public boolean isValidTokenBinding(Object request, String bindingReference) {
 
+        try {
+            String sessionIdentifier = getTokenBindingValue((HttpServletRequest) request);
+            if (StringUtils.isBlank(sessionIdentifier)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("CommonAuthId cookie is not found in the request.");
+                }
+                return false;
+            }
+            /* Retrieve session context information using sessionIdentifier in order to check the validity of
+            commonAuthId cookie.*/
+            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionIdentifier);
+            if (sessionContext == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Session context is not found corresponding to the session identifier: " +
+                            sessionIdentifier);
+                }
+                return false;
+            }
+        } catch (OAuthSystemException e) {
+            log.error("Error while getting the token binding value", e);
+            return false;
+        }
         return isValidTokenBinding(request, bindingReference, COMMONAUTH_COOKIE);
     }
 

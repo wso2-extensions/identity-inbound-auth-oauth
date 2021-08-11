@@ -41,14 +41,15 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.DEFAULT_SCOPE_BINDING;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SQLPlaceholders.SCOPE_LIST_PLACEHOLDER;
 
 /**
  * OAuth scope management data access object implementation.
@@ -253,6 +254,11 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
                     requestedScopes, tenantID, includeOIDCScopes));
         }
 
+        // Validate requestedScopes.
+        if (StringUtils.isBlank(requestedScopes)) {
+            return new HashSet<>();
+        }
+
         String sql;
         if (includeOIDCScopes) {
             sql = String.format(SQLQueries.RETRIEVE_REQUESTED_ALL_SCOPES_WITHOUT_SCOPE_TYPE);
@@ -261,10 +267,9 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
         }
 
         List<String> requestedScopeList = Arrays.asList(requestedScopes.split("\\s+"));
-        String sqlIN = requestedScopeList.stream().map(x -> String.valueOf(x))
-                .collect(Collectors.joining("\', \'", "(\'", "\')"));
 
-        sql = sql.replace("(?)", sqlIN);
+        String placeholder = String.join(", ", Collections.nCopies(requestedScopeList.size(), "?"));
+        sql = sql.replace(SCOPE_LIST_PLACEHOLDER, placeholder);
 
         Set<Scope> scopes = new HashSet<>();
         Map<Integer, Scope> scopeMap = new HashMap<>();
@@ -272,8 +277,14 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
         try (Connection conn = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setInt(1, tenantID);
+                int scopeIndex = 2;
                 if (!includeOIDCScopes) {
                     ps.setString(2, Oauth2ScopeConstants.SCOPE_TYPE_OAUTH2);
+                    scopeIndex++;
+                }
+                for (String scope : requestedScopeList) {
+                    ps.setString(scopeIndex, scope);
+                    scopeIndex++;
                 }
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
@@ -391,19 +402,20 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
             throws SQLException {
 
         String query;
-        if (conn.getMetaData().getDriverName().contains("MySQL")
-                || conn.getMetaData().getDriverName().contains("H2")) {
+        String driverName = conn.getMetaData().getDriverName();
+        if (driverName.contains("MySQL")
+                || driverName.contains("MariaDB")
+                || driverName.contains("H2")) {
             query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_MYSQL;
         } else if (conn.getMetaData().getDatabaseProductName().contains("DB2")) {
             query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_DB2SQL;
-        } else if (conn.getMetaData().getDriverName().contains("MS SQL")) {
+        } else if (driverName.contains("MS SQL")) {
             query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_MSSQL;
-        } else if (conn.getMetaData().getDriverName().contains("Microsoft") || conn.getMetaData()
-                .getDriverName().contains("microsoft")) {
+        } else if (driverName.contains("Microsoft") || driverName.contains("microsoft")) {
             query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_MSSQL;
-        } else if (conn.getMetaData().getDriverName().contains("PostgreSQL")) {
+        } else if (driverName.contains("PostgreSQL")) {
             query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_POSTGRESQL;
-        } else if (conn.getMetaData().getDriverName().contains("Informix")) {
+        } else if (driverName.contains("Informix")) {
             // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
             query = SQLQueries.RETRIEVE_SCOPES_WITH_PAGINATION_INFORMIX;
         } else {
@@ -435,19 +447,20 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
             throws SQLException {
 
         String query;
-        if (conn.getMetaData().getDriverName().contains("MySQL")
-                || conn.getMetaData().getDriverName().contains("H2")) {
+        String driverName = conn.getMetaData().getDriverName();
+        if (driverName.contains("MySQL")
+                || driverName.contains("MariaDB")
+                || driverName.contains("H2")) {
             query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_MYSQL;
         } else if (conn.getMetaData().getDatabaseProductName().contains("DB2")) {
             query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_DB2SQL;
-        } else if (conn.getMetaData().getDriverName().contains("MS SQL")) {
+        } else if (driverName.contains("MS SQL")) {
             query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_MSSQL;
-        } else if (conn.getMetaData().getDriverName().contains("Microsoft") || conn.getMetaData()
-                .getDriverName().contains("microsoft")) {
+        } else if (driverName.contains("Microsoft") || driverName.contains("microsoft")) {
             query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_MSSQL;
-        } else if (conn.getMetaData().getDriverName().contains("PostgreSQL")) {
+        } else if (driverName.contains("PostgreSQL")) {
             query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_POSTGRESQL;
-        } else if (conn.getMetaData().getDriverName().contains("Informix")) {
+        } else if (driverName.contains("Informix")) {
             // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
             query = SQLQueries.RETRIEVE_ALL_SCOPES_WITH_PAGINATION_INFORMIX;
         } else {

@@ -30,6 +30,7 @@ import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -56,6 +57,7 @@ import javax.sql.DataSource;
 
 import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -135,6 +137,17 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
             prepareForResponseClaimTest(inputClaims, oidcScopeMap, getClaimsFromCache);
             mockDataSource();
             mockObjectsRelatedToTokenValidation();
+            mockStatic(FrameworkUtils.class);
+            when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+                    .thenReturn(AUTHORIZED_USER_ID);
+
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            authenticatedUser.setUserName(AUTHORIZED_USER_NAME);
+            authenticatedUser.setTenantDomain(TENANT_DOT_COM);
+            authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
+            authenticatedUser.setUserId(AUTHORIZED_USER_ID);
+            mockAccessTokenDOInOAuth2Util(authenticatedUser);
+
             String responseString =
                     userInfoJSONResponseBuilder.getResponseString(
                             getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED, requestedScopes));
@@ -176,6 +189,18 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
         when(authorizationGrantCacheEntry.getEssentialClaims()).thenReturn(ESSENTIAL_CLAIM_JSON);
         mockDataSource();
         mockObjectsRelatedToTokenValidation();
+
+        mockStatic(FrameworkUtils.class);
+        when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+                .thenReturn(AUTHORIZED_USER_ID);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserName(AUTHORIZED_USER_NAME);
+        authenticatedUser.setTenantDomain(TENANT_DOT_COM);
+        authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
+        authenticatedUser.setUserId(AUTHORIZED_USER_ID);
+        mockAccessTokenDOInOAuth2Util(authenticatedUser);
+
         String responseString =
                 userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 
@@ -223,6 +248,18 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
         setUpRequestObjectService();
         mockDataSource();
         mockObjectsRelatedToTokenValidation();
+
+        mockStatic(FrameworkUtils.class);
+        Mockito.when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+                .thenReturn(AUTHORIZED_USER_ID);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserName(AUTHORIZED_USER_NAME);
+        authenticatedUser.setTenantDomain(TENANT_DOT_COM);
+        authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
+        authenticatedUser.setUserId(AUTHORIZED_USER_ID);
+        mockAccessTokenDOInOAuth2Util(authenticatedUser);
+
         String responseString =
                 userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 
@@ -238,6 +275,17 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
         initSingleClaimTest(claimUri, claimValue);
         mockDataSource();
         mockObjectsRelatedToTokenValidation();
+        mockStatic(FrameworkUtils.class);
+        when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+                .thenReturn(AUTHORIZED_USER_ID);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserName(AUTHORIZED_USER_NAME);
+        authenticatedUser.setTenantDomain(TENANT_DOT_COM);
+        authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
+        authenticatedUser.setUserId(AUTHORIZED_USER_ID);
+        mockAccessTokenDOInOAuth2Util(authenticatedUser);
+
         String responseString =
                 userInfoJSONResponseBuilder.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 

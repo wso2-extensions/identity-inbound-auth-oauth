@@ -26,7 +26,6 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.core.dao.OpenIDUserRPDAO;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -57,19 +56,10 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
     private String tenantDomain;
 
     @Mock
-    OpenIDUserRPDAO openIDUserRPDAO;
-
-    @Mock
-    PreparedStatement preparedStatement;
-
-    @Mock
     OAuthServerConfiguration oAuthServerConfiguration;
 
     @Mock
     TokenPersistenceProcessor tokenPersistenceProcessor;
-
-    @Mock
-    ResultSet resultSet;
 
     @BeforeTest
     public void setUp() throws Exception {
@@ -86,6 +76,7 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
         user = new AuthenticatedUser();
         user.setTenantDomain(tenantDomain);
         user.setAuthenticatedSubjectIdentifier(username);
+        user.setUserId("4b4414e1-916b-4475-aaee-6b0751c29ff6");
 
         store = OpenIDConnectUserRPStore.getInstance();
 
@@ -157,7 +148,6 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
         return new Object[][]{
                 {username, clientId, appName, true},
                 {null, clientId, appName, true},
-                {null, "dummyClientId", appName, false},
                 {null, clientId, "dummyAppName", false}
         };
     }

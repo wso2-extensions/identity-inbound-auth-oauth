@@ -25,19 +25,11 @@ import static org.testng.Assert.assertTrue;
 
 public class OAuthScopeCacheKeyTest {
     String scopeName = "Scope1";
-    String tenantId = "Tenant1";
-    Integer scopeTenantHashCode = (scopeName + tenantId).hashCode();
-
-    @Test
-    public void testGetTenantID() throws Exception {
-        OAuthScopeCacheKey authScopeCacheKey = new OAuthScopeCacheKey(scopeName, tenantId);
-        assertEquals(authScopeCacheKey.getTenantID(), tenantId
-                , "Get tenantId successfully.");
-    }
+    Integer scopeTenantHashCode = (scopeName).hashCode();
 
     @Test
     public void testGetScopeName() throws Exception {
-        OAuthScopeCacheKey authScopeCacheKey = new OAuthScopeCacheKey(scopeName, tenantId);
+        OAuthScopeCacheKey authScopeCacheKey = new OAuthScopeCacheKey(scopeName);
         assertEquals(authScopeCacheKey.getScopeName(), scopeName
                 , "Get Scope name successfully.");
     }
@@ -53,8 +45,8 @@ public class OAuthScopeCacheKeyTest {
     @Test(dataProvider = "TestEqualsAuthorizationGrant")
     public void testEquals(boolean istrue) throws Exception {
         Object object = new Object();
-        OAuthScopeCacheKey oauthScopeCacheKey = new OAuthScopeCacheKey(scopeName, tenantId);
-        OAuthScopeCacheKey oAuthScopeCacheKeySample = new OAuthScopeCacheKey(scopeName, tenantId);
+        OAuthScopeCacheKey oauthScopeCacheKey = new OAuthScopeCacheKey(scopeName);
+        OAuthScopeCacheKey oAuthScopeCacheKeySample = new OAuthScopeCacheKey(scopeName);
         if (istrue) {
             assertTrue(oauthScopeCacheKey.equals(oAuthScopeCacheKeySample));
         }
@@ -63,7 +55,7 @@ public class OAuthScopeCacheKeyTest {
 
     @Test
     public void testHashCode() throws Exception {
-        OAuthScopeCacheKey authScopeCacheKey = new OAuthScopeCacheKey(scopeName, tenantId);
+        OAuthScopeCacheKey authScopeCacheKey = new OAuthScopeCacheKey(scopeName);
         Integer authScopeCacheKeysample = authScopeCacheKey.hashCode();
         assertEquals(authScopeCacheKeysample, scopeTenantHashCode, "Get tenant and scope hash code successfully. ");
     }

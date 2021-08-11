@@ -21,6 +21,8 @@ package org.wso2.carbon.identity.oauth2.token.bindings.impl;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.core.SameSiteCookie;
+import org.wso2.carbon.core.ServletCookie;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -37,13 +39,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.AUTHORIZATION_CODE;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.COOKIE_BASED_TOKEN_BINDER;
 
 /**
  * This class provides the cookie based token binder implementation.
  */
 public class CookieBasedTokenBinder extends AbstractTokenBinder {
-
-    private static final String BINDING_TYPE = "cookie";
 
     private static final String COOKIE_NAME = "atbv";
 
@@ -52,7 +53,7 @@ public class CookieBasedTokenBinder extends AbstractTokenBinder {
     @Override
     public String getBindingType() {
 
-        return BINDING_TYPE;
+        return COOKIE_BASED_TOKEN_BINDER;
     }
 
     @Override
@@ -127,10 +128,11 @@ public class CookieBasedTokenBinder extends AbstractTokenBinder {
     @Override
     public void setTokenBindingValueForResponse(HttpServletResponse response, String bindingValue) {
 
-        Cookie cookie = new Cookie(COOKIE_NAME, bindingValue);
+        ServletCookie cookie = new ServletCookie(COOKIE_NAME, bindingValue);
         cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
+        cookie.setSameSite(SameSiteCookie.NONE);
         response.addCookie(cookie);
     }
 
@@ -140,11 +142,13 @@ public class CookieBasedTokenBinder extends AbstractTokenBinder {
         Cookie[] cookies = request.getCookies();
         if (ArrayUtils.isNotEmpty(cookies)) {
             Arrays.stream(cookies).filter(t -> COOKIE_NAME.equals(t.getName())).findAny().ifPresent(cookie -> {
-                cookie.setMaxAge(0);
-                cookie.setSecure(true);
-                cookie.setHttpOnly(true);
-                cookie.setPath("/");
-                response.addCookie(cookie);
+                ServletCookie servletCookie = new ServletCookie(cookie.getName(), cookie.getValue());
+                servletCookie.setMaxAge(0);
+                servletCookie.setSecure(true);
+                servletCookie.setHttpOnly(true);
+                servletCookie.setPath("/");
+                servletCookie.setSameSite(SameSiteCookie.NONE);
+                response.addCookie(servletCookie);
             });
         }
     }

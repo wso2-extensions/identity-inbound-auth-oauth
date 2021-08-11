@@ -24,7 +24,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
@@ -33,7 +32,6 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
@@ -42,9 +40,6 @@ import static org.testng.Assert.assertTrue;
  */
 @PrepareForTest({OAuthServerConfiguration.class, AbstractAuthorizationGrantHandler.class})
 public class ClientCredentialsGrantHandlerTest extends PowerMockIdentityBaseTest {
-
-    @Mock
-    private TokenMgtDAO mockTokenMgtDAO;
 
     @Mock
     private OAuthServerConfiguration mockOAuthServerConfiguration;
@@ -56,7 +51,6 @@ public class ClientCredentialsGrantHandlerTest extends PowerMockIdentityBaseTest
 
         initMocks(this);
         mockStatic(OAuthServerConfiguration.class);
-        whenNew(TokenMgtDAO.class).withNoArguments().thenReturn(mockTokenMgtDAO);
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
     }
 

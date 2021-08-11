@@ -44,11 +44,12 @@ public class GenerateKeysTest extends PowerMockTestCase {
     public void testGetKey(int[] keyLengths) throws Exception {
 
         // First, test zero length scenario.
-        Assert.assertEquals(StringUtils.EMPTY, GenerateKeys.getKey(0));
+        Assert.assertNotEquals(StringUtils.EMPTY, GenerateKeys.getKey(0));
 
         for (int keyLength : keyLengths) {
-            String generatedKey = GenerateKeys.getKey(keyLength);
-            Assert.assertTrue(validateKey(generatedKey, keyLength));
+            int length = Math.max(keyLength, Constants.KEY_LENGTH);
+            String generatedKey = GenerateKeys.getKey(length);
+            Assert.assertTrue(validateKey(generatedKey, length));
         }
     }
 

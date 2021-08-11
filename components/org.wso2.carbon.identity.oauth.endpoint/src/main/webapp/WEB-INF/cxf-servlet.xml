@@ -61,13 +61,18 @@
     <bean id="oAuthClientAuthnFactoryBean" class="org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthnServiceFactory"/>
     <bean id="endpointUtilBean" class="org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil">
         <property name="oAuth2Service" ref="oAuth2ServiceFactoryBean"/>
+        <property name="oAuth2ScopeService" ref="oAuth2ScopeServiceFactoryBean"/>
+        <property name="oAuthAdminService" ref="oAuthAdminServiceFactoryBean"/>
         <property name="SSOConsentService"  ref="ssoConsentServiceFactoryBean"/>
         <property name="oauthServerConfiguration"  ref="oauthServerConfigurationFactoryBean"/>
         <property name="requestObjectService"  ref="requestObjectServiceFactoryBean"/>
         <property name="cibaAuthService"  ref="cibaAuthServiceFactoryBean"/>
+        <property name="idpManager" ref="idpManagerBean"/>
     </bean>
     <bean id="oidcProviderResponseBuilderBean" class="org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.impl.OIDProviderJSONResponseBuilder"/>
     <bean id="oAuth2ServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.OAuth2ServiceFactory"/>
+    <bean id="oAuth2ScopeServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.OAuth2ScopeServiceFactory"/>
+    <bean id="oAuthAdminServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.OAuthAdminServiceFactory"/>
     <bean id="ssoConsentServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.SSOConsentServiceFactory"/>
     <bean id="oauthServerConfigurationFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.OAuthServerConfigurationFactory"/>
     <bean id="requestObjectServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.RequestObjectServiceFactory"/>
@@ -81,4 +86,5 @@
     </bean>
     <bean id="cibaEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.ciba.OAuth2CibaEndpoint"/>
     <bean id="cibaAuthServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.CibaServiceFactory"/>
+    <bean id="idpManagerBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.IDPManagerFactory"/>
 </beans>

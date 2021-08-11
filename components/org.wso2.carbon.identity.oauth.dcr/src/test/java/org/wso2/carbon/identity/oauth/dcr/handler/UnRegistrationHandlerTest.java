@@ -21,13 +21,13 @@ import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.dcr.context.DCRMessageContext;
 import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationResponse;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRManagementService;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.doAnswer;
@@ -40,7 +40,7 @@ import static org.testng.Assert.assertEquals;
  * Unit test covering UnRegistrationHandler
  */
 @PrepareForTest({UnRegistrationHandler.class, DCRManagementService.class})
-public class UnRegistrationHandlerTest extends PowerMockIdentityBaseTest {
+public class UnRegistrationHandlerTest extends PowerMockTestCase {
 
     private UnRegistrationHandler unRegistrationHandler;
 

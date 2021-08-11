@@ -21,24 +21,30 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.TokenValidationHandler;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyMap;
+import static org.mockito.Matchers.anyObject;
+import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
-@PrepareForTest({TokenValidationHandler.class, OAuthComponentServiceHolder.class})
+@PrepareForTest({OAuth2Util.class, TokenValidationHandler.class, OAuthComponentServiceHolder.class,
+        OAuthServerConfiguration.class})
 public class OAuth2TokenValidationServiceTest extends PowerMockTestCase {
+
     private OAuth2TokenValidationService tokenValidationService;
 
     @Mock
@@ -46,6 +52,9 @@ public class OAuth2TokenValidationServiceTest extends PowerMockTestCase {
 
     @Mock
     private TokenValidationHandler mockedValidationHandler;
+
+    @Mock
+    private OAuthServerConfiguration mockedOAuthServerConfiguration;
 
     @Mock
     private OAuthComponentServiceHolder mockedOAuthComponentServiceHolder;
@@ -67,18 +76,20 @@ public class OAuth2TokenValidationServiceTest extends PowerMockTestCase {
 
     @BeforeMethod
     public void setUp() throws Exception {
-        tokenValidationService = new OAuth2TokenValidationService();
 
+        tokenValidationService = new OAuth2TokenValidationService();
         mockStatic(TokenValidationHandler.class);
         when(TokenValidationHandler.getInstance()).thenReturn(mockedValidationHandler);
 
         mockStatic(OAuthComponentServiceHolder.class);
         when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockedOAuthComponentServiceHolder);
         when(mockedOAuthComponentServiceHolder.getOAuthEventInterceptorProxy()).thenReturn(mockedOAuthEventInterceptor);
+
     }
 
     @Test
     public void testValidate() throws Exception {
+
         when(mockedOAuthEventInterceptor.isEnabled()).thenReturn(true, false);
         when(mockedValidationHandler.validate(any(OAuth2TokenValidationRequestDTO.class))).thenReturn
                 (mockedOAuth2TokenValidationResponseDTO);
@@ -88,6 +99,7 @@ public class OAuth2TokenValidationServiceTest extends PowerMockTestCase {
 
     @Test
     public void testValidateWithErrorResponse() throws Exception {
+
         when(mockedOAuthEventInterceptor.isEnabled()).thenReturn(true);
         doThrow(new IdentityOAuth2Exception("dummyException")).when(mockedOAuthEventInterceptor).onPreTokenValidation
                 (any(OAuth2TokenValidationRequestDTO.class), anyMap());
@@ -101,6 +113,7 @@ public class OAuth2TokenValidationServiceTest extends PowerMockTestCase {
 
     @Test
     public void testValidateWithErrorResponse2() throws Exception {
+
         String errorMsg = "Server error occurred while validating the OAuth2 access token";
         when(mockedOAuthEventInterceptor.isEnabled()).thenReturn(true);
 
@@ -116,6 +129,7 @@ public class OAuth2TokenValidationServiceTest extends PowerMockTestCase {
 
     @Test
     public void testValidateWithPrePostValidation() throws Exception {
+
         when(mockedOAuthComponentServiceHolder.getOAuthEventInterceptorProxy()).thenReturn(null);
 
         when(mockedValidationHandler.validate(any(OAuth2TokenValidationRequestDTO.class))).thenReturn
@@ -126,6 +140,7 @@ public class OAuth2TokenValidationServiceTest extends PowerMockTestCase {
 
     @Test
     public void testFindOAuthConsumerIfTokenIsValid() throws Exception {
+
         when(mockedValidationHandler.findOAuthConsumerIfTokenIsValid(any(OAuth2TokenValidationRequestDTO.class)))
                 .thenReturn(mockedClientApplicationDTO);
 
@@ -136,6 +151,7 @@ public class OAuth2TokenValidationServiceTest extends PowerMockTestCase {
 
     @Test
     public void testFindOAuthConsumerIfTokenIsValidWithException() throws Exception {
+
         when(mockedValidationHandler.findOAuthConsumerIfTokenIsValid(any(OAuth2TokenValidationRequestDTO.class)))
                 .thenThrow(new IdentityOAuth2Exception("dummyException"));
 
@@ -148,6 +164,7 @@ public class OAuth2TokenValidationServiceTest extends PowerMockTestCase {
 
     @Test
     public void testBuildIntrospectionResponse() throws Exception {
+
         when(mockedOAuthEventInterceptor.isEnabled()).thenReturn(true);
 
         when(mockedValidationHandler.buildIntrospectionResponse(any(OAuth2TokenValidationRequestDTO.class)))
@@ -163,12 +180,18 @@ public class OAuth2TokenValidationServiceTest extends PowerMockTestCase {
 
     @Test
     public void testBuildIntrospectionResponseWithErrorResponse() throws Exception {
+
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
+
         when(mockedOAuthEventInterceptor.isEnabled()).thenReturn(true);
         doThrow(new IdentityOAuth2Exception("dummyException")).when(mockedOAuthEventInterceptor).onPreTokenValidation
                 (any(OAuth2TokenValidationRequestDTO.class), anyMap());
-
+        mockStatic(OAuth2Util.class);
+        doNothing().when(OAuth2Util.class, "triggerOnIntrospectionExceptionListeners", anyObject(), anyObject());
         OAuth2IntrospectionResponseDTO oAuth2IntrospectionResponseDTO = tokenValidationService
                 .buildIntrospectionResponse(mockedOAuth2TokenValidationRequestDTO);
+
         assertNotNull(oAuth2IntrospectionResponseDTO, "Expected a not null object");
         assertEquals(oAuth2IntrospectionResponseDTO.getError(), "dummyException",
                 "Expected error message did not received");
@@ -176,6 +199,7 @@ public class OAuth2TokenValidationServiceTest extends PowerMockTestCase {
 
     @Test
     public void testBuildIntrospectionResponseWithErrorResponse2() throws Exception {
+
         String errorMsg = "Server error occurred while building the introspection response";
         when(mockedOAuthEventInterceptor.isEnabled()).thenReturn(true);
 
@@ -190,6 +214,7 @@ public class OAuth2TokenValidationServiceTest extends PowerMockTestCase {
 
     @Test
     public void testBuildIntrospectionResponseWithPostIntrospectionValidation() throws Exception {
+
         when(mockedOAuthEventInterceptor.isEnabled()).thenReturn(true);
 
         when(mockedValidationHandler.buildIntrospectionResponse(any(OAuth2TokenValidationRequestDTO.class)))

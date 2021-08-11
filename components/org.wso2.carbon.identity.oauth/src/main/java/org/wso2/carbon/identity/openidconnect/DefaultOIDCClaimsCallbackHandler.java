@@ -65,7 +65,6 @@ import java.util.regex.Pattern;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.LOCAL_ROLE_CLAIM_URI;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
 
@@ -170,14 +169,16 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         String spTenantDomain = requestMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
         String[] approvedScopes = requestMsgCtx.getScope();
         String token = getAccessToken(requestMsgCtx);
+        String authorizationCode = getAuthorizationCode(requestMsgCtx);
         String grantType = requestMsgCtx.getOauth2AccessTokenReqDTO().getGrantType();
 
-        return filterOIDCClaims(token, grantType, userClaimsInOIDCDialect, user, approvedScopes, clientId,
-                spTenantDomain);
+        return filterOIDCClaims(token, authorizationCode, grantType, userClaimsInOIDCDialect, user, approvedScopes,
+                clientId, spTenantDomain);
     }
 
 
     private Map<String, Object> filterOIDCClaims(String accessToken,
+                                                 String authorizationCode,
                                                  String grantType,
                                                  Map<String, Object> userClaimsInOIDCDialect,
                                                  AuthenticatedUser authenticatedUser,
@@ -191,10 +192,22 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         // https://github.com/wso2/product-is/issues/2680
 
         if (accessToken != null) {
-            // Handle essential claims of the request object
-            Map<String, Object> claimsFromRequestObject =
-                    filterClaimsFromRequestObject(userClaimsInOIDCDialect, accessToken);
-            filteredUserClaimsByOIDCScopes.putAll(claimsFromRequestObject);
+            if (StringUtils.isNotBlank(authorizationCode)) {
+                AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(authorizationCode);
+                AuthorizationGrantCacheEntry cacheEntry =
+                        AuthorizationGrantCache.getInstance().getValueFromCacheByCode(cacheKey);
+                if (cacheEntry != null && cacheEntry.isRequestObjectFlow()) {
+                    // Handle essential claims of the request object
+                    Map<String, Object> claimsFromRequestObject =
+                            filterClaimsFromRequestObject(userClaimsInOIDCDialect, accessToken);
+                    filteredUserClaimsByOIDCScopes.putAll(claimsFromRequestObject);
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("The request does not contains request object. So skipping " +
+                                "filterClaimsFromRequestObject");
+                    }
+                }
+            }
         }
 
         // Restrict the claims based on user consent given
@@ -396,8 +409,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         String accessToken = getAccessToken(authzReqMessageContext);
         String grantType = OAuthConstants.GrantTypes.IMPLICIT;
 
-        return filterOIDCClaims(accessToken, grantType, userClaimsInOIDCDialect, user, approvedScopes,
-                clientId, spTenantDomain);
+        return filterOIDCClaims(accessToken, StringUtils.EMPTY, grantType, userClaimsInOIDCDialect, user,
+                approvedScopes, clientId, spTenantDomain);
     }
 
     private Map<String, Object> retrieveClaimsForLocalUser(OAuthAuthzReqMessageContext authzReqMessageContext)
@@ -525,12 +538,20 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     private void handleServiceProviderRoleMappings(ServiceProvider serviceProvider,
                                                    String claimSeparator,
                                                    Map<String, String> userClaims) throws FrameworkException {
-        if (isNotEmpty(userClaims) && userClaims.containsKey(LOCAL_ROLE_CLAIM_URI)) {
-            String roleClaim = userClaims.get(LOCAL_ROLE_CLAIM_URI);
+        for (String roleGroupClaimURI : IdentityUtil.getRoleGroupClaims()) {
+            handleSPRoleMapping(serviceProvider, claimSeparator, userClaims, roleGroupClaimURI);
+        }
+    }
+
+    private void handleSPRoleMapping(ServiceProvider serviceProvider, String claimSeparator, Map<String, String>
+            userClaims, String roleGroupClaimURI) throws FrameworkException {
+
+        if (isNotEmpty(userClaims) && userClaims.containsKey(roleGroupClaimURI)) {
+            String roleClaim = userClaims.get(roleGroupClaimURI);
             List<String> rolesList = Arrays.asList(roleClaim.split(Pattern.quote(claimSeparator)));
             String spMappedRoleClaim =
                     OIDCClaimUtil.getServiceProviderMappedUserRoles(serviceProvider, rolesList, claimSeparator);
-            userClaims.put(LOCAL_ROLE_CLAIM_URI, spMappedRoleClaim);
+            userClaims.put(roleGroupClaimURI, spMappedRoleClaim);
         }
     }
 

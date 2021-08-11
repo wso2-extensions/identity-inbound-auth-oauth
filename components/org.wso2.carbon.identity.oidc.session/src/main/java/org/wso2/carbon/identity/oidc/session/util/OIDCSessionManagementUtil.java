@@ -29,6 +29,9 @@ import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
 import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -176,6 +179,42 @@ public class OIDCSessionManagementUtil {
     }
 
     /**
+     * Adds the browser state cookie with tenant qualified path to the response.
+     *
+     * @param response
+     * @param request
+     * @param loginTenantDomain
+     * @param sessionContextIdentifier
+     * @return Cookie
+     */
+    public static Cookie addOPBrowserStateCookie(HttpServletResponse response, HttpServletRequest request,
+                                                 String loginTenantDomain, String sessionContextIdentifier) {
+
+        SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextIdentifier,
+                loginTenantDomain);
+        if (sessionContext != null) {
+            Object opbsValue = sessionContext.getProperty(OIDCSessionConstants.OPBS_COOKIE_ID);
+            if (opbsValue != null) {
+                return getOIDCessionStateManager().addOPBrowserStateCookie(response, request,
+                        loginTenantDomain, (String) opbsValue);
+            }
+        }
+        return getOIDCessionStateManager().addOPBrowserStateCookie(response, request,
+                loginTenantDomain, generateOPBrowserStateCookieValue(loginTenantDomain));
+    }
+
+    /**
+     * Generate OPBrowserState Cookie Value.
+     *
+     * @param tenantDomain
+     * @return
+     */
+    public static String generateOPBrowserStateCookieValue(String tenantDomain) {
+
+        return getOIDCessionStateManager().generateOPBrowserStateCookieValue(tenantDomain);
+    }
+
+    /**
      * Invalidate the browser state cookie.
      *
      * @param request
@@ -191,7 +230,18 @@ public class OIDCSessionManagementUtil {
                     ServletCookie servletCookie = new ServletCookie(cookie.getName(), cookie.getValue());
                     servletCookie.setMaxAge(0);
                     servletCookie.setSecure(true);
-                    servletCookie.setPath("/");
+
+                    if (IdentityTenantUtil.isTenantedSessionsEnabled()) {
+                        // check whether the opbs cookie has a tenanted path.
+                        if (cookie.getValue().endsWith(OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX)) {
+                            String tenantDomain = resolveTenantDomain(request);
+                            servletCookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
+                        } else {
+                            servletCookie.setPath("/");
+                        }
+                    } else {
+                        servletCookie.setPath("/");
+                    }
                     servletCookie.setSameSite(SameSiteCookie.NONE);
                     response.addCookie(servletCookie);
                     return cookie;
@@ -200,6 +250,21 @@ public class OIDCSessionManagementUtil {
         }
 
         return null;
+    }
+
+    /**
+     * Resolve the user login tenant domain.
+     *
+     * @param request
+     * @return tenantDomain
+     */
+    private static String resolveTenantDomain(HttpServletRequest request) {
+
+        String tenantDomain = request.getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
+        if (StringUtils.isBlank(tenantDomain)) {
+            return IdentityTenantUtil.getTenantDomainFromContext();
+        }
+        return tenantDomain;
     }
 
     /**
@@ -365,6 +430,11 @@ public class OIDCSessionManagementUtil {
      */
     public static String extractClientIDFromDecryptedIDToken(JWT decryptedIDToken) throws ParseException {
 
+        /*
+        Based in the OpenId spec, decryptedIDToken is suppose to be a signedJWT.
+        However here for the sake of backward compatibility we are ignoring this,
+        as there are clients who send encrypted claimSet.
+        */
         String clientId = (String) decryptedIDToken.getJWTClaimsSet().getClaims()
                 .get(OIDCSessionConstants.OIDC_ID_TOKEN_AZP_CLAIM);
         if (StringUtils.isBlank(clientId)) {

@@ -19,7 +19,7 @@ package org.wso2.carbon.identity.oauth.cache;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.application.common.cache.BaseCache;
+import org.wso2.carbon.identity.core.cache.BaseCache;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 
 /**
@@ -53,10 +53,11 @@ public class OAuthScopeBindingCache extends BaseCache<OAuthScopeBindingCacheKey,
      *
      * @param key   Key which cache entry is indexed.
      * @param entry Actual object where cache entry is placed.
+     * @param tenantId Tenant where the cache is maintained.
      */
-    public void addToCache(OAuthScopeBindingCacheKey key, Scope[] entry) {
+    public void addToCache(OAuthScopeBindingCacheKey key, Scope[] entry, int tenantId) {
 
-        super.addToCache(key, entry);
+        super.addToCache(key, entry, tenantId);
         if (log.isDebugEnabled()) {
             log.debug("Scope bindings are added to the cache. \n" + ArrayUtils.toString(entry));
         }
@@ -67,10 +68,11 @@ public class OAuthScopeBindingCache extends BaseCache<OAuthScopeBindingCacheKey,
      *
      * @param key CacheKey
      * @return Cached entry.
+     * @param tenantId Tenant where the cache is maintained.
      */
-    public Scope[] getValueFromCache(OAuthScopeBindingCacheKey key) {
+    public Scope[] getValueFromCache(OAuthScopeBindingCacheKey key, int tenantId) {
 
-        Scope[] entry = super.getValueFromCache(key);
+        Scope[] entry = super.getValueFromCache(key, tenantId);
         if (log.isDebugEnabled()) {
             log.debug("Scopes are getting from the cache. \n" + ArrayUtils.toString(entry));
         }
@@ -81,13 +83,14 @@ public class OAuthScopeBindingCache extends BaseCache<OAuthScopeBindingCacheKey,
      * Clears a cache entry.
      *
      * @param key Key to clear cache.
+     * @param tenantId Tenant where the cache is maintained.
      */
-    public void clearCacheEntry(OAuthScopeBindingCacheKey key) {
+    public void clearCacheEntry(OAuthScopeBindingCacheKey key, int tenantId) {
 
-        super.clearCacheEntry(key);
+        super.clearCacheEntry(key, tenantId);
         if (log.isDebugEnabled()) {
             log.debug("Scope bindings type : " + key.getBindingType() + "" +
-                    "is removed from the cache in tenant: " + key.getTenantID());
+                    "is removed from the cache in tenant: " + tenantId);
         }
     }
 }

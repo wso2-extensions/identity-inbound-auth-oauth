@@ -51,11 +51,28 @@ public class Constants {
     public static final String SEPARATED_WITH_SPACE = " ";
     public static final String ERROR = "error";
     public static final String ERROR_DESCRIPTION = "error_description";
+    public static final String DEVICE_ENDPOINT_PATH = "/authenticationendpoint/device.do";
+    public static final String DEVICE_SUCCESS_ENDPOINT_PATH = "/authenticationendpoint/device_success.do";
+    public static final String USERCODE_QUANTIFIER_CONSTRAINT = "USRCDE_QNTFR_CONSTRAINT";
+
+    public static final String EXPIRY_TIME_PATH = "OAuth.SupportedGrantTypes.SupportedGrantType.ExpiryTime";
+    public static final String CONF_KEY_SET = "OAuth.SupportedGrantTypes.SupportedGrantType.KeySet";
+    public static final String CONF_USER_CODE_LENGTH = "OAuth.SupportedGrantTypes.SupportedGrantType.UserCodeLength";
 
     // Configurable values.
     public static final int KEY_LENGTH = 6;
-    public static final long EXPIRES_IN_VALUE = 600000L;
-    public static final int INTERVAL_VALUE = 5000;
+    public static final long EXPIRES_IN_MILLISECONDS = 600000L;
+    public static final int  INTERVAL_MILLISECONDS = 5000;
     public static final String KEY_SET = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
+    public static final int DEFAULT_DEVICE_TOKEN_PERSIST_RETRY_COUNT = 5;
 
+    public static final String PROXY_ENABLE = "JWTValidatorConfigs.JWKSEndpoint.HTTPProxy.Enable";
+    public static final String PROXY_HOST = "JWTValidatorConfigs.JWKSEndpoint.HTTPProxy.Host";
+    public static final String PROXY_PORT = "JWTValidatorConfigs.JWKSEndpoint.HTTPProxy.Port";
+    public static final String PROXY_USERNAME = "JWTValidatorConfigs.JWKSEndpoint.HTTPProxy.Username";
+    public static final String PROXY_PASSWORD = "JWTValidatorConfigs.JWKSEndpoint.HTTPProxy.Password";
+    public static final String PROTOCOL_HTTPS = "HTTPS";
+    public static final String TRUSTSTORE_LOCATION = "Security.TrustStore.Location";
+    public static final String TRUSTSTORE_PASSWORD = "Security.TrustStore.Password";
+    public static final String TRUSTSTORE_TYPE = "JKS";
 }

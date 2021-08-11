@@ -22,9 +22,11 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -41,7 +43,7 @@ import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForToken;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserId;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTimeToExpire;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validatePKCE;
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.CODE_ID;
@@ -80,7 +82,6 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                     ", authorized user : " + authzCodeBean.getAuthorizedUser() +
                     ", scope : " + OAuth2Util.buildScopeString(authzCodeBean.getScope()));
         }
-
         return true;
     }
 
@@ -253,8 +254,15 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                         tokenReqDTO.getAuthorizationCode());
         if (validationResult != null) {
             if (!validationResult.isActiveCode()) {
+                String tokenAlias = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                        .getAccessTokenByTokenId(validationResult.getTokenId());
                 //revoking access token issued for authorization code as per RFC 6749 Section 4.1.2
                 revokeExistingAccessTokens(validationResult.getTokenId(), validationResult.getAuthzCodeDO());
+
+                clearTokenCache(tokenAlias, validationResult.getTokenId());
+                String scope = OAuth2Util.buildScopeString(validationResult.getAuthzCodeDO().getScope());
+                OAuthUtil.clearOAuthCache(tokenReqDTO.getClientId(), validationResult.getAuthzCodeDO().
+                        getAuthorizedUser(), scope);
             }
             return validationResult.getAuthzCodeDO();
         } else {
@@ -265,8 +273,15 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     }
 
     private void revokeExistingAccessTokens(String tokenId, AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception {
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessToken(tokenId, authzCodeDO
-                .getAuthorizedUser().toString());
+
+        String userId = null;
+        try {
+            userId = authzCodeDO.getAuthorizedUser().getUserId();
+        } catch (UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception("User id not found for user: "
+                    + authzCodeDO.getAuthorizedUser().getLoggableUserId(), e);
+        }
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessToken(tokenId, userId);
 
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)) {
@@ -280,11 +295,16 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         }
     }
 
-    private String buildCacheKeyForToken(String clientId, AuthzCodeDO authzCodeDO) {
+    private String buildCacheKeyForToken(String clientId, AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception {
 
         String scope = OAuth2Util.buildScopeString(authzCodeDO.getScope());
-        return buildCacheKeyStringForToken(clientId, scope, authzCodeDO.getAuthorizedUser().toString(),
-                authzCodeDO.getAuthorizedUser().getFederatedIdPName(), authzCodeDO.getTokenBindingReference());
+        try {
+            return buildCacheKeyStringForTokenWithUserId(clientId, scope, authzCodeDO.getAuthorizedUser().getUserId(),
+                    authzCodeDO.getAuthorizedUser().getFederatedIdPName(), authzCodeDO.getTokenBindingReference());
+        } catch (UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception("User id not available for user: "
+                    + authzCodeDO.getAuthorizedUser().getLoggableUserId(), e);
+        }
     }
 
     /**
@@ -318,13 +338,36 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         return true;
     }
 
-    private void clearTokenCache(AuthzCodeDO authzCodeBean, String clientId) {
+    private void clearTokenCache(AuthzCodeDO authzCodeBean, String clientId) throws IdentityOAuth2Exception {
+
         if (cacheEnabled) {
             String cacheKeyString = buildCacheKeyForToken(clientId, authzCodeBean);
             OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(cacheKeyString));
             if (log.isDebugEnabled()) {
                 log.debug("Removed token from cache for user : " + authzCodeBean.getAuthorizedUser().toString() +
                         ", for client : " + clientId);
+            }
+        }
+    }
+
+    private void clearTokenCache(String tokenAlias, String tokenId) {
+
+        if (cacheEnabled) {
+            if (tokenAlias == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Received token alias is null. Skipping clearing token cache with token alias for " +
+                            "tokenId : " + tokenId);
+                }
+                return;
+            }
+            OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(tokenAlias));
+            if (log.isDebugEnabled()) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("Removed token from cache for token alias : " + tokenAlias);
+                } else {
+                    log.debug("Removed token from cache for token alias associated with tokenId : "
+                            + tokenId);
+                }
             }
         }
     }

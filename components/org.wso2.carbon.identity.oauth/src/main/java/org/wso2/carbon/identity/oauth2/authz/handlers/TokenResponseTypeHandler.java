@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.common.model.Claim;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.base.IdentityConstants;
@@ -87,7 +88,13 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
         respDTO.setCallbackURI(authorizationReqDTO.getCallbackUrl());
 
         String consumerKey = authorizationReqDTO.getConsumerKey();
-        String authorizedUser = authorizationReqDTO.getUser().toString();
+        String authorizedUserId = null;
+        try {
+            authorizedUserId = authorizationReqDTO.getUser().getUserId();
+        } catch (UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving the user id for user: "
+                    + authorizationReqDTO.getUser().getLoggableUserId());
+        }
         String oAuthCacheKeyString;
 
         String responseType = oauthAuthzMsgCtx.getAuthorizationReqDTO().getResponseType();
@@ -107,13 +114,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
             grantType = responseType;
         }
 
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-
-        if (isUsernameCaseSensitive) {
-            oAuthCacheKeyString = consumerKey + ":" + authorizedUser + ":" + scope;
-        } else {
-            oAuthCacheKeyString = consumerKey + ":" + authorizedUser.toLowerCase() + ":" + scope;
-        }
+        oAuthCacheKeyString = consumerKey + ":" + authorizedUserId + ":" + scope;
 
         OAuthCacheKey cacheKey = new OAuthCacheKey(oAuthCacheKeyString);
         String userStoreDomain = null;
@@ -136,7 +137,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
         AccessTokenDO tokenDO = null;
 
-        synchronized ((consumerKey + ":" + authorizedUser + ":" + scope).intern()) {
+        synchronized ((consumerKey + ":" + authorizedUserId + ":" + scope).intern()) {
 
             AccessTokenDO existingAccessTokenDO = null;
             // check if valid access token exists in cache
@@ -145,7 +146,8 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
                 if (existingAccessTokenDO != null) {
                     if (log.isDebugEnabled()) {
                         log.debug("Retrieved active Access Token for Client Id : " + consumerKey + ", User ID :"
-                                + authorizedUser + " and Scope : " + scope + " from cache");
+                                + authorizationReqDTO.getUser().getLoggableUserId() + " and Scope : " + scope
+                                + " from cache");
                     }
 
                     long expireTime = OAuth2Util.getTokenExpireTimeMillis(existingAccessTokenDO);
@@ -205,7 +207,8 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
                 } else {
                     if (log.isDebugEnabled()) {
                         log.debug("No active access token found in cache for Client ID : " + consumerKey + ", User "
-                                + "ID" + " : " + authorizedUser + " and Scope : " + scope);
+                                + "ID" + " : " + authorizationReqDTO.getUser().getLoggableUserId() + " and Scope : "
+                                + scope);
                     }
                 }
             }
@@ -221,7 +224,8 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
                     if (log.isDebugEnabled()) {
                         log.debug("Retrieved latest Access Token for Client ID : " + consumerKey + ", User ID :"
-                                + authorizedUser + " and Scope : " + scope + " from database");
+                                + authorizationReqDTO.getUser().getLoggableUserId() + " and Scope : " + scope
+                                + " from database");
                     }
 
                     long expiryTime = OAuth2Util.getTokenExpireTimeMillis(existingAccessTokenDO);
@@ -303,14 +307,14 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
                 } else {
                     if (log.isDebugEnabled()) {
                         log.debug("No access token found in database for Client ID : " + consumerKey + ", User ID : "
-                                + authorizedUser + " and Scope : " + scope);
+                                + authorizationReqDTO.getUser().getLoggableUserId() + " and Scope : " + scope);
                     }
                 }
             }
 
             if (log.isDebugEnabled()) {
-                log.debug("Issuing a new access token for client id: " + consumerKey + ", user : " + authorizedUser +
-                        "and scope : " + scope);
+                log.debug("Issuing a new access token for client id: " + consumerKey + ", user : "
+                        + authorizationReqDTO.getUser().getLoggableUserId() + "and scope : " + scope);
             }
 
             Timestamp timestamp = new Timestamp(new Date().getTime());
@@ -412,7 +416,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
             if (log.isDebugEnabled()) {
                 log.debug("Persisted Access Token for " +
                         "Client ID : " + authorizationReqDTO.getConsumerKey() +
-                        ", Authorized User : " + authorizationReqDTO.getUser() +
+                        ", Authorized User : " + authorizationReqDTO.getUser().getLoggableUserId() +
                         ", Timestamp : " + timestamp +
                         ", Validity period (s) : " + newAccessTokenDO.getValidityPeriod() +
                         ", Scope : " + OAuth2Util.buildScopeString(oauthAuthzMsgCtx.getApprovedScope()) +

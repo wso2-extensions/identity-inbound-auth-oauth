@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.4.92-SNAPSHOT</version>
+        <version>6.7.19-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -56,10 +56,6 @@
         <dependency>
             <groupId>com.google.gdata.wso2</groupId>
             <artifactId>gdata-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
         </dependency>
         <dependency>
             <groupId>com.thetransactioncompany.wso2</groupId>
@@ -182,6 +178,7 @@
                                         <include>oauth2.war</include>
                                         <include>p2.inf</include>
                                         <include>build.properties</include>
+                                        <include>oauth_response.html</include>
                                         <include>oidc-scope-config.xml</include>
                                         <include>oauth-scope-bindings.xml</include>
                                     </includes>
@@ -214,7 +211,6 @@
                                 <bundleDef>com.google.gdata.wso2:gdata-core</bundleDef>
                                 <bundleDef>com.google.code.gson:gson</bundleDef>
                                 <bundleDef>com.googlecode.json-simple.wso2:json-simple</bundleDef>
-                                <bundleDef>com.google.guava:guava</bundleDef>
                                 <bundleDef>com.thetransactioncompany.wso2:java-property-utils</bundleDef>
                                 <bundleDef>com.thetransactioncompany.wso2:cors-filter</bundleDef>
                                 <bundleDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oauth</bundleDef>

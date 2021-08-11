@@ -18,7 +18,6 @@ package org.wso2.carbon.identity.oauth.cache;
 
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth.listener.OAuthCacheRemoveListener;
 import org.wso2.carbon.utils.CarbonUtils;
 
 /**
@@ -33,7 +32,6 @@ public class OIDCAudienceCache extends BaseCache<OIDCAudienceCacheKey, CacheEntr
 
     private OIDCAudienceCache() {
         super(OAUTH_CACHE_NAME);
-        super.addListener(new OAuthCacheRemoveListener());
     }
 
     public static OIDCAudienceCache getInstance() {

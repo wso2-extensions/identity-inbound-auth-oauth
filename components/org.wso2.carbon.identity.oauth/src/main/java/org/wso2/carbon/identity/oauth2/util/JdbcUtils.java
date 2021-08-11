@@ -20,14 +20,15 @@ import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DB2;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.H2;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.INFORMIX;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.MARIADB;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.MICROSOFT;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.MY_SQL;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.POSTGRE_SQL;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.S_MICROSOFT;
 
-import static org.wso2.carbon.consent.mgt.core.constant.ConsentConstants.DB2;
-import static org.wso2.carbon.consent.mgt.core.constant.ConsentConstants.H2;
-import static org.wso2.carbon.consent.mgt.core.constant.ConsentConstants.INFORMIX;
-import static org.wso2.carbon.consent.mgt.core.constant.ConsentConstants.MICROSOFT;
-import static org.wso2.carbon.consent.mgt.core.constant.ConsentConstants.MY_SQL;
-import static org.wso2.carbon.consent.mgt.core.constant.ConsentConstants.POSTGRE_SQL;
-import static org.wso2.carbon.consent.mgt.core.constant.ConsentConstants.S_MICROSOFT;
 
 /**
  * A util class to support the Jdbc executions.
@@ -45,14 +46,14 @@ public class JdbcUtils {
     }
 
     /**
-     * Check if the DB is H2, MySQL or Postgres.
+     * Check if the DB is H2, MySQL/MariaDB or Postgres.
      *
-     * @return true if DB is H2, MySQL or Postgres, false otherwise.
+     * @return true if DB is H2, MySQL/MariaDB or Postgres, false otherwise.
      * @throws DataAccessException if error occurred while checking the DB metadata.
      */
     public static boolean isH2MySqlOrPostgresDB() throws DataAccessException {
 
-        return isDBTypeOf(MY_SQL) || isDBTypeOf(H2) || isDBTypeOf(POSTGRE_SQL);
+        return isDBTypeOf(MY_SQL) || isDBTypeOf(H2) || isDBTypeOf(POSTGRE_SQL) || isDBTypeOf(MARIADB);
     }
 
     /**

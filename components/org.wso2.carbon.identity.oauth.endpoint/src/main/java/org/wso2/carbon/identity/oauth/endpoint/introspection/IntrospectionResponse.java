@@ -80,6 +80,8 @@ public final class IntrospectionResponse {
     // Access token binding reference.
     public static final String BINDING_REFERENCE = "binding_ref";
 
+    public static final String AUT = "aut";
+
     class Error {
 
         public static final String INVALID_REQUEST = "invalid_request";

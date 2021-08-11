@@ -58,6 +58,7 @@ import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -274,8 +275,9 @@ public class OAuth2Service extends AbstractAdmin {
                     tokenReqDTO.getGrantType(), e);
             OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
             tokenRespDTO.setError(true);
-            if (e.getCause() != null && e.getCause().getCause() != null &&
-                    e.getCause().getCause() instanceof SQLIntegrityConstraintViolationException) {
+            if (e.getCause() != null && e.getCause().getCause() != null && (
+                    e.getCause().getCause() instanceof SQLIntegrityConstraintViolationException || e.getCause()
+                            .getCause() instanceof SQLException)) {
                 tokenRespDTO.setErrorCode("sql_error");
             } else {
                 tokenRespDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
@@ -421,10 +423,10 @@ public class OAuth2Service extends AbstractAdmin {
                         OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                                 OAuth2Util.buildScopeString(accessTokenDO.getScope()));
                         OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), accessTokenDO.getAuthzUser());
-                        OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
+                        OAuthUtil.clearOAuthCache(accessTokenDO);
                         String scope = OAuth2Util.buildScopeString(accessTokenDO.getScope());
-                        String authorizedUser = accessTokenDO.getAuthzUser().toString();
-                        synchronized ((revokeRequestDTO.getConsumerKey() + ":" + authorizedUser + ":" + scope + ":"
+                        String userId = accessTokenDO.getAuthzUser().getUserId();
+                        synchronized ((revokeRequestDTO.getConsumerKey() + ":" + userId + ":" + scope + ":"
                                 + tokenBindingReference).intern()) {
                             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                                     .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()});

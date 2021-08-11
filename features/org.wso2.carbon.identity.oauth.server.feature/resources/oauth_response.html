@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+
+<!--
+~    Copyright (c) 2020, WSO2 Inc. (http://www.wso2.com). All Rights Reserved.
+~
+~    This software is the property of WSO2 Inc. and its suppliers, if any.
+~    Dissemination of any information or reproduction of any material contained
+~    herein in any form is strictly forbidden, unless permitted by WSO2 expressly.
+~    You may not alter or remove any copyright or other notice from copies of this content."
+-->
+
+<html>
+
+<head>
+    <title>Redirecting</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        :root {
+            --primary-color: #FF5500;
+        }
+
+        .ui.primary.button {
+            background-color: var(--primary-color) !important;
+        }
+
+        div.redirect-loader {
+            padding: 10px 20px 20px 20px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 1.2em;
+        }
+
+        .center {
+            margin: 0;
+            position: relative;
+            left: 50%;
+            -ms-transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%);
+        }
+
+        .padding-top-20 {
+            padding-top: 22rem;
+        }
+
+        .padding-top-2 {
+            padding-top: 4rem;
+        }
+
+        .padding-bottom-1 {
+            padding-bottom: 1rem;
+        }
+
+        .text-align-center {
+            text-align: center;
+        }
+
+        .loader-redirect {
+            font-size: 17px;
+            color: #787778;
+            margin-right: 0.5rem;
+        }
+
+        .primary-color-btn {
+            color: var(--primary-color) !important;
+            cursor: pointer;
+            text-decoration-line: none;
+        }
+
+        .ui.centered.grid, .ui.centered.grid>.row, .ui.grid>.centered.row {
+            text-align: center;
+            -webkit-box-pack: center;
+            -ms-flex-pack: center;
+            justify-content: center;
+        }
+
+        .ui.grid {
+            margin-top: -1rem;
+            margin-bottom: -1rem;
+            margin-left: -1rem;
+            margin-right: -1rem;
+        }
+
+        .ui.grid {
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+            -webkit-box-orient: horizontal;
+            -webkit-box-direction: normal;
+            -ms-flex-direction: row;
+            flex-direction: row;
+            -ms-flex-wrap: wrap;
+            flex-wrap: wrap;
+            -webkit-box-align: stretch;
+            -ms-flex-align: stretch;
+            align-items: stretch;
+            padding: 0;
+        }
+
+        .ui.centered.grid>.column:not(.aligned):not(.justified):not(.row),
+        .ui.centered.grid>.row>.column:not(.aligned):not(.justified),
+        .ui.grid .centered.row>.column:not(.aligned):not(.justified) {
+            text-align: left;
+        }
+
+        @media only screen and (min-width: 320px) and (max-width: 767px){
+            .ui.column.grid>[class*="twelve wide mobile"].column,
+            .ui.grid>.column.row>[class*="twelve wide mobile"].column,
+            .ui.grid>.row>[class*="twelve wide mobile"].column,
+            .ui.grid>[class*="twelve wide mobile"].column {
+                width: 75%!important;
+            }
+        }
+
+        @media only screen and (min-width: 992px){
+            .ui.column.grid>[class*="six wide computer"].column,
+            .ui.grid>.column.row>[class*="six wide computer"].column,
+            .ui.grid>.row>[class*="six wide computer"].column,
+            .ui.grid>[class*="six wide computer"].column {
+                width: 37.5%!important;
+            }
+        }
+
+        @media only screen and (max-width: 320px){
+            .ui.column.grid>[class*="twelve wide mobile"].column,
+            .ui.grid>.column.row>[class*="twelve wide mobile"].column,
+            .ui.grid>.row>[class*="twelve wide mobile"].column,
+            .ui.grid>[class*="twelve wide mobile"].column {
+                width: 75%!important;
+            }
+        }
+
+        .ui.grid>.column:not(.row) {
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+
+        .ui.grid>.column:not(.row),
+        .ui.grid>.row>.column {
+            position: relative;
+            display: inline-block;
+            width: 75%;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            vertical-align: top;
+        }
+
+        .ui.grid>* {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            min-width: 320px;
+            background: #fff;
+            font-family: Lato,'Helvetica Neue',Arial,Helvetica,sans-serif;
+            font-size: 14px;
+            line-height: 1.4285em;
+            color: rgba(0,0,0,.87);
+            font-smoothing: antialiased;
+        }
+
+        p {
+            margin: 0 0 1em;
+            line-height: 1.4285em;
+        }
+
+        .loader {
+            border: 2px solid #f3f3f3; /* Light grey */
+            border-top: 2px solid #ff7300; /* Blue */
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .wrap-content {
+            text-align: -webkit-center;
+        }
+
+    </style>
+</head>
+
+<body onload="javascript:document.getElementById('oauth-response').submit()">
+    <div class="padding-top-20">
+        <div class="ui centered grid">
+            <div class="twelve wide mobile eight wide tablet six wide computer column">
+                <div class="wrap-content">
+                    <div class="loader"></div>
+                    <div class="redirect-loader">
+                        Please wait while we take you to the application.
+                    </div>
+                </div>
+                <p class="padding-bottom-1 text-align-center"><a class="primary-color-btn button" href="javascript:document.getElementById('oauth-response').submit()">Click here</a> if you have been waiting for
+                    too long.</p>
+
+                <form id="oauth-response" method="post" action="$redirectURI">
+                    <!--$params-->
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

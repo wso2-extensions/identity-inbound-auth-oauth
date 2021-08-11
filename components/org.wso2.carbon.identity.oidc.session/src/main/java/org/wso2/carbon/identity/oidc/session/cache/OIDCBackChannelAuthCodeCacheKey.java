@@ -17,11 +17,12 @@
  */
 package org.wso2.carbon.identity.oidc.session.cache;
 
-import org.wso2.carbon.identity.application.common.cache.CacheKey;
+import org.wso2.carbon.identity.oauth.cache.CacheKey;
 
 /**
  * This class holds the cache key which is AuthorizationCode.
  */
+@Deprecated
 public class OIDCBackChannelAuthCodeCacheKey extends CacheKey {
 
     private static final long serialVersionUID = 6918877910029168583L;

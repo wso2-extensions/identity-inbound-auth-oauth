@@ -27,6 +27,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -36,10 +37,14 @@ import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
@@ -55,19 +60,26 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
+import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
+import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -100,6 +112,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
 
 @WithCarbonHome
@@ -107,7 +120,7 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
         OAuth2Util.class, OAuthComponentServiceHolder.class, AppInfoCache.class, IdentityConfigParser.class,
         PrivilegedCarbonContext.class, IdentityTenantUtil.class, CarbonUtils.class,
         IdentityCoreServiceComponent.class, NetworkUtils.class, IdentityApplicationManagementUtil.class,
-        IdentityProviderManager.class, FederatedAuthenticatorConfig.class})
+        IdentityProviderManager.class, FederatedAuthenticatorConfig.class, FrameworkUtils.class})
 public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
@@ -178,6 +191,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private IdentityProvider mockIdentityProvider;
+
+    @Mock
+    private AccessTokenDAO accessTokenDAO;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -275,6 +291,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testClearTokenRequestContext() throws Exception {
+
         OAuth2Util.setTokenRequestContext(oAuthTokenReqMessageContextMock);
         assertEquals(OAuth2Util.getTokenRequestContext(), oAuthTokenReqMessageContextMock);
         OAuth2Util.clearTokenRequestContext();
@@ -385,6 +402,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     public void testAuthenticateClientWithHashPersistenceProcessor(Object cacheResult,
                                                                    String clientSecretInDB,
                                                                    boolean expectedResult) throws Exception {
+
         OAuthAppDO appDO = new OAuthAppDO();
         appDO.setOauthConsumerKey(clientId);
         appDO.setOauthConsumerSecret(clientSecretInDB);
@@ -404,6 +422,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         TokenPersistenceProcessor hashingProcessor = mock(HashingPersistenceProcessor.class);
         when(hashingProcessor.getProcessedClientSecret(clientSecret)).thenReturn(clientSecret);
 
+        when(oauthServerConfigurationMock.isClientSecretHashEnabled()).thenReturn(true);
+
         when(oauthServerConfigurationMock.getPersistenceProcessor()).thenReturn(hashingProcessor);
         assertEquals(OAuth2Util.authenticateClient(clientId, clientSecret), expectedResult);
     }
@@ -415,9 +435,19 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         assertEquals(OAuth2Util.isHashDisabled(), false);
     }
 
+    @Test
+    public void testIsHashEnabled() {
+
+        when(OAuthServerConfiguration.getInstance().isClientSecretHashEnabled()).thenReturn(true);
+
+        assertTrue(OAuth2Util.isHashEnabled());
+    }
+
     @DataProvider(name = "AuthenticateUsername")
     public Object[][] authenticateUsername() {
+
         CacheEntry cacheResult2 = cacheEntryMock;
+        ClientCredentialDO cacheResult3 = new ClientCredentialDO("testUser");
 
         // isUsernameCaseSensitive
         // cacheResult
@@ -432,7 +462,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 {true, cacheResult2, "4_EedLmABh_cPdmmYxCTwRdyDG5b", "testUser", null},
                 {true, cacheResult2, clientSecret, "testUser", "testUser"},
                 {true, cacheResult2, "4_EedLmABh_cPdmmYxCTwRdyDG5b", null, null},
-                {true, cacheResult2, clientSecret, null, null}
+                {true, cacheResult2, clientSecret, null, null},
+                {true, cacheResult3, clientSecret, "testUser", "testUser"}
         };
     }
 
@@ -476,6 +507,13 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
+    public void testGetPersistenceProcessorWithIdentityOAuth2Exception() throws IdentityOAuth2Exception {
+
+        when(oauthServerConfigurationMock.getPersistenceProcessor()).thenThrow(IdentityOAuth2Exception.class);
+        assertNotNull(OAuth2Util.getPersistenceProcessor());
+    }
+
+    @Test
     public void testBuildCacheKeyStringForAuthzCode() throws Exception {
 
         String authzCode = "testAuthzCode";
@@ -484,7 +522,55 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
+    public void testBuildCacheKeyStringForToken() throws Exception {
+
+        String authorizedUser = "testAuthzUser";
+        String scope = "testScope";
+        String userId = "4d458e40-afa4-466f-b668-b01cfbfba827";
+        mockStatic(IdentityUtil.class);
+        mockStatic(FrameworkUtils.class);
+        when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
+        when(IdentityUtil.getPrimaryDomainName()).thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+        when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString())).thenReturn(userId);
+        String expected = clientId + ":" + userId + ":" + scope;
+        assertEquals(OAuth2Util.buildCacheKeyStringForToken(clientId, scope, authorizedUser), expected);
+    }
+
+    @Test
+    public void testBuildCacheKeyStringForTokenWithAuthenticatedIDP() throws Exception {
+
+        String authorizedUser = "testAuthzUser";
+        String scope = "testScope";
+        String authenticatedIDP = "testAuthenticatedIDP";
+        String userId = "4d458e40-afa4-466f-b668-b01cfbfba827";
+        mockStatic(IdentityUtil.class);
+        mockStatic(FrameworkUtils.class);
+        when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
+        when(IdentityUtil.getPrimaryDomainName()).thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+        when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString())).thenReturn(userId);
+        String expected = clientId + ":" + userId + ":" + scope + ":" + authenticatedIDP;
+
+        assertEquals(OAuth2Util.buildCacheKeyStringForToken(clientId, scope, authorizedUser, authenticatedIDP),
+                expected);
+    }
+
+    @Test
+    public void testBuildCacheKeyStringForTokenWithTokenBindingReference() throws Exception {
+
+        String authorizedUser = "testAuthzUser";
+        String scope = "testScope";
+        String authenticatedIDP = "testAuthenticatedIDP";
+        String tokenBindingReference = "testTokenBindingReference";
+        String expected = clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP + ":"
+                + tokenBindingReference;
+
+        assertEquals(OAuth2Util.buildCacheKeyStringForTokenWithUserId(clientId, scope, authorizedUser,
+                authenticatedIDP, tokenBindingReference), expected);
+    }
+
+    @Test
     public void testValidateAccessTokenDO() throws Exception {
+
         AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
                 refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
                 authorizationCode);
@@ -857,9 +943,10 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testCalculateValidityInMillis() throws Exception {
+
         long issuedTimeInMillis = System.currentTimeMillis() - 5000;
         long validityPeriodMillis = 100000;
-        assertTrue(OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodMillis) > 0);
+        assertTrue(OAuth2Util.calculateValidityInMillis(issuedTimeInMillis, validityPeriodMillis) > 0);
     }
 
     @Test
@@ -902,6 +989,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetTenantIdFromUserName() throws Exception {
+
         String userName = "admin" + CarbonConstants.ROLE_TENANT_DOMAIN_SEPARATOR + MultitenantConstants
                 .SUPER_TENANT_DOMAIN_NAME;
         when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
@@ -1150,7 +1238,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Test(dataProvider = "OAuthURLData2")
     public void testGetOAuth2JWKSPageUrlLegacy(String configUrl, String serverUrl,
-                                         String tenantDomain, String oauthUrl) throws Exception {
+                                               String tenantDomain, String oauthUrl) throws Exception {
 
         when(oauthServerConfigurationMock.getOAuth2JWKSPageUrl()).thenReturn(configUrl);
         when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOAuth2JWKSPageUrl).get())
@@ -1160,7 +1248,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Test(dataProvider = "OAuthURLData2")
     public void testGetOAuth2DCREPUrlLegacy(String configUrl, String serverUrl,
-                                      String tenantDomain, String oauthUrl) throws Exception {
+                                            String tenantDomain, String oauthUrl) throws Exception {
 
         when(oauthServerConfigurationMock.getOAuth2DCREPUrl()).thenReturn(configUrl);
         when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOAuth2DCREPUrl).get())
@@ -1496,8 +1584,76 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         assertFalse(OAuth2Util.isPKCESupportEnabled());
     }
 
+    @DataProvider(name = "pkceData")
+    public Object[][] createPKCEData() {
+
+        String verificationCode = generateCodeVerifier(77);
+        return new Object[][]{
+                {verificationCode, verificationCode, OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE, true},
+                {"dummyReferenceCodeChallenge", verificationCode, OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE, false},
+                {"dummyReferenceCodeChallenge", verificationCode, OAuthConstants.OAUTH_PKCE_S256_CHALLENGE, false},
+                {verificationCode, verificationCode, null, true},
+                {"", null, OAuthConstants.OAUTH_PKCE_S256_CHALLENGE, true},
+
+        };
+    }
+
+    @Test(dataProvider = "pkceData")
+    public void doPKCEValidation(String referenceCodeChallenge, String verificationCode,
+                                 String challengeMethod, boolean expected) throws Exception {
+
+        OAuthAppDO oAuthApp = new OAuthAppDO();
+        oAuthApp.setPkceSupportPlain(true);
+        assertEquals(OAuth2Util.doPKCEValidation(referenceCodeChallenge, verificationCode,
+                challengeMethod, oAuthApp), expected);
+    }
+
+    @DataProvider(name = "invalidPKCEData")
+    public Object[][] createPKCEInvalidData() {
+
+        String verificationCode = generateCodeVerifier(77);
+        String invalidVerificationCode = generateCodeVerifier(42);
+        String invalidChallengeMethod = "dummyChallengeMethod";
+        return new Object[][]{
+                {verificationCode, null, OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE, true, false,
+                        "No PKCE code verifier found.PKCE is mandatory for this oAuth 2.0 application."},
+                {verificationCode, null, OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE, false, false,
+                        "Empty PKCE code_verifier sent. This authorization code " +
+                                "requires a PKCE verification to obtain an access token."},
+                {verificationCode, null, OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE, false, true,
+                        "Empty PKCE code_verifier sent. This authorization code " +
+                                "requires a PKCE verification to obtain an access token."},
+                {verificationCode, verificationCode, OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE, true, false,
+                        "This application does not allow 'plain' transformation algorithm."},
+                {verificationCode, invalidVerificationCode, OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE, false, false,
+                        "Code verifier used is not up to RFC 7636 specifications."},
+                {"dummyReferenceCodeChallenge", verificationCode, invalidChallengeMethod, false, false,
+                        "Invalid OAuth2 Token Response. Invalid PKCE Code Challenge Method '" +
+                                invalidChallengeMethod + "'"}
+        };
+    }
+
+    @Test(dataProvider = "invalidPKCEData")
+    public void testValidatePKCEWithException(String referenceCodeChallenge, String verificationCode,
+                                              String challengeMethod, boolean isPickleMandatory,
+                                              boolean isPkceSupportPlain, String expected) {
+
+        OAuthAppDO oAuthApp = new OAuthAppDO();
+        oAuthApp.setPkceMandatory(isPickleMandatory);
+        oAuthApp.setPkceSupportPlain(isPkceSupportPlain);
+
+        try {
+            OAuth2Util.validatePKCE(referenceCodeChallenge, verificationCode, challengeMethod, oAuthApp);
+        } catch (IdentityOAuth2Exception ex) {
+            assertEquals(ex.getMessage(), expected);
+            return;
+        }
+        fail("Expected IdentityOAuth2Exception was not thrown by validatePKCE method");
+    }
+
     @DataProvider(name = "ImplicitResponseTypeData")
     public Object[][] implicitResponseTypeData() {
+
         return new Object[][]{
                 // responseType
                 // expected result
@@ -1534,7 +1690,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         AuthenticatedUser localUser = new AuthenticatedUser();
         localUser.setFederatedUser(false);
 
-        return new Object[][] {
+        return new Object[][]{
                 // Authenticated User, isMapFederatedUserToLocal, expectedIsFederatedValue
                 {AuthenticatedUser.createFederateAuthenticatedUserFromSubjectIdentifier("DUMMY"), false, true},
                 {AuthenticatedUser.createFederateAuthenticatedUserFromSubjectIdentifier("DUMMY"), true, false},
@@ -1568,7 +1724,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         supportedGrantTypes.add("testGrantType1");
         supportedGrantTypes.add("testGrantType2");
 
-        return new Object[][] {
+        return new Object[][]{
                 // supportedGrantTypesMap
                 // supportedGrantTypes
                 {supportedGrantTypesMap, supportedGrantTypes},
@@ -1579,7 +1735,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Test(dataProvider = "supportedGrantTypes")
     public void testGetSuportedGrantTypes(Map<String, AuthorizationGrantHandler> supportedGrantTypesMap,
-            List<String> supportedGrantTypes) throws Exception {
+                                          List<String> supportedGrantTypes) throws Exception {
 
         when(oauthServerConfigurationMock.getSupportedGrantTypes()).thenReturn(supportedGrantTypesMap);
         assertEquals(OAuth2Util.getSupportedGrantTypes(), supportedGrantTypes);
@@ -1763,7 +1919,6 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         }
     }
 
-
     @DataProvider(name = "tenantDomainProvider")
     public Object[][] getTenantDomains() {
 
@@ -1798,5 +1953,316 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         }
 
         assertEquals(isInvalidClientExceptionThrown, isExceptionExpected);
+    }
+
+    @DataProvider(name = "createResponseType")
+    public Object[][] createResponseType() {
+
+        return new Object[][]{
+                {"", false},
+                {null, false},
+                {OAuthConstants.CODE_TOKEN, true},
+                {OAuthConstants.CODE_IDTOKEN, true},
+                {OAuthConstants.CODE_IDTOKEN_TOKEN, true}
+        };
+    }
+
+    @Test(dataProvider = "createResponseType")
+    public void testisHybridResponseType(String responseType, boolean expected) {
+
+        assertEquals(OAuth2Util.isHybridResponseType(responseType), expected);
+    }
+
+    @Test
+    public void testGetOIDCScopes() throws UserStoreException, IdentityOAuth2Exception {
+
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+        when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+        when(tenantManagerMock.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        ScopeClaimMappingDAO scopeClaimMappingDAOMock = mock(ScopeClaimMappingDAO.class);
+        WhiteboxImpl.setInternalState(OAuthTokenPersistenceFactory.getInstance(), "scopeClaimMappingDAO",
+                scopeClaimMappingDAOMock);
+        List<ScopeDTO> scopes = new ArrayList<>(Arrays.asList(new ScopeDTO("dummyName", "displayName",
+                "description", null)));
+        when(scopeClaimMappingDAOMock.getScopes(anyInt())).thenReturn(scopes);
+        List<String> result = OAuth2Util.getOIDCScopes(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        assertEquals(result.get(0), scopes.get(0).getName());
+    }
+
+    @Test
+    public void testGetOIDCScopesWithException() throws UserStoreException, IdentityOAuth2Exception {
+
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+        when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+        when(tenantManagerMock.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        ScopeClaimMappingDAO scopeClaimMappingDAOMock = mock(ScopeClaimMappingDAO.class);
+        WhiteboxImpl.setInternalState(OAuthTokenPersistenceFactory.getInstance(), "scopeClaimMappingDAO",
+                scopeClaimMappingDAOMock);
+
+        when(scopeClaimMappingDAOMock.getScopes(anyInt())).thenThrow(IdentityOAuth2Exception.class);
+        List<String> result = OAuth2Util.getOIDCScopes(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        assertEquals(result.size(), 0);
+    }
+
+    @DataProvider(name = "tokenTypeProvider")
+    public static Object[][] tokenTypeProvider() {
+
+        return new Object[][]{
+                {"dummyTokenType"},
+                {""},
+                {null}};
+    }
+
+    @Test(dataProvider = "tokenTypeProvider")
+    public void testGetOAuthTokenIssuerForOAuthApp(String tokenType) throws Exception {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setOauthConsumerKey(clientId);
+        appDO.setTokenType(tokenType);
+
+        AppInfoCache appInfoCache = mock(AppInfoCache.class);
+        when(appInfoCache.getValueFromCache(clientId)).thenReturn(appDO);
+
+        mockStatic(AppInfoCache.class);
+        when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
+
+        OauthTokenIssuer oauthTokenIssuer = mock(OauthTokenIssuer.class);
+        when(oauthServerConfigurationMock.getIdentityOauthTokenIssuer()).thenReturn(oauthTokenIssuer);
+        assertEquals(OAuth2Util.getOAuthTokenIssuerForOAuthApp(clientId), oauthTokenIssuer);
+    }
+
+    @Test
+    public void testGetOAuthTokenIssuerForOAuthAppWithException() throws Exception {
+
+        AppInfoCache appInfoCache = mock(AppInfoCache.class);
+        when(appInfoCache.getValueFromCache(clientId)).thenThrow(IdentityOAuth2Exception.class);
+
+        mockStatic(AppInfoCache.class);
+        when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
+
+        try {
+            OAuth2Util.getOAuthTokenIssuerForOAuthApp(clientId);
+        } catch (IdentityOAuth2Exception ex) {
+            assertEquals(ex.getMessage(), "Error while retrieving app information for clientId: " + clientId);
+            return;
+        }
+        fail("Expected IdentityOAuth2Exception was not thrown by getOAuthTokenIssuerForOAuthApp method");
+    }
+
+    @Test
+    public void testGetClientSecret() throws Exception {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setOauthConsumerKey(clientId);
+        appDO.setOauthConsumerSecret(clientSecret);
+
+        AppInfoCache appInfoCache = mock(AppInfoCache.class);
+        when(appInfoCache.getValueFromCache(clientId)).thenReturn(appDO);
+
+        mockStatic(AppInfoCache.class);
+        when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
+
+        assertEquals(OAuth2Util.getClientSecret(clientId), appDO.getOauthConsumerSecret());
+    }
+
+    @Test
+    public void testGetClientSecretWithException() throws Exception {
+
+        AppInfoCache appInfoCache = mock(AppInfoCache.class);
+        when(appInfoCache.getValueFromCache(clientId)).thenReturn(null);
+
+        mockStatic(AppInfoCache.class);
+        when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
+
+        OAuthAppDAO oAuthAppDAO = mock(OAuthAppDAO.class);
+        whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
+        when(oAuthAppDAO.getAppInformation(anyString())).thenReturn(null);
+
+        try {
+            OAuth2Util.getClientSecret(clientId);
+        } catch (InvalidOAuthClientException ex) {
+            assertEquals(ex.getMessage(), "Unable to retrieve app information for consumer key: "
+                    + clientId);
+            return;
+        }
+        fail("Expected InvalidOAuthClientException was not thrown by getClientSecret method");
+    }
+
+    @DataProvider(name = "authenticatedIDPProvider")
+    public static Object[][] authenticatedIDPProvider() {
+
+        String authenticatedIDP = "dummyAuthenticatedIDP";
+        return new Object[][]{
+                {authenticatedIDP, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX +
+                        OAuthConstants.UserType.FEDERATED_USER_DOMAIN_SEPARATOR + authenticatedIDP},
+                {null, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX},
+                {"", OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX}};
+    }
+
+    @Test(dataProvider = "authenticatedIDPProvider")
+    public void testGetFederatedUserDomain(String authenticatedIDP, String expected) {
+
+        assertEquals(OAuth2Util.getFederatedUserDomain(authenticatedIDP), expected);
+    }
+
+    @Test
+    public void testGetTokenBindingReference() {
+
+        assertNotNull(OAuth2Util.getTokenBindingReference("dummyReference"));
+    }
+
+    @Test
+    public void testGetTokenBindingReferenceWithInvalidBindingValue() {
+
+        assertNull(OAuth2Util.getTokenBindingReference(null));
+        assertNull(OAuth2Util.getTokenBindingReference(""));
+    }
+
+    @DataProvider(name = "accessTokenData")
+    public static Object[][] accessTokenDataProvider() {
+
+        return new Object[][]{
+                {true},
+                {false}};
+    }
+
+    @Test(dataProvider = "accessTokenData")
+    public void testGetAccessTokenDOFromTokenIdentifier(boolean isCacheAvailable) throws Exception {
+
+        getAccessTokenDOFromTokenIdentifier(isCacheAvailable);
+        assertNotNull(OAuth2Util.getAccessTokenDOfromTokenIdentifier("dummyIdentifier"));
+    }
+
+    @Test
+    public void testGetAccessTokenDOFromTokenIdentifierWithException() throws Exception {
+
+        getAccessTokenDOFromTokenIdentifier(false);
+        when(oAuthCacheMock.getValueFromCache(any(OAuthCacheKey.class))).thenReturn(null);
+        when(accessTokenDAO.getAccessToken(anyString(), anyBoolean())).thenReturn(null);
+
+        try {
+            OAuth2Util.getAccessTokenDOfromTokenIdentifier("dummyIdentifier");
+        } catch (IllegalArgumentException ex) {
+            assertEquals(ex.getMessage(), "Invalid Access Token. Access token is not ACTIVE.");
+            return;
+        }
+        fail("Expected IllegalArgumentException was not thrown by getAccessTokenDOfromTokenIdentifier method");
+    }
+
+    @Test(dataProvider = "accessTokenData")
+    public void testGetClientIdForAccessToken(boolean isCacheAvailable) throws Exception {
+
+        AccessTokenDO accessTokenDO = getAccessTokenDOFromTokenIdentifier(isCacheAvailable);
+        assertEquals(OAuth2Util.getClientIdForAccessToken("dummyIdentifier"), accessTokenDO.getConsumerKey());
+    }
+
+    private AccessTokenDO getAccessTokenDOFromTokenIdentifier(boolean isCacheAvailable) throws Exception {
+
+        when(oauthServerConfigurationMock.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        accessTokenDO.setConsumerKey("dummyConsumerKey");
+
+        mockStatic(OAuthCache.class);
+        when(OAuthCache.getInstance()).thenReturn(oAuthCacheMock);
+        if (isCacheAvailable) {
+            when(oAuthCacheMock.getValueFromCache(any(OAuthCacheKey.class))).thenReturn(accessTokenDO);
+        } else {
+            WhiteboxImpl.setInternalState(OAuthTokenPersistenceFactory.getInstance(), "tokenDAO", accessTokenDAO);
+            when(accessTokenDAO.getAccessToken(anyString(), anyBoolean())).thenReturn(accessTokenDO);
+
+        }
+        when(oauthServerConfigurationMock.isClientSecretHashEnabled()).thenReturn(false);
+        return accessTokenDO;
+    }
+
+    @Test
+    public void testGetServiceProvider() throws Exception {
+
+        setCache();
+        ApplicationManagementService applicationManagementService = mock(ApplicationManagementService.class);
+        OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
+        when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
+                .thenReturn(new ServiceProvider());
+        assertNotNull(OAuth2Util.getServiceProvider(clientId));
+    }
+
+    @Test
+    public void testGetServiceProviderWithIdentityApplicationManagementException() throws Exception {
+
+        setCache();
+        ApplicationManagementService applicationManagementService = mock(ApplicationManagementService.class);
+        OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
+        when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
+                .thenThrow(IdentityApplicationManagementException.class);
+
+        try {
+            OAuth2Util.getServiceProvider(clientId);
+        } catch (IdentityOAuth2Exception ex) {
+            assertEquals(ex.getMessage(), "Error while obtaining the service provider for client_id: " +
+                    clientId + " of tenantDomain: " + MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            return;
+        }
+        fail("Expected IdentityOAuth2Exception was not thrown by getServiceProvider method");
+    }
+
+    private void setCache() {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setOauthConsumerKey(clientId);
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        appDO.setUser(user);
+
+        AppInfoCache appInfoCache = mock(AppInfoCache.class);
+        when(appInfoCache.getValueFromCache(clientId)).thenReturn(appDO);
+        mockStatic(AppInfoCache.class);
+        when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
+    }
+
+    @Test
+    public void testGetServiceProviderWithIdentityInvalidOAuthClientException() throws Exception {
+
+        AppInfoCache appInfoCache = mock(AppInfoCache.class);
+        when(appInfoCache.getValueFromCache(clientId)).thenThrow(InvalidOAuthClientException.class);
+        mockStatic(AppInfoCache.class);
+        when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
+
+        try {
+            OAuth2Util.getServiceProvider(clientId);
+        } catch (IdentityOAuth2Exception ex) {
+            assertEquals(ex.getMessage(), "Could not find an existing app for clientId: " + clientId);
+            return;
+        }
+        fail("Expected IdentityOAuth2Exception was not thrown by getServiceProvider method");
+    }
+
+    @Test
+    public void testGetServiceProviderWithGivenTenantDomain() throws Exception {
+
+        setCache();
+        ApplicationManagementService applicationManagementService = mock(ApplicationManagementService.class);
+        OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
+        when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
+                .thenReturn(new ServiceProvider());
+        assertNotNull(OAuth2Util.getServiceProvider(clientId, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
+    }
+
+    @Test
+    public void testGetServiceProviderWithGivenTenantDomainWithException() throws Exception {
+
+        setCache();
+        ApplicationManagementService applicationManagementService = mock(ApplicationManagementService.class);
+        OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
+        when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
+                .thenThrow(IdentityApplicationManagementException.class);
+
+        try {
+            OAuth2Util.getServiceProvider(clientId, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        } catch (IdentityOAuth2Exception ex) {
+            assertEquals(ex.getMessage(), "Error while obtaining the service provider for client_id: " +
+                    clientId + " of tenantDomain: " + MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            return;
+        }
+        fail("Expected IdentityOAuth2Exception was not thrown by getServiceProvider method");
     }
 }

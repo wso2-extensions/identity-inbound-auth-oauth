@@ -1,13 +1,13 @@
 /*
  * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
- * 
+ *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -38,7 +38,6 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -47,6 +46,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -57,8 +57,8 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
-import org.wso2.carbon.user.core.UserStoreException;
-import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
@@ -75,6 +75,7 @@ import java.util.Set;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AUTH_TIME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AZP;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.IDP_SESSION_KEY;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.NONCE;
 
 /**
@@ -138,6 +139,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String subjectClaim = getSubjectClaim(tokenReqMsgCtxt, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
 
         String nonceValue = null;
+        String idpSessionKey = null;
         long authTime = 0;
         String acrValue = null;
         List<String> amrValues = Collections.emptyList();
@@ -153,9 +155,11 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                     authTime = authzGrantCacheEntry.getAuthTime();
                 }
                 amrValues = authzGrantCacheEntry.getAmrList();
+                idpSessionKey = getIdpSessionKey(authzGrantCacheEntry);
             }
         } else {
             amrValues = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getAuthenticationMethodReferences();
+            idpSessionKey = getIdpSessionKey(accessToken);
         }
 
         if (log.isDebugEnabled()) {
@@ -183,6 +187,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
         if (amrValues != null) {
             jwtClaimsSetBuilder.claim(OAuthConstants.AMR, translateAmrToResponse(amrValues));
+        }
+        if (idpSessionKey != null) {
+            jwtClaimsSetBuilder.claim(IDP_SESSION_KEY, idpSessionKey);
         }
         setUserRealm(authorizedUser, jwtClaimsSetBuilder);
         setAdditionalClaims(tokenReqMsgCtxt, tokenRespDTO, jwtClaimsSetBuilder);
@@ -221,6 +228,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String nonceValue = authzReqMessageContext.getAuthorizationReqDTO().getNonce();
         String acrValue = authzReqMessageContext.getAuthorizationReqDTO().getSelectedAcr();
         List<String> amrValues = Collections.emptyList(); //TODO:
+        String idpSessionKey = getIdpSessionKey(authzReqMessageContext);
 
         // Initialize OAuthAppDO using the client ID.
         OAuthAppDO oAuthAppDO;
@@ -267,6 +275,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (amrValues != null) {
             jwtClaimsSetBuilder.claim("amr", translateAmrToResponse(amrValues));
         }
+        if (idpSessionKey != null) {
+            jwtClaimsSetBuilder.claim(IDP_SESSION_KEY, idpSessionKey);
+        }
         setUserRealm(authorizedUser, jwtClaimsSetBuilder);
         setAdditionalClaims(authzReqMessageContext, tokenRespDTO, jwtClaimsSetBuilder);
 
@@ -289,7 +300,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         if (oAuthAppDO.isIdTokenEncryptionEnabled()) {
             setupEncryptionAlgorithms(oAuthAppDO, clientId);
-            return OAuth2Util.encryptJWT(jwtClaimsSet, encryptionAlgorithm, encryptionMethod, spTenantDomain,
+            return OAuth2Util.encryptJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain,
+                    encryptionAlgorithm, encryptionMethod, spTenantDomain,
                     clientId).serialize();
         } else {
             return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
@@ -445,7 +457,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 String error = "Error occurred while getting user claim for user: " + authorizedUser + ", claim: " +
                         subjectClaimUri;
                 throw new IdentityOAuth2Exception(error, e);
-            } catch (UserStoreException e) {
+            } catch (org.wso2.carbon.user.api.UserStoreException e) {
                 String error = "Error occurred while getting subject claim: " + subjectClaimUri + " for user: "
                         + fullQualifiedUsername;
                 throw new IdentityOAuth2Exception(error, e);
@@ -461,15 +473,16 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     }
 
     private String getSubjectClaimFromUserStore(String subjectClaimUri, AuthenticatedUser authenticatedUser)
-            throws UserStoreException, IdentityException {
+            throws org.wso2.carbon.user.api.UserStoreException, IdentityException {
 
-        UserStoreManager userStoreManager = IdentityTenantUtil
-                .getRealm(authenticatedUser.getTenantDomain(), authenticatedUser.toFullQualifiedUsername())
-                .getUserStoreManager();
+        RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+        int tenantId = realmService.getTenantManager().getTenantId(authenticatedUser.getTenantDomain());
+
+        AbstractUserStoreManager userStoreManager
+                = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
 
         return userStoreManager
-                .getSecondaryUserStoreManager(authenticatedUser.getUserStoreDomain())
-                .getUserClaimValue(authenticatedUser.getUserName(), subjectClaimUri, null);
+                .getUserClaimValueWithID(authenticatedUser.getUserId(), subjectClaimUri, null);
     }
 
     private String getSubjectClaimUriInLocalDialect(ServiceProvider serviceProvider) {
@@ -647,6 +660,18 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(authorizationCode);
         return AuthorizationGrantCache.getInstance().getValueFromCacheByCode(authorizationGrantCacheKey);
+    }
+
+    /**
+     * Retrieve Authorization Grant Cache entry using an Access token.
+     *
+     * @param accessToken   Access token.
+     * @return              AuthorizationGrantCacheEntry containing user attributes and nonce value.
+     */
+    private AuthorizationGrantCacheEntry getAuthorizationGrantCacheEntryFromToken(String accessToken) {
+
+        AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
+        return AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
     }
 
     /**
@@ -895,9 +920,70 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             if (log.isDebugEnabled()) {
                 log.debug("Setting authorized user tenant domain : " + tenantDomain + " and userstore domain : " +
                         userstoreDomain + " to the 'realm' claim of id_token for the user : " + authorizedUser
-                        .getUserName());
+                        .getLoggableUserId());
             }
             jwtClaimsSetBuilder.claim(OAuthConstants.OIDCClaims.REALM, realm);
         }
+    }
+
+    /**
+     * Retrieves IDP session key using an Authorization Grant Cache Entry. This method is used in the Authorization Code
+     * flow.
+     *
+     * @param authzGrantCacheEntry      Authorization Grant Cache Entry.
+     * @return                          IDP Session Key.
+     * @throws IdentityOAuth2Exception  Error if IDP Session Key is not available.
+     */
+    private String getIdpSessionKey(AuthorizationGrantCacheEntry authzGrantCacheEntry) throws IdentityOAuth2Exception {
+
+        String idpSessionKey = authzGrantCacheEntry.getSessionContextIdentifier();
+        if (idpSessionKey == null) {
+            throw new IdentityOAuth2Exception("Session context identifier not available in the Authorization " +
+                    "Grant cache. Session identifier is a required claim to be included in the id_token when " +
+                    "the Session Extender endpoint is enabled.");
+        }
+        return idpSessionKey;
+    }
+
+    /**
+     * Retrieves IDP session key using a Request Message Context. This method is used in the Implicit/Hybrid flows.
+     *
+     * @param authzReqMessageContext    Request Message Context.
+     * @return                          IDP Session Key.
+     * @throws IdentityOAuth2Exception  Error if IDP Session Key is not available.
+     */
+    private String getIdpSessionKey(OAuthAuthzReqMessageContext authzReqMessageContext) throws IdentityOAuth2Exception {
+
+        String idpSessionKey = authzReqMessageContext.getAuthorizationReqDTO().getIdpSessionIdentifier();
+        if (idpSessionKey == null) {
+            throw new IdentityOAuth2Exception("Session context identifier not available in the Authorization " +
+                    "Request Message context. Session identifier is a required claim to be included in the " +
+                    "id_token when the Session Extender endpoint is enabled.");
+        }
+        return idpSessionKey;
+    }
+
+    /**
+     * Retrieves IDP session key using an Access Token. This method is used in the Refresh Grant flow.
+     * This method will return null for the backchannel grant types (e.g. Password Grant) as no session
+     * will be involved in the said flow.
+     *
+     * @param accessToken   Access Token.
+     * @return              IDP Session Key.
+     */
+    private String getIdpSessionKey(String accessToken) {
+
+        String idpSessionKey = null;
+
+        AuthorizationGrantCacheEntry authzGrantCacheEntry = getAuthorizationGrantCacheEntryFromToken(accessToken);
+        if (authzGrantCacheEntry != null) {
+            idpSessionKey = authzGrantCacheEntry.getSessionContextIdentifier();
+        }
+        // Not breaking the flow if the idpSessionKey is null as there could be other grant types that create
+        // an Authorization Grant Cache entry against an access token but without a session.
+        if (idpSessionKey == null && log.isDebugEnabled()) {
+            log.debug("Session context identifier not available when retrieving using the access token.");
+        }
+        return idpSessionKey;
     }
 }

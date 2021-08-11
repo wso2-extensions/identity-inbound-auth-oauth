@@ -18,7 +18,7 @@ package org.wso2.carbon.identity.oauth.cache;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.application.common.cache.BaseCache;
+import org.wso2.carbon.identity.core.cache.BaseCache;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
@@ -53,10 +53,11 @@ public class OAuthScopeCache extends BaseCache<OAuthScopeCacheKey, Scope> {
      *
      * @param key   Key which cache entry is indexed.
      * @param entry Actual object where cache entry is placed.
+     * @param tenantId Tenant where the cache is placed.
      */
-    public void addToCache(OAuthScopeCacheKey key, Scope entry) {
+    public void addToCache(OAuthScopeCacheKey key, Scope entry, int tenantId) {
         if (IdentityUtil.getIdentityCacheConfig(IDENTITY_CACHE_MANAGER, OAUTH_SCOPE_CACHE_NAME).isEnabled()) {
-            super.addToCache(key, entry);
+            super.addToCache(key, entry, tenantId);
             if (log.isDebugEnabled()) {
                 log.debug("Scope is added to the cache. \n" + entry.toString());
             }
@@ -64,7 +65,7 @@ public class OAuthScopeCache extends BaseCache<OAuthScopeCacheKey, Scope> {
 
         for (ScopeBinding scopeBinding : entry.getScopeBindings()) {
             OAuthScopeBindingCache.getInstance().clearCacheEntry(new OAuthScopeBindingCacheKey(scopeBinding
-                    .getBindingType(), Integer.parseInt(key.getTenantID())));
+                    .getBindingType()), tenantId);
         }
     }
 
@@ -73,11 +74,12 @@ public class OAuthScopeCache extends BaseCache<OAuthScopeCacheKey, Scope> {
      *
      * @param key CacheKey
      * @return Cached entry.
+     * @param tenantId Tenant where the cache is maintained.
      */
-    public Scope getValueFromCache(OAuthScopeCacheKey key) {
+    public Scope getValueFromCache(OAuthScopeCacheKey key, int tenantId) {
         Scope entry = null;
         if (IdentityUtil.getIdentityCacheConfig(IDENTITY_CACHE_MANAGER, OAUTH_SCOPE_CACHE_NAME).isEnabled()) {
-            entry = super.getValueFromCache(key);
+            entry = super.getValueFromCache(key, tenantId);
             if (log.isDebugEnabled()) {
                 log.debug("Scope is getting from the cache. \n" + String.valueOf(entry));
             }
@@ -89,20 +91,21 @@ public class OAuthScopeCache extends BaseCache<OAuthScopeCacheKey, Scope> {
      * Clears a cache entry.
      *
      * @param key Key to clear cache.
+     * @param tenantId Tenant where the cache is maintained.
      */
-    public void clearCacheEntry(OAuthScopeCacheKey key) {
+    public void clearCacheEntry(OAuthScopeCacheKey key, int tenantId) {
         if (IdentityUtil.getIdentityCacheConfig(IDENTITY_CACHE_MANAGER, OAUTH_SCOPE_CACHE_NAME).isEnabled()) {
-            super.clearCacheEntry(key);
+            super.clearCacheEntry(key, tenantId);
             if (log.isDebugEnabled()) {
                 log.debug("Scope: " + key.getScopeName() + " is removed from the cache.");
             }
         }
-        OAuthScopeBindingCache.getInstance().clear();
+        OAuthScopeBindingCache.getInstance().clear(tenantId);
     }
 
     @Override
-    public void clear() {
-        super.clear();
-        OAuthScopeBindingCache.getInstance().clear();
+    public void clear(int tenantId) {
+        super.clear(tenantId);
+        OAuthScopeBindingCache.getInstance().clear(tenantId);
     }
 }

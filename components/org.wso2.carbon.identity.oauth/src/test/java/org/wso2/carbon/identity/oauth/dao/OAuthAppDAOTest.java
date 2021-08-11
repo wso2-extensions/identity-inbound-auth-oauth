@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.IdentityOAuthClientException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -64,6 +65,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static org.wso2.carbon.identity.oauth.Error.DUPLICATE_OAUTH_CLIENT;
 
 /*
  * Unit tests for OAuthAppDAO
@@ -165,9 +167,9 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     }
 
     /**
-     * Test adding duplicate OAuth apps.
+     * Test adding two OAuth apps with same name.
      */
-    @Test(expectedExceptions = IdentityOAuthAdminException.class)
+    @Test
     public void testAddDuplicateOAuthApplication() throws Exception {
         setupMocksForTest();
 
@@ -176,8 +178,47 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         try (Connection connection = getConnection(DB_NAME)) {
             mockIdentityUtilDataBaseConnection(connection);
             addOAuthApplication(appDO);
-            // This should throw an exception
-            appDAO.addOAuthApplication(appDO);
+
+            try {
+                // This should throw an exception
+                OAuthAppDO secondApp = getDefaultOAuthAppDO();
+                secondApp.setOauthConsumerKey("secondClientID");
+                secondApp.setOauthConsumerSecret("secondClientSecret");
+
+                appDAO.addOAuthApplication(secondApp);
+                fail("Application creation with duplicate name did not fail as expected.");
+            } catch (Exception e) {
+                assertTrue(e instanceof IdentityOAuthClientException);
+                assertEquals(((IdentityOAuthClientException) e).getErrorCode(), DUPLICATE_OAUTH_CLIENT.getErrorCode());
+            }
+        }
+    }
+
+    /**
+     * Test adding two OAuth apps with same clientID.
+     */
+    @Test
+    public void testAddOAuthApplicationWithDuplicateClientId() throws Exception {
+        setupMocksForTest();
+
+        OAuthAppDAO appDAO = new OAuthAppDAO();
+
+        try (Connection connection = getConnection(DB_NAME)) {
+            mockIdentityUtilDataBaseConnection(connection);
+            OAuthAppDO firstApp = getDefaultOAuthAppDO();
+            addOAuthApplication(firstApp);
+
+            try {
+                // Change the name of the second app.
+                OAuthAppDO secondApp = getDefaultOAuthAppDO();
+                secondApp.setApplicationName(UUID.randomUUID().toString());
+                // This should throw an exception
+                appDAO.addOAuthApplication(secondApp);
+                fail("Application creation with duplicate clientID did not fail as expected.");
+            } catch (Exception e) {
+                assertTrue(e instanceof IdentityOAuthClientException);
+                assertEquals(((IdentityOAuthClientException) e).getErrorCode(), DUPLICATE_OAUTH_CLIENT.getErrorCode());
+            }
         }
     }
 

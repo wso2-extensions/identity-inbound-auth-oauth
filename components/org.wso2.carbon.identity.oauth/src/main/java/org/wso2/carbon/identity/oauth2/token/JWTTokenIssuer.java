@@ -34,8 +34,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
@@ -46,6 +44,7 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -56,7 +55,7 @@ import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHa
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.user.core.UserStoreException;
-import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.security.Key;
@@ -66,11 +65,10 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getPrivateKey;
 
 /**
  * Self contained access token builder.
@@ -90,22 +88,14 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String SHA384_WITH_EC = "SHA384withEC";
     private static final String SHA512_WITH_EC = "SHA512withEC";
 
-    private static final String KEY_STORE_EXTENSION = ".jks";
     private static final String AUTHORIZATION_PARTY = "azp";
     private static final String AUDIENCE = "aud";
     private static final String SCOPE = "scope";
     private static final String TOKEN_BINDING_REF = "binding_ref";
     private static final String TOKEN_BINDING_TYPE = "binding_type";
 
-    // To keep track of the expiry time provided in the original jwt assertion, when JWT grant type is used.
-    private static final String EXPIRY_TIME_JWT = "EXPIRY_TIME_JWT";
-
     private static final Log log = LogFactory.getLog(JWTTokenIssuer.class);
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
-
-    // We are keeping a private key map which will have private key for each tenant domain. We are keeping this as a
-    // static Map since then we don't need to read the key from keystore every time.
-    private static Map<Integer, Key> privateKeys = new ConcurrentHashMap<>();
     private Algorithm signatureAlgorithm = null;
 
     public JWTTokenIssuer() throws IdentityOAuth2Exception {
@@ -125,7 +115,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         if (log.isDebugEnabled()) {
             log.debug("Access token request with token request message context. Authorized user " +
-                    oAuthTokenReqMessageContext.getAuthorizedUser().toString());
+                    oAuthTokenReqMessageContext.getAuthorizedUser().getLoggableUserId());
         }
 
         try {
@@ -140,7 +130,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         if (log.isDebugEnabled()) {
             log.debug("Access token request with authorization request message context message context. Authorized " +
-                    "user " + oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getUser().toString());
+                    "user " + oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getUser().getLoggableUserId());
         }
 
         try {
@@ -342,36 +332,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             String tenantDomain = resolveSigningTenantDomain(tokenContext, authorizationContext);
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
 
-            Key privateKey;
-            if (privateKeys.containsKey(tenantId)) {
-
-                // PrivateKey will not be null because containsKey() true says given key is exist and ConcurrentHashMap
-                // does not allow to store null values.
-                privateKey = privateKeys.get(tenantId);
-            } else {
-
-                // Get tenant's key store manager.
-                KeyStoreManager tenantKSM = KeyStoreManager.getInstance(tenantId);
-                if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
-                    try {
-                        privateKey = tenantKSM.getDefaultPrivateKey();
-                    } catch (Exception e) {
-                        throw new IdentityOAuth2Exception("Error while obtaining private key for super tenant", e);
-                    }
-                } else {
-
-                    // Derive key store name.
-                    String ksName = tenantDomain.trim().replace(".", "-");
-                    String jksName = ksName + KEY_STORE_EXTENSION;
-
-                    // Obtain private key.
-                    privateKey = tenantKSM.getPrivateKey(jksName, tenantDomain);
-                }
-
-                // Add the private key to the static concurrent hash map for later uses.
-                privateKeys.put(tenantId, privateKey);
-            }
-
+            Key privateKey = getPrivateKey(tenantDomain, tenantId);
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             String certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
@@ -498,7 +459,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSetBuilder.claim(SCOPE, scope);
         }
 
-        jwtClaimsSetBuilder.expirationTime(new Date(curTimeInMillis + accessTokenLifeTimeInMillis));
+        jwtClaimsSetBuilder.claim(OAuthConstants.AUTHORIZED_USER_TYPE,
+                getAuthorizedUserType(authAuthzReqMessageContext, tokenReqMessageContext));
+
+        jwtClaimsSetBuilder.expirationTime(calculateAccessTokenExpiryTime(accessTokenLifeTimeInMillis,
+                curTimeInMillis));
 
         // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens. But we are keeping this in JWT
         // as well.
@@ -516,6 +481,42 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSet = handleTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
 
         return jwtClaimsSet;
+    }
+
+    /**
+     * Calculates access token expiry time.
+     *
+     * @param accessTokenLifeTimeInMillis accessTokenLifeTimeInMillis
+     * @param curTimeInMillis             currentTimeInMillis
+     * @return expirationTime
+     */
+    private Date calculateAccessTokenExpiryTime(Long accessTokenLifeTimeInMillis, Long curTimeInMillis) {
+
+        Date expirationTime;
+        if (accessTokenLifeTimeInMillis < 0) {
+            if (log.isDebugEnabled()) {
+                log.debug("Infinite access token expiry detected. Setting the expiry value to MAX value: " +
+                        Long.MAX_VALUE + "ms.");
+            }
+            // Expiry time set to MAX value as (current + MAX) will lead to a negative value.
+            expirationTime = new Date(Long.MAX_VALUE);
+        } else {
+            expirationTime = new Date(curTimeInMillis + accessTokenLifeTimeInMillis);
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Access token expiry time : " + expirationTime + "ms.");
+        }
+        return expirationTime;
+    }
+
+    private String getAuthorizedUserType(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
+                                         OAuthTokenReqMessageContext tokenReqMessageContext) {
+
+        if (tokenReqMessageContext != null) {
+            return (String) tokenReqMessageContext.getProperty(OAuthConstants.UserType.USER_TYPE);
+        } else {
+            return (String) authAuthzReqMessageContext.getProperty(OAuthConstants.UserType.USER_TYPE);
+        }
     }
 
     /**
@@ -675,13 +676,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private String getSubjectClaimFromUserStore(String subjectClaimUri, AuthenticatedUser authenticatedUser)
             throws UserStoreException, IdentityException {
 
-        UserStoreManager userStoreManager = IdentityTenantUtil
+        AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager) IdentityTenantUtil
                 .getRealm(authenticatedUser.getTenantDomain(), authenticatedUser.toFullQualifiedUsername())
                 .getUserStoreManager();
 
         return userStoreManager
-                .getSecondaryUserStoreManager(authenticatedUser.getUserStoreDomain())
-                .getUserClaimValue(authenticatedUser.getUserName(), subjectClaimUri, null);
+                .getUserClaimValueWithID(authenticatedUser.getUserId(), subjectClaimUri, null);
     }
 
     /**

@@ -38,6 +38,7 @@ public class SessionDataCacheEntry extends CacheEntry {
     private long authTime;
     private String authenticatedIdPs;
     private String essentialClaims;
+    private String sessionContextIdentifier;
 
     private String queryString = null;
 
@@ -104,5 +105,25 @@ public class SessionDataCacheEntry extends CacheEntry {
     public Map<String, Serializable> getEndpointParams() {
 
         return endpointParams;
+    }
+
+    /**
+     * Get sessionContextIdentifier.
+     *
+     * @return sessionContextIdentifier.
+     */
+    public String getSessionContextIdentifier() {
+
+        return sessionContextIdentifier;
+    }
+
+    /**
+     * Set sessionContextIdentifier.
+     *
+     * @param sessionContextIdentifier sessionContextIdentifier.
+     */
+    public void setSessionContextIdentifier(String sessionContextIdentifier) {
+
+        this.sessionContextIdentifier = sessionContextIdentifier;
     }
 }

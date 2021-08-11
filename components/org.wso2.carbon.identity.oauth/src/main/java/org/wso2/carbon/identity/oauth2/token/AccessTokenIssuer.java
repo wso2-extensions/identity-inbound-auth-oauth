@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
+import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import org.wso2.carbon.utils.CarbonUtils;
 
@@ -64,6 +65,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 
@@ -204,8 +207,13 @@ public class AccessTokenIssuer {
 
         tokReqMsgCtx.addProperty(OAUTH_APP_DO, oAuthAppDO);
 
-        if (!authzGrantHandler.isOfTypeApplicationUser()) {
-            tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getUser());
+        boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser();
+
+        if (!isOfTypeApplicationUser) {
+            tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getAppOwner());
+            tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
+        } else {
+            tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
         }
 
         boolean isAuthorizedClient = false;
@@ -234,11 +242,15 @@ public class AccessTokenIssuer {
         }
         boolean isValidGrant = false;
         error = "Provided Authorization Grant is invalid";
+        String errorCode = OAuthError.TokenResponse.INVALID_GRANT;
         try {
             isValidGrant = authzGrantHandler.validateGrant(tokReqMsgCtx);
         } catch (IdentityOAuth2Exception e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while validating grant", e);
+            }
+            if (e.getErrorCode() != null) {
+                errorCode = e.getErrorCode();
             }
             error = e.getMessage();
         }
@@ -251,7 +263,7 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid Grant provided by the client Id: " + tokenReqDTO.getClientId());
             }
-            tokenRespDTO = handleError(OAuthError.TokenResponse.INVALID_GRANT, error, tokenReqDTO);
+            tokenRespDTO = handleError(errorCode, error, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
@@ -260,7 +272,7 @@ public class AccessTokenIssuer {
         boolean isAuthorized = authzGrantHandler.authorizeAccessDelegation(tokReqMsgCtx);
         if (!isAuthorized) {
             if (log.isDebugEnabled()) {
-                log.debug("Invalid authorization for client Id = " + tokenReqDTO.getClientId());
+                log.debug("Invalid authorization for client Id : " + tokenReqDTO.getClientId());
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT,
                     "Unauthorized Client!", tokenReqDTO);
@@ -284,18 +296,41 @@ public class AccessTokenIssuer {
             tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
         }
 
-        //Execute Internal SCOPE Validation.
+        // Execute Internal SCOPE Validation.
         JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
         String[] authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
+        // Execute internal console scopes validation.
+        if (IdentityUtil.isSystemRolesEnabled()) {
+            RoleBasedInternalScopeValidator roleBasedInternalScopeValidator = new RoleBasedInternalScopeValidator();
+            String[] roleBasedInternalConsoleScopes = roleBasedInternalScopeValidator.validateScope(tokReqMsgCtx);
+            authorizedInternalScopes = (String[]) ArrayUtils
+                    .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
+        }
+
         // Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
         // Those scopes should not send to the other scopes validators.
         // Thus remove the scopes from the tokReqMsgCtx. Will be added to the response after executing
         // the other scope validators.
         removeInternalScopes(tokReqMsgCtx);
+
+        // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
+        tokReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
+
+        boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
+        if (isDropUnregisteredScopes) {
+            if (log.isDebugEnabled()) {
+                log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
+            }
+            String[] filteredScopes = OAuth2Util.dropUnregisteredScopes(
+                    tokReqMsgCtx.getScope(),
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain());
+            tokReqMsgCtx.setScope(filteredScopes);
+        }
+
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
         if (isValidScope) {
-            //Add authorized internal scopes to the request for sending in the response.
-            addAuthorizedInternalScopes(tokReqMsgCtx, authorizedInternalScopes);
+            // Add authorized internal scopes to the request for sending in the response.
+            addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
             addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         } else {
             if (log.isDebugEnabled()) {
@@ -344,6 +379,10 @@ public class AccessTokenIssuer {
                     tokReqMsgCtx.getAuthorizedUser() + " and scopes: " + tokenRespDTO.getAuthorizedScopes());
         }
 
+        if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
+            // Should add user attributes to the cache before building the ID token.
+            addUserAttributesAgainstAccessToken(tokenReqDTO, tokenRespDTO);
+        }
         if (tokReqMsgCtx.getScope() != null && OAuth2Util.isOIDCAuthzRequest(tokReqMsgCtx.getScope())) {
             if (log.isDebugEnabled()) {
                 log.debug("Issuing ID token for client: " + tokenReqDTO.getClientId());
@@ -360,7 +399,6 @@ public class AccessTokenIssuer {
         }
 
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
-            addUserAttributesAgainstAccessToken(tokenReqDTO, tokenRespDTO);
             // Cache entry against the authorization code has no value beyond the token request.
             clearCacheEntryAgainstAuthorizationCode(getAuthorizationCode(tokenReqDTO));
         }
@@ -390,7 +428,8 @@ public class AccessTokenIssuer {
         }
         List<String> scopes = new ArrayList<>();
         for (String scope : tokReqMsgCtx.getScope()) {
-            if (!scope.startsWith("internal_") && !scope.equalsIgnoreCase(SYSTEM_SCOPE)) {
+            if (!scope.startsWith(INTERNAL_SCOPE_PREFIX) && !scope.startsWith(CONSOLE_SCOPE_PREFIX) && !scope
+                    .equalsIgnoreCase(SYSTEM_SCOPE)) {
                 scopes.add(scope);
             }
         }
