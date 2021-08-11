@@ -52,6 +52,7 @@ import java.util.List;
 public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
 
     private static final String ALGO_PREFIX = "RS";
+    private static final String ALGO_PREFIX_PS = "PS";
     private static final Log log = LogFactory.getLog(OAuth2JWTTokenValidator.class);
     private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
     private static final String DOT_SEPARATOR = ".";
@@ -174,7 +175,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             if (log.isDebugEnabled()) {
                 log.debug("Signature Algorithm found in the Token Header: " + alg);
             }
-            if (alg.indexOf(ALGO_PREFIX) == 0) {
+            if (alg.indexOf(ALGO_PREFIX) == 0 || alg.indexOf(ALGO_PREFIX_PS) == 0) {
                 // At this point 'x509Certificate' will never be null.
                 PublicKey publicKey = x509Certificate.getPublicKey();
                 if (publicKey instanceof RSAPublicKey) {
