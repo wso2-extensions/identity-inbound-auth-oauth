@@ -2551,16 +2551,12 @@ public class OAuth2Util {
             }
 
             if (jwkList.isEmpty()) {
-                log.error(String.format("Failed to retrieve valid jwk from jwks uri: %s, algorithm : %s",
-                        jwksUri, encryptionAlgorithm));
                 throw new IdentityOAuth2Exception(String.format("Failed to retrieve valid jwk from " +
                         "jwks uri: %s, algorithm : %s ", jwksUri, encryptionAlgorithm));
             } else {
                 return jwkList.get(0);
             }
         } catch (ParseException | IOException e) {
-            log.error(String.format("Failed to retrieve jwk from jwks uri: %s, algorithm : %s",
-                    jwksUri, encryptionAlgorithm));
             throw new IdentityOAuth2Exception(String.format("Failed to retrieve jwk from jwks uri: %s, algorithm : %s",
                     jwksUri, encryptionAlgorithm), e);
         }
