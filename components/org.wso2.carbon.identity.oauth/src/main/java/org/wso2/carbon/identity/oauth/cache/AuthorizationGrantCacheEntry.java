@@ -241,7 +241,7 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     /**
      * Get sessionContextIdentifier value.
      *
-     * @return sessionContextIdentifier value.
+     * @return sessionContextIdentifier value
      */
     public String getSessionContextIdentifier() {
 
@@ -252,7 +252,7 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
      * Set sessionContextIdentifier value. This can be used to add sessionContext identifier into the idtoken.
      * Hence it will be used when extending the idp session.
      *
-     * @param sessionContextIdentifier sessionContextIdentifier.
+     * @param sessionContextIdentifier sessionContextIdentifier
      */
     public void setSessionContextIdentifier(String sessionContextIdentifier) {
 

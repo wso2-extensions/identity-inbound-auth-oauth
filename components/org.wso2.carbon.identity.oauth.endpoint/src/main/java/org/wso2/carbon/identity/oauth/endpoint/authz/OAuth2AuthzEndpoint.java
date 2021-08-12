@@ -2610,8 +2610,8 @@ public class OAuth2AuthzEndpoint {
     /**
      * Store opbscookie in session context.
      *
-     * @param sessionDataCacheEntry SessionDataCacheEntry.
-     * @param opbscookie            opbscookie value.
+     * @param sessionDataCacheEntry SessionDataCacheEntry
+     * @param opbscookie opbscookie value
      */
     private void storeOpbsInSessionContext(SessionDataCacheEntry sessionDataCacheEntry, String opbscookie) {
 
@@ -2643,8 +2643,8 @@ public class OAuth2AuthzEndpoint {
     /**
      * Get getSessionContextIdentifier from sessionDataCacheEntry.
      *
-     * @param sessionDataCacheEntry sessionDataCacheEntry.
-     * @return SessionContextIdentifier.
+     * @param sessionDataCacheEntry sessionDataCacheEntry
+     * @return SessionContextIdentifier
      */
     private String getSessionContextIdentifier(SessionDataCacheEntry sessionDataCacheEntry) {
 

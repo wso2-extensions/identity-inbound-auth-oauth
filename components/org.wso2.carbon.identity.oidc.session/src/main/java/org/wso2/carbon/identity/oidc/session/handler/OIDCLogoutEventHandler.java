@@ -119,7 +119,7 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
      * Get opbscookie value from the httpservlet request.
      *
      * @param request HttpServletRequest
-     * @return opbscookie value.
+     * @return opbscookie value
      */
     private String getOpbsCookieFromRequest(HttpServletRequest request) {
 
@@ -133,8 +133,8 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
     /**
      * Get opbs cookie value from session context.
      *
-     * @param event Event.
-     * @return opbs cookie value.
+     * @param event Event
+     * @return opbs cookie value
      */
     private String getOpbsCookieFromContext(Event event) {
 

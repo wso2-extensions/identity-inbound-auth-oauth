@@ -42,8 +42,8 @@ public interface LogoutTokenBuilder {
     /**
      * Returns logout token and back-channel logout uri map.
      *
-     * @param opbsCookie Opbscookie value.
-     * @return A map of logout tokens and corresponding back-channel logout URLs.
+     * @param opbsCookie Opbscookie value
+     * @return A map of logout tokens and corresponding back-channel logout URLs
      * @throws IdentityOAuth2Exception
      */
     Map<String, String> buildLogoutToken(String opbsCookie)

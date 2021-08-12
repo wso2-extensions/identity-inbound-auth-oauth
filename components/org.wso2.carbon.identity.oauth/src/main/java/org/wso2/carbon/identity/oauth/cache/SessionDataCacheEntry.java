@@ -110,7 +110,7 @@ public class SessionDataCacheEntry extends CacheEntry {
     /**
      * Get sessionContextIdentifier.
      *
-     * @return sessionContextIdentifier.
+     * @return sessionContextIdentifier
      */
     public String getSessionContextIdentifier() {
 
@@ -120,7 +120,7 @@ public class SessionDataCacheEntry extends CacheEntry {
     /**
      * Set sessionContextIdentifier.
      *
-     * @param sessionContextIdentifier sessionContextIdentifier.
+     * @param sessionContextIdentifier sessionContextIdentifier
      */
     public void setSessionContextIdentifier(String sessionContextIdentifier) {
 
