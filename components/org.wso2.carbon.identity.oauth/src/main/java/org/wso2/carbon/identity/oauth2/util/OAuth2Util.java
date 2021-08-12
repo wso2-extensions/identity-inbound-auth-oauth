@@ -338,6 +338,7 @@ public class OAuth2Util {
     private static final String SHA384_WITH_EC = "SHA384withEC";
     private static final String SHA512_WITH_EC = "SHA512withEC";
     private static final String SHA256_WITH_PS = "SHA256withPS";
+    private static final String PS256 = "PS256";
     private static final String SHA256 = "SHA-256";
     private static final String SHA384 = "SHA-384";
     private static final String SHA512 = "SHA-512";
@@ -2229,7 +2230,7 @@ public class OAuth2Util {
             return JWSAlgorithm.ES384;
         } else if (SHA512_WITH_EC.equals(signatureAlgorithm)) {
             return JWSAlgorithm.ES512;
-        } else if (SHA256_WITH_PS.equals(signatureAlgorithm)) {
+        } else if (SHA256_WITH_PS.equals(signatureAlgorithm) || PS256.equals(signatureAlgorithm)) {
             return JWSAlgorithm.PS256;
         } else {
             log.error("Unsupported Signature Algorithm in identity.xml");
