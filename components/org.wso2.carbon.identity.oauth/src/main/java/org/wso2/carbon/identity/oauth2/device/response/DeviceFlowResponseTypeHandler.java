@@ -18,7 +18,12 @@
 
 package org.wso2.carbon.identity.oauth2.device.response;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.authz.handlers.AbstractResponseTypeHandler;
@@ -31,6 +36,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
  * Device response type handler.
  */
 public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
+
+    private static final Log log = LogFactory.getLog(DeviceFlowResponseTypeHandler.class);
 
     /**
      * This method is used to handle the response type. After authentication process finish this will redirect to the
@@ -51,5 +58,41 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
                 Constants.AUTHORIZED, authenticatedUser);
         respDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
         return respDTO;
+    }
+
+    @Override
+    public boolean isAuthorizedClient(OAuthAuthzReqMessageContext authzReqMsgCtx) throws IdentityOAuth2Exception {
+
+        OAuth2AuthorizeReqDTO authzReqDTO = authzReqMsgCtx.getAuthorizationReqDTO();
+        String consumerKey = authzReqDTO.getConsumerKey();
+
+        OAuthAppDO oAuthAppDO = (OAuthAppDO) authzReqMsgCtx.getProperty("OAuthAppDO");
+        if (StringUtils.isBlank(oAuthAppDO.getGrantTypes())) {
+            if (log.isDebugEnabled()) {
+                log.debug("Could not find authorized grant types for client id: " + consumerKey);
+            }
+            return false;
+        }
+        String responseType = authzReqDTO.getResponseType();
+        String grantType = null;
+        if (StringUtils.contains(responseType, Constants.RESPONSE_TYPE_DEVICE)) {
+            grantType = OAuthConstants.GrantTypes.DEVICE_CODE;
+        }
+
+        if (StringUtils.isBlank(grantType)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Valid grant type not found for client id: " + consumerKey);
+            }
+            return false;
+        }
+
+        if (!oAuthAppDO.getGrantTypes().contains(grantType)) {
+            if (log.isDebugEnabled()) {
+                // Do not change this log format as these logs use by external applications.
+                log.debug("Unsupported Grant Type: " + grantType + " for client id: " + consumerKey);
+            }
+            return false;
+        }
+        return true;
     }
 }
