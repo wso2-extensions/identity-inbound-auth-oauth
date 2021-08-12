@@ -37,6 +37,7 @@ public class CibaConstants {
     public static final String REQUESTED_EXPIRY = "requested_expiry";
     public static final String LOGIN_HINT_TOKEN = "login_hint_token";
     public static final String OAUTH_CIBA_GRANT_TYPE = "urn:openid:params:grant-type:ciba";
+    public static final String OAUTH_CIBA_RESPONSE_TYPE = "ciba";
     public static final String RESPONSE_TYPE_VALUE = "cibaAuthCode";
     public static final String USER_IDENTITY = "user";
     public static final String BINDING_MESSAGE = "binding_message";
