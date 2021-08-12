@@ -142,7 +142,7 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
 
         if (!oAuthAppDO.getGrantTypes().contains(grantType)) {
             if (log.isDebugEnabled()) {
-                //Do not change this log format as these logs use by external applications
+                // Do not change this log format as these logs use by external applications.
                 log.debug("Unsupported Grant Type: " + grantType + " for client id: " + consumerKey);
             }
             return false;
