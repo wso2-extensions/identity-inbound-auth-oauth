@@ -61,7 +61,7 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
             String opbsCookieId = getopbsCookieId(event);
             if (StringUtils.isNotEmpty(opbsCookieId)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("OPBS cookie with value " + opbsCookieId + " found. " +
+                    log.debug("Opbs cookie with value " + opbsCookieId + " found. " +
                             "Initiating session termination.");
                 }
                 LogoutRequestSender.getInstance().sendLogoutRequests(opbsCookieId);
@@ -144,7 +144,7 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
             return (String) sessionContext.getProperty(OIDCSessionConstants.OPBS_COOKIE_ID);
         }
         if (log.isDebugEnabled()) {
-            log.debug("Since the session context is not found in the event, Could not get the opbs cookie value");
+            log.debug("Since the session context is not found in the event, could not get the opbs cookie value");
         }
         return null;
     }
