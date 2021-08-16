@@ -1112,6 +1112,7 @@ public class OAuth2AuthzEndpoint {
         }
         if (isResponseTypeNotIdTokenOrNone(responseType, authzRespDTO)) {
             setAccessToken(authzRespDTO, builder);
+            setScopes(authzRespDTO, builder);
         }
         if (isIdTokenExists(authzRespDTO)) {
             setIdToken(authzRespDTO, builder);
@@ -1208,6 +1209,16 @@ public class OAuth2AuthzEndpoint {
         builder.setAccessToken(authzRespDTO.getAccessToken());
         builder.setExpiresIn(authzRespDTO.getValidityPeriod());
         builder.setParam(OAuth.OAUTH_TOKEN_TYPE, BEARER);
+    }
+
+    private void setScopes(OAuth2AuthorizeRespDTO authzRespDTO,
+                           OAuthASResponse.OAuthAuthorizationResponseBuilder builder) {
+
+        String[] scopes = authzRespDTO.getScope();
+        if (scopes != null && scopes.length > 0) {
+            String scopeString =  StringUtils.join(scopes, " ");
+            builder.setScope(scopeString.trim());
+        }
     }
 
     private void addUserAttributesToOAuthMessage(OAuthMessage oAuthMessage, String code, String codeId,
