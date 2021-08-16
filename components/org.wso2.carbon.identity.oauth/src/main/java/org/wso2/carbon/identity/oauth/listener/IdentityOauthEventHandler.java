@@ -20,6 +20,10 @@ package org.wso2.carbon.identity.oauth.listener;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
+import org.wso2.carbon.identity.application.authentication.framework.exception.session.mgt.SessionManagementException;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.bean.context.MessageContext;
 import org.wso2.carbon.identity.core.handler.InitConfig;
@@ -30,9 +34,12 @@ import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
+
+import java.util.List;
 
 /**
  * This is an event handler listening for some of the core user management operations.
@@ -85,6 +92,48 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 String errorMsg = "Error occurred while revoking  access token for User : " + username;
                 log.error(errorMsg, e);
                 throw new IdentityEventException(errorMsg);
+            }
+        } else if (IdentityEventConstants.Event.POST_UPDATE_USER_LIST_OF_ROLE.equals(event.getEventName())) {
+
+            try {
+                UserStoreManager userStoreManager = (UserStoreManager) CarbonContext.getThreadLocalCarbonContext()
+                        .getUserRealm().getUserStoreManager();
+
+                Object userIdList = event.getEventProperties()
+                        .get(IdentityEventConstants.EventProperty.DELETE_USER_ID_LIST);
+                List<String> deletedUserIDList;
+
+                if (userIdList instanceof List<?>) {
+                    deletedUserIDList = (List<String>) userIdList;
+                } else {
+                    String errorMsg = "Error occurred due to invalid format of deleted user Id list.";
+                    throw new IdentityEventException(errorMsg);
+                }
+
+                String userName;
+                if (!deletedUserIDList.isEmpty()) {
+                    for (String userId : deletedUserIDList) {
+                        try {
+                            userName = FrameworkUtils.resolveUserNameFromUserId(userStoreManager, userId);
+                            OAuthUtil.revokeTokens(userName, userStoreManager);
+                            OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
+                            OAuth2ServiceComponentHolder.getUserSessionManagementService()
+                                    .terminateSessionsByUserId(userId);
+                        } catch (UserSessionException e) {
+                            String errorMsg = "Error occurred while revoking access token for user Id: " + userId;
+                            log.error(errorMsg, e);
+                            throw new IdentityEventException(errorMsg, e);
+                        } catch (SessionManagementException e) {
+                            String errorMsg = "Failed to terminate active sessions of user Id: " + userId;
+                            log.error(errorMsg, e);
+                            throw new IdentityEventException(errorMsg, e);
+                        }
+                    }
+                }
+            } catch (org.wso2.carbon.user.api.UserStoreException e) {
+                String errorMsg = "Error occurred while retrieving user manager";
+                log.error(errorMsg, e);
+                throw new IdentityEventException(errorMsg, e);
             }
         }
     }

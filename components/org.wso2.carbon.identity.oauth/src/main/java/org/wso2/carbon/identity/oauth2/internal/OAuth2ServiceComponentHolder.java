@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.internal;
 
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
+import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -53,6 +54,7 @@ public class OAuth2ServiceComponentHolder {
     private static AuthenticationDataPublisher authenticationDataPublisherProxy;
     private static KeyIDProvider keyIDProvider = null;
     private IdpManager idpManager;
+    private static UserSessionManagementService userSessionManagementService;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -264,5 +266,25 @@ public class OAuth2ServiceComponentHolder {
     public IdpManager getIdpManager() {
 
         return idpManager;
+    }
+    
+    /**
+    * Set UserSessionManagementService Instance.
+    *
+    * @param userSessionManagementService UserSessionManagementService.
+     */
+    public static void setUserSessionManagementService(UserSessionManagementService userSessionManagementService) {
+
+        OAuth2ServiceComponentHolder.userSessionManagementService = userSessionManagementService;
+    }
+
+    /**
+     * Get UserSessionManagementService Instance.
+     *
+     * @return UserSessionManagementService.
+     */
+    public static UserSessionManagementService getUserSessionManagementService() {
+
+        return userSessionManagementService;
     }
 }
