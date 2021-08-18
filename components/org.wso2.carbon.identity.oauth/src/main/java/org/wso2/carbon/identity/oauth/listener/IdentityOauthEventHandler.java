@@ -35,10 +35,15 @@ import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.mgt.core.UserBasicInfo;
+import org.wso2.carbon.identity.role.mgt.core.dao.RoleDAO;
+import org.wso2.carbon.identity.role.mgt.core.dao.RoleMgtDAOFactory;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -47,6 +52,7 @@ import java.util.List;
 public class IdentityOauthEventHandler extends AbstractEventHandler {
 
     private static final Log log = LogFactory.getLog(IdentityOauthEventHandler.class);
+    private final RoleDAO roleDAO = RoleMgtDAOFactory.getInstance().getRoleDAO();
 
     public String getName() {
 
@@ -93,47 +99,42 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 log.error(errorMsg, e);
                 throw new IdentityEventException(errorMsg);
             }
+
         } else if (IdentityEventConstants.Event.POST_UPDATE_USER_LIST_OF_ROLE.equals(event.getEventName())) {
 
-            try {
-                UserStoreManager userStoreManager = (UserStoreManager) CarbonContext.getThreadLocalCarbonContext()
-                        .getUserRealm().getUserStoreManager();
+            Object userIdList = event.getEventProperties()
+                    .get(IdentityEventConstants.EventProperty.DELETE_USER_ID_LIST);
+            List<String> deletedUserIDList;
 
-                Object userIdList = event.getEventProperties()
-                        .get(IdentityEventConstants.EventProperty.DELETE_USER_ID_LIST);
-                List<String> deletedUserIDList;
-
+            if (userIdList != null) {
                 if (userIdList instanceof List<?>) {
                     deletedUserIDList = (List<String>) userIdList;
+                    terminateSession(deletedUserIDList);
                 } else {
                     String errorMsg = "Error occurred due to invalid format of deleted user Id list.";
                     throw new IdentityEventException(errorMsg);
                 }
+            }
 
-                String userName;
-                if (!deletedUserIDList.isEmpty()) {
-                    for (String userId : deletedUserIDList) {
-                        try {
-                            userName = FrameworkUtils.resolveUserNameFromUserId(userStoreManager, userId);
-                            OAuthUtil.revokeTokens(userName, userStoreManager);
-                            OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
-                            OAuth2ServiceComponentHolder.getUserSessionManagementService()
-                                    .terminateSessionsByUserId(userId);
-                        } catch (UserSessionException e) {
-                            String errorMsg = "Error occurred while revoking access token for user Id: " + userId;
-                            log.error(errorMsg, e);
-                            throw new IdentityEventException(errorMsg, e);
-                        } catch (SessionManagementException e) {
-                            String errorMsg = "Failed to terminate active sessions of user Id: " + userId;
-                            log.error(errorMsg, e);
-                            throw new IdentityEventException(errorMsg, e);
-                        }
-                    }
+        } else if (IdentityEventConstants.Event.PRE_DELETE_ROLE.equals(event.getEventName()) ||
+                IdentityEventConstants.Event.POST_SET_PERMISSIONS_FOR_ROLE.equals(event.getEventName())) {
+
+            String roleId = (String) event.getEventProperties()
+                    .get(IdentityEventConstants.EventProperty.ROLE_ID);
+            String tenantDomain = (String) event.getEventProperties()
+                    .get(IdentityEventConstants.EventProperty.TENANT_DOMAIN);
+            try {
+                List<UserBasicInfo> userList = roleDAO.getRole(roleId, tenantDomain).getUsers();
+
+                List<String> userIdList = new ArrayList<>();
+                for (UserBasicInfo userBasicInfo : userList) {
+                    userIdList.add(userBasicInfo.getId());
                 }
-            } catch (org.wso2.carbon.user.api.UserStoreException e) {
-                String errorMsg = "Error occurred while retrieving user manager";
-                log.error(errorMsg, e);
-                throw new IdentityEventException(errorMsg, e);
+
+                terminateSession(userIdList);
+            } catch (IdentityRoleManagementException e) {
+                String errorMsg = "Invaild role id :" + roleId + "in tenant domain " + tenantDomain;
+                throw new IdentityEventException(errorMsg);
             }
         }
     }
@@ -162,6 +163,45 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 log.debug(String.format("User %s is disabled. Hence revoking user's access tokens.", userName));
             }
             OAuthUtil.revokeTokens(userName, userStoreManager);
+        }
+    }
+
+    /**
+     * To revoke access tokens and terminate sessions of given list of user IDs.
+     *
+     * @param userIDList            List of user IDs
+     * @throws IdentityEventException
+     */
+    private void terminateSession(List<String> userIDList) throws IdentityEventException {
+
+        try {
+            UserStoreManager userStoreManager = (UserStoreManager) CarbonContext.getThreadLocalCarbonContext()
+                    .getUserRealm().getUserStoreManager();
+
+            String userName;
+            if (!userIDList.isEmpty()) {
+                for (String userId : userIDList) {
+                    try {
+                        userName = FrameworkUtils.resolveUserNameFromUserId(userStoreManager, userId);
+                        OAuthUtil.revokeTokens(userName, userStoreManager);
+                        OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
+                        OAuth2ServiceComponentHolder.getUserSessionManagementService()
+                                .terminateSessionsByUserId(userId);
+                    } catch (UserSessionException e) {
+                        String errorMsg = "Error occurred while revoking access token for user Id: " + userId;
+                        log.error(errorMsg, e);
+                        throw new IdentityEventException(errorMsg, e);
+                    } catch (SessionManagementException e) {
+                        String errorMsg = "Failed to terminate active sessions of user Id: " + userId;
+                        log.error(errorMsg, e);
+                        throw new IdentityEventException(errorMsg, e);
+                    }
+                }
+            }
+        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            String errorMsg = "Error occurred while retrieving user manager";
+            log.error(errorMsg, e);
+            throw new IdentityEventException(errorMsg, e);
         }
     }
 }
