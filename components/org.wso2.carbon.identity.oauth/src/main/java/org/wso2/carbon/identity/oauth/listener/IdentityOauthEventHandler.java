@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.listener;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
@@ -106,14 +107,9 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                     .get(IdentityEventConstants.EventProperty.DELETE_USER_ID_LIST);
             List<String> deletedUserIDList;
 
-            if (userIdList != null) {
-                if (userIdList instanceof List<?>) {
-                    deletedUserIDList = (List<String>) userIdList;
-                    terminateSession(deletedUserIDList);
-                } else {
-                    String errorMsg = "Error occurred due to invalid format of deleted user Id list.";
-                    throw new IdentityEventException(errorMsg);
-                }
+            if (userIdList instanceof List<?>) {
+                deletedUserIDList = (List<String>) userIdList;
+                terminateSession(deletedUserIDList);
             }
 
         } else if (IdentityEventConstants.Event.PRE_DELETE_ROLE.equals(event.getEventName()) ||
@@ -127,11 +123,12 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 List<UserBasicInfo> userList = roleDAO.getRole(roleId, tenantDomain).getUsers();
 
                 List<String> userIdList = new ArrayList<>();
-                for (UserBasicInfo userBasicInfo : userList) {
-                    userIdList.add(userBasicInfo.getId());
+                if (userList != null) {
+                    for (UserBasicInfo userBasicInfo : userList) {
+                        userIdList.add(userBasicInfo.getId());
+                    }
+                    terminateSession(userIdList);
                 }
-
-                terminateSession(userIdList);
             } catch (IdentityRoleManagementException e) {
                 String errorMsg = "Invaild role id :" + roleId + "in tenant domain " + tenantDomain;
                 throw new IdentityEventException(errorMsg);
@@ -179,7 +176,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                     .getUserRealm().getUserStoreManager();
 
             String userName;
-            if (!userIDList.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(userIDList)) {
                 for (String userId : userIDList) {
                     try {
                         userName = FrameworkUtils.resolveUserNameFromUserId(userStoreManager, userId);
