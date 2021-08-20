@@ -19,11 +19,13 @@ package org.wso2.carbon.identity.openidconnect;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -48,6 +50,12 @@ public class RequestObjectService {
             log.debug("Invoking the RequestObjectPersistenceFactory to persist the request object claims against" +
                     " the sessionDataKey:" + sessionDataKey);
         }
+        boolean isRequestObjectEnabled = OAuthServerConfiguration.getInstance().
+                isRequestObjectEnabled();
+        if (!isRequestObjectEnabled) {
+            log.debug("Request Object Flow is disabled, hence dropping the event");
+            return;
+        }
         try {
             OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO().insertRequestObjectData
                     (consumerKey, sessionDataKey, claims);
@@ -69,7 +77,12 @@ public class RequestObjectService {
      */
     private List<RequestedClaim> getRequestedClaimsbySessionDataKey(String sessionDataKey, boolean isUserInfo)
             throws RequestObjectException {
-
+        boolean isRequestObjectEnabled = OAuthServerConfiguration.getInstance().
+                isRequestObjectEnabled();
+        if (!isRequestObjectEnabled) {
+            log.debug("Request Object Flow is disabled, hence dropping the event");
+            return Collections.emptyList();
+        }
         List<RequestedClaim> essentialClaims;
         if (log.isDebugEnabled()) {
             log.debug("Invoking the RequestObjectPersistenceFactory to retrieve essential claims list " +
@@ -94,7 +107,12 @@ public class RequestObjectService {
      */
     private List<RequestedClaim> getRequestedClaims(String token, boolean isUserInfo)
             throws RequestObjectException {
-
+        boolean isRequestObjectEnabled = OAuthServerConfiguration.getInstance().
+                isRequestObjectEnabled();
+        if (!isRequestObjectEnabled) {
+            log.debug("Request Object Flow is disabled, hence dropping the event");
+            return Collections.emptyList();
+        }
         List<RequestedClaim> essentialClaims;
         if (log.isDebugEnabled()) {
             log.debug("Invoking the RequestObjectPersistenceFactory to retrieve essential claims list.");
