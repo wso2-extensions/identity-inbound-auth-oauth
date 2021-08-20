@@ -159,6 +159,14 @@ public interface AccessTokenDAO {
                                            String tokenStateId, AccessTokenDO accessTokenDO,
                                            String userStoreDomain) throws IdentityOAuth2Exception;
 
+    default void invalidateAndCreateNewAccessToken(String oldAccessTokenId, String tokenState, String consumerKey,
+                                                   String tokenStateId, AccessTokenDO accessTokenDO,
+                                                   String userStoreDomain, String grantType)
+            throws IdentityOAuth2Exception {
+        invalidateAndCreateNewAccessToken(oldAccessTokenId, tokenState, consumerKey, tokenStateId, accessTokenDO,
+                userStoreDomain);
+    }
+
     void updateUserStoreDomain(int tenantId, String currentUserStoreDomain,
                                String newUserStoreDomain) throws IdentityOAuth2Exception;
 
@@ -193,9 +201,23 @@ public interface AccessTokenDAO {
      *
      * @param tokenId         ID of the access token to update the state.
      * @param tokenState      state to update.
+     * @deprecated to use {{@link #updateAccessTokenState(String, String, String)}}
      * @throws IdentityOAuth2Exception
      */
     void updateAccessTokenState(String tokenId, String tokenState) throws IdentityOAuth2Exception;
+
+    /**
+     * Update access token to the given state.
+     *
+     * @param tokenId         ID of the access token to update the state.
+     * @param tokenState      state to update.
+     * @param grantType      state to update.
+     * @throws IdentityOAuth2Exception
+     */
+    default void updateAccessTokenState(String tokenId, String tokenState, String grantType)
+            throws IdentityOAuth2Exception {
+        updateAccessTokenState(tokenId, tokenState);
+    }
 
     default Set<AccessTokenDO> getActiveTokenSetWithTokenIdByConsumerKeyForOpenidScope(String consumerKey)
             throws IdentityOAuth2Exception {

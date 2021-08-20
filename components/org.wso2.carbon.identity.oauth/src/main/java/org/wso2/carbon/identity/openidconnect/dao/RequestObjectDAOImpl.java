@@ -429,9 +429,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                 .prepareStatement(SQLQueries.DELETE_REQ_OBJECT_TOKEN_FOR_CODE)) {
             prepStmt.setString(1, tokenId);
             prepStmt.execute();
-            IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e1) {
-            IdentityDatabaseUtil.rollbackTransaction(connection);
             throw handleError("Can not delete existing entry for the same token id" + tokenId, e1);
         }
     }

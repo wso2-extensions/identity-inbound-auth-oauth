@@ -344,7 +344,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         OAuthUtil.invokePreRevocationBySystemListeners(existingTokenBean, Collections.emptyMap());
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .updateAccessTokenState(existingTokenBean.getTokenId(), OAuthConstants.TokenStates
-                        .TOKEN_STATE_REVOKED);
+                        .TOKEN_STATE_REVOKED, existingTokenBean.getGrantType());
         clearExistingTokenFromCache(tokReqMsgCtx, existingTokenBean);
         OAuthUtil.invokePostRevocationBySystemListeners(existingTokenBean, Collections.emptyMap());
 

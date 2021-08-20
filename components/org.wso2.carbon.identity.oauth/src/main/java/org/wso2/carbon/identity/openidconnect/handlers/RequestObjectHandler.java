@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
@@ -53,6 +54,12 @@ public class RequestObjectHandler extends AbstractEventHandler {
 
         Map<String, Object> eventProperties = event.getEventProperties();
         String eventName = event.getEventName();
+        boolean isRequestObjectEnabled = OAuthServerConfiguration.getInstance().
+                isRequestObjectEnabled();
+        if (!isRequestObjectEnabled) {
+            log.debug("Request Object Flow is disabled, hence dropping the event");
+            return;
+        }
         try {
              Object isRequestObject = eventProperties.get(OIDCConstants.Event.IS_REQUEST_OBJECT_FLOW);
              if (isRequestObject != null && !(boolean) isRequestObject) {
@@ -103,7 +110,13 @@ public class RequestObjectHandler extends AbstractEventHandler {
     }
 
     private void postRefreshToken(Map<String, Object> eventProperties) throws IdentityOAuth2Exception {
-
+        Object isRequestObject = eventProperties.get(OIDCConstants.Event.IS_REQUEST_OBJECT_FLOW);
+        if (!Boolean.TRUE.equals(isRequestObject)) {
+            if (log.isDebugEnabled()) {
+                log.debug("The request does not contains request object. So skipping RequestObjectHandler");
+            }
+            return;
+        }
         String oldAccessToken = (String) eventProperties.get(OIDCConstants.Event.OLD_ACCESS_TOKEN);
         String newAccessToken = (String) eventProperties.get(OIDCConstants.Event.NEW_ACCESS_TOKEN);
         OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO().refreshRequestObjectReference
@@ -131,6 +144,13 @@ public class RequestObjectHandler extends AbstractEventHandler {
             IdentityOAuth2Exception, IdentityOAuthAdminException {
 
         if (isCodeRemoved(tokenState)) {
+            Object isRequestObject = eventProperties.get(OIDCConstants.Event.IS_REQUEST_OBJECT_FLOW);
+            if (!Boolean.TRUE.equals(isRequestObject)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("The request does not contains request object. So skipping RequestObjectHandler");
+                }
+                return;
+            }
             String tokenId = (String) eventProperties.get(OIDCConstants.Event.TOKEN_ID);
             OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO().deleteRequestObjectReferenceByTokenId
                     (tokenId);

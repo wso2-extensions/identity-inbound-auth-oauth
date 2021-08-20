@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceCompo
 import java.util.HashMap;
 import java.util.List;
 
+import static org.wso2.carbon.identity.openidconnect.OIDCConstants.Event.IS_REQUEST_OBJECT_FLOW;
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.Event.NEW_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.Event.OLD_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.Event.TOKEN_STATE;
@@ -83,17 +84,32 @@ public class OAuth2TokenUtil {
      *
      * @param acessTokenId
      * @throws IdentityOAuth2Exception
+     * @deprecated to use {{@link #postUpdateAccessToken(String, String, boolean)}}
      */
     public static void postUpdateAccessToken(String acessTokenId, String tokenState)
+            throws IdentityOAuth2Exception {
+        postUpdateAccessToken(acessTokenId, tokenState, true);
+    }
+
+    /**
+     * Uses to revoke access tokens from the request object related tables after token revocation
+     * happens from access token related tables.
+     *
+     * @param accessTokenId
+     * @param isRequestObjectFlow whether the request object is included.
+     * @throws IdentityOAuth2Exception
+     */
+    public static void postUpdateAccessToken(String accessTokenId, String tokenState, boolean isRequestObjectFlow)
             throws IdentityOAuth2Exception {
 
         String eventName = null;
         HashMap<String, Object> properties = new HashMap<>();
 
-        if (StringUtils.isNotBlank(acessTokenId)) {
+        if (StringUtils.isNotBlank(accessTokenId)) {
             eventName = OIDCConstants.Event.POST_REVOKE_ACESS_TOKEN_BY_ID;
             properties.put(TOKEN_STATE, tokenState);
-            properties.put(OIDCConstants.Event.TOKEN_ID, acessTokenId);
+            properties.put(OIDCConstants.Event.TOKEN_ID, accessTokenId);
+            properties.put(IS_REQUEST_OBJECT_FLOW, isRequestObjectFlow);
         }
         triggerEvent(eventName, properties);
     }
@@ -124,15 +140,29 @@ public class OAuth2TokenUtil {
      *
      * @param acessTokenId
      * @throws IdentityOAuth2Exception
+     * @deprecated to use {{@link #postRefreshAccessToken(String, String, String, boolean)}}
      */
     public static void postRefreshAccessToken(String oldAcessTokenId, String acessTokenId, String tokenState)
             throws IdentityOAuth2Exception {
+        postRefreshAccessToken(oldAcessTokenId, acessTokenId, tokenState, true);
+    }
+
+    /**
+     * Uses to revoke access tokens from the request object related tables after token revocation
+     * happens from access token related tables.
+     *
+     * @param acessTokenId
+     * @throws IdentityOAuth2Exception
+     */
+    public static void postRefreshAccessToken(String oldAcessTokenId, String acessTokenId, String tokenState,
+                                              boolean isRequestObjectFlow) throws IdentityOAuth2Exception {
 
         String eventName;
         HashMap<String, Object> properties = new HashMap<>();
         if (StringUtils.isNotBlank(acessTokenId)) {
             properties.put(OLD_ACCESS_TOKEN, oldAcessTokenId);
             properties.put(NEW_ACCESS_TOKEN, acessTokenId);
+            properties.put(IS_REQUEST_OBJECT_FLOW, isRequestObjectFlow);
         }
         eventName = OIDCConstants.Event.POST_REFRESH_TOKEN;
         triggerEvent(eventName, properties);

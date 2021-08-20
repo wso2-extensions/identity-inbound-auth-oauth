@@ -321,7 +321,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .invalidateAndCreateNewAccessToken(oldAccessToken.getTokenId(),
                         OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE, clientId,
-                        UUID.randomUUID().toString(), accessTokenBean, userStoreDomain);
+                        UUID.randomUUID().toString(), accessTokenBean, userStoreDomain, oldAccessToken.getGrantType());
         updateCacheIfEnabled(tokReqMsgCtx, accessTokenBean, clientId, oldAccessToken);
     }
 
