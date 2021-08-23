@@ -231,11 +231,6 @@
                 <artifactId>org.wso2.carbon.identity.application.authentication.endpoint.util</artifactId>
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
-            <dependency>
-                <groupId>org.wso2.carbon.identity.framework</groupId>
-                <artifactId>org.wso2.carbon.identity.mgt</artifactId>
-                <version>${carbon.identity.framework.version}</version>
-            </dependency>
 
             <!--SAML Common Util dependency-->
             <dependency>
