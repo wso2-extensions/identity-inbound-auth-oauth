@@ -270,6 +270,13 @@ public class OAuthServerConfiguration {
     // Property to check whether to drop unregistered scopes.
     private boolean dropUnregisteredScopes = false;
 
+    // Properties for OAuth2 Device Code Grant type.
+    private int deviceCodeKeyLength = 6;
+    private long deviceCodeExpiryTime = 600000L;
+    private int deviceCodePollingInterval = 5000;
+    private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
+    private int deviceCodeTokenPersistRetryCount = 5;
+
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
     }
@@ -401,6 +408,9 @@ public class OAuthServerConfiguration {
 
         // Parse token value generator class name.
         parseOAuthTokenValueGenerator(oauthElem);
+
+        // Parse values of DeviceCodeGrant config.
+        parseOAuthDeviceCodeGrantConfig(oauthElem);
 
         // Read the value of UseSPTenantDomain config.
         parseUseSPTenantDomainConfig(oauthElem);
@@ -1421,6 +1431,31 @@ public class OAuthServerConfiguration {
 
     public boolean isRequestObjectEnabled() {
         return requestObjectEnabled;
+    }
+
+    public int getDeviceCodeKeyLength() {
+
+        return deviceCodeKeyLength;
+    }
+
+    public long getDeviceCodeExpiryTime() {
+
+        return deviceCodeExpiryTime;
+    }
+
+    public int getDeviceCodePollingInterval() {
+
+        return deviceCodePollingInterval;
+    }
+
+    public String getDeviceCodeKeySet() {
+
+        return deviceCodeKeySet;
+    }
+
+    public int getDeviceCodeTokenPersistRetryCount() {
+
+        return deviceCodeTokenPersistRetryCount;
     }
 
     private void parseOAuthCallbackHandlers(OMElement callbackHandlersElem) {
@@ -2556,6 +2591,67 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseOAuthDeviceCodeGrantConfig(OMElement oauthElem) {
+
+        OMElement oauthDeviceCodeGrantElement = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_GRANT));
+
+        if (oauthDeviceCodeGrantElement
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_LENGTH)) != null) {
+            try {
+                deviceCodeKeyLength = Integer.parseInt(oauthDeviceCodeGrantElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_LENGTH)).getText()
+                        .trim());
+            } catch (NumberFormatException e) {
+                log.error("Error while converting user_code length " + oauthDeviceCodeGrantElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_LENGTH)).getText()
+                        .trim() + " to integer. Falling back to the default value.", e);
+            }
+        }
+        if (oauthDeviceCodeGrantElement
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_EXPIRY_TIME)) != null) {
+            try {
+                deviceCodeExpiryTime = Long.parseLong(oauthDeviceCodeGrantElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_EXPIRY_TIME)).getText()
+                        .trim());
+            } catch (NumberFormatException e) {
+                log.error("Error while converting device code expiry " + oauthDeviceCodeGrantElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_EXPIRY_TIME)).getText()
+                        .trim() + " to long. Falling back to the default value.", e);
+            }
+        }
+        if (oauthDeviceCodeGrantElement
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_POLLING_INTERVAL)) != null) {
+            try {
+                deviceCodePollingInterval =
+                        Integer.parseInt(oauthDeviceCodeGrantElement.getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_POLLING_INTERVAL)).getText().trim());
+            } catch (NumberFormatException e) {
+                log.error("Error while converting polling interval " + oauthDeviceCodeGrantElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_POLLING_INTERVAL))
+                        .getText().trim() + " to integer. Falling back to the default value.", e);
+            }
+        }
+        if (oauthDeviceCodeGrantElement
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_SET)) != null) {
+            deviceCodeKeySet = oauthDeviceCodeGrantElement
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_SET)).getText().trim();
+        }
+        if (oauthDeviceCodeGrantElement
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_TOKEN_PERSIST_RETRY_COUNT)) !=
+                null) {
+            try {
+                deviceCodeTokenPersistRetryCount = Integer.parseInt(oauthDeviceCodeGrantElement.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_TOKEN_PERSIST_RETRY_COUNT)).getText().trim());
+            } catch (NumberFormatException e) {
+                log.error("Error while converting token persist retry count " + oauthDeviceCodeGrantElement
+                        .getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_TOKEN_PERSIST_RETRY_COUNT)).getText()
+                        .trim() + " to integer. Falling back to the default value.", e);
+            }
+        }
+    }
+
     private void parseOpenIDConnectConfig(OMElement oauthConfigElem) {
 
         OMElement openIDConnectConfigElem =
@@ -3196,6 +3292,14 @@ public class OAuthServerConfiguration {
         private static final String SCOPES_ELEMENT = "Scope";
 
         private static final String DROP_UNREGISTERED_SCOPES = "DropUnregisteredScopes";
+
+        private static final String DEVICE_CODE_GRANT = "DeviceCodeGrant";
+        private static final String DEVICE_CODE_KEY_LENGTH = "KeyLength";
+        private static final String DEVICE_CODE_EXPIRY_TIME = "ExpiryTime";
+        private static final String DEVICE_CODE_POLLING_INTERVAL = "PollingInterval";
+        private static final String DEVICE_CODE_KEY_SET = "KeySet";
+        private static final String DEVICE_CODE_TOKEN_PERSIST_RETRY_COUNT = "DeviceTokenPersistRetryCount";
+
     }
 
 }
