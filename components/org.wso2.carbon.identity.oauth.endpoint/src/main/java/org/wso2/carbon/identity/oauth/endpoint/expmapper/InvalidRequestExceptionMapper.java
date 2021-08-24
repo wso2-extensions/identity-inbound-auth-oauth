@@ -190,7 +190,8 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
                         oAuthResponse.getBody());
             }
 
-            if (exception instanceof TokenEndpointAccessDeniedException) {
+            if (exception instanceof TokenEndpointAccessDeniedException ||
+                    exception instanceof InvalidApplicationClientException) {
                 return Response.status(oAuthResponse.getResponseStatus())
                         .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, EndpointUtil.getRealmInfo())
                         .entity(oAuthResponse.getBody()).build();
