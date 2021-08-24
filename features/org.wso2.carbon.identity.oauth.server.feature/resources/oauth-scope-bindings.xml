@@ -956,4 +956,24 @@
             <Permission>/permission/admin/manage/identity/groupmgt/update</Permission>
         </Permissions>
     </Scope>
+    <Scope name="internal_secret_mgt_add" displayName="Add Secret">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/secretmgt/add</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_secret_mgt_update" displayName="Update Secret">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/secretmgt/update</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_secret_mgt_view" displayName="View Secret">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/secretmgt/view</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_secret_mgt_delete" displayName="Delete Secret">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/secretmgt/delete</Permission>
+        </Permissions>
+    </Scope>
 </Scopes>
