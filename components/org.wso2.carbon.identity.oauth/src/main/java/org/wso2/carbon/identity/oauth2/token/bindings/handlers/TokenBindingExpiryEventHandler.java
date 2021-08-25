@@ -121,11 +121,8 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         if (StringUtils.isNotBlank(sessionContextIdentifier)) {
             SessionContext sessionContext = (SessionContext) eventProperties.get(IdentityEventConstants
                     .EventProperty.SESSION_CONTEXT);
-            Map<String, Object> params = (Map<String, Object>) eventProperties
-                    .get(IdentityEventConstants.EventProperty.PARAMS);
-            AuthenticatedUser user = (AuthenticatedUser) params.get(FrameworkConstants.AnalyticsAttributes.USER);
             if (sessionContext != null) {
-                revokeTokensMappedToSession(sessionContextIdentifier, user);
+                revokeTokensMappedToSession(sessionContextIdentifier);
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Session context for session context identifier: " + sessionContextIdentifier +
@@ -271,10 +268,9 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
      * Get the access tokens mapped for the session identifier and revoke those tokens.
      *
      * @param sessionId Session context identifier.
-     * @param user
      * @throws IdentityOAuth2Exception
      */
-    private void revokeTokensMappedToSession(String sessionId, AuthenticatedUser user) throws IdentityOAuth2Exception {
+    private void revokeTokensMappedToSession(String sessionId) throws IdentityOAuth2Exception {
 
         Set<String> tokenIds =
                 OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
@@ -296,12 +292,22 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                 }
                 return;
             }
+            AccessTokenDO accessTokenDO = null;
             try {
-                AccessTokenDO accessTokenDO = OAuth2Util.getAccessTokenDOFromTokenIdentifier(accessToken, false);
-                revokeTokens(accessTokenDO.getConsumerKey(), accessTokenDO, StringUtils.EMPTY);
+                accessTokenDO = OAuth2Util.getAccessTokenDOFromTokenIdentifier(accessToken, false);
             } catch (IllegalArgumentException e) {
-                log.warn("Revoking tokens mapped to session. Invalid token id: " + tokenId +
-                        "  | session id: " + sessionId + " | user: " + user);
+                if (StringUtils.equals(OAuth2Util.ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE, e.getMessage())) {
+                    if (log.isDebugEnabled()) {
+                        log.debug(String.format("Invalid token id: %s was found while revoking tokens mapped to the " +
+                                "session.", tokenId));
+                    }
+                } else {
+                    throw e;
+                }
+            }
+
+            if (accessTokenDO != null) {
+                revokeTokens(accessTokenDO.getConsumerKey(), accessTokenDO, StringUtils.EMPTY);
             }
         }
     }
