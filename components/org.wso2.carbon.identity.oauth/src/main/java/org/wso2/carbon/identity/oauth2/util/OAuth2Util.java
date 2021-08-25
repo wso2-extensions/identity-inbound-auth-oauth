@@ -353,6 +353,9 @@ public class OAuth2Util {
     private static final String FRAGMENT_RESPONSE_MODE = "fragment";
     private static final String FORM_POST_RESPONSE_MODE = "form_post";
 
+    public static final String ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE = "Invalid Access Token. Access token is " +
+            "not ACTIVE.";
+
     private OAuth2Util() {
 
     }
@@ -1706,7 +1709,7 @@ public class OAuth2Util {
 
         if (accessTokenDO == null) {
             // this means the token is not active so we can't proceed further
-            throw new IllegalArgumentException("Invalid Access Token. Access token is not ACTIVE.");
+            throw new IllegalArgumentException(ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE);
         }
 
         // Add the token back to the cache in the case of a cache miss but don't add to cache when OAuth2 token
