@@ -631,7 +631,7 @@ public class OAuthAppDAO {
                 preparedStatementForPropertyUpdate);
 
         if (TOKEN_BINDING_TYPE_NONE.equalsIgnoreCase(oauthAppDO.getTokenBindingType())) {
-            oauthAppDO.setTokenType(null);
+            oauthAppDO.setTokenBindingType(null);
         }
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, TOKEN_BINDING_TYPE,
                 oauthAppDO.getTokenBindingType(), prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
@@ -1176,7 +1176,7 @@ public class OAuthAppDAO {
                     RENEW_REFRESH_TOKEN, consumerAppDO.getRenewRefreshTokenEnabled());
 
             if (TOKEN_BINDING_TYPE_NONE.equalsIgnoreCase(consumerAppDO.getTokenBindingType())) {
-                consumerAppDO.setTokenType(null);
+                consumerAppDO.setTokenBindingType(null);
             }
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty, TOKEN_BINDING_TYPE,
                     consumerAppDO.getTokenBindingType());
