@@ -859,10 +859,15 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         // A new token needs to be generated when isTokenRenewalPerRequestEnabled is set to true.
         if (OAuthServerConfiguration.getInstance().isTokenRenewalPerRequestEnabled()) {
-            if (log.isDebugEnabled()) {
-                log.debug("`RenewTokenPerRequest` property is enabled. Current " +
-                        "refresh token: " + existingAccessTokenDO.getRefreshToken() + " will be " +
-                        "invalidated and new refresh token will be issued.");
+            if (log.isDebugEnabled() && existingAccessTokenDO != null) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.REFRESH_TOKEN)) {
+                    log.debug("`RenewTokenPerRequest` property is enabled. Current refresh token(hashed): " +
+                            DigestUtils.sha256Hex(existingAccessTokenDO.getRefreshToken()) +
+                            " will be invalidated and new refresh token will be issued.");
+                } else {
+                    log.debug("`RenewTokenPerRequest` property is enabled. Current refresh token will be invalidated " +
+                            "and new refresh token will be issued.");
+                }
             }
             return false;
         }
