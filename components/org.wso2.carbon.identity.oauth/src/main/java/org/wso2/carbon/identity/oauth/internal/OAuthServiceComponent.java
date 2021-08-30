@@ -26,6 +26,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -284,5 +285,28 @@ public class OAuthServiceComponent {
             log.debug("Removing OAuthApplicationMgtListener: " + oAuthApplicationMgtListener.getClass().getName());
         }
         OAuthComponentServiceHolder.getInstance().removeOAuthApplicationMgtListener(oAuthApplicationMgtListener);
+    }
+
+    @Reference(
+            name = "userSessionManagementService.service",
+            service = UserSessionManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetUserSessionManagementService"
+    )
+    protected void setUserSessionManagementService(UserSessionManagementService userSessionManagementService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the User Session Management Service");
+        }
+        OAuth2ServiceComponentHolder.setUserSessionManagementService(userSessionManagementService);
+    }
+
+    protected void unsetUserSessionManagementService(UserSessionManagementService userSessionManagementService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("UnSetting the User Session Management Service");
+        }
+        OAuth2ServiceComponentHolder.setUserSessionManagementService(null);
     }
 }
