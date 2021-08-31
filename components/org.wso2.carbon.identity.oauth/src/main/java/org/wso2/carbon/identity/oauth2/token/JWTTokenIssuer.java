@@ -493,12 +493,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private Date calculateAccessTokenExpiryTime(Long accessTokenLifeTimeInMillis, Long curTimeInMillis) {
 
         Date expirationTime;
-        if (accessTokenLifeTimeInMillis < 0) {
-            if (log.isDebugEnabled()) {
-                log.debug("Infinite access token expiry detected. Setting the expiry value to MAX value: " +
-                        Long.MAX_VALUE + "ms.");
-            }
-            // Expiry time set to MAX value as (current + MAX) will lead to a negative value.
+        // When accessTokenLifeTimeInMillis is equal to Long.MAX_VALUE the curTimeInMillis + 
+        // accessTokenLifeTimeInMillis can be a negative value
+        if (curTimeInMillis + accessTokenLifeTimeInMillis < curTimeInMillis) {
             expirationTime = new Date(Long.MAX_VALUE);
         } else {
             expirationTime = new Date(curTimeInMillis + accessTokenLifeTimeInMillis);
