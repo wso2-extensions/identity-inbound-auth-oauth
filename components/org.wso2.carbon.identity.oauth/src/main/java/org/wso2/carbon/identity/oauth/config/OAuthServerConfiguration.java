@@ -275,7 +275,6 @@ public class OAuthServerConfiguration {
     private long deviceCodeExpiryTime = 600000L;
     private int deviceCodePollingInterval = 5000;
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
-    private int deviceCodeTokenPersistRetryCount = 5;
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -1451,11 +1450,6 @@ public class OAuthServerConfiguration {
     public String getDeviceCodeKeySet() {
 
         return deviceCodeKeySet;
-    }
-
-    public int getDeviceCodeTokenPersistRetryCount() {
-
-        return deviceCodeTokenPersistRetryCount;
     }
 
     private void parseOAuthCallbackHandlers(OMElement callbackHandlersElem) {
@@ -2637,19 +2631,6 @@ public class OAuthServerConfiguration {
             deviceCodeKeySet = oauthDeviceCodeGrantElement
                     .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_SET)).getText().trim();
         }
-        if (oauthDeviceCodeGrantElement
-                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_TOKEN_PERSIST_RETRY_COUNT)) !=
-                null) {
-            try {
-                deviceCodeTokenPersistRetryCount = Integer.parseInt(oauthDeviceCodeGrantElement.getFirstChildWithName(
-                        getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_TOKEN_PERSIST_RETRY_COUNT)).getText().trim());
-            } catch (NumberFormatException e) {
-                log.error("Error while converting token persist retry count " + oauthDeviceCodeGrantElement
-                        .getFirstChildWithName(
-                                getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_TOKEN_PERSIST_RETRY_COUNT)).getText()
-                        .trim() + " to integer. Falling back to the default value.", e);
-            }
-        }
     }
 
     private void parseOpenIDConnectConfig(OMElement oauthConfigElem) {
@@ -3298,8 +3279,6 @@ public class OAuthServerConfiguration {
         private static final String DEVICE_CODE_EXPIRY_TIME = "ExpiryTime";
         private static final String DEVICE_CODE_POLLING_INTERVAL = "PollingInterval";
         private static final String DEVICE_CODE_KEY_SET = "KeySet";
-        private static final String DEVICE_CODE_TOKEN_PERSIST_RETRY_COUNT = "DeviceTokenPersistRetryCount";
-
     }
 
 }

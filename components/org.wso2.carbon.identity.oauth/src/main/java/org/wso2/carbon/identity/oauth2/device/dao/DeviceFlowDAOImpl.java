@@ -61,12 +61,11 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         }
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             String codeId = UUID.randomUUID().toString();
-            int retryCount = OAuthServerConfiguration.getInstance().getDeviceCodeTokenPersistRetryCount();
             int keyLength = OAuthServerConfiguration.getInstance().getDeviceCodeKeyLength();
             int pollingInterval = OAuthServerConfiguration.getInstance().getDeviceCodePollingInterval();
             String uniqueUserCode =
-                    storeIntoDeviceFlow(codeId, deviceCode, userCode, quantifier, consumerKey, connection, 0,
-                            retryCount, keyLength, pollingInterval);
+                    storeIntoDeviceFlow(codeId, deviceCode, userCode, quantifier, consumerKey, connection, 0, keyLength,
+                            pollingInterval);
             storeIntoScopes(codeId, deviceCode, scopes, connection);
             IdentityDatabaseUtil.commitTransaction(connection);
             return uniqueUserCode;
@@ -472,11 +471,11 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
      * @throws IdentityOAuth2Exception Error while storing parameters.
      */
     private String storeIntoDeviceFlow(String codeId, String deviceCode, String userCode, long quantifier,
-                                       String consumerKey, Connection connection, int retryAttempt, int retryCount,
-                                       int keyLength, int pollingInterval)
+                                       String consumerKey, Connection connection, int retryAttempt, int keyLength,
+                                       int pollingInterval)
             throws IdentityOAuth2Exception, SQLException {
 
-        if (retryAttempt < retryCount) {
+        if (retryAttempt < Constants.DEFAULT_DEVICE_TOKEN_PERSIST_RETRY_COUNT) {
             String tempUserCode;
             long currentQuantifier;
             long timeExpired;
@@ -487,7 +486,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                     tempUserCode = GenerateKeys.getKey(keyLength);
                     currentQuantifier = GenerateKeys.getCurrentQuantifier();
                     return storeIntoDeviceFlow(codeId, deviceCode, tempUserCode, currentQuantifier, consumerKey,
-                            connection, ++retryAttempt, retryCount, keyLength, pollingInterval);
+                            connection, ++retryAttempt, keyLength, pollingInterval);
                 }
                 prepStmt = connection.prepareStatement(
                         SQLQueries.DeviceFlowDAOSQLQueries.STORE_DEVICE_CODE_WITH_QUANTIFIER);
@@ -519,7 +518,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                     tempUserCode = GenerateKeys.getKey(keyLength);
                     currentQuantifier = GenerateKeys.getCurrentQuantifier();
                     return storeIntoDeviceFlow(codeId, deviceCode, tempUserCode, currentQuantifier, consumerKey,
-                            connection, ++retryAttempt, retryCount, keyLength, pollingInterval);
+                            connection, ++retryAttempt, keyLength, pollingInterval);
                 }
                 throw new IdentityOAuth2Exception("Error when storing the device flow parameters for consumer_key: "
                         + consumerKey, e);
