@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.application.authentication.framework.CommonAuthe
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthHistory;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ClaimMetaData;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ConsentClaimsData;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.exception.SSOConsentServiceException;
@@ -419,6 +420,12 @@ public class OAuth2AuthzEndpoint {
     private Response handleResponseFromConsent(OAuthMessage oAuthMessage) throws OAuthSystemException,
             URISyntaxException, ConsentHandlingFailedException {
 
+        Map<String, Object> params = new HashMap<>();
+        if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
+            oAuthMessage.getRequest().getParameterMap().forEach(params::put);
+        }
+        OAuth2Util.log("oauth-inbound-service", params, "SUCCESS", null, "receive-consent-response", null);
+
         updateAuthTimeInSessionDataCacheEntry(oAuthMessage);
         addSessionDataKeyToSessionDataCacheEntry(oAuthMessage);
 
@@ -496,6 +503,12 @@ public class OAuth2AuthzEndpoint {
                                     + spTenantDomain + " for user: " + loggedInUser.toFullQualifiedUsername() + ". " +
                                     "Therefore handling post consent is not applicable.");
                 }
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", clientId);
+                Map<String, Object> configs = new HashMap<>();
+                configs.put("skipConsent", "true");
+                OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
+                        "Consent is disabled for the OAuth client." , "handle-consent", configs);
                 return;
             }
 
@@ -530,10 +543,15 @@ public class OAuth2AuthzEndpoint {
                         " for client_id: " + clientId + " of tenantDomain: " + spTenantDomain);
             }
 
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", clientId);
+            params.put("prompt", oauth2Params.getPrompt());
             if (hasPromptContainsConsent(oauth2Params)) {
+                OAuth2Util.log("oauth-inbound-service", params, "SUCCESS", null , "hand-over-to-consent-service", null);
                 getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
                         loggedInUser, value, true);
             } else {
+                OAuth2Util.log("oauth-inbound-service", params, "SUCCESS", null , "hand-over-to-consent-service", null);
                 getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
                         loggedInUser, value, false);
             }
@@ -541,6 +559,7 @@ public class OAuth2AuthzEndpoint {
         } catch (OAuthSystemException | SSOConsentServiceException e) {
             String msg = "Error while processing consent of user: " + loggedInUser.toFullQualifiedUsername() + " for " +
                     "client_id: " + clientId + " of tenantDomain: " + spTenantDomain;
+            OAuth2Util.log("oauth-inbound-service", null, "FAILED", "System error occurred." , "process-consent", null);
             throw new ConsentHandlingFailedException(msg, e);
         } catch (ClaimMetadataException e) {
             throw new ConsentHandlingFailedException("Error while getting claim mappings for " + OIDC_DIALECT, e);
@@ -692,6 +711,13 @@ public class OAuth2AuthzEndpoint {
     private Response handleAuthenticationResponse(OAuthMessage oAuthMessage)
             throws OAuthSystemException, URISyntaxException, ConsentHandlingFailedException {
 
+        Map<String, Object> requestParams = new HashMap<>();
+        if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
+            oAuthMessage.getRequest().getParameterMap().forEach(requestParams::put);
+        }
+        OAuth2Util.log("oauth-inbound-service", requestParams, "SUCCESS",
+                "Received authentication response from Framework.", "receive-authn-response", null);
+
         updateAuthTimeInSessionDataCacheEntry(oAuthMessage);
         addSessionDataKeyToSessionDataCacheEntry(oAuthMessage);
 
@@ -705,11 +731,35 @@ public class OAuth2AuthzEndpoint {
             removeAuthenticationResult(oAuthMessage, sessionDataKeyFromLogin);
 
             if (authnResult.isAuthenticated()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", oAuthMessage.getClientId());
+                if (authnResult.getSubject() != null) {
+                    String userIdentifier = null;
+                    try {
+                        userIdentifier = authnResult.getSubject().getUserId();
+                    } catch (UserIdNotFoundException e) {
+                        if (StringUtils.isNotBlank(authnResult.getSubject().getAuthenticatedSubjectIdentifier())) {
+                            userIdentifier = authnResult.getSubject().getAuthenticatedSubjectIdentifier().replaceAll(
+                                    ".", "*");
+                        }
+                    }
+                    params.put("authenticatedUser", userIdentifier);
+                }
+                OAuth2Util.log("oauth-inbound-service", params, "SUCCESS", "Authentication is successful.",
+                        "validate-authn-status", null);
                 return handleSuccessfulAuthentication(oAuthMessage, oauth2Params, authnResult);
             } else {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", oAuthMessage.getClientId());
+                OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Authentication failed.",
+                        "validate-authn-status", null);
                 return handleFailedAuthentication(oAuthMessage, oauth2Params, authnResult);
             }
         } else {
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", oAuthMessage.getClientId());
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Authentication status is empty.",
+                    "validate-authn-status", null);
             return handleEmptyAuthenticationResult(oAuthMessage);
         }
     }
@@ -850,6 +900,12 @@ public class OAuth2AuthzEndpoint {
     private Response handleInitialAuthorizationRequest(OAuthMessage oAuthMessage) throws OAuthSystemException,
             OAuthProblemException, URISyntaxException, InvalidRequestParentException {
 
+        Map<String, Object> params = new HashMap<>();
+        if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
+            oAuthMessage.getRequest().getParameterMap().forEach(params::put);
+        }
+        OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
+                null , "receive-authz-request", null);
         String redirectURL = handleOAuthAuthorizationRequest(oAuthMessage);
         String type = getRequestProtocolType(oAuthMessage);
 
@@ -1107,6 +1163,13 @@ public class OAuth2AuthzEndpoint {
                 TokenBinder tokenBinder = tokenBinderOptional.get();
                 tokenBindingValue = tokenBinder.getOrGenerateTokenBindingValue(oAuthMessage.getRequest());
                 tokenBinder.setTokenBindingValueForResponse(oAuthMessage.getResponse(), tokenBindingValue);
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", oauth2Params.getClientId());
+                params.put("tokenBindingValue", tokenBindingValue);
+                Map<String, Object> configs = new HashMap<>();
+                configs.put("tokenBinderType", tokenBinder.getBindingType());
+                OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
+                        "Successfully generated token binding value." , "generate-token-binding-value", configs);
             }
             setAuthorizationCode(oAuthMessage, authzRespDTO, builder, tokenBindingValue);
         }
@@ -1130,7 +1193,12 @@ public class OAuth2AuthzEndpoint {
         } else {
             oauthResponse = builder.location(redirectURL).buildQueryMessage();
         }
-
+        Map<String, Object> params = new HashMap<>();
+        params.put("clientId", oauth2Params.getClientId());
+        params.put("responseMode", oauth2Params.getResponseMode());
+        params.put("redirectUrl", redirectURL);
+        OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
+                "Successfully generated oauth response." , "generate-response", null);
         sessionState.setAuthenticated(true);
         return oauthResponse;
     }
@@ -1323,6 +1391,10 @@ public class OAuth2AuthzEndpoint {
             return getErrorPageURL(oAuthMessage.getRequest(), validationResponse.getErrorCode(), OAuth2ErrorCodes
                     .OAuth2SubErrorCodes.INVALID_CLIENT, validationResponse.getErrorMsg(), null);
         } else {
+            Map<String, Object> logParams = new HashMap<>();
+            logParams.put("clientId", oAuthMessage.getClientId());
+            OAuth2Util.log("oauth-inbound-service", logParams, "SUCCESS", "OAuth client validation is successful.",
+                    "validate-oauth-client", null);
             String tenantDomain = EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
             setSPAttributeToRequest(oAuthMessage.getRequest(), validationResponse.getApplicationName(), tenantDomain);
         }
@@ -1350,6 +1422,9 @@ public class OAuth2AuthzEndpoint {
         }
 
         addDataToSessionCache(oAuthMessage, params, sessionDataKey);
+
+        OAuth2Util.log("oauth-inbound-service", null, "SUCCESS", "OIDC " +
+                        "request input parameter validation is successful.", "validate-input-parameters", null);
 
         try {
             oAuthMessage.getRequest().setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus
@@ -1387,12 +1462,20 @@ public class OAuth2AuthzEndpoint {
     private void validateNonceParameter(String nonce) throws OAuthProblemException {
 
         if (StringUtils.isBlank(nonce)) {
+            Map<String, Object> logParams = new HashMap<>();
+            logParams.put("nonce", nonce);
+            OAuth2Util.log("oauth-inbound-service", logParams, "FAILED", "'response_type' contains 'id_token' but " +
+                            "'nonce' param not found.", "validate-input-parameters", null);
             throw OAuthProblemException.error(OAuthError.TokenResponse.INVALID_REQUEST)
                     .description("\'response_type\' contains \'id_token\'; but \'nonce\' parameter not found");
         }
         if (log.isDebugEnabled()) {
             log.debug("Mandatory " + NONCE + " parameter is successfully validated");
         }
+        Map<String, Object> logParams = new HashMap<>();
+        logParams.put("nonce", nonce);
+        OAuth2Util.log("oauth-inbound-service", logParams, "SUCCESS", "'nonce' parameter validation is successful.",
+                "validate-input-parameters", null);
     }
 
     private void persistRequestObject(OAuth2Parameters params, RequestObject requestObject)
@@ -1439,6 +1522,13 @@ public class OAuth2AuthzEndpoint {
             List requestedPrompts = getRequestedPromptList(prompt);
             if (!CollectionUtils.containsAny(requestedPrompts, promptsList)) {
                 String message = "Invalid prompt variables passed with the authorization request";
+                Map<String, Object> logParams = new HashMap<>();
+                logParams.put("prompt", prompt);
+                logParams.put("clientId", params.getClientId());
+                Map<String, Object> configs = new HashMap<>();
+                configs.put("serverSupportedPrompts", promptsList);
+                OAuth2Util.log("oauth-inbound-service", logParams, "FAILED", message, "validate-input-parameters",
+                        configs);
                 return handleInvalidPromptValues(oAuthMessage, params, prompt, message);
             }
 
@@ -1448,6 +1538,13 @@ public class OAuth2AuthzEndpoint {
                     String message =
                             "Invalid prompt variable combination. The value 'none' cannot be used with others " +
                                     "prompts. Prompt: ";
+                    Map<String, Object> logParams = new HashMap<>();
+                    logParams.put("prompt", prompt);
+                    logParams.put("clientId", params.getClientId());
+                    Map<String, Object> configs = new HashMap<>();
+                    configs.put("serverSupportedPrompts", promptsList);
+                    OAuth2Util.log("oauth-inbound-service", logParams, "FAILED", message, "validate-input-parameters",
+                            configs);
                     return handleInvalidPromptValues(oAuthMessage, params, prompt, message);
 
                 } else if (requestedPrompts.contains(OAuthConstants.Prompt.LOGIN) &&
@@ -1502,6 +1599,15 @@ public class OAuth2AuthzEndpoint {
         if (validationResponse.isPkceMandatory()) {
             if (pkceChallengeCode == null || !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode,
                     pkceChallengeMethod)) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", oAuth2Parameters.getClientId());
+                params.put("pkceChallenge", pkceChallengeCode);
+                params.put("pkceMethod", pkceChallengeMethod);
+
+                Map<String, Object> configs = new HashMap<>();
+                configs.put("isPkceMandatory", "true");
+                OAuth2Util.log("oauth-inbound-service", params, "FAILED", "PKCE Challenge is not provided or is not " +
+                                "upto RFC 7636 specification.", "validate-pkce", configs);
                 return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
                         .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE, "PKCE is mandatory for this application. " +
                         "PKCE Challenge is not provided or is not upto RFC 7636 " +
@@ -1512,6 +1618,15 @@ public class OAuth2AuthzEndpoint {
         if (pkceChallengeCode != null && pkceChallengeMethod != null) {
             if (!OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(pkceChallengeMethod) &&
                     !OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(pkceChallengeMethod)) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", oAuth2Parameters.getClientId());
+                params.put("pkceChallenge", pkceChallengeCode);
+                params.put("pkceMethod", pkceChallengeMethod);
+
+                Map<String, Object> configs = new HashMap<>();
+                configs.put("isPkceMandatory", Boolean.toString(validationResponse.isPkceMandatory()));
+                OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Unsupported PKCE Challenge Method.",
+                        "validate-pkce", configs);
                 return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
                         .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE, "Unsupported PKCE Challenge Method", null,
                         oAuth2Parameters);
@@ -1521,6 +1636,16 @@ public class OAuth2AuthzEndpoint {
         // Check if "plain" transformation algorithm is disabled for the application
         if (pkceChallengeCode != null && !validationResponse.isPkceSupportPlain()) {
             if (pkceChallengeMethod == null || OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(pkceChallengeMethod)) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", oAuth2Parameters.getClientId());
+                params.put("pkceChallenge", pkceChallengeCode);
+                params.put("pkceMethod", pkceChallengeMethod);
+
+                Map<String, Object> configs = new HashMap<>();
+                configs.put("isPkceMandatory", Boolean.toString(validationResponse.isPkceMandatory()));
+                configs.put("isPkceSupportPlain", "false");
+                OAuth2Util.log("oauth-inbound-service", params, "FAILED", "OAuth client does not support 'plain' " +
+                                "transformation algorithm.", "validate-pkce", configs);
                 return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
                         .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE, "This application does not support " +
                         "\"plain\" transformation algorithm.", null, oAuth2Parameters);
@@ -1530,10 +1655,21 @@ public class OAuth2AuthzEndpoint {
         // If PKCE challenge code was sent, check if the code challenge is upto specifications
         if (pkceChallengeCode != null && !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode,
                 pkceChallengeMethod)) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", oAuth2Parameters.getClientId());
+            params.put("pkceChallenge", pkceChallengeCode);
+            params.put("pkceMethod", pkceChallengeMethod);
+
+            Map<String, Object> configs = new HashMap<>();
+            configs.put("isPkceMandatory", Boolean.toString(validationResponse.isPkceMandatory()));
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Code challenge used is not up to RFC " +
+                    "7636 specifications.", "validate-pkce", configs);
             return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
                     .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE, "Code challenge used is not up to RFC 7636 " +
                     "specifications.", null, oAuth2Parameters);
         }
+        OAuth2Util.log("oauth-inbound-service", null, "SUCCESS", "PKCE validation is successful.",
+                "validate-pkce", null);
         return null;
     }
 
@@ -1675,6 +1811,11 @@ public class OAuth2AuthzEndpoint {
                 params.setMaxAge(Long.parseLong(maxAgeParam));
             } catch (NumberFormatException ex) {
                 log.error("Invalid max_age parameter: '" + maxAgeParam + "' sent in the authorization request.");
+                Map<String, Object> logParams = new HashMap<>();
+                logParams.put("clientId", params.getClientId());
+                logParams.put("maxAge", maxAgeParam);
+                OAuth2Util.log("oauth-inbound-service", logParams, "FAILED", "Invalid " +
+                                "max_age paramter value", "validate-input-parameters", null);
                 throw new InvalidRequestException("Invalid max_age parameter value sent in the authorization request" +
                         ".", OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_PARAMETERS);
             }
@@ -1707,6 +1848,7 @@ public class OAuth2AuthzEndpoint {
         // With in the same request it can not be used both request parameter and request_uri parameter.
         if (StringUtils.isNotEmpty(oauthRequest.getParam(REQUEST)) && StringUtils.isNotEmpty(oauthRequest.getParam
                 (REQUEST_URI))) {
+            //diag log
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Both request and " +
                     "request_uri parameters can not be associated with the same authorization request.");
         }
@@ -1732,6 +1874,8 @@ public class OAuth2AuthzEndpoint {
         // so validating if the registered redirect uri is a single uri that can be properly redirected.
         if (StringUtils.isBlank(parameters.getRedirectURI()) ||
                 StringUtils.startsWith(parameters.getRedirectURI(), REGEX_PATTERN)) {
+            OAuth2Util.log("oauth-inbound-service", null, "FAILED", "Redirect URI is not present in the authorization" +
+                            " request.", "validate-input-parameters", null);
             throw new InvalidRequestException("Redirect URI is not present in the authorization request.",
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
@@ -1774,6 +1918,9 @@ public class OAuth2AuthzEndpoint {
                     oAuthMessage.getRequest().setAttribute(ACR_VALUES, acrRequestedValues);
                 }
             }
+            OAuth2Util.log("oauth-inbound-service", null, "SUCCESS", "Successfully overridden the parameters in " +
+                            "authorization request with the parameters available in request object.",
+                    "override-authz-parameters", null);
         }
     }
 
@@ -1886,6 +2033,20 @@ public class OAuth2AuthzEndpoint {
             // Remove any existing consents.
             String clientId = oauth2Params.getClientId();
             OpenIDConnectUserRPStore.getInstance().removeConsentForUser(authenticatedUser, clientId);
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", oauth2Params.getClientId());
+            params.put("prompt", oauth2Params.getPrompt());
+            if (authenticatedUser != null) {
+                try {
+                    params.put("user", authenticatedUser.getUserId());
+                } catch (UserIdNotFoundException e) {
+                    if (StringUtils.isNotBlank(authenticatedUser.getAuthenticatedSubjectIdentifier())) {
+                        params.put("user", authenticatedUser.getAuthenticatedSubjectIdentifier().replaceAll(".", "*"));
+                    }
+                }
+            }
+            OAuth2Util.log("oauth-inbound-service", params, "SUCCESS", "'prompt' contains consent. Hence existing " +
+                            "user consent is revoked.", "remove-user-consent", null);
             if (log.isDebugEnabled()) {
                 log.debug("Prompt parameter contains 'consent'. Existing consents for user: "
                         + authenticatedUser.toFullQualifiedUsername() + " for oauth app with clientId: " + clientId
@@ -1963,7 +2124,10 @@ public class OAuth2AuthzEndpoint {
             }
             preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, user);
         }
-
+        Map<String, Object> params = new HashMap<>();
+        params.put("clientId", clientId);
+        OAuth2Util.log("oauth-inbound-service", params, "SUCCESS", "Redirecting to Consent Page URL.", "prompt" +
+                "-consent-page", null);
         return getUserConsentURL(sessionDataKey, oauth2Params, user, preConsent, oAuthMessage);
     }
 
@@ -1978,6 +2142,11 @@ public class OAuth2AuthzEndpoint {
             // prompt=none but user is not logged in. Therefore throw error according to
             // http://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
             sessionState.setAddSessionState(true);
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", oauth2Params.getClientId());
+            params.put("prompt", oauth2Params.getPrompt());
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Request with 'prompt=none' but user " +
+                            "session does not exist", "validate-user-session", null);
             throw OAuthProblemException.error(OAuth2ErrorCodes.LOGIN_REQUIRED,
                     "Request with \'prompt=none\' but user session does not exist");
         }
@@ -2040,6 +2209,16 @@ public class OAuth2AuthzEndpoint {
         String spTenantDomain = oauth2Params.getTenantDomain();
         ServiceProvider serviceProvider = getServiceProvider(clientId);
 
+        Map<String, Object> params = new HashMap<>();
+        params.put("clientId", clientId);
+        try {
+            params.put("user", user.getUserId());
+        } catch (UserIdNotFoundException e) {
+            if (StringUtils.isNotBlank(user.getAuthenticatedSubjectIdentifier())) {
+                params.put("user", user.getAuthenticatedSubjectIdentifier());
+            }
+        }
+
         if (log.isDebugEnabled()) {
             log.debug("Initiating consent handling for user: " + user.toFullQualifiedUsername() + " for client_id: "
                     + clientId + " of tenantDomain: " + spTenantDomain);
@@ -2050,6 +2229,11 @@ public class OAuth2AuthzEndpoint {
                 log.debug("Consent handling from framework skipped for client_id: " + clientId + " of tenantDomain: "
                         + spTenantDomain + " for user: " + user.toFullQualifiedUsername());
             }
+
+            Map<String, Object> configs = new HashMap<>();
+            configs.put("skipConsent", "true");
+            OAuth2Util.log("oauth-inbound-service", params, "SUCCESS", "'skipConsent' is enabled for the OAuth client" +
+                            ". Hence consent claims not generated.", "generate-consent-claims", configs);
             return StringUtils.EMPTY;
         }
 
@@ -2074,16 +2258,31 @@ public class OAuth2AuthzEndpoint {
                     mandatoryClaimsQueryParam = MANDATORY_CLAIMS + "=" +
                             buildConsentClaimString(claimsForApproval.getMandatoryClaims());
                 }
-
+                Map<String, Object> configs = new HashMap<>();
+                List<String> requestedClaims = new ArrayList<>();
+                requestedOidcClaimsList.forEach(claim -> requestedClaims.add(claim.getClaimUri()));
+                List<String> mandatoryClaims = new ArrayList<>();
+                claimsForApproval.getMandatoryClaims().forEach(claim -> mandatoryClaims.add(claim.getClaimUri()));
+                configs.put("skipConsent", "false");
+                configs.put("requestedClaims", requestedClaims);
+                configs.put("mandatoryClaims", mandatoryClaims);
+                OAuth2Util.log("oauth-inbound-service", params, "SUCCESS", "Consent claims generation successful. " +
+                        "Consent claims query parameter: " + additionalQueryParam, "generate-consent-claims", configs);
                 additionalQueryParam = buildQueryParamString(requestClaimsQueryParam, mandatoryClaimsQueryParam);
             }
         } catch (UnsupportedEncodingException | SSOConsentServiceException e) {
             String msg = "Error while handling user consent for claim for user: " + user.toFullQualifiedUsername() +
                     " for client_id: " + clientId + " of tenantDomain: " + spTenantDomain;
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED", "System error occurred.", "generate-consent" +
+                            "-claims", null);
             throw new ConsentHandlingFailedException(msg, e);
         } catch (ClaimMetadataException e) {
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED", "System error occurred.", "generate-consent" +
+                    "-claims", null);
             throw new ConsentHandlingFailedException("Error while getting claim mappings for " + OIDC_DIALECT, e);
         } catch (RequestObjectException e) {
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED", "System error occurred.", "generate-consent" +
+                    "-claims", null);
             throw new ConsentHandlingFailedException("Error while getting essential claims for the session data key " +
                     ": " + oauth2Params.getSessionDataKey(), e);
         }
@@ -2266,9 +2465,15 @@ public class OAuth2AuthzEndpoint {
             ConsentHandlingFailedException, OAuthProblemException {
 
         sessionState.setAddSessionState(true);
+        Map<String, Object> params = new HashMap<>();
+        params.put("clientId", oauth2Params.getClientId());
+        params.put("prompt", oauth2Params.getPrompt());
+        params.put("idTokenHint", oauth2Params.getIDTokenHint());
         try {
             String idTokenHint = oauth2Params.getIDTokenHint();
             if (isIdTokenValidationFailed(idTokenHint)) {
+                OAuth2Util.log("oauth-inbound-service", params, "FAILED", "ID token signature validation failed.",
+                        "validate-id-token-hint", null);
                 throw OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED,
                         "Request with \'id_token_hint=" + idTokenHint +
                                 "\' but ID Token validation failed");
@@ -2278,6 +2483,8 @@ public class OAuth2AuthzEndpoint {
             if (isIdTokenSubjectEqualsToLoggedInUser(loggedInUserSubjectId, idTokenHint)) {
                 return handlePreviouslyApprovedConsent(oAuthMessage, sessionState, oauth2Params, hasUserApproved);
             } else {
+                OAuth2Util.log("oauth-inbound-service", params, "FAILED", "ID token 'sub' does not match with the " +
+                                "authenticated user subject identifier.", "validate-id-token-hint", null);
                 throw OAuthProblemException.error(OAuth2ErrorCodes.LOGIN_REQUIRED,
                         "Request with \'id_token_hint=" + idTokenHint +
                                 "\' but user has denied the consent");
@@ -2285,6 +2492,8 @@ public class OAuth2AuthzEndpoint {
         } catch (ParseException e) {
             String msg = "Error while getting clientId from the IdTokenHint.";
             log.error(msg, e);
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED", "System error occurred.", "validate-id-token" +
+                            "-hint", null);
             throw OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED, msg);
         }
     }
@@ -2296,10 +2505,26 @@ public class OAuth2AuthzEndpoint {
         ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
         sessionState.setAddSessionState(true);
         if (isConsentSkipped(serviceProvider)) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", oauth2Params.getClientId());
+            params.put("prompt", oauth2Params.getPrompt());
+
+            Map<String, Object> configs = new HashMap<>();
+            configs.put("skipConsent", "true");
+            OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
+                    "'prompt' is set to none, and consent is disabled for the OAuth client." , "validate-existing" +
+                            "-consent", configs);
             return handleUserConsent(oAuthMessage, APPROVE, sessionState);
         } else if (hasUserApproved) {
             return handleApprovedAlwaysWithoutPromptingForNewConsent(oAuthMessage, sessionState, oauth2Params);
         } else {
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", oauth2Params.getClientId());
+            params.put("prompt", oauth2Params.getPrompt());
+            Map<String, Object> configs = new HashMap<>();
+            configs.put("skipConsent", "false");
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+                    "'prompt' is set to none, but required consent not found." , "validate-existing-consent", configs);
             throw OAuthProblemException.error(OAuth2ErrorCodes.CONSENT_REQUIRED,
                     "Required consent not found");
         }
@@ -2314,9 +2539,25 @@ public class OAuth2AuthzEndpoint {
         String preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, authenticatedUser);
 
         if (isConsentFromUserRequired(preConsent)) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", oauth2Params.getClientId());
+            params.put("prompt", oauth2Params.getPrompt());
+
+            Map<String, Object> configs = new HashMap<>();
+            configs.put("consentRequiredClaims", preConsent);
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+                    "'prompt' is set to none, and existing user consent is incomplete for the OAuth client." ,
+                    "validate-existing-consent", configs);
             throw OAuthProblemException.error(OAuth2ErrorCodes.CONSENT_REQUIRED,
                     "Consent approved always without prompting for new consent");
         } else {
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", oauth2Params.getClientId());
+            params.put("prompt", oauth2Params.getPrompt());
+
+            OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
+                    "'prompt' is set to none, and existing user consent found for the OAuth client." , "validate" +
+                            "-existing-consent", null);
             return handleUserConsent(oAuthMessage, APPROVE, sessionState);
         }
     }
@@ -2588,6 +2829,10 @@ public class OAuth2AuthzEndpoint {
     private Response handleAuthFlowThroughFramework(OAuthMessage oAuthMessage, String type) throws URISyntaxException,
             InvalidRequestParentException {
 
+        Map<String, Object> params = new HashMap<>();
+        params.put("clientId", oAuthMessage.getClientId());
+        OAuth2Util.log("oauth-inbound-service", params, "SUCCESS", "Forward authorization request to framework " +
+                "for user authentication.", "hand-over-to-framework", null);
         try {
             String sessionDataKey =
                     (String) oAuthMessage.getRequest().getAttribute(FrameworkConstants.SESSION_DATA_KEY);
@@ -2621,6 +2866,8 @@ public class OAuth2AuthzEndpoint {
             }
         } catch (ServletException | IOException | URLBuilderException e) {
             log.error("Error occurred while sending request to authentication framework.");
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Server error occurred.", "hand-over-to" +
+                            "-framework", null);
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
     }

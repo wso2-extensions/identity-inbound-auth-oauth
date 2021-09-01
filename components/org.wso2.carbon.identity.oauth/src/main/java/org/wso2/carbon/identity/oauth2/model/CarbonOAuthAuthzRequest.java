@@ -27,6 +27,10 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -57,6 +61,11 @@ public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
                 log.debug("Unsupported Response Type : " + responseTypeValue +
                         " for client id : " + getClientId());
             }
+            Map<String, Object> params = new HashMap<>();
+            params.put("response_type", responseTypeValue);
+            params.put("client_id", getClientId());
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Invalid response_type parameter.",
+                    "validate-input-parameters", null);
             throw OAuthUtils.handleOAuthProblemException("Invalid response_type parameter value");
         }
 
