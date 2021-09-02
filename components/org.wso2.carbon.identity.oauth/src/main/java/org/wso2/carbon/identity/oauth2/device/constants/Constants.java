@@ -64,8 +64,8 @@ public class Constants {
     public static final long EXPIRES_IN_MILLISECONDS = 600000L;
     public static final int  INTERVAL_MILLISECONDS = 5000;
     public static final String KEY_SET = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
-    public static final int DEFAULT_DEVICE_TOKEN_PERSIST_RETRY_COUNT = 5;
 
+    public static final int DEFAULT_DEVICE_TOKEN_PERSIST_RETRY_COUNT = 5;
     public static final String PROXY_ENABLE = "JWTValidatorConfigs.JWKSEndpoint.HTTPProxy.Enable";
     public static final String PROXY_HOST = "JWTValidatorConfigs.JWKSEndpoint.HTTPProxy.Host";
     public static final String PROXY_PORT = "JWTValidatorConfigs.JWKSEndpoint.HTTPProxy.Port";

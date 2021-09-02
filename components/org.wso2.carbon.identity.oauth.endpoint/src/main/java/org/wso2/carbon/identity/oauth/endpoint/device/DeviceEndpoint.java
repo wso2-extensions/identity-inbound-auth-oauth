@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -100,7 +101,7 @@ public class DeviceEndpoint {
 
     private String getUniqueUserCode(String deviceCode, String clientId, String scopes) throws IdentityOAuth2Exception {
 
-        String temporaryUserCode = GenerateKeys.getKey(Constants.KEY_LENGTH);
+        String temporaryUserCode = GenerateKeys.getKey(OAuthServerConfiguration.getInstance().getDeviceCodeKeyLength());
         long quantifier = GenerateKeys.getCurrentQuantifier();
         return deviceAuthService.generateDeviceResponse(deviceCode, temporaryUserCode, quantifier, clientId, scopes);
     }

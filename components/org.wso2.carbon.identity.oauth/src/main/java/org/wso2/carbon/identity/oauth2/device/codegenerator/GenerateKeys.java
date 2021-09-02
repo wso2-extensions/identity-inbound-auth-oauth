@@ -23,6 +23,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.util.DeviceFlowUtil;
 
@@ -54,12 +55,13 @@ public class GenerateKeys {
         int configuredUserCodeLength;
         String configuredKeySet = IdentityUtil.getProperty(Constants.CONF_KEY_SET);
         String configuredLength = IdentityUtil.getProperty(Constants.CONF_USER_CODE_LENGTH);
+        int keyLengthFromDeviceCodeConfig = OAuthServerConfiguration.getInstance().getDeviceCodeKeyLength();
         try {
             configuredUserCodeLength = (StringUtils.isNotBlank(configuredLength) ? Integer.parseInt(configuredLength) :
-                    Constants.KEY_LENGTH);
+                    keyLengthFromDeviceCodeConfig);
         } catch (NumberFormatException e) {
             log.error("Error while converting user_code length " + configuredLength + " to integer. ", e);
-            configuredUserCodeLength = Constants.KEY_LENGTH;
+            configuredUserCodeLength = keyLengthFromDeviceCodeConfig;
         }
         userCodeLength = Math.max(configuredUserCodeLength, num);
         if (log.isDebugEnabled()) {
@@ -70,8 +72,9 @@ public class GenerateKeys {
             keysetEnd = configuredKeySet.length();
             subKeyset = configuredKeySet.toCharArray();
         } else {
-            keysetEnd = Constants.KEY_SET.length();
-            subKeyset = Constants.KEY_SET.toCharArray();
+            String keySet = OAuthServerConfiguration.getInstance().getDeviceCodeKeySet();
+            keysetEnd = keySet.length();
+            subKeyset = keySet.toCharArray();
         }
         return RandomStringUtils.random(userCodeLength, 0, keysetEnd, false, false,
                 subKeyset, new SecureRandom());

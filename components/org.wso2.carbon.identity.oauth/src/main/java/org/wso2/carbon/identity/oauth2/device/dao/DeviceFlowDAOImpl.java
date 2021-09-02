@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
@@ -56,12 +57,15 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         String consumerKey, String scopes) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.debug("Persisting device_code: " + deviceCode + " for client: " + consumerKey);
+            log.debug("Persisting device code: " + deviceCode + " for client: " + consumerKey);
         }
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             String codeId = UUID.randomUUID().toString();
-            String uniqueUserCode = storeIntoDeviceFlow(codeId, deviceCode, userCode, quantifier, consumerKey,
-                    connection, 0);
+            int keyLength = OAuthServerConfiguration.getInstance().getDeviceCodeKeyLength();
+            int pollingInterval = OAuthServerConfiguration.getInstance().getDeviceCodePollingInterval();
+            String uniqueUserCode =
+                    storeIntoDeviceFlow(codeId, deviceCode, userCode, quantifier, consumerKey, connection, 0, keyLength,
+                            pollingInterval);
             storeIntoScopes(codeId, deviceCode, scopes, connection);
             IdentityDatabaseUtil.commitTransaction(connection);
             return uniqueUserCode;
@@ -467,7 +471,9 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
      * @throws IdentityOAuth2Exception Error while storing parameters.
      */
     private String storeIntoDeviceFlow(String codeId, String deviceCode, String userCode, long quantifier,
-        String consumerKey, Connection connection, int retryAttempt) throws IdentityOAuth2Exception, SQLException {
+                                       String consumerKey, Connection connection, int retryAttempt, int keyLength,
+                                       int pollingInterval)
+            throws IdentityOAuth2Exception, SQLException {
 
         if (retryAttempt < Constants.DEFAULT_DEVICE_TOKEN_PERSIST_RETRY_COUNT) {
             String tempUserCode;
@@ -477,10 +483,10 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             ResultSet rs = null;
             try {
                 if (isUserCodeAndQuantifierExists(userCode, quantifier, connection)) {
-                    tempUserCode = GenerateKeys.getKey(Constants.KEY_LENGTH);
+                    tempUserCode = GenerateKeys.getKey(keyLength);
                     currentQuantifier = GenerateKeys.getCurrentQuantifier();
                     return storeIntoDeviceFlow(codeId, deviceCode, tempUserCode, currentQuantifier, consumerKey,
-                            connection, ++retryAttempt);
+                            connection, ++retryAttempt, keyLength, pollingInterval);
                 }
                 prepStmt = connection.prepareStatement(
                         SQLQueries.DeviceFlowDAOSQLQueries.STORE_DEVICE_CODE_WITH_QUANTIFIER);
@@ -497,7 +503,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                         .getTimeZone(Constants.UTC)));
                 prepStmt.setTimestamp(6, expiredTime, Calendar.getInstance(TimeZone
                         .getTimeZone(Constants.UTC)));
-                prepStmt.setLong(7, Constants.INTERVAL_MILLISECONDS);
+                prepStmt.setLong(7, pollingInterval);
                 prepStmt.setString(8, Constants.PENDING);
                 prepStmt.setLong(9, quantifier);
                 prepStmt.setString(10, consumerKey);
@@ -509,10 +515,10 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                 // SQLIntegrityConstraintViolationException.
                 if (e instanceof SQLIntegrityConstraintViolationException ||
                         StringUtils.containsIgnoreCase(e.getMessage(), Constants.USERCODE_QUANTIFIER_CONSTRAINT)) {
-                    tempUserCode = GenerateKeys.getKey(Constants.KEY_LENGTH);
+                    tempUserCode = GenerateKeys.getKey(keyLength);
                     currentQuantifier = GenerateKeys.getCurrentQuantifier();
                     return storeIntoDeviceFlow(codeId, deviceCode, tempUserCode, currentQuantifier, consumerKey,
-                            connection, ++retryAttempt);
+                            connection, ++retryAttempt, keyLength, pollingInterval);
                 }
                 throw new IdentityOAuth2Exception("Error when storing the device flow parameters for consumer_key: "
                         + consumerKey, e);

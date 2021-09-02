@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 
 /**
@@ -42,8 +43,8 @@ public class DeviceFlowUtil {
         if (log.isDebugEnabled()) {
             log.debug("User defined expiry time : " + configuredExpiresInValue);
         }
-        return ((StringUtils.isNumeric(configuredExpiresInValue)) ?
-                Long.parseLong(configuredExpiresInValue) : (Constants.EXPIRES_IN_MILLISECONDS / 1000));
+        return ((StringUtils.isNumeric(configuredExpiresInValue)) ? Long.parseLong(configuredExpiresInValue) :
+                (OAuthServerConfiguration.getInstance().getDeviceCodeExpiryTime() / 1000));
     }
 
     /**
@@ -53,6 +54,6 @@ public class DeviceFlowUtil {
      */
     public static long getIntervalValue() {
 
-        return (Constants.INTERVAL_MILLISECONDS / 1000);
+        return (OAuthServerConfiguration.getInstance().getDeviceCodePollingInterval() / 1000);
     }
 }
