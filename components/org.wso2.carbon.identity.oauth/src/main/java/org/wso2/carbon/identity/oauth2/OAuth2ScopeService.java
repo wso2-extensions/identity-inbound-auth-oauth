@@ -21,12 +21,17 @@ import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeCacheKey;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.model.UserApplicationScopeConsentDO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCache;
 
@@ -135,6 +140,55 @@ public class OAuth2ScopeService {
                 try {
                     scopes = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
                             .getAllScopes(Oauth2ScopeUtils.getTenantID(), includeOIDCScopesState);
+                } catch (IdentityOAuth2ScopeServerException e) {
+                    throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
+                            ERROR_CODE_FAILED_TO_GET_ALL_SCOPES, e);
+                }
+            } else {
+                // Check if it is a pagination request.
+                scopes = listScopesWithPagination(startIndex, count, includeOIDCScopesState);
+            }
+        }
+        return scopes;
+    }
+
+    /**
+     * Retrieve the available scope list.
+     *
+     * @param startIndex        Start Index of the result set to enforce pagination.
+     * @param count             Number of elements in the result set to enforce pagination.
+     * @param includeOIDCScopes Include OIDC scopes as well.
+     * @param requestedScopes   Requested set of scopes to be return in the response.
+     * @param clientId   clientId of Oauth app .
+     * @return Scope list.
+     */
+    public Set<Scope> getScopes(Integer startIndex, Integer count, Boolean includeOIDCScopes, String requestedScopes, String clientId)
+            throws IdentityOAuth2ScopeServerException, IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        Set<Scope> scopes;
+
+        // includeOIDCScopes can be null.
+        boolean includeOIDCScopesState = BooleanUtils.isTrue(includeOIDCScopes);
+
+        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        String tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+
+        // If the requested scopes are provided we won't honour pagination. Will return requested scopes only.
+        if (StringUtils.isNotBlank(requestedScopes)) {
+            try {
+                scopes = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                        .getRequestedScopesOnly(IdentityTenantUtil.getTenantId(tenantDomain), includeOIDCScopesState,
+                                requestedScopes);
+            } catch (IdentityOAuth2ScopeServerException e) {
+                throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
+                        ERROR_CODE_FAILED_TO_GET_REQUESTED_SCOPES, e);
+            }
+        } else {
+            // Check for pagination query params.
+            if (startIndex == null && count == null) {
+                try {
+                    scopes = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
+                            .getAllScopes(IdentityTenantUtil.getTenantId(tenantDomain), includeOIDCScopesState);
                 } catch (IdentityOAuth2ScopeServerException e) {
                     throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
                             ERROR_CODE_FAILED_TO_GET_ALL_SCOPES, e);
