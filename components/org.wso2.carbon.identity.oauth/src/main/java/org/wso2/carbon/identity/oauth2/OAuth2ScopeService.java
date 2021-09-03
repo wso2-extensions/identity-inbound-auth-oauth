@@ -33,7 +33,6 @@ import org.wso2.carbon.identity.oauth2.model.UserApplicationScopeConsentDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCache;
-import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.util.ArrayList;
 import java.util.List;
