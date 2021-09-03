@@ -21,7 +21,6 @@ import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeCacheKey;
@@ -34,6 +33,7 @@ import org.wso2.carbon.identity.oauth2.model.UserApplicationScopeConsentDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCache;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -162,16 +162,23 @@ public class OAuth2ScopeService {
      * @param clientId   clientId of Oauth app .
      * @return Scope list.
      */
-    public Set<Scope> getScopes(Integer startIndex, Integer count, Boolean includeOIDCScopes, String requestedScopes, String clientId)
-            throws IdentityOAuth2ScopeServerException, IdentityOAuth2Exception, InvalidOAuthClientException {
+    public Set<Scope> getScopes(Integer startIndex, Integer count, Boolean includeOIDCScopes, String requestedScopes,
+                                String clientId) throws IdentityOAuth2ScopeServerException {
 
         Set<Scope> scopes;
 
         // includeOIDCScopes can be null.
         boolean includeOIDCScopesState = BooleanUtils.isTrue(includeOIDCScopes);
 
-        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-        String tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+        String tenantDomain;
+        try {
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            log.error("Error while getting oauth app for client Id: " + clientId, e);
+            throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_FAILED_TO_GET_ALL_SCOPES, e);
+        }
 
         // If the requested scopes are provided we won't honour pagination. Will return requested scopes only.
         if (StringUtils.isNotBlank(requestedScopes)) {
