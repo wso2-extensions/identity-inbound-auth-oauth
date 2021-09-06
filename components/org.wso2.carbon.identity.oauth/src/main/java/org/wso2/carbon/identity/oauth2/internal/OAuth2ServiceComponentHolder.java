@@ -24,6 +24,8 @@ import org.wso2.carbon.identity.application.authentication.framework.UserSession
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
+import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
@@ -55,6 +57,8 @@ public class OAuth2ServiceComponentHolder {
     private static KeyIDProvider keyIDProvider = null;
     private IdpManager idpManager;
     private static UserSessionManagementService userSessionManagementService;
+    private List<ScopeDTO> oidcScopesClaims = new ArrayList<>();
+    private List<Scope> oauthScopeBinding = new ArrayList<>();
 
     private OAuth2ServiceComponentHolder() {
 
@@ -286,5 +290,25 @@ public class OAuth2ServiceComponentHolder {
     public static UserSessionManagementService getUserSessionManagementService() {
 
         return userSessionManagementService;
+    }
+
+    public void setOIDCScopesClaims(List<ScopeDTO> oidcScopesClaims) {
+
+        this.oidcScopesClaims = oidcScopesClaims;
+    }
+
+    public List<ScopeDTO> getOIDCScopesClaims() {
+
+        return oidcScopesClaims;
+    }
+
+    public void setOauthScopeBinding(List<Scope> oauthScopeBinding) {
+
+        this.oauthScopeBinding = oauthScopeBinding;
+    }
+
+    public List<Scope> getOauthScopeBinding() {
+
+        return oauthScopeBinding;
     }
 }

@@ -47,7 +47,6 @@ import com.nimbusds.jwt.JWTParser;
 import com.nimbusds.jwt.SignedJWT;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.axiom.om.OMElement;
-import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -81,7 +80,6 @@ import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
-import org.wso2.carbon.identity.core.util.IdentityIOStreamUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
@@ -137,21 +135,15 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
-import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -184,9 +176,6 @@ import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
@@ -308,11 +297,6 @@ public class OAuth2Util {
 
     private static final Log log = LogFactory.getLog(OAuth2Util.class);
     private static final String INTERNAL_LOGIN_SCOPE = "internal_login";
-    private static final String IDENTITY_PATH = "identity";
-    public static final String NAME = "name";
-    private static final String DISPLAY_NAME = "displayName";
-    private static final String DESCRIPTION = "description";
-    private static final String PERMISSION = "Permission";
     public static final String JWT = "JWT";
     private static long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
     private static ThreadLocal<Integer> clientTenantId = new ThreadLocal<>();
@@ -1641,7 +1625,7 @@ public class OAuth2Util {
      */
     public static void initiateOIDCScopes(int tenantId) {
 
-        List<ScopeDTO> scopeClaimsList = loadScopeConfigFile();
+        List<ScopeDTO> scopeClaimsList = OAuth2ServiceComponentHolder.getInstance().getOIDCScopesClaims();
         try {
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScopes(tenantId,
                     scopeClaimsList);
@@ -1984,91 +1968,6 @@ public class OAuth2Util {
             }
         }
         return oauthIdentityTokenGenerator;
-    }
-
-    private static List<ScopeDTO> loadScopeConfigFile() {
-
-        List<ScopeDTO> listOIDCScopesClaims = new ArrayList<>();
-        String configDirPath = CarbonUtils.getCarbonConfigDirPath();
-        String confXml =
-                Paths.get(configDirPath, "identity", OAuthConstants.OIDC_SCOPE_CONFIG_PATH)
-                        .toString();
-        File configfile = new File(confXml);
-        if (!configfile.exists()) {
-            log.warn("OIDC scope-claim Configuration File is not present at: " + confXml);
-        }
-
-        XMLStreamReader parser = null;
-        InputStream stream = null;
-
-        try {
-            stream = new FileInputStream(configfile);
-            parser = XMLInputFactory.newInstance()
-                    .createXMLStreamReader(stream);
-            StAXOMBuilder builder = new StAXOMBuilder(parser);
-            OMElement documentElement = builder.getDocumentElement();
-            Iterator iterator = documentElement.getChildElements();
-            while (iterator.hasNext()) {
-                ScopeDTO scope = new ScopeDTO();
-                OMElement omElement = (OMElement) iterator.next();
-                String configType = omElement.getAttributeValue(new QName("id"));
-                scope.setName(configType);
-
-                String displayName = omElement.getAttributeValue(new QName("displayName"));
-                if (StringUtils.isNotEmpty(displayName)) {
-                    scope.setDisplayName(displayName);
-                } else {
-                    scope.setDisplayName(configType);
-                }
-
-                String description = omElement.getAttributeValue(new QName("description"));
-                if (StringUtils.isNotEmpty(description)) {
-                    scope.setDescription(description);
-                }
-
-                scope.setClaim(loadClaimConfig(omElement));
-                listOIDCScopesClaims.add(scope);
-            }
-        } catch (XMLStreamException e) {
-            log.warn("Error while loading scope config.", e);
-        } catch (FileNotFoundException e) {
-            log.warn("Error while loading email config.", e);
-        } finally {
-            try {
-                if (parser != null) {
-                    parser.close();
-                }
-                if (stream != null) {
-                    IdentityIOStreamUtils.closeInputStream(stream);
-                }
-            } catch (XMLStreamException e) {
-                log.error("Error while closing XML stream", e);
-            }
-        }
-        return listOIDCScopesClaims;
-    }
-
-    private static String[] loadClaimConfig(OMElement configElement) {
-
-        StringBuilder claimConfig = new StringBuilder();
-        Iterator it = configElement.getChildElements();
-        while (it.hasNext()) {
-            OMElement element = (OMElement) it.next();
-            if ("Claim".equals(element.getLocalName())) {
-                String commaSeparatedClaimNames = element.getText();
-                if (StringUtils.isNotBlank(commaSeparatedClaimNames)) {
-                    claimConfig.append(commaSeparatedClaimNames.trim());
-                }
-            }
-        }
-
-        String[] claim;
-        if (claimConfig.length() > 0) {
-            claim = claimConfig.toString().split(",");
-        } else {
-            claim = new String[0];
-        }
-        return claim;
     }
 
     /**
@@ -4034,7 +3933,7 @@ public class OAuth2Util {
         try {
             //Check login scope is available. If exists, assumes all scopes are loaded using the file.
             if (!hasScopesAlreadyAdded(tenantId)) {
-                List<Scope> scopes = loadOauthScopeBinding();
+                List<Scope> scopes = OAuth2ServiceComponentHolder.getInstance().getOauthScopeBinding();
                 for (Scope scope : scopes) {
                     OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().addScope(scope, tenantId);
                 }
@@ -4066,80 +3965,6 @@ public class OAuth2Util {
             }
         }
         return false;
-    }
-
-    private static List<Scope> loadOauthScopeBinding() {
-
-        List<Scope> scopes = new ArrayList<>();
-        String configDirPath = CarbonUtils.getCarbonConfigDirPath();
-        String confXml = Paths.get(configDirPath, IDENTITY_PATH, OAuthConstants.OAUTH_SCOPE_BINDING_PATH)
-                .toString();
-        File configFile = new File(confXml);
-        if (!configFile.exists()) {
-            log.warn("OAuth scope binding File is not present at: " + confXml);
-            return new ArrayList<>();
-        }
-
-        XMLStreamReader parser = null;
-        InputStream stream = null;
-
-        try {
-            stream = new FileInputStream(configFile);
-            parser = XMLInputFactory.newInstance()
-                    .createXMLStreamReader(stream);
-            StAXOMBuilder builder = new StAXOMBuilder(parser);
-            OMElement documentElement = builder.getDocumentElement();
-            Iterator iterator = documentElement.getChildElements();
-            while (iterator.hasNext()) {
-                OMElement omElement = (OMElement) iterator.next();
-                String scopeName = omElement.getAttributeValue(new QName(
-                        NAME));
-                String displayName = omElement.getAttributeValue(new QName(
-                        DISPLAY_NAME));
-                String description = omElement.getAttributeValue(new QName(
-                        DESCRIPTION));
-                List<String> bindingPermissions = loadScopePermissions(omElement);
-                ScopeBinding scopeBinding = new ScopeBinding(PERMISSIONS_BINDING_TYPE, bindingPermissions);
-                ArrayList<ScopeBinding> scopeBindings = new ArrayList<>();
-                scopeBindings.add(scopeBinding);
-                Scope scope = new Scope(scopeName, displayName, scopeBindings, description);
-                scopes.add(scope);
-            }
-        } catch (XMLStreamException e) {
-            log.warn("Error while loading scope config.", e);
-        } catch (FileNotFoundException e) {
-            log.warn("Error while loading email config.", e);
-        } finally {
-            try {
-                if (parser != null) {
-                    parser.close();
-                }
-                if (stream != null) {
-                    IdentityIOStreamUtils.closeInputStream(stream);
-                }
-            } catch (XMLStreamException e) {
-                log.error("Error while closing XML stream", e);
-            }
-        }
-        return scopes;
-    }
-
-    private static List<String> loadScopePermissions(OMElement configElement) {
-
-        List<String> permissions = new ArrayList<>();
-        Iterator it = configElement.getChildElements();
-        while (it.hasNext()) {
-            OMElement element = (OMElement) it.next();
-            Iterator permissonsIterator = element.getChildElements();
-            while (permissonsIterator.hasNext()) {
-                OMElement permissionElement = (OMElement) permissonsIterator.next();
-                if (PERMISSION.equals(permissionElement.getLocalName())) {
-                    String permisson = permissionElement.getText();
-                    permissions.add(permisson);
-                }
-            }
-        }
-        return permissions;
     }
 
     /**
