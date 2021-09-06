@@ -820,8 +820,9 @@ public class ResponseTypeHandlerUtil {
                     // no valid refresh token found in existing Token
                     if (log.isDebugEnabled()) {
                         if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.REFRESH_TOKEN)) {
-                            log.debug("Refresh token: " + tokenBean.getRefreshToken() + " for client: " + tokenBean
-                                    .getConsumerKey() + " is expired. Issuing a new refresh token.");
+                            log.debug("Refresh token(hashed): " + DigestUtils.sha256Hex(tokenBean.getRefreshToken()) +
+                                    " for client: " + tokenBean.getConsumerKey() + " is expired. Issuing a new " +
+                                    "refresh token.");
 
                         } else {
                             log.debug("Refresh token for client: " + tokenBean.getConsumerKey() + " is expired. " +
