@@ -26,6 +26,7 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ClaimMetaData;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.exception.SSOConsentServiceException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.Claim;
@@ -457,19 +458,16 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
     private void handleRolesClaim(Map<String, Object> returnClaims) {
 
         if (returnClaims.containsKey(ROLES) && IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
-            String delim = "";
-            String separator = ",";
-            String[] roles = returnClaims.get(ROLES).toString().split(separator);
-            StringBuffer multiValuedStringBf = new StringBuffer();
+            String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
+            List<String> roles = Arrays.asList(returnClaims.get(ROLES).toString().split(multiAttributeSeparator));
 
             for (String role : roles) {
                 if (UserCoreConstants.INTERNAL_DOMAIN.equalsIgnoreCase(IdentityUtil.extractDomainFromName(role))) {
-                    role = UserCoreUtil.removeDomainFromName(role);
+                   String domainRemovedRole = UserCoreUtil.removeDomainFromName(role);
+                   roles.set(roles.indexOf(role), domainRemovedRole);
                 }
-                multiValuedStringBf.append(delim).append(role);
-                delim = separator;
             }
-            returnClaims.put(ROLES, multiValuedStringBf.toString());
+            returnClaims.put(ROLES, StringUtils.join(roles, multiAttributeSeparator));
         }
     }
 
