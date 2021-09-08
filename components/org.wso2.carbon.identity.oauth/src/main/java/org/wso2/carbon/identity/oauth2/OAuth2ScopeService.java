@@ -160,7 +160,8 @@ public class OAuth2ScopeService {
      * @return Scope list.
      * @throws IdentityOAuth2ScopeServerException
      */
-    public Set<Scope> getTenantScopes(Integer startIndex, Integer count, Boolean includeOIDCScopes, String requestedScopes, int tenantId)
+    public Set<Scope> getTenantScopes(Integer startIndex, Integer count, Boolean includeOIDCScopes,
+                                      String requestedScopes, int tenantId)
             throws IdentityOAuth2ScopeServerException {
 
         Set<Scope> scopes;
