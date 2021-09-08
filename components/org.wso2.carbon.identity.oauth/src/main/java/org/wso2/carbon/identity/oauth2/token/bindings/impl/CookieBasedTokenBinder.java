@@ -138,19 +138,7 @@ public class CookieBasedTokenBinder extends AbstractTokenBinder {
 
     @Override
     public void clearTokenBindingElements(HttpServletRequest request, HttpServletResponse response) {
-
-        Cookie[] cookies = request.getCookies();
-        if (ArrayUtils.isNotEmpty(cookies)) {
-            Arrays.stream(cookies).filter(t -> COOKIE_NAME.equals(t.getName())).findAny().ifPresent(cookie -> {
-                ServletCookie servletCookie = new ServletCookie(cookie.getName(), cookie.getValue());
-                servletCookie.setMaxAge(0);
-                servletCookie.setSecure(true);
-                servletCookie.setHttpOnly(true);
-                servletCookie.setPath("/");
-                servletCookie.setSameSite(SameSiteCookie.NONE);
-                response.addCookie(servletCookie);
-            });
-        }
+        // Not required as we not clear the atbv cookie from the browser.
     }
 
     @Override
