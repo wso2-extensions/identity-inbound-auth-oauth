@@ -118,37 +118,8 @@ public class OAuth2ScopeService {
     public Set<Scope> getScopes(Integer startIndex, Integer count, Boolean includeOIDCScopes, String requestedScopes)
             throws IdentityOAuth2ScopeServerException {
 
-        Set<Scope> scopes;
-
-        // includeOIDCScopes can be null.
-        boolean includeOIDCScopesState = BooleanUtils.isTrue(includeOIDCScopes);
-
-        // If the requested scopes are provided we won't honour pagination. Will return requested scopes only.
-        if (StringUtils.isNotBlank(requestedScopes)) {
-            try {
-                scopes = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
-                        .getRequestedScopesOnly(Oauth2ScopeUtils.getTenantID(), includeOIDCScopesState,
-                                requestedScopes);
-            } catch (IdentityOAuth2ScopeServerException e) {
-                throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
-                        ERROR_CODE_FAILED_TO_GET_REQUESTED_SCOPES, e);
-            }
-        } else {
-            // Check for pagination query params.
-            if (startIndex == null && count == null) {
-                try {
-                    scopes = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
-                            .getAllScopes(Oauth2ScopeUtils.getTenantID(), includeOIDCScopesState);
-                } catch (IdentityOAuth2ScopeServerException e) {
-                    throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
-                            ERROR_CODE_FAILED_TO_GET_ALL_SCOPES, e);
-                }
-            } else {
-                // Check if it is a pagination request.
-                scopes = listScopesWithPagination(startIndex, count, includeOIDCScopesState);
-            }
-        }
-        return scopes;
+        int tenantId = Oauth2ScopeUtils.getTenantID();
+        return getTenantScopes(startIndex, count, includeOIDCScopes, requestedScopes, tenantId);
     }
 
     /**
@@ -164,11 +135,6 @@ public class OAuth2ScopeService {
     public Set<Scope> getScopes(Integer startIndex, Integer count, Boolean includeOIDCScopes, String requestedScopes,
                                 String clientId) throws IdentityOAuth2ScopeServerException {
 
-        Set<Scope> scopes;
-
-        // includeOIDCScopes can be null.
-        boolean includeOIDCScopesState = BooleanUtils.isTrue(includeOIDCScopes);
-
         String tenantDomain;
         try {
             OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
@@ -178,12 +144,35 @@ public class OAuth2ScopeService {
             throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
                     ERROR_CODE_FAILED_TO_GET_ALL_SCOPES, e);
         }
+        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+        return getTenantScopes(startIndex, count, includeOIDCScopes, requestedScopes, tenantId);
+
+    }
+
+    /**
+     * Retrieve the available scope list of given tenant domain.
+     *
+     * @param startIndex        Start Index of the result set to enforce pagination.
+     * @param count             Number of elements in the result set to enforce pagination.
+     * @param includeOIDCScopes Include OIDC scopes as well.
+     * @param requestedScopes   Requested set of scopes to be return in the response.
+     * @param tenantId          tenantId.
+     * @return Scope list.
+     * @throws IdentityOAuth2ScopeServerException
+     */
+    public Set<Scope> getTenantScopes(Integer startIndex, Integer count, Boolean includeOIDCScopes, String requestedScopes, int tenantId)
+            throws IdentityOAuth2ScopeServerException {
+
+        Set<Scope> scopes;
+
+        // includeOIDCScopes can be null.
+        boolean includeOIDCScopesState = BooleanUtils.isTrue(includeOIDCScopes);
 
         // If the requested scopes are provided we won't honour pagination. Will return requested scopes only.
         if (StringUtils.isNotBlank(requestedScopes)) {
             try {
                 scopes = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
-                        .getRequestedScopesOnly(IdentityTenantUtil.getTenantId(tenantDomain), includeOIDCScopesState,
+                        .getRequestedScopesOnly(tenantId, includeOIDCScopesState,
                                 requestedScopes);
             } catch (IdentityOAuth2ScopeServerException e) {
                 throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
@@ -194,7 +183,7 @@ public class OAuth2ScopeService {
             if (startIndex == null && count == null) {
                 try {
                     scopes = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
-                            .getAllScopes(IdentityTenantUtil.getTenantId(tenantDomain), includeOIDCScopesState);
+                            .getAllScopes(tenantId, includeOIDCScopesState);
                 } catch (IdentityOAuth2ScopeServerException e) {
                     throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
                             ERROR_CODE_FAILED_TO_GET_ALL_SCOPES, e);
