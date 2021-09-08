@@ -70,6 +70,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest;
+import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.user.core.UserRealm;
@@ -257,7 +258,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
         OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
         defaultOIDCClaimsCallbackHandler = new DefaultOIDCClaimsCallbackHandler();
-
+        OAuth2ServiceComponentHolder.getInstance().setScopeClaimMappingDAO(new ScopeClaimMappingDAOImpl());
     }
 
     public static String getFilePath(String fileName) {

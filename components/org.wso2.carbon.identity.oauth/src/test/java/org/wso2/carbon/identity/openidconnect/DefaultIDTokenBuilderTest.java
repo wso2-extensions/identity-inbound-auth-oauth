@@ -66,6 +66,7 @@ import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
@@ -112,6 +113,11 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
     private OAuthTokenReqMessageContext messageContext;
     private OAuth2AccessTokenRespDTO tokenRespDTO;
     private AuthenticatedUser user;
+
+    public DefaultIDTokenBuilderTest() {
+
+        OAuth2ServiceComponentHolder.getInstance().setScopeClaimMappingDAO(new ScopeClaimMappingDAOImpl());
+    }
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -234,7 +240,8 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         List claimProviders = new ArrayList();
         claimProviders.add(claimProvider);
         WhiteboxImpl.setInternalState(OpenIDConnectServiceComponentHolder.getInstance(),
-                "claimProviders", claimProviders);    }
+                "claimProviders", claimProviders);
+    }
 
     @Test
     public void testBuildIDToken() throws Exception {
