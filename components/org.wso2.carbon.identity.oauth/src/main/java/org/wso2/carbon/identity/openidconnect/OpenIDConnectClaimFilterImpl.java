@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataExcept
 import org.wso2.carbon.identity.claim.metadata.mgt.model.Claim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -41,6 +42,8 @@ import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.api.RegistryException;
 import org.wso2.carbon.registry.api.Resource;
 import org.wso2.carbon.registry.core.service.RegistryService;
+import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -58,6 +61,7 @@ import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.EMAIL_VERIFIED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.PHONE_NUMBER_VERIFIED;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ROLES;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.UPDATED_AT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SCOPE_RESOURCE_PATH;
 
@@ -137,7 +141,7 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         if (isNotEmpty(addressScopeClaims)) {
             handleAddressClaim(claimsToBeReturned, addressScopeClaims);
         }
-
+        handleRolesClaim(claimsToBeReturned);
         handleUpdateAtClaim(claimsToBeReturned);
         handlePhoneNumberVerifiedClaim(claimsToBeReturned);
         handleEmailVerifiedClaim(claimsToBeReturned);
@@ -447,6 +451,25 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
             if (returnClaims.get(EMAIL_VERIFIED) instanceof String) {
                 returnClaims.put(EMAIL_VERIFIED, (Boolean.valueOf((String) (returnClaims.get(EMAIL_VERIFIED)))));
             }
+        }
+    }
+
+    private void handleRolesClaim(Map<String, Object> returnClaims) {
+
+        if (returnClaims.containsKey(ROLES) && IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
+            String delim = "";
+            String separator = ",";
+            String[] roles = returnClaims.get(ROLES).toString().split(separator);
+            StringBuffer multiValuedStringBf = new StringBuffer();
+
+            for (String role : roles) {
+                if (UserCoreConstants.INTERNAL_DOMAIN.equalsIgnoreCase(IdentityUtil.extractDomainFromName(role))) {
+                    role = UserCoreUtil.removeDomainFromName(role);
+                }
+                multiValuedStringBf.append(delim).append(role);
+                delim = separator;
+            }
+            returnClaims.put(ROLES, multiValuedStringBf.toString());
         }
     }
 
