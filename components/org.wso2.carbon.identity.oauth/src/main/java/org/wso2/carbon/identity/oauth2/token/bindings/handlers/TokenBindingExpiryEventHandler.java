@@ -257,8 +257,9 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                 .getAccessTokensByBindingRef(tokenBindingReference);
         for (AccessTokenDO accessTokenDO : boundTokens) {
             String consumerKey = accessTokenDO.getConsumerKey();
-            if (OAuth2Util.getAppInformationByClientId(consumerKey).
-                    isTokenRevocationWithIDPSessionTerminationEnabled()) {
+            if (OAuth2Util.getAppInformationByClientId(consumerKey)
+                    .isTokenRevocationWithIDPSessionTerminationEnabled() && accessTokenDO.getAuthzUser() != null &&
+                    user.toString().equals(accessTokenDO.getAuthzUser().toString())) {
                 revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
             }
         }
