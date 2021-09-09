@@ -419,6 +419,7 @@ public final class OAuthConstants {
         public static final String PHONE_NUMBER_VERIFIED = "phone_number_verified";
         public static final String EMAIL_VERIFIED = "email_verified";
         public static final String ADDRESS = "address";
+        public static final String ROLES = "roles";
         public static final String CUSTOM = "custom";
         public static final String AZP = "azp";
         public static final String AUTH_TIME = "auth_time";
