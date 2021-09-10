@@ -1627,7 +1627,7 @@ public class OAuth2Util {
 
         List<ScopeDTO> scopeClaimsList = OAuth2ServiceComponentHolder.getInstance().getOIDCScopesClaims();
         try {
-            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScopes(tenantId,
+            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().initScopeClaimMapping(tenantId,
                     scopeClaimsList);
         } catch (IdentityOAuth2Exception e) {
             log.error(e.getMessage(), e);

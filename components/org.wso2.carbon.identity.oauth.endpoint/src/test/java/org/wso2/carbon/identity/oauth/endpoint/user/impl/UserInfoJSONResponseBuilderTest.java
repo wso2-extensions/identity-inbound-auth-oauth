@@ -39,9 +39,11 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
+import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.service.RegistryService;
@@ -85,6 +87,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
     @BeforeClass
     public void setUpTest() throws Exception {
 
+        OAuth2ServiceComponentHolder.getInstance().setScopeClaimMappingDAO(new ScopeClaimMappingDAOImpl());
         userInfoJSONResponseBuilder = new UserInfoJSONResponseBuilder();
         TestUtils.initiateH2Base();
         con = TestUtils.getConnection();

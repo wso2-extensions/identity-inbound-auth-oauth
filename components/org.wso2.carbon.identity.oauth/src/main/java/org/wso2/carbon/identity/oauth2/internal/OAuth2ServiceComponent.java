@@ -66,6 +66,8 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
+import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
+import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
@@ -134,6 +136,10 @@ public class OAuth2ServiceComponent {
     protected void activate(ComponentContext context) {
 
         try {
+            if (OAuth2ServiceComponentHolder.getInstance().getScopeClaimMappingDAO() == null) {
+                OAuth2ServiceComponentHolder.getInstance()
+                        .setScopeClaimMappingDAO(new ScopeClaimMappingDAOImpl());
+            }
             loadScopeConfigFile();
             loadOauthScopeBinding();
             int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
@@ -492,6 +498,38 @@ public class OAuth2ServiceComponent {
     protected void unsetIdpManager(IdpManager idpManager) {
 
         OAuth2ServiceComponentHolder.getInstance().setIdpManager(null);
+    }
+
+    @Reference(
+            name = "scope.claim.mapping.dao",
+            service = ScopeClaimMappingDAO.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetScopeClaimMappingDAO"
+    )
+    protected void setScopeClaimMappingDAO(ScopeClaimMappingDAO scopeClaimMappingDAO) {
+
+        ScopeClaimMappingDAO existingScopeClaimMappingDAO = OAuth2ServiceComponentHolder.getInstance()
+                .getScopeClaimMappingDAO();
+        if (existingScopeClaimMappingDAO != null) {
+            log.warn("Scope Claim DAO implementation " + existingScopeClaimMappingDAO.getClass().getName() +
+                            " is registered already and PersistenceFactory is created." +
+                            " So DAO Impl : " + scopeClaimMappingDAO.getClass().getName() + " will not be registered");
+        } else {
+            OAuth2ServiceComponentHolder.getInstance().setScopeClaimMappingDAO(scopeClaimMappingDAO);
+            if (log.isDebugEnabled()) {
+                log.debug("Scope Claim DAO implementation got registered: " +
+                        scopeClaimMappingDAO.getClass().getName());
+            }
+        }
+    }
+
+    protected void unsetScopeClaimMappingDAO(ScopeClaimMappingDAO scopeClaimMappingDAO) {
+
+        OAuth2ServiceComponentHolder.getInstance().setScopeClaimMappingDAO(new ScopeClaimMappingDAOImpl());
+        if (log.isDebugEnabled()) {
+            log.debug("Scope Claim DAO implementation got removed: " + scopeClaimMappingDAO.getClass().getName());
+        }
     }
 
     private static void loadScopeConfigFile() {

@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenti
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
+import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
@@ -59,6 +60,7 @@ public class OAuth2ServiceComponentHolder {
     private static UserSessionManagementService userSessionManagementService;
     private List<ScopeDTO> oidcScopesClaims = new ArrayList<>();
     private List<Scope> oauthScopeBinding = new ArrayList<>();
+    private ScopeClaimMappingDAO scopeClaimMappingDAO;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -310,5 +312,16 @@ public class OAuth2ServiceComponentHolder {
     public List<Scope> getOauthScopeBinding() {
 
         return oauthScopeBinding;
+    }
+
+
+    public ScopeClaimMappingDAO getScopeClaimMappingDAO() {
+
+        return scopeClaimMappingDAO;
+    }
+
+    public void setScopeClaimMappingDAO(ScopeClaimMappingDAO scopeClaimMappingDAO) {
+
+        this.scopeClaimMappingDAO = scopeClaimMappingDAO;
     }
 }

@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCache;
 import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCacheEntry;
 
@@ -37,8 +38,9 @@ import java.util.List;
 public class CacheBackedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImpl {
 
     private static final Log log = LogFactory.getLog(CacheBackedScopeClaimMappingDAOImpl.class);
-    private OIDCScopeClaimCache oidcScopeClaimCache = OIDCScopeClaimCache.getInstance();
-    private ScopeClaimMappingDAO defaultScopeClaimMappingDAO = new ScopeClaimMappingDAOImpl();
+    private final OIDCScopeClaimCache oidcScopeClaimCache = OIDCScopeClaimCache.getInstance();
+    private final ScopeClaimMappingDAO defaultScopeClaimMappingDAO = OAuth2ServiceComponentHolder
+            .getInstance().getScopeClaimMappingDAO();
 
     @Override
     public void addScopes(int tenantId, List<ScopeDTO> scopeClaimsMap) throws IdentityOAuth2Exception {
