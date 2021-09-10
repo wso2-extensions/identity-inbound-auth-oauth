@@ -156,6 +156,9 @@ public final class OAuthConstants {
     //JWT claim for authorized user type
     public static final String AUTHORIZED_USER_TYPE = "aut";
 
+    // Identity config properties related to OAuth.
+    public static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
+
     private OAuthConstants() {
 
     }
