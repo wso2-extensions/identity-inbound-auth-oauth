@@ -33,13 +33,13 @@ public interface ScopeClaimMappingDAO {
     /**
      * Initialize the scope claim mapping for tenant. This wil be used during the server startup and tenant creation.
      *
-     * @param tenantId       tenant Id
-     * @param scopeClaimsMap map of oidc scope claims
+     * @param tenantId       Tenant Id.
+     * @param scopeClaims    List of oidc scope claims.
      * @throws IdentityOAuth2Exception if an error occurs when inserting scopes or claims.
      */
-    default void initScopeClaimMapping(int tenantId, List<ScopeDTO> scopeClaimsMap) throws IdentityOAuth2Exception {
+    default void initScopeClaimMapping(int tenantId, List<ScopeDTO> scopeClaims) throws IdentityOAuth2Exception {
 
-        addScopes(tenantId, scopeClaimsMap);
+        addScopes(tenantId, scopeClaims);
     }
 
     /**
