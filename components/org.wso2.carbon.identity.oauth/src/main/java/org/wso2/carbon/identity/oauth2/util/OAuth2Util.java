@@ -4245,14 +4245,4 @@ public class OAuth2Util {
                 = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
         return userStoreManager.getUserNameFromUserID(userId);
     }
-
-    /**
-     * Check whether introspecting tokens from different tenants is allowed.
-     *
-     * @return true/false Allow or block cross tenant token inspection.
-     */
-    public static boolean isCrossTenantTokenInspectionAllowed() {
-
-        return Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION));
-    }
 }
