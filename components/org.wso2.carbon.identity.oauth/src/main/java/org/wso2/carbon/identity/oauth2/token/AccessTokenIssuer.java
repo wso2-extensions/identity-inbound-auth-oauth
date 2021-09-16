@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.application.common.model.ClaimConfig;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -499,17 +500,17 @@ public class AccessTokenIssuer {
     private String getDefaultSubject(ServiceProvider serviceProvider, AuthenticatedUser authenticatedUser)
             throws UserIdNotFoundException {
         String subject;
-        boolean useUserIdForSubject = false;
+        boolean useUserIdForDefaultSubject = false;
         ServiceProviderProperty[] spProperties = serviceProvider.getSpProperties();
         if (spProperties != null) {
             for (ServiceProviderProperty prop : spProperties) {
-                if ("useUserIdForSubject".equals(prop.getName())) {
-                    useUserIdForSubject = Boolean.parseBoolean(prop.getValue());
+                if (IdentityApplicationConstants.USE_USER_ID_FOR_DEFAULT_SUBJECT.equals(prop.getName())) {
+                    useUserIdForDefaultSubject = Boolean.parseBoolean(prop.getValue());
                     break;
                 }
             }
         }
-        if (useUserIdForSubject) {
+        if (useUserIdForDefaultSubject) {
             subject = authenticatedUser.getUserId();
         } else {
             subject = authenticatedUser.getUserName();
