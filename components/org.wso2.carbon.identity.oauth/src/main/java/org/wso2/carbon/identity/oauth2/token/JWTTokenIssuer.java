@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.token;
 
 import com.nimbusds.jose.Algorithm;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
@@ -338,6 +339,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             String certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
             headerBuilder.keyID(OAuth2Util.getKID(OAuth2Util.getCertificate(tenantDomain, tenantId),
                     (JWSAlgorithm) signatureAlgorithm, tenantDomain));
+            headerBuilder.type(new JOSEObjectType(OAuth2Util.JWT));
             headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
