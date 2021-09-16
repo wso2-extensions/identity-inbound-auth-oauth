@@ -79,7 +79,7 @@ public class OAuthRevocationEndpoint {
     private static final String TOKEN_TYPE_HINT_PARAM = "token_type_hint";
     private static final String CALLBACK_PARAM = "callback";
     private static final String APPLICATION_JAVASCRIPT = "application/javascript";
-    private static final String TEXT_HTML = "text/html";
+    private static final String APPLICATION_JSON = "application/json";
 
     @POST
     @Path("/")
@@ -143,7 +143,7 @@ public class OAuthRevocationEndpoint {
         if (isNotEmpty(callback)) {
             respBuilder.header(HttpHeaders.CONTENT_TYPE, APPLICATION_JAVASCRIPT);
         } else {
-            respBuilder.header(HttpHeaders.CONTENT_TYPE, TEXT_HTML);
+            respBuilder.header(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON);
         }
         return respBuilder.entity(response.getBody()).build();
     }
@@ -292,7 +292,7 @@ public class OAuthRevocationEndpoint {
                     .setErrorDescription("Client Authentication failed.").buildJSONMessage();
             return Response.status(response.getResponseStatus())
                     .header(HTTP_RESP_HEADER_AUTHENTICATE, getRealmInfo())
-                    .header(HttpHeaders.CONTENT_TYPE, TEXT_HTML)
+                    .header(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
                     .entity(response.getBody()).build();
         } else {
             OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
@@ -316,7 +316,7 @@ public class OAuthRevocationEndpoint {
                     .setError(OAuth2ErrorCodes.INVALID_REQUEST)
                     .setErrorDescription("Invalid revocation request").buildJSONMessage();
             return Response.status(response.getResponseStatus())
-                    .header(HttpHeaders.CONTENT_TYPE, TEXT_HTML)
+                    .header(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
                     .entity(response.getBody()).build();
         } else {
             OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST)
@@ -335,7 +335,7 @@ public class OAuthRevocationEndpoint {
                     .setError(dto.getErrorCode())
                     .setErrorDescription(dto.getErrorMsg()).buildJSONMessage();
             return Response.status(response.getResponseStatus())
-                    .header(HttpHeaders.CONTENT_TYPE, TEXT_HTML)
+                    .header(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
                     .entity(response.getBody()).build();
         } else {
             OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST)
