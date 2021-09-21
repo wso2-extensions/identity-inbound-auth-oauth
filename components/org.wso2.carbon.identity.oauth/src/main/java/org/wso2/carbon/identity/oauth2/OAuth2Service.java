@@ -311,10 +311,10 @@ public class OAuth2Service extends AbstractAdmin {
             } catch (IdentityOAuth2Exception  e) {
                 log.error("Error occurred while checking client authentication.", e);
                 return buildErrorResponse(OAuth2ErrorCodes.SERVER_ERROR, "Error occurred while revoking " +
-                        "authorization grant for application");
+                        "authorization grant for application.");
             } catch (InvalidOAuthClientException e) {
-                log.error("Unauthorized Client.", e);
-                return buildErrorResponse(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, "Unauthorized Client");
+                log.error("Invalid Client.", e);
+                return buildErrorResponse(OAuth2ErrorCodes.INVALID_CLIENT, "Client Authentication failed.");
             }
         }
 
