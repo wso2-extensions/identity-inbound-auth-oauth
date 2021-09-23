@@ -1196,7 +1196,7 @@ public class OAuth2AuthzEndpoint {
 
     private void setAuthorizationCode(OAuthMessage oAuthMessage, OAuth2AuthorizeRespDTO authzRespDTO,
                                       OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
-                                      String tokenBindingValue) {
+                                      String tokenBindingValue) throws OAuthSystemException {
 
         builder.setCode(authzRespDTO.getAuthorizationCode());
         addUserAttributesToOAuthMessage(oAuthMessage, authzRespDTO.getAuthorizationCode(), authzRespDTO.getCodeId(),
@@ -1222,7 +1222,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private void addUserAttributesToOAuthMessage(OAuthMessage oAuthMessage, String code, String codeId,
-                                                 String tokenBindingValue) {
+                                                 String tokenBindingValue) throws OAuthSystemException {
 
         SessionDataCacheEntry sessionDataCacheEntry = oAuthMessage.getSessionDataCacheEntry();
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry = new AuthorizationGrantCacheEntry(
