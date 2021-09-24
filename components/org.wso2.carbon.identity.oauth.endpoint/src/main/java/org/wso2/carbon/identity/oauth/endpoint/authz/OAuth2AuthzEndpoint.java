@@ -1597,21 +1597,23 @@ public class OAuth2AuthzEndpoint {
         }
 
         if (isPkceSupportEnabled()) {
+
             String pkceChallengeCode;
             String pkceChallengeMethod;
-            //Check whether code_challenge is in the request object
-            if (oauthRequest.getParam(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE) != null) {
-                //If request contains code_challenge get value from request object
-                pkceChallengeCode = oauthRequest.getParam(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE);
+
+            //If the code_challenge is in the request object, then it is added to Oauth2 params before this point
+            if (params.getPkceCodeChallenge() != null) {
+                //If Oauth2 params contains code_challenge_method get value from Oauth2 params
+                pkceChallengeCode = params.getPkceCodeChallenge();
             } else {
                 //Else retrieve from request query params
                 pkceChallengeCode = oAuthMessage.getOauthPKCECodeChallenge();
             }
 
-            //Check whether code_challenge_code is in the request object
-            if (oauthRequest.getParam(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD) != null) {
-                //If request contains code_challenge_method get value from request object
-                pkceChallengeMethod = oauthRequest.getParam(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD);
+            //If the code_challenge_code is in the request object, then it is added to Oauth2 params before this point
+            if (params.getPkceCodeChallengeMethod() != null) {
+                //If Oauth2 params contains code_challenge get value from Oauth2 params
+                pkceChallengeMethod = params.getPkceCodeChallengeMethod();
             } else {
                 //Else retrieve from request query params
                 pkceChallengeMethod = oAuthMessage.getOauthPKCECodeChallengeMethod();
@@ -1719,6 +1721,8 @@ public class OAuth2AuthzEndpoint {
             replaceIfPresent(requestObject, CLAIMS, params::setEssentialClaims);
 
             if (isPkceSupportEnabled()) {
+                //If code_challenge and code_challenge_method is sent inside the request object then add them to
+                // Oauth2 parameters
                 replaceIfPresent(requestObject, CODE_CHALLENGE, params::setPkceCodeChallenge);
                 replaceIfPresent(requestObject, CODE_CHALLENGE_METHOD, params::setPkceCodeChallengeMethod);
             }
