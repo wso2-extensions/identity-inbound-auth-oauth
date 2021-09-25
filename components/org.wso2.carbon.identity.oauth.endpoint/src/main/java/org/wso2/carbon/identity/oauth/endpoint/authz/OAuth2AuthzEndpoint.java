@@ -2680,9 +2680,11 @@ public class OAuth2AuthzEndpoint {
                     // Storing the oidc session id.
                     storeSidClaim(oAuthMessage, previousSessionState, redirectURL);
                 } else {
-                    log.warn("No session state found for the received Session ID : " + opBrowserStateCookie.getValue());
                     if (log.isDebugEnabled()) {
-                        log.debug("Restore browser session state.");
+                        log.debug(String.format(
+                                "No session state found for the received Session ID : %s. Restore browser session " +
+                                        "state.", opBrowserStateCookie.getValue()
+                        ));
                     }
                     opBrowserStateCookie = OIDCSessionManagementUtil
                             .addOPBrowserStateCookie(response, request, oAuth2Parameters.getLoginTenantDomain(),
