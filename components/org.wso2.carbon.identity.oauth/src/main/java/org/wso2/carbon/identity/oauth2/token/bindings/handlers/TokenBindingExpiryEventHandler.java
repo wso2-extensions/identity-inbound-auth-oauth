@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
@@ -253,14 +254,32 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         if (StringUtils.isBlank(tokenBindingReference) || user == null) {
             return;
         }
+        String userId;
+        try {
+            userId = user.getUserId();
+        } catch (UserIdNotFoundException e) {
+            log.error("User id cannot be found for user: " + user.getLoggableUserId() + ". Hence skip revoking " +
+                    "relevant tokens");
+            throw new IdentityOAuth2Exception("Unable to revoke tokens for the token binding reference: "
+                    + tokenBindingReference);
+        }
+
         Set<AccessTokenDO> boundTokens = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .getAccessTokensByBindingRef(tokenBindingReference);
         for (AccessTokenDO accessTokenDO : boundTokens) {
             String consumerKey = accessTokenDO.getConsumerKey();
-            if (OAuth2Util.getAppInformationByClientId(consumerKey)
-                    .isTokenRevocationWithIDPSessionTerminationEnabled() && accessTokenDO.getAuthzUser() != null &&
-                    user.toString().equals(accessTokenDO.getAuthzUser().toString())) {
-                revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
+            if (OAuth2Util.getAppInformationByClientId(consumerKey).isTokenRevocationWithIDPSessionTerminationEnabled()
+                    && accessTokenDO.getAuthzUser() != null) {
+                AuthenticatedUser authenticatedUser = new AuthenticatedUser(accessTokenDO.getAuthzUser());
+                try {
+                    if (StringUtils.equalsIgnoreCase(userId, authenticatedUser.getUserId())) {
+                        revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
+                    }
+                } catch (UserIdNotFoundException e) {
+                    log.error("User id cannot be found for user: " + authenticatedUser.getLoggableUserId());
+                    throw new IdentityOAuth2Exception("Unable to revoke tokens of the app: " + consumerKey +
+                            " for the token binding reference: " + tokenBindingReference);
+                }
             }
         }
     }
