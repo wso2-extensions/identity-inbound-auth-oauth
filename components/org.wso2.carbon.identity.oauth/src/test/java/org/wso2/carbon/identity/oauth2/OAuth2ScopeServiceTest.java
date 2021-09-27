@@ -258,7 +258,7 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
             String sql = "INSERT INTO SP_APP (TENANT_ID, APP_NAME, UUID) VALUES (?,?,?)";
-            try(PreparedStatement ps = connection.prepareStatement(sql)) {
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
                 ps.setInt(1, 1);
                 ps.setString(2, "dummyAppName");
                 ps.setString(3, uuid);
