@@ -86,8 +86,6 @@ public class OAuthServiceComponent {
             oauthServerConfig.populateOAuthTokenIssuerMap();
 
             OAuthAdminServiceImpl oauthAdminService = new OAuthAdminServiceImpl();
-            context.getBundleContext().registerService(OAuthAdminServiceImpl.class.getName(), oauthAdminService, null);
-
             OAuthComponentServiceHolder.getInstance().setOAuthAdminService(oauthAdminService);
             OAuth2ServiceComponentHolder.getInstance().setOAuthAdminService(oauthAdminService);
             context.getBundleContext().registerService(OAuthEventInterceptor.class,
@@ -95,6 +93,9 @@ public class OAuthServiceComponent {
             if (log.isDebugEnabled()) {
                 log.debug("OAuthTokenSessionMapping Event Handler is enabled");
             }
+            context.getBundleContext().registerService(OAuthAdminServiceImpl.class.getName(), oauthAdminService, null);
+            // Note : DO NOT add any activation related code below this point,
+            // to make sure the server doesn't start up if any activation failures occur
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
