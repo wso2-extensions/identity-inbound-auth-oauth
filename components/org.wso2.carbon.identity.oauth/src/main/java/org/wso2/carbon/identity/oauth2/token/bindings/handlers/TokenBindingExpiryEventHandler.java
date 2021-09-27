@@ -317,7 +317,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
             throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.debug("Revoking tokens for the application with consumerKey:" + consumerKey + "for the user: "
+            log.debug("Revoking tokens for the application with consumerKey:" + consumerKey + " for the user: "
                     + accessTokenDO.getAuthzUser().getLoggableUserId());
         }
 
