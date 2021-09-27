@@ -316,6 +316,11 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
     private void revokeTokens(String consumerKey, AccessTokenDO accessTokenDO, String tokenBindingReference)
             throws IdentityOAuth2Exception {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Revoking tokens for the application with consumerKey:" + consumerKey + "for the user: "
+                    + accessTokenDO.getAuthzUser().getLoggableUserId());
+        }
+
         OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser(), OAuth2Util.buildScopeString
                 (accessTokenDO.getScope()), tokenBindingReference);
         OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser(), OAuth2Util.buildScopeString

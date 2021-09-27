@@ -68,6 +68,10 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
     public boolean isTokenBindingExistsForBindingReference(String tokenBindingReference)
             throws IdentityOAuth2Exception {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Checking for token binding existence for the binding reference: "
+                    + tokenBindingReference);
+        }
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
                 PreparedStatement preparedStatement = connection.prepareStatement(RETRIEVE_TOKEN_BINDING_REF_EXISTS)) {
             preparedStatement.setString(1, tokenBindingReference);
