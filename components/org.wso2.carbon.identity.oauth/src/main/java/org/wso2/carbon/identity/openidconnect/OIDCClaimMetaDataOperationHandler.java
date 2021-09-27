@@ -53,7 +53,7 @@ public class OIDCClaimMetaDataOperationHandler extends AbstractEventHandler {
         if (MapUtils.isEmpty(eventProperties)) {
             return;
         }
-        if (eventProperties.get(IdentityEventConstants.EventProperty.TENANT_ID) != null) {
+        if (eventProperties.get(IdentityEventConstants.EventProperty.TENANT_ID) == null) {
             return;
         }
         int tenantId = (int) eventProperties.get(IdentityEventConstants.EventProperty.TENANT_ID);
