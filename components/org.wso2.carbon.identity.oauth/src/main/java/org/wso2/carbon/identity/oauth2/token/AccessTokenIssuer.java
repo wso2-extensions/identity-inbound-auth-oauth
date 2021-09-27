@@ -448,7 +448,7 @@ public class AccessTokenIssuer {
         }
         Map<String, Object> params = new HashMap<>();
         params.put("clientId", tokenReqDTO.getClientId());
-        OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+        OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
                 "Access token issued for the application." ,
                 "issue-access-token", null);
 

@@ -63,7 +63,6 @@ public class OAuthCommonUtil {
      */
     public static void validateContentTypes(HttpServletRequest request) throws OAuthProblemException {
 
-        //diag
         String contentType = request.getContentType();
         if (!isAllowedContentType(contentType, ALLOWED_CONTENT_TYPES)) {
             throw OAuthUtils.handleBadContentTypeException(String.join(" or ", ALLOWED_CONTENT_TYPES));

@@ -4286,35 +4286,5 @@ public class OAuth2Util {
 
         LoggerUtils.triggerDiagnosticLogEvent(componentId, input, resultStatus, resultMessage, actionId,
                 configurations);
-//
-//        JSONObject logData = new JSONObject();
-//
-//        logData.put("id", UUIDGenerator.generateUUID());
-//        logData.put("recordedAt", new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date()));
-//        logData.put("requestId", MDC.get("Correlation-ID"));
-//        logData.put("flowId", "sample-session-data-key");
-//        JSONObject inputData = new JSONObject();
-//        if (Optional.ofNullable(input).isPresent()) {
-//            input.forEach((key, value) -> {
-//                if (value instanceof List) {
-//                    if (((List<?>) value).size() > 1) {
-//                        inputData.put(key, new JSONArray(value));
-//                    } else {
-//                        inputData.put(key, ((List<?>) value).get(0));
-//                    }
-//                   // ((List<?>) value).forEach(y -> inputData.put(key, y));
-//                } else {
-//                    inputData.put(key, value);
-//                }
-//            });
-//        }
-//        logData.put("input", inputData);
-//        logData.put("result.status", resultStatus);
-//        logData.put("result.message", resultMessage);
-//        logData.put("action.id", actionId);
-//        logData.put("component.id", componentId);
-//        logData.put("configurations", configurations);
-//
-//        diagnosticLog.info(logData.toString());
     }
 }

@@ -483,9 +483,10 @@ public class OAuth2Service extends AbstractAdmin {
                                 getTokenBinding(), revokeRequestDTO.getRequest()))) {
                             Map<String, Object> params = new HashMap<>();
                             params.put("clientId", accessTokenDO.getConsumerKey());
-                            params.put("tokenBindingType", accessTokenDO.getTokenBinding().getBindingType());
-                            params.put("tokenBindingValue", accessTokenDO.getTokenBinding().getBindingValue());
-
+                            if (accessTokenDO.getTokenBinding() != null) {
+                                params.put("tokenBindingType", accessTokenDO.getTokenBinding().getBindingType());
+                                params.put("tokenBindingValue", accessTokenDO.getTokenBinding().getBindingValue());
+                            }
                             Map<String, Object> configs = new HashMap<>();
                             configs.put("isTokenBindingValidationEnabled", "true");
                             OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Valid token binding value not " +
@@ -559,9 +560,7 @@ public class OAuth2Service extends AbstractAdmin {
             }
 
         } catch (InvalidOAuthClientException e) {
-            Map<String, Object> params = new HashMap<>();
-            params.put("clientId", accessTokenDO.getConsumerKey());
-            OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+            OAuth2Util.log("oauth-inbound-service", null, "FAILED",
                     "Client is not authorized." , "validate-oauth-client", null);
             log.error("Unauthorized Client", e);
             OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();

@@ -422,9 +422,14 @@ public class OAuth2AuthzEndpoint {
 
         Map<String, Object> params = new HashMap<>();
         if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
-            oAuthMessage.getRequest().getParameterMap().forEach(params::put);
+            oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
+                if (ArrayUtils.isNotEmpty(value)) {
+                    params.put(key, Arrays.asList(value));
+                }
+            });
         }
-        OAuth2Util.log("oauth-inbound-service", params, "SUCCESS", null, "receive-consent-response", null);
+        OAuth2Util.log("oauth-inbound-service", params, "SUCCESS", "Successfully received consent response", "receive" +
+                        "-consent-response", null);
 
         updateAuthTimeInSessionDataCacheEntry(oAuthMessage);
         addSessionDataKeyToSessionDataCacheEntry(oAuthMessage);
@@ -713,7 +718,11 @@ public class OAuth2AuthzEndpoint {
 
         Map<String, Object> requestParams = new HashMap<>();
         if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
-            oAuthMessage.getRequest().getParameterMap().forEach(requestParams::put);
+            oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
+                if (ArrayUtils.isNotEmpty(value)) {
+                    requestParams.put(key, Arrays.asList(value));
+                }
+            });
         }
         OAuth2Util.log("oauth-inbound-service", requestParams, "SUCCESS",
                 "Received authentication response from Framework.", "receive-authn-response", null);
@@ -902,10 +911,14 @@ public class OAuth2AuthzEndpoint {
 
         Map<String, Object> params = new HashMap<>();
         if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
-            oAuthMessage.getRequest().getParameterMap().forEach(params::put);
+            oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
+                if (ArrayUtils.isNotEmpty(value)) {
+                    params.put(key, Arrays.asList(value));
+                }
+            });
         }
         OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
-                null , "receive-authz-request", null);
+                "Successfully received OAuth2 Authorize request." , "receive-authz-request", null);
         String redirectURL = handleOAuthAuthorizationRequest(oAuthMessage);
         String type = getRequestProtocolType(oAuthMessage);
 

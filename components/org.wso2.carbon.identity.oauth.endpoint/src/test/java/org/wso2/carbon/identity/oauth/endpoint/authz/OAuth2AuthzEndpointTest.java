@@ -61,6 +61,8 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
@@ -97,6 +99,7 @@ import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
+import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
@@ -120,6 +123,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -157,7 +161,7 @@ import static org.testng.FileAssert.fail;
         EndpointUtil.class, FrameworkUtils.class, EndpointUtil.class, OpenIDConnectUserRPStore.class,
         IdentityTenantUtil.class, OAuthResponse.class, SignedJWT.class,
         OIDCSessionManagementUtil.class, CarbonUtils.class, SessionDataCache.class, IdentityUtil.class,
-        ServiceURLBuilder.class, OAuth2AuthzEndpoint.class})
+        ServiceURLBuilder.class, OAuth2AuthzEndpoint.class, ClaimMetadataHandler.class})
 public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -226,6 +230,15 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     @Mock
     OAuthProblemException oAuthProblemException;
 
+    @Mock
+    Cookie authCookie;
+
+    @Mock
+    OpenIDConnectClaimFilterImpl openIDConnectClaimFilter;
+
+    @Mock
+    ClaimMetadataHandler claimMetadataHandler;
+
     private static final String ERROR_PAGE_URL = "https://localhost:9443/authenticationendpoint/oauth2_error.do";
     private static final String LOGIN_PAGE_URL = "https://localhost:9443/authenticationendpoint/login.do";
     private static final String USER_CONSENT_URL =
@@ -246,6 +259,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     private static final String APP_REDIRECT_URL_JSON = "{\"url\":\"http://localhost:8080/redirect\"}";
     private static final String SP_DISPLAY_NAME = "DisplayName";
     private static final String SP_NAME = "Name";
+    private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
     private OAuth2AuthzEndpoint oAuth2AuthzEndpoint;
     private Object authzEndpointObject;
@@ -431,7 +445,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         mockOAuthServerConfiguration();
 
-        mockEndpointUtil();
+        mockEndpointUtil(false);
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
         if (ArrayUtils.isNotEmpty(clientId) && (clientId[0].equalsIgnoreCase("invalidId") || clientId[0]
                 .equalsIgnoreCase(INACTIVE_CLIENT_ID_VALUE) || StringUtils.isEmpty(clientId[0]))) {
@@ -588,12 +602,12 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             when(openIDConnectUserRPStore.hasUserApproved(any(AuthenticatedUser.class), anyString(), anyString())).
                     thenReturn(true);
 
-            mockEndpointUtil();
+            mockEndpointUtil(false);
             when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
             mockApplicationManagementService();
 
-            mockEndpointUtil();
+            mockEndpointUtil(false);
             when(oAuth2Service.handleAuthenticationFailure(oAuth2Params)).thenReturn(oAuthErrorDTO);
             when(oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(
                     anyString(), anyString(), anyInt(), anyList())).thenReturn(true);
@@ -683,13 +697,36 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                                         int expectedStatus, String oAuthErrorDTODescription, String expectedError)
             throws Exception {
 
+        initMocks(this);
+        spy(FrameworkUtils.class);
+        when(authCookie.getValue()).thenReturn("dummyValue");
+        doReturn(authCookie).when(FrameworkUtils.class, "getAuthCookie", any());
+
+        SessionContext sessionContext = new SessionContext();
+        sessionContext.addProperty(FrameworkConstants.CREATED_TIMESTAMP, 1479249799770L);
+
+        doReturn(sessionContext)
+                .when(FrameworkUtils.class, "getSessionContextFromCache", anyString(), anyString());
+
+        when(openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(any(), anyString())).thenReturn(Arrays.asList(
+                "country"));
+        OAuth2AuthzEndpoint.setOpenIDConnectClaimFilter(openIDConnectClaimFilter);
+
+        Set<ExternalClaim> mappings = new HashSet<>();
+        ExternalClaim claim = new ExternalClaim(OIDC_DIALECT, "country", "http://wso2.org/country");
+        mappings.add(claim);
+        when(claimMetadataHandler.getMappingsFromOtherDialectToCarbon(anyString(), any(), anyString()))
+                .thenReturn(mappings);
+        mockStatic(ClaimMetadataHandler.class);
+        when(ClaimMetadataHandler.getInstance()).thenReturn(claimMetadataHandler);
+
         mockStatic(SessionDataCache.class);
         when(SessionDataCache.getInstance()).thenReturn(sessionDataCache);
         SessionDataCacheKey consentDataCacheKey = new SessionDataCacheKey(SESSION_DATA_KEY_CONSENT_VALUE);
         when(sessionDataCache.getValueFromCache(consentDataCacheKey)).thenReturn(consentCacheEntry);
 
         Map<String, String[]> requestParams = new HashMap<>();
-        Map<String, Object> requestAttributes = new HashMap<>();
+        Map<String, Object> requestAttributes = new ConcurrentHashMap<>();
 
         requestParams.put(OAuthConstants.SESSION_DATA_KEY_CONSENT, new String[]{SESSION_DATA_KEY_CONSENT_VALUE});
         requestParams.put(FrameworkConstants.RequestParams.TO_COMMONAUTH, new String[]{"false"});
@@ -717,10 +754,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
 
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getServiceProvider(CLIENT_ID_VALUE)).thenReturn(new ServiceProvider());
+        spy(OAuth2Util.class);
+        doReturn(new ServiceProvider())
+                .when(OAuth2Util.class, "getServiceProvider", CLIENT_ID_VALUE);
 
-        mockEndpointUtil();
+        mockEndpointUtil(true);
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
         mockApplicationManagementService();
@@ -918,7 +956,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockStatic(IdentityDatabaseUtil.class);
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
 
-        mockEndpointUtil();
+        mockEndpointUtil(false);
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
         when(oAuth2Service.isPKCESupportEnabled()).thenReturn(pkceEnabled);
         if (ERROR_PAGE_URL.equals(expectedLocation) && OAuthConstants.Prompt.NONE.equals(prompt)) {
@@ -1071,7 +1109,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 authzRespDTO.setCallbackURI(APP_REDIRECT_URL + "?");
             }
         }
-        mockEndpointUtil();
+        mockEndpointUtil(false);
         when(oAuth2Service.authorize(any(OAuth2AuthorizeReqDTO.class))).thenReturn(authzRespDTO);
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
         mockStatic(OpenIDConnectUserRPStore.class);
@@ -1179,7 +1217,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(loginCacheEntry.getLoggedInUser()).thenReturn(result.getSubject());
         when(loginCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
 
-        mockEndpointUtil();
+        mockEndpointUtil(false);
         when(oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(
                 anyString(), anyString(), anyInt(), anyList())).thenReturn(hasUserApproved);
 
@@ -1299,7 +1337,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         oAuth2Params.setPrompt(OAuthConstants.Prompt.LOGIN);
 
         mockOAuthServerConfiguration();
-        mockEndpointUtil();
+        mockEndpointUtil(false);
 
         when(oAuthServerConfiguration.getOpenIDConnectSkipeUserConsentConfig()).thenReturn(true);
 
@@ -1574,7 +1612,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         ServiceProvider sp = new ServiceProvider();
         sp.setApplicationName(APP_NAME);
         mockOAuthServerConfiguration();
-        mockEndpointUtil();
+        mockEndpointUtil(false);
 
         mockApplicationManagementService(sp);
 
@@ -1636,7 +1674,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockApplicationManagementService(sp);
 
         mockOAuthServerConfiguration();
-        mockEndpointUtil();
+        mockEndpointUtil(false);
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
@@ -1710,7 +1748,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
 
         connection.close(); // Closing connection to create SQLException
-        mockEndpointUtil();
+        mockEndpointUtil(false);
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
@@ -1769,7 +1807,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(httpServletRequest.getHeader("Authorization")).thenReturn(authHeader);
     }
 
-    private void mockEndpointUtil() throws Exception {
+    private void mockEndpointUtil(boolean isConsentMgtEnabled) throws Exception {
 
         spy(EndpointUtil.class);
         doReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)
@@ -1796,6 +1834,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 .getConsentRequiredClaimsWithoutExistingConsents(any(ServiceProvider.class),
                         any(AuthenticatedUser.class)))
                 .thenReturn(new ConsentClaimsData());
+
+        when(ssoConsentService.isSSOConsentManagementEnabled(any())).thenReturn(isConsentMgtEnabled);
 
         doReturn(ssoConsentService).when(EndpointUtil.class, "getSSOConsentService");
     }
