@@ -554,12 +554,12 @@ public class OAuth2AuthzEndpoint {
     private ConsentClaimsData getConsentRequiredClaims(AuthenticatedUser user, ServiceProvider serviceProvider,
                                                        OAuth2Parameters oAuth2Parameters)
             throws SSOConsentServiceException {
-
+        Set<String> scopes = oAuth2Parameters.getScopes();
         if (hasPromptContainsConsent(oAuth2Parameters)) {
             // Ignore all previous consents and get consent required claims
-            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user);
+            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user, scopes);
         } else {
-            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user);
+            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user, scopes);
         }
     }
 
@@ -2054,7 +2054,8 @@ public class OAuth2AuthzEndpoint {
         }
 
         try {
-            ConsentClaimsData claimsForApproval = getConsentRequiredClaims(user, serviceProvider, useExistingConsents);
+            ConsentClaimsData claimsForApproval = getConsentRequiredClaims(user, serviceProvider, useExistingConsents,
+                    oauth2Params);
             if (claimsForApproval != null) {
                 String requestClaimsQueryParam = null;
                 // Get the mandatory claims and append as query param.
@@ -2226,12 +2227,14 @@ public class OAuth2AuthzEndpoint {
 
     private ConsentClaimsData getConsentRequiredClaims(AuthenticatedUser user,
                                                        ServiceProvider serviceProvider,
-                                                       boolean useExistingConsents) throws SSOConsentServiceException {
+                                                       boolean useExistingConsents, OAuth2Parameters oAuth2Parameters)
+            throws SSOConsentServiceException {
 
+        Set<String> scopes = oAuth2Parameters.getScopes();
         if (useExistingConsents) {
-            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user);
+            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user, scopes);
         } else {
-            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user);
+            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user, scopes);
         }
     }
 
