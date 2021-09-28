@@ -196,6 +196,8 @@ public class OAuth2AuthzEndpoint {
     private static final String RESPONSE_MODE = "response_mode";
     private static final String REQUEST = "request";
     private static final String REQUEST_URI = "request_uri";
+    private static final String CODE_CHALLENGE = "code_challenge";
+    private static final String CODE_CHALLENGE_METHOD = "code_challenge_method";
 
     private static final String formPostRedirectPage = getFormPostRedirectPage();
     private static final String DISPLAY_NAME = "DisplayName";
@@ -1625,8 +1627,26 @@ public class OAuth2AuthzEndpoint {
         }
 
         if (isPkceSupportEnabled()) {
-            String pkceChallengeCode = oAuthMessage.getOauthPKCECodeChallenge();
-            String pkceChallengeMethod = oAuthMessage.getOauthPKCECodeChallengeMethod();
+            String pkceChallengeCode;
+            String pkceChallengeMethod;
+
+            //If the code_challenge is in the request object, then it is added to Oauth2 params before this point
+            if (params.getPkceCodeChallenge() != null) {
+                //If Oauth2 params contains code_challenge get value from Oauth2 params
+                pkceChallengeCode = params.getPkceCodeChallenge();
+            } else {
+                //Else retrieve from request query params
+                pkceChallengeCode = oAuthMessage.getOauthPKCECodeChallenge();
+            }
+
+            //If the code_challenge_method is in the request object, then it is added to Oauth2 params before this point
+            if (params.getPkceCodeChallengeMethod() != null) {
+                //If Oauth2 params contains code_challenge_method get value from Oauth2 params
+                pkceChallengeMethod = params.getPkceCodeChallengeMethod();
+            } else {
+                //Else retrieve from request query params
+                pkceChallengeMethod = oAuthMessage.getOauthPKCECodeChallengeMethod();
+            }
             String redirectURI = validatePKCEParameters(oAuthMessage, validationResponse, pkceChallengeCode,
                     pkceChallengeMethod);
             if (redirectURI != null) {
@@ -1752,6 +1772,13 @@ public class OAuth2AuthzEndpoint {
             replaceIfPresent(requestObject, ID_TOKEN_HINT, params::setIDTokenHint);
             replaceIfPresent(requestObject, PROMPT, params::setPrompt);
             replaceIfPresent(requestObject, CLAIMS, params::setEssentialClaims);
+
+            if (isPkceSupportEnabled()) {
+                //If code_challenge and code_challenge_method is sent inside the request object then add them to
+                // Oauth2 parameters
+                replaceIfPresent(requestObject, CODE_CHALLENGE, params::setPkceCodeChallenge);
+                replaceIfPresent(requestObject, CODE_CHALLENGE_METHOD, params::setPkceCodeChallengeMethod);
+            }
 
             if (StringUtils.isNotEmpty(requestObject.getClaimValue(SCOPE))) {
                 String scopeString = requestObject.getClaimValue(SCOPE);
