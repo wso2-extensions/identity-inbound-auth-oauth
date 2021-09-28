@@ -256,18 +256,14 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
 
     private void insertAppId(String uuid) throws Exception {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
-            String sql = "INSERT INTO SP_APP (TENANT_ID, APP_NAME, UUID) VALUES (?,?,?)";
-            try (PreparedStatement ps = connection.prepareStatement(sql)) {
-                ps.setInt(1, 1);
-                ps.setString(2, "dummyAppName");
-                ps.setString(3, uuid);
-                ps.execute();
-                IdentityDatabaseUtil.commitTransaction(connection);
-            } catch (SQLException e) {
-                IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new IdentityOAuth2Exception("Error when inserting codeID", e);
-            }
+        String sql = "INSERT INTO SP_APP (TENANT_ID, APP_NAME, UUID) VALUES (?,?,?)";
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection();
+            PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, 1);
+            ps.setString(2, "dummyAppName");
+            ps.setString(3, uuid);
+            ps.execute();
+            IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when inserting codeID", e);
         }
