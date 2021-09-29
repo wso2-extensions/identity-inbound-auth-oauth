@@ -48,7 +48,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 /**
- * Unit test covering HttpUnregistrationResponseFactory
+ * This class is to cover unit tests for HttpUnregistrationResponseFactory
  */
 @PrepareForTest({HttpUnregistrationResponseFactory.class, HttpIdentityResponse.HttpIdentityResponseBuilder.class})
 public class HttpUnRegistrationResponseFactoryTest extends PowerMockTestCase {
