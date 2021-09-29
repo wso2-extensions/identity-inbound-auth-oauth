@@ -210,13 +210,14 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
                 "failed");
         oAuth2ScopeService.deleteScope(scopeName);
     }
+
     @Test
     public void testUpdateScope() throws Exception {
 
         String scopeName = "DummyName";
         Scope dummyScope = new Scope(scopeName, SCOPE_NAME, SCOPE_DESCRIPTION);
         oAuth2ScopeService.registerScope(dummyScope);
-        Scope updatedDummyScope = new Scope(scopeName, SCOPE_NAME,  StringUtils.EMPTY);
+        Scope updatedDummyScope = new Scope(scopeName, SCOPE_NAME, StringUtils.EMPTY);
         assertEquals(oAuth2ScopeService.updateScope(updatedDummyScope).getDescription(), StringUtils.EMPTY);
         oAuth2ScopeService.deleteScope(scopeName);
     }
@@ -258,7 +259,7 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
 
         String sql = "INSERT INTO SP_APP (TENANT_ID, APP_NAME, UUID) VALUES (?,?,?)";
         try (Connection connection = IdentityDatabaseUtil.getDBConnection();
-            PreparedStatement ps = connection.prepareStatement(sql)) {
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, 1);
             ps.setString(2, "dummyAppName");
             ps.setString(3, uuid);
