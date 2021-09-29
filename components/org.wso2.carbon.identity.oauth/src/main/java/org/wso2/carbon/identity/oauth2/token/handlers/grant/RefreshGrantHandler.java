@@ -173,7 +173,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 .equals(validationBean.getTokenBindingReference())) {
             Optional<TokenBinding> tokenBindingOptional = OAuthTokenPersistenceFactory.getInstance()
                     .getTokenBindingMgtDAO()
-                    .getTokenBinding(validationBean.getTokenId());
+                    .getTokenBindingByBindingRef(validationBean.getTokenId(),
+                            validationBean.getTokenBindingReference());
             tokenBindingOptional.ifPresent(tokReqMsgCtx::setTokenBinding);
         }
         // Store the old access token as a OAuthTokenReqMessageContext property, this is already

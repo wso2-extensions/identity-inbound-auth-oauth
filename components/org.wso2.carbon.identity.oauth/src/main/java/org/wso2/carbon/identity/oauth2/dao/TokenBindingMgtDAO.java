@@ -38,6 +38,20 @@ public interface TokenBindingMgtDAO {
     Optional<TokenBinding> getTokenBinding(String tokenId) throws IdentityOAuth2Exception;
 
     /**
+     * Get access token binding by token id and binding reference.
+     *
+     * @param tokenId    Token id.
+     * @param bindingRef Binding reference.
+     * @return token binding optional.
+     * @throws IdentityOAuth2Exception in case of failure.
+     */
+    default Optional<TokenBinding> getTokenBindingByBindingRef(String tokenId, String bindingRef)
+            throws IdentityOAuth2Exception {
+
+        return Optional.empty();
+    }
+
+    /**
      * Check whether the token binding exists for the token binding reference.
      *
      * @param tokenBindingReference token binding reference.
