@@ -664,11 +664,12 @@ public class OAuth2AuthzEndpoint {
                 getOauth2Params(oAuthMessage).getApplicationName(), false, oauth2Params.getClientId());
 
         OAuthErrorDTO oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleUserConsentDenial(oauth2Params);
-        OAuthProblemException ex = buildConsentDenialException(oAuthErrorDTO);
+        OAuthProblemException consentDenialException = buildConsentDenialException(oAuthErrorDTO);
 
-        String denyResponse = EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), ex, oauth2Params);
+        String denyResponse = EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(),
+                consentDenialException, oauth2Params);
         if (StringUtils.equals(oauth2Params.getResponseMode(), RESPONSE_MODE_FORM_POST)) {
-            return handleFailedState(oAuthMessage, oauth2Params, ex);
+            return handleFailedState(oAuthMessage, oauth2Params, consentDenialException);
         }
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(denyResponse)).build();
     }
@@ -682,13 +683,14 @@ public class OAuth2AuthzEndpoint {
             errorDescription = oAuthErrorDTO.getErrorDescription();
         }
 
-        OAuthProblemException error = OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED, errorDescription);
+        OAuthProblemException consentDeniedException = OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED,
+                errorDescription);
 
         // Adding Error URI if exist.
         if (oAuthErrorDTO != null && StringUtils.isNotBlank(oAuthErrorDTO.getErrorURI())) {
-            error.uri(oAuthErrorDTO.getErrorURI());
+            consentDeniedException.uri(oAuthErrorDTO.getErrorURI());
         }
-        return error;
+        return consentDeniedException;
     }
 
     private Response handleAuthenticationResponse(OAuthMessage oAuthMessage)

@@ -27,8 +27,6 @@ public enum AuthReqStatus {
     AUTHENTICATED,
     TOKEN_ISSUED, // Token issued for the authentication request after successful completion of authentication process.
     EXPIRED,
-
-   // Possible failures in authentication requests.
-    FAILED ,
+    FAILED , // Possible failures in authentication requests.
     CONSENT_DENIED
 }

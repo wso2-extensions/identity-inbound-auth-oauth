@@ -30,6 +30,9 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class CibaResponseTypeValidator extends AbstractValidator {
 
+    public static final String  RESPONSE_TYPE = "response_type";
+    public static final String  CLIENT_ID = "client_id";
+
     public CibaResponseTypeValidator() {
         this.configureParams();
     }
@@ -37,8 +40,8 @@ public class CibaResponseTypeValidator extends AbstractValidator {
     @Override
     protected void configureParams() {
         
-        this.requiredParams.add("response_type");
-        this.requiredParams.add("client_id");
+        this.requiredParams.add(RESPONSE_TYPE);
+        this.requiredParams.add(CLIENT_ID);
     }
 
     @Override

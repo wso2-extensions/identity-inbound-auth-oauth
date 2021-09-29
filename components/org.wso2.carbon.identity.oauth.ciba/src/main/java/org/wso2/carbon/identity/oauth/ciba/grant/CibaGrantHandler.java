@@ -284,8 +284,8 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,
                                                  CibaAuthCodeDO cibaAuthCodeDO) {
 
-        tokReqMsgCtx
-                .setAuthorizedUser(OAuth2Util.getUserFromUserName(cibaAuthCodeDO.getAuthenticatedUser().getUserName()));
+        tokReqMsgCtx.setAuthorizedUser(OAuth2Util.getUserFromUserName(cibaAuthCodeDO.getAuthenticatedUser().
+                getUserName()));
         tokReqMsgCtx.setScope(cibaAuthCodeDO.getScopes());
     }
 
