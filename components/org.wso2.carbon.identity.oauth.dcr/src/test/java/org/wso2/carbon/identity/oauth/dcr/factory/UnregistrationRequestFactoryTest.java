@@ -93,7 +93,6 @@ public class UnregistrationRequestFactoryTest extends PowerMockTestCase {
         return new Object[][]{
                 {null},
                 {unregisterRequestBuilder}
-
         };
     }
 

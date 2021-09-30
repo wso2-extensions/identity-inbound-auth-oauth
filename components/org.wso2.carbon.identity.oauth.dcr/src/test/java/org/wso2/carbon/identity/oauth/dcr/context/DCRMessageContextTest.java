@@ -25,7 +25,7 @@ import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.testng.Assert.assertNotNull;
 
 /**
- * Unit test covering DCRMessageContext
+ * This class is to cover unit tests for DCRMessageContext class.
  */
 public class DCRMessageContextTest {
 

@@ -314,12 +314,20 @@ public final class OAuthUtil {
 
     public static void clearOAuthCache(String oauthCacheKey) {
 
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Clearing cache for cache key: " + oauthCacheKey);
+        }
+
         OAuthCacheKey cacheKey = new OAuthCacheKey(oauthCacheKey);
         OAuthCache.getInstance().clearCacheEntry(cacheKey);
     }
 
     public static void clearOAuthCache(AccessTokenDO accessTokenDO) {
 
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Clearing cache for access token as cache key of user: " +
+                    accessTokenDO.getAuthzUser().getLoggableUserId());
+        }
         OAuthCacheKey cacheKey = new OAuthCacheKey(accessTokenDO.getAccessToken());
         String tenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
         OAuthCache.getInstance().clearCacheEntry(cacheKey,  tenantDomain);
