@@ -166,6 +166,7 @@ public class OAuthServerConfiguration {
     private Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> supportedResponseTypeValidators;
     private Map<String, TokenIssuerDO> supportedTokenIssuers = new HashMap<>();
     private List<String> supportedTokenTypes = new ArrayList<>();
+    private List publicClientSupportedGrantTypes = new ArrayList<>();
     private Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
     private String[] supportedClaims = null;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
@@ -358,6 +359,9 @@ public class OAuthServerConfiguration {
 
         // read supported grant types
         parseSupportedGrantTypesConfig(oauthElem);
+
+        // Read public client supported grant type names in <PublicClientSupportedGrantTypes>
+        parsePublicClientSupportedGrantTypesConfig(oauthElem);
 
         // Read <UserConsentEnabledGrantTypes> under <OAuth> tag and populate data.
         parseUserConsentEnabledGrantTypesConfig(oauthElem);
@@ -1092,6 +1096,11 @@ public class OAuthServerConfiguration {
 
     public Set<String> getIdTokenNotAllowedGrantTypesSet() {
         return idTokenNotAllowedGrantTypesSet;
+    }
+
+    public List getPublicClientSupportedGrantTypesList() {
+
+        return publicClientSupportedGrantTypes;
     }
 
     public boolean isRedirectToRequestedRedirectUriEnabled() {
@@ -2164,6 +2173,22 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parsePublicClientSupportedGrantTypesConfig(OMElement oauthConfigElem) {
+
+        OMElement publicClientGrantTypesElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.PUBLIC_CLIENT_SUPPORTED_GRANT_TYPES));
+        if (publicClientGrantTypesElem != null) {
+            Iterator iterator = publicClientGrantTypesElem
+                    .getChildrenWithName(getQNameWithIdentityNS(ConfigElements.PUBLIC_CLIENT_ENABLED_GRANT_TYPE_NAME));
+            while (iterator.hasNext()) {
+                OMElement publicClientSupportedGrantName = (OMElement) iterator.next();
+                if (publicClientSupportedGrantName != null) {
+                    publicClientSupportedGrantTypes.add(publicClientSupportedGrantName.getText());
+                }
+            }
+        }
+    }
+
     private void parseSupportedTokenTypesConfig(OMElement oauthConfigElem) {
 
         OMElement supportedTokenTypesElem = oauthConfigElem
@@ -3206,6 +3231,10 @@ public class OAuthServerConfiguration {
         private static final String SUPPORTED_GRANT_TYPES = "SupportedGrantTypes";
         private static final String SUPPORTED_GRANT_TYPE = "SupportedGrantType";
         private static final String GRANT_TYPE_NAME = "GrantTypeName";
+
+        // Public client supported Grant Types
+        private static final String PUBLIC_CLIENT_SUPPORTED_GRANT_TYPES = "PublicClientSupportedGrantTypes";
+        private static final String PUBLIC_CLIENT_ENABLED_GRANT_TYPE_NAME = "GrantTypeName";
 
         //Supported Token Types
         private static final String SUPPORTED_TOKEN_TYPES = "SupportedTokenTypes";

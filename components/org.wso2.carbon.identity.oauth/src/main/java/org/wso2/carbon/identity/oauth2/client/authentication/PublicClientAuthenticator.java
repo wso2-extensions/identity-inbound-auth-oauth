@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -40,6 +41,7 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
 
     public static final String PUBLIC_CLIENT_AUTHENTICATOR = "PublicClientAuthenticator";
     private static final Log log = LogFactory.getLog(PublicClientAuthenticator.class);
+    private static final String GRANT_TYPE = "grant_type";
 
     /**
      * Returns the execution order of this authenticator.
@@ -79,6 +81,20 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     @Override
     public boolean canAuthenticate(HttpServletRequest request, Map<String, List> bodyParams, OAuthClientAuthnContext
             context) {
+
+        List publicClientSupportedGrantTypes = OAuthServerConfiguration.getInstance().
+                getPublicClientSupportedGrantTypesList();
+        List grantTypes = bodyParams.get(GRANT_TYPE);
+
+        if (publicClientSupportedGrantTypes != null && grantTypes != null) {
+            for (Object grantType : grantTypes) {
+                if (!publicClientSupportedGrantTypes.contains(grantType)) {
+                    log.warn("The request contained grant type : '" + grantType + "' which is not allowed for " +
+                            "public clients.");
+                    return false;
+                }
+            }
+        }
 
         String clientId = getClientId(request, bodyParams, context);
 
