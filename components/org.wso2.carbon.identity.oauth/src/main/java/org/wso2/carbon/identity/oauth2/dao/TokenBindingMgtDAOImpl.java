@@ -73,7 +73,6 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
             log.debug("Getting token binding for the token id: " + tokenId + " and token binding ref: " + bindingRef);
         }
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
-
              PreparedStatement preparedStatement =
                      connection.prepareStatement(RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID_AND_BINDING_REF)) {
             preparedStatement.setString(1, tokenId);

@@ -42,7 +42,7 @@ public interface TokenBindingMgtDAO {
      *
      * @param tokenId    Token id.
      * @param bindingRef Binding reference.
-     * @return token binding optional.
+     * @return Token binding optional.
      * @throws IdentityOAuth2Exception in case of failure.
      */
     default Optional<TokenBinding> getTokenBindingByBindingRef(String tokenId, String bindingRef)
