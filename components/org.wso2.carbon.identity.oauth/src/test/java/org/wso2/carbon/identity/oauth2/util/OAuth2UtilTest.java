@@ -439,7 +439,6 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     public void testIsHashEnabled() {
 
         when(OAuthServerConfiguration.getInstance().isClientSecretHashEnabled()).thenReturn(true);
-
         assertTrue(OAuth2Util.isHashEnabled());
     }
 
@@ -1594,7 +1593,6 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 {"dummyReferenceCodeChallenge", verificationCode, OAuthConstants.OAUTH_PKCE_S256_CHALLENGE, false},
                 {verificationCode, verificationCode, null, true},
                 {"", null, OAuthConstants.OAUTH_PKCE_S256_CHALLENGE, true},
-
         };
     }
 
@@ -1968,7 +1966,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     }
 
     @Test(dataProvider = "createResponseType")
-    public void testisHybridResponseType(String responseType, boolean expected) {
+    public void testIsHybridResponseType(String responseType, boolean expected) {
 
         assertEquals(OAuth2Util.isHybridResponseType(responseType), expected);
     }
@@ -2169,7 +2167,6 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         } else {
             WhiteboxImpl.setInternalState(OAuthTokenPersistenceFactory.getInstance(), "tokenDAO", accessTokenDAO);
             when(accessTokenDAO.getAccessToken(anyString(), anyBoolean())).thenReturn(accessTokenDO);
-
         }
         when(oauthServerConfigurationMock.isClientSecretHashEnabled()).thenReturn(false);
         return accessTokenDO;

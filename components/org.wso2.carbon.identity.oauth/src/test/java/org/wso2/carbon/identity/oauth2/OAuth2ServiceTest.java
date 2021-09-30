@@ -655,7 +655,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
-    public void testGetOauthApplicationStateWithInvalidOAuthClientExceptionException() throws Exception {
+    public void testGetOauthApplicationStateWithInvalidOAuthClientException() throws Exception {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
