@@ -237,7 +237,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             clearCache(tokenReq.getClientId(), userId,
                     validationBean.getScope(), validationBean.getAccessToken(),
                     validationBean.getAuthorizedUser().getFederatedIdPName(),
-                    validationBean.getTokenBindingReference());
+                    validationBean.getTokenBindingReference(), validationBean.getAuthorizedUser().getTenantDomain());
         }
     }
 
@@ -344,11 +344,12 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             String cacheKeyString = buildCacheKeyStringForTokenWithUserId(clientId, scope, userId,
                     authenticatedIDP, oldAccessToken.getTokenBindingReference());
             OAuthCacheKey oauthCacheKey = new OAuthCacheKey(cacheKeyString);
-            OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
+            OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, accessTokenBean.getAuthzUser().getTenantDomain());
 
             // Remove old access token from the AccessTokenCache
             OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(oldAccessToken.getAccessToken());
-            OAuthCache.getInstance().clearCacheEntry(accessTokenCacheKey);
+            OAuthCache.getInstance().clearCacheEntry(accessTokenCacheKey,
+                    oldAccessToken.getAuthorizedUser().getTenantDomain());
 
             // Add new access token to the OAuthCache
             OAuthCache.getInstance().addToCache(oauthCacheKey, accessTokenBean);
@@ -428,18 +429,18 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     }
 
     private void clearCache(String clientId, String authorizedUserId, String[] scopes, String accessToken,
-                            String authenticatedIDP, String tokenBindingReference) {
+                            String authenticatedIDP, String tokenBindingReference, String tenantDomain) {
 
         String cacheKeyString = buildCacheKeyStringForTokenWithUserId(clientId, OAuth2Util.buildScopeString(scopes),
                 authorizedUserId, authenticatedIDP, tokenBindingReference);
 
         // Remove the old access token from the OAuthCache
         OAuthCacheKey oauthCacheKey = new OAuthCacheKey(cacheKeyString);
-        OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
+        OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, tenantDomain);
 
         // Remove the old access token from the AccessTokenCache
         OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(accessToken);
-        OAuthCache.getInstance().clearCacheEntry(accessTokenCacheKey);
+        OAuthCache.getInstance().clearCacheEntry(accessTokenCacheKey, tenantDomain);
     }
 
     private boolean isRefreshTokenExpired(RefreshTokenValidationDataDO validationBean) {
