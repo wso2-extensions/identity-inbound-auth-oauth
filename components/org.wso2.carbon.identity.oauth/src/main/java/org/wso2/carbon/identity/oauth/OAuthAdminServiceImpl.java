@@ -853,6 +853,13 @@ public class OAuthAdminServiceImpl {
                 }
                 OAuthCacheKey cacheKeyUser = new OAuthCacheKey(cacheKeyString);
                 OAuthCache.getInstance().clearCacheEntry(cacheKeyUser);
+                String tokenBindingRef = NONE;
+                if (detailToken.getTokenBinding() != null) {
+                    tokenBindingRef = detailToken.getTokenBinding().getBindingReference();
+                }
+                OAuthUtil.clearOAuthCache(consumerKey, detailToken.getAuthzUser(),
+                        OAuth2Util.buildScopeString(detailToken.getScope()), tokenBindingRef,
+                        detailToken.getAuthzUser().getTenantDomain());
             }
 
             if (LOG.isDebugEnabled()) {
@@ -1082,7 +1089,8 @@ public class OAuthAdminServiceImpl {
                                 tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
                             }
                             OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser,
-                                    buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
+                                    buildScopeString(accessTokenDO.getScope()), tokenBindingReference,
+                                    authzUser.getTenantDomain());
                             OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser,
                                     buildScopeString(accessTokenDO.getScope()));
                             OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser);
