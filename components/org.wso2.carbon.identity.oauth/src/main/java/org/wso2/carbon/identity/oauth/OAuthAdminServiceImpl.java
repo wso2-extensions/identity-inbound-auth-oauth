@@ -1082,8 +1082,7 @@ public class OAuthAdminServiceImpl {
                                 tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
                             }
                             OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser,
-                                    buildScopeString(accessTokenDO.getScope()), tokenBindingReference,
-                                    authzUser.getTenantDomain());
+                                    buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
                             OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser,
                                     buildScopeString(accessTokenDO.getScope()));
                             OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser);

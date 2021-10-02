@@ -76,12 +76,7 @@ public class OAuthCache extends AuthenticationBaseCache<OAuthCacheKey, CacheEntr
         }
     }
 
-    /**
-     * Clear from cache using key and tenant domain.
-     *
-     * @param key          OAuthCacheKey
-     * @param tenantDomain TenantDomain.
-     */
+    @Override
     public void clearCacheEntry(OAuthCacheKey key, String tenantDomain) {
 
         if (LOG.isDebugEnabled()) {
@@ -106,6 +101,7 @@ public class OAuthCache extends AuthenticationBaseCache<OAuthCacheKey, CacheEntr
     }
 
 
+    @Override
     public CacheEntry getValueFromCache(OAuthCacheKey key, String tenantDomain) {
 
         if (LOG.isDebugEnabled()) {
