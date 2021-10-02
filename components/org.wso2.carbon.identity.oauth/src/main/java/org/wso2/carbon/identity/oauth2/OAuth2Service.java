@@ -405,8 +405,13 @@ public class OAuth2Service extends AbstractAdmin {
                     if (StringUtils.isNotBlank(refreshTokenDO.getTokenBindingReference())) {
                         tokenBindingReference = refreshTokenDO.getTokenBindingReference();
                     }
+                    String tenantDomain = null;
+                    if (refreshTokenDO.getAuthorizedUser() != null) {
+                        tenantDomain = refreshTokenDO.getAuthorizedUser().getTenantDomain();
+                    }
                     OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), refreshTokenDO.getAuthorizedUser(),
-                            OAuth2Util.buildScopeString(refreshTokenDO.getScope()), tokenBindingReference);
+                            OAuth2Util.buildScopeString(refreshTokenDO.getScope()), tokenBindingReference,
+                            tenantDomain);
                     OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), refreshTokenDO.getAuthorizedUser(),
                             OAuth2Util.buildScopeString(refreshTokenDO.getScope()));
                     OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), refreshTokenDO.getAuthorizedUser());
@@ -433,8 +438,13 @@ public class OAuth2Service extends AbstractAdmin {
                                 .isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
                             tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
                         }
+                        String tenantDomain = null;
+                        if (accessTokenDO.getAuthzUser() != null) {
+                            tenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
+                        }
                         OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), accessTokenDO.getAuthzUser(),
-                                OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
+                                OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference,
+                                tenantDomain);
                         OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                                 OAuth2Util.buildScopeString(accessTokenDO.getScope()));
                         OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), accessTokenDO.getAuthzUser());
