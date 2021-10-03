@@ -152,7 +152,7 @@ public class OIDCLogoutServlet extends HttpServlet {
         }
 
         if (!OIDCSessionManagementUtil.getSessionManager().sessionExists(opBrowserState,
-                resolveTenantDomain(request))) {
+                OAuth2Util.resolveTenantDomain(request))) {
             String msg = "No valid session found for the received session state.";
             if (log.isDebugEnabled()) {
                 log.debug(msg);
@@ -681,7 +681,7 @@ public class OIDCLogoutServlet extends HttpServlet {
         String sessionDataKey = request.getParameter(FrameworkConstants.SESSION_DATA_KEY);
         OIDCSessionDataCacheEntry cacheEntry = getSessionDataFromCache(sessionDataKey);
         String obpsCookieValue = getOPBrowserState(request);
-        String tenantDomain = resolveTenantDomain(request);
+        String tenantDomain = OAuth2Util.resolveTenantDomain(request);
 
         if (cacheEntry != null) {
             if (log.isDebugEnabled()) {
@@ -856,6 +856,7 @@ public class OIDCLogoutServlet extends HttpServlet {
      * Sends logout token to registered back-channel logout uris.
      *
      * @param opbsCookieValue OP browser state cookie value.
+     * @param tenantDomain    Tenant Domain.
      */
     private void doBackChannelLogout(String opbsCookieValue, String tenantDomain) {
 
@@ -972,17 +973,5 @@ public class OIDCLogoutServlet extends HttpServlet {
 
         tokenBinders.stream().filter(t -> oAuthAppDO.getTokenBindingType().equals(t.getBindingType())).findAny()
                 .ifPresent(t -> t.clearTokenBindingElements(request, response));
-    }
-
-    private String resolveTenantDomain(HttpServletRequest request) {
-
-        if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
-            return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-        }
-        String tenantDomain = request.getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
-        if (StringUtils.isBlank(tenantDomain)) {
-            return IdentityTenantUtil.getTenantDomainFromContext();
-        }
-        return tenantDomain;
     }
 }

@@ -4245,4 +4245,25 @@ public class OAuth2Util {
                 = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
         return userStoreManager.getUserNameFromUserID(userId);
     }
+
+    /**
+     * Resolve tenant domain from the httpServlet request.
+     *
+     * @param request HttpServlet Request.
+     * @return Tenant Domain.
+     */
+    public static String resolveTenantDomain(HttpServletRequest request) {
+
+        if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
+            return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+
+        if (request != null) {
+            String tenantDomainFromReq = request.getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
+            if (StringUtils.isNotBlank(tenantDomainFromReq)) {
+                return tenantDomainFromReq;
+            }
+        }
+        return IdentityTenantUtil.getTenantDomainFromContext();
+    }
 }
