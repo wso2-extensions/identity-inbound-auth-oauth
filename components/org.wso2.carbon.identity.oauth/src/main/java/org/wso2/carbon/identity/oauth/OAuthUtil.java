@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -136,7 +137,7 @@ public final class OAuthUtil {
      */
     public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser) {
 
-        String authenticatedIDP = authorizedUser.getFederatedIdPName();
+        String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizedUser);
         String userId;
         try {
             userId = authorizedUser.getUserId();
@@ -174,7 +175,8 @@ public final class OAuthUtil {
                 return;
             }
             clearOAuthCache(consumerKey, userId, scope);
-            clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, scope, authenticatedIDP);
+            clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, scope, authenticatedIDP,
+                    authenticatedUser.getTenantDomain());
         }
     }
 
@@ -187,7 +189,7 @@ public final class OAuthUtil {
      */
     public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser, String scope) {
 
-        String authenticatedIDP = authorizedUser.getFederatedIdPName();
+        String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizedUser);
 
         String userId;
         try {
@@ -196,7 +198,8 @@ public final class OAuthUtil {
             LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
             return;
         }
-        clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, scope, authenticatedIDP);
+        clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, scope, authenticatedIDP,
+                authorizedUser.getTenantDomain());
     }
 
     /**
@@ -244,18 +247,22 @@ public final class OAuthUtil {
     public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser, String scope,
                                        String tokenBindingReference) {
 
-        String authenticatedIDP = authorizedUser.getFederatedIdPName();
+        String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizedUser);
 
         String userId;
+        String tenantDomain;
         try {
             userId = authorizedUser.getUserId();
+            tenantDomain = authorizedUser.getTenantDomain();
+
         } catch (UserIdNotFoundException e) {
             LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
             return;
         }
-        clearOAuthCache(buildCacheKeyStringForToken(consumerKey, scope, userId,
-                authenticatedIDP, tokenBindingReference));
+        clearOAuthCacheByTenant(buildCacheKeyStringForToken(consumerKey, scope, userId,
+                authenticatedIDP, tokenBindingReference), tenantDomain);
     }
+
 
     private static void clearOAuthCache(String consumerKey, String authorizedUserId) {
 
@@ -288,10 +295,11 @@ public final class OAuthUtil {
      * @param scope            Scopes.
      * @param authenticatedIDP Authenticated IdP.
      */
-    private static void clearOAuthCacheWithAuthenticatedIDP(String consumerKey, String authorizedUserId, String scope,
-                                                           String authenticatedIDP) {
+    private static void clearOAuthCacheWithAuthenticatedIDP(String consumerKey, String authorizedUserId, String scope
+            , String authenticatedIDP, String tenantDomain) {
 
-        clearOAuthCache(consumerKey + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP);
+        clearOAuthCacheByTenant(consumerKey + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP,
+                tenantDomain);
     }
 
     /**
@@ -309,17 +317,20 @@ public final class OAuthUtil {
     public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUserId,
             String authenticatedIDP, String tokenBindingReference) {
 
-        return clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
+        return OAuth2Util.buildCacheKeyStringForTokenWithUserId(clientId, scope, authorizedUserId,
+                authenticatedIDP, tokenBindingReference);
     }
 
     public static void clearOAuthCache(String oauthCacheKey) {
 
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Clearing cache for cache key: " + oauthCacheKey);
-        }
-
         OAuthCacheKey cacheKey = new OAuthCacheKey(oauthCacheKey);
         OAuthCache.getInstance().clearCacheEntry(cacheKey);
+    }
+
+    public static void clearOAuthCacheByTenant(String oauthCacheKey, String tenantDomain) {
+
+        OAuthCacheKey cacheKey = new OAuthCacheKey(oauthCacheKey);
+        OAuthCache.getInstance().clearCacheEntry(cacheKey, tenantDomain);
     }
 
     public static void clearOAuthCache(AccessTokenDO accessTokenDO) {
@@ -544,6 +555,10 @@ public final class OAuthUtil {
                 throw new UserStoreException(e);
             }
 
+            if (LOG.isDebugEnabled() && CollectionUtils.isNotEmpty(accessTokenDOs)) {
+                LOG.debug("ACTIVE or EXPIRED access tokens found for the client: " + clientId + " for the user: "
+                        + username);
+            }
             boolean isTokenPreservingAtPasswordUpdateEnabled =
                     Boolean.parseBoolean(IdentityUtil.getProperty(PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE));
             String currentTokenBindingReference = "";
@@ -570,6 +585,8 @@ public final class OAuthUtil {
                         continue;
                     }
                 }
+                OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                         OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),

@@ -717,7 +717,12 @@ public class OAuth2Util {
     public static String buildCacheKeyStringForTokenWithUserId(String clientId, String scope, String authorizedUserId,
                                                      String authenticatedIDP, String tokenBindingReference) {
 
-        return clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
+        String oauthCacheKey =
+                clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Building cache key: %s to access OAuthCache.", oauthCacheKey));
+        }
+        return oauthCacheKey;
     }
 
     /**
@@ -1680,8 +1685,12 @@ public class OAuth2Util {
         if (result != null && result instanceof AccessTokenDO) {
             accessTokenDO = (AccessTokenDO) result;
             cacheHit = true;
-            if (log.isDebugEnabled()) {
+            if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 log.debug("Hit OAuthCache for accessTokenIdentifier: " + accessTokenIdentifier);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Hit OAuthCache with accessTokenIdentifier");
+                }
             }
         }
 
@@ -1689,6 +1698,11 @@ public class OAuth2Util {
         if (accessTokenDO == null) {
             accessTokenDO = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                     .getAccessToken(accessTokenIdentifier, includeExpired);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Retrieved active access token from OAuthCache for token Identifier: " +
+                        accessTokenDO.getTokenId());
+            }
         }
 
         if (accessTokenDO == null) {

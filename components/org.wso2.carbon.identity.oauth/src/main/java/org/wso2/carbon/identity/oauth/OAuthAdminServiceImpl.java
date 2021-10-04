@@ -853,6 +853,12 @@ public class OAuthAdminServiceImpl {
                 }
                 OAuthCacheKey cacheKeyUser = new OAuthCacheKey(cacheKeyString);
                 OAuthCache.getInstance().clearCacheEntry(cacheKeyUser);
+                String tokenBindingRef = NONE;
+                if (detailToken.getTokenBinding() != null) {
+                    tokenBindingRef = detailToken.getTokenBinding().getBindingReference();
+                }
+                OAuthUtil.clearOAuthCache(consumerKey, detailToken.getAuthzUser(),
+                        OAuth2Util.buildScopeString(detailToken.getScope()), tokenBindingRef);
             }
 
             if (LOG.isDebugEnabled()) {

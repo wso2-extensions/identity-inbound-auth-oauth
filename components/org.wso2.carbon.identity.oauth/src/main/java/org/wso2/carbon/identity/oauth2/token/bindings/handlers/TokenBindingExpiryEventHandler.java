@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token.bindings.handlers;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -33,6 +34,7 @@ import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
@@ -255,6 +257,9 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         }
         Set<AccessTokenDO> boundTokens = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .getAccessTokensByBindingRef(tokenBindingReference);
+        if (log.isDebugEnabled() && CollectionUtils.isEmpty(boundTokens)) {
+            log.debug("No bound tokens found for the the provided binding reference: " + tokenBindingReference);
+        }
         for (AccessTokenDO accessTokenDO : boundTokens) {
             String consumerKey = accessTokenDO.getConsumerKey();
             if (OAuth2Util.getAppInformationByClientId(consumerKey)
@@ -308,7 +313,11 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
             }
 
             if (accessTokenDO != null) {
-                revokeTokens(accessTokenDO.getConsumerKey(), accessTokenDO, StringUtils.EMPTY);
+                String tokenBindingRef = OAuthConstants.TokenBindings.NONE;
+                if (accessTokenDO.getTokenBinding() != null) {
+                    tokenBindingRef = accessTokenDO.getTokenBinding().getBindingReference();
+                }
+                revokeTokens(accessTokenDO.getConsumerKey(), accessTokenDO, tokenBindingRef);
             }
         }
     }
@@ -320,7 +329,6 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
             log.debug("Revoking tokens for the application with consumerKey:" + consumerKey + " for the user: "
                     + accessTokenDO.getAuthzUser().getLoggableUserId());
         }
-
         OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser(), OAuth2Util.buildScopeString
                 (accessTokenDO.getScope()), tokenBindingReference);
         OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser(), OAuth2Util.buildScopeString
