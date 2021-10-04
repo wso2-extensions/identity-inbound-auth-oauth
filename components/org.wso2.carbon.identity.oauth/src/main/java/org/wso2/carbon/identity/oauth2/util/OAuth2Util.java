@@ -3930,6 +3930,13 @@ public class OAuth2Util {
      */
     public static void initiateOAuthScopePermissionsBindings(int tenantId) {
 
+        if (Oauth2ScopeUtils.isSystemLevelInternalSystemScopeManagementEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth internal scopes permission binding initialization is skipped as the scopes " +
+                        "are managed globally.");
+            }
+            return;
+        }
         try {
             //Check login scope is available. If exists, assumes all scopes are loaded using the file.
             if (!hasScopesAlreadyAdded(tenantId)) {
