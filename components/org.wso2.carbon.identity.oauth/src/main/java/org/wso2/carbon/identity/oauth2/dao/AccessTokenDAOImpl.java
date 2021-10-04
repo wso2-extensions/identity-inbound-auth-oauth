@@ -901,8 +901,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             prepStmt.setString(1,
                     getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(accessTokenIdentifier));
             if (isTenantQualifiedUrlsEnabled && tenantDomain != null) {
-                prepStmt.setInt(2,
-                        IdentityTenantUtil.getTenantId(tenantDomain));
+                prepStmt.setInt(2, IdentityTenantUtil.getTenantId(tenantDomain));
             }
             resultSet = prepStmt.executeQuery();
 
