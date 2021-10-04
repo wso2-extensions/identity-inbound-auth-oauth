@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.application.authentication.framework.config.mode
 import org.wso2.carbon.identity.application.authentication.framework.config.model.AuthenticatorConfig;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.SequenceConfig;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.AuthenticationFailedException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedIdPData;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -95,7 +96,13 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         ServiceProvider serviceProvider = getServiceProvider(tokenReq);
 
-        validateUserTenant(tokenReq, serviceProvider);
+        // Update resource owner username when tenant qualified URLs enabled.
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            String userNameWithTenant = getFullQualifiedUsername(tokenReq,
+                    serviceProvider);
+            tokenReq.setResourceOwnerUsername(userNameWithTenant);
+        }
+
         AuthenticatedUser authenticatedUser = validateUserCredentials(tokenReq, serviceProvider);
         setPropertiesForTokenGeneration(tokReqMsgCtx, tokenReq, authenticatedUser);
         return true;
@@ -109,34 +116,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         tokReqMsgCtx.setScope(tokenReq.getScope());
     }
 
-    private boolean validateUserTenant(OAuth2AccessTokenReqDTO tokenReq, ServiceProvider serviceProvider)
-            throws IdentityOAuth2Exception {
-
-        String userTenantDomain = null;
-
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            String userNameWithTenant = getFullQualifiedUsernameWhenTenantQualifiedUrlEnabled(tokenReq,
-                    serviceProvider);
-            userTenantDomain = MultitenantUtils.getTenantDomain(userNameWithTenant);
-            tokenReq.setResourceOwnerUsername(userNameWithTenant);
-        }
-
-        if (StringUtils.isBlank(userTenantDomain)) {
-            userTenantDomain = MultitenantUtils.getTenantDomain(tokenReq.getResourceOwnerUsername());
-        }
-
-        if (!serviceProvider.isSaasApp() && !userTenantDomain.equals(tokenReq.getTenantDomain())) {
-            if (log.isDebugEnabled()) {
-                log.debug("Non-SaaS service provider. Application tenantDomain(" + tokenReq.getTenantDomain() + ") "
-                        + "!= User tenant domain(" + userTenantDomain + ")");
-            }
-            throw new IdentityOAuth2Exception("Users in the tenant domain : " + userTenantDomain + " do not have" +
-                    " access to application " + serviceProvider.getApplicationName());
-        }
-        return true;
-    }
-
-    private String getFullQualifiedUsernameWhenTenantQualifiedUrlEnabled(OAuth2AccessTokenReqDTO tokenReq,
+    private String getFullQualifiedUsername(OAuth2AccessTokenReqDTO tokenReq,
                                                                          ServiceProvider serviceProvider) {
 
         boolean isEmailUserNameEnabled = MultitenantUtils.isEmailUserName();
@@ -212,9 +192,15 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                     log.debug("UserMgtContext had been set as the thread local.");
                 }
             }
-            AbstractUserStoreManager userStoreManager = getUserStoreManager(tokenReq);
-            String tenantAwareUserName = MultitenantUtils.getTenantAwareUsername(tokenReq.getResourceOwnerUsername());
-            String userTenantDomain = MultitenantUtils.getTenantDomain(tokenReq.getResourceOwnerUsername());
+
+            String username = tokenReq.getResourceOwnerUsername();
+            if (!IdentityUtil.isEmailUsernameValidationDisabled()) {
+                FrameworkUtils.validateUsername(username);
+                username = FrameworkUtils.preprocessUsername(username, serviceProvider);
+            }
+
+            String tenantAwareUserName = MultitenantUtils.getTenantAwareUsername(username);
+            String userTenantDomain = MultitenantUtils.getTenantDomain(username);
             ResolvedUserResult resolvedUserResult =
                     FrameworkUtils.processMultiAttributeLoginIdentification(tenantAwareUserName, userTenantDomain);
             String userId = null;
@@ -225,6 +211,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 tokenReq.setResourceOwnerUsername(tenantAwareUserName + "@" + userTenantDomain);
             }
 
+            AbstractUserStoreManager userStoreManager = getUserStoreManager(userTenantDomain);
             AuthenticationResult authenticationResult;
             if (userId != null) {
                 authenticationResult = userStoreManager.authenticateWithID(userId, tokenReq.getResourceOwnerPassword());
@@ -258,7 +245,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                         (tokenReq.getResourceOwnerUsername()))) {
                     throw new IdentityOAuth2Exception("Authentication failed for " + tenantAwareUserName);
                 }
-                String username = tokenReq.getResourceOwnerUsername();
+                username = tokenReq.getResourceOwnerUsername();
                 if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
                     // For tenant qualified urls, no need to send fully qualified username in response.
                     username = tenantAwareUserName;
@@ -297,6 +284,12 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 }
             }
             throw new IdentityOAuth2Exception(message, e);
+        } catch (AuthenticationFailedException e) {
+            String message = "Authentication failed for " + tokenReq.getResourceOwnerUsername();
+            if (log.isDebugEnabled()) {
+                log.debug(message, e);
+            }
+            throw new IdentityOAuth2Exception(message);
         } finally {
             UserCoreUtil.removeUserMgtContextInThreadLocal();
             if (log.isDebugEnabled()) {
@@ -402,10 +395,10 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         return authenticationContext;
     }
 
-    private AbstractUserStoreManager getUserStoreManager(OAuth2AccessTokenReqDTO tokenReq)
+    private AbstractUserStoreManager getUserStoreManager(String tenantDomain)
             throws IdentityOAuth2Exception {
 
-        int tenantId = getTenantId(tokenReq);
+        int tenantId = getTenantId(tenantDomain);
         RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
         AbstractUserStoreManager userStoreManager;
         try {
@@ -420,19 +413,17 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         return userStoreManager;
     }
 
-    private int getTenantId(OAuth2AccessTokenReqDTO tokenReq) throws IdentityOAuth2Exception {
-        String username = tokenReq.getResourceOwnerUsername();
-        String userTenantDomain = MultitenantUtils.getTenantDomain(username);
+    private int getTenantId(String tenantDomain) throws IdentityOAuth2Exception {
 
         int tenantId;
         try {
-            tenantId = IdentityTenantUtil.getTenantId(userTenantDomain);
+            tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
         } catch (IdentityRuntimeException e) {
-            log.error("Token request with Password Grant Type for an invalid tenant : " + userTenantDomain);
+            log.error("Token request with Password Grant Type for an invalid tenant : " + tenantDomain);
             throw new IdentityOAuth2Exception(e.getMessage(), e);
         }
         if (log.isDebugEnabled()) {
-            log.debug("Retrieved tenant id: " + tenantId + " for tenant domain: " + userTenantDomain);
+            log.debug("Retrieved tenant id: " + tenantId + " for tenant domain: " + tenantDomain);
         }
         return tenantId;
     }
