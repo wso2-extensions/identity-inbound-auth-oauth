@@ -47,6 +47,8 @@ public class Oauth2ScopeUtils {
 
     private static final Log log = LogFactory.getLog(Oauth2ScopeUtils.class);
     public static final String OAUTH_APP_DO_PROPERTY_NAME = "OAuthAppDO";
+    private static final String OAUTH_ENABLE_SYSTEM_LEVEL_INTERNAL_SYSTEM_SCOPE_MANAGEMENT =
+            "OAuth.EnableSystemLevelInternalSystemScopeManagement";
 
     public static IdentityOAuth2ScopeServerException generateServerException(Oauth2ScopeConstants.ErrorMessages
                                                                                 error, String data)
@@ -285,7 +287,7 @@ public class Oauth2ScopeUtils {
      */
     public static boolean isSystemLevelInternalSystemScopeManagementEnabled() {
 
-        String property = IdentityUtil.getProperty("OAuth.EnableSystemLevelInternalSystemScopeManagement");
+        String property = IdentityUtil.getProperty(OAUTH_ENABLE_SYSTEM_LEVEL_INTERNAL_SYSTEM_SCOPE_MANAGEMENT);
         if (StringUtils.isNotEmpty(property)) {
             return Boolean.parseBoolean(property);
         }
