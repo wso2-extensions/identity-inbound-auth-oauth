@@ -330,7 +330,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                     + accessTokenDO.getAuthzUser().getLoggableUserId());
         }
         OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser(), OAuth2Util.buildScopeString
-                (accessTokenDO.getScope()), tokenBindingReference, accessTokenDO.getAuthzUser().getTenantDomain());
+                (accessTokenDO.getScope()), tokenBindingReference);
         OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser(), OAuth2Util.buildScopeString
                 (accessTokenDO.getScope()));
         OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser());

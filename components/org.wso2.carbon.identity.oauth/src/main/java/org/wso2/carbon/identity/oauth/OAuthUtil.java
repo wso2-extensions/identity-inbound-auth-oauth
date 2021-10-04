@@ -216,8 +216,7 @@ public final class OAuthUtil {
             String tokenBindingReference) {
 
         if (authorizedUser instanceof AuthenticatedUser) {
-            clearOAuthCache(consumerKey, (AuthenticatedUser) authorizedUser, scope, tokenBindingReference,
-                    authorizedUser.getTenantDomain());
+            clearOAuthCache(consumerKey, (AuthenticatedUser) authorizedUser, scope, tokenBindingReference);
         } else {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("User is not an instance of AuthenticatedUser therefore cannot resolve authenticatedIDP "
@@ -251,32 +250,11 @@ public final class OAuthUtil {
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizedUser);
 
         String userId;
+        String tenantDomain;
         try {
             userId = authorizedUser.getUserId();
-        } catch (UserIdNotFoundException e) {
-            LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
-            return;
-        }
-        clearOAuthCache(buildCacheKeyStringForToken(consumerKey, scope, userId,
-                authenticatedIDP, tokenBindingReference));
-    }
+            tenantDomain = authorizedUser.getTenantDomain();
 
-    /**
-     * Clear OAuth cache based on the application, authorized user, scope list and token binding reference.
-     *
-     * @param consumerKey           Client id of the application the token issued to.
-     * @param authorizedUser        Authorized user.
-     * @param scope                 Scope list.
-     * @param tokenBindingReference Token binding reference.
-     */
-    public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser, String scope,
-                                       String tokenBindingReference, String tenantDomain) {
-
-        String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizedUser);
-
-        String userId;
-        try {
-            userId = authorizedUser.getUserId();
         } catch (UserIdNotFoundException e) {
             LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
             return;
@@ -608,7 +586,7 @@ public final class OAuthUtil {
                     }
                 }
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
-                        OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference, tenantDomain);
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                         OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
