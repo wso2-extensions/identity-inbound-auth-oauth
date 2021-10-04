@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.listener;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
@@ -48,15 +49,22 @@ public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKe
             return;
         }
         AccessTokenDO accessTokenDO = (AccessTokenDO) cacheEntry;
-
-        if (log.isDebugEnabled()) {
-            log.debug("OAuth cache removed for consumer id : " + accessTokenDO.getConsumerKey());
+        if (StringUtils.equalsIgnoreCase(cacheEntryEvent.getKey().getCacheKeyString(),
+                accessTokenDO.getAccessToken())) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth cache removed for consumer id : " + accessTokenDO.getConsumerKey() + " and token " +
+                        "identifier: " + accessTokenDO.getTokenId());
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth cache removed for cache key: " + cacheEntryEvent.getKey().getCacheKeyString());
+            }
         }
 
         OAuthCache oauthCache = OAuthCache.getInstance();
 
         OAuthCacheKey oauthcacheKey = new OAuthCacheKey(accessTokenDO.getAccessToken());
-        oauthCache.clearCacheEntry(oauthcacheKey);
+        oauthCache.clearCacheEntry(oauthcacheKey, accessTokenDO.getAuthzUser().getTenantDomain());
 
         try {
             String userId = accessTokenDO.getAuthzUser().getUserId();

@@ -226,9 +226,8 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
             startTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
 
-           if (builder == null) {
+            if (builder == null) {
                 registrationRequestFactory.create(mockHttpRequest, mockHttpResponse);
-
             } else {
                 registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
             }

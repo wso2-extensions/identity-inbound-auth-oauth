@@ -94,6 +94,7 @@ public class OAuthAdminServiceImpl {
 
     protected static final Log LOG = LogFactory.getLog(OAuthAdminServiceImpl.class);
     private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
+    private static final int MAX_RETRY_ATTEMPTS = 3;
 
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single
@@ -852,6 +853,12 @@ public class OAuthAdminServiceImpl {
                 }
                 OAuthCacheKey cacheKeyUser = new OAuthCacheKey(cacheKeyString);
                 OAuthCache.getInstance().clearCacheEntry(cacheKeyUser);
+                String tokenBindingRef = NONE;
+                if (detailToken.getTokenBinding() != null) {
+                    tokenBindingRef = detailToken.getTokenBinding().getBindingReference();
+                }
+                OAuthUtil.clearOAuthCache(consumerKey, detailToken.getAuthzUser(),
+                        OAuth2Util.buildScopeString(detailToken.getScope()), tokenBindingRef);
             }
 
             if (LOG.isDebugEnabled()) {
@@ -894,8 +901,35 @@ public class OAuthAdminServiceImpl {
         }
 
         OAuthAppDAO dao = new OAuthAppDAO();
-        dao.removeConsumerApplication(consumerKey);
-        // remove client credentials from cache
+        try {
+            dao.removeConsumerApplication(consumerKey);
+        } catch (IdentityOAuthAdminException e) {
+            /*
+             * For more information read https://github.com/wso2/product-is/issues/12579. This is to overcome the
+             * above issue.
+             */
+            LOG.error(String.format("Error occurred when trying to remove OAuth application date for the " +
+                    "application with consumer key: %s. Therefore retrying again.", consumerKey), e);
+            boolean isOperationFailed = true;
+            for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+                try {
+                    Thread.sleep(1000);
+                    dao.removeConsumerApplication(consumerKey);
+                    isOperationFailed = false;
+                    LOG.info(String.format("Oauth application data deleted for the application with consumer key: %s " +
+                            "during the retry attempt: %s", consumerKey, attempt));
+                    break;
+                } catch (Exception exception) {
+                    LOG.error(String.format("Retry attempt: %s failed to delete OAuth application data for " +
+                            "application with the consumer key: %s", attempt, consumerKey), exception);
+                }
+            }
+            if (isOperationFailed) {
+                throw new IdentityOAuthAdminException("Error occurred while deleting OAuth2 application " +
+                        "data for application with consumer key: " + consumerKey, e);
+            }
+        }
+        // Remove client credentials from cache.
         OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(consumerKey));
         AppInfoCache.getInstance().clearCacheEntry(consumerKey);
         if (LOG.isDebugEnabled()) {

@@ -291,7 +291,7 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
         when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(
                 Matchers.any(OAuthConsumerAppDTO.class))).thenReturn(oAuthConsumerApp);
 
-         RegistrationResponseProfile registrationRqstProfile = dcrManagementService.registerOAuthApplication
+        RegistrationResponseProfile registrationRqstProfile = dcrManagementService.registerOAuthApplication
                 (registrationRequestProfile);
         assertEquals(registrationRqstProfile.getGrantTypes(), dummyGrantType);
         assertEquals(registrationRqstProfile.getClientName(), applicationName);

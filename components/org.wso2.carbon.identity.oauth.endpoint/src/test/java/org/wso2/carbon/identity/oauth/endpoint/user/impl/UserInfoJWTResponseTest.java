@@ -108,6 +108,8 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         try {
             AuthenticatedUser authenticatedUser = (AuthenticatedUser) authorizedUser;
             prepareForSubjectClaimTest(authenticatedUser, inputClaims, appendTenantDomain, appendUserStoreDomain);
+            updateAuthenticatedSubjectIdentifier(authenticatedUser, appendTenantDomain, appendUserStoreDomain,
+                    inputClaims);
 
             mockObjectsRelatedToTokenValidation();
 
@@ -181,6 +183,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         authenticatedUser.setTenantDomain(TENANT_DOT_COM);
         authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
         authenticatedUser.setUserId(AUTHORIZED_USER_ID);
+        authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHORIZED_USER_ID);
         mockAccessTokenDOInOAuth2Util(authenticatedUser);
         String responseString =
                 userInfoJWTResponse.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
@@ -210,6 +213,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         authenticatedUser.setTenantDomain(TENANT_DOT_COM);
         authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
         authenticatedUser.setUserId(AUTHORIZED_USER_ID);
+        authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHORIZED_USER_ID);
         mockAccessTokenDOInOAuth2Util(authenticatedUser);
 
         String responseString =
@@ -251,6 +255,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
             authenticatedUser.setTenantDomain(TENANT_DOT_COM);
             authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
             authenticatedUser.setUserId(AUTHORIZED_USER_ID);
+            authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHORIZED_USER_ID);
             mockAccessTokenDOInOAuth2Util(authenticatedUser);
             String responseString =
                     userInfoJWTResponse.getResponseString(

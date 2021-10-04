@@ -210,13 +210,14 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
                 "failed");
         oAuth2ScopeService.deleteScope(scopeName);
     }
+
     @Test
     public void testUpdateScope() throws Exception {
 
         String scopeName = "DummyName";
         Scope dummyScope = new Scope(scopeName, SCOPE_NAME, SCOPE_DESCRIPTION);
         oAuth2ScopeService.registerScope(dummyScope);
-        Scope updatedDummyScope = new Scope(scopeName, SCOPE_NAME,  StringUtils.EMPTY);
+        Scope updatedDummyScope = new Scope(scopeName, SCOPE_NAME, StringUtils.EMPTY);
         assertEquals(oAuth2ScopeService.updateScope(updatedDummyScope).getDescription(), StringUtils.EMPTY);
         oAuth2ScopeService.deleteScope(scopeName);
     }
@@ -256,9 +257,9 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
 
     private void insertAppId(String uuid) throws Exception {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
-            String sql = "INSERT INTO SP_APP (TENANT_ID, APP_NAME, UUID) VALUES (?,?,?)";
-            PreparedStatement ps = connection.prepareStatement(sql);
+        String sql = "INSERT INTO SP_APP (TENANT_ID, APP_NAME, UUID) VALUES (?,?,?)";
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, 1);
             ps.setString(2, "dummyAppName");
             ps.setString(3, uuid);
@@ -449,8 +450,8 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
     }
 
     @Test(dataProvider = "userConsentScopesProvider")
-    public void testsUserHasAnExistingConsentForApp(List<String> approvedScopes,
-                                                    List<String> deniedScopes, boolean expected)
+    public void testUserHasAnExistingConsentForApp(List<String> approvedScopes,
+                                                   List<String> deniedScopes, boolean expected)
             throws Exception {
 
         String appId = UUID.randomUUID().toString();
@@ -497,5 +498,5 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         List<OAuth2ScopeConsentResponse> response = oAuth2ScopeService.getUserConsents(userId,
                 tenantId);
         assertEquals(response.size(), 0);
-        }
+    }
 }
