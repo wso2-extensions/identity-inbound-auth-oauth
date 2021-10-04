@@ -2733,9 +2733,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             int tenantId = resultSet.getInt("TENANT_ID");
                             String authzUser = resultSet.getString("AUTHZ_USER");
                             String userDomain = resultSet.getString("USER_DOMAIN");
-                            String authenticatedIDP = resultSet.getString("IDP_ID");
+                            String authenticatedIDPName = resultSet.getString("NAME");
                             AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser,
-                                    userDomain, OAuth2Util.getTenantDomain(tenantId), authenticatedIDP);
+                                    userDomain, OAuth2Util.getTenantDomain(tenantId), authenticatedIDPName);
                             Timestamp issuedTime = resultSet
                                     .getTimestamp("TIME_CREATED", Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                             Timestamp refreshTokenIssuedTime =

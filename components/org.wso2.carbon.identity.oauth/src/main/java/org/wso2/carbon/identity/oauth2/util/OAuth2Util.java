@@ -3556,6 +3556,8 @@ public class OAuth2Util {
             } else {
                 authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
             }
+            // For federated scenarios, we need to set the username as the identifier.
+            authenticatedUser.setAuthenticatedSubjectIdentifier(username);
             if (log.isDebugEnabled()) {
                 log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username +
                         " in tenant domain: " + tenantDomain + ". Flag user as a federated user. " +
