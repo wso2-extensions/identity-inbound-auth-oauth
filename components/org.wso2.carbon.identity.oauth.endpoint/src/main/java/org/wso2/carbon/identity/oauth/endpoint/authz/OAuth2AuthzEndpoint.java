@@ -554,12 +554,17 @@ public class OAuth2AuthzEndpoint {
     private ConsentClaimsData getConsentRequiredClaims(AuthenticatedUser user, ServiceProvider serviceProvider,
                                                        OAuth2Parameters oAuth2Parameters)
             throws SSOConsentServiceException {
-        Set<String> scopes = oAuth2Parameters.getScopes();
+
+        List<String> claimsListOfScopes =
+                openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oAuth2Parameters.getScopes(),
+                        oAuth2Parameters.getTenantDomain());
         if (hasPromptContainsConsent(oAuth2Parameters)) {
             // Ignore all previous consents and get consent required claims
-            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user, scopes);
+            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user,
+                    claimsListOfScopes);
         } else {
-            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user, scopes);
+            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user,
+                    claimsListOfScopes);
         }
     }
 
@@ -2230,11 +2235,15 @@ public class OAuth2AuthzEndpoint {
                                                        boolean useExistingConsents, OAuth2Parameters oAuth2Parameters)
             throws SSOConsentServiceException {
 
-        Set<String> scopes = oAuth2Parameters.getScopes();
+        List<String> claimsListOfScopes =
+                openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oAuth2Parameters.getScopes(),
+                        oAuth2Parameters.getTenantDomain());
         if (useExistingConsents) {
-            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user, scopes);
+            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user,
+                    claimsListOfScopes);
         } else {
-            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user, scopes);
+            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user,
+                    claimsListOfScopes);
         }
     }
 
