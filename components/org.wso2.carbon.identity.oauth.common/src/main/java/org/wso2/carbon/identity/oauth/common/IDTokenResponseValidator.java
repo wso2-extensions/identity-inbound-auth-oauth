@@ -29,7 +29,7 @@ import javax.servlet.http.HttpServletRequest;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.SCOPE;
 
 /**
- * Validator for IDtoken response.
+ * Validator for ID token response.
  */
 public class IDTokenResponseValidator extends TokenValidator {
 
