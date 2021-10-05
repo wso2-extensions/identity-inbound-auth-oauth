@@ -267,7 +267,7 @@ public class OAuthServerConfiguration {
     // Property to define the allowed scopes.
     private List<String> allowedScopes = new ArrayList<>();
 
-    // Property to define the allowed scopes.
+    // Property to define the unsupported Claims for introspection response.
     private List<String> unsupportedIntrospectionClaims = new ArrayList<>();
 
     // Property to check whether to drop unregistered scopes.
