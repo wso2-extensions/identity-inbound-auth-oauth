@@ -29,7 +29,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * DefaultOIDCProcessor build the response to be sent as the final result
+ * DefaultOIDCProcessor build the response to be sent as the final result.
  * <ol>
  * <li>Build the OIDProviderRequest using HttpServletRequest<li/>
  * <li>Get the OIDProvider configuration</li>
