@@ -63,7 +63,9 @@ import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -3556,6 +3558,7 @@ public class OAuth2Util {
             } else {
                 authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
             }
+            authenticatedUser.setUserId(getUserIdOfFederatedUser(username, tenantDomain, idpName));
             if (log.isDebugEnabled()) {
                 log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username +
                         " in tenant domain: " + tenantDomain + ". Flag user as a federated user. " +
@@ -3567,6 +3570,28 @@ public class OAuth2Util {
         }
 
         return authenticatedUser;
+    }
+
+    /**
+     * Get the user if of the federated user from the user session store.
+     *
+     * @param username     Username.
+     * @param tenantDomain Tenant domain.
+     * @param idpName      IDP name.
+     * @return User id associated with the given federated user.
+     */
+    private static String getUserIdOfFederatedUser(String username, String tenantDomain, String idpName) {
+
+        String userId = null;
+        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+        try {
+            int idpId = UserSessionStore.getInstance().getIdPId(idpName, tenantId);
+            userId = UserSessionStore.getInstance().getFederatedUserId(username, tenantId, idpId);
+        } catch (UserSessionException e) {
+            // In here we better not log the user id.
+            log.error("Error occurred while resolving the user id from the username for the federated user", e);
+        }
+        return userId;
     }
 
     public static String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
