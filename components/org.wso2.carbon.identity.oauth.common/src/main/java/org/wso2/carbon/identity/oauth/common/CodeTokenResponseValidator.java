@@ -36,7 +36,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.SCOPE;
 
 /**
- * Validator for hybrid flow code token requests
+ * Validator for hybrid flow code token requests.
  */
 public class CodeTokenResponseValidator extends TokenValidator {
 
