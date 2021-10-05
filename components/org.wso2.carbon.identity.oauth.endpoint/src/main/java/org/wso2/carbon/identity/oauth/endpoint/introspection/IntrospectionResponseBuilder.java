@@ -20,8 +20,10 @@ package org.wso2.carbon.identity.oauth.endpoint.introspection;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.utils.JSONUtils;
 import org.json.JSONException;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -40,6 +42,12 @@ public class IntrospectionResponseBuilder {
      */
     public String build() throws JSONException {
 
+        List<String> unsupportedClaims = OAuthServerConfiguration.getInstance().getUnsupportedIntrospectionClaims();
+        for (String parameter : parameters.keySet()) {
+            if (unsupportedClaims.contains(parameter)) {
+                parameters.remove(parameter);
+            }
+        }
         return JSONUtils.buildJSON(parameters);
     }
 

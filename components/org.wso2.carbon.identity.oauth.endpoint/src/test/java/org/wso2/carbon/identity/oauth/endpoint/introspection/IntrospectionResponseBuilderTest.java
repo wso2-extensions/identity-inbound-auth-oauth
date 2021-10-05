@@ -19,11 +19,18 @@ package org.wso2.carbon.identity.oauth.endpoint.introspection;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.mockito.Mock;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,17 +43,27 @@ import static org.testng.Assert.assertTrue;
 /**
  * This class does unit test coverage for RecoveryConfigImpl class
  */
-public class IntrospectionResponseBuilderTest {
+@PrepareForTest({OAuthServerConfiguration.class})
+public class IntrospectionResponseBuilderTest extends PowerMockIdentityBaseTest {
 
     private IntrospectionResponseBuilder introspectionResponseBuilder1;
 
     private IntrospectionResponseBuilder introspectionResponseBuilder2;
+
+    @Mock
+    OAuthServerConfiguration oAuthServerConfiguration;
+    List<String> unsupportedIntrospectionClaims = new ArrayList<>();
 
     @BeforeTest
     public void setUp() {
 
         introspectionResponseBuilder1 = new IntrospectionResponseBuilder();
         introspectionResponseBuilder2 = new IntrospectionResponseBuilder();
+
+        System.setProperty(
+                CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
+        );
     }
 
     @DataProvider(name = "provideBuilderData")
@@ -74,6 +91,8 @@ public class IntrospectionResponseBuilderTest {
                 "ImlzcyI6Imh0dHBzOlwvXC9sb2NhbGhvc3Q6OTQ0M1wvb2F1dGgyXC90b2tlbiIsImlhdCI6MTQ1MjE3MDE3Nn0.RqAgm0ybe7tQ" +
                 "YvQYi7uqEtzWf6wgDv5sJq2UIQRC4OJGjn_fTqftIWerZc7rIMRYXi7jzuHxX_GabUhuj7m1iRzi1wgxbI9yQn825lDVF4Lt9" +
                 "DMUTBfKLk81KIy6uB_ECtyxumoX3372yRgC7R56_L_hAElflgBsclEUwEH9psE";
+
+        mockOAuthServerConfiguration();
 
         introspectionResponseBuilder1.setActive(isActive);
         introspectionResponseBuilder1.setIssuedAt(1452170176);
@@ -125,6 +144,8 @@ public class IntrospectionResponseBuilderTest {
     @Test
     public void testResposeBuilderWithoutVal() {
 
+        mockOAuthServerConfiguration();
+
         introspectionResponseBuilder2.setActive(false);
         introspectionResponseBuilder2.setIssuedAt(0);
         introspectionResponseBuilder2.setJwtId("");
@@ -167,6 +188,8 @@ public class IntrospectionResponseBuilderTest {
         Map<String, Object> additionalData = new HashMap<>();
         List<Map<String, Object>> permissions = new ArrayList<>();
 
+        mockOAuthServerConfiguration();
+
         Map<String, Object> resource1 = new HashMap<>();
         String resourceIdKey = "resource_id";
         String resourceScopesKey = "resource_scopes";
@@ -201,5 +224,13 @@ public class IntrospectionResponseBuilderTest {
         assertTrue(resourceEntry.has(resourceIdKey), resourceIdKey + " key not found in introspection response.");
         assertTrue(resourceEntry.has(resourceScopesKey), resourceScopesKey + " key not found in introspection " +
                 "response.");
+    }
+
+    private void mockOAuthServerConfiguration() {
+
+        PowerMockito.mockStatic(OAuthServerConfiguration.class);
+        PowerMockito.when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+        PowerMockito.when(oAuthServerConfiguration.getUnsupportedIntrospectionClaims())
+                .thenReturn(unsupportedIntrospectionClaims);
     }
 }

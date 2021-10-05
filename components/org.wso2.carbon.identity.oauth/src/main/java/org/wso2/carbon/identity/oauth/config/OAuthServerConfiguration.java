@@ -267,6 +267,9 @@ public class OAuthServerConfiguration {
     // Property to define the allowed scopes.
     private List<String> allowedScopes = new ArrayList<>();
 
+    // Property to define the allowed scopes.
+    private List<String> unsupportedIntrospectionClaims = new ArrayList<>();
+
     // Property to check whether to drop unregistered scopes.
     private boolean dropUnregisteredScopes = false;
 
@@ -436,6 +439,9 @@ public class OAuthServerConfiguration {
         // Read config for allowed scopes.
         parseAllowedScopesConfiguration(oauthElem);
 
+        // Read config for unsupported claims for introspection response.
+        parseUnsupportedClaimsForIntrospectionResponseConfiguration(oauthElem);
+
         // Read config for dropping unregistered scopes.
         parseDropUnregisteredScopes(oauthElem);
     }
@@ -455,6 +461,25 @@ public class OAuthServerConfiguration {
             while (scopeIterator.hasNext()) {
                 OMElement scopeElement = (OMElement) scopeIterator.next();
                 allowedScopes.add(scopeElement.getText());
+            }
+        }
+    }
+
+    /**
+     * Parse unsupported claims for introspection response configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseUnsupportedClaimsForIntrospectionResponseConfiguration(OMElement oauthConfigElem) {
+
+        OMElement introspectionClaimsElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.INTROSPECTION_RESPONSE));
+        if (introspectionClaimsElem != null) {
+            Iterator claimIterator =   introspectionClaimsElem.getChildrenWithName(getQNameWithIdentityNS(
+                    ConfigElements.UNSUPPORTED_CLAIM));
+            while (claimIterator.hasNext()) {
+                OMElement claimElement = (OMElement) claimIterator.next();
+                unsupportedIntrospectionClaims.add(claimElement.getText());
             }
         }
     }
@@ -522,6 +547,11 @@ public class OAuthServerConfiguration {
     public List<String> getAllowedScopes() {
 
         return allowedScopes;
+    }
+
+    public List<String> getUnsupportedIntrospectionClaims() {
+
+        return unsupportedIntrospectionClaims;
     }
 
     public String getOAuth1RequestTokenUrl() {
@@ -3271,6 +3301,9 @@ public class OAuthServerConfiguration {
         // Allowed Scopes Config.
         private static final String ALLOWED_SCOPES_ELEMENT = "AllowedScopes";
         private static final String SCOPES_ELEMENT = "Scope";
+        // Unsupported Claims For Introspection Response Config.
+        private static final String INTROSPECTION_RESPONSE = "IntrospectionResponse";
+        private static final String UNSUPPORTED_CLAIM = "UnsupportedClaim";
 
         private static final String DROP_UNREGISTERED_SCOPES = "DropUnregisteredScopes";
 
