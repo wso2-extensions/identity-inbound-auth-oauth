@@ -76,7 +76,7 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
 
         OAuthErrorDTO oAuthErrorDTO = new OAuthErrorDTO();
         String authReqID = oAuth2Parameters.getNonce();
-        String authCodeKey = null;
+        String authCodeKey;
         try {
             authCodeKey = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCodeKey(authReqID);
 
