@@ -267,8 +267,8 @@ public class OAuthServerConfiguration {
     // Property to define the allowed scopes.
     private List<String> allowedScopes = new ArrayList<>();
 
-    // Property to define the unsupported Claims for introspection response.
-    private List<String> unsupportedIntrospectionClaims = new ArrayList<>();
+    // Property to define the filtered claims.
+    private List<String> filteredIntrospectionClaims = new ArrayList<>();
 
     // Property to check whether to drop unregistered scopes.
     private boolean dropUnregisteredScopes = false;
@@ -439,8 +439,8 @@ public class OAuthServerConfiguration {
         // Read config for allowed scopes.
         parseAllowedScopesConfiguration(oauthElem);
 
-        // Read config for unsupported claims for introspection response.
-        parseUnsupportedClaimsForIntrospectionResponseConfiguration(oauthElem);
+        // Read config for filtered claims for introspection response.
+        parseFilteredClaimsForIntrospectionConfiguration(oauthElem);
 
         // Read config for dropping unregistered scopes.
         parseDropUnregisteredScopes(oauthElem);
@@ -466,20 +466,24 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * Parse unsupported claims for introspection response configuration.
+     * Parse filtered claims for introspection response configuration.
      *
      * @param oauthConfigElem oauthConfigElem.
      */
-    private void parseUnsupportedClaimsForIntrospectionResponseConfiguration(OMElement oauthConfigElem) {
+    private void parseFilteredClaimsForIntrospectionConfiguration(OMElement oauthConfigElem) {
 
         OMElement introspectionClaimsElem = oauthConfigElem.getFirstChildWithName(
-                getQNameWithIdentityNS(ConfigElements.INTROSPECTION_RESPONSE));
+                getQNameWithIdentityNS(ConfigElements.INTROSPECTION_CONFIG));
         if (introspectionClaimsElem != null) {
-            Iterator claimIterator =   introspectionClaimsElem.getChildrenWithName(getQNameWithIdentityNS(
-                    ConfigElements.UNSUPPORTED_CLAIM));
-            while (claimIterator.hasNext()) {
-                OMElement claimElement = (OMElement) claimIterator.next();
-                unsupportedIntrospectionClaims.add(claimElement.getText());
+            OMElement filteredClaimsElem = introspectionClaimsElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.FILTERED_CLAIMS));
+            if (filteredClaimsElem != null) {
+                Iterator claimIterator =   filteredClaimsElem.getChildrenWithName(getQNameWithIdentityNS(
+                        ConfigElements.FILTERED_CLAIM));
+                while (claimIterator.hasNext()) {
+                    OMElement claimElement = (OMElement) claimIterator.next();
+                    filteredIntrospectionClaims.add(claimElement.getText());
+                }
             }
         }
     }
@@ -549,9 +553,9 @@ public class OAuthServerConfiguration {
         return allowedScopes;
     }
 
-    public List<String> getUnsupportedIntrospectionClaims() {
+    public List<String> getFilteredIntrospectionClaims() {
 
-        return unsupportedIntrospectionClaims;
+        return filteredIntrospectionClaims;
     }
 
     public String getOAuth1RequestTokenUrl() {
@@ -3301,9 +3305,9 @@ public class OAuthServerConfiguration {
         // Allowed Scopes Config.
         private static final String ALLOWED_SCOPES_ELEMENT = "AllowedScopes";
         private static final String SCOPES_ELEMENT = "Scope";
-        // Unsupported Claims For Introspection Response Config.
-        private static final String INTROSPECTION_RESPONSE = "IntrospectionResponse";
-        private static final String UNSUPPORTED_CLAIM = "UnsupportedClaim";
+        // Filtered Claims For Introspection Response Config.
+        private static final String FILTERED_CLAIMS = "FilteredClaims";
+        private static final String FILTERED_CLAIM = "FilteredClaim";
 
         private static final String DROP_UNREGISTERED_SCOPES = "DropUnregisteredScopes";
 

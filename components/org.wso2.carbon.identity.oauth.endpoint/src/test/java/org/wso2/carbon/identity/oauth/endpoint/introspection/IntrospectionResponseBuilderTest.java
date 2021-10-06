@@ -52,7 +52,7 @@ public class IntrospectionResponseBuilderTest extends PowerMockIdentityBaseTest 
 
     @Mock
     OAuthServerConfiguration oAuthServerConfiguration;
-    List<String> unsupportedIntrospectionClaims = new ArrayList<>();
+    List<String> filteredIntrospectionClaims = new ArrayList<>();
 
     @BeforeTest
     public void setUp() {
@@ -92,7 +92,7 @@ public class IntrospectionResponseBuilderTest extends PowerMockIdentityBaseTest 
                 "YvQYi7uqEtzWf6wgDv5sJq2UIQRC4OJGjn_fTqftIWerZc7rIMRYXi7jzuHxX_GabUhuj7m1iRzi1wgxbI9yQn825lDVF4Lt9" +
                 "DMUTBfKLk81KIy6uB_ECtyxumoX3372yRgC7R56_L_hAElflgBsclEUwEH9psE";
 
-        mockOAuthServerConfiguration();
+        mockOAuthServerConfiguration(filteredIntrospectionClaims);
 
         introspectionResponseBuilder1.setActive(isActive);
         introspectionResponseBuilder1.setIssuedAt(1452170176);
@@ -144,7 +144,7 @@ public class IntrospectionResponseBuilderTest extends PowerMockIdentityBaseTest 
     @Test
     public void testResposeBuilderWithoutVal() {
 
-        mockOAuthServerConfiguration();
+        mockOAuthServerConfiguration(filteredIntrospectionClaims);
 
         introspectionResponseBuilder2.setActive(false);
         introspectionResponseBuilder2.setIssuedAt(0);
@@ -188,7 +188,7 @@ public class IntrospectionResponseBuilderTest extends PowerMockIdentityBaseTest 
         Map<String, Object> additionalData = new HashMap<>();
         List<Map<String, Object>> permissions = new ArrayList<>();
 
-        mockOAuthServerConfiguration();
+        mockOAuthServerConfiguration(filteredIntrospectionClaims);
 
         Map<String, Object> resource1 = new HashMap<>();
         String resourceIdKey = "resource_id";
@@ -226,11 +226,46 @@ public class IntrospectionResponseBuilderTest extends PowerMockIdentityBaseTest 
                 "response.");
     }
 
-    private void mockOAuthServerConfiguration() {
+    /**
+     * This method does unit test for build response with values
+     */
+    @Test (priority = 1)
+    public void testRespoNseBuilderWithFilteredClaims() {
+
+        String idToken = "eyJhbGciOiJSUzI1NiJ9.eyJhdXRoX3RpbWUiOjE0NTIxNzAxNzYsImV4cCI6MTQ1MjE3Mzc3Niwic3ViI" +
+                "joidXNlQGNhcmJvbi5zdXBlciIsImF6cCI6IjF5TDFfZnpuekdZdXRYNWdCMDNMNnRYR3lqZ2EiLCJhdF9oYXNoI" +
+                "joiWWljbDFlNTI5WlhZOE9zVDlvM3ktdyIsImF1ZCI6WyIxeUwxX2Z6bnpHWXV0WDVnQjAzTDZ0WEd5amdhIl0s" +
+                "ImlzcyI6Imh0dHBzOlwvXC9sb2NhbGhvc3Q6OTQ0M1wvb2F1dGgyXC90b2tlbiIsImlhdCI6MTQ1MjE3MDE3Nn0.RqAgm0ybe7tQ" +
+                "YvQYi7uqEtzWf6wgDv5sJq2UIQRC4OJGjn_fTqftIWerZc7rIMRYXi7jzuHxX_GabUhuj7m1iRzi1wgxbI9yQn825lDVF4Lt9" +
+                "DMUTBfKLk81KIy6uB_ECtyxumoX3372yRgC7R56_L_hAElflgBsclEUwEH9psE";
+
+        filteredIntrospectionClaims.add(IntrospectionResponse.USERNAME);
+        mockOAuthServerConfiguration(filteredIntrospectionClaims);
+
+        introspectionResponseBuilder1.setActive(true);
+        introspectionResponseBuilder1.setIssuedAt(1452170176);
+        introspectionResponseBuilder1.setJwtId(idToken);
+        introspectionResponseBuilder1.setSubject("admin@carbon.super");
+        introspectionResponseBuilder1.setExpiration(7343678);
+        introspectionResponseBuilder1.setUsername("admin@carbon.super");
+        introspectionResponseBuilder1.setTokenType("Bearer");
+        introspectionResponseBuilder1.setNotBefore(1452173776);
+        introspectionResponseBuilder1.setAudience("1yL1_fznzGYutX5gB03L6tXGyjga");
+        introspectionResponseBuilder1.setIssuer("https:\\/\\/localhost:9443\\/oauth2\\/token");
+        introspectionResponseBuilder1.setScope("test");
+        introspectionResponseBuilder1.setClientId("rgfKVdnMQnJSSr_pKFTxj3apiwYa");
+        introspectionResponseBuilder1.setErrorCode("Invalid input");
+        introspectionResponseBuilder1.setErrorDescription("error_discription");
+
+        JSONObject jsonObject = new JSONObject(introspectionResponseBuilder1.build());
+        assertFalse(jsonObject.has(IntrospectionResponse.USERNAME));
+    }
+
+    private void mockOAuthServerConfiguration(List<String> filteredIntrospectionClaims) {
 
         PowerMockito.mockStatic(OAuthServerConfiguration.class);
         PowerMockito.when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        PowerMockito.when(oAuthServerConfiguration.getUnsupportedIntrospectionClaims())
-                .thenReturn(unsupportedIntrospectionClaims);
+        PowerMockito.when(oAuthServerConfiguration.getFilteredIntrospectionClaims())
+                .thenReturn(filteredIntrospectionClaims);
     }
 }

@@ -42,7 +42,7 @@ public class IntrospectionResponseBuilder {
      */
     public String build() throws JSONException {
 
-        List<String> unsupportedClaims = OAuthServerConfiguration.getInstance().getUnsupportedIntrospectionClaims();
+        List<String> unsupportedClaims = OAuthServerConfiguration.getInstance().getFilteredIntrospectionClaims();
         for (String parameter : parameters.keySet()) {
             if (unsupportedClaims.contains(parameter)) {
                 parameters.remove(parameter);
