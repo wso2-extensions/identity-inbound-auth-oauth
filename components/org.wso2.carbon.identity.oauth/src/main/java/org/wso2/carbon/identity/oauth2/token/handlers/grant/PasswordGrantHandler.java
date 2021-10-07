@@ -98,8 +98,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
 
         // Update resource owner username when tenant qualified URLs enabled.
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            String userNameWithTenant = getFullQualifiedUsername(tokenReq,
-                    serviceProvider);
+            String userNameWithTenant = getFullQualifiedUsername(tokenReq, serviceProvider);
             tokenReq.setResourceOwnerUsername(userNameWithTenant);
         }
 
@@ -116,8 +115,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         tokReqMsgCtx.setScope(tokenReq.getScope());
     }
 
-    private String getFullQualifiedUsername(OAuth2AccessTokenReqDTO tokenReq,
-                                                                         ServiceProvider serviceProvider) {
+    private String getFullQualifiedUsername(OAuth2AccessTokenReqDTO tokenReq, ServiceProvider serviceProvider) {
 
         boolean isEmailUserNameEnabled = MultitenantUtils.isEmailUserName();
         boolean isSaasApp = serviceProvider.isSaasApp();
@@ -267,7 +265,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             }
             String message = e.getMessage();
             // Sometimes client exceptions are wrapped in the super class.
-            // Therefore checking for possible client exception.
+            // Therefore, checking for possible client exception.
             Throwable rootCause = ExceptionUtils.getRootCause(e);
             if (rootCause instanceof UserStoreClientException) {
                 message = rootCause.getMessage();
@@ -349,7 +347,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
     /**
      * This method will create an AuthenticationContext object which needs to be passed to the publish methods.
      *
-     * @param authenticatedUser User which tries to be authenticate.
+     * @param authenticatedUser User which tries to be authenticated.
      * @param serviceProvider Service provider which contains the details of the application.
      * @return An AuthenticationContest object with relevant details.
      */
