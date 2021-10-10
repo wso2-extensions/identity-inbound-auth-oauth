@@ -49,17 +49,17 @@ import static org.wso2.carbon.identity.oauth.scope.endpoint.Constants.SERVER_API
 import static org.wso2.carbon.identity.oauth.scope.endpoint.Constants.TENANT_CONTEXT_PATH_COMPONENT;
 
 /**
- * ScopesApiServiceImpl is used to handling scope bindings
+ * ScopesApiServiceImpl is used to handling scope bindings.
  */
 public class ScopesApiServiceImpl extends ScopesApiService {
 
     private static final Log LOG = LogFactory.getLog(ScopesApiServiceImpl.class);
     private static final String INTERNAL_SCOPE_PREFIX = "internal_";
     /**
-     * Register a scope with the bindings
+     * Register a scope with the bindings.
      *
      * @param scope details of the scope to be registered
-     * @return Response with the status of the registration
+     * @return Response with the status of the registration.
      */
     @Override
     public Response registerScope(ScopeDTO scope) {
