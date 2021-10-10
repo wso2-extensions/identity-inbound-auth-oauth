@@ -25,7 +25,7 @@ import java.util.Map;
 /**
  * OIDProviderConfigResponse contains the patameters to be written
  * as specified in the spec at https://openid.net/specs/openid-connect-discovery-1_0.html
- * Values are corresponding to the entries specified in the DicoveryConstants class
+ * Values are corresponding to the entries specified in the DicoveryConstants class.
  */
 public class OIDProviderConfigResponse {
 

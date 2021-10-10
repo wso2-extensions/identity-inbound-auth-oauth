@@ -50,7 +50,7 @@ public class ScopeUtils {
     }
 
     /**
-     * Logs the error, builds a ScopeEndpointException with specified details and throws it
+     * Logs the error, builds a ScopeEndpointException with specified details and throws it.
      *
      * @param status    response status
      * @param message   error message
@@ -92,10 +92,10 @@ public class ScopeUtils {
     }
 
     /**
-     * Returns a generic errorDTO
+     * Returns a generic errorDTO.
      *
-     * @param message specifies the error message
-     * @return A generic errorDTO with the specified details
+     * @param message specifies the error message.
+     * @return A generic errorDTO with the specified details.
      */
     public static ErrorDTO getErrorDTO(String message, String code, String description) {
 
