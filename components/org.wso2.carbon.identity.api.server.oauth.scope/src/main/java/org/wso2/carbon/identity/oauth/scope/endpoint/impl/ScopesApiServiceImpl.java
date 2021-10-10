@@ -96,10 +96,10 @@ public class ScopesApiServiceImpl extends ScopesApiService {
     }
 
     /**
-     * Retrieve the scope of the given scope name
+     * Retrieve the scope of the given scope name.
      *
      * @param name Name of the scope which need to get retrieved
-     * @return Response with the retrieved scope/ retrieval status
+     * @return Response with the retrieved scope/ retrieval status.
      */
     @Override
     public Response getScope(String name) {
@@ -134,7 +134,7 @@ public class ScopesApiServiceImpl extends ScopesApiService {
      * Retrieve the available scope list.
      *
      * @param startIndex        Start Index of the result set to enforce pagination.
-     * @param count             Number of elements in the result set to enforce pagination
+     * @param count             Number of elements in the result set to enforce pagination.
      * @param includeOIDCScopes Include OIDC scopes as well.
      * @param requestedScopes   Requested set of scopes to be return in the response.
      * @return Response with the retrieved scopes retrieval status.
@@ -162,7 +162,7 @@ public class ScopesApiServiceImpl extends ScopesApiService {
      *
      * @param startIndex Start Index of the result set to enforce pagination.
      * @param count      Number of elements in the result set to enforce pagination.
-     * @return Response with the retrieved scopes/ retrieval status
+     * @return Response with the retrieved scopes/ retrieval status.
      * @deprecated use {@link #getScopes(Integer, Integer, Boolean, String)} instead.
      */
     public Response getScopes(Integer startIndex, Integer count) {
@@ -171,10 +171,10 @@ public class ScopesApiServiceImpl extends ScopesApiService {
     }
 
     /**
-     * Check the existence of a scope
+     * Check the existence of a scope.
      *
      * @param name Name of the scope
-     * @return Response with the indication whether the scope exists or not
+     * @return Response with the indication whether the scope exists or not.
      */
     @Override
     public Response isScopeExists(String name) {
@@ -207,8 +207,8 @@ public class ScopesApiServiceImpl extends ScopesApiService {
     /**
      * Update a scope
      *
-     * @param scope details of the scope to be updated
-     * @param name  name of the scope to be updated
+     * @param scope details of the scope to be updated.
+     * @param name  name of the scope to be updated.
      * @return
      */
     @Override
@@ -246,10 +246,10 @@ public class ScopesApiServiceImpl extends ScopesApiService {
     }
 
     /**
-     * Delete the scope for the given scope name
+     * Delete the scope for the given scope name.
      *
-     * @param name Name of the scope which need to get deleted
-     * @return Response with the status of scope deletion
+     * @param name Name of the scope which need to get deleted.
+     * @return Response with the status of scope deletion.
      */
     @Override
     public Response deleteScope(String name) {
