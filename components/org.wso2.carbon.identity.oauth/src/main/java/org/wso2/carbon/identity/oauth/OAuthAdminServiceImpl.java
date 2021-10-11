@@ -93,6 +93,9 @@ public class OAuthAdminServiceImpl {
     public static final String AUTHORIZATION_CODE = "authorization_code";
     static final String RESPONSE_TYPE_TOKEN = "token";
     static final String RESPONSE_TYPE_ID_TOKEN = "id_token";
+    static final String BINDING_TYPE_NONE = "None";
+    static final String BINDING_TYPE_SSO_SESSION = "sso-session";
+    static final String BINDING_TYPE_COOKIE = "cookie";
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     static List<String> allowedGrants = null;
     static String[] allowedScopeValidators = null;
@@ -307,6 +310,7 @@ public class OAuthAdminServiceImpl {
                     }
                     app.setBypassClientCredentials(application.isBypassClientCredentials());
                     app.setRenewRefreshTokenEnabled(application.getRenewRefreshTokenEnabled());
+                    validateBindingType(application.getTokenBindingType());
                     app.setTokenBindingType(application.getTokenBindingType());
                     app.setTokenBindingValidationEnabled(application.isTokenBindingValidationEnabled());
                     app.setTokenRevocationWithIDPSessionTerminationEnabled(
@@ -368,6 +372,17 @@ public class OAuthAdminServiceImpl {
                 String msg = String.format("'%s' grant type is not allowed.", requestedGrant);
                 throw handleClientError(INVALID_REQUEST, msg);
             }
+        }
+    }
+
+    private void validateBindingType(String bindingType) throws IdentityOAuthClientException {
+
+        if (BINDING_TYPE_COOKIE.equals(bindingType) || BINDING_TYPE_SSO_SESSION.equals(bindingType) ||
+                BINDING_TYPE_NONE.equals(bindingType)) {
+            return;
+        } else {
+            String msg = String.format("'%s' binding type is not allowed.", bindingType);
+            throw handleClientError(INVALID_REQUEST, msg);
         }
     }
 
@@ -499,6 +514,7 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
             oauthappdo.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
             oauthappdo.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
+            validateBindingType(consumerAppDTO.getTokenBindingType());
             oauthappdo.setTokenBindingType(consumerAppDTO.getTokenBindingType());
             oauthappdo.setTokenRevocationWithIDPSessionTerminationEnabled(consumerAppDTO
                     .isTokenRevocationWithIDPSessionTerminationEnabled());
