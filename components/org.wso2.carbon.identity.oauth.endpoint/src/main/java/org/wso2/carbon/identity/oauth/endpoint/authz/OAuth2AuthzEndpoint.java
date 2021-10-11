@@ -1755,11 +1755,11 @@ public class OAuth2AuthzEndpoint {
             replaceIfPresent(requestObject, ID_TOKEN_HINT, params::setIDTokenHint);
             replaceIfPresent(requestObject, PROMPT, params::setPrompt);
 
-            if (requestObject.getClaim(CLAIMS) != null) {
-                if (requestObject.getClaim(CLAIMS) instanceof net.minidev.json.JSONObject) {
-                    net.minidev.json.JSONObject claims = (net.minidev.json.JSONObject) requestObject.getClaim(CLAIMS);
-                    params.setEssentialClaims(claims.toJSONString());
-                }
+            if (requestObject.getClaim(CLAIMS) instanceof net.minidev.json.JSONObject) {
+                // Claims in the request object is in the type of net.minidev.json.JSONObject,
+                // hence retrieving claims as a JSONObject
+                net.minidev.json.JSONObject claims = (net.minidev.json.JSONObject) requestObject.getClaim(CLAIMS);
+                params.setEssentialClaims(claims.toJSONString());
             }
 
             if (isPkceSupportEnabled()) {
