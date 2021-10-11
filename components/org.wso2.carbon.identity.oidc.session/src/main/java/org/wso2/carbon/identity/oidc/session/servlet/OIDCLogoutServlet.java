@@ -157,6 +157,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             if (log.isDebugEnabled()) {
                 log.debug(msg);
             }
+            OIDCSessionManagementUtil.removeOPBrowserStateCookie(request, response);
             if (OIDCSessionManagementUtil.handleAlreadyLoggedOutSessionsGracefully()) {
                 handleMissingSessionStateGracefully(request, response);
             } else {
@@ -168,7 +169,6 @@ public class OIDCLogoutServlet extends HttpServlet {
                 redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
                 response.sendRedirect(getRedirectURL(redirectURL, request));
             }
-            OIDCSessionManagementUtil.removeOPBrowserStateCookie(request, response);
             return;
         }
 
