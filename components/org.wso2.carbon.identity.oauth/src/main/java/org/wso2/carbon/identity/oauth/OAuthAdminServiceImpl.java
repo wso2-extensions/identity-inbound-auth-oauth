@@ -378,7 +378,7 @@ public class OAuthAdminServiceImpl {
     private void validateBindingType(String bindingType) throws IdentityOAuthClientException {
 
         if (BINDING_TYPE_COOKIE.equals(bindingType) || BINDING_TYPE_SSO_SESSION.equals(bindingType) ||
-                BINDING_TYPE_NONE.equals(bindingType)) {
+                BINDING_TYPE_NONE.equals(bindingType) || bindingType == null) {
             return;
         } else {
             String msg = String.format("'%s' binding type is not allowed.", bindingType);
