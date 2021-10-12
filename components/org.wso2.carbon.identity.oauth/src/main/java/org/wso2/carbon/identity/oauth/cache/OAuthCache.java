@@ -82,12 +82,8 @@ public class OAuthCache extends AuthenticationBaseCache<OAuthCacheKey, CacheEntr
         if (LOG.isDebugEnabled()) {
             LOG.debug("Hit OAuthCache for clearing in tenant domain: " + tenantDomain);
         }
-        if (getValueFromCache(key, tenantDomain) == null) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug(String.format("No cache entry found for the given cache key in the tenant: %s.",
-                        tenantDomain));
-            }
-            return;
+        if (LOG.isDebugEnabled() && getValueFromCache(key, tenantDomain) == null) {
+            LOG.debug(String.format("No cache entry found for the given cache key in the tenant: %s.", tenantDomain));
         }
         if (StringUtils.isNotBlank(tenantDomain)) {
             super.clearCacheEntry(key, tenantDomain);
