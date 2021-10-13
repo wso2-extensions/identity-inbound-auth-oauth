@@ -227,10 +227,10 @@ public class IntrospectionResponseBuilderTest extends PowerMockIdentityBaseTest 
     }
 
     /**
-     * This method does unit test for build response with values
+     * This method does unit test for build response with username as a filtered values
      */
     @Test (priority = 1)
-    public void testRespoNseBuilderWithFilteredClaims() {
+    public void testResponseBuilderWithFilteredUsernameClaims() {
 
         String idToken = "eyJhbGciOiJSUzI1NiJ9.eyJhdXRoX3RpbWUiOjE0NTIxNzAxNzYsImV4cCI6MTQ1MjE3Mzc3Niwic3ViI" +
                 "joidXNlQGNhcmJvbi5zdXBlciIsImF6cCI6IjF5TDFfZnpuekdZdXRYNWdCMDNMNnRYR3lqZ2EiLCJhdF9oYXNoI" +
@@ -239,7 +239,45 @@ public class IntrospectionResponseBuilderTest extends PowerMockIdentityBaseTest 
                 "YvQYi7uqEtzWf6wgDv5sJq2UIQRC4OJGjn_fTqftIWerZc7rIMRYXi7jzuHxX_GabUhuj7m1iRzi1wgxbI9yQn825lDVF4Lt9" +
                 "DMUTBfKLk81KIy6uB_ECtyxumoX3372yRgC7R56_L_hAElflgBsclEUwEH9psE";
 
+        introspectionResponseBuilder1.setActive(true);
+        introspectionResponseBuilder1.setIssuedAt(1452170176);
+        introspectionResponseBuilder1.setJwtId(idToken);
+        introspectionResponseBuilder1.setSubject("admin@carbon.super");
+        introspectionResponseBuilder1.setExpiration(7343678);
+        introspectionResponseBuilder1.setUsername("admin@carbon.super");
+        introspectionResponseBuilder1.setTokenType("Bearer");
+        introspectionResponseBuilder1.setNotBefore(1452173776);
+        introspectionResponseBuilder1.setAudience("1yL1_fznzGYutX5gB03L6tXGyjga");
+        introspectionResponseBuilder1.setIssuer("https:\\/\\/localhost:9443\\/oauth2\\/token");
+        introspectionResponseBuilder1.setScope("test");
+        introspectionResponseBuilder1.setClientId("rgfKVdnMQnJSSr_pKFTxj3apiwYa");
+        introspectionResponseBuilder1.setErrorCode("Invalid input");
+        introspectionResponseBuilder1.setErrorDescription("error_discription");
+
+        List<String> filteredIntrospectionClaims = new ArrayList<>();
         filteredIntrospectionClaims.add(IntrospectionResponse.USERNAME);
+        mockOAuthServerConfiguration(filteredIntrospectionClaims);
+
+        JSONObject jsonObject = new JSONObject(introspectionResponseBuilder1.build());
+        assertFalse(jsonObject.has(IntrospectionResponse.USERNAME));
+    }
+
+    /**
+     * This method does unit test for build response with few filtered claim values
+     */
+    @Test (priority = 1)
+    public void testResponseBuilderWithFilteredClaims() {
+
+        String idToken = "eyJhbGciOiJSUzI1NiJ9.eyJhdXRoX3RpbWUiOjE0NTIxNzAxNzYsImV4cCI6MTQ1MjE3Mzc3Niwic3ViI" +
+                "joidXNlQGNhcmJvbi5zdXBlciIsImF6cCI6IjF5TDFfZnpuekdZdXRYNWdCMDNMNnRYR3lqZ2EiLCJhdF9oYXNoI" +
+                "joiWWljbDFlNTI5WlhZOE9zVDlvM3ktdyIsImF1ZCI6WyIxeUwxX2Z6bnpHWXV0WDVnQjAzTDZ0WEd5amdhIl0s" +
+                "ImlzcyI6Imh0dHBzOlwvXC9sb2NhbGhvc3Q6OTQ0M1wvb2F1dGgyXC90b2tlbiIsImlhdCI6MTQ1MjE3MDE3Nn0.RqAgm0ybe7tQ" +
+                "YvQYi7uqEtzWf6wgDv5sJq2UIQRC4OJGjn_fTqftIWerZc7rIMRYXi7jzuHxX_GabUhuj7m1iRzi1wgxbI9yQn825lDVF4Lt9" +
+                "DMUTBfKLk81KIy6uB_ECtyxumoX3372yRgC7R56_L_hAElflgBsclEUwEH9psE";
+
+        List<String> filteredIntrospectionClaims = new ArrayList<>();
+        filteredIntrospectionClaims.add(IntrospectionResponse.SCOPE);
+        filteredIntrospectionClaims.add(IntrospectionResponse.NBF);
         mockOAuthServerConfiguration(filteredIntrospectionClaims);
 
         introspectionResponseBuilder1.setActive(true);
@@ -258,7 +296,9 @@ public class IntrospectionResponseBuilderTest extends PowerMockIdentityBaseTest 
         introspectionResponseBuilder1.setErrorDescription("error_discription");
 
         JSONObject jsonObject = new JSONObject(introspectionResponseBuilder1.build());
-        assertFalse(jsonObject.has(IntrospectionResponse.USERNAME));
+        assertTrue(jsonObject.has(IntrospectionResponse.AUD));
+        assertFalse(jsonObject.has(IntrospectionResponse.SCOPE));
+        assertFalse(jsonObject.has(IntrospectionResponse.NBF));
     }
 
     private void mockOAuthServerConfiguration(List<String> filteredIntrospectionClaims) {
