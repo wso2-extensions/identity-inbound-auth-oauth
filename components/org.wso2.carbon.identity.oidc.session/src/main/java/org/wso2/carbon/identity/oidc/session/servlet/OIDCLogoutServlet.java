@@ -157,9 +157,9 @@ public class OIDCLogoutServlet extends HttpServlet {
             if (log.isDebugEnabled()) {
                 log.debug(msg);
             }
+            OIDCSessionManagementUtil.removeOPBrowserStateCookie(request, response);
             if (OIDCSessionManagementUtil.handleAlreadyLoggedOutSessionsGracefully()) {
                 handleMissingSessionStateGracefully(request, response);
-                return;
             } else {
                 if (log.isDebugEnabled()) {
                     msg = "HandleAlreadyLoggedOutSessionsGracefully configuration enabled. No valid session found is " +
@@ -168,8 +168,8 @@ public class OIDCLogoutServlet extends HttpServlet {
                 }
                 redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
                 response.sendRedirect(getRedirectURL(redirectURL, request));
-                return;
             }
+            return;
         }
 
         String consent = request.getParameter(OIDCSessionConstants.OIDC_LOGOUT_CONSENT_PARAM);

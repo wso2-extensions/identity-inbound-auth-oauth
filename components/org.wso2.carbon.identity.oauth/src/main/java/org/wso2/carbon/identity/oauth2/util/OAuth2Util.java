@@ -63,7 +63,9 @@ import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -717,7 +719,12 @@ public class OAuth2Util {
     public static String buildCacheKeyStringForTokenWithUserId(String clientId, String scope, String authorizedUserId,
                                                      String authenticatedIDP, String tokenBindingReference) {
 
-        return clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
+        String oauthCacheKey =
+                clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Building cache key: %s to access OAuthCache.", oauthCacheKey));
+        }
+        return oauthCacheKey;
     }
 
     /**
@@ -1680,8 +1687,12 @@ public class OAuth2Util {
         if (result != null && result instanceof AccessTokenDO) {
             accessTokenDO = (AccessTokenDO) result;
             cacheHit = true;
-            if (log.isDebugEnabled()) {
+            if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 log.debug("Hit OAuthCache for accessTokenIdentifier: " + accessTokenIdentifier);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Hit OAuthCache with accessTokenIdentifier");
+                }
             }
         }
 
@@ -1689,6 +1700,11 @@ public class OAuth2Util {
         if (accessTokenDO == null) {
             accessTokenDO = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                     .getAccessToken(accessTokenIdentifier, includeExpired);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Retrieved active access token from OAuthCache for token Identifier: " +
+                        accessTokenDO.getTokenId());
+            }
         }
 
         if (accessTokenDO == null) {
@@ -3542,6 +3558,7 @@ public class OAuth2Util {
             } else {
                 authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
             }
+            authenticatedUser.setUserId(getUserIdOfFederatedUser(username, tenantDomain, idpName));
             if (log.isDebugEnabled()) {
                 log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username +
                         " in tenant domain: " + tenantDomain + ". Flag user as a federated user. " +
@@ -3553,6 +3570,28 @@ public class OAuth2Util {
         }
 
         return authenticatedUser;
+    }
+
+    /**
+     * Get the user if of the federated user from the user session store.
+     *
+     * @param username     Username.
+     * @param tenantDomain Tenant domain.
+     * @param idpName      IDP name.
+     * @return User id associated with the given federated user.
+     */
+    private static String getUserIdOfFederatedUser(String username, String tenantDomain, String idpName) {
+
+        String userId = null;
+        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+        try {
+            int idpId = UserSessionStore.getInstance().getIdPId(idpName, tenantId);
+            userId = UserSessionStore.getInstance().getFederatedUserId(username, tenantId, idpId);
+        } catch (UserSessionException e) {
+            // In here we better not log the user id.
+            log.error("Error occurred while resolving the user id from the username for the federated user", e);
+        }
+        return userId;
     }
 
     public static String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
@@ -3930,6 +3969,13 @@ public class OAuth2Util {
      */
     public static void initiateOAuthScopePermissionsBindings(int tenantId) {
 
+        if (Oauth2ScopeUtils.isSystemLevelInternalSystemScopeManagementEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth internal scopes permission binding initialization is skipped as the scopes " +
+                        "are managed globally.");
+            }
+            return;
+        }
         try {
             //Check login scope is available. If exists, assumes all scopes are loaded using the file.
             if (!hasScopesAlreadyAdded(tenantId)) {
@@ -3988,7 +4034,7 @@ public class OAuth2Util {
             return false;
         }
 
-        return tokenBinderOptional.get().isValidTokenBinding(request, tokenBinding.getBindingReference());
+        return tokenBinderOptional.get().isValidTokenBinding(request, tokenBinding);
     }
 
     /**

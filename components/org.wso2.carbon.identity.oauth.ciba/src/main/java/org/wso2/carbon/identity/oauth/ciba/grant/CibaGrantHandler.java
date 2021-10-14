@@ -52,7 +52,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes.OAuth2SubEr
  */
 public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
 
-    // Used to keep the pre processed authorization code in the OAuthTokenReqMessageContext.
+    // Used to keep the pre-processed authorization code in the OAuthTokenReqMessageContext.
     private static final String INVALID_GRANT = "invalid_grant";
     private static final String MISSING_AUTH_REQ_ID = "auth_req_id_missing";
     private static final String INVALID_AUTH_REQ_ID = "invalid auth_req_id";
@@ -284,8 +284,8 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,
                                                  CibaAuthCodeDO cibaAuthCodeDO) {
 
-        tokReqMsgCtx
-                .setAuthorizedUser(OAuth2Util.getUserFromUserName(cibaAuthCodeDO.getAuthenticatedUser().getUserName()));
+        tokReqMsgCtx.setAuthorizedUser(OAuth2Util.getUserFromUserName(cibaAuthCodeDO.getAuthenticatedUser().
+                getUserName()));
         tokReqMsgCtx.setScope(cibaAuthCodeDO.getScopes());
     }
 

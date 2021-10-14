@@ -90,7 +90,7 @@ public class OAuth2CibaEndpoint {
             return getAuthResponse(response, cibaAuthCodeResponse);
 
         } catch (CibaAuthFailureException e) {
-            //Returning error response.
+            // Returning error response.
             return getErrorResponse(e);
         }
     }

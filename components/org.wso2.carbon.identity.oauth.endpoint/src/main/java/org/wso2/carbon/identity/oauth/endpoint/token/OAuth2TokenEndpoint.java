@@ -187,12 +187,16 @@ public class OAuth2TokenEndpoint {
 
     private Response buildTokenResponse(OAuth2AccessTokenRespDTO oauth2AccessTokenResp) throws OAuthSystemException {
 
+        if (StringUtils.isBlank(oauth2AccessTokenResp.getTokenType())) {
+            oauth2AccessTokenResp.setTokenType(BEARER);
+        }
+
         OAuthTokenResponseBuilder oAuthRespBuilder = OAuthASResponse
                 .tokenResponse(HttpServletResponse.SC_OK)
                 .setAccessToken(oauth2AccessTokenResp.getAccessToken())
                 .setRefreshToken(oauth2AccessTokenResp.getRefreshToken())
                 .setExpiresIn(Long.toString(oauth2AccessTokenResp.getExpiresIn()))
-                .setTokenType(BEARER);
+                .setTokenType(oauth2AccessTokenResp.getTokenType());
         oAuthRespBuilder.setScope(oauth2AccessTokenResp.getAuthorizedScopes());
 
         if (oauth2AccessTokenResp.getIDToken() != null) {
