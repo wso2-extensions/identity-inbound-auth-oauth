@@ -4034,7 +4034,7 @@ public class OAuth2Util {
             return false;
         }
 
-        return tokenBinderOptional.get().isValidTokenBinding(request, tokenBinding.getBindingReference());
+        return tokenBinderOptional.get().isValidTokenBinding(request, tokenBinding);
     }
 
     /**
