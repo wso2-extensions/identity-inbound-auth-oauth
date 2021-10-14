@@ -2590,7 +2590,7 @@ public class OAuthServerConfiguration {
         OMElement oauthDeviceCodeGrantElement = oauthElem
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_GRANT));
 
-        if (oauthDeviceCodeGrantElement
+        if (oauthDeviceCodeGrantElement != null && oauthDeviceCodeGrantElement
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_LENGTH)) != null) {
             try {
                 deviceCodeKeyLength = Integer.parseInt(oauthDeviceCodeGrantElement
@@ -2602,7 +2602,7 @@ public class OAuthServerConfiguration {
                         .trim() + " to integer. Falling back to the default value.", e);
             }
         }
-        if (oauthDeviceCodeGrantElement
+        if (oauthDeviceCodeGrantElement != null && oauthDeviceCodeGrantElement
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_EXPIRY_TIME)) != null) {
             try {
                 deviceCodeExpiryTime = Long.parseLong(oauthDeviceCodeGrantElement
@@ -2614,7 +2614,7 @@ public class OAuthServerConfiguration {
                         .trim() + " to long. Falling back to the default value.", e);
             }
         }
-        if (oauthDeviceCodeGrantElement
+        if (oauthDeviceCodeGrantElement != null && oauthDeviceCodeGrantElement
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_POLLING_INTERVAL)) != null) {
             try {
                 deviceCodePollingInterval =
@@ -2626,7 +2626,7 @@ public class OAuthServerConfiguration {
                         .getText().trim() + " to integer. Falling back to the default value.", e);
             }
         }
-        if (oauthDeviceCodeGrantElement
+        if (oauthDeviceCodeGrantElement != null && oauthDeviceCodeGrantElement
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_SET)) != null) {
             deviceCodeKeySet = oauthDeviceCodeGrantElement
                     .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_SET)).getText().trim();

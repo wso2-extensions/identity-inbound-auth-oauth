@@ -82,6 +82,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String SCOPE = "scope";
     private static final String TOKEN_BINDING_REF = "binding_ref";
     private static final String TOKEN_BINDING_TYPE = "binding_type";
+    private static final String CNF = "cnf";
 
     private static final Log log = LogFactory.getLog(JWTTokenIssuer.class);
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
@@ -468,6 +469,10 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         // Include token binding.
         jwtClaimsSet = handleTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
 
+        if (tokenReqMessageContext != null && tokenReqMessageContext.getProperty(CNF) != null) {
+            jwtClaimsSet = handleCnf(jwtClaimsSetBuilder, tokenReqMessageContext);
+        }
+
         return jwtClaimsSet;
     }
 
@@ -516,6 +521,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
         return authenticatedUser.getAuthenticatedSubjectIdentifier();
+    }
+
+    private JWTClaimsSet handleCnf(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                   OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        jwtClaimsSetBuilder.claim(CNF, tokReqMsgCtx.getProperty(CNF));
+        return jwtClaimsSetBuilder.build();
     }
 
     private String getSubjectClaim(String clientId, String spTenantDomain, AuthenticatedUser authorizedUser)

@@ -268,6 +268,18 @@ public class OAuth2Service extends AbstractAdmin {
             tokenRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
             tokenRespDTO.setErrorMsg("Invalid Client");
             return tokenRespDTO;
+        } catch (IdentityOAuth2ClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Error occurred while issuing access token for Client ID : %s , " +
+                                "User ID: %s , Scope : %s  and Grant Type :  %s.", tokenReqDTO.getClientId(),
+                        tokenReqDTO.getResourceOwnerUsername(), Arrays.toString(tokenReqDTO.getScope()),
+                        tokenReqDTO.getGrantType()), e);
+            }
+            OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
+            tokenRespDTO.setError(true);
+            handleErrorCode(tokenRespDTO, e.getErrorCode());
+            handleErrorMessage(tokenRespDTO, e.getMessage());
+            return tokenRespDTO;
         } catch (Exception e) { // in case of an error, consider it as a system error
             log.error("Error occurred while issuing the access token for Client ID : " +
                     tokenReqDTO.getClientId() + ", User ID " + tokenReqDTO.getResourceOwnerUsername() +
@@ -750,6 +762,24 @@ public class OAuth2Service extends AbstractAdmin {
                     + oauth2Params.getClientId(), e);
         }
         return null;
+    }
+
+    private void handleErrorCode(OAuth2AccessTokenRespDTO tokenRespDTO, String errorCode) {
+
+        if (StringUtils.isNotBlank(errorCode)) {
+            tokenRespDTO.setErrorCode(errorCode);
+        } else {
+            tokenRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
+        }
+    }
+
+    private void handleErrorMessage(OAuth2AccessTokenRespDTO tokenRespDTO, String errorMessage) {
+
+        if (StringUtils.isNotBlank(errorMessage)) {
+            tokenRespDTO.setErrorMsg(errorMessage);
+        } else {
+            tokenRespDTO.setErrorMsg("Invalid Client");
+        }
     }
 }
 
