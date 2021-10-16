@@ -425,6 +425,39 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
     }
 
     /**
+     * Revoke the OAuth consents by the application name and tenant domain.
+     *
+     * @param applicationName Name of the OAuth application
+     * @param tenantDomain    Tenant domain of the application
+     * @throws IdentityOAuth2Exception If an unexpected error occurs
+     */
+    @Override
+    public void revokeOAuthConsentsByApplication(String applicationName, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        // TODO: Modify the functionality to revoke all OAuth consents of SaaS applications.
+        if (log.isDebugEnabled()) {
+            String message = String.format("Revoking all OAuth consents given for application: %s in " +
+                    "tenant domain: %s.", applicationName, tenantDomain);
+            log.debug(message);
+        }
+
+        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            try (PreparedStatement ps = connection.prepareStatement(SQLQueries.DELETE_USER_RPS_OF_APPLICATION)) {
+                ps.setInt(1, tenantId);
+                ps.setString(2, applicationName);
+                ps.execute();
+                IdentityDatabaseUtil.commitTransaction(connection);
+            }
+        } catch (SQLException e) {
+            String errorMsg = String.format("Error revoking all OAuth consents given for application: %s in " +
+                    "tenant domain: %s.", applicationName, tenantDomain);
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        }
+    }
+
+    /**
      * Update the OAuth Consent Approve Always which is recorded in the IDN_OPENID_USER_RPS table against
      * the user for a particular Application
      *
