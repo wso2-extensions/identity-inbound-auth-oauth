@@ -26,6 +26,7 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -36,6 +37,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dto.OAuthAppRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthIDTokenAlgorithmDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationRequestDTO;
@@ -53,7 +55,9 @@ import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -89,6 +93,7 @@ public class OAuthAdminServiceImpl {
     public static final String AUTHORIZATION_CODE = "authorization_code";
     static final String RESPONSE_TYPE_TOKEN = "token";
     static final String RESPONSE_TYPE_ID_TOKEN = "id_token";
+    private static final String INBOUND_AUTH2_TYPE = "oauth2";
     static List<String> allowedGrants = null;
     static String[] allowedScopeValidators = null;
 
@@ -1154,6 +1159,52 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
+     * Revoke issued tokens for the application.
+     *
+     * @param application {@link OAuthAppRevocationRequestDTO}
+     * @return revokeRespDTO {@link OAuthAppRevocationRequestDTO}
+     * @throws IdentityOAuthAdminException Error while revoking the issued tokens
+     */
+    public OAuthRevocationResponseDTO revokeIssuedTokensByApplication(OAuthAppRevocationRequestDTO application)
+            throws IdentityOAuthAdminException {
+
+        triggerPreApplicationTokenRevokeListeners(application);
+        OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
+        String consumerKey = application.getConsumerKey();
+
+        if (StringUtils.isBlank(consumerKey)) {
+            revokeRespDTO.setError(true);
+            revokeRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_REQUEST);
+            revokeRespDTO.setErrorMsg("Consumer key is null or empty.");
+            triggerPostApplicationTokenRevokeListeners(application, revokeRespDTO, new ArrayList<>());
+            return revokeRespDTO;
+        }
+
+        String tenantDomain = getTenantDomain(consumerKey);
+        String applicationName = getApplicationName(consumerKey, tenantDomain);
+        List<AccessTokenDO> accessTokenDOs = getActiveAccessTokensByConsumerKey(consumerKey);
+        if (accessTokenDOs.size() > 0) {
+            String[] accessTokens = new String[accessTokenDOs.size()];
+            int count = 0;
+            for (AccessTokenDO accessTokenDO : accessTokenDOs) {
+                accessTokens[count++] = accessTokenDO.getAccessToken();
+                clearCacheByAccessTokenAndConsumerKey(accessTokenDO, consumerKey);
+            }
+
+            if (LOG.isDebugEnabled()) {
+                String message = String.format("Access tokens and token of users are removed from the cache for " +
+                        "OAuth app in tenant domain: %s with consumer key: %s.", tenantDomain, consumerKey);
+                LOG.debug(message);
+            }
+
+            revokeAccessTokens(accessTokens, consumerKey, tenantDomain);
+            revokeOAuthConsentsForApplication(applicationName, tenantDomain);
+        }
+        triggerPostApplicationTokenRevokeListeners(application, revokeRespDTO, accessTokenDOs);
+        return revokeRespDTO;
+    }
+
+    /**
      * Revoke approve always of the consent for OAuth apps by resource owners
      *
      * @param appName name of the app
@@ -1213,6 +1264,135 @@ public class OAuthAdminServiceImpl {
                     LOG.error("Error occurred with post revocation listener.", e);
                 }
             }
+        }
+    }
+
+    private void triggerPreApplicationTokenRevokeListeners(OAuthAppRevocationRequestDTO revokeRequestDTO)
+            throws IdentityOAuthAdminException {
+
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            Map<String, Object> paramMap = new HashMap<>();
+            try {
+                oAuthEventInterceptorProxy.onPreTokenRevocationByApplication(revokeRequestDTO, paramMap);
+            } catch (IdentityOAuth2Exception e) {
+                throw handleError("Error occurred when triggering pre revocation listener.", e);
+            }
+        }
+    }
+
+    private void triggerPostApplicationTokenRevokeListeners(OAuthAppRevocationRequestDTO revokeRequestDTO,
+                                                            OAuthRevocationResponseDTO revokeRespDTO,
+                                                            List<AccessTokenDO> accessTokenDOs)
+            throws IdentityOAuthAdminException {
+
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            Map<String, Object> paramMap = new HashMap<>();
+            try {
+                oAuthEventInterceptorProxy.onPostTokenRevocationByApplication(revokeRequestDTO, revokeRespDTO,
+                        accessTokenDOs, paramMap);
+            } catch (IdentityOAuth2Exception e) {
+                throw handleError("Error occurred when triggering post revocation listener.", e);
+            }
+        }
+    }
+
+    private List<AccessTokenDO> getActiveAccessTokensByConsumerKey(String consumerKey)
+            throws IdentityOAuthAdminException {
+
+        List<AccessTokenDO> accessTokenDOs;
+        try {
+            accessTokenDOs = new ArrayList<>(OAuthTokenPersistenceFactory
+                    .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(consumerKey));
+        } catch (IdentityOAuth2Exception e) {
+            String errorMsg = String.format("Error occurred while retrieving access tokens issued for OAuth " +
+                    "app with consumer key: %s.", consumerKey);
+            throw handleError(errorMsg, e);
+        }
+        return accessTokenDOs;
+    }
+
+    private void revokeAccessTokens(String[] accessTokens, String consumerKey, String tenantDomain)
+            throws IdentityOAuthAdminException {
+
+        try {
+            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .revokeAccessTokens(accessTokens, OAuth2Util.isHashEnabled());
+        } catch (IdentityOAuth2Exception e) {
+            String errorMsg = String.format("Error occurred while revoking access tokens for OAuth app in " +
+                    "tenant domain: %s with consumer key: %s.", tenantDomain, consumerKey);
+            throw handleError(errorMsg, e);
+        }
+    }
+
+    private String getTenantDomain(String consumerKey) throws IdentityOAuthAdminException {
+
+        String tenantDomain;
+        try {
+            tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(consumerKey);
+        } catch (IdentityOAuth2Exception e) {
+            String errorMsg = String.format("Error occurred while retrieving tenant domain of OAuth app with " +
+                    "consumer key: %s.", consumerKey);
+            throw handleError(errorMsg, e);
+        } catch (InvalidOAuthClientException e) {
+            String errorMsg = String.format("Cannot find a valid OAuth app with consumer key: %s.", consumerKey);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(errorMsg, e);
+            }
+            throw handleClientError(INVALID_OAUTH_CLIENT, errorMsg);
+        }
+        return tenantDomain;
+    }
+
+    private String getApplicationName(String consumerKey, String tenantDomain)
+            throws IdentityOAuthAdminException {
+
+        String applicationName;
+        try {
+            ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder
+                    .getApplicationMgtService();
+            applicationName = applicationMgtService
+                    .getServiceProviderNameByClientId(consumerKey, INBOUND_AUTH2_TYPE, tenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+            String errorMsg = String.format("Error occurred while retrieving application name for OAuth app in " +
+                    "tenant domain: %s with consumer key: %s.", tenantDomain, consumerKey);
+            throw handleError(errorMsg, e);
+        }
+        return applicationName;
+    }
+
+    private void clearCacheByAccessTokenAndConsumerKey(AccessTokenDO accessTokenDO, String consumerKey) {
+
+        String token = accessTokenDO.getAccessToken();
+        AuthenticatedUser authenticatedUser = accessTokenDO.getAuthzUser();
+
+        OAuthCacheKey cacheKeyToken = new OAuthCacheKey(token);
+        String scope = buildScopeString(accessTokenDO.getScope());
+        TokenBinding tokenBinding = accessTokenDO.getTokenBinding();
+        String tokenBindingReference = (tokenBinding != null &&
+                StringUtils.isNotBlank(tokenBinding.getBindingReference())) ?
+                tokenBinding.getBindingReference() : NONE;
+
+        OAuthCache.getInstance().clearCacheEntry(cacheKeyToken);
+        OAuthUtil.clearOAuthCache(consumerKey, authenticatedUser, scope, tokenBindingReference);
+        OAuthUtil.clearOAuthCache(consumerKey, authenticatedUser, scope);
+        OAuthUtil.clearOAuthCache(consumerKey, authenticatedUser);
+        OAuthUtil.clearOAuthCache(accessTokenDO);
+    }
+
+    private void revokeOAuthConsentsForApplication(String applicationName, String tenantDomain)
+            throws IdentityOAuthAdminException {
+
+        try {
+            OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
+                    .revokeOAuthConsentsByApplication(applicationName, tenantDomain);
+        } catch (IdentityOAuth2Exception e) {
+            String errorMsg = String.format("Error occurred while revoking all OAuth consents given for " +
+                    "application: %s in tenant domain: %s.", applicationName, tenantDomain);
+            throw handleError(errorMsg, e);
         }
     }
 

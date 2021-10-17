@@ -619,6 +619,9 @@ public class SQLQueries {
     public static final String DELETE_USER_RPS_IN_TENANT = "DELETE FROM IDN_OPENID_USER_RPS WHERE USER_NAME = ? AND " +
             "TENANT_ID=? AND RP_URL = ?";
 
+    public static final String DELETE_USER_RPS_OF_APPLICATION = "DELETE FROM IDN_OPENID_USER_RPS WHERE TENANT_ID = ? " +
+            "AND RP_URL = ?";
+
     public static final String UPDATE_TRUSTED_ALWAYS_IDN_OPENID_USER_RPS =
             "UPDATE IDN_OPENID_USER_RPS SET TRUSTED_ALWAYS=? " +
                     "WHERE USER_NAME = ? AND TENANT_ID=? AND RP_URL = ?";
