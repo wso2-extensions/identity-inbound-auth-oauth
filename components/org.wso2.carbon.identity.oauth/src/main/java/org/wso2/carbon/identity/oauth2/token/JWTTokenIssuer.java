@@ -94,6 +94,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String SCOPE = "scope";
     private static final String TOKEN_BINDING_REF = "binding_ref";
     private static final String TOKEN_BINDING_TYPE = "binding_type";
+    private static final String DEFAULT_TYP_HEADER_VALUE = "at+jwt";
 
     private static final Log log = LogFactory.getLog(JWTTokenIssuer.class);
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
@@ -340,7 +341,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             headerBuilder.keyID(OAuth2Util.getKID(OAuth2Util.getCertificate(tenantDomain, tenantId),
                     (JWSAlgorithm) signatureAlgorithm, tenantDomain));
             // Set the required "typ" header "at+jwt" for access tokens issued by the issuer
-            headerBuilder.type(new JOSEObjectType("at+jwt"));
+            headerBuilder.type(new JOSEObjectType(DEFAULT_TYP_HEADER_VALUE));
             headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
