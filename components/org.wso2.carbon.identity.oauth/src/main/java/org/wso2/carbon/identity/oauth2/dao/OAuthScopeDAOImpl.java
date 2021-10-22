@@ -49,6 +49,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.DEFAULT_SCOPE_BINDING;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SQLPlaceholders.SCOPE_LIST_PLACEHOLDER;
 
 /**
@@ -68,7 +69,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
     @Override
     public void addScope(Scope scope, int tenantID) throws IdentityOAuth2ScopeException {
 
-        if (scope == null) {
+        if (scope == null || scope.getName() == null) {
             if (log.isDebugEnabled()) {
                 log.debug("Scope is not defined");
             }
@@ -77,6 +78,14 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
                     ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED, null);
         }
 
+        if (scope.getName().startsWith(INTERNAL_SCOPE_PREFIX) &&
+                Oauth2ScopeUtils.isSystemLevelInternalSystemScopeManagementEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Internal Scopes can't be added per tenant as they are managed at system level.");
+            }
+            throw Oauth2ScopeUtils.generateClientException(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_INTERNAL_SCOPE_MANAGED_AT_SYSTEM_LEVEL, null);
+        }
         if (log.isDebugEnabled()) {
             log.debug("Adding scope :" + scope.getName());
         }

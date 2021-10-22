@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -46,6 +47,8 @@ public class Oauth2ScopeUtils {
 
     private static final Log log = LogFactory.getLog(Oauth2ScopeUtils.class);
     public static final String OAUTH_APP_DO_PROPERTY_NAME = "OAuthAppDO";
+    private static final String OAUTH_ENABLE_SYSTEM_LEVEL_INTERNAL_SYSTEM_SCOPE_MANAGEMENT =
+            "OAuth.EnableSystemLevelInternalSystemScopeManagement";
 
     public static IdentityOAuth2ScopeServerException generateServerException(Oauth2ScopeConstants.ErrorMessages
                                                                                 error, String data)
@@ -272,6 +275,21 @@ public class Oauth2ScopeUtils {
                     return false;
                 }
             }
+        }
+        return true;
+    }
+
+    /**
+     * Configuration to maintain backward compatibility to manage the internal system scope - permission
+     * binding per tenant. By default this will be System level.
+     *
+     * @return  The internal scopes maintained at System level or not (maintained at tenant level).
+     */
+    public static boolean isSystemLevelInternalSystemScopeManagementEnabled() {
+
+        String property = IdentityUtil.getProperty(OAUTH_ENABLE_SYSTEM_LEVEL_INTERNAL_SYSTEM_SCOPE_MANAGEMENT);
+        if (StringUtils.isNotEmpty(property)) {
+            return Boolean.parseBoolean(property);
         }
         return true;
     }

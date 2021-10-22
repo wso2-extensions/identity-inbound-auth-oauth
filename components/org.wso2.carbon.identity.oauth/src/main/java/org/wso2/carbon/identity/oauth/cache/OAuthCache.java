@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationBaseCache;
 import org.wso2.carbon.identity.core.cache.AbstractCacheListener;
 import org.wso2.carbon.identity.oauth.listener.OAuthCacheRemoveListener;
@@ -35,6 +38,7 @@ public class OAuthCache extends AuthenticationBaseCache<OAuthCacheKey, CacheEntr
     private static final String OAUTH_CACHE_NAME = "OAuthCache";
     private static final List<AbstractCacheListener<OAuthCacheKey, CacheEntry>> cacheListeners = new ArrayList<>();
     private static volatile OAuthCache instance;
+    private static final Log LOG = LogFactory.getLog(OAuthCache.class);
 
     static {
         cacheListeners.add(new OAuthCacheRemoveListener());
@@ -62,9 +66,52 @@ public class OAuthCache extends AuthenticationBaseCache<OAuthCacheKey, CacheEntr
         if (entry instanceof AccessTokenDO) {
             AccessTokenDO tokenDO = (AccessTokenDO) entry;
             String tenantDomain = tokenDO.getAuthzUser().getTenantDomain();
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(String.format("AccessTokenDO was added for the given token identifier: %s in the tenant: %s.",
+                        ((AccessTokenDO) entry).getTokenId(), tenantDomain));
+            }
             super.addToCache(key, entry, tenantDomain);
         } else {
             super.addToCache(key, entry);
         }
+    }
+
+    @Override
+    public void clearCacheEntry(OAuthCacheKey key, String tenantDomain) {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Hit OAuthCache for clearing in tenant domain: " + tenantDomain);
+        }
+        if (LOG.isDebugEnabled() && getValueFromCache(key, tenantDomain) == null) {
+            LOG.debug(String.format("No cache entry found for the given cache key in the tenant: %s.", tenantDomain));
+        }
+        if (StringUtils.isNotBlank(tenantDomain)) {
+            super.clearCacheEntry(key, tenantDomain);
+        } else {
+            super.clearCacheEntry(key);
+        }
+        // Added below logs to make sure the cache is cleared properly.
+        if (LOG.isDebugEnabled() && super.getValueFromCache(key, tenantDomain) == null) {
+            LOG.debug("Successfully cleared OAuthCache for the provided key in tenant domain: " + tenantDomain);
+        }
+    }
+
+
+    @Override
+    public CacheEntry getValueFromCache(OAuthCacheKey key, String tenantDomain) {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Hit OAuthCache for getting the cache entry in tenant domain: " + tenantDomain);
+        }
+        CacheEntry cacheEntry;
+        if (StringUtils.isNotBlank(tenantDomain)) {
+            cacheEntry = super.getValueFromCache(key, tenantDomain);
+        } else {
+            cacheEntry = super.getValueFromCache(key);
+        }
+        if (LOG.isDebugEnabled() && cacheEntry != null) {
+            LOG.debug("Successfully retrieved cache entry from OauthCache for tenant domain: " + tenantDomain);
+        }
+        return cacheEntry;
     }
 }

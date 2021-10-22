@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token.bindings.handlers;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -26,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
@@ -33,6 +35,7 @@ import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
@@ -253,14 +256,35 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         if (StringUtils.isBlank(tokenBindingReference) || user == null) {
             return;
         }
+        String userId;
+        try {
+            userId = user.getUserId();
+        } catch (UserIdNotFoundException e) {
+            log.error("User id cannot be found for user: " + user.getLoggableUserId() + ". Hence skip revoking " +
+                    "relevant tokens");
+            throw new IdentityOAuth2Exception("Unable to revoke tokens for the token binding reference: "
+                    + tokenBindingReference);
+        }
+
         Set<AccessTokenDO> boundTokens = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .getAccessTokensByBindingRef(tokenBindingReference);
+        if (log.isDebugEnabled() && CollectionUtils.isEmpty(boundTokens)) {
+            log.debug("No bound tokens found for the the provided binding reference: " + tokenBindingReference);
+        }
         for (AccessTokenDO accessTokenDO : boundTokens) {
             String consumerKey = accessTokenDO.getConsumerKey();
-            if (OAuth2Util.getAppInformationByClientId(consumerKey)
-                    .isTokenRevocationWithIDPSessionTerminationEnabled() && accessTokenDO.getAuthzUser() != null &&
-                    user.toString().equals(accessTokenDO.getAuthzUser().toString())) {
-                revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
+            if (OAuth2Util.getAppInformationByClientId(consumerKey).isTokenRevocationWithIDPSessionTerminationEnabled()
+                    && accessTokenDO.getAuthzUser() != null) {
+                AuthenticatedUser authenticatedUser = new AuthenticatedUser(accessTokenDO.getAuthzUser());
+                try {
+                    if (StringUtils.equalsIgnoreCase(userId, authenticatedUser.getUserId())) {
+                        revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
+                    }
+                } catch (UserIdNotFoundException e) {
+                    log.error("User id cannot be found for user: " + authenticatedUser.getLoggableUserId());
+                    throw new IdentityOAuth2Exception("Unable to revoke tokens of the app: " + consumerKey +
+                            " for the token binding reference: " + tokenBindingReference);
+                }
             }
         }
     }
@@ -308,7 +332,11 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
             }
 
             if (accessTokenDO != null) {
-                revokeTokens(accessTokenDO.getConsumerKey(), accessTokenDO, StringUtils.EMPTY);
+                String tokenBindingRef = OAuthConstants.TokenBindings.NONE;
+                if (accessTokenDO.getTokenBinding() != null) {
+                    tokenBindingRef = accessTokenDO.getTokenBinding().getBindingReference();
+                }
+                revokeTokens(accessTokenDO.getConsumerKey(), accessTokenDO, tokenBindingRef);
             }
         }
     }
@@ -316,6 +344,10 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
     private void revokeTokens(String consumerKey, AccessTokenDO accessTokenDO, String tokenBindingReference)
             throws IdentityOAuth2Exception {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Revoking tokens for the application with consumerKey:" + consumerKey + " for the user: "
+                    + accessTokenDO.getAuthzUser().getLoggableUserId());
+        }
         OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser(), OAuth2Util.buildScopeString
                 (accessTokenDO.getScope()), tokenBindingReference);
         OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser(), OAuth2Util.buildScopeString

@@ -2723,7 +2723,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             String[] previousScope = tokenObj.getScope();
                             String[] newScope = new String[tokenObj.getScope().length + 1];
                             System.arraycopy(previousScope, 0, newScope, 0, previousScope.length);
-                            newScope[previousScope.length] = resultSet.getString(2);
+                            newScope[previousScope.length] = resultSet.getString("TOKEN_SCOPE");
                             tokenObj.setScope(newScope);
                         } else {
                             String consumerKey = resultSet.getString("CONSUMER_KEY");
@@ -2733,9 +2733,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             int tenantId = resultSet.getInt("TENANT_ID");
                             String authzUser = resultSet.getString("AUTHZ_USER");
                             String userDomain = resultSet.getString("USER_DOMAIN");
-                            String authenticatedIDP = resultSet.getString("IDP_ID");
+                            String authenticatedIDPName = resultSet.getString("NAME");
                             AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser,
-                                    userDomain, OAuth2Util.getTenantDomain(tenantId), authenticatedIDP);
+                                    userDomain, OAuth2Util.getTenantDomain(tenantId), authenticatedIDPName);
                             Timestamp issuedTime = resultSet
                                     .getTimestamp("TIME_CREATED", Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                             Timestamp refreshTokenIssuedTime =

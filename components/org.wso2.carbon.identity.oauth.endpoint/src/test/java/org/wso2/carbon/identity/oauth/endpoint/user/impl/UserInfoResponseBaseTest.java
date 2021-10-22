@@ -287,22 +287,29 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
 
         return new Object[][]{
                 // User claims, Authz user, Append Tenant Domain, Append User Store Domain, Expected Subject Claim
-                {Collections.emptyMap(), authzUserJDBCDomain, true, true, AUTHORIZED_USER_FULL_QUALIFIED},
-                {Collections.emptyMap(), authzUserJDBCDomain, true, false, AUTHORIZED_USER_WITH_TENANT},
-                {Collections.emptyMap(), authzUserJDBCDomain, false, true, AUTHORIZED_USER_WITH_DOMAIN},
-                {Collections.emptyMap(), authzUserJDBCDomain, false, false, AUTHORIZED_USER_NAME},
+                {Collections.emptyMap(), new AuthenticatedUser(authzUserJDBCDomain), true, true,
+                        AUTHORIZED_USER_FULL_QUALIFIED},
+                {Collections.emptyMap(), new AuthenticatedUser(authzUserJDBCDomain), true, false,
+                        AUTHORIZED_USER_WITH_TENANT},
+                {Collections.emptyMap(), new AuthenticatedUser(authzUserJDBCDomain), false, true,
+                        AUTHORIZED_USER_WITH_DOMAIN},
+                {Collections.emptyMap(), new AuthenticatedUser(authzUserJDBCDomain), false, false,
+                        AUTHORIZED_USER_NAME},
 
                 // Authorized user is from PRIMARY userstore domain
-                {Collections.emptyMap(), authzUserPrimaryDomain, true, true, PRIMARY_USER_WITH_TENANT},
-                {Collections.emptyMap(), authzUserPrimaryDomain, true, false, PRIMARY_USER_WITH_TENANT},
-                {Collections.emptyMap(), authzUserPrimaryDomain, false, true, PRIMARY_USER_NAME},
-                {Collections.emptyMap(), authzUserPrimaryDomain, false, false, PRIMARY_USER_NAME},
+                {Collections.emptyMap(), new AuthenticatedUser(authzUserPrimaryDomain), true, true,
+                        PRIMARY_USER_WITH_TENANT},
+                {Collections.emptyMap(), new AuthenticatedUser(authzUserPrimaryDomain), true, false,
+                        PRIMARY_USER_WITH_TENANT},
+                {Collections.emptyMap(), new AuthenticatedUser(authzUserPrimaryDomain), false, true, PRIMARY_USER_NAME},
+                {Collections.emptyMap(), new AuthenticatedUser(authzUserPrimaryDomain), false, false,
+                        PRIMARY_USER_NAME},
 
                 // Subject claim is in user claims
-                {claimMapWithSubject, authzUserJDBCDomain, true, true, SUBJECT_FULL_QUALIFIED},
-                {claimMapWithSubject, authzUserJDBCDomain, true, false, SUBJECT_WITH_TENANT},
-                {claimMapWithSubject, authzUserJDBCDomain, false, true, SUBJECT_WITH_DOMAIN},
-                {claimMapWithSubject, authzUserJDBCDomain, false, false, SUBJECT},
+                {claimMapWithSubject, new AuthenticatedUser(authzUserJDBCDomain), true, true, SUBJECT_FULL_QUALIFIED},
+                {claimMapWithSubject, new AuthenticatedUser(authzUserJDBCDomain), true, false, SUBJECT_WITH_TENANT},
+                {claimMapWithSubject, new AuthenticatedUser(authzUserJDBCDomain), false, true, SUBJECT_WITH_DOMAIN},
+                {claimMapWithSubject, new AuthenticatedUser(authzUserJDBCDomain), false, false, SUBJECT},
         };
     }
 
@@ -316,10 +323,6 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
 
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getPrimaryDomainName()).thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
-        when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
-        when(IdentityUtil.addDomainToName(anyString(), anyString())).thenCallRealMethod();
         spy(OAuth2Util.class);
 
         prepareOAuth2Util();
@@ -332,6 +335,23 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         prepareRegistry(Collections.<String, List<String>>emptyMap());
         prepareAuthorizationGrantCache(false);
         prepareClaimUtil(inputClaims);
+    }
+
+    protected void updateAuthenticatedSubjectIdentifier(AuthenticatedUser user, boolean appendTenantDomain,
+                                                        boolean appendUserStoreDomain,
+                                                        Map<String, Object> inputClaims) {
+        String sub = user.getUserName();
+        if (inputClaims.get(OAuth2Util.SUB) != null) {
+            sub = (String) inputClaims.get(OAuth2Util.SUB);
+        }
+        if (appendUserStoreDomain
+                && !UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME.equalsIgnoreCase(user.getUserStoreDomain())) {
+            sub = user.getUserStoreDomain() + "/" + sub;
+        }
+        if (appendTenantDomain) {
+            sub = sub + "@" + user.getTenantDomain();
+        }
+        user.setAuthenticatedSubjectIdentifier(sub);
     }
 
     protected void mockAccessTokenDOInOAuth2Util(AuthenticatedUser authorizedUser)

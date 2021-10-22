@@ -148,6 +148,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
 
             if (existingTokenBean != null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Latest access token is found in the OAuthCache for the app: " + consumerKey);
+                }
                 if (accessTokenRenewedPerRequest(oauthTokenIssuer, tokReqMsgCtx)) {
                     if (log.isDebugEnabled()) {
                         log.debug("TokenRenewalPerRequest is enabled. " +
@@ -509,8 +512,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 throw new IdentityOAuth2Exception(
                         "User id is not available for user: " + tokenToCache.getAuthzUser().getLoggableUserId(), e);
             }
-            OAuthCacheKey cacheKey = getOAuthCacheKey(scope, tokenToCache.getConsumerKey(),
-                    userId, tokenToCache.getAuthzUser().getFederatedIdPName(),
+
+            String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokenToCache.getAuthzUser());
+            OAuthCacheKey cacheKey = getOAuthCacheKey(scope, tokenToCache.getConsumerKey(), userId, authenticatedIDP,
                     getTokenBindingReference(tokenToCache));
             oauthCache.addToCache(cacheKey, tokenToCache);
             if (log.isDebugEnabled()) {
@@ -813,7 +817,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         if (cacheEnabled) {
             existingToken = getExistingTokenFromCache(cacheKey, tokenReq.getClientId(),
-                    tokenMsgCtx.getAuthorizedUser().getLoggableUserId(), scope, tokenBindingReference);
+                    tokenMsgCtx.getAuthorizedUser().getLoggableUserId(), scope, tokenBindingReference,
+                    tokenMsgCtx.getAuthorizedUser().getTenantDomain());
         }
 
         if (existingToken == null) {
@@ -853,11 +858,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private AccessTokenDO getExistingTokenFromCache(OAuthCacheKey cacheKey, String consumerKey, String loggableUserId,
-                                                    String scope, String tokenBindingReference)
+                                                    String scope, String tokenBindingReference, String tenantDomain)
             throws IdentityOAuth2Exception {
 
         AccessTokenDO existingToken = null;
-        CacheEntry cacheEntry = oauthCache.getValueFromCache(cacheKey);
+        CacheEntry cacheEntry = oauthCache.getValueFromCache(cacheKey, tenantDomain);
         if (cacheEntry instanceof AccessTokenDO) {
             existingToken = (AccessTokenDO) cacheEntry;
             if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
@@ -871,12 +876,19 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 removeFromCache(cacheKey, consumerKey, existingToken);
                 return null;
             }
+            return existingToken;
         }
+        if (existingToken != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Retrieved active access token from OAuthCache for the cachekey: " + cacheKey);
+            }
+        }
+
         return existingToken;
     }
 
     private void removeFromCache(OAuthCacheKey cacheKey, String consumerKey, AccessTokenDO existingAccessTokenDO) {
-        oauthCache.clearCacheEntry(cacheKey);
+        oauthCache.clearCacheEntry(cacheKey , existingAccessTokenDO.getAuthzUser().getTenantDomain());
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 log.debug("Access token(hashed) " + DigestUtils.sha256Hex(existingAccessTokenDO

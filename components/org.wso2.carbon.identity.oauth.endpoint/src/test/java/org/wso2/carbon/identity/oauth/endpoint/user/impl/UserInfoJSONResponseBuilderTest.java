@@ -149,6 +149,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
             authenticatedUser.setTenantDomain(TENANT_DOT_COM);
             authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
             authenticatedUser.setUserId(AUTHORIZED_USER_ID);
+            authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHORIZED_USER_ID);
             mockAccessTokenDOInOAuth2Util(authenticatedUser);
 
             String responseString =
@@ -202,6 +203,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
         authenticatedUser.setTenantDomain(TENANT_DOT_COM);
         authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
         authenticatedUser.setUserId(AUTHORIZED_USER_ID);
+        authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHORIZED_USER_ID);
         mockAccessTokenDOInOAuth2Util(authenticatedUser);
 
         String responseString =
@@ -261,6 +263,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
         authenticatedUser.setTenantDomain(TENANT_DOT_COM);
         authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
         authenticatedUser.setUserId(AUTHORIZED_USER_ID);
+        authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHORIZED_USER_ID);
         mockAccessTokenDOInOAuth2Util(authenticatedUser);
 
         String responseString =
@@ -287,6 +290,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
         authenticatedUser.setTenantDomain(TENANT_DOT_COM);
         authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
         authenticatedUser.setUserId(AUTHORIZED_USER_ID);
+        authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHORIZED_USER_ID);
         mockAccessTokenDOInOAuth2Util(authenticatedUser);
 
         String responseString =
@@ -306,14 +310,15 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
     @Test(dataProvider = "subjectClaimDataProvider")
     public void testSubjectClaim(Map<String, Object> inputClaims,
-                                 Object authorizedUsername,
+                                 Object authorizedUser,
                                  boolean appendTenantDomain,
                                  boolean appendUserStoreDomain,
                                  String expectedSubjectValue) throws Exception {
 
         try {
-            AuthenticatedUser authzUser = (AuthenticatedUser) authorizedUsername;
+            AuthenticatedUser authzUser = (AuthenticatedUser) authorizedUser;
             prepareForSubjectClaimTest(authzUser, inputClaims, appendTenantDomain, appendUserStoreDomain);
+            updateAuthenticatedSubjectIdentifier(authzUser, appendTenantDomain, appendUserStoreDomain, inputClaims);
 
             when(userInfoJSONResponseBuilder.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
                     .thenReturn(inputClaims);

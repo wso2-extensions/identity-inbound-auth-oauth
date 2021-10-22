@@ -102,7 +102,7 @@ public class CibaAuthRequestValidator {
             validateRequestedExpiry(claimsSet);
 
             if (log.isDebugEnabled()) {
-                log.debug(" CIBA Authentication Request made by client with clientID : " +
+                log.debug("CIBA Authentication Request made by client with clientID : " +
                         claimsSet.getIssuer() + "is properly validated.");
             }
 

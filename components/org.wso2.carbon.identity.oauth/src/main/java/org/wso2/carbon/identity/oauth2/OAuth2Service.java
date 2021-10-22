@@ -268,6 +268,18 @@ public class OAuth2Service extends AbstractAdmin {
             tokenRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
             tokenRespDTO.setErrorMsg("Invalid Client");
             return tokenRespDTO;
+        } catch (IdentityOAuth2ClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Error occurred while issuing access token for Client ID : %s , " +
+                                "User ID: %s , Scope : %s  and Grant Type :  %s.", tokenReqDTO.getClientId(),
+                        tokenReqDTO.getResourceOwnerUsername(), Arrays.toString(tokenReqDTO.getScope()),
+                        tokenReqDTO.getGrantType()), e);
+            }
+            OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
+            tokenRespDTO.setError(true);
+            handleErrorCode(tokenRespDTO, e.getErrorCode());
+            handleErrorMessage(tokenRespDTO, e.getMessage());
+            return tokenRespDTO;
         } catch (Exception e) { // in case of an error, consider it as a system error
             log.error("Error occurred while issuing the access token for Client ID : " +
                     tokenReqDTO.getClientId() + ", User ID " + tokenReqDTO.getResourceOwnerUsername() +
@@ -300,6 +312,23 @@ public class OAuth2Service extends AbstractAdmin {
         OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
                 .getOAuthEventInterceptorProxy();
         OAuthClientAuthnContext oAuthClientAuthnContext = revokeRequestDTO.getoAuthClientAuthnContext();
+
+        if (!isClientAuthenticated(oAuthClientAuthnContext)) {
+            try {
+                // Returns the authentication failure error if the client doesn't support implicit grant
+                if (!isImplicitGrantSupportedClient(revokeRequestDTO.getConsumerKey())) {
+                    return buildErrorResponse(getErrorCode(oAuthClientAuthnContext),
+                            getErrorMessage(oAuthClientAuthnContext));
+                }
+            } catch (IdentityOAuth2Exception  e) {
+                log.error("Error occurred while checking client authentication.", e);
+                return buildErrorResponse(OAuth2ErrorCodes.SERVER_ERROR, "Error occurred while revoking " +
+                        "authorization grant for application.");
+            } catch (InvalidOAuthClientException e) {
+                log.error("Invalid Client.", e);
+                return buildErrorResponse(OAuth2ErrorCodes.INVALID_CLIENT, "Client Authentication failed.");
+            }
+        }
 
         //Invoke pre listeners
 
@@ -359,9 +388,7 @@ public class OAuth2Service extends AbstractAdmin {
                                         .equals(refreshTokenDO.getRefreshTokenState()) ||
                                         OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED
                                                 .equals(refreshTokenDO.getRefreshTokenState()))) {
-                            invokePostRevocationListeners(revokeRequestDTO, revokeResponseDTO, accessTokenDO,
-                                    refreshTokenDO);
-                            return revokeResponseDTO;
+                            refreshTokenDO = null;
                         }
                     }
                 }
@@ -665,6 +692,19 @@ public class OAuth2Service extends AbstractAdmin {
                 ()) || StringUtils.equals(OAuthConstants.GrantTypes.IMPLICIT, grantType);
     }
 
+    private boolean isClientAuthenticated(OAuthClientAuthnContext oAuthClientAuthnContext) {
+
+        return oAuthClientAuthnContext != null &&
+                oAuthClientAuthnContext.isAuthenticated() && !oAuthClientAuthnContext.isMultipleAuthenticatorsEngaged();
+    }
+
+    private boolean isImplicitGrantSupportedClient(String consumerKey) throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
+
+        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+        return (oAuthAppDO != null && oAuthAppDO.getGrantTypes().contains(OAuthConstants.GrantTypes.IMPLICIT));
+    }
+
     private String getErrorMessage(OAuthClientAuthnContext oAuthClientAuthnContext) {
         String errorMessage = "Unauthorized Client";
         if (oAuthClientAuthnContext != null && StringUtils.isNotEmpty(oAuthClientAuthnContext.getErrorMessage())) {
@@ -681,6 +721,14 @@ public class OAuth2Service extends AbstractAdmin {
         return errorCode;
     }
 
+    private OAuthRevocationResponseDTO buildErrorResponse(String errorCode, String errorMessage) {
+
+        OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
+        revokeRespDTO.setError(true);
+        revokeRespDTO.setErrorCode(errorCode);
+        revokeRespDTO.setErrorMsg(errorMessage);
+        return revokeRespDTO;
+    }
 
     /**
      * Handles authorization requests denied by user.
@@ -714,6 +762,24 @@ public class OAuth2Service extends AbstractAdmin {
                     + oauth2Params.getClientId(), e);
         }
         return null;
+    }
+
+    private void handleErrorCode(OAuth2AccessTokenRespDTO tokenRespDTO, String errorCode) {
+
+        if (StringUtils.isNotBlank(errorCode)) {
+            tokenRespDTO.setErrorCode(errorCode);
+        } else {
+            tokenRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
+        }
+    }
+
+    private void handleErrorMessage(OAuth2AccessTokenRespDTO tokenRespDTO, String errorMessage) {
+
+        if (StringUtils.isNotBlank(errorMessage)) {
+            tokenRespDTO.setErrorMsg(errorMessage);
+        } else {
+            tokenRespDTO.setErrorMsg("Invalid Client");
+        }
     }
 }
 

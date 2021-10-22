@@ -167,9 +167,8 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
     private Response buildErrorResponseConsentHandlingFailure(InvalidRequestParentException exception)
             throws URISyntaxException {
 
-        if (log.isDebugEnabled()) {
-            log.debug("System Error while handling consent: ", exception);
-        }
+        log.error("System Error while handling consent: ", exception);
+
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
                 EndpointUtil.getErrorPageURL(request, OAuth2ErrorCodes.SERVER_ERROR, OAuth2ErrorCodes
                         .OAuth2SubErrorCodes.CONSENT_DENIED, "Error while handling consent.", null))).build();
@@ -190,7 +189,8 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
                         oAuthResponse.getBody());
             }
 
-            if (exception instanceof TokenEndpointAccessDeniedException) {
+            if (exception instanceof TokenEndpointAccessDeniedException ||
+                    exception instanceof InvalidApplicationClientException) {
                 return Response.status(oAuthResponse.getResponseStatus())
                         .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, EndpointUtil.getRealmInfo())
                         .entity(oAuthResponse.getBody()).build();

@@ -259,7 +259,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
                 clientId);
         Assert.assertEquals(claims.getIssuer(),
                 "https://localhost:9443/oauth2/token");
-        Assert.assertEquals(claims.getSubject(), "user@carbon.super");
+        Assert.assertEquals(claims.getSubject(), "user1");
         Assert.assertEquals(claims.getClaim("isk"), "idp");
         Assert.assertEquals(claims.getClaim("email"), "email");
         Assert.assertEquals(claims.getClaim("username"), "username");
@@ -285,7 +285,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         Assert.assertEquals(claims.getAudience().get(0),
                 clientId);
         Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
-        Assert.assertEquals(claims.getSubject(), "user@carbon.super");
+        Assert.assertEquals(claims.getSubject(), "user1");
         Assert.assertEquals(claims.getClaim("isk"), "wso2.is.com");
         Long expirationTime = ((Date) claims.getClaim("exp")).getTime();
         Assert.assertTrue(expirationTime > (new Date()).getTime());
@@ -313,7 +313,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
         Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
         Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
-        Assert.assertEquals(claims.getSubject(), "user1@carbon.super");
+        Assert.assertEquals(claims.getSubject(), "user1");
         Assert.assertEquals(claims.getClaim("acr"),  "acr");
         Assert.assertEquals(claims.getClaim("isk"), "idp");
         Assert.assertEquals(claims.getClaim("nonce"), "nonce");
@@ -341,7 +341,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
         Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
         Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
-        Assert.assertEquals(claims.getSubject(),  "user1@carbon.super");
+        Assert.assertEquals(claims.getSubject(),  "user1");
         Assert.assertEquals(claims.getClaim("isk"), "wso2.is.com");
         Long expirationTime = ((Date) claims.getClaim("exp")).getTime();
         Assert.assertTrue(expirationTime < (new Date()).getTime());

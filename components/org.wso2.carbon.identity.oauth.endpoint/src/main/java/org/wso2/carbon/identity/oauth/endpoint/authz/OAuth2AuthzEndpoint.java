@@ -196,6 +196,8 @@ public class OAuth2AuthzEndpoint {
     private static final String RESPONSE_MODE = "response_mode";
     private static final String REQUEST = "request";
     private static final String REQUEST_URI = "request_uri";
+    private static final String CODE_CHALLENGE = "code_challenge";
+    private static final String CODE_CHALLENGE_METHOD = "code_challenge_method";
 
     private static final String formPostRedirectPage = getFormPostRedirectPage();
     private static final String DISPLAY_NAME = "DisplayName";
@@ -662,11 +664,12 @@ public class OAuth2AuthzEndpoint {
                 getOauth2Params(oAuthMessage).getApplicationName(), false, oauth2Params.getClientId());
 
         OAuthErrorDTO oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleUserConsentDenial(oauth2Params);
-        OAuthProblemException ex = buildConsentDenialException(oAuthErrorDTO);
+        OAuthProblemException consentDenialException = buildConsentDenialException(oAuthErrorDTO);
 
-        String denyResponse = EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), ex, oauth2Params);
+        String denyResponse = EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(),
+                consentDenialException, oauth2Params);
         if (StringUtils.equals(oauth2Params.getResponseMode(), RESPONSE_MODE_FORM_POST)) {
-            return handleFailedState(oAuthMessage, oauth2Params, ex);
+            return handleFailedState(oAuthMessage, oauth2Params, consentDenialException);
         }
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(denyResponse)).build();
     }
@@ -680,13 +683,14 @@ public class OAuth2AuthzEndpoint {
             errorDescription = oAuthErrorDTO.getErrorDescription();
         }
 
-        OAuthProblemException error = OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED, errorDescription);
+        OAuthProblemException consentDeniedException = OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED,
+                errorDescription);
 
         // Adding Error URI if exist.
         if (oAuthErrorDTO != null && StringUtils.isNotBlank(oAuthErrorDTO.getErrorURI())) {
-            error.uri(oAuthErrorDTO.getErrorURI());
+            consentDeniedException.uri(oAuthErrorDTO.getErrorURI());
         }
-        return error;
+        return consentDeniedException;
     }
 
     private Response handleAuthenticationResponse(OAuthMessage oAuthMessage)
@@ -1196,7 +1200,7 @@ public class OAuth2AuthzEndpoint {
 
     private void setAuthorizationCode(OAuthMessage oAuthMessage, OAuth2AuthorizeRespDTO authzRespDTO,
                                       OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
-                                      String tokenBindingValue) {
+                                      String tokenBindingValue) throws OAuthSystemException {
 
         builder.setCode(authzRespDTO.getAuthorizationCode());
         addUserAttributesToOAuthMessage(oAuthMessage, authzRespDTO.getAuthorizationCode(), authzRespDTO.getCodeId(),
@@ -1222,7 +1226,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private void addUserAttributesToOAuthMessage(OAuthMessage oAuthMessage, String code, String codeId,
-                                                 String tokenBindingValue) {
+                                                 String tokenBindingValue) throws OAuthSystemException {
 
         SessionDataCacheEntry sessionDataCacheEntry = oAuthMessage.getSessionDataCacheEntry();
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry = new AuthorizationGrantCacheEntry(
@@ -1625,8 +1629,9 @@ public class OAuth2AuthzEndpoint {
         }
 
         if (isPkceSupportEnabled()) {
-            String pkceChallengeCode = oAuthMessage.getOauthPKCECodeChallenge();
-            String pkceChallengeMethod = oAuthMessage.getOauthPKCECodeChallengeMethod();
+            String pkceChallengeCode = getPkceCodeChallenge(oAuthMessage, params);
+            String pkceChallengeMethod = getPkceCodeChallengeMethod(oAuthMessage, params);
+
             String redirectURI = validatePKCEParameters(oAuthMessage, validationResponse, pkceChallengeCode,
                     pkceChallengeMethod);
             if (redirectURI != null) {
@@ -1752,6 +1757,13 @@ public class OAuth2AuthzEndpoint {
             replaceIfPresent(requestObject, ID_TOKEN_HINT, params::setIDTokenHint);
             replaceIfPresent(requestObject, PROMPT, params::setPrompt);
             replaceIfPresent(requestObject, CLAIMS, params::setEssentialClaims);
+
+            if (isPkceSupportEnabled()) {
+                // If code_challenge and code_challenge_method is sent inside the request object then add them to
+                // Oauth2 parameters.
+                replaceIfPresent(requestObject, CODE_CHALLENGE, params::setPkceCodeChallenge);
+                replaceIfPresent(requestObject, CODE_CHALLENGE_METHOD, params::setPkceCodeChallengeMethod);
+            }
 
             if (StringUtils.isNotEmpty(requestObject.getClaimValue(SCOPE))) {
                 String scopeString = requestObject.getClaimValue(SCOPE);
@@ -2680,9 +2692,11 @@ public class OAuth2AuthzEndpoint {
                     // Storing the oidc session id.
                     storeSidClaim(oAuthMessage, previousSessionState, redirectURL);
                 } else {
-                    log.warn("No session state found for the received Session ID : " + opBrowserStateCookie.getValue());
                     if (log.isDebugEnabled()) {
-                        log.debug("Restore browser session state.");
+                        log.debug(String.format(
+                                "No session state found for the received Session ID : %s. Restore browser session " +
+                                        "state.", opBrowserStateCookie.getValue()
+                        ));
                     }
                     opBrowserStateCookie = OIDCSessionManagementUtil
                             .addOPBrowserStateCookie(response, request, oAuth2Parameters.getLoginTenantDomain(),
@@ -2958,5 +2972,53 @@ public class OAuth2AuthzEndpoint {
             oAuth2Parameters = getOauth2Params(oAuthMessage);
         }
         return oAuth2Parameters;
+    }
+
+    /**
+     * Method to retrieve PkceCodeChallenge.
+     * First check whether PkceCodeChallenge available in OAuth2Parameters and retrieve. If not retrieve from
+     * request query parameters.
+     *
+     * @param oAuthMessage
+     * @param params
+     * @return
+     */
+    private String getPkceCodeChallenge(OAuthMessage oAuthMessage, OAuth2Parameters params) {
+
+        String pkceChallengeCode;
+        // If the code_challenge is in the request object, then it is added to Oauth2 params before this point.
+        if (params.getPkceCodeChallenge() != null) {
+            // If Oauth2 params contains code_challenge get value from Oauth2 params.
+            pkceChallengeCode = params.getPkceCodeChallenge();
+        } else {
+            // Else retrieve from request query params.
+            pkceChallengeCode = oAuthMessage.getOauthPKCECodeChallenge();
+        }
+
+        return pkceChallengeCode;
+    }
+
+    /**
+     * Method to retrieve PkceCodeChallengeMethod.
+     * First check whether PkceCodeChallengeMethod available in OAuth2Parameters and retrieve. If not retrieve from
+     * request query parameters.
+     *
+     * @param oAuthMessage
+     * @param params
+     * @return
+     */
+    private String getPkceCodeChallengeMethod(OAuthMessage oAuthMessage, OAuth2Parameters params) {
+
+        String pkceChallengeMethod;
+        // If the code_challenge_method is in the request object, then it is added to Oauth2 params before this point.
+        if (params.getPkceCodeChallengeMethod() != null) {
+            // If Oauth2 params contains code_challenge_method get value from Oauth2 params.
+            pkceChallengeMethod = params.getPkceCodeChallengeMethod();
+        } else {
+            // Else retrieve from request query params.
+            pkceChallengeMethod = oAuthMessage.getOauthPKCECodeChallengeMethod();
+        }
+
+        return pkceChallengeMethod;
     }
 }

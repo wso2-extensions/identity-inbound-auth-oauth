@@ -84,7 +84,6 @@ public class OAuth2TokenValidationServiceTest extends PowerMockTestCase {
         mockStatic(OAuthComponentServiceHolder.class);
         when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockedOAuthComponentServiceHolder);
         when(mockedOAuthComponentServiceHolder.getOAuthEventInterceptorProxy()).thenReturn(mockedOAuthEventInterceptor);
-
     }
 
     @Test

@@ -276,8 +276,15 @@ public class TokenValidationHandler {
                     } else if (tokenValidator instanceof RefreshTokenValidator) {
                         introResp = validateRefreshToken(messageContext, validationRequest, tokenValidator);
                     }
+                    if (log.isDebugEnabled()) {
+                        log.debug("Introspecting token of the application:" + introResp.getClientId() + " using the"
+                                + " token validator " + tokenValidator.getClass().getName());
+                    }
                     // If there aren't any errors from the above special validations.
                     if (introResp.isActive()) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Introspecting token is active for the application:" + introResp.getClientId());
+                        }
                         introResp.setTokenType(tokenValidator.getTokenType());
                         break;
                     }
