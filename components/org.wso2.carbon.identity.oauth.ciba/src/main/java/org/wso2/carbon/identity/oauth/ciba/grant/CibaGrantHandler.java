@@ -44,8 +44,8 @@ import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.SEC_TO_MI
 import static org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes.AUTHORIZATION_PENDING;
 import static org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes.EXPIRED_AUTH_REQ_ID;
 import static org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes.SLOW_DOWN;
+import static org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes.ACCESS_DENIED;
 import static org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes.INVALID_REQUEST;
-import static org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes.OAuth2SubErrorCodes.CONSENT_DENIED;
 
 /**
  * Grant Handler for CIBA.
@@ -99,6 +99,10 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             // Check whether provided authReqId is a valid and retrieve AuthCode if exists.
             CibaAuthCodeDO cibaAuthCodeDO = retrieveCibaAuthCode(authReqId);
 
+            //Validate if auth_req_id belongs to the same client
+            validateAuthReqIdOwner(cibaAuthCodeDO.getConsumerKey(),
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+
             // Check whether auth_req_id is not expired.
             validateAuthReqId(cibaAuthCodeDO);
 
@@ -109,7 +113,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
 
             // Validate whether authentication  is provided with affirmative consent.
             if (!isConsentGiven(cibaAuthCodeDO)) {
-                throw new IdentityOAuth2Exception(CONSENT_DENIED);
+                throw new IdentityOAuth2Exception(ACCESS_DENIED, "User denied authentication");
             }
 
             // Validate whether polling is under proper rate limiting.
@@ -118,7 +122,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             // Validate whether user is authenticated.
             if (isAuthorizationPending(cibaAuthCodeDO)) {
                 updateLastPolledTime(cibaAuthCodeDO);
-                throw new IdentityOAuth2Exception(AUTHORIZATION_PENDING);
+                throw new IdentityOAuth2Exception(AUTHORIZATION_PENDING, "Authorization pending");
             }
 
             setPropertiesForTokenGeneration(tokReqMsgCtx, cibaAuthCodeDO);
@@ -135,7 +139,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
      * @return String Authentication Request Identifier from the request.
      * @throws IdentityOAuth2Exception Exception thrown regarding IdentityOAuth
      */
-    private String getAuthReqId(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
+    public String getAuthReqId(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
         String authReqId = null; // Initiating auth_req_id.
         RequestParameter[] parameters = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getRequestParameters();
@@ -167,7 +171,8 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
      */
     private Boolean isConsentGiven(CibaAuthCodeDO cibaAuthCodeDO) {
 
-        return !AuthReqStatus.CONSENT_DENIED.equals(cibaAuthCodeDO.getAuthReqStatus());
+        return !(AuthReqStatus.CONSENT_DENIED.equals(cibaAuthCodeDO.getAuthReqStatus()) ||
+                AuthReqStatus.FAILED.equals(cibaAuthCodeDO.getAuthReqStatus()));
     }
 
     /**
@@ -188,7 +193,18 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             }
             CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateStatus(cibaAuthCodeDO.getCibaAuthCodeKey(),
                     AuthReqStatus.EXPIRED);
-            throw new IdentityOAuth2Exception(EXPIRED_AUTH_REQ_ID);
+            throw new IdentityOAuth2Exception(EXPIRED_AUTH_REQ_ID, "Token expired");
+        }
+    }
+
+    private void validateAuthReqIdOwner(String actualConsumerKey, String reqConsumerKey)
+            throws IdentityOAuth2Exception {
+
+        if (!actualConsumerKey.equals(reqConsumerKey)) {
+            if (log.isDebugEnabled()) {
+                log.debug("CIBA auth_req_id does not belong to the requested client.Token Request Denied.");
+            }
+            throw new IdentityOAuth2Exception("Invalid client. Request ID issued for different client");
         }
     }
 
@@ -214,7 +230,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
                         "frequency on the table.");
             }
             CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updatePollingInterval(cibaAuthCodeID, newInterval);
-            throw new IdentityOAuth2Exception(SLOW_DOWN);
+            throw new IdentityOAuth2Exception(SLOW_DOWN, "Slow down");
         }
     }
 

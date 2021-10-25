@@ -96,7 +96,7 @@ public class CibaAuthRequestValidator {
             validateBindingMessage(claimsSet);
 
             // Validate the transaction_context of the Request.
-            valiateTransactionContext(claimsSet);
+//            valiateTransactionContext(claimsSet);
 
             // Validate the requested_expiry of the Request.
             validateRequestedExpiry(claimsSet);
@@ -274,7 +274,7 @@ public class CibaAuthRequestValidator {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "Missing parameter (nbf).");
         }
         long nbfTime = claimsSet.getNotBeforeTime().getTime();
-        if (checkNotBeforeTime(currentTime, nbfTime, skewTime)) {
+        if (!checkNotBeforeTime(nbfTime, currentTime, skewTime)) {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
                         claimsSet.getIssuer() + ".The request is with invalid  value for (nbf).");
@@ -433,7 +433,7 @@ public class CibaAuthRequestValidator {
      * @param request CIBA Authentication request.
      * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
      */
-    public void validateClient(String request) throws CibaAuthFailureException {
+    public void validateClient(String request, String authenticatedClient) throws CibaAuthFailureException {
 
         try {
             SignedJWT signedJWT = SignedJWT.parse(request);
@@ -447,7 +447,7 @@ public class CibaAuthRequestValidator {
                 if (log.isDebugEnabled()) {
                     log.debug("Missing issuer of the JWT of the request : " + request);
                 }
-                throw new CibaAuthFailureException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, "Invalid value for (iss).");
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "Invalid value for (iss).");
             }
 
             // Validation for existence of clientApp  in the store.
@@ -461,6 +461,11 @@ public class CibaAuthRequestValidator {
                         "Client has not configured grant_type properly.");
             }
 
+            if (!clientId.equals(authenticatedClient)) {
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_CLIENT,
+                        "Issuer does not match with the authenticated client.");
+            }
+
             if (log.isDebugEnabled()) {
                 log.debug("CIBA Authentication Request 'request':" + request +
                         " is having a proper clientID : " + claimsSet.getIssuer() + " as the issuer.");
@@ -470,7 +475,7 @@ public class CibaAuthRequestValidator {
             if (log.isDebugEnabled()) {
                 log.debug("The request: " + request + " doesn't have a proper clientID.");
             }
-            throw new CibaAuthFailureException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, "Unknown (iss) client.");
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "Unknown (iss) client.");
 
         } catch (IdentityOAuth2Exception | ParseException ex) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Exception in validating for (iss). ");
@@ -510,6 +515,7 @@ public class CibaAuthRequestValidator {
      */
     public void validateUserHint(String authRequest) throws CibaAuthFailureException {
 
+        boolean singleHintIdentified = false;
         try {
             SignedJWT signedJWT = SignedJWT.parse(authRequest);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
@@ -531,6 +537,7 @@ public class CibaAuthRequestValidator {
             if (!(claimsSet.getClaim(CibaConstants.LOGIN_HINT_TOKEN) == null)
                     && (claimsSet.getClaim(Constants.LOGIN_HINT) == null)
                     && (claimsSet.getClaim(Constants.ID_TOKEN_HINT) == null)) {
+                singleHintIdentified = true;
                 if (log.isDebugEnabled()) {
                     log.debug("No Login_hint_token support for current version of IS.Invalid CIBA Authentication " +
                             "request : " + authRequest);
@@ -543,6 +550,7 @@ public class CibaAuthRequestValidator {
             if ((claimsSet.getClaim(CibaConstants.LOGIN_HINT_TOKEN) == null)
                     && (!(claimsSet.getClaim(Constants.LOGIN_HINT) == null))
                     && (claimsSet.getClaim(Constants.ID_TOKEN_HINT) == null)) {
+                singleHintIdentified = true;
 
                 // Claim exists for login_hint.
                 if (StringUtils.isBlank(claimsSet.getClaim(Constants.LOGIN_HINT).toString())) {
@@ -561,6 +569,7 @@ public class CibaAuthRequestValidator {
             if ((claimsSet.getClaim(CibaConstants.LOGIN_HINT_TOKEN) == null)
                     && (claimsSet.getClaim(Constants.LOGIN_HINT) == null)
                     && (!(claimsSet.getClaim(Constants.ID_TOKEN_HINT) == null))) {
+                singleHintIdentified = true;
 
                 // Value exists for id_token_hint
                 if (StringUtils.isBlank(claimsSet.getClaim(Constants.ID_TOKEN_HINT).toString())) {
@@ -585,6 +594,11 @@ public class CibaAuthRequestValidator {
                             claimsSet.getAudience() + " is having a proper id_token_hint: " +
                             claimsSet.getClaim(Constants.ID_TOKEN_HINT) + ".");
                 }
+            }
+
+            if (!singleHintIdentified) {
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "Only one hint value can be provided.");
             }
         } catch (ParseException ex) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
@@ -710,12 +724,17 @@ public class CibaAuthRequestValidator {
             cibaAuthCodeRequest.setBindingMessage(claimsSet.getStringClaim(CibaConstants.BINDING_MESSAGE));
 
             // Setting transaction_context to AuthenticationRequest after successful validation.
-            cibaAuthCodeRequest.setTransactionContext(
-                    (claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT).toJSONString()));
+//            cibaAuthCodeRequest.setTransactionContext(
+//                    (claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT).toJSONString()));
 
             // Setting requested_expiry to AuthenticationRequest after successful validation.
             if (claimsSet.getClaim(CibaConstants.REQUESTED_EXPIRY) != null) {
-                cibaAuthCodeRequest.setRequestedExpiry(claimsSet.getLongClaim(CibaConstants.REQUESTED_EXPIRY));
+                if (claimsSet.getClaim(CibaConstants.REQUESTED_EXPIRY) instanceof String) {
+                    cibaAuthCodeRequest.setRequestedExpiry(Long.parseLong(claimsSet.getStringClaim
+                            (CibaConstants.REQUESTED_EXPIRY)));
+                } else {
+                    cibaAuthCodeRequest.setRequestedExpiry(claimsSet.getLongClaim(CibaConstants.REQUESTED_EXPIRY));
+                }
             } else {
                 cibaAuthCodeRequest.setRequestedExpiry(0);
             }
