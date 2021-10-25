@@ -186,9 +186,7 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
                 {"carbon.super", true, true, new IdentityApplicationManagementException("Error"),
                         "Error while retrieving service provider"},
                 {"carbon.super", true, true, new UserStoreException(), "Error while retrieving user store"},
-                {"wso2.com", false, true, null, "Authentication failed for user"},
-                {"wso2.com", true, false, null, "Cross tenant access of non Saas application"},
-
+                {"wso2.com", false, true, null, "Authentication failed for user"}
         };
     }
 
