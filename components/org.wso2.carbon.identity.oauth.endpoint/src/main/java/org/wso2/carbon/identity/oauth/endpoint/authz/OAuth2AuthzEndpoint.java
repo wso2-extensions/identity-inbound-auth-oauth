@@ -557,11 +557,16 @@ public class OAuth2AuthzEndpoint {
                                                        OAuth2Parameters oAuth2Parameters)
             throws SSOConsentServiceException {
 
+        List<String> claimsListOfScopes =
+                openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oAuth2Parameters.getScopes(),
+                        oAuth2Parameters.getTenantDomain());
         if (hasPromptContainsConsent(oAuth2Parameters)) {
             // Ignore all previous consents and get consent required claims
-            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user);
+            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user,
+                    claimsListOfScopes);
         } else {
-            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user);
+            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user,
+                    claimsListOfScopes);
         }
     }
 
@@ -2066,7 +2071,8 @@ public class OAuth2AuthzEndpoint {
         }
 
         try {
-            ConsentClaimsData claimsForApproval = getConsentRequiredClaims(user, serviceProvider, useExistingConsents);
+            ConsentClaimsData claimsForApproval = getConsentRequiredClaims(user, serviceProvider, useExistingConsents,
+                    oauth2Params);
             if (claimsForApproval != null) {
                 String requestClaimsQueryParam = null;
                 // Get the mandatory claims and append as query param.
@@ -2238,12 +2244,18 @@ public class OAuth2AuthzEndpoint {
 
     private ConsentClaimsData getConsentRequiredClaims(AuthenticatedUser user,
                                                        ServiceProvider serviceProvider,
-                                                       boolean useExistingConsents) throws SSOConsentServiceException {
+                                                       boolean useExistingConsents, OAuth2Parameters oAuth2Parameters)
+            throws SSOConsentServiceException {
 
+        List<String> claimsListOfScopes =
+                openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oAuth2Parameters.getScopes(),
+                        oAuth2Parameters.getTenantDomain());
         if (useExistingConsents) {
-            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user);
+            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user,
+                    claimsListOfScopes);
         } else {
-            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user);
+            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user,
+                    claimsListOfScopes);
         }
     }
 
