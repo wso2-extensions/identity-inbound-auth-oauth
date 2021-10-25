@@ -109,16 +109,17 @@ public class CibaAuthResponseHandler {
         cibaErrorResponse.put("error", cibaAuthFailureException.getErrorCode());
         cibaErrorResponse.put("error_description", cibaAuthFailureException.getMessage());
 
-        if (errorCode.equals(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT) || errorCode.equals(ErrorCodes.UNAUTHORIZED_USER)) {
+        Response.ResponseBuilder respBuilder;
+        //todo: remove unauth user since not menstioned in spec for 401
+        if (errorCode.equals(OAuth2ErrorCodes.INVALID_CLIENT) || errorCode.equals(ErrorCodes.UNAUTHORIZED_USER)) {
 
             // Creating error response for the request.
-            Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED);
-            return respBuilder.entity(cibaErrorResponse.toString()).build();
+            respBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED);
 
         } else {
-            Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
-            return respBuilder.entity(cibaErrorResponse.toString()).build();
+            respBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
         }
+        return respBuilder.entity(cibaErrorResponse.toString()).build();
     }
 
     /**
