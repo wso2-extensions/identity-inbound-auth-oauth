@@ -2474,7 +2474,8 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setSessionDataKey(oauth2Params.getSessionDataKey());
         authzReqDTO.setRequestObjectFlow(oauth2Params.isRequestObjectFlow());
         authzReqDTO.setIdpSessionIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
-        authzReqDTO.setLoginTenantDomain(oauth2Params.getLoginTenantDomain());
+        authzReqDTO.setLoggedInTenantDomain(oauth2Params.getLoginTenantDomain());
+
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {
             authzReqDTO.addProperty(OAuthConstants.AMR, sessionDataCacheEntry.getParamMap().get(OAuthConstants.AMR));
