@@ -954,6 +954,12 @@ public class OIDCLogoutServlet extends HttpServlet {
 
     private void clearTokenBindingElements(String clientId, HttpServletRequest request, HttpServletResponse response) {
 
+        if (StringUtils.isBlank(clientId)) {
+            log.debug("Logout request received without a client id. "
+                    + "So skipping the clearing token binding element.");
+            return;
+        }
+
         OAuthAppDO oAuthAppDO;
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
