@@ -2662,7 +2662,7 @@ public class OAuth2AuthzEndpoint {
         if (sessionDataCacheEntry != null) {
             return sessionDataCacheEntry.getSessionContextIdentifier();
         }
-        return null;
+        return StringUtils.EMPTY;
     }
 
     /**

@@ -127,7 +127,7 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
         if (opbsCookie != null) {
             return opbsCookie.getValue();
         }
-        return null;
+        return StringUtils.EMPTY;
     }
 
     /**
@@ -146,7 +146,7 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
         if (log.isDebugEnabled()) {
             log.debug("Since the session context is not found in the event, could not get the opbs cookie value");
         }
-        return null;
+        return StringUtils.EMPTY;
     }
 
     private HttpServletRequest getHttpRequestFromEvent(Event event) {

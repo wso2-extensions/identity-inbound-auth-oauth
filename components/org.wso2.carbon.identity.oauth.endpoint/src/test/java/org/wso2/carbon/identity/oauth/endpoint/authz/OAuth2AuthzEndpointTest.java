@@ -1360,8 +1360,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(sessionDataCache.getValueFromCache(loginDataCacheKey)).thenReturn(loginCacheEntry);
         when(loginCacheEntry.getLoggedInUser()).thenReturn(result.getSubject());
         when(loginCacheEntry.getSessionContextIdentifier()).thenReturn(identifier);
-        String sessionContextIdentifier = WhiteboxImpl.invokeMethod(authzEndpointObject, "getSessionContextIdentifier"
-                , loginCacheEntry);
+        String sessionContextIdentifier = WhiteboxImpl.invokeMethod(authzEndpointObject, "getSessionContextIdentifier",
+                loginCacheEntry);
         if (identifier != null) {
             assertNotNull(sessionContextIdentifier, "Session context identifier should not be null");
         } else {
