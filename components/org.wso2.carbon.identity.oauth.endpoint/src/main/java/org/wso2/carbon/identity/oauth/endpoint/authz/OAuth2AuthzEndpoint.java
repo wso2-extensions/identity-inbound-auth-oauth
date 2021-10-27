@@ -1761,7 +1761,13 @@ public class OAuth2AuthzEndpoint {
             replaceIfPresent(requestObject, LOGIN_HINT, params::setLoginHint);
             replaceIfPresent(requestObject, ID_TOKEN_HINT, params::setIDTokenHint);
             replaceIfPresent(requestObject, PROMPT, params::setPrompt);
-            replaceIfPresent(requestObject, CLAIMS, params::setEssentialClaims);
+
+            if (requestObject.getClaim(CLAIMS) instanceof net.minidev.json.JSONObject) {
+                // Claims in the request object is in the type of net.minidev.json.JSONObject,
+                // hence retrieving claims as a JSONObject
+                net.minidev.json.JSONObject claims = (net.minidev.json.JSONObject) requestObject.getClaim(CLAIMS);
+                params.setEssentialClaims(claims.toJSONString());
+            }
 
             if (isPkceSupportEnabled()) {
                 // If code_challenge and code_challenge_method is sent inside the request object then add them to
