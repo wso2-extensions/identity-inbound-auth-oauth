@@ -325,7 +325,6 @@ public class OAuth2Service extends AbstractAdmin {
                 return buildErrorResponse(OAuth2ErrorCodes.SERVER_ERROR, "Error occurred while revoking " +
                         "authorization grant for application.");
             } catch (InvalidOAuthClientException e) {
-                log.error("Invalid Client.", e);
                 return buildErrorResponse(OAuth2ErrorCodes.INVALID_CLIENT, "Client Authentication failed.");
             }
         }
@@ -478,7 +477,6 @@ public class OAuth2Service extends AbstractAdmin {
             }
 
         } catch (InvalidOAuthClientException e) {
-            log.error("Unauthorized Client", e);
             OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
             revokeRespDTO.setError(true);
             revokeRespDTO.setErrorCode(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT);
@@ -648,7 +646,6 @@ public class OAuth2Service extends AbstractAdmin {
             return appDO.getState();
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             String msg = "Error while finding application state for application with client_id: " + consumerKey;
-            log.error(msg);
             if (log.isDebugEnabled()) {
                 log.debug(msg, e);
             }
