@@ -57,7 +57,6 @@ public class WebFingerServlet extends HttpServlet {
             httpServletResponse.setStatus(processor.handleError(e));
             return;
         } catch (ServerConfigurationException e) {
-            log.error("Server Configuration error occurred.", e);
             httpServletResponse.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             return;
         }

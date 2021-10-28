@@ -411,7 +411,6 @@ public class AccessTokenIssuer {
                 String idToken = builder.buildIDToken(tokReqMsgCtx, tokenRespDTO);
                 tokenRespDTO.setIDToken(idToken);
             } catch (IDTokenValidationFailureException e) {
-                log.error(e.getMessage());
                 tokenRespDTO = handleError(OAuth2ErrorCodes.SERVER_ERROR, "Server Error", tokenReqDTO);
                 return tokenRespDTO;
             }

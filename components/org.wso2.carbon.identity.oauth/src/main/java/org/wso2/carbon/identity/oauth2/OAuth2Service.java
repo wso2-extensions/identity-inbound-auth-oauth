@@ -105,8 +105,6 @@ public class OAuth2Service extends AbstractAdmin {
                     AuthorizationHandlerManager.getInstance();
             return authzHandlerManager.handleAuthorization(oAuth2AuthorizeReqDTO);
         } catch (Exception e) {
-            log.error("Error occurred when processing the authorization request. Returning an error back to client.",
-                    e);
             OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
             authorizeRespDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
             authorizeRespDTO.setErrorMsg("Error occurred when processing the authorization " +
@@ -213,7 +211,6 @@ public class OAuth2Service extends AbstractAdmin {
             validationResponseDTO.setErrorMsg(e.getMessage());
             return validationResponseDTO;
         } catch (IdentityOAuth2Exception e) {
-            log.error("Error when reading the Application Information.", e);
             validationResponseDTO.setValidClient(false);
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
             validationResponseDTO.setErrorMsg("Error when processing the authorization request.");
@@ -281,10 +278,7 @@ public class OAuth2Service extends AbstractAdmin {
             handleErrorMessage(tokenRespDTO, e.getMessage());
             return tokenRespDTO;
         } catch (Exception e) { // in case of an error, consider it as a system error
-            log.error("Error occurred while issuing the access token for Client ID : " +
-                    tokenReqDTO.getClientId() + ", User ID " + tokenReqDTO.getResourceOwnerUsername() +
-                    ", Scope : " + Arrays.toString(tokenReqDTO.getScope()) + " and Grant Type : " +
-                    tokenReqDTO.getGrantType(), e);
+
             OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
             tokenRespDTO.setError(true);
             if (e.getCause() != null && e.getCause().getCause() != null && (
@@ -321,11 +315,9 @@ public class OAuth2Service extends AbstractAdmin {
                             getErrorMessage(oAuthClientAuthnContext));
                 }
             } catch (IdentityOAuth2Exception  e) {
-                log.error("Error occurred while checking client authentication.", e);
                 return buildErrorResponse(OAuth2ErrorCodes.SERVER_ERROR, "Error occurred while revoking " +
                         "authorization grant for application.");
             } catch (InvalidOAuthClientException e) {
-                log.error("Invalid Client.", e);
                 return buildErrorResponse(OAuth2ErrorCodes.INVALID_CLIENT, "Client Authentication failed.");
             }
         }
@@ -337,7 +329,6 @@ public class OAuth2Service extends AbstractAdmin {
                 Map<String, Object> paramMap = new HashMap<>();
                 oAuthEventInterceptorProxy.onPreTokenRevocationByClient(revokeRequestDTO, paramMap);
             } catch (IdentityOAuth2Exception e) {
-                log.error(e);
                 revokeResponseDTO.setError(true);
                 revokeResponseDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
                 revokeResponseDTO.setErrorMsg("Error occurred while revoking authorization grant for applications");
@@ -486,7 +477,6 @@ public class OAuth2Service extends AbstractAdmin {
             invokePostRevocationListeners(revokeRequestDTO, revokeResponseDTO, accessTokenDO, refreshTokenDO);
             return revokeRespDTO;
         } catch (IdentityException e) {
-            log.error("Error occurred while revoking authorization grant for applications", e);
             OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
             revokeRespDTO.setError(true);
             revokeRespDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);

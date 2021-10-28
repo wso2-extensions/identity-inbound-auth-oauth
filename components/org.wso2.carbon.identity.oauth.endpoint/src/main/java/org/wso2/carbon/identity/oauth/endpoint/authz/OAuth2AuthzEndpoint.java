@@ -2544,7 +2544,6 @@ public class OAuth2AuthzEndpoint {
             invokeCommonauthFlow(oAuthMessage, responseWrapper);
             return processAuthResponseFromFramework(oAuthMessage, responseWrapper);
         } catch (ServletException | IOException | URLBuilderException e) {
-            log.error("Error occurred while sending request to authentication framework.");
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -2651,7 +2650,6 @@ public class OAuth2AuthzEndpoint {
                 return authorize(requestWrapper, responseWrapper);
             }
         } catch (ServletException | IOException | URLBuilderException e) {
-            log.error("Error occurred while sending request to authentication framework.");
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
     }

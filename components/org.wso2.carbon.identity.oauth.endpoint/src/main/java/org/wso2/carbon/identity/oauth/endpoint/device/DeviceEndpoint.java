@@ -159,7 +159,6 @@ public class DeviceEndpoint {
 
     private Response handleIdentityOAuth2Exception(IdentityOAuth2Exception e) throws OAuthSystemException {
 
-        log.error("Error while checking for unique user_code", e);
         OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
                 setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error.")
                 .buildJSONMessage();
@@ -183,7 +182,6 @@ public class DeviceEndpoint {
 
     private Response handleURLBuilderException(URLBuilderException e) throws OAuthSystemException {
 
-        log.error("Error occurred while sending request to authentication framework.", e);
         OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
                 setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error.")
                 .buildJSONMessage();

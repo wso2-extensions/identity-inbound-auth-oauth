@@ -74,7 +74,6 @@ public class DefaultWebFingerProcessor implements WebFingerProcessor {
             log.error(WebFingerConstants.ERROR_MESSAGE_NO_WEBFINGER_CONFIG, error);
             return HttpServletResponse.SC_NOT_FOUND;
         } else {
-            log.error("Internal server error occured. ", error);
             return HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
         }
 
