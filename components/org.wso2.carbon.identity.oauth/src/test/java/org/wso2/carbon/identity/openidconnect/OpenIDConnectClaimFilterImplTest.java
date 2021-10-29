@@ -150,6 +150,20 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
     }
 
     @Test
+    public void testHandleUpdatedAtClaim() {
+
+        claims = new HashMap<>();
+        claims.put("updated_at", "2021-10-27T11:34:13.791Z");
+        String[] requestedScopes = {"profile"};
+        OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = new OIDCScopeClaimCacheEntry();
+        oidcScopeClaimCacheEntry.setScopeClaimMapping(getScopeDTOList());
+        OIDCScopeClaimCache.getInstance().addScopeClaimMap(-1234, oidcScopeClaimCacheEntry);
+        Map<String, Object> filteredClaims = openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(claims,
+                requestedScopes, CLIENT_ID, SP_TENANT_DOMAIN);
+        Assert.assertEquals(filteredClaims.get("updated_at"), (long) 1635314653);
+    }
+
+    @Test
     public void testGetClaimsFilteredByUserConsent() throws Exception {
 
         claims = getClaims();
@@ -298,9 +312,18 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
         scopeDTOForAddress.setDescription("addressDescription");
         String[] claimsForAddress = new String[]{"claim3"};
         scopeDTOForAddress.setClaim(claimsForAddress);
+
+        ScopeDTO scopeDTOForProfile = new ScopeDTO();
+        scopeDTOForProfile.setName("profile");
+        scopeDTOForProfile.setDisplayName("profileDisplayName");
+        scopeDTOForProfile.setDescription("profileDescription");
+        String[] claimsForProfile = new String[]{"updated_at"};
+        scopeDTOForProfile.setClaim(claimsForProfile);
+
         scopeDTOList = new ArrayList<>();
         scopeDTOList.add(scopeDTOForEmail);
         scopeDTOList.add(scopeDTOForAddress);
+        scopeDTOList.add(scopeDTOForProfile);
         return scopeDTOList;
     }
 
