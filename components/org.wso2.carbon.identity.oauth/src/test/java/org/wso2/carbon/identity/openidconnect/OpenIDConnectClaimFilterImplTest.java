@@ -152,15 +152,19 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
     @Test
     public void testHandleUpdatedAtClaim() {
 
+        String date = "2021-10-27T11:34:13.791Z";
         claims = new HashMap<>();
-        claims.put("updated_at", "2021-10-27T11:34:13.791Z");
+        claims.put("updated_at", date);
         String[] requestedScopes = {"profile"};
         OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = new OIDCScopeClaimCacheEntry();
         oidcScopeClaimCacheEntry.setScopeClaimMapping(getScopeDTOList());
         OIDCScopeClaimCache.getInstance().addScopeClaimMap(-1234, oidcScopeClaimCacheEntry);
         Map<String, Object> filteredClaims = openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(claims,
                 requestedScopes, CLIENT_ID, SP_TENANT_DOMAIN);
-        Assert.assertEquals(filteredClaims.get("updated_at"), (long) 1635314653);
+        // Due to the effect of time zone during time conversion, considering only the seconds during comparison
+        // Check is to ensure this claim is in seconds not milliseconds
+        String filteredDate = String.valueOf(filteredClaims.get("updated_at"));
+        Assert.assertEquals(filteredDate.substring(8), "53");
     }
 
     @Test
