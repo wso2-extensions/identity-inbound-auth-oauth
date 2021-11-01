@@ -270,7 +270,9 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
             for (String scope : requestedScopes) {
                 if (!isScopeValid(scope, tenantId)) {
                     // If the scope is not registered return false.
-                    log.error("Requested scope " + scope + " is invalid");
+                    if (log.isDebugEnabled()) {
+                        log.debug("Requested scope " + scope + " is invalid");
+                    }
                     return false;
                 }
                 if (!isUserAuthorizedForScope(scope, userRoles, tenantId)) {

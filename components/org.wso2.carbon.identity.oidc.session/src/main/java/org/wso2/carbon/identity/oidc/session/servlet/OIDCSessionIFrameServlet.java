@@ -88,11 +88,17 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
                 log.debug("Client Origin : " + clientOrigin);
             }
             response.getWriter().print(getOPIFrame(clientOrigin));
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (IdentityOAuth2Exception e) {
             log.error("Error while retrieving OAuth application information for the provided client id : " + clientId +
                     ", " + e.getMessage());
             if (log.isDebugEnabled()) {
                 log.debug(e);
+            }
+            response.getWriter().print(ERROR_RESPONSE);
+        } catch (InvalidOAuthClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while retrieving OAuth application information for the provided client id : \" + " +
+                        "clientId : "+ clientId + "," + e.getMessage());
             }
             response.getWriter().print(ERROR_RESPONSE);
         } catch (OIDCSessionManagerException e) {

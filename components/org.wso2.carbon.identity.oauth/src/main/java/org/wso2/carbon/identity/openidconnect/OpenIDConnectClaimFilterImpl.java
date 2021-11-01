@@ -524,7 +524,6 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         } catch (ClaimMetadataException e) {
             String msg = "Error while trying to convert user consented claims to OIDC dialect in tenantDomain: "
                     + tenantDomain;
-            log.error(msg);
             if (log.isDebugEnabled()) {
                 log.debug(msg, e);
             }

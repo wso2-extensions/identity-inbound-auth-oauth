@@ -329,7 +329,9 @@ public class OIDCLogoutServlet extends HttpServlet {
             } else {
                 if (!validateIdToken(idTokenHint)) {
                     String msg = "ID token signature validation failed.";
-                    log.error(msg);
+                    if(log.isDebugEnabled()) {
+                        log.debug(msg);
+                    }
                     redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
                     return redirectURL;
                 }
@@ -449,8 +451,14 @@ public class OIDCLogoutServlet extends HttpServlet {
         } catch (ParseException e) {
             log.error("Error occurred while extracting client id from id token", e);
             return null;
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (IdentityOAuth2Exception e) {
             log.error("Error occurred while getting oauth application information.", e);
+            return null;
+        } catch (InvalidOAuthClientException e) {
+            if(log.isDebugEnabled()) {
+                log.debug("Error occurred while getting tenant domain for signature validation with id token: "
+                        + idToken, e);
+            }
             return null;
         }
         return tenantDomain;

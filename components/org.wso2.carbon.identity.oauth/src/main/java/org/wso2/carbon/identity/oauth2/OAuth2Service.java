@@ -555,7 +555,9 @@ public class OAuth2Service extends AbstractAdmin {
             }
         }
         if (!isOICScope) {
-            log.error("AccessToken does not have the openid scope");
+            if (log.isDebugEnabled()) {
+                log.debug("AccessToken does not have the openid scope");
+            }
             return new Claim[0];
         }
 

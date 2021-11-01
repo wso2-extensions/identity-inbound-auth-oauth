@@ -104,8 +104,12 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
             } else {
                 revokeTokensForCommonAuthCookie(request, context.getLastAuthenticatedUser());
             }
-        } catch (IdentityOAuth2Exception | OAuthSystemException | InvalidOAuthClientException e) {
+        } catch (IdentityOAuth2Exception | OAuthSystemException  e) {
             log.error("Error while revoking the tokens on session termination.", e);
+        } catch (InvalidOAuthClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while revoking the tokens on session termination.", e);
+            }
         }
     }
 

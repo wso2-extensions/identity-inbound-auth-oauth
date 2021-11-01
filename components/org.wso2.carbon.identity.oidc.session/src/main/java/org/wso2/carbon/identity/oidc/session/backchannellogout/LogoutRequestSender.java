@@ -139,8 +139,13 @@ public class LogoutRequestSender {
         try {
             DefaultLogoutTokenBuilder logoutTokenBuilder = new DefaultLogoutTokenBuilder();
             logoutTokenList = logoutTokenBuilder.buildLogoutToken(opbsCookie, tenantDomain);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (IdentityOAuth2Exception e) {
             log.error("Error while initializing " + DefaultLogoutTokenBuilder.class, e);
+        } catch (InvalidOAuthClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while obtaining logout token list for the obpsCookie: "+ opbsCookie+
+                                "& tenant domain: "+ tenantDomain, e);
+            }
         }
         return logoutTokenList;
     }
