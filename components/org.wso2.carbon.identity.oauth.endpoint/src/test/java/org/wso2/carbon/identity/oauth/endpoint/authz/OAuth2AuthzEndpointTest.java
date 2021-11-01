@@ -246,6 +246,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     private static final String APP_REDIRECT_URL_JSON = "{\"url\":\"http://localhost:8080/redirect\"}";
     private static final String SP_DISPLAY_NAME = "DisplayName";
     private static final String SP_NAME = "Name";
+    private static final String STATE = "JEZGpTb8IF";
 
     private OAuth2AuthzEndpoint oAuth2AuthzEndpoint;
     private Object authzEndpointObject;
@@ -568,6 +569,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         OAuth2Parameters oAuth2Params = setOAuth2Parameters(scopes, APP_NAME, responseMode, redirectUri);
         oAuth2Params.setClientId(CLIENT_ID_VALUE);
+        oAuth2Params.setState(STATE);
         when(loginCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
         when(loginCacheEntry.getLoggedInUser()).thenReturn(result.getSubject());
 
@@ -602,6 +604,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
             Response response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
             assertEquals(response.getStatus(), expected, "Unexpected HTTP response status");
+            if (!isAuthenticated) {
+                assertTrue(response.getEntity().toString().contains(OAuthConstants.OAuth20Params.STATE));
+            }
         }
     }
 
