@@ -490,7 +490,7 @@ public class CibaAuthRequestValidator {
 
         if (currentTimeInMillis + timeStampSkewMillis < notBeforeTimeMillis) {
             if (log.isDebugEnabled()) {
-                log.error("JSON Web Token is used before Not_Before_Time." +
+                log.debug("JSON Web Token is used before Not_Before_Time." +
                         ", Not Before Time(ms) : " + notBeforeTimeMillis +
                         ", TimeStamp Skew : " + timeStampSkewMillis +
                         ", Current Time : " + currentTimeInMillis + ". JWT Rejected.");

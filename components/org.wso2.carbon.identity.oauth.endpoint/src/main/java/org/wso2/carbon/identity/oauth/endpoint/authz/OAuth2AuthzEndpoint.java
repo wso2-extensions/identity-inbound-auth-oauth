@@ -1684,7 +1684,9 @@ public class OAuth2AuthzEndpoint {
             try {
                 params.setMaxAge(Long.parseLong(maxAgeParam));
             } catch (NumberFormatException ex) {
-                log.error("Invalid max_age parameter: '" + maxAgeParam + "' sent in the authorization request.");
+                if (log.isDebugEnabled()) {
+                    log.debug("Invalid max_age parameter: '" + maxAgeParam + "' sent in the authorization request.");
+                }
                 throw new InvalidRequestException("Invalid max_age parameter value sent in the authorization request" +
                         ".", OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_PARAMETERS);
             }

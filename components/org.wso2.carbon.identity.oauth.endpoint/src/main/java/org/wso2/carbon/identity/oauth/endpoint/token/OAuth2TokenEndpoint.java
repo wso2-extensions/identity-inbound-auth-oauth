@@ -153,7 +153,9 @@ public class OAuth2TokenEndpoint {
                 log.debug("Error: " + e.getError() + ", description: " + e.getDescription());
             }
         } else {
-            log.error("Error while creating the Carbon OAuth token request", e);
+            if (log.isDebugEnabled()) {
+                log.debug("Error while creating the Carbon OAuth token request", e);
+            }
         }
         throw new TokenEndpointBadRequestException(e.getDescription(), e);
     }
