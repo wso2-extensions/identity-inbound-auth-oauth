@@ -143,8 +143,8 @@ public class LogoutRequestSender {
             log.error("Error while initializing " + DefaultLogoutTokenBuilder.class, e);
         } catch (InvalidOAuthClientException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Error while obtaining logout token list for the obpsCookie: "+ opbsCookie+
-                                "& tenant domain: "+ tenantDomain, e);
+                log.debug("Error while obtaining logout token list for the obpsCookie: " + opbsCookie +
+                                "& tenant domain: " + tenantDomain, e);
             }
         }
         return logoutTokenList;

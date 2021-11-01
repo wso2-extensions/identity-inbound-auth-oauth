@@ -329,7 +329,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             } else {
                 if (!validateIdToken(idTokenHint)) {
                     String msg = "ID token signature validation failed.";
-                    if(log.isDebugEnabled()) {
+                    if (log.isDebugEnabled()) {
                         log.debug(msg);
                     }
                     redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
@@ -455,7 +455,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             log.error("Error occurred while getting oauth application information.", e);
             return null;
         } catch (InvalidOAuthClientException e) {
-            if(log.isDebugEnabled()) {
+            if (log.isDebugEnabled()) {
                 log.debug("Error occurred while getting tenant domain for signature validation with id token: "
                         + idToken, e);
             }
