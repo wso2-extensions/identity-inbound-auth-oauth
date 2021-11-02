@@ -605,7 +605,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             Response response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
             assertEquals(response.getStatus(), expected, "Unexpected HTTP response status");
             if (!isAuthenticated) {
-                assertTrue(response.getEntity().toString().contains(OAuthConstants.OAuth20Params.STATE));
+                String expectedState = "name=\"" + OAuthConstants.OAuth20Params.STATE + "\" value=\"" + STATE + "\"";
+                assertTrue(response.getEntity().toString().contains(expectedState));
             }
         }
     }
