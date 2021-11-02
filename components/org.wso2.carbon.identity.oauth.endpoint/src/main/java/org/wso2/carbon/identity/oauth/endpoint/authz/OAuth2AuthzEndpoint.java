@@ -775,6 +775,7 @@ public class OAuth2AuthzEndpoint {
 
         String redirectURL = EndpointUtil.getErrorRedirectURL(oauthException, oauth2Params);
         if (StringUtils.equals(oauth2Params.getResponseMode(), RESPONSE_MODE_FORM_POST)) {
+            oauthException.state(oauth2Params.getState());
             return handleFormPostResponseModeError(oAuthMessage, oauthException);
         } else {
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
@@ -967,6 +968,12 @@ public class OAuth2AuthzEndpoint {
         if (StringUtils.isNotEmpty(oauthProblemException.getDescription())) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"error_description\" value=\"")
                     .append(oauthProblemException.getDescription())
+                    .append("\"/>\n");
+        }
+
+        if (StringUtils.isNotEmpty(oauthProblemException.getState())) {
+            paramStringBuilder.append("<input type=\"hidden\" name=\"state\" value=\"")
+                    .append(oauthProblemException.getState())
                     .append("\"/>\n");
         }
 
