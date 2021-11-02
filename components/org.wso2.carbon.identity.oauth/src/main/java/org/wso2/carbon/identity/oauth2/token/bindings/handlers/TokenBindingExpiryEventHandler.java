@@ -92,7 +92,10 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
             if (FrameworkConstants.RequestType.CLAIM_TYPE_OIDC.equals(request.getParameter(TYPE))) {
 
                 String consumerKey = context.getRelyingParty();
-                String bindingType = OAuth2Util.getAppInformationByClientId(consumerKey).getTokenBindingType();
+                String bindingType = null;
+                if (StringUtils.isNotBlank(consumerKey)) {
+                    bindingType = OAuth2Util.getAppInformationByClientId(consumerKey).getTokenBindingType();
+                }
 
                 if (bindingType != null) {
                     revokeTokensForBindingType(request, context.getLastAuthenticatedUser(), consumerKey, bindingType);
