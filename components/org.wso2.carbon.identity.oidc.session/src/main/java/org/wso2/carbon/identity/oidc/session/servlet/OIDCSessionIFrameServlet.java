@@ -102,7 +102,9 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
             }
             response.getWriter().print(ERROR_RESPONSE);
         } catch (OIDCSessionManagerException e) {
-            log.error(e.getMessage(), e);
+            if (log.isDebugEnabled()) {
+                log.debug(e.getMessage(), e);
+            }
             response.getWriter().print(ERROR_RESPONSE);
         }
     }
