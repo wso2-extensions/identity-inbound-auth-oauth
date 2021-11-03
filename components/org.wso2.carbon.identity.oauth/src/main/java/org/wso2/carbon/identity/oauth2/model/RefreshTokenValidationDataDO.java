@@ -45,6 +45,10 @@ public class RefreshTokenValidationDataDO {
 
     private String tokenBindingReference;
 
+    private Timestamp accessTokenIssuedTime;
+
+    private long accessTokenValidityInMillis;
+
     public String getAccessToken() {
         return accessToken;
     }
@@ -117,5 +121,21 @@ public class RefreshTokenValidationDataDO {
     public void setTokenBindingReference(String tokenBindingReference) {
 
         this.tokenBindingReference = tokenBindingReference;
+    }
+
+    public Timestamp getAccessTokenIssuedTime() {
+        return accessTokenIssuedTime;
+    }
+
+    public void setAccessTokenIssuedTime(Timestamp accessTokenIssuedTime) {
+        this.accessTokenIssuedTime = accessTokenIssuedTime;
+    }
+
+    public long getAccessTokenValidityInMillis() {
+        return accessTokenValidityInMillis;
+    }
+
+    public void setAccessTokenValidityInMillis(long accessTokenValidityInMillis) {
+        this.accessTokenValidityInMillis = accessTokenValidityInMillis;
     }
 }
