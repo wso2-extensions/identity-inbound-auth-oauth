@@ -83,6 +83,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
@@ -1867,6 +1868,12 @@ public class OAuth2AuthzEndpoint {
 
         try {
             return OAuth2Util.getServiceProvider(clientId);
+        } catch (IdentityOAuth2ClientException e) {
+            String msg = "Couldn't retrieve Service Provider for clientId: " + clientId;
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
+            throw new OAuthSystemException(msg, e);
         } catch (IdentityOAuth2Exception e) {
             String msg = "Couldn't retrieve Service Provider for clientId: " + clientId;
             log.error(msg, e);
@@ -2316,7 +2323,9 @@ public class OAuth2AuthzEndpoint {
             }
         } catch (ParseException e) {
             String msg = "Error while getting clientId from the IdTokenHint.";
-            log.error(msg, e);
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
             throw OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED, msg);
         }
     }
@@ -2403,7 +2412,9 @@ public class OAuth2AuthzEndpoint {
     private boolean isIdTokenValidationFailed(String idTokenHint) {
 
         if (!OAuth2Util.validateIdToken(idTokenHint)) {
-            log.error("ID token signature validation failed.");
+            if (log.isDebugEnabled()) {
+                log.debug("ID token signature validation failed for the IDTokenHint: " + idTokenHint);
+            }
             return true;
         }
         return false;

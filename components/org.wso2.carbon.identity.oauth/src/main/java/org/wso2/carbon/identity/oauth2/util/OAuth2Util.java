@@ -101,6 +101,7 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
@@ -3212,7 +3213,7 @@ public class OAuth2Util {
             throw new IdentityOAuth2Exception("Error while obtaining the service provider for client_id: " +
                     clientId + " of tenantDomain: " + tenantDomain, e);
         } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception("Could not find an existing app for clientId: " + clientId, e);
+            throw new IdentityOAuth2ClientException("Could not find an existing app for clientId: " + clientId, e);
         }
     }
 
