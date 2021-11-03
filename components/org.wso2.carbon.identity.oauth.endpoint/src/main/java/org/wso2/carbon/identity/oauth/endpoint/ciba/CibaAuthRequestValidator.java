@@ -23,6 +23,7 @@ import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -94,9 +95,6 @@ public class CibaAuthRequestValidator {
 
             // Validate the binding_message of the Request.
             validateBindingMessage(claimsSet);
-
-            // Validate the transaction_context of the Request.
-//            valiateTransactionContext(claimsSet);
 
             // Validate the requested_expiry of the Request.
             validateRequestedExpiry(claimsSet);
@@ -515,7 +513,6 @@ public class CibaAuthRequestValidator {
      */
     public void validateUserHint(String authRequest) throws CibaAuthFailureException {
 
-        boolean singleHintIdentified = false;
         try {
             SignedJWT signedJWT = SignedJWT.parse(authRequest);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
@@ -534,10 +531,7 @@ public class CibaAuthRequestValidator {
             }
 
             // Validation when login_hint_token exists.
-            if (!(claimsSet.getClaim(CibaConstants.LOGIN_HINT_TOKEN) == null)
-                    && (claimsSet.getClaim(Constants.LOGIN_HINT) == null)
-                    && (claimsSet.getClaim(Constants.ID_TOKEN_HINT) == null)) {
-                singleHintIdentified = true;
+            if (!(claimsSet.getClaim(CibaConstants.LOGIN_HINT_TOKEN) == null)) {
                 if (log.isDebugEnabled()) {
                     log.debug("No Login_hint_token support for current version of IS.Invalid CIBA Authentication " +
                             "request : " + authRequest);
@@ -547,11 +541,7 @@ public class CibaAuthRequestValidator {
             }
 
             // Validation when login_hint exists.
-            if ((claimsSet.getClaim(CibaConstants.LOGIN_HINT_TOKEN) == null)
-                    && (!(claimsSet.getClaim(Constants.LOGIN_HINT) == null))
-                    && (claimsSet.getClaim(Constants.ID_TOKEN_HINT) == null)) {
-                singleHintIdentified = true;
-
+            if (!(claimsSet.getClaim(Constants.LOGIN_HINT) == null)) {
                 // Claim exists for login_hint.
                 if (StringUtils.isBlank(claimsSet.getClaim(Constants.LOGIN_HINT).toString())) {
                     // Login_hint is blank.
@@ -565,11 +555,7 @@ public class CibaAuthRequestValidator {
                 return;
             }
 
-            // Validation when id_token_hint exists.
-            if ((claimsSet.getClaim(CibaConstants.LOGIN_HINT_TOKEN) == null)
-                    && (claimsSet.getClaim(Constants.LOGIN_HINT) == null)
-                    && (!(claimsSet.getClaim(Constants.ID_TOKEN_HINT) == null))) {
-                singleHintIdentified = true;
+            if (!(claimsSet.getClaim(Constants.ID_TOKEN_HINT) == null)) {
 
                 // Value exists for id_token_hint
                 if (StringUtils.isBlank(claimsSet.getClaim(Constants.ID_TOKEN_HINT).toString())) {
@@ -596,10 +582,6 @@ public class CibaAuthRequestValidator {
                 }
             }
 
-            if (!singleHintIdentified) {
-                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Only one hint value can be provided.");
-            }
         } catch (ParseException ex) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
                     "Error occurred in validating user hints.");
@@ -724,8 +706,10 @@ public class CibaAuthRequestValidator {
             cibaAuthCodeRequest.setBindingMessage(claimsSet.getStringClaim(CibaConstants.BINDING_MESSAGE));
 
             // Setting transaction_context to AuthenticationRequest after successful validation.
-//            cibaAuthCodeRequest.setTransactionContext(
-//                    (claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT).toJSONString()));
+            JSONObject transactionContext = claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT);
+            if (transactionContext != null) {
+                cibaAuthCodeRequest.setTransactionContext(transactionContext.toJSONString());
+            }
 
             // Setting requested_expiry to AuthenticationRequest after successful validation.
             if (claimsSet.getClaim(CibaConstants.REQUESTED_EXPIRY) != null) {

@@ -112,7 +112,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             }
 
             // Validate whether authentication  is provided with affirmative consent.
-            if (!isConsentGiven(cibaAuthCodeDO)) {
+            if (!isAuthorized(cibaAuthCodeDO)) {
                 throw new IdentityOAuth2Exception(ACCESS_DENIED, "User denied authentication");
             }
 
@@ -139,7 +139,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
      * @return String Authentication Request Identifier from the request.
      * @throws IdentityOAuth2Exception Exception thrown regarding IdentityOAuth
      */
-    public String getAuthReqId(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
+    protected String getAuthReqId(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
         String authReqId = null; // Initiating auth_req_id.
         RequestParameter[] parameters = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getRequestParameters();
@@ -164,12 +164,12 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
     }
 
     /**
-     * Checks whether consent is provided or not.
+     * Checks whether user approval is provided or not.
      *
      * @param cibaAuthCodeDO Persisted DO which accumulates authentication and token request information.
      * @return Boolean Returns whether consent is provided or not.
      */
-    private Boolean isConsentGiven(CibaAuthCodeDO cibaAuthCodeDO) {
+    private Boolean isAuthorized(CibaAuthCodeDO cibaAuthCodeDO) {
 
         return !(AuthReqStatus.CONSENT_DENIED.equals(cibaAuthCodeDO.getAuthReqStatus()) ||
                 AuthReqStatus.FAILED.equals(cibaAuthCodeDO.getAuthReqStatus()));
@@ -201,9 +201,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             throws IdentityOAuth2Exception {
 
         if (!actualConsumerKey.equals(reqConsumerKey)) {
-            if (log.isDebugEnabled()) {
-                log.debug("CIBA auth_req_id does not belong to the requested client.Token Request Denied.");
-            }
+            log.debug("CIBA auth_req_id does not belong to the requested client.Token Request Denied.");
             throw new IdentityOAuth2Exception("Invalid client. Request ID issued for different client");
         }
     }

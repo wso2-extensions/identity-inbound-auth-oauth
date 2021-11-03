@@ -81,18 +81,18 @@ public class CibaGrantHandlerTest extends PowerMockTestCase {
     }
 
     @Test
-    public void testIsConsentGiven() throws Exception {
+    public void testIsAuthorized() throws Exception {
 
         CibaAuthCodeDO cibaAuthCodeDoDenied = new CibaAuthCodeDO();
         cibaAuthCodeDoDenied.setAuthReqStatus(AuthReqStatus.CONSENT_DENIED);
 
-        Assert.assertFalse(WhiteboxImpl.invokeMethod(cibaGrantHandler, "isConsentGiven",
+        Assert.assertFalse(WhiteboxImpl.invokeMethod(cibaGrantHandler, "isAuthorized",
                 cibaAuthCodeDoDenied));
 
         CibaAuthCodeDO cibaAuthCodeDoAuth = new CibaAuthCodeDO();
         cibaAuthCodeDoAuth.setAuthReqStatus(AuthReqStatus.AUTHENTICATED);
 
-        Assert.assertTrue(WhiteboxImpl.invokeMethod(cibaGrantHandler, "isConsentGiven",
+        Assert.assertTrue(WhiteboxImpl.invokeMethod(cibaGrantHandler, "isAuthorized",
                 cibaAuthCodeDoAuth));
     }
 
@@ -191,5 +191,23 @@ public class CibaGrantHandlerTest extends PowerMockTestCase {
 
         Assert.assertNull(WhiteboxImpl.invokeMethod(cibaGrantHandler, "validatePollingFrequency",
                 cibaAuthCodeDO));
+    }
+
+    @Test
+    public void testValidateCorrectAuthReqIdOwner() throws Exception {
+
+        String dummyString = "dummyString";
+        Assert.assertNull(WhiteboxImpl.invokeMethod(cibaGrantHandler, "validateAuthReqIdOwner",
+                dummyString, dummyString));
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testValidateIncorrectAuthReqIdOwner() throws Exception {
+
+        String firstDummyString = "firstDummyString";
+        String secondDummyString = "secondDummyString";
+
+        WhiteboxImpl.invokeMethod(cibaGrantHandler, "validateAuthReqIdOwner",
+                firstDummyString, secondDummyString);
     }
 }

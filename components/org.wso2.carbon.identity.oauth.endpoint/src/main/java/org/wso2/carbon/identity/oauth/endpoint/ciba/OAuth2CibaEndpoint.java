@@ -280,7 +280,7 @@ public class OAuth2CibaEndpoint {
         return oAuthClientAuthnContext;
     }
 
-    public String getSpTenantDomain(String clientId) throws InvalidRequestException {
+    private String getSpTenantDomain(String clientId) throws InvalidRequestException {
 
         try {
             // At this point we have verified that a valid app exists for the client_id. So we directly get the SP
