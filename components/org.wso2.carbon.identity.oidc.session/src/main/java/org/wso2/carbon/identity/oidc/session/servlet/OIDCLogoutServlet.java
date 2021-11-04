@@ -954,11 +954,23 @@ public class OIDCLogoutServlet extends HttpServlet {
 
     private void clearTokenBindingElements(String clientId, HttpServletRequest request, HttpServletResponse response) {
 
+        if (StringUtils.isBlank(clientId)) {
+            log.debug("Logout request received without a client id. "
+                    + "So skipping the clearing token binding element.");
+            return;
+        }
+
         OAuthAppDO oAuthAppDO;
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (IdentityOAuth2Exception e) {
             log.error("Failed to load the app information for the client id: " + clientId, e);
+            return;
+        } catch (InvalidOAuthClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("The application with client id: " + clientId
+                        + " does not exists. This application may be deleted after this session is created.", e);
+            }
             return;
         }
 
