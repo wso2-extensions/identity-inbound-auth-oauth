@@ -654,7 +654,9 @@ public class OAuth2Util {
         try {
             return clientId + ":" + authenticatedUser.getUserId() + ":" + scope;
         } catch (UserIdNotFoundException e) {
-            log.error("Cache could not be built for user: " + authorizedUser, e);
+            if (log.isDebugEnabled()) {
+                log.debug("Cache could not be built for user: " + authorizedUser, e);
+            }
         }
         return null;
     }
@@ -1637,6 +1639,10 @@ public class OAuth2Util {
         try {
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().initScopeClaimMapping(tenantId,
                     scopeClaimsList);
+        } catch (IdentityOAuth2ClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug(e.getMessage(), e);
+            }
         } catch (IdentityOAuth2Exception e) {
             log.error(e.getMessage(), e);
         }
@@ -2248,7 +2254,9 @@ public class OAuth2Util {
 
             return signedJWT.verify(verifier);
         } catch (JOSEException | ParseException e) {
-            log.error("Error occurred while validating id token signature.");
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while validating id token signature.");
+            }
             return false;
         } catch (Exception e) {
             log.error("Error occurred while validating id token signature.");

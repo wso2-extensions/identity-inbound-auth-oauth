@@ -331,7 +331,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             } catch (IdentityOAuth2Exception e) {
                 String errorMsg = "Error occurred while getting user store domain for User ID : " +
                         authenticatedUser;
-                log.error(errorMsg, e);
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMsg, e);
+                }
                 throw new IdentityOAuth2Exception(errorMsg, e);
             }
         }

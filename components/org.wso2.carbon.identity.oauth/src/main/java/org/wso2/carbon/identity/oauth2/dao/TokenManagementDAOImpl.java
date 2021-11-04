@@ -353,7 +353,9 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         }
 
         if (username == null || applicationName == null) {
-            log.error("Could not remove consent of user " + username + " for application " + applicationName);
+            if (log.isDebugEnabled()) {
+                log.debug("Could not remove consent of user " + username + " for application " + applicationName);
+            }
             return;
         }
 
@@ -397,7 +399,9 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         }
 
         if (username == null || applicationName == null) {
-            log.error("Could not remove consent of user " + username + " for application " + applicationName);
+            if (log.isDebugEnabled()) {
+                log.debug("Could not remove consent of user " + username + " for application " + applicationName);
+            }
             return;
         }
 
@@ -476,8 +480,10 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         }
 
         if (tenantAwareUserName == null || applicationName == null) {
-            log.error("Could not remove consent of user " + tenantAwareUserName +
-                    " for application " + applicationName);
+            if (log.isDebugEnabled()) {
+                log.debug("Could not remove consent of user " + tenantAwareUserName +
+                        " for application " + applicationName);
+            }
             return;
         }
 
@@ -640,7 +646,9 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         }
 
         if (consumerKey == null) {
-            log.error("Couldn't revoke token for tenant ID: " + tenantId + " because of null consumer key");
+            if (log.isDebugEnabled()) {
+                log.debug("Couldn't revoke token for tenant ID: " + tenantId + " because of null consumer key");
+            }
             return;
         }
 
