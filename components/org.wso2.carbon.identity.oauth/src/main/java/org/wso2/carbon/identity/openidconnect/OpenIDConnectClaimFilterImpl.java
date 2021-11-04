@@ -430,7 +430,8 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
             } else {
                 timeInMillis = Long.parseLong((String) (returnClaims.get(UPDATED_AT)));
             }
-            returnClaims.put(UPDATED_AT, timeInMillis);
+            long timeInSeconds = timeInMillis / 1000;
+            returnClaims.put(UPDATED_AT, timeInSeconds);
         }
     }
 

@@ -49,7 +49,6 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -200,16 +199,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             try {
                 skipConsent = getOpenIDConnectSkipUserConsent(request);
             } catch (ParseException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Error while getting clientId from the IdTokenHint.", e);
-                }
-                redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, "ID token signature validation failed.");
-                response.sendRedirect(getRedirectURL(redirectURL, request));
-                return;
-            } catch (IdentityOAuth2ClientException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Error while getting service provider from the clientId.", e);
-                }
+                log.error("Error while getting clientId from the IdTokenHint.", e);
                 redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, "ID token signature validation failed.");
                 response.sendRedirect(getRedirectURL(redirectURL, request));
                 return;
@@ -339,9 +329,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             } else {
                 if (!validateIdToken(idTokenHint)) {
                     String msg = "ID token signature validation failed.";
-                    if (log.isDebugEnabled()) {
-                        log.debug(msg);
-                    }
+                    log.error(msg);
                     redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
                     return redirectURL;
                 }
@@ -419,9 +407,7 @@ public class OIDCLogoutServlet extends HttpServlet {
 
             return signedJWT.verify(verifier);
         } catch (JOSEException | ParseException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error occurred while validating id token signature for the id token: " + idToken);
-            }
+            log.error("Error occurred while validating id token signature.");
             return false;
         } catch (Exception e) {
             log.error("Error occurred while validating id token signature.");
@@ -461,18 +447,10 @@ public class OIDCLogoutServlet extends HttpServlet {
                 tenantDomain = extractTenantDomainFromIdToken(idToken);
             }
         } catch (ParseException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error occurred while extracting client id from id token: " + idToken, e);
-            }
+            log.error("Error occurred while extracting client id from id token", e);
             return null;
-        } catch (IdentityOAuth2Exception e) {
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             log.error("Error occurred while getting oauth application information.", e);
-            return null;
-        } catch (InvalidOAuthClientException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error occurred while getting tenant domain for signature validation with id token: "
-                        + idToken, e);
-            }
             return null;
         }
         return tenantDomain;
@@ -976,15 +954,22 @@ public class OIDCLogoutServlet extends HttpServlet {
 
     private void clearTokenBindingElements(String clientId, HttpServletRequest request, HttpServletResponse response) {
 
+        if (StringUtils.isBlank(clientId)) {
+            log.debug("Logout request received without a client id. "
+                    + "So skipping the clearing token binding element.");
+            return;
+        }
+
         OAuthAppDO oAuthAppDO;
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-        }  catch (IdentityOAuth2Exception e) {
+        } catch (IdentityOAuth2Exception e) {
             log.error("Failed to load the app information for the client id: " + clientId, e);
             return;
         } catch (InvalidOAuthClientException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Cannot find an application associated with the provided client id: " + clientId, e);
+                log.debug("The application with client id: " + clientId
+                        + " does not exists. This application may be deleted after this session is created.", e);
             }
             return;
         }

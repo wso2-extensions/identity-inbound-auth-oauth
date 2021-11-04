@@ -164,6 +164,7 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getLogin
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthServerConfiguration;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSSOConsentService;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.retrieveStateForErrorURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
@@ -379,6 +380,12 @@ public class OAuth2AuthzEndpoint {
         }
 
         OAuth2Parameters oAuth2Parameters = getOAuth2ParamsFromOAuthMessage(oAuthMessage);
+
+        if (StringUtils.equals(oAuthMessage.getRequest().getParameter(RESPONSE_MODE), RESPONSE_MODE_FORM_POST)) {
+            e.state(retrieveStateForErrorURL(oAuthMessage.getRequest(), oAuth2Parameters));
+            return Response.ok(createErrorFormPage(oAuthMessage.getRequest().getParameter(REDIRECT_URI), e)).build();
+        }
+
         String errorPageURL = getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST,
                 OAuth2ErrorCodes.OAuth2SubErrorCodes.UNEXPECTED_SERVER_ERROR, e.getMessage(), null,
                 oAuth2Parameters);
@@ -776,6 +783,7 @@ public class OAuth2AuthzEndpoint {
 
         String redirectURL = EndpointUtil.getErrorRedirectURL(oauthException, oauth2Params);
         if (StringUtils.equals(oauth2Params.getResponseMode(), RESPONSE_MODE_FORM_POST)) {
+            oauthException.state(oauth2Params.getState());
             return handleFormPostResponseModeError(oAuthMessage, oauthException);
         } else {
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
@@ -968,6 +976,12 @@ public class OAuth2AuthzEndpoint {
         if (StringUtils.isNotEmpty(oauthProblemException.getDescription())) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"error_description\" value=\"")
                     .append(oauthProblemException.getDescription())
+                    .append("\"/>\n");
+        }
+
+        if (StringUtils.isNotEmpty(oauthProblemException.getState())) {
+            paramStringBuilder.append("<input type=\"hidden\" name=\"state\" value=\"")
+                    .append(oauthProblemException.getState())
                     .append("\"/>\n");
         }
 

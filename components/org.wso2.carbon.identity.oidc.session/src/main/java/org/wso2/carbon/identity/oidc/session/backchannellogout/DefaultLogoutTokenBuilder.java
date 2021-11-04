@@ -93,7 +93,17 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
             Set<String> sessionParticipants = getSessionParticipants(sessionState);
             if (!sessionParticipants.isEmpty()) {
                 for (String clientID : sessionParticipants) {
-                    OAuthAppDO oAuthAppDO = getOAuthAppDO(clientID);
+                    OAuthAppDO oAuthAppDO;
+                    try {
+                        oAuthAppDO = getOAuthAppDO(clientID);
+                    } catch (InvalidOAuthClientException e) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("The application with client id: " + clientID
+                                    + " does not exists. This application may be deleted after"
+                                    + " this session is created. So skipping it in logout token list.", e);
+                        }
+                        continue;
+                    }
                     String tenantDomain = oAuthAppDO.getAppOwner().getTenantDomain();
                     if (StringUtils.equals(clientID, getClientId(request, tenantDomain))) {
                         // No need to send logout token if the client id of the RP initiated logout is known.
@@ -133,10 +143,19 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     }
 
     private void addToLogoutTokenList(Map<String, String> logoutTokenList,
-                                      OIDCSessionState sessionState, String clientID) throws IdentityOAuth2Exception,
-            InvalidOAuthClientException {
+                                      OIDCSessionState sessionState, String clientID) throws IdentityOAuth2Exception {
 
-        OAuthAppDO oAuthAppDO = getOAuthAppDO(clientID);
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = getOAuthAppDO(clientID);
+        } catch (InvalidOAuthClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("The application with client id: " + clientID
+                        + " does not exists. This application may be deleted after"
+                        + " this session is created. So skipping it in logout token list.", e);
+            }
+            return;
+        }
         String backChannelLogoutUrl = oAuthAppDO.getBackChannelLogoutUrl();
         if (StringUtils.isNotBlank(backChannelLogoutUrl)) {
             // Send back-channel logout request to all RPs those registered their back-channel logout uri.
