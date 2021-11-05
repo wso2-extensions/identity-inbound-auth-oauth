@@ -19,8 +19,10 @@
 package org.wso2.carbon.identity.oauth2.authz;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -41,6 +43,7 @@ import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidato
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -261,6 +264,22 @@ public class AuthorizationHandlerManager {
                         " doesn't have necessary rights to grant access to the resource(s) : " +
                         OAuth2Util.buildScopeString(authzReqDTO.getScopes()));
             }
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", authzReqDTO.getConsumerKey());
+            if (authzReqDTO.getUser() != null) {
+                try {
+                    params.put("user", authzReqDTO.getUser().getUserId());
+                } catch (UserIdNotFoundException e) {
+                    if (StringUtils.isNotBlank(authzReqDTO.getUser().getAuthenticatedSubjectIdentifier())) {
+                        params.put("user", authzReqDTO.getUser().getAuthenticatedSubjectIdentifier().replaceAll(".",
+                                "*"));
+                    }
+                }
+            }
+            params.put("requestedScopes", OAuth2Util.buildScopeString(authzReqDTO.getScopes()));
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+                    "User doesn't have necessary rights to grant access to the requested resource(s)." , "validate" +
+                            "-authz-request", null);
             return true;
         }
         return false;
@@ -310,6 +329,13 @@ public class AuthorizationHandlerManager {
                         " provided for user : " + authzReqDTO.getUser() +
                         ", for client :" + authzReqDTO.getConsumerKey());
             }
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", authzReqDTO.getConsumerKey());
+            params.put("response_type", authzReqDTO.getResponseType());
+
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+                    "Un-supported response type." , "validate" +
+                            "-authz-request", null);
             return true;
         }
         return false;

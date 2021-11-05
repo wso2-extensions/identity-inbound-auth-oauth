@@ -68,6 +68,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -152,6 +153,13 @@ public class AccessTokenIssuer {
         OAuthClientAuthnContext oAuthClientAuthnContext = tokenReqDTO.getoAuthClientAuthnContext();
 
         if (oAuthClientAuthnContext == null) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", tokenReqDTO.getClientId());
+            if (StringUtils.isNotBlank(tokenReqDTO.getClientSecret())) {
+                params.put("clientSecret", tokenReqDTO.getClientSecret().replaceAll(".", "*"));
+            }
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+                    "OAuth client authentication failed." , "issue-access-token", null);
             oAuthClientAuthnContext = new OAuthClientAuthnContext();
             oAuthClientAuthnContext.setAuthenticated(false);
             oAuthClientAuthnContext.setErrorMessage("Client Authentication Failed");
@@ -161,6 +169,12 @@ public class AccessTokenIssuer {
         // Will return an invalid request response if multiple authentication mechanisms are engaged irrespective of
         // whether the grant type is confidential or not.
         if (oAuthClientAuthnContext.isMultipleAuthenticatorsEngaged()) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", tokenReqDTO.getClientId());
+            params.put("clientAuthenticators", oAuthClientAuthnContext.getExecutedAuthenticators());
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+                    "The client MUST NOT use more than one authentication method per request." , "issue-access-token",
+                    null);
             tokenRespDTO = handleError(OAuth2ErrorCodes.INVALID_REQUEST, "The client MUST NOT use more than one " +
                     "authentication method in each", tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
@@ -175,6 +189,11 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug(errorMsg);
             }
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", tokenReqDTO.getClientId());
+            params.put("grantType", grantType);
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+                    "Unsupported grant type." , "issue-access-token", null);
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNSUPPORTED_GRANT_TYPE,
                     errorMsg, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
@@ -190,6 +209,10 @@ public class AccessTokenIssuer {
 
         if (!isAuthenticated && !oAuthClientAuthnContext.isPreviousAuthenticatorEngaged() && authzGrantHandler
                 .isConfidentialClient()) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", tokenReqDTO.getClientId());
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+                    "Unsupported client authentication method." , "issue-access-token", null);
             tokenRespDTO = handleError(
                     OAuth2ErrorCodes.INVALID_CLIENT,
                     "Unsupported Client Authentication Method!", tokenReqDTO);
@@ -198,6 +221,11 @@ public class AccessTokenIssuer {
             return tokenRespDTO;
         }
         if (!isAuthenticated) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", tokenReqDTO.getClientId());
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+                    "Client authentication failed. " + oAuthClientAuthnContext.getErrorMessage() , "issue-access" +
+                            "-token", null);
             tokenRespDTO = handleError(
                     oAuthClientAuthnContext.getErrorCode(),
                     oAuthClientAuthnContext.getErrorMessage(), tokenReqDTO);
@@ -238,6 +266,8 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while validating client for authorization", e);
             }
+            OAuth2Util.log("oauth-inbound-service", null, "FAILED",
+                    "System error occurred." , "issue-access-token", null);
             error = e.getMessage();
         }
 
@@ -247,6 +277,11 @@ public class AccessTokenIssuer {
                 log.debug("Client Id: " + tokenReqDTO.getClientId() + " is not authorized to use grant type: " +
                         grantType);
             }
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", tokenReqDTO.getClientId());
+            params.put("grantType", grantType);
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+                    "Client is not authorized to use the requested grant type." , "issue-access-token", null);
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT, error, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
@@ -341,6 +376,13 @@ public class AccessTokenIssuer {
 
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
         if (isValidScope) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", tokenReqDTO.getClientId());
+            if (ArrayUtils.isNotEmpty(tokenReqDTO.getScope())) {
+                params.put("scope", Arrays.asList(tokenReqDTO.getScope()));
+            }
+            OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
+                    "OAuth scope validation is successful." , "validate-scope", null);
             // Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
             addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
@@ -348,6 +390,13 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid scope provided by client Id: " + tokenReqDTO.getClientId());
             }
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", tokenReqDTO.getClientId());
+            if (ArrayUtils.isNotEmpty(tokenReqDTO.getScope())) {
+                params.put("scope", Arrays.asList(tokenReqDTO.getScope()));
+            }
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+                    "Invalid scope provided in the request." , "validate-scope", null);
             tokenRespDTO = handleError(OAuthError.TokenResponse.INVALID_SCOPE, "Invalid Scope!", tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
@@ -397,6 +446,11 @@ public class AccessTokenIssuer {
             log.debug("Access token issued to client Id: " + tokenReqDTO.getClientId() + " username: " +
                     tokReqMsgCtx.getAuthorizedUser() + " and scopes: " + tokenRespDTO.getAuthorizedScopes());
         }
+        Map<String, Object> params = new HashMap<>();
+        params.put("clientId", tokenReqDTO.getClientId());
+        OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
+                "Access token issued for the application." ,
+                "issue-access-token", null);
 
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
             // Should add user attributes to the cache before building the ID token.
@@ -409,9 +463,13 @@ public class AccessTokenIssuer {
             IDTokenBuilder builder = OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenBuilder();
             try {
                 String idToken = builder.buildIDToken(tokReqMsgCtx, tokenRespDTO);
+                OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
+                        "ID token issued for the application." , "issue-id-token", null);
                 tokenRespDTO.setIDToken(idToken);
             } catch (IDTokenValidationFailureException e) {
                 log.error(e.getMessage());
+                OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+                        "System error occurred." , "issue-id-token", null);
                 tokenRespDTO = handleError(OAuth2ErrorCodes.SERVER_ERROR, "Server Error", tokenReqDTO);
                 return tokenRespDTO;
             }

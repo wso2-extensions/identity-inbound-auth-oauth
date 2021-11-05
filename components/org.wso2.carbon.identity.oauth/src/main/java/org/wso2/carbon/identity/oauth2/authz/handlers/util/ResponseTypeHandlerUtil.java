@@ -212,6 +212,8 @@ public class ResponseTypeHandlerUtil {
             OauthTokenIssuer oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
             return generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled, oauthTokenIssuer);
         } catch (InvalidOAuthClientException e) {
+            OAuth2Util.log("oauth-inbound-service", null, "FAILED",
+                    "System error occurred." , "issue-authz-code", null);
             throw new IdentityOAuth2Exception(
                     "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
@@ -255,6 +257,8 @@ public class ResponseTypeHandlerUtil {
         try {
             authorizationCode = oauthIssuerImpl.authorizationCode(oauthAuthzMsgCtx);
         } catch (OAuthSystemException e) {
+            OAuth2Util.log("oauth-inbound-service", null, "FAILED",
+                    "System error occurred." , "issue-authz-code", null);
             throw new IdentityOAuth2Exception(e.getMessage(), e);
         }
 
@@ -286,6 +290,25 @@ public class ResponseTypeHandlerUtil {
                     ", Scope : " + OAuth2Util.buildScopeString(oauthAuthzMsgCtx.getApprovedScope()) +
                     ", validity period : " + validityPeriod);
         }
+        Map<String, Object> params = new HashMap<>();
+        params.put("clientId", authorizationReqDTO.getConsumerKey());
+        if (authorizationReqDTO.getUser() != null) {
+            try {
+                params.put("user", authorizationReqDTO.getUser().getUserId());
+            } catch (UserIdNotFoundException e) {
+                if (StringUtils.isNotBlank(authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier())) {
+                    params.put("user", authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier().replaceAll(".",
+                            "*"));
+                }
+            }
+        }
+        params.put("requestedScopes", OAuth2Util.buildScopeString(authorizationReqDTO.getScopes()));
+        params.put("redirectUri", authorizationReqDTO.getCallbackUrl());
+
+        Map<String, Object> configs = new HashMap<>();
+        configs.put("authzCodeValidityPeriod", String.valueOf(validityPeriod));
+        OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
+                "Issued Authorization Code to user." , "issue-authz-code", configs);
         return authzCodeDO;
     }
 

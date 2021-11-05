@@ -40,7 +40,9 @@ import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * AbstractResponseTypeHandler contains all the common methods of all three basic handlers.
@@ -130,6 +132,12 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
             if (log.isDebugEnabled()) {
                 log.debug("Could not find authorized grant types for client id: " + consumerKey);
             }
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", authzReqDTO.getConsumerKey());
+
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+                    "Could not find any configured authorized grant types for the OAuth client." , "validate" +
+                            "-authz-request", null);
             return false;
         }
 
@@ -152,6 +160,15 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
                     //Do not change this log format as these logs use by external applications
                     log.debug("Unsupported Grant Type : " + grantType + " for client id : " + consumerKey);
                 }
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", authzReqDTO.getConsumerKey());
+                params.put("grantType", grantType);
+
+                Map<String, Object> configs = new HashMap<>();
+                configs.put("supportedGrantTypes", oAuthAppDO.getGrantTypes());
+                OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+                        "Un-supported grant type." , "validate" +
+                                "-authz-request", configs);
                 return false;
             }
         }

@@ -31,6 +31,9 @@ import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * According to the OIDC spec requestObject is passed as a query param value of request/request_uri parameters. This is
  * associated with OIDC authorization request. This class is used to select the corresponding builder class and build
@@ -75,6 +78,11 @@ public class OIDCRequestObjectUtil {
 
         if (requestObjectBuilder == null) {
             String error = "Unable to build the OIDC Request Object from:";
+            Map<String, Object> params = new HashMap<>();
+            params.put(REQUEST, oauthRequest.getParam(REQUEST));
+            params.put(REQUEST_URI, oauthRequest.getParam(REQUEST_URI));
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Server error occurred.",
+                    "parse-request-object", null);
             throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, error + requestObjType);
         }
         requestObject = requestObjectBuilder.buildRequestObject(oauthRequest.getParam(requestObjType),
@@ -105,29 +113,55 @@ public class OIDCRequestObjectUtil {
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            OAuth2Util.log("oauth-inbound-service", null, "FAILED", "Server error occurred.",
+                    "validate-request-object-signature", null);
             throw new RequestObjectException("Error while retrieving app information for client_id: " + clientId +
                     ". Cannot proceed with signature validation", e);
         }
 
-        // Check whether request object signature validation is enforced.
-        if (oAuthAppDO.isRequestObjectSignatureValidationEnabled()) {
-            if (log.isDebugEnabled()) {
-                log.debug("Request Object Signature Verification enabled for client_id: " + clientId);
-            }
-            if (requestObject.isSigned()) {
-                validateSignature(oAuth2Parameters, requestObject, requestObjectValidator);
+        try {
+            // Check whether request object signature validation is enforced.
+            if (oAuthAppDO.isRequestObjectSignatureValidationEnabled()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Request Object Signature Verification enabled for client_id: " + clientId);
+                }
+                if (requestObject.isSigned()) {
+                    validateSignature(oAuth2Parameters, requestObject, requestObjectValidator);
+                } else {
+                    // If request object is not signed we need to throw an exception.
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("clientId", clientId);
+
+                    Map<String, Object> configs = new HashMap<>();
+                    configs.put("requestObjectSignatureValidationEnabled", "true");
+                    OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Request object signature validation is" +
+                            " enabled but request object is not signed.", "validate-request-object-signature", configs);
+                    throw new RequestObjectException("Request object signature validation is enabled but request " +
+                            "object is not signed.");
+                }
             } else {
-                // If request object is not signed we need to throw an exception.
-                throw new RequestObjectException("Request object signature validation is enabled but request object " +
-                        "is not signed.");
+                // Since request object signature validation is not enabled we will only validate the signature if
+                // the request object is signed.
+                if (requestObject.isSigned()) {
+                    validateSignature(oAuth2Parameters, requestObject, requestObjectValidator);
+                }
             }
-        } else {
-            // Since request object signature validation is not enabled we will only validate the signature if
-            // the request object is signed.
-            if (requestObject.isSigned()) {
-                validateSignature(oAuth2Parameters, requestObject, requestObjectValidator);
+        } catch (RequestObjectException e) {
+            if (StringUtils.isNotBlank(e.getErrorMessage()) && e.getErrorMessage().contains("signature verification " +
+                    "failed")) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", oAuth2Parameters.getClientId());
+
+                Map<String, Object> configs = new HashMap<>();
+                configs.put("requestObjectSignatureValidationEnabled",
+                        Boolean.toString(oAuthAppDO.isRequestObjectSignatureValidationEnabled()));
+                OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Request Object signature verification " +
+                        "failed.", "validate-request-object-signature", configs);
             }
+            throw e;
         }
+        OAuth2Util.log("oauth-inbound-service", null, "SUCCESS", "Request Object signature verification " +
+                "is successful.", "validate-request-object-signature", null);
     }
 
     private static void validateSignature(OAuth2Parameters oAuth2Parameters,

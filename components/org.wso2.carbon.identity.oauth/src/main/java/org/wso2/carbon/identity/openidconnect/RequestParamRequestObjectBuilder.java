@@ -40,6 +40,8 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import java.security.Key;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.JWT_PART_DELIMITER;
@@ -77,6 +79,8 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         if (log.isDebugEnabled()) {
             log.debug("Request Object extracted from the request: " + requestObjectParam);
         }
+        OAuth2Util.log("oauth-inbound-service", null, "FAILED", "Request object parsed successfully.",
+                "parse-request-object", null);
         return requestObject;
     }
 
@@ -155,6 +159,10 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage + "Received Request Object: " + requestObjectString, e);
             }
+            Map<String, Object> params = new HashMap<>();
+            params.put("requestObject", requestObjectString);
+            OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Request object is not a valid JWT.",
+                    "parse-request-object", null);
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, errorMessage);
         }
     }
