@@ -53,7 +53,7 @@ public class CibaAuthResponseHandler {
         // Set the ExpiryTime.
         long expiresIn = cibaAuthCodeResponse.getExpiresIn();
         if (log.isDebugEnabled()) {
-            log.info("Setting ExpiryTime for the response to the  request made by client with clientID : " +
+            log.debug("Setting ExpiryTime for the response to the  request made by client with clientID : " +
                     cibaAuthCodeResponse.getClientId() + ".");
         }
         // Create authentication response.

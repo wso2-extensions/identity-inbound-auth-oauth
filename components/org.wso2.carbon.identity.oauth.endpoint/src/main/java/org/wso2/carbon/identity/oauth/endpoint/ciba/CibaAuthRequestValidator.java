@@ -604,7 +604,7 @@ public class CibaAuthRequestValidator {
         // Obtain (sub) from id_token_hint
         try {
             if (log.isDebugEnabled()) {
-                log.info("Extracting 'sub' from this id_token_hint " + idTokenHint);
+                log.debug("Extracting 'sub' from this id_token_hint " + idTokenHint);
             }
             SignedJWT signedJWT = SignedJWT.parse(idTokenHint);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
