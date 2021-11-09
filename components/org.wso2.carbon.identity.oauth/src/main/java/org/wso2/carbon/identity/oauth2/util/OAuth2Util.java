@@ -60,6 +60,8 @@ import org.apache.oltu.oauth2.common.exception.OAuthRuntimeException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
@@ -138,6 +140,7 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
@@ -4349,9 +4352,20 @@ public class OAuth2Util {
     }
 
     public static void log(String componentId, Map<String, Object> input, String resultStatus, String resultMessage,
-                            String actionId, Map<String, Object> configurations) {
+                           String actionId, Map<String, Object> configurations) {
 
         LoggerUtils.triggerDiagnosticLogEvent(componentId, input, resultStatus, resultMessage, actionId,
                 configurations);
+    }
+
+    public static boolean isDiagnosticLogsEnabled() {
+
+        int tenantId = IdentityTenantUtil.getTenantId(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+        CarbonConstants.DiagnosticLogMode diagnosticLogMode = CarbonUtils.getDiagnosticLogMode(tenantId);
+
+        if (CarbonConstants.DiagnosticLogMode.NONE.equals(diagnosticLogMode)) {
+            return false;
+        }
+        return true;
     }
 }
