@@ -576,8 +576,12 @@ public class OAuth2AuthzEndpoint {
             OAuth2Util.log("oauth-inbound-service", null, "FAILED", "System error occurred." , "process-consent", null);
             throw new ConsentHandlingFailedException(msg, e);
         } catch (ClaimMetadataException e) {
+            OAuth2Util.log("oauth-inbound-service", null, "FAILED", String.format("Error occurred while getting " +
+                    "claim mappings for %s.", OIDC_DIALECT) ,"process-consent", null);
             throw new ConsentHandlingFailedException("Error while getting claim mappings for " + OIDC_DIALECT, e);
         } catch (RequestObjectException e) {
+            OAuth2Util.log("oauth-inbound-service", null, "FAILED", String.format("Error occurred while getting " +
+                    "essential claims for the session data key : %s.", oauth2Params.getSessionDataKey()) , "process-consent", null);
             throw new ConsentHandlingFailedException("Error while getting essential claims for the session data key " +
                     ": " + oauth2Params.getSessionDataKey(), e);
         }
