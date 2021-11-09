@@ -93,11 +93,12 @@ public class OAuthRequestStateValidator {
                 log.debug("Invalid authorization request.\'SessionDataKey\' found in request as parameter and " +
                         "attribute, and both have non NULL objects in cache");
             }
-            Map<String, Object> params = new HashMap<>();
-            oAuthMessage.getRequest().getParameterMap().forEach(params::put);
-            OAuth2Util.log(params, "FAILED",
-                    "invalid 'SessionDataKey' parameter in authorization request", "validate-input-parameters",
-                    null);
+            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                oAuthMessage.getRequest().getParameterMap().forEach(params::put);
+                OAuth2Util.log(params, "FAILED", "invalid 'SessionDataKey' parameter in authorization request",
+                        "validate-input-parameters", null);
+            }
             throw new InvalidRequestException("Invalid authorization request", OAuth2ErrorCodes.INVALID_REQUEST,
                     OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST);
 
@@ -108,10 +109,12 @@ public class OAuthRequestStateValidator {
                 log.debug("Invalid authorization request.\'SessionDataKey\' not found in request as parameter or " +
                         "attribute, and client_id parameter cannot be found in request");
             }
-            Map<String, Object> params = new HashMap<>();
-            oAuthMessage.getRequest().getParameterMap().forEach(params::put);
-            OAuth2Util.log(params, "FAILED", "invalid 'client_id' and 'SessionDataKey' " +
-                    "parameters cannot be found in request", "validate-input-parameters", null);
+            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                oAuthMessage.getRequest().getParameterMap().forEach(params::put);
+                OAuth2Util.log(params, "FAILED", "invalid 'client_id' and 'SessionDataKey' " +
+                        "parameters cannot be found in request", "validate-input-parameters", null);
+            }
             throw new InvalidRequestException("Invalid authorization request", OAuth2ErrorCodes.INVALID_REQUEST,
                     OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT);
 
@@ -121,10 +124,12 @@ public class OAuthRequestStateValidator {
                 log.debug(
                         "Session data not found in SessionDataCache for " + oAuthMessage.getSessionDataKeyFromLogin());
             }
-            Map<String, Object> params = new HashMap<>();
-            oAuthMessage.getRequest().getParameterMap().forEach(params::put);
-            OAuth2Util.log(params, "FAILED", "Access denied " +
-                    "since user session has timed-out.", "validate-input-parameters", null);
+            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                oAuthMessage.getRequest().getParameterMap().forEach(params::put);
+                OAuth2Util.log(params, "FAILED", "Access denied since user session has timed-out.",
+                        "validate-input-parameters", null);
+            }
             throw new AccessDeniedException("Session Timed Out", OAuth2ErrorCodes.ACCESS_DENIED, OAuth2ErrorCodes
                     .OAuth2SubErrorCodes.SESSION_TIME_OUT);
 
@@ -135,10 +140,12 @@ public class OAuthRequestStateValidator {
                     log.debug("Session data not found in SessionDataCache for " + oAuthMessage
                             .getSessionDataKeyFromConsent());
                 }
-                Map<String, Object> params = new HashMap<>();
-                oAuthMessage.getRequest().getParameterMap().forEach(params::put);
-                OAuth2Util.log(params, "FAILED", "Access " +
-                        "denied since user session has timed-out.", "validate-input-parameters", null);
+                if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    oAuthMessage.getRequest().getParameterMap().forEach(params::put);
+                    OAuth2Util.log(params, "FAILED", "Access denied since user session has timed-out.",
+                            "validate-input-parameters", null);
+                }
                 throw new AccessDeniedException("Session Timed Out", OAuth2ErrorCodes.ACCESS_DENIED, OAuth2ErrorCodes
                         .OAuth2SubErrorCodes.SESSION_TIME_OUT);
             } else {
@@ -155,9 +162,10 @@ public class OAuthRequestStateValidator {
             if (log.isDebugEnabled()) {
                 log.debug("Client Id is not present in the authorization request");
             }
-            OAuth2Util.log(null, "FAILED",
-                    "client_id is not present in the authorization request", "validate-input-parameters",
-                    null);
+            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                OAuth2Util.log(null, "FAILED", "client_id is not present in the authorization request",
+                        "validate-input-parameters", null);
+            }
             throw new InvalidRequestException("Client Id is not present in the authorization request",
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT);
         }
@@ -167,8 +175,10 @@ public class OAuthRequestStateValidator {
             if (log.isDebugEnabled()) {
                 log.debug("Redirect URI is not present in the authorization request");
             }
-            OAuth2Util.log(null, "FAILED",
-                    "redirect_uri is not present in the authorization request", "validate-input-parameters", null);
+            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                OAuth2Util.log(null, "FAILED", "redirect_uri is not present in the authorization request",
+                        "validate-input-parameters", null);
+            }
             throw new InvalidRequestException("Redirect URI is not present in the authorization request",
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
