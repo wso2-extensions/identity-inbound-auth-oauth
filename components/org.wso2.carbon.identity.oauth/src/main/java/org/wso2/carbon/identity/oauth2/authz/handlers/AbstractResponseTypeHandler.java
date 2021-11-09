@@ -132,12 +132,14 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
             if (log.isDebugEnabled()) {
                 log.debug("Could not find authorized grant types for client id: " + consumerKey);
             }
-            Map<String, Object> params = new HashMap<>();
-            params.put("clientId", authzReqDTO.getConsumerKey());
+            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", authzReqDTO.getConsumerKey());
 
-            OAuth2Util.log(params, "FAILED",
-                    "Could not find any configured authorized grant types for the OAuth client.", "validate" +
-                            "-authz-request", null);
+                OAuth2Util.log(params, "FAILED",
+                        "Could not find any configured authorized grant types for the OAuth client.",
+                        "validate-authz-request", null);
+            }
             return false;
         }
 
@@ -160,15 +162,15 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
                     //Do not change this log format as these logs use by external applications
                     log.debug("Unsupported Grant Type : " + grantType + " for client id : " + consumerKey);
                 }
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", authzReqDTO.getConsumerKey());
-                params.put("grantType", grantType);
+                if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("clientId", authzReqDTO.getConsumerKey());
+                    params.put("grantType", grantType);
 
-                Map<String, Object> configs = new HashMap<>();
-                configs.put("supportedGrantTypes", oAuthAppDO.getGrantTypes());
-                OAuth2Util.log(params, "FAILED",
-                        "Un-supported grant type.", "validate" +
-                                "-authz-request", configs);
+                    Map<String, Object> configs = new HashMap<>();
+                    configs.put("supportedGrantTypes", oAuthAppDO.getGrantTypes());
+                    OAuth2Util.log(params, "FAILED", "Un-supported grant type.", "validate-authz-request", configs);
+                }
                 return false;
             }
         }
