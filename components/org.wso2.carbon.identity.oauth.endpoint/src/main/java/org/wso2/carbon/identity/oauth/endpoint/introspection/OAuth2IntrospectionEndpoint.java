@@ -88,16 +88,16 @@ public class OAuth2IntrospectionEndpoint {
             params.put("token", token.replaceAll(".", "*"));
         }
 
-        OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
-                "Successfully received introspect request." , "receive-introspect-request", null);
+        OAuth2Util.log(params, "SUCCESS",
+                "Successfully received introspect request.", "receive-introspect-request", null);
 
         if (log.isDebugEnabled()) {
             log.debug("Token type hint: " + tokenTypeHint);
         }
 
         if (StringUtils.isBlank(token)) {
-            OAuth2Util.log("oauth-inbound-service", params, "FAILED",
-                    "'token' parameter cannot be empty." , "validate-input-parameters", null);
+            OAuth2Util.log(params, "FAILED",
+                    "'token' parameter cannot be empty.", "validate-input-parameters", null);
             introspectionResponse = new OAuth2IntrospectionResponseDTO();
             introspectionResponse.setError(INVALID_INPUT);
             triggerOnIntrospectionExceptionListeners(null, introspectionResponse);
@@ -192,8 +192,8 @@ public class OAuth2IntrospectionEndpoint {
                             (((IntrospectionDataProvider) dataProvider).getIntrospectionData(
                                     introspectionRequest, introspectionResponse)));
                 } catch (IdentityOAuth2Exception e) {
-                    OAuth2Util.log("oauth-inbound-service", null, "FAILED",
-                            "System error occurred." , "generate-introspect-response", null);
+                    OAuth2Util.log(null, "FAILED",
+                            "System error occurred.", "generate-introspect-response", null);
                     log.error("Error occurred while processing additional token introspection data.", e);
 
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -207,8 +207,8 @@ public class OAuth2IntrospectionEndpoint {
         try {
             return Response.ok(respBuilder.build(), MediaType.APPLICATION_JSON).status(Response.Status.OK).build();
         } catch (JSONException e) {
-            OAuth2Util.log("oauth-inbound-service", null, "FAILED",
-                    "System error occurred." , "generate-introspect-response", null);
+            OAuth2Util.log(null, "FAILED",
+                    "System error occurred.", "generate-introspect-response", null);
             log.error("Error occurred while building the json response.", e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity("{\"error\": \"Error occurred while building the json response.\"}").build();

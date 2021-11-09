@@ -271,8 +271,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                         List<String> scopes = Arrays.asList(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope());
                         params.put("scopes", scopes);
                     }
-                    OAuth2Util.log("oauth-inbound-service", params, "FAILED",
-                            "Scope validation failed against the configured scope validator." ,
+                    OAuth2Util.log(params, "FAILED",
+                            "Scope validation failed against the configured scope validator.",
                             "validate-scope", configs);
                     break;
                 }

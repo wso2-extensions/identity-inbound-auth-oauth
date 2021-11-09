@@ -79,7 +79,7 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         if (log.isDebugEnabled()) {
             log.debug("Request Object extracted from the request: " + requestObjectParam);
         }
-        OAuth2Util.log("oauth-inbound-service", null, "FAILED", "Request object parsed successfully.",
+        OAuth2Util.log(null, "FAILED", "Request object parsed successfully.",
                 "parse-request-object", null);
         return requestObject;
     }
@@ -161,7 +161,7 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             }
             Map<String, Object> params = new HashMap<>();
             params.put("requestObject", requestObjectString);
-            OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Request object is not a valid JWT.",
+            OAuth2Util.log(params, "FAILED", "Request object is not a valid JWT.",
                     "parse-request-object", null);
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, errorMessage);
         }

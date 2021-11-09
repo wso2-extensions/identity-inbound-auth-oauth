@@ -880,17 +880,17 @@ public class EndpointUtil {
 
                 Map<String, Object> configs = new HashMap<>();
                 configs.put("overrideExistingConsent", String.valueOf(overrideExistingConsent));
-                OAuth2Util.log("oauth-inbound-service", consentParams, "SUCCESS",
-                        "Successfully persisted oauth scopes." , "persist-oauth-scope-consent", configs);
+                OAuth2Util.log(consentParams, "SUCCESS",
+                        "Successfully persisted oauth scopes.", "persist-oauth-scope-consent", configs);
             }
         } catch (IdentityOAuthAdminException e) {
-            OAuth2Util.log("oauth-inbound-service", null, "FAILED",
-                    "System error occurred." , "persist-oauth-scope-consent", null);
+            OAuth2Util.log(null, "FAILED",
+                    "System error occurred.", "persist-oauth-scope-consent", null);
             throw new OAuthSystemException(
                     "Error occurred while removing OIDC scopes from approved OAuth scopes.", e);
         } catch (IdentityOAuth2ScopeException e) {
-            OAuth2Util.log("oauth-inbound-service", null, "FAILED",
-                    "System error occurred." , "persist-oauth-scope-consent", null);
+            OAuth2Util.log(null, "FAILED",
+                    "System error occurred.", "persist-oauth-scope-consent", null);
             throw new OAuthSystemException("Error occurred while storing OAuth scope consent.", e);
         }
     }
@@ -1106,8 +1106,8 @@ public class EndpointUtil {
                     if (log.isDebugEnabled()) {
                         log.debug("Repeated param found:" + paramEntry.getKey());
                     }
-                    OAuth2Util.log("oauth-inbound-service", logParams, "FAILED",
-                            "Parameter with name: '" + paramEntry.getKey() + "' is repeated in the request." ,
+                    OAuth2Util.log(logParams, "FAILED",
+                            "Parameter with name: '" + paramEntry.getKey() + "' is repeated in the request.",
                             "validate-input-parameters", null);
                     return false;
                 }
@@ -1123,8 +1123,8 @@ public class EndpointUtil {
                         log.debug("Repeated param found:" + entry.getKey());
 
                     }
-                    OAuth2Util.log("oauth-inbound-service", logParams, "FAILED",
-                            "Parameter with name: '" + entry.getKey() + "' is repeated in the request." , "validate" +
+                    OAuth2Util.log(logParams, "FAILED",
+                            "Parameter with name: '" + entry.getKey() + "' is repeated in the request.", "validate" +
                                     "-input-parameters", null);
                     return false;
                 }
@@ -1199,8 +1199,8 @@ public class EndpointUtil {
             }
             Map<String, Object> params = new HashMap<>();
             params.put("clientId", consumerKey);
-            OAuth2Util.log("oauth-inbound-service", params, "FAILED",
-                    "A valid OAuth application could not be found for the given client_id." , "validate-oauth-client",
+            OAuth2Util.log(params, "FAILED",
+                    "A valid OAuth application could not be found for the given client_id.", "validate-oauth-client",
                     null);
             throw new InvalidApplicationClientException("A valid OAuth client could not be found for client_id: " +
                     Encode.forHtml(consumerKey));
@@ -1213,8 +1213,8 @@ public class EndpointUtil {
             Map<String, Object> params = new HashMap<>();
             params.put("clientId", consumerKey);
             params.put("appState", appState);
-            OAuth2Util.log("oauth-inbound-service", params, "FAILED",
-                    "OAuth application is not in active state." , "validate-oauth-client", null);
+            OAuth2Util.log(params, "FAILED",
+                    "OAuth application is not in active state.", "validate-oauth-client", null);
             throw new InvalidApplicationClientException("Oauth application is not in active state");
         }
 
@@ -1224,8 +1224,8 @@ public class EndpointUtil {
         Map<String, Object> params = new HashMap<>();
         params.put("clientId", consumerKey);
         params.put("appState", appState);
-        OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
-                "OAuth Application validation is successful." , "validate-oauth-client", null);
+        OAuth2Util.log(params, "SUCCESS",
+                "OAuth Application validation is successful.", "validate-oauth-client", null);
     }
 
     private static boolean isNotActiveState(String appState) {

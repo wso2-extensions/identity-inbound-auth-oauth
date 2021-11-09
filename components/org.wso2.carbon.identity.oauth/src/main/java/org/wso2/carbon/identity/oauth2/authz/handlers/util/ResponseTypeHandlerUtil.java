@@ -212,8 +212,8 @@ public class ResponseTypeHandlerUtil {
             OauthTokenIssuer oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
             return generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled, oauthTokenIssuer);
         } catch (InvalidOAuthClientException e) {
-            OAuth2Util.log("oauth-inbound-service", null, "FAILED",
-                    "System error occurred." , "issue-authz-code", null);
+            OAuth2Util.log(null, "FAILED",
+                    "System error occurred.", "issue-authz-code", null);
             throw new IdentityOAuth2Exception(
                     "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
@@ -257,8 +257,8 @@ public class ResponseTypeHandlerUtil {
         try {
             authorizationCode = oauthIssuerImpl.authorizationCode(oauthAuthzMsgCtx);
         } catch (OAuthSystemException e) {
-            OAuth2Util.log("oauth-inbound-service", null, "FAILED",
-                    "System error occurred." , "issue-authz-code", null);
+            OAuth2Util.log(null, "FAILED",
+                    "System error occurred.", "issue-authz-code", null);
             throw new IdentityOAuth2Exception(e.getMessage(), e);
         }
 
@@ -307,8 +307,8 @@ public class ResponseTypeHandlerUtil {
 
         Map<String, Object> configs = new HashMap<>();
         configs.put("authzCodeValidityPeriod", String.valueOf(validityPeriod));
-        OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
-                "Issued Authorization Code to user." , "issue-authz-code", configs);
+        OAuth2Util.log(params, "SUCCESS",
+                "Issued Authorization Code to user.", "issue-authz-code", configs);
         return authzCodeDO;
     }
 

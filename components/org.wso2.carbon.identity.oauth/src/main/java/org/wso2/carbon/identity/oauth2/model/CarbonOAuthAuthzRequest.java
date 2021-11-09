@@ -64,7 +64,7 @@ public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
             Map<String, Object> params = new HashMap<>();
             params.put("response_type", responseTypeValue);
             params.put("client_id", getClientId());
-            OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Invalid response_type parameter.",
+            OAuth2Util.log(params, "FAILED", "Invalid response_type parameter.",
                     "validate-input-parameters", null);
             throw OAuthUtils.handleOAuthProblemException("Invalid response_type parameter value");
         }

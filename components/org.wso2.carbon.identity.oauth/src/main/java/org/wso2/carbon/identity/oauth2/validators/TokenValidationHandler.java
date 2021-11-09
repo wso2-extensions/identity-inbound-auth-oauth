@@ -298,19 +298,19 @@ public class TokenValidationHandler {
         // as well, that means this token is not active. So show the generic error.
         if (!introResp.isActive()) {
             if (introResp.getError() != null) {
-                OAuth2Util.log("oauth-inbound-service", null, "FAILED",
-                        introResp.getError() , "validate-token", null);
+                OAuth2Util.log(null, "FAILED",
+                        introResp.getError(), "validate-token", null);
                 return introResp;
             } else if (exception != null) {
-                OAuth2Util.log("oauth-inbound-service", null, "FAILED",
-                        "System error occurred." , "validate-token", null);
+                OAuth2Util.log(null, "FAILED",
+                        "System error occurred.", "validate-token", null);
                 throw new IdentityOAuth2Exception("Error occurred while validating token.", exception);
             } else {
                 return buildIntrospectionErrorResponse("Token validation failed");
             }
         } else {
-            OAuth2Util.log("oauth-inbound-service", null, "SUCCESS",
-                    "Token is successfully validated." , "validate-token", null);
+            OAuth2Util.log(null, "SUCCESS",
+                    "Token is successfully validated.", "validate-token", null);
         }
 
         if (introResp.getUsername() != null) {
@@ -344,17 +344,17 @@ public class TokenValidationHandler {
             refreshTokenDataDO = findRefreshToken(validationRequest.getAccessToken().getIdentifier());
         } catch (IllegalArgumentException e) {
             // Refresh token not found in the system.
-            OAuth2Util.log("oauth-inbound-service", null, "FAILED", "Provided token is not a valid refresh token.",
+            OAuth2Util.log(null, "FAILED", "Provided token is not a valid refresh token.",
                     "validate-refresh-token", null);
             return buildIntrospectionErrorResponse(e.getMessage());
         }
 
         if (refreshTokenDataDO == null || hasRefreshTokenExpired(refreshTokenDataDO)) {
             if (refreshTokenDataDO == null) {
-                OAuth2Util.log("oauth-inbound-service", null, "FAILED", "Provided token is not a valid refresh token.",
+                OAuth2Util.log(null, "FAILED", "Provided token is not a valid refresh token.",
                         "validate-refresh-token", null);
             } else if (hasRefreshTokenExpired(refreshTokenDataDO)) {
-                OAuth2Util.log("oauth-inbound-service", null, "FAILED", "Token is expired.",
+                OAuth2Util.log(null, "FAILED", "Token is expired.",
                         "validate-refresh-token", null);
             }
             // Token is not active. we do not need to worry about other details.
@@ -453,13 +453,13 @@ public class TokenValidationHandler {
                 }
             } catch (IllegalArgumentException e) {
                 // access token not found in the system.
-                OAuth2Util.log("oauth-inbound-service", null, "FAILED", "Provided token is not a valid access token.",
+                OAuth2Util.log(null, "FAILED", "Provided token is not a valid access token.",
                         "validate-access-token", null);
                 return buildIntrospectionErrorResponse(e.getMessage());
             }
 
             if (hasAccessTokenExpired(accessTokenDO)) {
-                OAuth2Util.log("oauth-inbound-service", null, "FAILED", "Access token is expired.", "validate-access" +
+                OAuth2Util.log(null, "FAILED", "Access token is expired.", "validate-access" +
                         "-token", null);
                 // token is not active. we do not need to worry about other details.
                 introResp.setActive(false);
@@ -525,7 +525,7 @@ public class TokenValidationHandler {
         // Validate access delegation.
         if (!tokenValidator.validateAccessDelegation(messageContext)) {
             // This is redundant. But sake of readability.
-            OAuth2Util.log("oauth-inbound-service", null, "FAILED", "Invalid access delegation.", "validate-access" +
+            OAuth2Util.log(null, "FAILED", "Invalid access delegation.", "validate-access" +
                     "-token", null);
             introResp.setActive(false);
             return buildIntrospectionErrorResponse("Invalid access delegation");
@@ -534,7 +534,7 @@ public class TokenValidationHandler {
         // Validate scopes at app level.
         if (!tokenValidator.validateScope(messageContext)) {
             // This is redundant. But sake of readability.
-            OAuth2Util.log("oauth-inbound-service", null, "FAILED", "Scope validation failed at application level.",
+            OAuth2Util.log(null, "FAILED", "Scope validation failed at application level.",
                     "validate-access-token", null);
             introResp.setActive(false);
             if (log.isDebugEnabled()) {

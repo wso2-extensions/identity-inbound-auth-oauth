@@ -1550,8 +1550,8 @@ public class OAuth2Util {
             if ((verificationCode == null || verificationCode.trim().length() == 0)) {
                 //if pkce is mandatory, throw error
                 if (oAuthApp.isPkceMandatory()) {
-                    OAuth2Util.log("oauth-inbound-service", params, "FAILED",
-                            "No PKCE code verifier found. PKCE is mandatory for the application." , "validate-pkce",
+                    OAuth2Util.log(params, "FAILED",
+                            "No PKCE code verifier found. PKCE is mandatory for the application.", "validate-pkce",
                             null);
                     throw new IdentityOAuth2Exception("No PKCE code verifier found.PKCE is mandatory for this " +
                             "oAuth 2.0 application.");
@@ -1559,14 +1559,14 @@ public class OAuth2Util {
                     //PKCE is optional, see if the authz code was requested with a PKCE challenge
                     if (referenceCodeChallenge == null || referenceCodeChallenge.trim().length() == 0) {
                         //since no PKCE challenge was provided
-                        OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
-                                "PKCE challenge is not provided." , "validate-pkce",
+                        OAuth2Util.log(params, "SUCCESS",
+                                "PKCE challenge is not provided.", "validate-pkce",
                                 null);
                         return true;
                     } else {
-                        OAuth2Util.log("oauth-inbound-service", params, "FAILED",
+                        OAuth2Util.log(params, "FAILED",
                                 "Empty PKCE code_verifier sent. This authorization code requires a PKCE verification " +
-                                        "to obtain an access token." , "validate-pkce",
+                                        "to obtain an access token.", "validate-pkce",
                                 null);
                         throw new IdentityOAuth2Exception("Empty PKCE code_verifier sent. This authorization code " +
                                 "requires a PKCE verification to obtain an access token.");
@@ -1575,23 +1575,23 @@ public class OAuth2Util {
             }
             //verify that the code verifier is upto spec as per RFC 7636
             if (!validatePKCECodeVerifier(verificationCode)) {
-                OAuth2Util.log("oauth-inbound-service", params, "FAILED",
-                        "Code verifier used is not up to RFC 7636 specifications." , "validate-pkce",
+                OAuth2Util.log(params, "FAILED",
+                        "Code verifier used is not up to RFC 7636 specifications.", "validate-pkce",
                         null);
                 throw new IdentityOAuth2Exception("Code verifier used is not up to RFC 7636 specifications.");
             }
             if (OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(challengeMethod)) {
                 //if the current application explicitly doesn't support plain, throw exception
                 if (!oAuthApp.isPkceSupportPlain()) {
-                    OAuth2Util.log("oauth-inbound-service", params, "FAILED",
-                            "This application does not allow 'plain' transformation algorithm." , "validate-pkce",
+                    OAuth2Util.log(params, "FAILED",
+                            "This application does not allow 'plain' transformation algorithm.", "validate-pkce",
                             null);
                     throw new IdentityOAuth2Exception(
                             "This application does not allow 'plain' transformation algorithm.");
                 }
                 if (!referenceCodeChallenge.equals(verificationCode)) {
-                    OAuth2Util.log("oauth-inbound-service", params, "FAILED",
-                            "Reference code challenge does not match with verification code." , "validate-pkce",
+                    OAuth2Util.log(params, "FAILED",
+                            "Reference code challenge does not match with verification code.", "validate-pkce",
                             null);
                     return false;
                 }
@@ -1605,8 +1605,8 @@ public class OAuth2Util {
                     String referencePKCECodeChallenge = new String(Base64.encodeBase64URLSafe(hash),
                             StandardCharsets.UTF_8).trim();
                     if (!referencePKCECodeChallenge.equals(referenceCodeChallenge)) {
-                        OAuth2Util.log("oauth-inbound-service", params, "FAILED",
-                                "Reference code challenge does not match with verification code." , "validate-pkce",
+                        OAuth2Util.log(params, "FAILED",
+                                "Reference code challenge does not match with verification code.", "validate-pkce",
                                 null);
                         return false;
                     }
@@ -1614,21 +1614,21 @@ public class OAuth2Util {
                     if (log.isDebugEnabled()) {
                         log.debug("Failed to create SHA256 Message Digest.");
                     }
-                    OAuth2Util.log("oauth-inbound-service", params, "FAILED",
-                            "System error occurred." , "validate-pkce", null);
+                    OAuth2Util.log(params, "FAILED",
+                            "System error occurred.", "validate-pkce", null);
                     return false;
                 }
             } else {
                 //Invalid OAuth2 token response
-                OAuth2Util.log("oauth-inbound-service", params, "FAILED",
-                        "Invalid PKCE Code Challenge Method." , "validate-pkce", null);
+                OAuth2Util.log(params, "FAILED",
+                        "Invalid PKCE Code Challenge Method.", "validate-pkce", null);
                 throw new IdentityOAuth2Exception("Invalid OAuth2 Token Response. Invalid PKCE Code Challenge Method '"
                         + challengeMethod + "'");
             }
         }
         //pkce validation successful
-        OAuth2Util.log("oauth-inbound-service", null, "SUCCESS",
-                "PKCE validation is successful for the token request." , "validate-pkce", null);
+        OAuth2Util.log(null, "SUCCESS",
+                "PKCE validation is successful for the token request.", "validate-pkce", null);
         return true;
     }
 
@@ -4351,10 +4351,10 @@ public class OAuth2Util {
         return IdentityTenantUtil.getTenantDomainFromContext();
     }
 
-    public static void log(String componentId, Map<String, Object> input, String resultStatus, String resultMessage,
+    public static void log(Map<String, Object> input, String resultStatus, String resultMessage,
                            String actionId, Map<String, Object> configurations) {
 
-        LoggerUtils.triggerDiagnosticLogEvent(componentId, input, resultStatus, resultMessage, actionId,
+        LoggerUtils.triggerDiagnosticLogEvent("oauth-inbound-service", input, resultStatus, resultMessage, actionId,
                 configurations);
     }
 

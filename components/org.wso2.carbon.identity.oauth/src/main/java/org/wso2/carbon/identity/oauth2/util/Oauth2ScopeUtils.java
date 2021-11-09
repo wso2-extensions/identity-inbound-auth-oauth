@@ -292,8 +292,8 @@ public class Oauth2ScopeUtils {
                             params.put("scopes", scopes);
                         }
                     }
-                    OAuth2Util.log("oauth-inbound-service", params, "FAILED",
-                            "Scope validation failed against the configured application scope validator." ,
+                    OAuth2Util.log(params, "FAILED",
+                            "Scope validation failed against the configured application scope validator.",
                             "validate-scope", configs);
                     return false;
                 }

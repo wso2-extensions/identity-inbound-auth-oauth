@@ -81,7 +81,7 @@ public class OIDCRequestObjectUtil {
             Map<String, Object> params = new HashMap<>();
             params.put(REQUEST, oauthRequest.getParam(REQUEST));
             params.put(REQUEST_URI, oauthRequest.getParam(REQUEST_URI));
-            OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Server error occurred.",
+            OAuth2Util.log(params, "FAILED", "Server error occurred.",
                     "parse-request-object", null);
             throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, error + requestObjType);
         }
@@ -113,7 +113,7 @@ public class OIDCRequestObjectUtil {
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            OAuth2Util.log("oauth-inbound-service", null, "FAILED", "Server error occurred.",
+            OAuth2Util.log(null, "FAILED", "Server error occurred.",
                     "validate-request-object-signature", null);
             throw new RequestObjectException("Error while retrieving app information for client_id: " + clientId +
                     ". Cannot proceed with signature validation", e);
@@ -134,7 +134,7 @@ public class OIDCRequestObjectUtil {
 
                     Map<String, Object> configs = new HashMap<>();
                     configs.put("requestObjectSignatureValidationEnabled", "true");
-                    OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Request object signature validation is" +
+                    OAuth2Util.log(params, "FAILED", "Request object signature validation is" +
                             " enabled but request object is not signed.", "validate-request-object-signature", configs);
                     throw new RequestObjectException("Request object signature validation is enabled but request " +
                             "object is not signed.");
@@ -155,12 +155,12 @@ public class OIDCRequestObjectUtil {
                 Map<String, Object> configs = new HashMap<>();
                 configs.put("requestObjectSignatureValidationEnabled",
                         Boolean.toString(oAuthAppDO.isRequestObjectSignatureValidationEnabled()));
-                OAuth2Util.log("oauth-inbound-service", params, "FAILED", "Request Object signature verification " +
+                OAuth2Util.log(params, "FAILED", "Request Object signature verification " +
                         "failed.", "validate-request-object-signature", configs);
             }
             throw e;
         }
-        OAuth2Util.log("oauth-inbound-service", null, "SUCCESS", "Request Object signature verification " +
+        OAuth2Util.log(null, "SUCCESS", "Request Object signature verification " +
                 "is successful.", "validate-request-object-signature", null);
     }
 

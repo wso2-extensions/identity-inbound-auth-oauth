@@ -105,8 +105,8 @@ public class OAuthRevocationEndpoint {
                     }
                 });
             }
-            OAuth2Util.log("oauth-inbound-service", params, "SUCCESS",
-                    "Successfully received token revocation request." , "receive-revoke-request", null);
+            OAuth2Util.log(params, "SUCCESS",
+                    "Successfully received token revocation request.", "receive-revoke-request", null);
 
             validateRepeatedParams(request, paramMap);
 
@@ -114,8 +114,8 @@ public class OAuthRevocationEndpoint {
             String token = getToken(paramMap, httpRequest);
             String callback = getCallback(paramMap, httpRequest);
             if (isEmpty(token)) {
-                OAuth2Util.log("oauth-inbound-service", params, "FAILED",
-                        "'token' parameter is missing in the revoke request." , "validate-input-parameters", null);
+                OAuth2Util.log(params, "FAILED",
+                        "'token' parameter is missing in the revoke request.", "validate-input-parameters", null);
                 return handleClientFailure(callback);
             }
             String tokenType = getTokenType(paramMap, httpRequest);
