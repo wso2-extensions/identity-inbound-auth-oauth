@@ -264,22 +264,23 @@ public class AuthorizationHandlerManager {
                         " doesn't have necessary rights to grant access to the resource(s) : " +
                         OAuth2Util.buildScopeString(authzReqDTO.getScopes()));
             }
-            Map<String, Object> params = new HashMap<>();
-            params.put("clientId", authzReqDTO.getConsumerKey());
-            if (authzReqDTO.getUser() != null) {
-                try {
-                    params.put("user", authzReqDTO.getUser().getUserId());
-                } catch (UserIdNotFoundException e) {
-                    if (StringUtils.isNotBlank(authzReqDTO.getUser().getAuthenticatedSubjectIdentifier())) {
-                        params.put("user", authzReqDTO.getUser().getAuthenticatedSubjectIdentifier().replaceAll(".",
-                                "*"));
+            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", authzReqDTO.getConsumerKey());
+                if (authzReqDTO.getUser() != null) {
+                    try {
+                        params.put("user", authzReqDTO.getUser().getUserId());
+                    } catch (UserIdNotFoundException e) {
+                        if (StringUtils.isNotBlank(authzReqDTO.getUser().getAuthenticatedSubjectIdentifier())) {
+                            params.put("user", authzReqDTO.getUser().getAuthenticatedSubjectIdentifier().replaceAll(".",
+                                    "*"));
+                        }
                     }
                 }
+                params.put("requestedScopes", OAuth2Util.buildScopeString(authzReqDTO.getScopes()));
+                OAuth2Util.log(params, "FAILED","User doesn't have necessary rights to grant access to the requested resource(s).", "validate" +
+                                "-authz-request", null);
             }
-            params.put("requestedScopes", OAuth2Util.buildScopeString(authzReqDTO.getScopes()));
-            OAuth2Util.log(params, "FAILED",
-                    "User doesn't have necessary rights to grant access to the requested resource(s).", "validate" +
-                            "-authz-request", null);
             return true;
         }
         return false;
@@ -329,13 +330,14 @@ public class AuthorizationHandlerManager {
                         " provided for user : " + authzReqDTO.getUser() +
                         ", for client :" + authzReqDTO.getConsumerKey());
             }
-            Map<String, Object> params = new HashMap<>();
-            params.put("clientId", authzReqDTO.getConsumerKey());
-            params.put("response_type", authzReqDTO.getResponseType());
+            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", authzReqDTO.getConsumerKey());
+                params.put("response_type", authzReqDTO.getResponseType());
 
-            OAuth2Util.log(params, "FAILED",
-                    "Un-supported response type.", "validate" +
-                            "-authz-request", null);
+                OAuth2Util.log(params, "FAILED", "Un-supported response type.", "validate" +
+                        "-authz-request", null);
+            }
             return true;
         }
         return false;
