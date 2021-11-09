@@ -91,12 +91,14 @@ public class OAuth2TokenEndpoint {
         try {
             startSuperTenantFlow();
             paramMap = parseJsonTokenRequest(payload);
-            Map<String, Object> params = new HashMap<>();
-            if (MapUtils.isNotEmpty(paramMap)) {
-                paramMap.forEach(params::put);
+            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                if (MapUtils.isNotEmpty(paramMap)) {
+                    paramMap.forEach(params::put);
+                }
+                OAuth2Util
+                        .log(params, "SUCCESS", "Successfully received token request.", "receive-token-request", null);
             }
-            OAuth2Util.log(params, "SUCCESS",
-                    "Successfully received token request.", "receive-token-request", null);
         } catch (TokenEndpointBadRequestException e) {
             triggerOnTokenExceptionListeners(e, request, null);
             throw e;
@@ -114,12 +116,13 @@ public class OAuth2TokenEndpoint {
                                      MultivaluedMap<String, String> paramMap)
             throws OAuthSystemException, InvalidRequestParentException {
 
-        Map<String, Object> params = new HashMap<>();
-        if (MapUtils.isNotEmpty(paramMap)) {
-            paramMap.forEach(params::put);
+        if (OAuth2Util.isDiagnosticLogsEnabled()) {
+            Map<String, Object> params = new HashMap<>();
+            if (MapUtils.isNotEmpty(paramMap)) {
+                paramMap.forEach(params::put);
+            }
+            OAuth2Util.log(params, "SUCCESS", "Successfully received token request.", "receive-token-request", null);
         }
-        OAuth2Util.log(params, "SUCCESS",
-                "Successfully received token request.", "receive-token-request", null);
         return issueAccessToken(request, (Map<String, List<String>>) paramMap);
     }
 
