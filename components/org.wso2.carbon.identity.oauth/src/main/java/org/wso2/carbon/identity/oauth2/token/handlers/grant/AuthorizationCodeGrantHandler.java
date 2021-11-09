@@ -120,12 +120,14 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                 log.debug("Received callback url in the request : " + callbackUrlFromRequest +
                         " is not matching with persisted callback url " + callbackUrlFromPersistedAuthzCode);
             }
-            Map<String, Object> params = new HashMap<>();
-            params.put("callbackUrlInRequest", callbackUrlFromRequest);
-            Map<String, Object> configs = new HashMap<>();
-            configs.put("applicationCallbackUrl", callbackUrlFromPersistedAuthzCode);
-            OAuth2Util.log(params, "FAILED",
-                    "Received callback URL does not match with the persisted.", "validate-input-parameters", configs);
+            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("callbackUrlInRequest", callbackUrlFromRequest);
+                Map<String, Object> configs = new HashMap<>();
+                configs.put("applicationCallbackUrl", callbackUrlFromPersistedAuthzCode);
+                OAuth2Util.log(params, "FAILED", "Received callback URL does not match with the persisted.",
+                        "validate-input-parameters", configs);
+            }
             throw new IdentityOAuth2Exception("Callback url mismatch");
         }
         return true;
@@ -338,31 +340,40 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                 log.debug("Invalid token request for client id: " + clientId +
                         "and couldn't find persisted data for authorization code: " + authzCode);
             }
-            OAuth2Util.log(params, "FAILED",
-                    "Invalid authorization code received. Couldn't find persisted data for authorization code.",
-                    "validate-authz-code", null);
+            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                OAuth2Util.log(params, "FAILED",
+                        "Invalid authorization code received. Couldn't find persisted data for authorization code.",
+                        "validate-authz-code", null);
+            }
             throw new IdentityOAuth2Exception("Invalid authorization code received from token request");
         }
 
         if (isInactiveAuthzCode(authzCodeBean)) {
             clearTokenCache(authzCodeBean, clientId);
-            OAuth2Util.log(params, "FAILED",
-                    "Inactive authorization code received.", "validate-authz-code", null);
+            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                OAuth2Util.log(params, "FAILED", "Inactive authorization code received.", "validate-authz-code", null);
+            }
             throw new IdentityOAuth2Exception("Inactive authorization code received from token request");
         }
 
         if (isAuthzCodeExpired(authzCodeBean) || isAuthzCodeRevoked(authzCodeBean)) {
             if (isAuthzCodeExpired(authzCodeBean)) {
-                OAuth2Util.log(params, "FAILED",
-                        "Expired authorization code received.", "validate-authz-code", null);
+                if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                    OAuth2Util
+                            .log(params, "FAILED", "Expired authorization code received.", "validate-authz-code", null);
+                }
             } else if (isAuthzCodeRevoked(authzCodeBean)) {
-                OAuth2Util.log(params, "FAILED",
-                        "Revoked authorization code received.", "validate-authz-code", null);
+                if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                    OAuth2Util
+                            .log(params, "FAILED", "Revoked authorization code received.", "validate-authz-code", null);
+                }
             }
             throw new IdentityOAuth2Exception("Expired or Revoked authorization code received from token request");
         }
-        OAuth2Util.log(params, "SUCCESS",
-                "Authorization code validation is successful.", "validate-authz-code", null);
+        if (OAuth2Util.isDiagnosticLogsEnabled()) {
+            OAuth2Util.log(params, "SUCCESS", "Authorization code validation is successful.", "validate-authz-code",
+                    null);
+        }
         return true;
     }
 

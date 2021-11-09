@@ -263,17 +263,18 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                             .getCanonicalName(), isValid));
                 }
                 if (!isValid) {
-                    Map<String, Object> configs = new HashMap<>();
-                    configs.put("scopeValidator", scopeHandler.getClass().getCanonicalName());
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
-                    if (ArrayUtils.isNotEmpty(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope())) {
-                        List<String> scopes = Arrays.asList(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope());
-                        params.put("scopes", scopes);
+                    if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                        Map<String, Object> configs = new HashMap<>();
+                        configs.put("scopeValidator", scopeHandler.getClass().getCanonicalName());
+                        Map<String, Object> params = new HashMap<>();
+                        params.put("clientId", tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+                        if (ArrayUtils.isNotEmpty(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope())) {
+                            List<String> scopes = Arrays.asList(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope());
+                            params.put("scopes", scopes);
+                        }
+                        OAuth2Util.log(params, "FAILED", "Scope validation failed against the configured scope validator.",
+                                "validate-scope", configs);
                     }
-                    OAuth2Util.log(params, "FAILED",
-                            "Scope validation failed against the configured scope validator.",
-                            "validate-scope", configs);
                     break;
                 }
             }
