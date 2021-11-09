@@ -79,8 +79,10 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         if (log.isDebugEnabled()) {
             log.debug("Request Object extracted from the request: " + requestObjectParam);
         }
-        OAuth2Util.log(null, "FAILED", "Request object parsed successfully.",
-                "parse-request-object", null);
+        if (OAuth2Util.isDiagnosticLogsEnabled()) {
+            OAuth2Util.log(null, "FAILED", "Request object parsed successfully.",
+                    "parse-request-object", null);
+        }
         return requestObject;
     }
 
@@ -159,10 +161,12 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage + "Received Request Object: " + requestObjectString, e);
             }
-            Map<String, Object> params = new HashMap<>();
-            params.put("requestObject", requestObjectString);
-            OAuth2Util.log(params, "FAILED", "Request object is not a valid JWT.",
-                    "parse-request-object", null);
+            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("requestObject", requestObjectString);
+                OAuth2Util.log(params, "FAILED", "Request object is not a valid JWT.",
+                        "parse-request-object", null);
+            }
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, errorMessage);
         }
     }
