@@ -113,12 +113,14 @@ public class CarbonOAuthTokenRequest extends OAuthTokenRequest {
     @Override
     protected OAuthValidator<HttpServletRequest> initValidator() throws OAuthProblemException, OAuthSystemException {
 
-        Map<String, Object> params = new HashMap<>();
-        params.put("clientId", getClientId());
         String requestTypeValue = getParam(OAuth.OAUTH_GRANT_TYPE);
         if (OAuthUtils.isEmpty(requestTypeValue)) {
-            OAuth2Util.log(params, "FAILED",
-                    "Missing grant_type parameter value.", "validate-input-parameters", null);
+            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", getClientId());
+                OAuth2Util.log(params, "FAILED", "Missing grant_type parameter value.", "validate-input-parameters",
+                        null);
+            }
             throw OAuthUtils.handleOAuthProblemException("Missing grant_type parameter value");
         }
 
@@ -131,13 +133,16 @@ public class CarbonOAuthTokenRequest extends OAuthTokenRequest {
                 log.debug("Unsupported Grant Type : " + requestTypeValue +
                         " for client id : " + getClientId());
             }
-            params.put("grantType", requestTypeValue);
-            Map<String, Object> configs = new HashMap<>();
-            List<String> supportedGrantTypes = new ArrayList<>(OAuthServerConfiguration.getInstance()
-                    .getSupportedGrantTypeValidators().keySet());
-            configs.put("supportedGrantTypes", supportedGrantTypes);
-            OAuth2Util.log(params, "FAILED",
-                    "Unsupported grant_type value.", "validate-input-parameters", configs);
+            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", getClientId());
+                params.put("grantType", requestTypeValue);
+                Map<String, Object> configs = new HashMap<>();
+                List<String> supportedGrantTypes = new ArrayList<>(OAuthServerConfiguration.getInstance()
+                        .getSupportedGrantTypeValidators().keySet());
+                configs.put("supportedGrantTypes", supportedGrantTypes);
+                OAuth2Util.log(params, "FAILED", "Unsupported grant_type value.", "validate-input-parameters", configs);
+            }
             throw OAuthProblemException.error(OAuthError.TokenResponse.UNSUPPORTED_GRANT_TYPE)
                     .description("Unsupported grant_type value");
         }
