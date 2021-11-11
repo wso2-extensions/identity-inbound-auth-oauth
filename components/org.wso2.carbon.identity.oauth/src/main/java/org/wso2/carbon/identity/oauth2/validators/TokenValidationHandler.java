@@ -457,6 +457,10 @@ public class TokenValidationHandler {
             introResp.setUsername(getAuthzUser(accessTokenDO));
             // add client id
             introResp.setClientId(accessTokenDO.getConsumerKey());
+            // add issuer
+            introResp.setIss(OAuth2Util.OAuthURL.getOAuth2TokenEPUrl());
+            // add audience
+            introResp.setAud(accessTokenDO.getConsumerKey());
             // Set token binding info.
             if (accessTokenDO.getTokenBinding() != null) {
                 introResp.setBindingType(accessTokenDO.getTokenBinding().getBindingType());
