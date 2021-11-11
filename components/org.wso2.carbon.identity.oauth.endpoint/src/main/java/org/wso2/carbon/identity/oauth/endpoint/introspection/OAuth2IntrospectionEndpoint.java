@@ -28,7 +28,7 @@ import org.wso2.carbon.identity.oauth2.IntrospectionDataProvider;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.OAuth2LogsUtil;
 
 import java.util.HashMap;
 import java.util.List;
@@ -75,7 +75,7 @@ public class OAuth2IntrospectionEndpoint {
         OAuth2TokenValidationRequestDTO introspectionRequest;
         OAuth2IntrospectionResponseDTO introspectionResponse;
 
-        if (OAuth2Util.isDiagnosticLogsEnabled()) {
+        if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
             Map<String, Object> params = new HashMap<>();
             if (StringUtils.isNotBlank(tokenTypeHint)) {
                 params.put("tokenTypeHint", tokenTypeHint);
@@ -88,10 +88,11 @@ public class OAuth2IntrospectionEndpoint {
             if (StringUtils.isNotBlank(token)) {
                 params.put("token", token.replaceAll(".", "*"));
             }
-            OAuth2Util.log(params, "SUCCESS", "Successfully received introspect request.", "receive-introspect-request",
-                    null);
+            OAuth2LogsUtil
+                    .log(params, "SUCCESS", "Successfully received introspect request.", "receive-introspect-request",
+                            null);
             if (StringUtils.isBlank(token)) {
-                OAuth2Util
+                OAuth2LogsUtil
                         .log(params, "FAILED", "'token' parameter cannot be empty.", "validate-input-parameters", null);
             }
         }
@@ -195,9 +196,7 @@ public class OAuth2IntrospectionEndpoint {
                             (((IntrospectionDataProvider) dataProvider).getIntrospectionData(
                                     introspectionRequest, introspectionResponse)));
                 } catch (IdentityOAuth2Exception e) {
-                    if (OAuth2Util.isDiagnosticLogsEnabled()) {
-                        OAuth2Util.log(null, "FAILED", "System error occurred.", "generate-introspect-response", null);
-                    }
+                    OAuth2LogsUtil.log(null, "FAILED", "System error occurred.", "generate-introspect-response", null);
                     log.error("Error occurred while processing additional token introspection data.", e);
 
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -211,9 +210,7 @@ public class OAuth2IntrospectionEndpoint {
         try {
             return Response.ok(respBuilder.build(), MediaType.APPLICATION_JSON).status(Response.Status.OK).build();
         } catch (JSONException e) {
-            if (OAuth2Util.isDiagnosticLogsEnabled()) {
-                OAuth2Util.log(null, "FAILED", "System error occurred.", "generate-introspect-response", null);
-            }
+            OAuth2LogsUtil.log(null, "FAILED", "System error occurred.", "generate-introspect-response", null);
             log.error("Error occurred while building the json response.", e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity("{\"error\": \"Error occurred while building the json response.\"}").build();

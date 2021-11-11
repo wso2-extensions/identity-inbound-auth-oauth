@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.util.OAuth2LogsUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
@@ -79,10 +80,7 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         if (log.isDebugEnabled()) {
             log.debug("Request Object extracted from the request: " + requestObjectParam);
         }
-        if (OAuth2Util.isDiagnosticLogsEnabled()) {
-            OAuth2Util.log(null, "FAILED", "Request object parsed successfully.",
-                    "parse-request-object", null);
-        }
+        OAuth2LogsUtil.log(null, "FAILED", "Request object parsed successfully.", "parse-request-object", null);
         return requestObject;
     }
 
@@ -161,11 +159,11 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage + "Received Request Object: " + requestObjectString, e);
             }
-            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+            if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 params.put("requestObject", requestObjectString);
-                OAuth2Util.log(params, "FAILED", "Request object is not a valid JWT.",
-                        "parse-request-object", null);
+                OAuth2LogsUtil
+                        .log(params, "FAILED", "Request object is not a valid JWT.", "parse-request-object", null);
             }
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, errorMessage);
         }

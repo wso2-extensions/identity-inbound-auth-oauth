@@ -44,7 +44,7 @@ import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthTokenRequest;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.OAuth2LogsUtil;
 
 import java.util.HashMap;
 import java.util.List;
@@ -91,12 +91,12 @@ public class OAuth2TokenEndpoint {
         try {
             startSuperTenantFlow();
             paramMap = parseJsonTokenRequest(payload);
-            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+            if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 if (MapUtils.isNotEmpty(paramMap)) {
                     paramMap.forEach(params::put);
                 }
-                OAuth2Util
+                OAuth2LogsUtil
                         .log(params, "SUCCESS", "Successfully received token request.", "receive-token-request", null);
             }
         } catch (TokenEndpointBadRequestException e) {
@@ -116,12 +116,13 @@ public class OAuth2TokenEndpoint {
                                      MultivaluedMap<String, String> paramMap)
             throws OAuthSystemException, InvalidRequestParentException {
 
-        if (OAuth2Util.isDiagnosticLogsEnabled()) {
+        if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
             Map<String, Object> params = new HashMap<>();
             if (MapUtils.isNotEmpty(paramMap)) {
                 paramMap.forEach(params::put);
             }
-            OAuth2Util.log(params, "SUCCESS", "Successfully received token request.", "receive-token-request", null);
+            OAuth2LogsUtil
+                    .log(params, "SUCCESS", "Successfully received token request.", "receive-token-request", null);
         }
         return issueAccessToken(request, (Map<String, List<String>>) paramMap);
     }

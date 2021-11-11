@@ -41,7 +41,7 @@ import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.OAuth2LogsUtil;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -105,8 +105,8 @@ public class OAuthRevocationEndpoint {
                     }
                 });
             }
-            if (OAuth2Util.isDiagnosticLogsEnabled()) {
-                OAuth2Util.log(params, "SUCCESS", "Successfully received token revocation request.",
+            if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
+                OAuth2LogsUtil.log(params, "SUCCESS", "Successfully received token revocation request.",
                         "receive-revoke-request", null);
             }
 
@@ -116,8 +116,8 @@ public class OAuthRevocationEndpoint {
             String token = getToken(paramMap, httpRequest);
             String callback = getCallback(paramMap, httpRequest);
             if (isEmpty(token)) {
-                if (OAuth2Util.isDiagnosticLogsEnabled()) {
-                    OAuth2Util.log(params, "FAILED", "'token' parameter is missing in the revoke request.",
+                if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
+                    OAuth2LogsUtil.log(params, "FAILED", "'token' parameter is missing in the revoke request.",
                             "validate-input-parameters", null);
                 }
                 return handleClientFailure(callback);

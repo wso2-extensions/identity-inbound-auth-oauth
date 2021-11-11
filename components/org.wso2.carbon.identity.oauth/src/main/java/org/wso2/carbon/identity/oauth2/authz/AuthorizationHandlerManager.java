@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.util.OAuth2LogsUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
@@ -264,7 +265,7 @@ public class AuthorizationHandlerManager {
                         " doesn't have necessary rights to grant access to the resource(s) : " +
                         OAuth2Util.buildScopeString(authzReqDTO.getScopes()));
             }
-            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+            if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 params.put("clientId", authzReqDTO.getConsumerKey());
                 if (authzReqDTO.getUser() != null) {
@@ -278,8 +279,9 @@ public class AuthorizationHandlerManager {
                     }
                 }
                 params.put("requestedScopes", OAuth2Util.buildScopeString(authzReqDTO.getScopes()));
-                OAuth2Util.log(params, "FAILED","User doesn't have necessary rights to grant access to the requested resource(s).", "validate" +
-                                "-authz-request", null);
+                OAuth2LogsUtil.log(params, "FAILED",
+                        "User doesn't have necessary rights to grant access to the requested resource(s).",
+                        "validate-authz-request", null);
             }
             return true;
         }
@@ -330,13 +332,12 @@ public class AuthorizationHandlerManager {
                         " provided for user : " + authzReqDTO.getUser() +
                         ", for client :" + authzReqDTO.getConsumerKey());
             }
-            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+            if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 params.put("clientId", authzReqDTO.getConsumerKey());
                 params.put("response_type", authzReqDTO.getResponseType());
 
-                OAuth2Util.log(params, "FAILED", "Un-supported response type.", "validate" +
-                        "-authz-request", null);
+                OAuth2LogsUtil.log(params, "FAILED", "Un-supported response type.", "validate-authz-request", null);
             }
             return true;
         }

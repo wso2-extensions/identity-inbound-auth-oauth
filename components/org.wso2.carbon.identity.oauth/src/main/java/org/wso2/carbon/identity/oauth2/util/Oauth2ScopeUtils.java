@@ -274,7 +274,7 @@ public class Oauth2ScopeUtils {
                 }
                 appScopeValidators.remove(validator.getValidatorName());
                 if (!isValid) {
-                    if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                    if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
                         Map<String, Object> configs = new HashMap<>();
                         configs.put("applicationScopeValidator", validator.getValidatorName());
                         Map<String, Object> params = new HashMap<>();
@@ -293,7 +293,8 @@ public class Oauth2ScopeUtils {
                                 params.put("scopes", scopes);
                             }
                         }
-                        OAuth2Util.log(params, "FAILED", "Scope validation failed against the configured application scope validator.",
+                        OAuth2LogsUtil.log(params, "FAILED",
+                                "Scope validation failed against the configured application scope validator.",
                                 "validate-scope", configs);
                     }
                     return false;

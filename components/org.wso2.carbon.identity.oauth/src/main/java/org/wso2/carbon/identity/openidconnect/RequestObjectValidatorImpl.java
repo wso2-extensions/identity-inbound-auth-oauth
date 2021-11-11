@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.util.OAuth2LogsUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidator;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
@@ -210,10 +211,8 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                 return false;
             }
         }
-        if (OAuth2Util.isDiagnosticLogsEnabled()) {
-            OAuth2Util.log(null, "SUCCESS", "Request object validation is successful.",
-                    "validate-request-object", null);
-        }
+        OAuth2LogsUtil
+                .log(null, "SUCCESS", "Request object validation is successful.", "validate-request-object", null);
         return true;
     }
 
@@ -238,10 +237,10 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                         ", TimeStamp Skew : " + timeStampSkewMillis +
                         ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
                 logAndReturnFalse(msg);
-                if (OAuth2Util.isDiagnosticLogsEnabled()) {
+                if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
                     Map<String, Object> params = new HashMap<>();
                     params.put("requestObjectExpirationTime", expirationTime);
-                    OAuth2Util.log(params, "FAILED", "Request Object is Expired.", "validate-request-object", null);
+                    OAuth2LogsUtil.log(params, "FAILED", "Request Object is Expired.", "validate-request-object", null);
                 }
                 throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Request Object " +
                         "is Expired.");
@@ -258,22 +257,22 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         final String errorMsg = "Request Object and Authorization request contains unmatched ";
 
         if (!isValidParameter(oauthRequest.getClientId(), clientIdInReqObj)) {
-            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+            if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 params.put("clientIdInRequest", oauthRequest.getClientId());
                 params.put("clientIdInRequestObject", clientIdInReqObj);
-                OAuth2Util.log(params, "FAILED", errorMsg + Constants.CLIENT_ID, "validate-request-object", null);
+                OAuth2LogsUtil.log(params, "FAILED", errorMsg + Constants.CLIENT_ID, "validate-request-object", null);
             }
             throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMsg + Constants
                     .CLIENT_ID);
         }
 
         if (!isValidParameter(oauthRequest.getResponseType(), responseTypeInReqObj)) {
-            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+            if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 params.put("responseTypeInRequest", oauthRequest.getResponseType());
                 params.put("responseTypeInRequestObject", responseTypeInReqObj);
-                OAuth2Util.log(params, "FAILED", errorMsg + Constants.CLIENT_ID, "validate-request-object", null);
+                OAuth2LogsUtil.log(params, "FAILED", errorMsg + Constants.CLIENT_ID, "validate-request-object", null);
             }
             throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST,
                     errorMsg + Constants.RESPONSE_TYPE);
@@ -334,11 +333,11 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         String issuer = requestObject.getClaimsSet().getIssuer();
         boolean isValid = StringUtils.isNotEmpty(issuer) && issuer.equals(oAuth2Parameters.getClientId());
         if (!isValid) {
-            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+            if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 params.put("issuer", issuer);
                 params.put("clientId", oAuth2Parameters.getClientId());
-                OAuth2Util.log(params, "FAILED",
+                OAuth2LogsUtil.log(params, "FAILED",
                         "'issuer' field in request object should match with 'client_id' in request.",
                         "validate-request-object", null);
             }
@@ -366,13 +365,13 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                 return true;
             }
         }
-        if (OAuth2Util.isDiagnosticLogsEnabled()) {
+        if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
             Map<String, Object> params = new HashMap<>();
             params.put("audience", audience);
 
             Map<String, Object> configs = new HashMap<>();
             params.put("tokenEndpointUrl", currentAudience);
-            OAuth2Util.log(params, "FAILED", "None of the audiences in request object matched the token endpoint",
+            OAuth2LogsUtil.log(params, "FAILED", "None of the audiences in request object matched the token endpoint",
                     "validate-request-object", configs);
         }
         return logAndReturnFalse("None of the audience values matched the tokenEndpoint Alias: " + currentAudience);
@@ -476,11 +475,11 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         boolean isValid = StringUtils.isBlank(redirectUriInReqObj) || StringUtils.equals(redirectUriInReqObj,
                 oAuth2Parameters.getRedirectURI());
         if (!isValid) {
-            if (OAuth2Util.isDiagnosticLogsEnabled()) {
+            if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 params.put("redirectUriInRequest", oAuth2Parameters.getRedirectURI());
                 params.put("redirectUriInRequestObject", redirectUriInReqObj);
-                OAuth2Util.log(params, "FAILED",
+                OAuth2LogsUtil.log(params, "FAILED",
                         "Redirect URI in request object does not match with redirect URI in request.",
                         "validate-request-object", null);
             }
