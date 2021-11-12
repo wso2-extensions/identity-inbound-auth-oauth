@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.exceptions.DCRMEndpointException;
 
 import java.util.UUID;
+
 import javax.ws.rs.core.Response;
 
 /**
