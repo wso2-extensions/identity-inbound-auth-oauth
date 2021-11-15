@@ -130,6 +130,7 @@ public class ScopeUtils {
         errorDTO.setCode(code);
         errorDTO.setMessage(message);
         errorDTO.setDescription(description);
+        errorDTO.setRef(getCorrelation());
 
         return errorDTO;
     }
