@@ -23,6 +23,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -37,7 +38,6 @@ import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.util.OAuth2LogsUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
@@ -265,7 +265,7 @@ public class AuthorizationHandlerManager {
                         " doesn't have necessary rights to grant access to the resource(s) : " +
                         OAuth2Util.buildScopeString(authzReqDTO.getScopes()));
             }
-            if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 params.put("clientId", authzReqDTO.getConsumerKey());
                 if (authzReqDTO.getUser() != null) {
@@ -279,7 +279,8 @@ public class AuthorizationHandlerManager {
                     }
                 }
                 params.put("requestedScopes", OAuth2Util.buildScopeString(authzReqDTO.getScopes()));
-                OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED,
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED,
                         "User doesn't have necessary rights to grant access to the requested resource(s).",
                         "validate-authz-request", null);
             }
@@ -332,12 +333,14 @@ public class AuthorizationHandlerManager {
                         " provided for user : " + authzReqDTO.getUser() +
                         ", for client :" + authzReqDTO.getConsumerKey());
             }
-            if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 params.put("clientId", authzReqDTO.getConsumerKey());
                 params.put("response_type", authzReqDTO.getResponseType());
 
-                OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED, "Un-supported response type.", "validate-authz-request", null);
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED, "Un-supported response type.", "validate-authz-request",
+                        null);
             }
             return true;
         }

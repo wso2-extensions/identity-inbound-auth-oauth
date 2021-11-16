@@ -21,6 +21,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -29,7 +30,6 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.util.OAuth2LogsUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
@@ -80,11 +80,12 @@ public class OIDCRequestObjectUtil {
 
         if (requestObjectBuilder == null) {
             String error = "Unable to build the OIDC Request Object from:";
-            if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 params.put(REQUEST, oauthRequest.getParam(REQUEST));
                 params.put(REQUEST_URI, oauthRequest.getParam(REQUEST_URI));
-                OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED, "Server error occurred.", "parse-request-object", null);
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED, "Server error occurred.", "parse-request-object", null);
             }
             throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, error + requestObjType);
         }
@@ -116,7 +117,9 @@ public class OIDCRequestObjectUtil {
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "Server error occurred.", "validate-request-object-signature", null);
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "Server error occurred.", "validate-request-object-signature",
+                    null);
             throw new RequestObjectException("Error while retrieving app information for client_id: " + clientId +
                     ". Cannot proceed with signature validation", e);
         }
@@ -131,13 +134,14 @@ public class OIDCRequestObjectUtil {
                     validateSignature(oAuth2Parameters, requestObject, requestObjectValidator);
                 } else {
                     // If request object is not signed we need to throw an exception.
-                    if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
                         Map<String, Object> params = new HashMap<>();
                         params.put("clientId", clientId);
 
                         Map<String, Object> configs = new HashMap<>();
                         configs.put("requestObjectSignatureValidationEnabled", "true");
-                        OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED,
+                        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                                OAuthConstants.LogConstants.FAILED,
                                 "Request object signature validation is enabled but request object is not signed.",
                                 "validate-request-object-signature", configs);
                     }
@@ -154,20 +158,22 @@ public class OIDCRequestObjectUtil {
         } catch (RequestObjectException e) {
             if (StringUtils.isNotBlank(e.getErrorMessage()) && e.getErrorMessage().contains("signature verification " +
                     "failed")) {
-                if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     Map<String, Object> params = new HashMap<>();
                     params.put("clientId", oAuth2Parameters.getClientId());
 
                     Map<String, Object> configs = new HashMap<>();
                     configs.put("requestObjectSignatureValidationEnabled",
                             Boolean.toString(oAuthAppDO.isRequestObjectSignatureValidationEnabled()));
-                    OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED, "Request Object signature verification failed.",
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.FAILED, "Request Object signature verification failed.",
                             "validate-request-object-signature", configs);
                 }
             }
             throw e;
         }
-        OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.SUCCESS, "Request Object signature verification is successful.",
+        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                OAuthConstants.LogConstants.SUCCESS, "Request Object signature verification is successful.",
                 "validate-request-object-signature", null);
     }
 

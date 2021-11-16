@@ -78,6 +78,7 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationManag
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
@@ -1532,7 +1533,7 @@ public class OAuth2Util {
 
         if (oAuthApp != null && oAuthApp.isPkceMandatory() || referenceCodeChallenge != null) {
             Map<String, Object> params = null;
-            if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 params = new HashMap<>();
                 params.put("clientId", oAuthApp.getOauthConsumerKey());
                 params.put("verificationCode", verificationCode);
@@ -1549,8 +1550,9 @@ public class OAuth2Util {
             if ((verificationCode == null || verificationCode.trim().length() == 0)) {
                 //if pkce is mandatory, throw error
                 if (oAuthApp.isPkceMandatory()) {
-                    if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-                        OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED,
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                                OAuthConstants.LogConstants.FAILED,
                                 "No PKCE code verifier found. PKCE is mandatory for the application.", "validate-pkce",
                                 null);
                     }
@@ -1560,14 +1562,16 @@ public class OAuth2Util {
                     //PKCE is optional, see if the authz code was requested with a PKCE challenge
                     if (referenceCodeChallenge == null || referenceCodeChallenge.trim().length() == 0) {
                         //since no PKCE challenge was provided
-                        if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-                            OAuth2LogsUtil
-                                    .log(params, OAuthConstants.LogConstants.SUCCESS, "PKCE challenge is not provided.", "validate-pkce", null);
+                        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                                    params, OAuthConstants.LogConstants.SUCCESS, "PKCE challenge is not provided.",
+                                    "validate-pkce", null);
                         }
                         return true;
                     } else {
-                        if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-                            OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED,
+                        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                                    params, OAuthConstants.LogConstants.FAILED,
                                     "Empty PKCE code_verifier sent. This authorization code requires a PKCE verification to obtain an access token.",
                                     "validate-pkce", null);
                         }
@@ -1578,17 +1582,19 @@ public class OAuth2Util {
             }
             //verify that the code verifier is upto spec as per RFC 7636
             if (!validatePKCECodeVerifier(verificationCode)) {
-                if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-                    OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED, "Code verifier used is not up to RFC 7636 specifications.",
-                            "validate-pkce", null);
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.FAILED,
+                            "Code verifier used is not up to RFC 7636 specifications.", "validate-pkce", null);
                 }
                 throw new IdentityOAuth2Exception("Code verifier used is not up to RFC 7636 specifications.");
             }
             if (OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(challengeMethod)) {
                 //if the current application explicitly doesn't support plain, throw exception
                 if (!oAuthApp.isPkceSupportPlain()) {
-                    if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-                        OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED,
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                                OAuthConstants.LogConstants.FAILED,
                                 "This application does not allow 'plain' transformation algorithm.", "validate-pkce",
                                 null);
                     }
@@ -1596,8 +1602,9 @@ public class OAuth2Util {
                             "This application does not allow 'plain' transformation algorithm.");
                 }
                 if (!referenceCodeChallenge.equals(verificationCode)) {
-                    if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-                        OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED,
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                                OAuthConstants.LogConstants.FAILED,
                                 "Reference code challenge does not match with verification code.", "validate-pkce",
                                 null);
                     }
@@ -1613,8 +1620,9 @@ public class OAuth2Util {
                     String referencePKCECodeChallenge = new String(Base64.encodeBase64URLSafe(hash),
                             StandardCharsets.UTF_8).trim();
                     if (!referencePKCECodeChallenge.equals(referenceCodeChallenge)) {
-                        if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-                            OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED,
+                        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                                    params, OAuthConstants.LogConstants.FAILED,
                                     "Reference code challenge does not match with verification code.", "validate-pkce",
                                     null);
                         }
@@ -1624,23 +1632,27 @@ public class OAuth2Util {
                     if (log.isDebugEnabled()) {
                         log.debug("Failed to create SHA256 Message Digest.");
                     }
-                    if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-                        OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED, "System error occurred.", "validate-pkce", null);
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                                OAuthConstants.LogConstants.FAILED, "System error occurred.", "validate-pkce", null);
                     }
                     return false;
                 }
             } else {
                 //Invalid OAuth2 token response
-                if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-                    OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED, "Invalid PKCE Code Challenge Method.", "validate-pkce", null);
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.FAILED, "Invalid PKCE Code Challenge Method.", "validate-pkce",
+                            null);
                 }
                 throw new IdentityOAuth2Exception("Invalid OAuth2 Token Response. Invalid PKCE Code Challenge Method '"
                         + challengeMethod + "'");
             }
         }
         //pkce validation successful
-        OAuth2LogsUtil
-                .log(null, OAuthConstants.LogConstants.SUCCESS, "PKCE validation is successful for the token request.", "validate-pkce", null);
+        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                OAuthConstants.LogConstants.SUCCESS, "PKCE validation is successful for the token request.",
+                "validate-pkce", null);
         return true;
     }
 

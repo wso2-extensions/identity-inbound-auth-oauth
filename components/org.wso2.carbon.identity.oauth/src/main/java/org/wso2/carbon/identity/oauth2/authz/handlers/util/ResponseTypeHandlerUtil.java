@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.application.common.model.Claim;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -54,7 +55,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
-import org.wso2.carbon.identity.oauth2.util.OAuth2LogsUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 
@@ -213,7 +213,8 @@ public class ResponseTypeHandlerUtil {
             OauthTokenIssuer oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
             return generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled, oauthTokenIssuer);
         } catch (InvalidOAuthClientException e) {
-            OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-authz-code", null);
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-authz-code", null);
             throw new IdentityOAuth2Exception(
                     "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
@@ -257,7 +258,8 @@ public class ResponseTypeHandlerUtil {
         try {
             authorizationCode = oauthIssuerImpl.authorizationCode(oauthAuthzMsgCtx);
         } catch (OAuthSystemException e) {
-            OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-authz-code", null);
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-authz-code", null);
             throw new IdentityOAuth2Exception(e.getMessage(), e);
         }
 
@@ -289,7 +291,7 @@ public class ResponseTypeHandlerUtil {
                     ", Scope : " + OAuth2Util.buildScopeString(oauthAuthzMsgCtx.getApprovedScope()) +
                     ", validity period : " + validityPeriod);
         }
-        if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
             Map<String, Object> params = new HashMap<>();
             params.put("clientId", authorizationReqDTO.getConsumerKey());
             if (authorizationReqDTO.getUser() != null) {
@@ -308,7 +310,9 @@ public class ResponseTypeHandlerUtil {
 
             Map<String, Object> configs = new HashMap<>();
             configs.put("authzCodeValidityPeriod", String.valueOf(validityPeriod));
-            OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.SUCCESS, "Issued Authorization Code to user.", "issue-authz-code", configs);
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                    OAuthConstants.LogConstants.SUCCESS, "Issued Authorization Code to user.", "issue-authz-code",
+                    configs);
         }
         return authzCodeDO;
     }

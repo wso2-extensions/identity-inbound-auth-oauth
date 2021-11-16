@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -50,7 +51,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
-import org.wso2.carbon.identity.oauth2.util.OAuth2LogsUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
@@ -264,7 +264,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                             .getCanonicalName(), isValid));
                 }
                 if (!isValid) {
-                    if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
                         Map<String, Object> configs = new HashMap<>();
                         configs.put("scopeValidator", scopeHandler.getClass().getCanonicalName());
                         Map<String, Object> params = new HashMap<>();
@@ -273,7 +273,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                             List<String> scopes = Arrays.asList(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope());
                             params.put("scopes", scopes);
                         }
-                        OAuth2LogsUtil.log(params, "FAILED",
+                        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                                OAuthConstants.LogConstants.FAILED,
                                 "Scope validation failed against the configured scope validator.", "validate-scope",
                                 configs);
                     }

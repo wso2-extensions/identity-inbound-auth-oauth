@@ -137,7 +137,7 @@ public class OAuth2AuthorizeReqDTO {
         if (scopes != null) {
             return scopes.clone();
         } else {
-            return null;
+            return new String[0];
         }
     }
 

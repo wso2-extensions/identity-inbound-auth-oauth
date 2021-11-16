@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -275,7 +276,7 @@ public class Oauth2ScopeUtils {
                 }
                 appScopeValidators.remove(validator.getValidatorName());
                 if (!isValid) {
-                    if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
                         Map<String, Object> configs = new HashMap<>();
                         configs.put("applicationScopeValidator", validator.getValidatorName());
                         Map<String, Object> params = new HashMap<>();
@@ -294,7 +295,8 @@ public class Oauth2ScopeUtils {
                                 params.put("scopes", scopes);
                             }
                         }
-                        OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED,
+                        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                                OAuthConstants.LogConstants.FAILED,
                                 "Scope validation failed against the configured application scope validator.",
                                 "validate-scope", configs);
                     }

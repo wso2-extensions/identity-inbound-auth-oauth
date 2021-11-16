@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallback;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallbackManager;
@@ -35,7 +36,6 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
-import org.wso2.carbon.identity.oauth2.util.OAuth2LogsUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
@@ -133,11 +133,12 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
             if (log.isDebugEnabled()) {
                 log.debug("Could not find authorized grant types for client id: " + consumerKey);
             }
-            if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 params.put("clientId", authzReqDTO.getConsumerKey());
 
-                OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED,
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED,
                         "Could not find any configured authorized grant types for the OAuth client.",
                         "validate-authz-request", null);
             }
@@ -163,14 +164,16 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
                     //Do not change this log format as these logs use by external applications
                     log.debug("Unsupported Grant Type : " + grantType + " for client id : " + consumerKey);
                 }
-                if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     Map<String, Object> params = new HashMap<>();
                     params.put("clientId", authzReqDTO.getConsumerKey());
                     params.put("grantType", grantType);
 
                     Map<String, Object> configs = new HashMap<>();
                     configs.put("supportedGrantTypes", oAuthAppDO.getGrantTypes());
-                    OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED, "Un-supported grant type.", "validate-authz-request", configs);
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.FAILED, "Un-supported grant type.", "validate-authz-request",
+                            configs);
                 }
                 return false;
             }
