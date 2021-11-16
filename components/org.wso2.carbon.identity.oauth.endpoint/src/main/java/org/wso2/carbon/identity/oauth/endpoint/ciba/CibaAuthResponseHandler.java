@@ -22,7 +22,6 @@ import net.minidev.json.JSONObject;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
@@ -111,8 +110,7 @@ public class CibaAuthResponseHandler {
         cibaErrorResponse.put(ERROR_DESCRIPRION, cibaAuthFailureException.getMessage());
 
         Response.ResponseBuilder respBuilder;
-        //todo: remove unauth user since not menstioned in spec for 401
-        if (errorCode.equals(OAuth2ErrorCodes.INVALID_CLIENT) || errorCode.equals(ErrorCodes.UNAUTHORIZED_USER)) {
+        if (errorCode.equals(OAuth2ErrorCodes.INVALID_CLIENT)) {
 
             // Creating error response for the request.
             respBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED);

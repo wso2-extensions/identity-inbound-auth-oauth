@@ -431,7 +431,7 @@ public class CibaAuthRequestValidator {
      * @param request CIBA Authentication request.
      * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
      */
-    public void validateClient(String request, String authenticatedClient) throws CibaAuthFailureException {
+    public void validateClient(String request) throws CibaAuthFailureException {
 
         try {
             SignedJWT signedJWT = SignedJWT.parse(request);
@@ -458,12 +458,6 @@ public class CibaAuthRequestValidator {
                 throw new CibaAuthFailureException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT,
                         "Client has not configured grant_type properly.");
             }
-
-            if (!clientId.equals(authenticatedClient)) {
-                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_CLIENT,
-                        "Issuer does not match with the authenticated client.");
-            }
-
             if (log.isDebugEnabled()) {
                 log.debug("CIBA Authentication Request 'request':" + request +
                         " is having a proper clientID : " + claimsSet.getIssuer() + " as the issuer.");
@@ -476,6 +470,40 @@ public class CibaAuthRequestValidator {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "Unknown (iss) client.");
 
         } catch (IdentityOAuth2Exception | ParseException ex) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Exception in validating for (iss). ");
+        }
+    }
+
+    /**
+     * Checks whether the client is valid.
+     *
+     * @param request CIBA Authentication request.
+     * @param authenticatedClient Authenticated Client ID.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
+     */
+    public void validateClient(String request, String authenticatedClient) throws CibaAuthFailureException {
+        try {
+            SignedJWT signedJWT = SignedJWT.parse(request);
+            JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
+            String clientId = claimsSet.getIssuer();
+
+            // Validate whether the claim for the issuer is valid.
+            if (StringUtils.isBlank(claimsSet.getIssuer())) {
+                // (iss) is a blank value.
+
+                if (log.isDebugEnabled()) {
+                    log.debug("Missing issuer of the JWT of the request : " + request);
+                }
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "Invalid value for (iss).");
+            }
+
+            if (!clientId.equals(authenticatedClient)) {
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_CLIENT,
+                        "Issuer does not match with the authenticated client.");
+            }
+            validateClient(request);
+
+        } catch (ParseException ex) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Exception in validating for (iss). ");
         }
     }

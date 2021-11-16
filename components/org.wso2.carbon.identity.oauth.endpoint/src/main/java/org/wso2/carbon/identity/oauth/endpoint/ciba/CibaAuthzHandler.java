@@ -47,7 +47,6 @@ public class CibaAuthzHandler {
     private static final String REQUEST_OBJECT = "request_object";
 
     OAuth2AuthzEndpoint authzEndPoint = new OAuth2AuthzEndpoint();
-    private static final String REQUEST_OBJECT = "request_object";
 
     /**
      * Trigger authorize request after building the url.
