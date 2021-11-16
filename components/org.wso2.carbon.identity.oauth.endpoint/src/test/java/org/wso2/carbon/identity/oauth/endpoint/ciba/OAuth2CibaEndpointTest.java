@@ -203,7 +203,7 @@ public class OAuth2CibaEndpointTest extends PowerMockTestCase {
         return new Object[][]{
                 {REQUEST_ATTRIBUTE, request, HttpServletResponse.SC_BAD_REQUEST},
                 {REQUEST_ATTRIBUTE, requestWithImproperClient, HttpServletResponse.SC_BAD_REQUEST},
-                {REQUEST_ATTRIBUTE, requestWithBlankLoginHint, HttpServletResponse.SC_UNAUTHORIZED},
+                {REQUEST_ATTRIBUTE, requestWithBlankLoginHint, HttpServletResponse.SC_BAD_REQUEST},
                 {REQUEST_ATTRIBUTE, requestwithnojti, HttpServletResponse.SC_BAD_REQUEST},
                 {REQUEST_ATTRIBUTE, requestWithNoScope, HttpServletResponse.SC_BAD_REQUEST},
                 {REQUEST_ATTRIBUTE, requestWithWrongEXP, HttpServletResponse.SC_BAD_REQUEST},
