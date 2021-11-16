@@ -882,16 +882,16 @@ public class EndpointUtil {
 
                     Map<String, Object> configs = new HashMap<>();
                     configs.put("overrideExistingConsent", String.valueOf(overrideExistingConsent));
-                    OAuth2LogsUtil.log(consentParams, "SUCCESS", "Successfully persisted oauth scopes.",
+                    OAuth2LogsUtil.log(consentParams, OAuthConstants.LogConstants.SUCCESS, "Successfully persisted oauth scopes.",
                             "persist-oauth-scope-consent", configs);
                 }
             }
         } catch (IdentityOAuthAdminException e) {
-            OAuth2LogsUtil.log(null, "FAILED", "System error occurred.", "persist-oauth-scope-consent", null);
+            OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "System error occurred.", "persist-oauth-scope-consent", null);
             throw new OAuthSystemException(
                     "Error occurred while removing OIDC scopes from approved OAuth scopes.", e);
         } catch (IdentityOAuth2ScopeException e) {
-            OAuth2LogsUtil.log(null, "FAILED", "System error occurred.", "persist-oauth-scope-consent", null);
+            OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "System error occurred.", "persist-oauth-scope-consent", null);
             throw new OAuthSystemException("Error occurred while storing OAuth scope consent.", e);
         }
     }
@@ -1108,7 +1108,7 @@ public class EndpointUtil {
                     if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
                         Map<String, Object> logParams = new HashMap<>();
                         paramMap.forEach(logParams::put);
-                        OAuth2LogsUtil.log(logParams, "FAILED",
+                        OAuth2LogsUtil.log(logParams, OAuthConstants.LogConstants.FAILED,
                                 "Parameter with name: '" + paramEntry.getKey() + "' is repeated in the request.",
                                 "validate-input-parameters", null);
                     }
@@ -1127,7 +1127,7 @@ public class EndpointUtil {
                     if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
                         Map<String, Object> logParams = new HashMap<>();
                         map.forEach(logParams::put);
-                        OAuth2LogsUtil.log(logParams, "FAILED",
+                        OAuth2LogsUtil.log(logParams, OAuthConstants.LogConstants.FAILED,
                                 "Parameter with name: '" + entry.getKey() + "' is repeated in the request.",
                                 "validate-input-parameters", null);
                     }
@@ -1206,7 +1206,7 @@ public class EndpointUtil {
                 Map<String, Object> params = new HashMap<>();
                 params.put("clientId", consumerKey);
                 OAuth2LogsUtil
-                        .log(params, "FAILED", "A valid OAuth application could not be found for the given client_id.",
+                        .log(params, OAuthConstants.LogConstants.FAILED, "A valid OAuth application could not be found for the given client_id.",
                                 "validate-oauth-client", null);
             }
             throw new InvalidApplicationClientException("A valid OAuth client could not be found for client_id: " +
@@ -1222,7 +1222,7 @@ public class EndpointUtil {
                 params.put("clientId", consumerKey);
                 params.put("appState", appState);
                 OAuth2LogsUtil
-                        .log(params, "FAILED", "OAuth application is not in active state.", "validate-oauth-client",
+                        .log(params, OAuthConstants.LogConstants.FAILED, "OAuth application is not in active state.", "validate-oauth-client",
                                 null);
             }
             throw new InvalidApplicationClientException("Oauth application is not in active state");
@@ -1236,7 +1236,7 @@ public class EndpointUtil {
             params.put("clientId", consumerKey);
             params.put("appState", appState);
             OAuth2LogsUtil
-                    .log(params, "SUCCESS", "OAuth Application validation is successful.", "validate-oauth-client",
+                    .log(params, OAuthConstants.LogConstants.SUCCESS, "OAuth Application validation is successful.", "validate-oauth-client",
                             null);
         }
     }

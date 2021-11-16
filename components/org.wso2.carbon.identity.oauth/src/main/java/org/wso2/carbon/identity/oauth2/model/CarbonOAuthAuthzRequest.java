@@ -26,6 +26,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.util.OAuth2LogsUtil;
 
@@ -66,7 +67,7 @@ public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
                 params.put("response_type", responseTypeValue);
                 params.put("client_id", getClientId());
                 OAuth2LogsUtil
-                        .log(params, "FAILED", "Invalid response_type parameter.", "validate-input-parameters", null);
+                        .log(params, OAuthConstants.LogConstants.FAILED, "Invalid response_type parameter.", "validate-input-parameters", null);
             }
             throw OAuthUtils.handleOAuthProblemException("Invalid response_type parameter value");
         }

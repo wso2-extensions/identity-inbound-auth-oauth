@@ -137,7 +137,7 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
                 Map<String, Object> params = new HashMap<>();
                 params.put("clientId", authzReqDTO.getConsumerKey());
 
-                OAuth2LogsUtil.log(params, "FAILED",
+                OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED,
                         "Could not find any configured authorized grant types for the OAuth client.",
                         "validate-authz-request", null);
             }
@@ -170,7 +170,7 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
 
                     Map<String, Object> configs = new HashMap<>();
                     configs.put("supportedGrantTypes", oAuthAppDO.getGrantTypes());
-                    OAuth2LogsUtil.log(params, "FAILED", "Un-supported grant type.", "validate-authz-request", configs);
+                    OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED, "Un-supported grant type.", "validate-authz-request", configs);
                 }
                 return false;
             }

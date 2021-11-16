@@ -279,7 +279,7 @@ public class AuthorizationHandlerManager {
                     }
                 }
                 params.put("requestedScopes", OAuth2Util.buildScopeString(authzReqDTO.getScopes()));
-                OAuth2LogsUtil.log(params, "FAILED",
+                OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED,
                         "User doesn't have necessary rights to grant access to the requested resource(s).",
                         "validate-authz-request", null);
             }
@@ -337,7 +337,7 @@ public class AuthorizationHandlerManager {
                 params.put("clientId", authzReqDTO.getConsumerKey());
                 params.put("response_type", authzReqDTO.getResponseType());
 
-                OAuth2LogsUtil.log(params, "FAILED", "Un-supported response type.", "validate-authz-request", null);
+                OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED, "Un-supported response type.", "validate-authz-request", null);
             }
             return true;
         }

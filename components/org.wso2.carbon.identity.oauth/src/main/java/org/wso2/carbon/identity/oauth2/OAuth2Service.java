@@ -106,7 +106,7 @@ public class OAuth2Service extends AbstractAdmin {
                     AuthorizationHandlerManager.getInstance();
             return authzHandlerManager.handleAuthorization(oAuth2AuthorizeReqDTO);
         } catch (Exception e) {
-            OAuth2LogsUtil.log(null, "FAILED", "System error occurred.", "authorize-client", null);
+            OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "System error occurred.", "authorize-client", null);
             log.error("Error occurred when processing the authorization request. Returning an error back to client.",
                     e);
             OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
@@ -142,7 +142,7 @@ public class OAuth2Service extends AbstractAdmin {
 
             if (StringUtils.isBlank(clientId)) {
                 if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-                    OAuth2LogsUtil.log(null, "FAILED", "client_id cannot be empty.", "validate-input-parameters", null);
+                    OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "client_id cannot be empty.", "validate-input-parameters", null);
                 }
                 throw new InvalidOAuthClientException("Invalid client_id. No OAuth application has been registered " +
                         "with the given client_id");
@@ -158,7 +158,7 @@ public class OAuth2Service extends AbstractAdmin {
                     Map<String, Object> params = new HashMap<>();
                     params.put("clientId", clientId);
                     OAuth2LogsUtil
-                            .log(params, "FAILED", "A valid OAuth application could not be found for given client_id.",
+                            .log(params, OAuthConstants.LogConstants.FAILED, "A valid OAuth application could not be found for given client_id.",
                                     "validate-input-parameters", null);
                 }
                 throw new InvalidOAuthClientException("A valid OAuth client could not be found for client_id: " +
@@ -172,7 +172,7 @@ public class OAuth2Service extends AbstractAdmin {
                 if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
                     Map<String, Object> params = new HashMap<>();
                     params.put("clientId", clientId);
-                    OAuth2LogsUtil.log(params, "FAILED", "OAuth application is not in active state.",
+                    OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED, "OAuth application is not in active state.",
                             "validate-input-parameters", null);
                 }
                 throw new InvalidOAuthClientException("Oauth application is not in active state");
@@ -190,7 +190,7 @@ public class OAuth2Service extends AbstractAdmin {
                     Map<String, Object> configurations = new HashMap<>();
                     configurations.put("callbackUrl", appDO.getCallbackUrl());
                     configurations.put("supportedGrantTypes", appDO.getGrantTypes());
-                    OAuth2LogsUtil.log(params, "FAILED",
+                    OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED,
                             "The OAuth client is not authorized to use the requested grant type.",
                             "validate-input-parameters", configurations);
                 }
@@ -235,7 +235,7 @@ public class OAuth2Service extends AbstractAdmin {
                     Map<String, Object> configurations = new HashMap<>();
                     configurations.put("redirectUri", appDO.getApplicationName());
                     OAuth2LogsUtil
-                            .log(params, "FAILED", "redirect_uri in request does not match with the registered one.",
+                            .log(params, OAuthConstants.LogConstants.FAILED, "redirect_uri in request does not match with the registered one.",
                                     "validate-input-parameters", configurations);
                 }
                 validationResponseDTO.setValidClient(false);
@@ -251,7 +251,7 @@ public class OAuth2Service extends AbstractAdmin {
             if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 params.put("clientId", clientId);
-                OAuth2LogsUtil.log(params, "FAILED", "Cannot find an application associated with the given client_id",
+                OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED, "Cannot find an application associated with the given client_id",
                         "validate-oauth-client", null);
             }
             validationResponseDTO.setValidClient(false);
@@ -260,7 +260,7 @@ public class OAuth2Service extends AbstractAdmin {
             return validationResponseDTO;
         } catch (IdentityOAuth2Exception e) {
             log.error("Error when reading the Application Information.", e);
-            OAuth2LogsUtil.log(null, "FAILED", "Server error occurred.", "validate-input-parameters", null);
+            OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "Server error occurred.", "validate-input-parameters", null);
             validationResponseDTO.setValidClient(false);
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
             validationResponseDTO.setErrorMsg("Error when processing the authorization request.");
@@ -333,7 +333,7 @@ public class OAuth2Service extends AbstractAdmin {
                     ", Scope : " + Arrays.toString(tokenReqDTO.getScope()) + " and Grant Type : " +
                     tokenReqDTO.getGrantType(), e);
             if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-                OAuth2LogsUtil.log(null, "FAILED", "System error occurred.", "issue-access-token", null);
+                OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-access-token", null);
             }
             OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
             tokenRespDTO.setError(true);
@@ -387,7 +387,7 @@ public class OAuth2Service extends AbstractAdmin {
                 Map<String, Object> paramMap = new HashMap<>();
                 oAuthEventInterceptorProxy.onPreTokenRevocationByClient(revokeRequestDTO, paramMap);
             } catch (IdentityOAuth2Exception e) {
-                OAuth2LogsUtil.log(null, "FAILED", "System error occurred.", "revoke-token", null);
+                OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "System error occurred.", "revoke-token", null);
                 log.error(e);
                 revokeResponseDTO.setError(true);
                 revokeResponseDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
@@ -443,18 +443,18 @@ public class OAuth2Service extends AbstractAdmin {
                             params.put("clientId", revokeRequestDTO.getConsumerKey());
                             if (refreshTokenDO == null || StringUtils.isEmpty(refreshTokenDO.getRefreshTokenState())) {
                                 if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-                                    OAuth2LogsUtil.log(params, "FAILED", "Invalid token.", "revoke-token", null);
+                                    OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED, "Invalid token.", "revoke-token", null);
                                 }
                             } else if (OAuthConstants.TokenStates.TOKEN_STATE_REVOKED
                                     .equals(refreshTokenDO.getRefreshTokenState())) {
                                 if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-                                    OAuth2LogsUtil.log(params, "SUCCESS", "Provided token is already revoked.",
+                                    OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.SUCCESS, "Provided token is already revoked.",
                                             "revoke-token", null);
                                 }
                             }  else if (OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE
                                     .equals(refreshTokenDO.getRefreshTokenState())) {
                                 if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-                                    OAuth2LogsUtil.log(params, "SUCCESS", "Provided token is in inactive state.",
+                                    OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.SUCCESS, "Provided token is in inactive state.",
                                             "revoke-token", null);
                                 }
                             }
@@ -476,7 +476,7 @@ public class OAuth2Service extends AbstractAdmin {
                         Map<String, Object> params = new HashMap<>();
                         params.put("clientId", revokeRequestDTO.getConsumerKey());
                         OAuth2LogsUtil
-                                .log(params, "FAILED", "OAuth client authentication is unsuccessful.", "revoke-token",
+                                .log(params, OAuthConstants.LogConstants.FAILED, "OAuth client authentication is unsuccessful.", "revoke-token",
                                         null);
                     }
                     OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
@@ -522,7 +522,7 @@ public class OAuth2Service extends AbstractAdmin {
                                 Map<String, Object> configs = new HashMap<>();
                                 configs.put("isTokenBindingValidationEnabled", "true");
                                 OAuth2LogsUtil
-                                        .log(params, "FAILED", "Valid token binding value not present in the request.",
+                                        .log(params, OAuthConstants.LogConstants.FAILED, "Valid token binding value not present in the request.",
                                                 "validate-token-binding", configs);
                             }
 
@@ -558,7 +558,7 @@ public class OAuth2Service extends AbstractAdmin {
                             Map<String, Object> params = new HashMap<>();
                             params.put("clientId", accessTokenDO.getConsumerKey());
                             OAuth2LogsUtil
-                                    .log(params, "FAILED", "Client is not authorized.", "validate-oauth-client", null);
+                                    .log(params, OAuthConstants.LogConstants.FAILED, "Client is not authorized.", "validate-oauth-client", null);
                         }
 
                         throw new InvalidOAuthClientException("Unauthorized Client");
@@ -570,7 +570,7 @@ public class OAuth2Service extends AbstractAdmin {
                     if (accessTokenDO != null) {
                         params.put("clientId", accessTokenDO.getConsumerKey());
                     }
-                    OAuth2LogsUtil.log(params, "SUCCESS", "Token revocation is successful.", "revoke-tokens", null);
+                    OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.SUCCESS, "Token revocation is successful.", "revoke-tokens", null);
                 }
                 return revokeResponseDTO;
 
@@ -581,14 +581,14 @@ public class OAuth2Service extends AbstractAdmin {
                 } else {
                     if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
                         OAuth2LogsUtil
-                                .log(params, "FAILED", "'client_id' is empty in request.", "validate-input-parameters",
+                                .log(params, OAuthConstants.LogConstants.FAILED, "'client_id' is empty in request.", "validate-input-parameters",
                                         null);
                     }
                 }
                 if (StringUtils.isBlank(revokeRequestDTO.getToken())) {
                     if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
                         OAuth2LogsUtil
-                                .log(params, "FAILED", "'token' is empty in request.", "validate-input-parameters",
+                                .log(params, OAuthConstants.LogConstants.FAILED, "'token' is empty in request.", "validate-input-parameters",
                                         null);
                     }
                 }
@@ -601,7 +601,7 @@ public class OAuth2Service extends AbstractAdmin {
             }
 
         } catch (InvalidOAuthClientException e) {
-            OAuth2LogsUtil.log(null, "FAILED", "Client is not authorized.", "validate-oauth-client", null);
+            OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "Client is not authorized.", "validate-oauth-client", null);
             log.error("Unauthorized Client", e);
             OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
             revokeRespDTO.setError(true);
@@ -610,7 +610,7 @@ public class OAuth2Service extends AbstractAdmin {
             invokePostRevocationListeners(revokeRequestDTO, revokeResponseDTO, accessTokenDO, refreshTokenDO);
             return revokeRespDTO;
         } catch (IdentityException e) {
-            OAuth2LogsUtil.log(null, "FAILED", "System error occurred.", "revoke-tokens", null);
+            OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "System error occurred.", "revoke-tokens", null);
             log.error("Error occurred while revoking authorization grant for applications", e);
             OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
             revokeRespDTO.setError(true);

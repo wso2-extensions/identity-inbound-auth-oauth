@@ -22,6 +22,7 @@ import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.util.Map;
@@ -31,8 +32,8 @@ public class OAuth2LogsUtil {
     public static void log(Map<String, Object> input, String resultStatus, String resultMessage,
                            String actionId, Map<String, Object> configurations) {
 
-        LoggerUtils.triggerDiagnosticLogEvent("oauth-inbound-service", input, resultStatus, resultMessage, actionId,
-                configurations);
+        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, input, resultStatus,
+                resultMessage, actionId, configurations);
     }
 
     public static boolean isDiagnosticLogsEnabled() {

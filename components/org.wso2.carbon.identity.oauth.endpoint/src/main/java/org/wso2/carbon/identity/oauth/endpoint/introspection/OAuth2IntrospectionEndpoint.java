@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.json.JSONException;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IntrospectionDataProvider;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -89,11 +90,11 @@ public class OAuth2IntrospectionEndpoint {
                 params.put("token", token.replaceAll(".", "*"));
             }
             OAuth2LogsUtil
-                    .log(params, "SUCCESS", "Successfully received introspect request.", "receive-introspect-request",
+                    .log(params, OAuthConstants.LogConstants.SUCCESS, "Successfully received introspect request.", "receive-introspect-request",
                             null);
             if (StringUtils.isBlank(token)) {
                 OAuth2LogsUtil
-                        .log(params, "FAILED", "'token' parameter cannot be empty.", "validate-input-parameters", null);
+                        .log(params, OAuthConstants.LogConstants.FAILED, "'token' parameter cannot be empty.", "validate-input-parameters", null);
             }
         }
 
@@ -196,7 +197,7 @@ public class OAuth2IntrospectionEndpoint {
                             (((IntrospectionDataProvider) dataProvider).getIntrospectionData(
                                     introspectionRequest, introspectionResponse)));
                 } catch (IdentityOAuth2Exception e) {
-                    OAuth2LogsUtil.log(null, "FAILED", "System error occurred.", "generate-introspect-response", null);
+                    OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "System error occurred.", "generate-introspect-response", null);
                     log.error("Error occurred while processing additional token introspection data.", e);
 
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -210,7 +211,7 @@ public class OAuth2IntrospectionEndpoint {
         try {
             return Response.ok(respBuilder.build(), MediaType.APPLICATION_JSON).status(Response.Status.OK).build();
         } catch (JSONException e) {
-            OAuth2LogsUtil.log(null, "FAILED", "System error occurred.", "generate-introspect-response", null);
+            OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "System error occurred.", "generate-introspect-response", null);
             log.error("Error occurred while building the json response.", e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity("{\"error\": \"Error occurred while building the json response.\"}").build();

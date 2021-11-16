@@ -97,7 +97,7 @@ public class OAuth2TokenEndpoint {
                     paramMap.forEach(params::put);
                 }
                 OAuth2LogsUtil
-                        .log(params, "SUCCESS", "Successfully received token request.", "receive-token-request", null);
+                        .log(params, OAuthConstants.LogConstants.SUCCESS, "Successfully received token request.", "receive-token-request", null);
             }
         } catch (TokenEndpointBadRequestException e) {
             triggerOnTokenExceptionListeners(e, request, null);
@@ -122,7 +122,7 @@ public class OAuth2TokenEndpoint {
                 paramMap.forEach(params::put);
             }
             OAuth2LogsUtil
-                    .log(params, "SUCCESS", "Successfully received token request.", "receive-token-request", null);
+                    .log(params, OAuthConstants.LogConstants.SUCCESS, "Successfully received token request.", "receive-token-request", null);
         }
         return issueAccessToken(request, (Map<String, List<String>>) paramMap);
     }

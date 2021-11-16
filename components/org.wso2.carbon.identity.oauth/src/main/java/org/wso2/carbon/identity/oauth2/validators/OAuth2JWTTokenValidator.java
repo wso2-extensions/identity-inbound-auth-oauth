@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorC
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2LogsUtil;
@@ -72,7 +73,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             SignedJWT signedJWT = getSignedJWT(validationReqDTO);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
             if (claimsSet == null) {
-                OAuth2LogsUtil.log(null, "FAILED", "Claim values are empty in the provided token.",
+                OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "Claim values are empty in the provided token.",
                         "validate-jwt-access-token", null);
                 throw new IdentityOAuth2Exception("Claim values are empty in the given Token.");
             }
@@ -84,19 +85,19 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             IdentityProvider identityProvider = getResidentIDPForIssuer(claimsSet.getIssuer());
 
             if (!validateSignature(signedJWT, identityProvider)) {
-                OAuth2LogsUtil.log(null, "FAILED", "Signature validation failed.", "validate-jwt-access-token", null);
+                OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "Signature validation failed.", "validate-jwt-access-token", null);
                 return false;
             }
             if (!checkExpirationTime(claimsSet.getExpirationTime())) {
-                OAuth2LogsUtil.log(null, "FAILED", "Token is expired.", "validate-jwt-access-token", null);
+                OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "Token is expired.", "validate-jwt-access-token", null);
                 return false;
             }
             checkNotBeforeTime(claimsSet.getNotBeforeTime());
         } catch (JOSEException | ParseException e) {
-            OAuth2LogsUtil.log(null, "FAILED", "System error occurred.", "validate-jwt-access-token", null);
+            OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.FAILED, "System error occurred.", "validate-jwt-access-token", null);
             throw new IdentityOAuth2Exception("Error while validating Token.", e);
         }
-        OAuth2LogsUtil.log(null, "SUCCESS", "Token validation is successful.", "validate-jwt-access-token", null);
+        OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.SUCCESS, "Token validation is successful.", "validate-jwt-access-token", null);
         return true;
     }
 
@@ -248,7 +249,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
                     params.put("timestampSkew", timeStampSkewMillis);
                     params.put("currentTime", currentTimeInMillis);
                     OAuth2LogsUtil
-                            .log(params, "FAILED", "Token is used before Not_Before_Time.", "validate-jwt-access-token",
+                            .log(params, OAuthConstants.LogConstants.FAILED, "Token is used before Not_Before_Time.", "validate-jwt-access-token",
                                     null);
                 }
                 throw new IdentityOAuth2Exception("Token is used before Not_Before_Time.");
@@ -272,7 +273,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
                         " jtl or Audience) are empty in the given Token.");
             }
             OAuth2LogsUtil
-                    .log(null, "FAILED", "Mandatory fields (iss, sub, exp, jtl, aud) are empty in the provided token.",
+                    .log(null, OAuthConstants.LogConstants.FAILED, "Mandatory fields (iss, sub, exp, jtl, aud) are empty in the provided token.",
                             "validate-jwt-access-token", null);
             return false;
         }

@@ -373,7 +373,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             throw new IdentityOAuth2Exception("Expired or Revoked authorization code received from token request");
         }
         if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-            OAuth2LogsUtil.log(params, "SUCCESS", "Authorization code validation is successful.", "validate-authz-code",
+            OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.SUCCESS, "Authorization code validation is successful.", "validate-authz-code",
                     null);
         }
         return true;

@@ -106,7 +106,7 @@ public class OAuthRevocationEndpoint {
                 });
             }
             if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-                OAuth2LogsUtil.log(params, "SUCCESS", "Successfully received token revocation request.",
+                OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.SUCCESS, "Successfully received token revocation request.",
                         "receive-revoke-request", null);
             }
 
@@ -117,7 +117,7 @@ public class OAuthRevocationEndpoint {
             String callback = getCallback(paramMap, httpRequest);
             if (isEmpty(token)) {
                 if (OAuth2LogsUtil.isDiagnosticLogsEnabled()) {
-                    OAuth2LogsUtil.log(params, "FAILED", "'token' parameter is missing in the revoke request.",
+                    OAuth2LogsUtil.log(params, OAuthConstants.LogConstants.FAILED, "'token' parameter is missing in the revoke request.",
                             "validate-input-parameters", null);
                 }
                 return handleClientFailure(callback);

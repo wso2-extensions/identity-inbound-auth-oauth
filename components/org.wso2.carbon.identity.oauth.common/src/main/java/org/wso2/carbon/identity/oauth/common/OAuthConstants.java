@@ -499,4 +499,14 @@ public final class OAuthConstants {
 
         public static final String NONE = "NONE";
     }
+
+    /**
+     * Define logging constants.
+     */
+    public static class LogConstants {
+
+        public static final String OAUTH_INBOUND_SERVICE = "oauth-inbound-service";
+        public static final String FAILED = "FAILED";
+        public static final String SUCCESS = "SUCCESS";
+    }
 }

@@ -308,7 +308,7 @@ public class TokenValidationHandler {
                 return buildIntrospectionErrorResponse("Token validation failed");
             }
         } else {
-            OAuth2LogsUtil.log(null, "SUCCESS", "Token is successfully validated.", "validate-token", null);
+            OAuth2LogsUtil.log(null, OAuthConstants.LogConstants.SUCCESS, "Token is successfully validated.", "validate-token", null);
         }
 
         if (introResp.getUsername() != null) {
