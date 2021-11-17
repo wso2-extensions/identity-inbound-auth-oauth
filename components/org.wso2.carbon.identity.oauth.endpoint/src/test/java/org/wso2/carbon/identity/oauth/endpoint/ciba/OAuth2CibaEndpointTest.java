@@ -200,6 +200,14 @@ public class OAuth2CibaEndpointTest extends PowerMockTestCase {
                 "M2Y1MjA0YyIsInRyYW5zYWN0aW9uX2NvbnRleHQiOnsidXNlciI6InVzZXIiLCJhbW91bnQiOjEwMDAsInNob3AiOiJXU08" +
                 "yIENJQkEgREVNTyBDT05TT0xFIiwiYXBwbGljYXRpb24iOiJQYXlIZXJlIn19.w6T8VDlzcTz8tEbkXvXYoMaZ9yp4VW-z7" +
                 "U4qf-KmC6A";
+
+        String requestWithIdTokenHint = "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYX" +
+                "VkIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImlkX3Rva2VuX" +
+                "2hpbnQiOiJkdW1teSIsInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJpYXQiOjE1NzQ5Njk1NzYsImV4cCI6OTc2MDg1" +
+                "NTU5LCJuYmYiOjE1NzQ5Njk1NzYsImFjciI6IjU3ODg4Nzg4IiwianRpIjoiOWZmODQ1YjktMjBiZi00MDMzLTllZDMtM2NjYzY" +
+                "zZjUyMDRjIiwidHJhbnNhY3Rpb25fY29udGV4dCI6eyJ1c2VyIjoidXNlciIsImFtb3VudCI6MTAwMCwic2hvcCI6IldTTzIgQ0" +
+                "lCQSBERU1PIENPTlNPTEUiLCJhcHBsaWNhdGlvbiI6IlBheUhlcmUifX0.4R3QsdgP_HR7skswDt8hBKCliKsak7wtS8V40MQWUuU";
+
         return new Object[][]{
                 {REQUEST_ATTRIBUTE, request, HttpServletResponse.SC_BAD_REQUEST},
                 {REQUEST_ATTRIBUTE, requestWithImproperClient, HttpServletResponse.SC_BAD_REQUEST},
@@ -214,7 +222,8 @@ public class OAuth2CibaEndpointTest extends PowerMockTestCase {
                 {REQUEST_ATTRIBUTE, "etfcra.cesavr", HttpServletResponse.SC_BAD_REQUEST},
                 {REQUEST_ATTRIBUTE, "vrsgyb.waygersh.reygsrab", HttpServletResponse.SC_BAD_REQUEST},
                 {"", "", HttpServletResponse.SC_BAD_REQUEST},
-                {REQUEST_ATTRIBUTE, requestWithBadIDToken, HttpServletResponse.SC_BAD_REQUEST}
+                {REQUEST_ATTRIBUTE, requestWithBadIDToken, HttpServletResponse.SC_BAD_REQUEST},
+                {REQUEST_ATTRIBUTE, requestWithIdTokenHint, HttpServletResponse.SC_BAD_REQUEST}
         };
     }
 
