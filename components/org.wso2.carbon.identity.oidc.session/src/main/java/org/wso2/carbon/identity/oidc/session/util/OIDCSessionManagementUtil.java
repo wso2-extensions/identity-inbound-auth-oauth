@@ -461,6 +461,7 @@ public class OIDCSessionManagementUtil {
 
     /**
      * Method to retrieve the <AllowAdditionalParamsFromPostLogoutRedirectURI> config from the OAuth Configuration.
+     *
      * @return Retrieved config (true or false)
      */
     public static boolean isAllowAdditionalParamsFromPostLogoutRedirectURIEnabled() {
