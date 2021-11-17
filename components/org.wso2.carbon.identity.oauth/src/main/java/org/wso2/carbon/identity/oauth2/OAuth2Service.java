@@ -647,10 +647,9 @@ public class OAuth2Service extends AbstractAdmin {
             OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(consumerKey);
             return appDO.getState();
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            String msg = "Error while finding application state for application with client_id: " + consumerKey;
-            log.error(msg);
             if (log.isDebugEnabled()) {
-                log.debug(msg, e);
+                log.debug("Error while finding application state for application with client_id: " +
+                        consumerKey, e);
             }
             return null;
         }
