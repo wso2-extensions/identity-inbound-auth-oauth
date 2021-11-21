@@ -29,7 +29,8 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
  */
 
 public class CIBARequestObjectValidatorImpl implements RequestObjectValidator {
-    private static Log log = LogFactory.getLog(CIBARequestObjectValidatorImpl.class);
+
+    private static final Log log = LogFactory.getLog(CIBARequestObjectValidatorImpl.class);
 
     @Override
     public boolean isSigned(RequestObject requestObject) {

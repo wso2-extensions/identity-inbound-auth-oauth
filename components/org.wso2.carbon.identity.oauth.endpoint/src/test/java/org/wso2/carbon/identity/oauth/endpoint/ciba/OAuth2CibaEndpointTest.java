@@ -109,7 +109,7 @@ public class OAuth2CibaEndpointTest extends PowerMockTestCase {
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
-                          );
+        );
         oAuth2CibaEndpoint = new OAuth2CibaEndpoint();
 
         mockStatic(OAuthServerConfiguration.class);
@@ -200,6 +200,29 @@ public class OAuth2CibaEndpointTest extends PowerMockTestCase {
                 "M2Y1MjA0YyIsInRyYW5zYWN0aW9uX2NvbnRleHQiOnsidXNlciI6InVzZXIiLCJhbW91bnQiOjEwMDAsInNob3AiOiJXU08" +
                 "yIENJQkEgREVNTyBDT05TT0xFIiwiYXBwbGljYXRpb24iOiJQYXlIZXJlIn19.w6T8VDlzcTz8tEbkXvXYoMaZ9yp4VW-z7" +
                 "U4qf-KmC6A";
+
+        String requestWithIdTokenHint = "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYX" +
+                "VkIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImlkX3Rva2VuX" +
+                "2hpbnQiOiJkdW1teSIsInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJpYXQiOjE1NzQ5Njk1NzYsImV4cCI6OTc2MDg1" +
+                "NTU5LCJuYmYiOjE1NzQ5Njk1NzYsImFjciI6IjU3ODg4Nzg4IiwianRpIjoiOWZmODQ1YjktMjBiZi00MDMzLTllZDMtM2NjYzY" +
+                "zZjUyMDRjIiwidHJhbnNhY3Rpb25fY29udGV4dCI6eyJ1c2VyIjoidXNlciIsImFtb3VudCI6MTAwMCwic2hvcCI6IldTTzIgQ0" +
+                "lCQSBERU1PIENPTlNPTEUiLCJhcHBsaWNhdGlvbiI6IlBheUhlcmUifX0.4R3QsdgP_HR7skswDt8hBKCliKsak7wtS8V40MQWUuU";
+
+        String requestWithIDtokenHintAndLoginHint = "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5" +
+                "OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsIml" +
+                "kX3Rva2VuX2hpbnQiOiJkdW1teSIsImxvZ2luX2hpbnQiOiJkdW1teSIsInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJ" +
+                "pYXQiOjE1NzQ5Njk1NzYsImV4cCI6OTc2MDg1NTU5LCJuYmYiOjE1NzQ5Njk1NzYsImFjciI6IjU3ODg4Nzg4IiwianRpIjoiOWZ" +
+                "mODQ1YjktMjBiZi00MDMzLTllZDMtM2NjYzYzZjUyMDRjIiwidHJhbnNhY3Rpb25fY29udGV4dCI6eyJ1c2VyIjoidXNlciIsImF" +
+                "tb3VudCI6MTAwMCwic2hvcCI6IldTTzIgQ0lCQSBERU1PIENPTlNPTEUiLCJhcHBsaWNhdGlvbiI6IlBheUhlcmUifX0.fWm9M-z" +
+                "qUI7KHMyexZNk-o3vautQPfrvK7ZYqLMbTaw";
+
+        String requestWithNoHints = "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjo" +
+                "iIiwiYmluZGluZ19tZXNzYWdlIjoidHJ5Iiwic2NvcGUiOiJvcGVuaWQgc2NvcGUxIHNjb3BleCIsImlhdCI6MTU3NDk2OTU3Niw" +
+                "iZXhwIjo5NzYwODU1NTksIm5iZiI6MTU3NDk2OTU3NiwiYWNyIjoiNTc4ODg3ODgiLCJqdGkiOiI5ZmY4NDViOS0yMGJmLTQwMzM" +
+                "tOWVkMy0zY2NjNjNmNTIwNGMiLCJ0cmFuc2FjdGlvbl9jb250ZXh0Ijp7InVzZXIiOiJ1c2VyIiwiYW1vdW50IjoxMDAwLCJzaG9" +
+                "wIjoiV1NPMiBDSUJBIERFTU8gQ09OU09MRSIsImFwcGxpY2F0aW9uIjoiUGF5SGVyZSJ9fQ.Ist7f4VUiEth3T5e7bno5Pl1DzxC" +
+                "bkhSZQmXd_B72Ic";
+
         return new Object[][]{
                 {REQUEST_ATTRIBUTE, request, HttpServletResponse.SC_BAD_REQUEST},
                 {REQUEST_ATTRIBUTE, requestWithImproperClient, HttpServletResponse.SC_BAD_REQUEST},
@@ -214,7 +237,10 @@ public class OAuth2CibaEndpointTest extends PowerMockTestCase {
                 {REQUEST_ATTRIBUTE, "etfcra.cesavr", HttpServletResponse.SC_BAD_REQUEST},
                 {REQUEST_ATTRIBUTE, "vrsgyb.waygersh.reygsrab", HttpServletResponse.SC_BAD_REQUEST},
                 {"", "", HttpServletResponse.SC_BAD_REQUEST},
-                {REQUEST_ATTRIBUTE, requestWithBadIDToken, HttpServletResponse.SC_BAD_REQUEST}
+                {REQUEST_ATTRIBUTE, requestWithBadIDToken, HttpServletResponse.SC_BAD_REQUEST},
+                {REQUEST_ATTRIBUTE, requestWithIdTokenHint, HttpServletResponse.SC_BAD_REQUEST},
+                {REQUEST_ATTRIBUTE, requestWithIDtokenHintAndLoginHint, HttpServletResponse.SC_BAD_REQUEST},
+                {REQUEST_ATTRIBUTE, requestWithNoHints, HttpServletResponse.SC_BAD_REQUEST}
         };
     }
 
@@ -308,7 +334,7 @@ public class OAuth2CibaEndpointTest extends PowerMockTestCase {
 
         when(oAuth2AuthzEndpoint.authorize(any(), any())).thenReturn(response);
 
-        Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse,  new MultivaluedHashMap());
+        Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, new MultivaluedHashMap());
         Assert.assertEquals(200, response.getStatus());
     }
 

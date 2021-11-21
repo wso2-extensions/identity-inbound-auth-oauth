@@ -82,7 +82,7 @@ public class OAuth2CibaEndpoint {
     public Response ciba(@Context HttpServletRequest request, @Context HttpServletResponse response,
                          MultivaluedMap paramMap) {
 
-        OAuthClientAuthnContext oAuthClientAuthnContext =  getClientAuthnContext(request);
+        OAuthClientAuthnContext oAuthClientAuthnContext = getClientAuthnContext(request);
 
         if (!oAuthClientAuthnContext.isAuthenticated()) {
             return getErrorResponse(new CibaAuthFailureException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT,
@@ -262,11 +262,15 @@ public class OAuth2CibaEndpoint {
 
             }
         } catch (InvalidRequestException | RequestObjectException e) {
+            if (log.isDebugEnabled()) {
+                log.debug(OAuth2ErrorCodes.INVALID_REQUEST, e);
+            }
             throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, e.getMessage());
         }
     }
 
     private OAuthClientAuthnContext getClientAuthnContext(HttpServletRequest request) {
+
         OAuthClientAuthnContext oAuthClientAuthnContext;
         Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
         if (oauthClientAuthnContextObj instanceof OAuthClientAuthnContext) {
@@ -287,6 +291,9 @@ public class OAuth2CibaEndpoint {
             // tenantDomain.
             return OAuth2Util.getTenantDomainOfOauthApp(clientId);
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
+            if (log.isDebugEnabled()) {
+                log.debug(OAuth2ErrorCodes.INVALID_REQUEST, e);
+            }
             throw new InvalidRequestException("Error retrieving Service Provider tenantDomain for client_id: "
                     + clientId, OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
                     .UNEXPECTED_SERVER_ERROR);

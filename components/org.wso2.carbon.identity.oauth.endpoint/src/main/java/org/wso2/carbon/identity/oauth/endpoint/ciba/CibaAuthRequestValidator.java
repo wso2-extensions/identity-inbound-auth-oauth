@@ -469,19 +469,20 @@ public class CibaAuthRequestValidator {
             }
             throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "Unknown (iss) client.");
 
-        } catch (IdentityOAuth2Exception | ParseException ex) {
-            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Exception in validating for (iss). ");
+        } catch (IdentityOAuth2Exception | ParseException e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Exception in validating for (iss). ", e);
         }
     }
 
     /**
      * Checks whether the client is valid.
      *
-     * @param request CIBA Authentication request.
+     * @param request             CIBA Authentication request.
      * @param authenticatedClient Authenticated Client ID.
      * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
      */
     public void validateClient(String request, String authenticatedClient) throws CibaAuthFailureException {
+
         try {
             SignedJWT signedJWT = SignedJWT.parse(request);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
@@ -503,8 +504,8 @@ public class CibaAuthRequestValidator {
             }
             validateClient(request);
 
-        } catch (ParseException ex) {
-            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Exception in validating for (iss). ");
+        } catch (ParseException e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Exception in validating for (iss). ", e);
         }
     }
 
@@ -570,6 +571,11 @@ public class CibaAuthRequestValidator {
 
             // Validation when login_hint exists.
             if (!(claimsSet.getClaim(Constants.LOGIN_HINT) == null)) {
+                // id_token_hint is also present
+                if (!(claimsSet.getClaim(Constants.ID_TOKEN_HINT) == null)) {
+                    throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "Both ID token hint and login " +
+                            "hint present in the request");
+                }
                 // Claim exists for login_hint.
                 if (StringUtils.isBlank(claimsSet.getClaim(Constants.LOGIN_HINT).toString())) {
                     // Login_hint is blank.
@@ -609,10 +615,9 @@ public class CibaAuthRequestValidator {
                             claimsSet.getClaim(Constants.ID_TOKEN_HINT) + ".");
                 }
             }
-
-        } catch (ParseException ex) {
+        } catch (ParseException e) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
-                    "Error occurred in validating user hints.");
+                    "Error occurred in validating user hints.", e);
         }
     }
 
