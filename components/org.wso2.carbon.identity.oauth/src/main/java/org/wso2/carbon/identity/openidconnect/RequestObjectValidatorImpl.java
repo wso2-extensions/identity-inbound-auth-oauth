@@ -52,7 +52,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
 
     private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
     private static final String OIDC_ID_TOKEN_ISSUER_ID = "OAuth.OpenIDConnect.IDTokenIssuerID";
-    private static Log log = LogFactory.getLog(RequestObjectValidatorImpl.class);
+    private static final Log log = LogFactory.getLog(RequestObjectValidatorImpl.class);
 
     @Override
     public boolean isSigned(RequestObject requestObject) {
@@ -126,7 +126,9 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                         ", Expiration Time(ms) : " + expirationTimeInMillis +
                         ", TimeStamp Skew : " + timeStampSkewMillis +
                         ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
-                RequestObjectValidatorUtil.logAndReturnFalse(msg);
+                if (log.isDebugEnabled()) {
+                    log.debug(msg);
+                }
                 throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Request Object " +
                         "is Expired.");
             }
@@ -227,14 +229,16 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                 return true;
             }
         }
-        return RequestObjectValidatorUtil.logAndReturnFalse("None of the audience values matched the " +
-                "tokenEndpoint Alias: " + currentAudience);
+        if (log.isDebugEnabled()) {
+            log.debug("None of the audience values matched the tokenEndpoint Alias: " + currentAudience);
+        }
+        return false;
     }
 
     /**
      * Check if the redirect uri in the request object is valid.
      *
-     * @param requestObject Request object.
+     * @param requestObject    Request object.
      * @param oAuth2Parameters OAuth2 parameters.
      * @return True if redirect uri is valid.
      */

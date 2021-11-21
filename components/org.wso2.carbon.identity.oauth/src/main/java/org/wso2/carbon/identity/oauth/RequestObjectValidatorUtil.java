@@ -160,7 +160,7 @@ public class RequestObjectValidatorUtil {
     /**
      * Validate the signedJWT signature with given certificate
      *
-     * @param signedJWT signed JWT
+     * @param signedJWT       signed JWT
      * @param x509Certificate X509 certificate
      * @return signature validity
      */
@@ -169,7 +169,10 @@ public class RequestObjectValidatorUtil {
         JWSVerifier verifier;
         JWSHeader header = signedJWT.getHeader();
         if (x509Certificate == null) {
-            return logAndReturnFalse("Unable to locate certificate for JWT " + header.toString());
+            if (log.isDebugEnabled()) {
+                log.debug("Unable to locate certificate for JWT " + header.toString());
+            }
+            return false;
         }
 
         String alg = signedJWT.getHeader().getAlgorithm().getName();
@@ -182,31 +185,25 @@ public class RequestObjectValidatorUtil {
             if (publicKey instanceof RSAPublicKey) {
                 verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
             } else {
-                return logAndReturnFalse("Public key is not an RSA public key.");
+                if (log.isDebugEnabled()) {
+                    log.debug("Public key is not an RSA public key.");
+                }
+                return false;
             }
         } else {
-            return logAndReturnFalse("Signature Algorithm not supported yet : " + alg);
+            if (log.isDebugEnabled()) {
+                log.debug("Signature Algorithm not supported yet : " + alg);
+            }
+            return false;
         }
         // At this point 'verifier' will never be null;
         try {
             return signedJWT.verify(verifier);
         } catch (JOSEException e) {
-            return logAndReturnFalse("Unable to verify the signature of the request object: " + signedJWT.serialize());
+            if (log.isDebugEnabled()) {
+                log.debug("Unable to verify the signature of the request object: " + signedJWT.serialize(), e);
+            }
+            return false;
         }
     }
-
-    /**
-     * Message is logged and returns false
-     *
-     * @param errorMessage
-     * @return
-     */
-    public static boolean logAndReturnFalse(String errorMessage) {
-
-        if (log.isDebugEnabled()) {
-            log.debug(errorMessage);
-        }
-        return false;
-    }
-
 }

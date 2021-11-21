@@ -1067,7 +1067,7 @@ public class OAuthServerConfiguration {
                         cibaRequestObjectValidator = (RequestObjectValidator) clazz.newInstance();
                     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
                         log.warn("Failed to initiate CIBA RequestObjectValidator from identity.xml. " +
-                                "Hence initiating the default implementation");
+                                "Hence initiating the default implementation", e);
                         cibaRequestObjectValidator = new CIBARequestObjectValidatorImpl();
                     }
                 }
