@@ -113,7 +113,7 @@ public class ScopeUtils {
             ref = MDC.get(Oauth2ScopeConstants.CORRELATION_ID_MDC).toString();
         } else {
             ref = UUID.randomUUID().toString();
-
+            MDC.put(Oauth2ScopeConstants.CORRELATION_ID_MDC, ref);
         }
         return ref;
     }
