@@ -177,7 +177,7 @@ public class DCRMUtils {
             ref = MDC.get(DCRMConstants.CORRELATION_ID_MDC).toString();
         } else {
             ref = UUID.randomUUID().toString();
-
+            MDC.put(DCRMConstants.CORRELATION_ID_MDC, ref);
         }
         return ref;
     }
