@@ -17,12 +17,7 @@
  */
 package org.wso2.carbon.identity.openidconnect;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.SignedJWT;
-import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,23 +33,17 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidator;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
-import java.security.PublicKey;
 import java.security.cert.Certificate;
-import java.security.interfaces.RSAPublicKey;
 import java.util.Date;
 import java.util.List;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.PS;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
 
 /**
  * This class validates request object parameter value which comes with the OIDC authorization request as an optional
@@ -92,18 +81,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     @Deprecated
     protected boolean isSignatureVerified(SignedJWT signedJWT, String jwksUri) throws RequestObjectException {
 
-        // Validate the signature of the assertion using the jwks endpoint.
-        if (StringUtils.isNotBlank(jwksUri)) {
-            String jwtString = signedJWT.getParsedString();
-            String alg = signedJWT.getHeader().getAlgorithm().getName();
-            try {
-                return new JWKSBasedJWTValidator().validateSignature(jwtString, jwksUri, alg, MapUtils.EMPTY_MAP);
-            } catch (IdentityOAuth2Exception e) {
-                String errorMessage = "Error occurred while validating request object signature using jwks endpoint";
-                throw new RequestObjectException(errorMessage, OAuth2ErrorCodes.SERVER_ERROR, e);
-            }
-        }
-        return false;
+        return RequestObjectValidatorUtil.isSignatureVerified(signedJWT, jwksUri);
 
     }
 
@@ -295,18 +273,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     @Deprecated
     protected Certificate getX509CertOfOAuthApp(String clientId, String tenantDomain) throws RequestObjectException {
 
-        try {
-            return OAuth2Util.getX509CertOfOAuthApp(clientId, tenantDomain);
-        } catch (IdentityOAuth2Exception e) {
-            String errorMsg = "Error retrieving application certificate of OAuth app with client_id: " + clientId +
-                    " , tenantDomain: " + tenantDomain;
-            if (StringUtils.isNotBlank(e.getMessage())) {
-                // We expect OAuth2Util.getX509CertOfOAuthApp() to throw an exception with a more specific reason for
-                // not being able to retrieve the X509 Cert of the service provider.
-                errorMsg = e.getMessage();
-            }
-            throw new RequestObjectException(errorMsg, e);
-        }
+        return RequestObjectValidatorUtil.getX509CertOfOAuthApp(clientId, tenantDomain);
     }
 
     /**
@@ -314,52 +281,14 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * to verify the signature
      * Validate the signedJWT signature with given certificate
      *
-     * @param signedJWT
-     * @param x509Certificate
-     * @return
+     * @param signedJWT Signed JWT
+     * @param x509Certificate X509 Certificate
+     * @return is signature valid
      */
     @Deprecated
     protected boolean isSignatureVerified(SignedJWT signedJWT, Certificate x509Certificate) {
 
-        JWSVerifier verifier;
-        JWSHeader header = signedJWT.getHeader();
-        if (x509Certificate == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Unable to locate certificate for JWT " + header.toString());
-            }
-            return false;
-        }
-
-        String alg = signedJWT.getHeader().getAlgorithm().getName();
-        if (log.isDebugEnabled()) {
-            log.debug("Signature Algorithm found in the JWT Header: " + alg);
-        }
-        if (alg.indexOf(RS) == 0 || alg.indexOf(PS) == 0) {
-            // At this point 'x509Certificate' will never be null.
-            PublicKey publicKey = x509Certificate.getPublicKey();
-            if (publicKey instanceof RSAPublicKey) {
-                verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
-            } else {
-                if (log.isDebugEnabled()) {
-                    log.debug("Public key is not an RSA public key.");
-                }
-                return false;
-            }
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Signature Algorithm not supported yet : " + alg);
-            }
-            return false;
-        }
-        // At this point 'verifier' will never be null;
-        try {
-            return signedJWT.verify(verifier);
-        } catch (JOSEException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Unable to verify the signature of the request object: " + signedJWT.serialize(), e);
-            }
-            return false;
-        }
+        return RequestObjectValidatorUtil.isSignatureVerified(signedJWT, x509Certificate);
     }
 
     /**
