@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.identity.oauth;
 
 import com.nimbusds.jose.JOSEException;
@@ -33,6 +51,13 @@ public class RequestObjectValidatorUtil {
 
     private static final Log log = LogFactory.getLog(RequestObjectValidatorUtil.class);
 
+    /**
+     * Validate the signature of the request object
+     * @param requestObject Request Object
+     * @param oAuth2Parameters OAuth2 Parameters
+     * @return is signature valid
+     * @throws RequestObjectException
+     */
     public static boolean validateSignature(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws
             RequestObjectException {
 
@@ -134,12 +159,26 @@ public class RequestObjectValidatorUtil {
 
     }
 
+    /**
+     * Get certificate for the given alias
+     * @param tenantDomain Tenant Domain
+     * @param alias Alias
+     * @return Certificate for the given Alias
+     * @throws RequestObjectException
+     */
     protected static Certificate getCertificateForAlias(String tenantDomain, String alias) throws
             RequestObjectException {
 
         return getX509CertOfOAuthApp(alias, tenantDomain);
     }
 
+    /**
+     * Get the X509Certificate object containing the public key of the OAuth client.
+     *
+     * @param clientId clientID of the OAuth client (Service Provider).
+     * @param tenantDomain tenant domain of Service Provider.
+     * @return X509Certificate object containing the public certificate of the Service Provider.
+     */
     protected static Certificate getX509CertOfOAuthApp(String clientId, String tenantDomain) throws
             RequestObjectException {
 
