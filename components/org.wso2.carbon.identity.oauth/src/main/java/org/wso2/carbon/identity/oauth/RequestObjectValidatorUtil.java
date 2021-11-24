@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2021, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -140,7 +140,7 @@ public class RequestObjectValidatorUtil {
      * @return signature validity
      * @throws RequestObjectException
      */
-    private static boolean isSignatureVerified(SignedJWT signedJWT, String jwksUri) throws RequestObjectException {
+    public static boolean isSignatureVerified(SignedJWT signedJWT, String jwksUri) throws RequestObjectException {
 
         // Validate the signature of the assertion using the jwks endpoint.
         if (StringUtils.isNotBlank(jwksUri)) {
@@ -179,7 +179,7 @@ public class RequestObjectValidatorUtil {
      * @param tenantDomain tenant domain of Service Provider.
      * @return X509Certificate object containing the public certificate of the Service Provider.
      */
-    protected static Certificate getX509CertOfOAuthApp(String clientId, String tenantDomain) throws
+    public static Certificate getX509CertOfOAuthApp(String clientId, String tenantDomain) throws
             RequestObjectException {
 
         try {
@@ -203,7 +203,7 @@ public class RequestObjectValidatorUtil {
      * @param x509Certificate X509 certificate
      * @return signature validity
      */
-    private static boolean isSignatureVerified(SignedJWT signedJWT, Certificate x509Certificate) {
+    public static boolean isSignatureVerified(SignedJWT signedJWT, Certificate x509Certificate) {
 
         JWSVerifier verifier;
         JWSHeader header = signedJWT.getHeader();
