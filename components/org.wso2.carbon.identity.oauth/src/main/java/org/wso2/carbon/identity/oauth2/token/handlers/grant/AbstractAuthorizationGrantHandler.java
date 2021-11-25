@@ -516,7 +516,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
             return newAccessToken;
         } catch (OAuthSystemException e) {
-            throw new IdentityOAuth2Exception("Error while generating access token");
+            throw new IdentityOAuth2Exception("Error while generating access token", e);
         }
     }
 
@@ -529,7 +529,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
             return refreshToken;
         } catch (OAuthSystemException e) {
-            throw new IdentityOAuth2Exception("Error while issuing refresh token");
+            throw new IdentityOAuth2Exception("Error while issuing refresh token", e);
         }
     }
 
