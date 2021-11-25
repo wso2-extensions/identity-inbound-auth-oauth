@@ -140,11 +140,11 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
             long expirationTimeInMillis = expirationTime.getTime();
             long currentTimeInMillis = System.currentTimeMillis();
             if ((currentTimeInMillis + timeStampSkewMillis) > expirationTimeInMillis) {
-                String msg = "Request Object is expired." +
-                        ", Expiration Time(ms) : " + expirationTimeInMillis +
-                        ", TimeStamp Skew : " + timeStampSkewMillis +
-                        ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
                 if (log.isDebugEnabled()) {
+                    String msg = "Request Object is expired." +
+                            ", Expiration Time(ms) : " + expirationTimeInMillis +
+                            ", TimeStamp Skew : " + timeStampSkewMillis +
+                            ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
                     log.debug(msg);
                 }
                 throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Request Object " +
