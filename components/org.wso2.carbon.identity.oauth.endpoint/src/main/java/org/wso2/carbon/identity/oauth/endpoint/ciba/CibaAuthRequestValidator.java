@@ -573,8 +573,8 @@ public class CibaAuthRequestValidator {
             if (!(claimsSet.getClaim(Constants.LOGIN_HINT) == null)) {
                 // id_token_hint is also present
                 if (!(claimsSet.getClaim(Constants.ID_TOKEN_HINT) == null)) {
-                    throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "Both ID token hint and login " +
-                            "hint present in the request");
+                    throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "Both ID token hint and " +
+                            "login hint present in the request");
                 }
                 // Claim exists for login_hint.
                 if (StringUtils.isBlank(claimsSet.getClaim(Constants.LOGIN_HINT).toString())) {
