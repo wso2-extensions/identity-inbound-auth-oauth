@@ -172,12 +172,9 @@ public class DCRMUtils {
      * @return correlation-id
      */
     public static String getCorrelation() {
-        String ref;
+        String ref = null;
         if (isCorrelationIDPresent()) {
             ref = MDC.get(DCRMConstants.CORRELATION_ID_MDC).toString();
-        } else {
-            ref = UUID.randomUUID().toString();
-            MDC.put(DCRMConstants.CORRELATION_ID_MDC, ref);
         }
         return ref;
     }
