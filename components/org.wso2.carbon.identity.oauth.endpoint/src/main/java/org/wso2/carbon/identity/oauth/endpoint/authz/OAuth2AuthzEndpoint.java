@@ -36,6 +36,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.owasp.encoder.Encode;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
@@ -923,7 +924,7 @@ public class OAuth2AuthzEndpoint {
             paramStringBuilder.append("<input type=\"hidden\" name=\"")
                     .append(key)
                     .append("\"" + "value=\"")
-                    .append(jsonObject.get(key.toString()))
+                    .append(Encode.forHtml((String) jsonObject.get(key.toString())))
                     .append("\"/>\n");
         }
 
