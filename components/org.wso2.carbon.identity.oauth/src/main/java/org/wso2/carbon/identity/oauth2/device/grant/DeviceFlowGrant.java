@@ -31,7 +31,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Timestamp;
 import java.util.Date;
@@ -69,7 +68,6 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
                 .getAuthenticationDetails(deviceCode, clientId);
         Date date = new Date();
         deviceStatus = deviceFlowDO.getStatus();
-        deviceFlowDO.setScope(getScopes(deviceCode));
         deviceFlowDO.setDeviceCode(deviceCode);
         if (Constants.NOT_EXIST.equals(deviceStatus)) {
             throw new IdentityOAuth2Exception(DeviceErrorCodes.INVALID_REQUEST, DeviceErrorCodes.INVALID_REQUEST);
@@ -103,13 +101,9 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx, DeviceFlowDO deviceFlowDO) {
 
         AuthenticatedUser authzUser = deviceFlowDO.getAuthorizedUser();
-        String[] scopeSet = OAuth2Util.buildScopeArray(deviceFlowDO.getScope());
+        String[] scopeSet = deviceFlowDO.getScopes().toArray(new String[0]);
         tokReqMsgCtx.setAuthorizedUser(authzUser);
-        if (StringUtils.isNotBlank(deviceFlowDO.getScope())) {
-            tokReqMsgCtx.setScope(scopeSet);
-        } else {
-            tokReqMsgCtx.setScope(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope());
-        }
+        tokReqMsgCtx.setScope(scopeSet);
     }
 
     @Override
@@ -146,18 +140,5 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
     private static boolean isValidPollTime(Timestamp newPollTime, DeviceFlowDO deviceFlowDO) {
 
         return newPollTime.getTime() - deviceFlowDO.getLastPollTime().getTime() > deviceFlowDO.getPollTime();
-    }
-
-    /**
-     * Get scopes for device code.
-     *
-     * @param deviceCode Code that is used to identify the device.
-     * @return scopes
-     * @throws IdentityOAuth2Exception Error while getting scopes for device code.
-     */
-    private String getScopes(String deviceCode) throws IdentityOAuth2Exception {
-
-        return String.join(Constants.SEPARATED_WITH_SPACE,
-                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getScopesForDeviceCode(deviceCode));
     }
 }

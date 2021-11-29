@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
@@ -66,6 +67,7 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
@@ -150,6 +152,29 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
                 {null, HttpServletResponse.SC_BAD_REQUEST, false},
                 {"testClientId", HttpServletResponse.SC_OK, true}
         };
+    }
+
+    @Test
+    public void testhandleErrorResponse() throws Exception {
+
+        OAuthClientAuthnContext context = new OAuthClientAuthnContext();
+        context.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
+        context.setClientId("sample-client");
+        DeviceEndpoint deviceEndpoint = new DeviceEndpoint();
+        Response response = WhiteboxImpl.invokeMethod(deviceEndpoint, "handleErrorResponse", context);
+        String res = (String) response.getEntity();
+        assertTrue(res.contains(OAuth2ErrorCodes.INVALID_CLIENT));
+
+        context.setClientId(null);
+        response = WhiteboxImpl.invokeMethod(deviceEndpoint, "handleErrorResponse", context);
+        res = (String) response.getEntity();
+        assertTrue(res.contains(OAuth2ErrorCodes.INVALID_REQUEST));
+
+        context.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
+        context.setErrorMessage(OAuth2ErrorCodes.SERVER_ERROR);
+        response = WhiteboxImpl.invokeMethod(deviceEndpoint, "handleErrorResponse", context);
+        res = (String) response.getEntity();
+        assertTrue(res.contains(OAuth2ErrorCodes.SERVER_ERROR));
     }
 
     /**

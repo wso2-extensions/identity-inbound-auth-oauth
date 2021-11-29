@@ -49,6 +49,7 @@ import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAOImpl;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAOImpl;
+import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -212,6 +213,17 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
                 validateClientInfo(clientId, "dummyCallBackURI");
         assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), OAuth2ErrorCodes.INVALID_CALLBACK);
+    }
+
+    @Test
+    public void testValidateClientInfoWithDeviceResponseType() throws Exception {
+
+        String clientId = UUID.randomUUID().toString();
+        getOAuthAppDO(clientId, "dummyGrantType", null, "carbon.super");
+        OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
+                validateClientInfo(clientId, null, Constants.RESPONSE_TYPE_DEVICE);
+        assertNotNull(oAuth2ClientValidationResponseDTO);
+        assertTrue(oAuth2ClientValidationResponseDTO.isValidClient());
     }
 
     @Test

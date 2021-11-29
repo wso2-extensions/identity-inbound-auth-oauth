@@ -73,6 +73,7 @@ public interface DeviceFlowDAO {
      * @return client_id
      * @throws IdentityOAuth2Exception Error while getting client id for user code.
      */
+    @Deprecated
     String getClientIdByUserCode(String userCode) throws IdentityOAuth2Exception;
 
     /**
@@ -132,6 +133,7 @@ public interface DeviceFlowDAO {
      * @return Exist or not.
      * @throws IdentityOAuth2Exception Error while checking client id exist.
      */
+    @Deprecated
     boolean checkClientIdExist(String clientId) throws IdentityOAuth2Exception;
 
     /**
@@ -141,6 +143,7 @@ public interface DeviceFlowDAO {
      * @return status
      * @throws IdentityOAuth2Exception Error while getting status for user code.
      */
+    @Deprecated
     String getStatusForUserCode(String userCode) throws IdentityOAuth2Exception;
 
     /**
@@ -179,6 +182,7 @@ public interface DeviceFlowDAO {
      * @param callBackUri Callback uri of the service provider.
      * @throws IdentityOAuth2Exception Error while Setting callback uri.
      */
+    @Deprecated
     void setCallbackURI(String clientId, String callBackUri) throws IdentityOAuth2Exception;
 
     /**
@@ -188,6 +192,7 @@ public interface DeviceFlowDAO {
      * @return Array of scopes.
      * @throws IdentityOAuth2Exception Error while getting scopes for user code.
      */
+    @Deprecated
     String[] getScopesForUserCode(String userCode) throws IdentityOAuth2Exception;
 
     /**
@@ -197,6 +202,7 @@ public interface DeviceFlowDAO {
      * @return Array of scopes.
      * @throws IdentityOAuth2Exception Error while getting scopes for device code.
      */
+    @Deprecated
     String[] getScopesForDeviceCode(String deviceCode) throws IdentityOAuth2Exception;
 
     /**

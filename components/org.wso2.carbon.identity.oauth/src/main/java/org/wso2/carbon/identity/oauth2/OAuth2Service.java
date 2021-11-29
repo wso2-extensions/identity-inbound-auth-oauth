@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -119,22 +120,30 @@ public class OAuth2Service extends AbstractAdmin {
         }
     }
 
+    @Deprecated
+    public OAuth2ClientValidationResponseDTO validateClientInfo(String clientId, String callbackURI) {
+
+        return validateClientInfo(clientId, callbackURI, null);
+    }
+
     /**
      * Check Whether the provided client_id and the callback URL are valid.
      *
-     * @param clientId    client_id available in the request, Not null parameter.
-     * @param callbackURI callback_uri available in the request, can be null.
+     * @param clientId      client_id available in the request, Not null parameter.
+     * @param callbackURI   callback_uri available in the request, can be null.
+     * @param responseType  responseType used in the request.
      * @return <code>OAuth2ClientValidationResponseDTO</code> bean with validity information,
      * callback, App Name, Error Code and Error Message when appropriate.
      */
-    public OAuth2ClientValidationResponseDTO validateClientInfo(String clientId, String callbackURI) {
+    public OAuth2ClientValidationResponseDTO validateClientInfo(String clientId, String callbackURI,
+                                                                String responseType) {
 
         OAuth2ClientValidationResponseDTO validationResponseDTO =
                 new OAuth2ClientValidationResponseDTO();
 
         if (log.isDebugEnabled()) {
-            log.debug("Validate Client information request for client_id : " + clientId + " and callback_uri " +
-                    callbackURI);
+            log.debug("Validate Client information request for client_id : " + clientId + " , callback_uri " +
+                    callbackURI + " and responseType " + responseType);
         }
 
         try {
@@ -183,7 +192,8 @@ public class OAuth2Service extends AbstractAdmin {
                 throw new InvalidOAuthClientException("Oauth application is not in active state");
             }
 
-            if (StringUtils.isEmpty(appDO.getGrantTypes()) || StringUtils.isEmpty(appDO.getCallbackUrl())) {
+            if (StringUtils.isEmpty(appDO.getGrantTypes()) || (StringUtils.isEmpty(appDO.getCallbackUrl()) &&
+                    !StringUtils.equals(responseType, Constants.RESPONSE_TYPE_DEVICE))) {
                 if (log.isDebugEnabled()) {
                     log.debug("Registered App found for the given Client Id : " + clientId + " ,App Name : " + appDO
                             .getApplicationName() + ", does not support the requested grant type.");
@@ -224,7 +234,7 @@ public class OAuth2Service extends AbstractAdmin {
                         .getApplicationName() + ", Callback URL : " + appDO.getCallbackUrl());
             }
 
-            if (validateCallbackURI(callbackURI, appDO)) {
+            if (validateCallbackURI(callbackURI, appDO, responseType)) {
                 validationResponseDTO.setValidClient(true);
                 validationResponseDTO.setApplicationName(appDO.getApplicationName());
                 validationResponseDTO.setCallbackURL(callbackURI);
@@ -283,10 +293,15 @@ public class OAuth2Service extends AbstractAdmin {
      *
      * @param callbackURI callback url in the request.
      * @param oauthApp OAuth application data object
+     * @param responseType
      * @return boolean If application callback url is defined as a regexp check weather it matches the given url
      * Or check weather callback urls are equal
      */
-    private boolean validateCallbackURI(String callbackURI, OAuthAppDO oauthApp) {
+    private boolean validateCallbackURI(String callbackURI, OAuthAppDO oauthApp, String responseType) {
+
+        if (StringUtils.equals(responseType, Constants.RESPONSE_TYPE_DEVICE)) {
+            return true;
+        }
         String regexp = null;
         String registeredCallbackUrl = oauthApp.getCallbackUrl();
         if (registeredCallbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {

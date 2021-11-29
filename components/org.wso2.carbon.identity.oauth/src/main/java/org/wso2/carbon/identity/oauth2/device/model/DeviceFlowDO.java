@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.device.model;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 
 import java.sql.Timestamp;
+import java.util.List;
 
 /**
  * Device flow data object.
@@ -31,9 +32,15 @@ public class DeviceFlowDO {
 
     private String userCode;
 
+    @Deprecated
     private String consumerKeyID;
 
+    private String consumerKey;
+
+    @Deprecated
     private String scope;
+
+    List<String> scopes;
 
     private String status;
 
@@ -69,21 +76,35 @@ public class DeviceFlowDO {
         this.userCode = userCode;
     }
 
+    @Deprecated
     public String getConsumerKeyID() {
 
         return consumerKeyID;
     }
 
+    @Deprecated
     public void setConsumerKeyID(String consumerKeyID) {
 
         this.consumerKeyID = consumerKeyID;
     }
 
+    public String getConsumerKey() {
+
+        return consumerKey;
+    }
+
+    public void setConsumerKey(String consumerKey) {
+
+        this.consumerKey = consumerKey;
+    }
+
+    @Deprecated
     public String getScope() {
 
         return scope;
     }
 
+    @Deprecated
     public void setScope(String scope) {
 
         this.scope = scope;
@@ -157,5 +178,15 @@ public class DeviceFlowDO {
     public void setAuthorizedUser(AuthenticatedUser authorizedUser) {
 
         this.authorizedUser = authorizedUser;
+    }
+
+    public void setScopes(List<String> scopes) {
+
+        this.scopes = scopes;
+    }
+
+    public List<String> getScopes() {
+
+        return scopes;
     }
 }

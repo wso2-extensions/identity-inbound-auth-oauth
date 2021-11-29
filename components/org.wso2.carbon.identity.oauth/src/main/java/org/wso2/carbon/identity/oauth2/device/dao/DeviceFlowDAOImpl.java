@@ -169,6 +169,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         boolean isMatchingDeviceCodeAndClientId = false; // Check for matching deviceCode and clientId.
         String userDomain = null;
         String authenticatedIDP = null;
+        List<String> scopes = null;
         DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              PreparedStatement prepStmt =
@@ -187,6 +188,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                     tenantId = resultSet.getInt(6);
                     userDomain = resultSet.getString(7);
                     authenticatedIDP = resultSet.getString(8);
+                   scopes = getScopesForCodeId(resultSet.getString(9), connection);
                     isMatchingDeviceCodeAndClientId = true;
                 }
                 if (isMatchingDeviceCodeAndClientId) {
@@ -194,6 +196,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                         String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
                         user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain, authenticatedIDP);
                         deviceFlowDO.setAuthorizedUser(user);
+                        deviceFlowDO.setScopes(scopes);
                     }
                 } else {
                     deviceFlowDO.setStatus(Constants.NOT_EXIST);
@@ -577,9 +580,9 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             for (String scopes : scopeSet) {
                 prepStmt.setString(1, codeId);
                 prepStmt.setString(2, scopes);
-                prepStmt.execute();
+                prepStmt.addBatch();
             }
-
+            prepStmt.executeBatch();
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error when storing scopes for device_code: " +
@@ -607,6 +610,8 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                     deviceFlowDO.setExpiryTime(resultSet.getTimestamp(2,
                             Calendar.getInstance(TimeZone.getTimeZone(Constants.UTC))));
                     deviceFlowDO.setDeviceCode(resultSet.getString(3));
+                    deviceFlowDO.setScopes(getScopesForCodeId(resultSet.getString(4), connection));
+                    deviceFlowDO.setConsumerKey(resultSet.getString(5));
                 }
             }
             return deviceFlowDO;
@@ -614,5 +619,28 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             throw new IdentityOAuth2Exception("Error when getting authentication details for user_code(hashed): " +
                     DigestUtils.sha256Hex(userCode), e);
         }
+    }
+
+    private List<String> getScopesForCodeId(String codeId, Connection connection) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Getting scopes for codeId: " + codeId);
+        }
+        List<String> scopeSet = new ArrayList<>();
+
+        try {
+            try (PreparedStatement prepStmt =
+                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.GET_SCOPES_FOR_CODE_ID)) {
+                ResultSet resultSet;
+                prepStmt.setString(1, codeId);
+                resultSet = prepStmt.executeQuery();
+                while (resultSet.next()) {
+                    scopeSet.add(resultSet.getString(1));
+                }
+            }
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error when getting scopes for codeId: " + codeId, e);
+        }
+        return scopeSet;
     }
 }

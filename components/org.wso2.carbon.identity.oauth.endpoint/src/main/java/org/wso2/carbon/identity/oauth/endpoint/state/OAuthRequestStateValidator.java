@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
+import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -176,6 +177,10 @@ public class OAuthRequestStateValidator {
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT);
         }
 
+        String responseType = oAuthMessage.getRequest().getParameter(Constants.RESPONSE_TYPE);
+        if (StringUtils.equals(responseType, Constants.RESPONSE_TYPE_DEVICE)) {
+            return;
+        }
         if (StringUtils.isBlank(oAuthMessage.getRequest().getParameter(REQUEST_URI)) &&
                 StringUtils.isBlank(oAuthMessage.getRequest().getParameter(REDIRECT_URI))) {
             if (log.isDebugEnabled()) {

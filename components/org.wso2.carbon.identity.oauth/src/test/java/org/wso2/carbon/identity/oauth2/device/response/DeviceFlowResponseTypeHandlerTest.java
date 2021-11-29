@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.device.response;
 
+import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
@@ -26,6 +27,9 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
+import org.wso2.carbon.identity.core.ServiceURL;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -33,8 +37,10 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dao.util.DAOUtils;
+import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Connection;
@@ -46,7 +52,8 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 
-@PrepareForTest({OAuth2Util.class, DeviceFlowPersistenceFactory.class, IdentityDatabaseUtil.class, IdentityUtil.class})
+@PrepareForTest({OAuth2Util.class, DeviceFlowPersistenceFactory.class, IdentityDatabaseUtil.class, IdentityUtil.class,
+        ServiceURLBuilder.class, ServiceURL.class})
 @PowerMockIgnore({"javax.crypto.*"})
 @WithCarbonHome
 @WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
@@ -70,7 +77,8 @@ public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
     }
 
     @Test
-    public void testIssue() throws IdentityOAuth2Exception, InvalidOAuthClientException, SQLException {
+    public void testIssue() throws IdentityOAuth2Exception, InvalidOAuthClientException, SQLException,
+            URLBuilderException {
 
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(OAuth2Util.class);
@@ -80,11 +88,26 @@ public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             mockStatic(IdentityUtil.class);
             when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(TEST_URL);
+            mockStatic(ServiceURLBuilder.class);
+            mockStatic(ServiceURL.class);
+            ServiceURLBuilder mockServiceURLBuilder = Mockito.mock(ServiceURLBuilder.class);
+            ServiceURL mockServiceURL = Mockito.mock(ServiceURL.class);
+            when(ServiceURLBuilder.create()).thenReturn(mockServiceURLBuilder);
+            when(mockServiceURLBuilder.addPath(anyString())).thenReturn(mockServiceURLBuilder);
+            when(mockServiceURLBuilder.addParameter(anyString(), anyString())).thenReturn(mockServiceURLBuilder);
+            when(mockServiceURLBuilder.build()).thenReturn(mockServiceURL);
+            when(mockServiceURL.getAbsolutePublicURL())
+                    .thenReturn(Constants.DEVICE_SUCCESS_ENDPOINT_PATH);
+
             oAuthAppDO.setApplicationName("testApplicationName");
             OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext =
                     new OAuthAuthzReqMessageContext(oAuth2AuthorizeReqDTO);
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setApplicationName("testApp");
+            oAuthAuthzReqMessageContext.addProperty("OAuthAppDO", oAuthAppDO);
             DeviceFlowResponseTypeHandler deviceFlowResponseTypeHandler = new DeviceFlowResponseTypeHandler();
-            assertEquals(TEST_URL, deviceFlowResponseTypeHandler.issue(oAuthAuthzReqMessageContext).getCallbackURI());
+            OAuth2AuthorizeRespDTO res = deviceFlowResponseTypeHandler.issue(oAuthAuthzReqMessageContext);
+            assertEquals(res.getCallbackURI(), Constants.DEVICE_SUCCESS_ENDPOINT_PATH + "?app_name=testApp");
         }
     }
 }

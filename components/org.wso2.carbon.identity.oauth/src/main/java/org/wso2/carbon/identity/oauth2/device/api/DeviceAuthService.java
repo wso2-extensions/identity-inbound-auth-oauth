@@ -123,5 +123,6 @@ public interface DeviceAuthService {
      * @return true or false.
      * @throws IdentityOAuth2Exception Error while validate the client id.
      */
+    @Deprecated
     boolean validateClientInfo(String clientId) throws IdentityOAuth2Exception;
 }

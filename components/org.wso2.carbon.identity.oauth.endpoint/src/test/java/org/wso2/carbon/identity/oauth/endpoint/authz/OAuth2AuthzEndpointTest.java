@@ -479,10 +479,10 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
         if (ArrayUtils.isNotEmpty(clientId) && (clientId[0].equalsIgnoreCase("invalidId") || clientId[0]
                 .equalsIgnoreCase(INACTIVE_CLIENT_ID_VALUE) || StringUtils.isEmpty(clientId[0]))) {
-            when(oAuth2Service.validateClientInfo(clientId[0], APP_REDIRECT_URL)).thenCallRealMethod();
+            when(oAuth2Service.validateClientInfo(clientId[0], APP_REDIRECT_URL, null)).thenCallRealMethod();
 
         } else {
-            when(oAuth2Service.validateClientInfo(anyString(), anyString()))
+            when(oAuth2Service.validateClientInfo(anyString(), anyString(), anyString()))
                     .thenReturn(oAuth2ClientValidationResponseDTO);
             when(oAuth2ClientValidationResponseDTO.isValidClient()).thenReturn(true);
         }
@@ -1042,7 +1042,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         }
         validationResponseDTO.setPkceMandatory(supportPlainPkce);
         validationResponseDTO.setPkceSupportPlain(supportPlainPkce);
-        when(oAuth2Service.validateClientInfo(anyString(), anyString())).thenReturn(validationResponseDTO);
+        when(oAuth2Service.validateClientInfo(anyString(), anyString(), anyString())).thenReturn(validationResponseDTO);
 
         if (StringUtils.equals(expectedLocation, LOGIN_PAGE_URL) ||
                 StringUtils.equals(expectedLocation, ERROR_PAGE_URL)) {
@@ -1814,7 +1814,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         OAuth2ClientValidationResponseDTO validationResponseDTO = new OAuth2ClientValidationResponseDTO();
         validationResponseDTO.setValidClient(true);
         validationResponseDTO.setCallbackURL(APP_REDIRECT_URL);
-        when(oAuth2Service.validateClientInfo(anyString(), anyString())).thenReturn(validationResponseDTO);
+        when(oAuth2Service.validateClientInfo(anyString(), anyString(), anyString())).thenReturn(validationResponseDTO);
 
         Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> responseTypeValidators = new Hashtable<>();
         responseTypeValidators.put(ResponseType.CODE.toString(), CodeValidator.class);
