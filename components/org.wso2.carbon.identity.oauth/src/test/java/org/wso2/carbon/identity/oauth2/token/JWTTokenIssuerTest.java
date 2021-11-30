@@ -113,7 +113,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
 
     private static final String CLAIM_CLIENT_ID = "client_id";
     private static final String DEFAULT_TYP_HEADER_VALUE = "at+jwt";
-    private static final String THUMB_PRINT = "Certificate";
+    private static final String THUMBPRINT = "Certificate";
 
     @Mock
     private OAuthServerConfiguration oAuthServerConfiguration;
@@ -317,7 +317,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
             mockCustomClaimsCallbackHandler();
             mockStatic(OAuth2Util.class);
             when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
-            when(OAuth2Util.getThumbPrint(anyString(), anyInt())).thenReturn(THUMB_PRINT);
+            when(OAuth2Util.getThumbPrint(anyString(), anyInt())).thenReturn(THUMBPRINT);
 
             System.setProperty(CarbonBaseConstants.CARBON_HOME,
                     Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());

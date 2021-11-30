@@ -361,7 +361,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     /**
-     * This method map signature algorithm define in identity.xml to nimbus signature algorithm format, Strings are.
+     * This method map signature algorithm define in identity.xml to nimbus signature algorithm format, Strings are
      * defined inline hence there are not being used anywhere
      *
      * @param signatureAlgorithm Signature algorithm.
