@@ -1,5 +1,5 @@
 /*
- *Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,7 +114,6 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     private static final String CLAIM_CLIENT_ID = "client_id";
     private static final String DEFAULT_TYP_HEADER_VALUE = "at+jwt";
     private static final String THUMB_PRINT = "Certificate";
-
 
     @Mock
     private OAuthServerConfiguration oAuthServerConfiguration;
@@ -313,7 +312,6 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
                                    String sub,
                                    long expectedExpiry) throws Exception {
 
-        try {
             OAuthAppDO appDO = spy(new OAuthAppDO());
             mockGrantHandlers();
             mockCustomClaimsCallbackHandler();
@@ -351,11 +349,6 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
             assertNotNull(signedJWT.getHeader());
             assertNotNull(signedJWT.getHeader().getType());
             assertEquals(signedJWT.getHeader().getType().toString(), DEFAULT_TYP_HEADER_VALUE);
-
-        } catch (Exception ex) {
-            assertTrue(ex.getMessage() != null && ex.getMessage().contains("is not supported"),
-                    "Looks like someone has implemented this method. Need to modify this testcase");
-        }
     }
 
     @Test
