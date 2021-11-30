@@ -44,8 +44,10 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.user.api.AuthorizationManager;
 import org.wso2.carbon.user.api.UserStoreException;
 
@@ -334,6 +336,10 @@ public class JDBCPermissionBasedInternalScopeValidator {
 
     private Set<Scope> getScopesOfPermissionType(int tenantId) throws IdentityOAuth2ScopeServerException {
 
+        if (Oauth2ScopeUtils.isSystemLevelInternalSystemScopeManagementEnabled()) {
+            List<Scope> oauthScopeBinding = OAuth2ServiceComponentHolder.getInstance().getOauthScopeBinding();
+            return new HashSet<>(oauthScopeBinding);
+        }
         Scope[] scopesFromCache = OAuthScopeBindingCache.getInstance()
                 .getValueFromCache(new OAuthScopeBindingCacheKey(PERMISSION_BINDING_TYPE), tenantId);
         Set<Scope> allScopes;

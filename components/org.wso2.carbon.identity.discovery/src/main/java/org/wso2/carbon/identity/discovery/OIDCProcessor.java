@@ -23,7 +23,7 @@ import org.wso2.carbon.base.ServerConfigurationException;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * OIDCProcessor should be implemented to process the HttpServletRequest
+ * OIDCProcessor should be implemented to process the HttpServletRequest.
  * This should handle OIDCDiscoveryEndPointException which is not
  * specified in the spec.
  */

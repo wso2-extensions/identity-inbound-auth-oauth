@@ -57,6 +57,7 @@ import org.wso2.carbon.identity.oauth2.validators.grant.AuthorizationCodeGrantVa
 import org.wso2.carbon.identity.oauth2.validators.grant.ClientCredentialGrantValidator;
 import org.wso2.carbon.identity.oauth2.validators.grant.PasswordGrantValidator;
 import org.wso2.carbon.identity.oauth2.validators.grant.RefreshTokenGrantValidator;
+import org.wso2.carbon.identity.openidconnect.CIBARequestObjectValidatorImpl;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
@@ -202,11 +203,14 @@ public class OAuthServerConfiguration {
             "org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilder";
     private String defaultRequestValidatorClassName =
             "org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl";
+    private String defaultCibaRequestValidatorClassName =
+            "org.wso2.carbon.identity.openidconnect.CIBARequestObjectValidatorImpl";
     private String openIDConnectIDTokenCustomClaimsHanlderClassName =
             "org.wso2.carbon.identity.openidconnect.SAMLAssertionClaimsCallback";
     private IDTokenBuilder openIDConnectIDTokenBuilder = null;
     private Map<String, String> requestObjectBuilderClassNames = new HashMap<>();
     private volatile RequestObjectValidator requestObjectValidator = null;
+    private volatile RequestObjectValidator cibaRequestObjectValidator = null;
     private CustomClaimsCallbackHandler openidConnectIDTokenCustomClaimsCallbackHandler = null;
     private String openIDConnectIDTokenIssuerIdentifier = null;
     private String openIDConnectIDTokenSubClaim = "http://wso2.org/claims/fullname";
@@ -1045,6 +1049,31 @@ public class OAuthServerConfiguration {
             }
         }
         return requestObjectValidator;
+    }
+
+    /**
+     * Returns an instance of CIBARequestObjectValidator
+     *
+     * @return instance of CIBARequestObjectValidator
+     */
+    public RequestObjectValidator getCIBARequestObjectValidator() {
+
+        if (cibaRequestObjectValidator == null) {
+            synchronized (RequestObjectValidator.class) {
+                if (cibaRequestObjectValidator == null) {
+                    try {
+                        Class clazz = Thread.currentThread().getContextClassLoader()
+                                        .loadClass(defaultCibaRequestValidatorClassName);
+                        cibaRequestObjectValidator = (RequestObjectValidator) clazz.newInstance();
+                    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+                        log.warn("Failed to initiate CIBA RequestObjectValidator from identity.xml. " +
+                                "Hence initiating the default implementation", e);
+                        cibaRequestObjectValidator = new CIBARequestObjectValidatorImpl();
+                    }
+                }
+            }
+        }
+        return cibaRequestObjectValidator;
     }
 
     /**
@@ -2624,7 +2653,7 @@ public class OAuthServerConfiguration {
         OMElement oauthDeviceCodeGrantElement = oauthElem
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_GRANT));
 
-        if (oauthDeviceCodeGrantElement
+        if (oauthDeviceCodeGrantElement != null && oauthDeviceCodeGrantElement
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_LENGTH)) != null) {
             try {
                 deviceCodeKeyLength = Integer.parseInt(oauthDeviceCodeGrantElement
@@ -2636,7 +2665,7 @@ public class OAuthServerConfiguration {
                         .trim() + " to integer. Falling back to the default value.", e);
             }
         }
-        if (oauthDeviceCodeGrantElement
+        if (oauthDeviceCodeGrantElement != null && oauthDeviceCodeGrantElement
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_EXPIRY_TIME)) != null) {
             try {
                 deviceCodeExpiryTime = Long.parseLong(oauthDeviceCodeGrantElement
@@ -2648,7 +2677,7 @@ public class OAuthServerConfiguration {
                         .trim() + " to long. Falling back to the default value.", e);
             }
         }
-        if (oauthDeviceCodeGrantElement
+        if (oauthDeviceCodeGrantElement != null && oauthDeviceCodeGrantElement
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_POLLING_INTERVAL)) != null) {
             try {
                 deviceCodePollingInterval =
@@ -2660,7 +2689,7 @@ public class OAuthServerConfiguration {
                         .getText().trim() + " to integer. Falling back to the default value.", e);
             }
         }
-        if (oauthDeviceCodeGrantElement
+        if (oauthDeviceCodeGrantElement != null && oauthDeviceCodeGrantElement
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_SET)) != null) {
             deviceCodeKeySet = oauthDeviceCodeGrantElement
                     .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_SET)).getText().trim();
@@ -2683,6 +2712,12 @@ public class OAuthServerConfiguration {
                 defaultRequestValidatorClassName =
                         openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
                                 REQUEST_OBJECT_VALIDATOR)).getText().trim();
+            }
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
+                    CIBA_REQUEST_OBJECT_VALIDATOR)) != null) {
+                defaultCibaRequestValidatorClassName =
+                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
+                                CIBA_REQUEST_OBJECT_VALIDATOR)).getText().trim();
             }
             if (openIDConnectConfigElem
                     .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_BUILDER)) !=
@@ -3175,6 +3210,7 @@ public class OAuthServerConfiguration {
         public static final String SUPPORTED_CLAIMS = "OpenIDConnectClaims";
         public static final String REQUEST_OBJECT = "RequestObject";
         public static final String REQUEST_OBJECT_VALIDATOR = "RequestObjectValidator";
+        public static final String CIBA_REQUEST_OBJECT_VALIDATOR = "CIBARequestObjectValidator";
         public static final String OPENID_CONNECT_BACK_CHANNEL_LOGOUT_TOKEN_EXPIRATION = "LogoutTokenExpiration";
         // Callback handler related configuration elements
         private static final String OAUTH_CALLBACK_HANDLERS = "OAuthCallbackHandlers";

@@ -119,9 +119,8 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 try (ResultSet resultSet = prepStmt.executeQuery()) {
                     if (resultSet.next()) {
                         if (log.isDebugEnabled()) {
-                            log.debug(
-                                    "Successfully returning Ciba AuthCodeKey : " + resultSet.getString(1) + "for the " +
-                                            "ciba auth_req_id : " + authReqId);
+                            log.debug("Successfully returning Ciba AuthCodeKey : " +
+                                    resultSet.getString(1) + "for the ciba auth_req_id : " + authReqId);
                         }
                         return resultSet.getString(1);
                     } else {
@@ -305,8 +304,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                         cibaAuthCodeDO.setInterval(resultSet.getLong(5));
                         cibaAuthCodeDO.setExpiresIn(resultSet.getLong(6));
                         cibaAuthCodeDO.setAuthReqStatus(AuthReqStatus.valueOf(resultSet.getString(7)));
-                        cibaAuthCodeDO.setIssuedTime(
-                                resultSet.getTimestamp(8,
+                        cibaAuthCodeDO.setIssuedTime(resultSet.getTimestamp(8,
                                         Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC))));
                     } else {
                         return null;

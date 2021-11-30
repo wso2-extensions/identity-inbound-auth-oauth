@@ -269,6 +269,18 @@ public class OAuth2Service extends AbstractAdmin {
             tokenRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
             tokenRespDTO.setErrorMsg("Invalid Client");
             return tokenRespDTO;
+        } catch (IdentityOAuth2ClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Error occurred while issuing access token for Client ID : %s , " +
+                                "User ID: %s , Scope : %s  and Grant Type :  %s.", tokenReqDTO.getClientId(),
+                        tokenReqDTO.getResourceOwnerUsername(), Arrays.toString(tokenReqDTO.getScope()),
+                        tokenReqDTO.getGrantType()), e);
+            }
+            OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
+            tokenRespDTO.setError(true);
+            handleErrorCode(tokenRespDTO, e.getErrorCode());
+            handleErrorMessage(tokenRespDTO, e.getMessage());
+            return tokenRespDTO;
         } catch (Exception e) { // in case of an error, consider it as a system error
             log.error("Error occurred while issuing the access token for Client ID : " +
                     tokenReqDTO.getClientId() + ", User ID " + tokenReqDTO.getResourceOwnerUsername() +
@@ -635,11 +647,13 @@ public class OAuth2Service extends AbstractAdmin {
         try {
             OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(consumerKey);
             return appDO.getState();
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            String msg = "Error while finding application state for application with client_id: " + consumerKey;
-            log.error(msg);
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error while finding application state for application with client_id: " + consumerKey, e);
+            return null;
+        } catch (InvalidOAuthClientException e) {
             if (log.isDebugEnabled()) {
-                log.debug(msg, e);
+                log.debug("Error while finding an application associated with the given consumer key " +
+                        consumerKey, e);
             }
             return null;
         }
@@ -751,6 +765,24 @@ public class OAuth2Service extends AbstractAdmin {
                     + oauth2Params.getClientId(), e);
         }
         return null;
+    }
+
+    private void handleErrorCode(OAuth2AccessTokenRespDTO tokenRespDTO, String errorCode) {
+
+        if (StringUtils.isNotBlank(errorCode)) {
+            tokenRespDTO.setErrorCode(errorCode);
+        } else {
+            tokenRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
+        }
+    }
+
+    private void handleErrorMessage(OAuth2AccessTokenRespDTO tokenRespDTO, String errorMessage) {
+
+        if (StringUtils.isNotBlank(errorMessage)) {
+            tokenRespDTO.setErrorMsg(errorMessage);
+        } else {
+            tokenRespDTO.setErrorMsg("Invalid Client");
+        }
     }
 }
 

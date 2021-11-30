@@ -163,6 +163,7 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getLogin
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthServerConfiguration;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSSOConsentService;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.retrieveStateForErrorURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
@@ -378,6 +379,12 @@ public class OAuth2AuthzEndpoint {
         }
 
         OAuth2Parameters oAuth2Parameters = getOAuth2ParamsFromOAuthMessage(oAuthMessage);
+
+        if (StringUtils.equals(oAuthMessage.getRequest().getParameter(RESPONSE_MODE), RESPONSE_MODE_FORM_POST)) {
+            e.state(retrieveStateForErrorURL(oAuthMessage.getRequest(), oAuth2Parameters));
+            return Response.ok(createErrorFormPage(oAuthMessage.getRequest().getParameter(REDIRECT_URI), e)).build();
+        }
+
         String errorPageURL = getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST,
                 OAuth2ErrorCodes.OAuth2SubErrorCodes.UNEXPECTED_SERVER_ERROR, e.getMessage(), null,
                 oAuth2Parameters);
@@ -557,11 +564,16 @@ public class OAuth2AuthzEndpoint {
                                                        OAuth2Parameters oAuth2Parameters)
             throws SSOConsentServiceException {
 
+        List<String> claimsListOfScopes =
+                openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oAuth2Parameters.getScopes(),
+                        oAuth2Parameters.getTenantDomain());
         if (hasPromptContainsConsent(oAuth2Parameters)) {
             // Ignore all previous consents and get consent required claims
-            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user);
+            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user,
+                    claimsListOfScopes);
         } else {
-            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user);
+            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user,
+                    claimsListOfScopes);
         }
     }
 
@@ -664,11 +676,12 @@ public class OAuth2AuthzEndpoint {
                 getOauth2Params(oAuthMessage).getApplicationName(), false, oauth2Params.getClientId());
 
         OAuthErrorDTO oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleUserConsentDenial(oauth2Params);
-        OAuthProblemException ex = buildConsentDenialException(oAuthErrorDTO);
+        OAuthProblemException consentDenialException = buildConsentDenialException(oAuthErrorDTO);
 
-        String denyResponse = EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), ex, oauth2Params);
+        String denyResponse = EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(),
+                consentDenialException, oauth2Params);
         if (StringUtils.equals(oauth2Params.getResponseMode(), RESPONSE_MODE_FORM_POST)) {
-            return handleFailedState(oAuthMessage, oauth2Params, ex);
+            return handleFailedState(oAuthMessage, oauth2Params, consentDenialException);
         }
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(denyResponse)).build();
     }
@@ -682,13 +695,14 @@ public class OAuth2AuthzEndpoint {
             errorDescription = oAuthErrorDTO.getErrorDescription();
         }
 
-        OAuthProblemException error = OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED, errorDescription);
+        OAuthProblemException consentDeniedException = OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED,
+                errorDescription);
 
         // Adding Error URI if exist.
         if (oAuthErrorDTO != null && StringUtils.isNotBlank(oAuthErrorDTO.getErrorURI())) {
-            error.uri(oAuthErrorDTO.getErrorURI());
+            consentDeniedException.uri(oAuthErrorDTO.getErrorURI());
         }
-        return error;
+        return consentDeniedException;
     }
 
     private Response handleAuthenticationResponse(OAuthMessage oAuthMessage)
@@ -768,6 +782,7 @@ public class OAuth2AuthzEndpoint {
 
         String redirectURL = EndpointUtil.getErrorRedirectURL(oauthException, oauth2Params);
         if (StringUtils.equals(oauth2Params.getResponseMode(), RESPONSE_MODE_FORM_POST)) {
+            oauthException.state(oauth2Params.getState());
             return handleFormPostResponseModeError(oAuthMessage, oauthException);
         } else {
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
@@ -960,6 +975,12 @@ public class OAuth2AuthzEndpoint {
         if (StringUtils.isNotEmpty(oauthProblemException.getDescription())) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"error_description\" value=\"")
                     .append(oauthProblemException.getDescription())
+                    .append("\"/>\n");
+        }
+
+        if (StringUtils.isNotEmpty(oauthProblemException.getState())) {
+            paramStringBuilder.append("<input type=\"hidden\" name=\"state\" value=\"")
+                    .append(oauthProblemException.getState())
                     .append("\"/>\n");
         }
 
@@ -2070,7 +2091,8 @@ public class OAuth2AuthzEndpoint {
         }
 
         try {
-            ConsentClaimsData claimsForApproval = getConsentRequiredClaims(user, serviceProvider, useExistingConsents);
+            ConsentClaimsData claimsForApproval = getConsentRequiredClaims(user, serviceProvider, useExistingConsents,
+                    oauth2Params);
             if (claimsForApproval != null) {
                 String requestClaimsQueryParam = null;
                 // Get the mandatory claims and append as query param.
@@ -2242,12 +2264,18 @@ public class OAuth2AuthzEndpoint {
 
     private ConsentClaimsData getConsentRequiredClaims(AuthenticatedUser user,
                                                        ServiceProvider serviceProvider,
-                                                       boolean useExistingConsents) throws SSOConsentServiceException {
+                                                       boolean useExistingConsents, OAuth2Parameters oAuth2Parameters)
+            throws SSOConsentServiceException {
 
+        List<String> claimsListOfScopes =
+                openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oAuth2Parameters.getScopes(),
+                        oAuth2Parameters.getTenantDomain());
         if (useExistingConsents) {
-            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user);
+            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user,
+                    claimsListOfScopes);
         } else {
-            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user);
+            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user,
+                    claimsListOfScopes);
         }
     }
 
@@ -2466,7 +2494,8 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setSessionDataKey(oauth2Params.getSessionDataKey());
         authzReqDTO.setRequestObjectFlow(oauth2Params.isRequestObjectFlow());
         authzReqDTO.setIdpSessionIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
-        authzReqDTO.setLoginTenantDomain(oauth2Params.getLoginTenantDomain());
+        authzReqDTO.setLoggedInTenantDomain(oauth2Params.getLoginTenantDomain());
+
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {
             authzReqDTO.addProperty(OAuthConstants.AMR, sessionDataCacheEntry.getParamMap().get(OAuthConstants.AMR));

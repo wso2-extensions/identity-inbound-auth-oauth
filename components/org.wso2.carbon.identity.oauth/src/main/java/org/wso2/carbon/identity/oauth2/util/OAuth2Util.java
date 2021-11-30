@@ -3969,6 +3969,13 @@ public class OAuth2Util {
      */
     public static void initiateOAuthScopePermissionsBindings(int tenantId) {
 
+        if (Oauth2ScopeUtils.isSystemLevelInternalSystemScopeManagementEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth internal scopes permission binding initialization is skipped as the scopes " +
+                        "are managed globally.");
+            }
+            return;
+        }
         try {
             //Check login scope is available. If exists, assumes all scopes are loaded using the file.
             if (!hasScopesAlreadyAdded(tenantId)) {
@@ -4027,7 +4034,7 @@ public class OAuth2Util {
             return false;
         }
 
-        return tokenBinderOptional.get().isValidTokenBinding(request, tokenBinding.getBindingReference());
+        return tokenBinderOptional.get().isValidTokenBinding(request, tokenBinding);
     }
 
     /**
@@ -4283,5 +4290,26 @@ public class OAuth2Util {
         AbstractUserStoreManager userStoreManager
                 = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
         return userStoreManager.getUserNameFromUserID(userId);
+    }
+
+    /**
+     * Resolve tenant domain from the httpServlet request.
+     *
+     * @param request HttpServlet Request.
+     * @return Tenant Domain.
+     */
+    public static String resolveTenantDomain(HttpServletRequest request) {
+
+        if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
+            return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+
+        if (request != null) {
+            String tenantDomainFromReq = request.getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
+            if (StringUtils.isNotBlank(tenantDomainFromReq)) {
+                return tenantDomainFromReq;
+            }
+        }
+        return IdentityTenantUtil.getTenantDomainFromContext();
     }
 }

@@ -232,6 +232,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             "https://localhost:9443/authenticationendpoint/oauth2_authz.do";
     private static final String CLIENT_ID = "client_id";
     private static final String REDIRECT_URI = "redirect_uri";
+    private static final String RESPONSE_MODE = "response_mode";
     private static final String RESPONSE_MODE_FORM_POST = "form_post";
     private static final String SESSION_DATA_KEY_CONSENT_VALUE = "savedSessionDataKeyForConsent";
     private static final String SESSION_DATA_KEY_VALUE = "savedSessionDataKey";
@@ -246,6 +247,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     private static final String APP_REDIRECT_URL_JSON = "{\"url\":\"http://localhost:8080/redirect\"}";
     private static final String SP_DISPLAY_NAME = "DisplayName";
     private static final String SP_NAME = "Name";
+    private static final String STATE = "JEZGpTb8IF";
 
     private OAuth2AuthzEndpoint oAuth2AuthzEndpoint;
     private Object authzEndpointObject;
@@ -338,59 +340,64 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         return new Object[][]{
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{"val1", "val2"},
                         SESSION_DATA_KEY_CONSENT_VALUE, "true", "scope1", SESSION_DATA_KEY_VALUE, null,
-                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST},
+                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, null},
 
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE},
                         SESSION_DATA_KEY_CONSENT_VALUE, "true", "scope1", SESSION_DATA_KEY_VALUE, null,
-                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST},
+                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null},
 
-                {null, new String[]{""}, null, "true", "scope1", null, null, HttpServletResponse.SC_FOUND, null},
+                {null, new String[]{""}, null, "true", "scope1", null, null, HttpServletResponse.SC_FOUND, null, null},
 
                 {null, new String[]{""}, null, "false", "scope1", null, null, HttpServletResponse.SC_FOUND,
-                        OAuth2ErrorCodes.INVALID_REQUEST},
+                        OAuth2ErrorCodes.INVALID_REQUEST, null},
 
                 {null, new String[]{"invalidId"}, null, "false", "scope1", null, null, HttpServletResponse.SC_FOUND,
-                        OAuth2ErrorCodes.INVALID_CLIENT},
+                        OAuth2ErrorCodes.INVALID_CLIENT, null},
 
                 {null, new String[]{INACTIVE_CLIENT_ID_VALUE}, null, "false", "scope1", null, null,
-                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_CLIENT},
+                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_CLIENT, null},
 
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, "invalidConsentCacheKey",
                         "true", "scope1", SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_FOUND,
-                        OAuth2ErrorCodes.INVALID_REQUEST},
+                        OAuth2ErrorCodes.INVALID_REQUEST, null},
 
                 {null, new String[]{CLIENT_ID_VALUE}, SESSION_DATA_KEY_CONSENT_VALUE, "false", "scope1",
-                        SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST},
+                        SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST,
+                        null},
 
                 {null, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
-                      null, new IOException(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR, null},
+                      null, new IOException(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR, null, null},
 
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
-                        null, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST},
+                        null, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null},
 
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
                         null, OAuthProblemException.error("error"), HttpServletResponse.SC_FOUND,
-                        OAuth2ErrorCodes.INVALID_REQUEST},
+                        OAuth2ErrorCodes.INVALID_REQUEST, null},
 
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
-                        null, new IOException(), HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST},
+                        null, new IOException(), HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null},
 
                 {null, new String[]{CLIENT_ID_VALUE}, null, "false", null, null, null, HttpServletResponse.SC_FOUND,
-                        OAuth2ErrorCodes.INVALID_REQUEST},
+                        OAuth2ErrorCodes.INVALID_REQUEST, null},
 
                 {AuthenticatorFlowStatus.INCOMPLETE, new String[]{CLIENT_ID_VALUE}, null, "false",
                         OAuthConstants.Scope.OPENID, null, null, HttpServletResponse.SC_FOUND,
-                        OAuth2ErrorCodes.INVALID_REQUEST},
+                        OAuth2ErrorCodes.INVALID_REQUEST, null},
 
                 {AuthenticatorFlowStatus.INCOMPLETE, null, null, "false", OAuthConstants.Scope.OPENID, null, null,
-                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST},
+                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null},
+
+                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
+                        null, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST,
+                        RESPONSE_MODE_FORM_POST}
         };
     }
 
     @Test(dataProvider = "provideParams", groups = "testWithConnection")
     public void testAuthorize(Object flowStatusObject, String[] clientId, String sessionDataKayConsent,
                               String toCommonAuth, String scope, String sessionDataKey, Exception e, int expectedStatus,
-                              String expectedError) throws Exception {
+                              String expectedError, String responseMode) throws Exception {
 
         AuthenticatorFlowStatus flowStatus = (AuthenticatorFlowStatus) flowStatusObject;
 
@@ -403,6 +410,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         requestParams.put(OAuthConstants.SESSION_DATA_KEY_CONSENT, new String[]{sessionDataKayConsent});
         requestParams.put(FrameworkConstants.RequestParams.TO_COMMONAUTH, new String[]{toCommonAuth});
         requestParams.put(OAuthConstants.OAuth20Params.SCOPE, new String[]{scope});
+        if (StringUtils.equals(responseMode, RESPONSE_MODE_FORM_POST)) {
+            requestParams.put(RESPONSE_MODE, new String[]{RESPONSE_MODE_FORM_POST});
+        }
 
         requestAttributes.put(FrameworkConstants.RequestParams.FLOW_STATUS, flowStatus);
         requestAttributes.put(FrameworkConstants.SESSION_DATA_KEY, sessionDataKey);
@@ -462,29 +472,37 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             }
         }
 
-        assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
-        MultivaluedMap<String, Object> responseMetadata = response.getMetadata();
+        if (!StringUtils.equals(responseMode, RESPONSE_MODE_FORM_POST)) {
+            assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
+            MultivaluedMap<String, Object> responseMetadata = response.getMetadata();
 
-        assertNotNull(responseMetadata, "HTTP response metadata is null");
+            assertNotNull(responseMetadata, "HTTP response metadata is null");
 
-        if (expectedStatus == HttpServletResponse.SC_FOUND) {
-            if (expectedError != null) {
-                List<Object> redirectPath = responseMetadata.get(HTTPConstants.HEADER_LOCATION);
-                if (CollectionUtils.isNotEmpty(redirectPath)) {
-                    String location = String.valueOf(redirectPath.get(0));
-                    assertTrue(location.contains(expectedError), "Expected error code not found in URL");
+            if (expectedStatus == HttpServletResponse.SC_FOUND) {
+                if (expectedError != null) {
+                    List<Object> redirectPath = responseMetadata.get(HTTPConstants.HEADER_LOCATION);
+                    if (CollectionUtils.isNotEmpty(redirectPath)) {
+                        String location = String.valueOf(redirectPath.get(0));
+                        assertTrue(location.contains(expectedError), "Expected error code not found in URL");
+                    } else {
+                        assertNotNull(response.getEntity(), "Response entity is null");
+                        assertTrue(response.getEntity().toString().contains(expectedError),
+                                "Expected error code not found response entity");
+                    }
                 } else {
-                    assertNotNull(response.getEntity(), "Response entity is null");
-                    assertTrue(response.getEntity().toString().contains(expectedError),
-                            "Expected error code not found response entity");
+                    // This is the case where a redirect outside happens.
+                    List<Object> redirectPath = responseMetadata.get(HTTPConstants.HEADER_LOCATION);
+                    assertTrue(CollectionUtils.isNotEmpty(redirectPath));
+                    String location = String.valueOf(redirectPath.get(0));
+                    assertNotNull(location);
+                    assertFalse(location.contains("error"), "Expected no errors in the redirect url, but found one.");
                 }
-            } else {
-                // This is the case where a redirect outside happens.
-                List<Object> redirectPath = responseMetadata.get(HTTPConstants.HEADER_LOCATION);
-                assertTrue(CollectionUtils.isNotEmpty(redirectPath));
-                String location = String.valueOf(redirectPath.get(0));
-                assertNotNull(location);
-                assertFalse(location.contains("error"), "Expected no errors in the redirect url, but found one.");
+            }
+        } else {
+            if (expectedError != null) {
+                // Check if the error response is of form post mode
+                assertTrue(response.getEntity().toString()
+                        .contains("<form method=\"post\" action=\"" + APP_REDIRECT_URL + "\">"));
             }
         }
 
@@ -568,6 +586,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         OAuth2Parameters oAuth2Params = setOAuth2Parameters(scopes, APP_NAME, responseMode, redirectUri);
         oAuth2Params.setClientId(CLIENT_ID_VALUE);
+        oAuth2Params.setState(STATE);
         when(loginCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
         when(loginCacheEntry.getLoggedInUser()).thenReturn(result.getSubject());
 
@@ -602,6 +621,10 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
             Response response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
             assertEquals(response.getStatus(), expected, "Unexpected HTTP response status");
+            if (!isAuthenticated) {
+                String expectedState = "name=\"" + OAuthConstants.OAuth20Params.STATE + "\" value=\"" + STATE + "\"";
+                assertTrue(response.getEntity().toString().contains(expectedState));
+            }
         }
     }
 

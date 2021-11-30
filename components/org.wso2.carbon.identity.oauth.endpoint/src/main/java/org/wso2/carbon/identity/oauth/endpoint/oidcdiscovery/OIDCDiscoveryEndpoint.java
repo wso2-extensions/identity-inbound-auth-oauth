@@ -67,7 +67,7 @@ public class OIDCDiscoveryEndpoint {
         if (isValidIssuer(discoveryEpPathComponent)) {
             return this.getResponse(request, tenantDomain);
         } else {
-            Response.ResponseBuilder errorResponse = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            Response.ResponseBuilder errorResponse = Response.status(HttpServletResponse.SC_BAD_REQUEST);
             if (log.isDebugEnabled()) {
                 log.debug("The discovery path component is " + discoveryEpPathComponent +
                         " . The expected discovery path component is either '"

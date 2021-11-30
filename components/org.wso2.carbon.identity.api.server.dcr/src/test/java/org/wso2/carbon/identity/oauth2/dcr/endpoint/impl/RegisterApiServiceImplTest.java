@@ -70,7 +70,7 @@ public class RegisterApiServiceImplTest extends PowerMockTestCase {
 
     @BeforeMethod
     public void setUp() throws Exception {
-        //Initializing variables
+        //Initializing variables.
         registerApiService = new RegisterApiServiceImpl();
         validclientId = "N2QqQluzQuL5X6CtM3KZwqzLQhUa";
         application = new Application();

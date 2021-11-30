@@ -19,15 +19,14 @@ package org.wso2.carbon.identity.oidc.session.handler;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.event.IdentityEventConstants.EventName;
 import org.wso2.carbon.identity.event.IdentityEventConstants.EventProperty;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.backchannellogout.LogoutRequestSender;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
@@ -66,7 +65,7 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
                     log.debug("OPBS cookie with value " + opbsCookieId + " found. " +
                             "Initiating session termination.");
                 }
-                String tenantDomain = resolveTenantDomain(getHttpRequestFromEvent(event));
+                String tenantDomain = OAuth2Util.resolveTenantDomain(getHttpRequestFromEvent(event));
                 LogoutRequestSender.getInstance().sendLogoutRequests(opbsCookieId, tenantDomain);
                 OIDCSessionManagementUtil.getSessionManager().removeOIDCSessionState(opbsCookieId, tenantDomain);
             } else {
@@ -166,20 +165,5 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
         }
 
         return StringUtils.isNotBlank(opbsCookieValue);
-    }
-
-    private String resolveTenantDomain(HttpServletRequest request) {
-
-        if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
-            return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-        }
-
-        if (request != null) {
-            String tenantDomainFromReq = request.getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
-            if (StringUtils.isNotBlank(tenantDomainFromReq)) {
-                return tenantDomainFromReq;
-            }
-        }
-        return IdentityTenantUtil.getTenantDomainFromContext();
     }
 }
