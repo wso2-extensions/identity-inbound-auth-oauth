@@ -522,8 +522,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @param tokenReqMessageContext     Token request message context.
      * @return authenticated subject identifier.
      */
-    private String getAuthenticatedSubjectIdentifier
-    (OAuthAuthzReqMessageContext authAuthzReqMessageContext,
+    private String getAuthenticatedSubjectIdentifier(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
      OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
