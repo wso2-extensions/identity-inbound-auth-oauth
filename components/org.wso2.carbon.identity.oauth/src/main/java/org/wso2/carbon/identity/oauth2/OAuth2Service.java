@@ -213,7 +213,7 @@ public class OAuth2Service extends AbstractAdmin {
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
             validationResponseDTO.setErrorMsg(e.getMessage());
             return validationResponseDTO;
-        } catch (IdentityOAuth2Exception | UnsupportedEncodingException e) {
+        } catch (IdentityOAuth2Exception e) {
             log.error("Error when reading the Application Information.", e);
             validationResponseDTO.setValidClient(false);
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
@@ -230,7 +230,7 @@ public class OAuth2Service extends AbstractAdmin {
      * @return boolean If application callback url is defined as a regexp check weather it matches the given url
      * Or check weather callback urls are equal
      */
-    private boolean validateCallbackURI(String callbackURI, OAuthAppDO oauthApp) throws UnsupportedEncodingException {
+    private boolean validateCallbackURI(String callbackURI, OAuthAppDO oauthApp) {
         String regexp = null;
         String registeredCallbackUrl = oauthApp.getCallbackUrl();
         if (registeredCallbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
