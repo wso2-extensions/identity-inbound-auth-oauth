@@ -58,6 +58,8 @@ import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -211,7 +213,7 @@ public class OAuth2Service extends AbstractAdmin {
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
             validationResponseDTO.setErrorMsg(e.getMessage());
             return validationResponseDTO;
-        } catch (IdentityOAuth2Exception e) {
+        } catch (IdentityOAuth2Exception | UnsupportedEncodingException e) {
             log.error("Error when reading the Application Information.", e);
             validationResponseDTO.setValidClient(false);
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
@@ -228,11 +230,12 @@ public class OAuth2Service extends AbstractAdmin {
      * @return boolean If application callback url is defined as a regexp check weather it matches the given url
      * Or check weather callback urls are equal
      */
-    private boolean validateCallbackURI(String callbackURI, OAuthAppDO oauthApp) {
+    private boolean validateCallbackURI(String callbackURI, OAuthAppDO oauthApp) throws UnsupportedEncodingException {
         String regexp = null;
         String registeredCallbackUrl = oauthApp.getCallbackUrl();
         if (registeredCallbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
-            regexp = registeredCallbackUrl.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
+            regexp = (registeredCallbackUrl.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length()))
+                    .replace("?", "\\?");
         }
         return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
     }
