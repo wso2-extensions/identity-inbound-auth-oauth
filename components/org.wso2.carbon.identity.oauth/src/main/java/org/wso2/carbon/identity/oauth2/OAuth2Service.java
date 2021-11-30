@@ -58,8 +58,6 @@ import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Arrays;
