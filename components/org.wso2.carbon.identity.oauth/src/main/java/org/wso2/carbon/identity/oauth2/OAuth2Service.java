@@ -198,8 +198,8 @@ public class OAuth2Service extends AbstractAdmin {
                 return validationResponseDTO;
             } else {    // Provided callback URL does not match the registered callback url.
                 if (log.isDebugEnabled()) {
-                    log.debug("Provided Callback URLs: " + callbackURI + " does not match with the registered " +
-                            "callback url.");
+                    log.debug("Provided Callback URL: " + callbackURI + " does not match with the registered " +
+                            "callback URLs.");
                 }
                 validationResponseDTO.setValidClient(false);
                 validationResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CALLBACK);
