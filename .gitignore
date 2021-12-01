@@ -7,7 +7,6 @@
 *.ipr
 .idea
 .DS_Store
-.jpb
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
