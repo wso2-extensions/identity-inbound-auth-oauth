@@ -364,4 +364,18 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         }
         return isValid;
     }
+
+    /**
+     * Message is logged and returns false
+     *
+     * @param errorMessage
+     * @return
+     */
+    private boolean logAndReturnFalse(String errorMessage) {
+
+        if (log.isDebugEnabled()) {
+            log.debug(errorMessage);
+        }
+        return false;
+    }
 }
