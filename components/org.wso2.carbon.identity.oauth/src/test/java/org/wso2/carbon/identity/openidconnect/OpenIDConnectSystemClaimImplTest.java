@@ -74,8 +74,7 @@ public class OpenIDConnectSystemClaimImplTest extends PowerMockTestCase {
     public Object[][] getAuthzAdditionalClaims() throws Exception {
 
         return new Object[][] {
-                {"code", AUTHORIZATION_CODE, ACCESS_TOKEN, getHashValue(AUTHORIZATION_CODE),
-                        getHashValue(ACCESS_TOKEN)},
+                {"code", AUTHORIZATION_CODE, ACCESS_TOKEN, getHashValue(AUTHORIZATION_CODE), EMPTY_VALUE},
                 {"token", AUTHORIZATION_CODE, ACCESS_TOKEN, EMPTY_VALUE, getHashValue(ACCESS_TOKEN)},
                 {"id_token", AUTHORIZATION_CODE, ACCESS_TOKEN, EMPTY_VALUE, EMPTY_VALUE}
         };
@@ -115,7 +114,29 @@ public class OpenIDConnectSystemClaimImplTest extends PowerMockTestCase {
         Assert.assertEquals(claims.get(AT_HASH), hashAccessToken);
         Assert.assertEquals(claims.get(C_HASH), authorizationHashCode);
     }
-    
+
+    @DataProvider(name = "getAtHashClaim")
+    public Object[][] getAtHashClaim() throws Exception {
+
+        return new Object[][] {
+                {"id_token", EMPTY_VALUE, ACCESS_TOKEN, EMPTY_VALUE},
+                {"code id_token", AUTHORIZATION_CODE, ACCESS_TOKEN, EMPTY_VALUE},
+                {"code id_token token", AUTHORIZATION_CODE, ACCESS_TOKEN, getHashValue(ACCESS_TOKEN)},
+        };
+    }
+
+    @Test(dataProvider = "getAtHashClaim")
+    public void testSetAtHashClaim(String responseType, String authorizationCode,
+                                       String accessToken, String hashAccessToken) throws Exception {
+
+        oAuth2AuthorizeRespDTO.setAuthorizationCode(authorizationCode);
+        oAuth2AuthorizeReqDTO.setResponseType(responseType);
+        oAuth2AuthorizeRespDTO.setAccessToken(accessToken);
+        Map<String, Object> claims = openIDConnectSystemClaim.getAdditionalClaims(oAuthAuthzReqMessageContext,
+                oAuth2AuthorizeRespDTO);
+        Assert.assertEquals(claims.get(AT_HASH), hashAccessToken);
+    }
+
     private String getHashValue(String value) throws Exception {
 
         String signatureAlgorithm = "SHA256withRSA";

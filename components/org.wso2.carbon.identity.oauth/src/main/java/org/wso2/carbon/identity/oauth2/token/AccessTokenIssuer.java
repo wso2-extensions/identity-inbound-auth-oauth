@@ -318,6 +318,9 @@ public class AccessTokenIssuer {
                 errorCode = e.getErrorCode();
             }
             error = e.getMessage();
+            if (e.getErrorCode() != null) {
+                errorCode = e.getErrorCode();
+            }
         }
 
         if (tokReqMsgCtx.getAuthorizedUser() != null && tokReqMsgCtx.getAuthorizedUser().isFederatedUser()) {
