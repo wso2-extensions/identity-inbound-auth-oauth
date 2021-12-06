@@ -1572,7 +1572,8 @@ public class OAuth2Util {
                         if (LoggerUtils.isDiagnosticLogsEnabled()) {
                             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
                                     params, OAuthConstants.LogConstants.FAILED,
-                                    "Empty PKCE code_verifier sent. This authorization code requires a PKCE verification to obtain an access token.",
+                                    "Empty PKCE code_verifier sent. This authorization code requires a PKCE " +
+                                            "verification to obtain an access token.",
                                     "validate-pkce", null);
                         }
                         throw new IdentityOAuth2Exception("Empty PKCE code_verifier sent. This authorization code " +
