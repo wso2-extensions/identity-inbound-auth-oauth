@@ -709,7 +709,19 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     public void testValidateClientInfoWIthQueryParamsInCallbackURL() throws Exception {
 
         String clientId = UUID.randomUUID().toString();
-        getOAuthAppDO(clientId, "dummyGrantType", "https://www.amazon.com/policy?dummy=1", "carbon.super");
+        getOAuthAppDO(clientId, "dummyGrantType", "https://wso2.com?dummy1=1&dummy=2",
+                "carbon.super");
+        OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
+                validateClientInfo(clientId, "https://wso2.com\\?dummy1=1&dummy=2");
+        assertTrue(oAuth2ClientValidationResponseDTO.isValidClient());
+    }
+
+    @Test
+    public void testValidateClientInfoWIthInCallbackURL() throws Exception {
+
+        String clientId = UUID.randomUUID().toString();
+        getOAuthAppDO(clientId, "dummyGrantType", "https://www.amazon.com/policy?dummy=1",
+                "carbon.super");
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
                 validateClientInfo(clientId, "https://www.amazon.com/policy\\?dummy=1");
         assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), OAuth2ErrorCodes.INVALID_CALLBACK);
