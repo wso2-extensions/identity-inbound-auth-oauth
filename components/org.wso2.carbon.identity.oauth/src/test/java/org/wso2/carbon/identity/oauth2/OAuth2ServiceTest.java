@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -50,6 +51,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -60,6 +62,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -72,9 +75,7 @@ import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.*;
 import static org.testng.AssertJUnit.assertTrue;
 
 /**
@@ -440,6 +441,27 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getRealm(anyString(), anyString())).thenThrow(new IdentityException(""));
         assertEquals(oAuth2Service.getUserClaims("test").length, 1);
+    }
+
+    @Test
+    public void testValidateClientInfoWIthQueryParamsInCallbackURL() throws Exception, IdentityOAuth2Exception,
+            InvalidOAuthClientException {
+
+        String clientId = UUID.randomUUID().toString();
+        whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO.setGrantTypes("dummyGrantType");
+        oAuthAppDO.setApplicationName("dummyName");
+        oAuthAppDO.setState("ACTIVE");
+        oAuthAppDO.setCallbackUrl("https://wso2.com?dummy1=1&dummy=2");
+        oAuthAppDO.setAppOwner(new AuthenticatedUser());
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
+        when(oAuthAppDAO.getAppInformation(clientId)).thenReturn(oAuthAppDO);
+        when(authenticatedUser.getTenantDomain()).thenReturn("carbon.super");
+        OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
+                validateClientInfo(clientId, "https://wso2.com\\?dummy1=1&dummy=2");
+        assertTrue(oAuth2ClientValidationResponseDTO.isValidClient());
     }
 
     private void setUpRevokeToken() throws Exception {
