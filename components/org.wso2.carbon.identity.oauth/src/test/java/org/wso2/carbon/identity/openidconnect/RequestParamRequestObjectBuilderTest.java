@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import org.mockito.Mock;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -27,11 +28,16 @@ import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.identity.central.log.mgt.internal.CentralLogMgtServiceComponentHolder;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
@@ -42,6 +48,7 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Map;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
@@ -52,7 +59,8 @@ import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreF
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getRequestObjects;
 
 @PrepareForTest({OAuth2Util.class, IdentityUtil.class, OAuthServerConfiguration.class,
-        RequestObjectValidatorImpl.class})
+        RequestObjectValidatorImpl.class, LoggerUtils.class, IdentityTenantUtil.class, IdentityEventService.class,
+        CentralLogMgtServiceComponentHolder.class})
 @PowerMockIgnore({"javax.crypto.*"})
 public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
 
@@ -61,6 +69,9 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
     private KeyStore wso2KeyStore;
     public static final String TEST_CLIENT_ID_1 = "wso2test";
     public static final String SOME_SERVER_URL = "some-server-url";
+
+    @Mock
+    private CentralLogMgtServiceComponentHolder centralLogMgtServiceComponentHolderMock;
 
     @BeforeTest
     public void setUp() throws Exception {
@@ -71,6 +82,8 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
                 System.getProperty(CarbonBaseConstants.CARBON_HOME));
         wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon", System.getProperty(CarbonBaseConstants
                 .CARBON_HOME));
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
     }
 
     @DataProvider(name = "TestBuildRequestObjectTest")
@@ -89,6 +102,13 @@ public class RequestParamRequestObjectBuilderTest extends PowerMockTestCase {
                                        String errorMsg) throws Exception {
 
         mockStatic(IdentityUtil.class);
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+        IdentityEventService eventServiceMock = mock(IdentityEventService.class);
+        mockStatic(CentralLogMgtServiceComponentHolder.class);
+        when(CentralLogMgtServiceComponentHolder.getInstance()).thenReturn(centralLogMgtServiceComponentHolderMock);
+        when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
+        PowerMockito.doNothing().when(eventServiceMock).handleEvent(any());
         when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn("some-server-url");
 
         OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
