@@ -30,6 +30,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithAxisConfiguration;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
@@ -69,7 +70,7 @@ import static org.testng.Assert.assertNotNull;
 @WithAxisConfiguration
 @PowerMockIgnore({"javax.xml.*", "org.xml.sax.*", "org.w3c.dom.*"})
 @PrepareForTest({OAuthServerConfiguration.class, JDBCPersistenceManager.class, IdentityDatabaseUtil.class,
-        RealmService.class})
+        RealmService.class, LoggerUtils.class})
 public class TokenValidationHandlerTest extends PowerMockTestCase {
 
     private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
@@ -104,6 +105,7 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
 
     @BeforeMethod
     public void setUp() {
+
         authzUser = new AuthenticatedUser();
         issuedTime = new Timestamp(System.currentTimeMillis());
         refreshTokenIssuedTime = new Timestamp(System.currentTimeMillis());
@@ -111,6 +113,8 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         refreshTokenValidityPeriodInMillis = 3600000L;
         tokenValidationHandler = TokenValidationHandler.getInstance();
         tokenValidationHandler.addTokenValidator("test", tokenValidator);
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
     }
 
     @Test
