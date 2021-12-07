@@ -157,6 +157,13 @@ public class RoleBasedInternalScopeValidator {
             if (userName == null) {
                 userName = userStoreManager.getUserNameFromUserID(authenticatedUser.getUserId());
             }
+            if (IdentityUtil.isUserStoreCaseSensitive(authenticatedUser.getUserStoreDomain(), tenantId)) {
+                if (!IdentityUtil.isUseCaseSensitiveUsernameForCacheKeys(userStoreManager)) {
+                    userName = userName.toLowerCase();
+                }
+            } else {
+                userName = userName.toLowerCase();
+            }
             return userStoreManager.getHybridRoleListOfUser(userName, authenticatedUser.getUserStoreDomain());
 
         } catch (UserStoreException e) {
