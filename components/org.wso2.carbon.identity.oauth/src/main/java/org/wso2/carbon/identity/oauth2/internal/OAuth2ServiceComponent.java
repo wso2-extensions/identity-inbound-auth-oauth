@@ -149,11 +149,7 @@ public class OAuth2ServiceComponent {
                 OAuth2Util.initiateOIDCScopes(tenantId);
             }
             TenantCreationEventListener scopeTenantMgtListener = new TenantCreationEventListener();
-            //Registering OAuth2Service as a OSGIService
             bundleContext = context.getBundleContext();
-            bundleContext.registerService(OAuth2Service.class.getName(), new OAuth2Service(), null);
-            //Registering OAuth2ScopeService as a OSGIService
-            bundleContext.registerService(OAuth2ScopeService.class.getName(), new OAuth2ScopeService(), null);
             //Registering TenantCreationEventListener
             ServiceRegistration scopeTenantMgtListenerSR = bundleContext.registerService(
                     TenantMgtListener.class.getName(), scopeTenantMgtListener, null);
@@ -256,6 +252,13 @@ public class OAuth2ServiceComponent {
             if (log.isDebugEnabled()) {
                 log.debug("TokenBindingExpiryEventHandler is successfully registered.");
             }
+
+            // Registering OAuth2Service as a OSGIService
+            bundleContext.registerService(OAuth2Service.class.getName(), new OAuth2Service(), null);
+            // Registering OAuth2ScopeService as a OSGIService
+            bundleContext.registerService(OAuth2ScopeService.class.getName(), new OAuth2ScopeService(), null);
+            // Note : DO NOT add any activation related code below this point,
+            // to make sure the server doesn't start up if any activation failures occur
 
         } catch (Throwable e) {
             String errMsg = "Error while activating OAuth2ServiceComponent.";

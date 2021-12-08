@@ -183,8 +183,9 @@ public class OIDCLogoutServlet extends HttpServlet {
                 // User denied logout.
                 redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, "End User denied the logout request");
                 // If postlogoutUri is available then set it as redirectUrl
-                redirectURL = generatePostLogoutRedirectUrl(redirectURL, opBrowserState);
-
+                redirectURL = generatePostLogoutRedirectUrl(redirectURL, opBrowserState, request);
+                response.sendRedirect(redirectURL);
+                return;
             }
         } else {
             // OIDC Logout response
@@ -236,7 +237,6 @@ public class OIDCLogoutServlet extends HttpServlet {
                 return;
             }
         }
-        response.sendRedirect(getRedirectURL(redirectURL, request));
     }
 
     private String getOPBrowserState(HttpServletRequest request) {
@@ -274,11 +274,12 @@ public class OIDCLogoutServlet extends HttpServlet {
      *
      * @param redirectURL               Redirect URL.
      * @param opBrowserStateCookieValue OP browser state cookie value.
-     * @return
+     * @param request                   HttpServletRequest.
+     * @return If postLogoutRedirectUri is sent in Logout request parameter then return it as redirect URL.
      * @throws UnsupportedEncodingException
      */
-    private String generatePostLogoutRedirectUrl(String redirectURL, String opBrowserStateCookieValue)
-            throws UnsupportedEncodingException {
+    private String generatePostLogoutRedirectUrl(String redirectURL, String opBrowserStateCookieValue,
+                                                 HttpServletRequest request) throws UnsupportedEncodingException {
 
         // Set postLogoutRedirectUri as redirectURL.
         boolean postLogoutRedirectUriRedirectIsEnabled =
@@ -296,7 +297,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                         cacheEntry.getPostLogoutRedirectUri(), params);
             }
         }
-        return redirectURL;
+        return buildRedirectURLAfterLogout(redirectURL, request);
     }
 
     /**
@@ -722,7 +723,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             // Clear binding elements from the response.
             clearTokenBindingElements(cacheEntry.getParamMap().get(OIDCSessionConstants.OIDC_CACHE_CLIENT_ID_PARAM),
                     request, response);
-            response.sendRedirect(getRedirectURL(redirectURL, request));
+            response.sendRedirect(buildRedirectURLAfterLogout(redirectURL, request));
         } else {
             response.sendRedirect(
                     getRedirectURL(getErrorPageURL(OAuth2ErrorCodes.SERVER_ERROR, "User logout failed"), request));
@@ -985,5 +986,13 @@ public class OIDCLogoutServlet extends HttpServlet {
 
         tokenBinders.stream().filter(t -> oAuthAppDO.getTokenBindingType().equals(t.getBindingType())).findAny()
                 .ifPresent(t -> t.clearTokenBindingElements(request, response));
+    }
+
+    private String buildRedirectURLAfterLogout(String redirectURL, HttpServletRequest request) {
+
+        if (OIDCSessionManagementUtil.isAllowAdditionalParamsFromPostLogoutRedirectURIEnabled()) {
+            return getRedirectURL(redirectURL, request);
+        }
+        return redirectURL;
     }
 }

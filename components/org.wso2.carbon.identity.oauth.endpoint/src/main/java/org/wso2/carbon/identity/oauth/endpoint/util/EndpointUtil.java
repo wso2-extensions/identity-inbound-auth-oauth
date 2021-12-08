@@ -1367,7 +1367,7 @@ public class EndpointUtil {
      * @param oAuth2Parameters OAuth2 parameters.
      * @return state
      */
-    private static String retrieveStateForErrorURL(HttpServletRequest request, OAuth2Parameters oAuth2Parameters) {
+    public static String retrieveStateForErrorURL(HttpServletRequest request, OAuth2Parameters oAuth2Parameters) {
 
         String state = null;
         if (oAuth2Parameters != null && oAuth2Parameters.getState() != null) {

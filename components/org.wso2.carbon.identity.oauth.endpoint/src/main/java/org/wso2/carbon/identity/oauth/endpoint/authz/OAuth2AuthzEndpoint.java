@@ -163,6 +163,7 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getLogin
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthServerConfiguration;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSSOConsentService;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.retrieveStateForErrorURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
@@ -378,6 +379,12 @@ public class OAuth2AuthzEndpoint {
         }
 
         OAuth2Parameters oAuth2Parameters = getOAuth2ParamsFromOAuthMessage(oAuthMessage);
+
+        if (StringUtils.equals(oAuthMessage.getRequest().getParameter(RESPONSE_MODE), RESPONSE_MODE_FORM_POST)) {
+            e.state(retrieveStateForErrorURL(oAuthMessage.getRequest(), oAuth2Parameters));
+            return Response.ok(createErrorFormPage(oAuthMessage.getRequest().getParameter(REDIRECT_URI), e)).build();
+        }
+
         String errorPageURL = getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST,
                 OAuth2ErrorCodes.OAuth2SubErrorCodes.UNEXPECTED_SERVER_ERROR, e.getMessage(), null,
                 oAuth2Parameters);
