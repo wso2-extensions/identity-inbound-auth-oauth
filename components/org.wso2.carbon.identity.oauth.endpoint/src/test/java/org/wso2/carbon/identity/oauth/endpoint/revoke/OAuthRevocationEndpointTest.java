@@ -31,6 +31,8 @@ import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -68,7 +70,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
-@PrepareForTest({EndpointUtil.class, OAuthServerConfiguration.class})
+@PrepareForTest({EndpointUtil.class, OAuthServerConfiguration.class, LoggerUtils.class, IdentityTenantUtil.class})
 public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
 
     @Mock
@@ -223,6 +225,10 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
             requestedParams.put(CALLBACK_PARAM, new String[]{""});
         }
 
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         HttpServletRequest request = mockHttpRequest(requestedParams, new HashMap<String, Object>());
         when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(authzHeader);
 

@@ -1975,7 +1975,14 @@ public class OAuth2AuthzEndpoint {
         // With in the same request it can not be used both request parameter and request_uri parameter.
         if (StringUtils.isNotEmpty(oauthRequest.getParam(REQUEST)) && StringUtils.isNotEmpty(oauthRequest.getParam
                 (REQUEST_URI))) {
-            //diag log
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("request", oauthRequest.getParam(REQUEST));
+                params.put("request_uri", oauthRequest.getParam(REQUEST_URI));
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED, "request and request_uri parameters associated with the " +
+                                "same authorization request", "validate-oauth-client", null);
+            }
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Both request and " +
                     "request_uri parameters can not be associated with the same authorization request.");
         }
@@ -2061,8 +2068,8 @@ public class OAuth2AuthzEndpoint {
             }
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
                     OAuthConstants.LogConstants.SUCCESS,
-                    "Successfully overridden the parameters in authorization request with the parameters available in request object.",
-                    "override-authz-parameters", null);
+                    "Successfully overridden the parameters in authorization request with the parameters " +
+                            "available in request object.", "override-authz-parameters", null);
         }
     }
 

@@ -457,23 +457,20 @@ public class OAuth2Service extends AbstractAdmin {
                                                 .equals(refreshTokenDO.getRefreshTokenState()))) {
                             Map<String, Object> params = new HashMap<>();
                             params.put("clientId", revokeRequestDTO.getConsumerKey());
-                            if (refreshTokenDO == null || StringUtils.isEmpty(refreshTokenDO.getRefreshTokenState())) {
-                                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                                if (refreshTokenDO == null ||
+                                        StringUtils.isEmpty(refreshTokenDO.getRefreshTokenState())) {
                                     LoggerUtils.triggerDiagnosticLogEvent(
                                             OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                                             OAuthConstants.LogConstants.FAILED, "Invalid token.", "revoke-token", null);
-                                }
-                            } else if (OAuthConstants.TokenStates.TOKEN_STATE_REVOKED
-                                    .equals(refreshTokenDO.getRefreshTokenState())) {
-                                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                                } else if (OAuthConstants.TokenStates.TOKEN_STATE_REVOKED
+                                        .equals(refreshTokenDO.getRefreshTokenState())) {
                                     LoggerUtils.triggerDiagnosticLogEvent(
                                             OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                                             OAuthConstants.LogConstants.SUCCESS, "Provided token is already revoked.",
                                             "revoke-token", null);
-                                }
-                            }  else if (OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE
-                                    .equals(refreshTokenDO.getRefreshTokenState())) {
-                                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                                } else if (OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE
+                                        .equals(refreshTokenDO.getRefreshTokenState())) {
                                     LoggerUtils.triggerDiagnosticLogEvent(
                                             OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                                             OAuthConstants.LogConstants.SUCCESS, "Provided token is in inactive state.",
@@ -534,13 +531,13 @@ public class OAuth2Service extends AbstractAdmin {
                         if ((OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey()).
                                 isTokenBindingValidationEnabled()) && (!isValidTokenBinding(accessTokenDO.
                                 getTokenBinding(), revokeRequestDTO.getRequest()))) {
-                            Map<String, Object> params = new HashMap<>();
-                            params.put("clientId", accessTokenDO.getConsumerKey());
-                            if (accessTokenDO.getTokenBinding() != null) {
-                                params.put("tokenBindingType", accessTokenDO.getTokenBinding().getBindingType());
-                                params.put("tokenBindingValue", accessTokenDO.getTokenBinding().getBindingValue());
-                            }
                             if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                                Map<String, Object> params = new HashMap<>();
+                                params.put("clientId", accessTokenDO.getConsumerKey());
+                                if (accessTokenDO.getTokenBinding() != null) {
+                                    params.put("tokenBindingType", accessTokenDO.getTokenBinding().getBindingType());
+                                    params.put("tokenBindingValue", accessTokenDO.getTokenBinding().getBindingValue());
+                                }
                                 Map<String, Object> configs = new HashMap<>();
                                 configs.put("isTokenBindingValidationEnabled", "true");
                                 LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,

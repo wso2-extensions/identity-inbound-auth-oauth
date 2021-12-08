@@ -263,6 +263,7 @@
                         <!--This component is depend on factory classes to create the bean classes. But the beans
                         classes will be created via the xml configurations. Hence they excluding them in coverage reports-->
                         <exclude>**/*Factory.class</exclude>
+                        <exclude>**/*Exception.class</exclude>
                     </excludes>
                 </configuration>
                 <executions>

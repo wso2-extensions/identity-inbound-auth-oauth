@@ -35,6 +35,7 @@ import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.AfterTest;
@@ -61,6 +62,8 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.central.log.mgt.internal.CentralLogMgtServiceComponentHolder;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.ServiceURL;
@@ -69,6 +72,7 @@ import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
@@ -158,10 +162,10 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.FileAssert.fail;
 
 @PrepareForTest({OAuth2Util.class, SessionDataCache.class, OAuthServerConfiguration.class, IdentityDatabaseUtil.class,
-        EndpointUtil.class, FrameworkUtils.class, EndpointUtil.class, OpenIDConnectUserRPStore.class,
-        IdentityTenantUtil.class, OAuthResponse.class, SignedJWT.class,
-        OIDCSessionManagementUtil.class, CarbonUtils.class, SessionDataCache.class, IdentityUtil.class,
-        ServiceURLBuilder.class, OAuth2AuthzEndpoint.class, ClaimMetadataHandler.class})
+        EndpointUtil.class, FrameworkUtils.class, EndpointUtil.class, OpenIDConnectUserRPStore.class, SignedJWT.class,
+        IdentityTenantUtil.class, OAuthResponse.class, OIDCSessionManagementUtil.class, ServiceURLBuilder.class,
+        CarbonUtils.class, SessionDataCache.class, IdentityUtil.class, OAuth2AuthzEndpoint.class, LoggerUtils.class,
+        ClaimMetadataHandler.class, IdentityEventService.class, CentralLogMgtServiceComponentHolder.class})
 public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -238,6 +242,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
     ClaimMetadataHandler claimMetadataHandler;
+
+    @Mock
+    private CentralLogMgtServiceComponentHolder centralLogMgtServiceComponentHolderMock;
 
     private static final String ERROR_PAGE_URL = "https://localhost:9443/authenticationendpoint/oauth2_error.do";
     private static final String LOGIN_PAGE_URL = "https://localhost:9443/authenticationendpoint/login.do";
@@ -329,7 +336,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         MultivaluedMap<String, String> paramMap = (MultivaluedMap<String, String>) paramObject;
         when(httpServletRequest.getParameterMap()).thenReturn(requestParams);
         when(httpServletRequest.getParameterNames()).thenReturn(new Vector(requestParams.keySet()).elements());
-
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
         mockOAuthServerConfiguration();
@@ -442,7 +450,15 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
 
         mockStatic(IdentityTenantUtil.class);
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        IdentityEventService eventServiceMock = mock(IdentityEventService.class);
+        mockStatic(CentralLogMgtServiceComponentHolder.class);
+        when(CentralLogMgtServiceComponentHolder.getInstance()).thenReturn(centralLogMgtServiceComponentHolderMock);
+        when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
+        PowerMockito.doNothing().when(eventServiceMock).handleEvent(any());
 
         mockStatic(SessionDataCache.class);
         when(SessionDataCache.getInstance()).thenReturn(sessionDataCache);
@@ -565,6 +581,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(SessionDataCache.getInstance()).thenReturn(sessionDataCache);
         SessionDataCacheKey loginDataCacheKey = new SessionDataCacheKey(SESSION_DATA_KEY_VALUE);
         when(sessionDataCache.getValueFromCache(loginDataCacheKey)).thenReturn(loginCacheEntry);
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
 
         AuthenticationResult result =
                 setAuthenticationResult(isAuthenticated, attributes, errorCode, errorMsg, errorUri);
@@ -724,6 +742,10 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         spy(FrameworkUtils.class);
         when(authCookie.getValue()).thenReturn("dummyValue");
         doReturn(authCookie).when(FrameworkUtils.class, "getAuthCookie", any());
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
 
         SessionContext sessionContext = new SessionContext();
         sessionContext.addProperty(FrameworkConstants.CREATED_TIMESTAMP, 1479249799770L);
@@ -975,6 +997,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        IdentityEventService eventServiceMock = mock(IdentityEventService.class);
+        mockStatic(CentralLogMgtServiceComponentHolder.class);
+        when(CentralLogMgtServiceComponentHolder.getInstance()).thenReturn(centralLogMgtServiceComponentHolderMock);
+        when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
+        PowerMockito.doNothing().when(eventServiceMock).handleEvent(any());
 
         mockStatic(IdentityDatabaseUtil.class);
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
@@ -1510,6 +1539,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         requestAttributes.put(FrameworkConstants.RequestParams.FLOW_STATUS, flowStatus);
         mockHttpRequest(requestParams, requestAttributes, HttpMethod.POST);
 
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
         final String[] redirectUrl = new String[1];
         doAnswer(new Answer<Object>() {
             @Override
@@ -1702,6 +1736,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        IdentityEventService eventServiceMock = mock(IdentityEventService.class);
+        mockStatic(CentralLogMgtServiceComponentHolder.class);
+        when(CentralLogMgtServiceComponentHolder.getInstance()).thenReturn(centralLogMgtServiceComponentHolderMock);
+        when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
+        PowerMockito.doNothing().when(eventServiceMock).handleEvent(any());
 
         mockStatic(IdentityDatabaseUtil.class);
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
@@ -1765,6 +1806,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         requestParams.put(FrameworkConstants.RequestParams.TO_COMMONAUTH, new String[]{"false"});
         requestAttributes.put(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus.SUCCESS_COMPLETED);
         mockHttpRequest(requestParams, requestAttributes, HttpMethod.POST);
+
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
 
         mockOAuthServerConfiguration();
         mockStatic(IdentityDatabaseUtil.class);
@@ -2046,8 +2092,17 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         mockOAuthServerConfiguration();
 
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        IdentityEventService eventServiceMock = mock(IdentityEventService.class);
+        mockStatic(CentralLogMgtServiceComponentHolder.class);
+        when(CentralLogMgtServiceComponentHolder.getInstance()).thenReturn(centralLogMgtServiceComponentHolderMock);
+        when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
+        PowerMockito.doNothing().when(eventServiceMock).handleEvent(any());
+
         if (isTenantedSessionsEnabled) {
             when(IdentityTenantUtil.isTenantedSessionsEnabled()).thenReturn(true);
         } else {

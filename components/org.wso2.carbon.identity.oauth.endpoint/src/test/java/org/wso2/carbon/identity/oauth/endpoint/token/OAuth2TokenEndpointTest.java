@@ -36,7 +36,9 @@ import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.NTLMAuthenticationValidator;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -83,7 +85,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({EndpointUtil.class, IdentityDatabaseUtil.class, OAuthServerConfiguration.class,
-        CarbonOAuthTokenRequest.class})
+        CarbonOAuthTokenRequest.class, LoggerUtils.class, IdentityTenantUtil.class})
 public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -246,6 +248,10 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         requestParams.put(OAuth.OAUTH_USERNAME, new String[]{USERNAME});
         requestParams.put(OAuth.OAUTH_PASSWORD, new String[]{"password"});
 
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<String, Object>());
         when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(authzHeader);
         when(request.getHeaderNames()).thenReturn(
@@ -339,6 +345,10 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         requestParams.put(OAuth.OAUTH_USERNAME, new String[]{USERNAME});
         requestParams.put(OAuth.OAUTH_PASSWORD, new String[]{"password"});
 
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<String, Object>());
         when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(AUTHORIZATION_HEADER);
         when(request.getHeaderNames()).thenReturn(

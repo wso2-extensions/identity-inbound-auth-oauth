@@ -473,9 +473,9 @@ public class AccessTokenIssuer {
             log.debug("Access token issued to client Id: " + tokenReqDTO.getClientId() + " username: " +
                     tokReqMsgCtx.getAuthorizedUser() + " and scopes: " + tokenRespDTO.getAuthorizedScopes());
         }
-        Map<String, Object> params = new HashMap<>();
-        params.put("clientId", tokenReqDTO.getClientId());
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", tokenReqDTO.getClientId());
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                     OAuthConstants.LogConstants.SUCCESS, "Access token issued for the application.",
                     "issue-access-token", null);
@@ -493,6 +493,8 @@ public class AccessTokenIssuer {
             try {
                 String idToken = builder.buildIDToken(tokReqMsgCtx, tokenRespDTO);
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("clientId", tokenReqDTO.getClientId());
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                             OAuthConstants.LogConstants.SUCCESS, "ID token issued for the application.",
                             "issue-id-token", null);
@@ -501,6 +503,8 @@ public class AccessTokenIssuer {
             } catch (IDTokenValidationFailureException e) {
                 log.error(e.getMessage());
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("clientId", tokenReqDTO.getClientId());
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                             OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-id-token", null);
                 }
