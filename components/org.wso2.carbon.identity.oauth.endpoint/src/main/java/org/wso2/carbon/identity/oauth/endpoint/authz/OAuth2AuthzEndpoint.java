@@ -945,7 +945,7 @@ public class OAuth2AuthzEndpoint {
             paramStringBuilder.append("<input type=\"hidden\" name=\"")
                     .append(key)
                     .append("\"" + "value=\"")
-                    .append(Encode.forHtml((String) jsonObject.get(key.toString())))
+                    .append(Encode.forHtml(jsonObject.get(key.toString()).toString()))
                     .append("\"/>\n");
         }
 
