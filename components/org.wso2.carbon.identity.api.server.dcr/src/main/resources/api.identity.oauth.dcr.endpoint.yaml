@@ -343,7 +343,8 @@ definitions:
       client_secret:
         type: string
       client_secret_expires_at:
-        type: string
+        type: integer
+        format: int64
       redirect_uris:
         type: array
         items:
