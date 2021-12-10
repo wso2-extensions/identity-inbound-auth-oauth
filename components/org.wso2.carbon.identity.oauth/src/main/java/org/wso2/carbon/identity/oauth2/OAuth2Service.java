@@ -203,7 +203,7 @@ public class OAuth2Service extends AbstractAdmin {
                 }
                 validationResponseDTO.setValidClient(false);
                 validationResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CALLBACK);
-                validationResponseDTO.setErrorMsg("Registered callback does not match with the provided url.");
+                validationResponseDTO.setErrorMsg("callback.not.match");
                 return validationResponseDTO;
             }
         } catch (InvalidOAuthClientException e) {
