@@ -95,7 +95,13 @@ public class OIDCRequestObjectUtil {
         return requestObject;
     }
 
-    private static void validateRequestObjectSignature(OAuth2Parameters oAuth2Parameters,
+    /**
+     * @param oAuth2Parameters OAuth2 parameters
+     * @param requestObject OAuth2 request
+     * @param requestObjectValidator OAuth2 Request validator
+     * @throws RequestObjectException
+     */
+    public static void validateRequestObjectSignature(OAuth2Parameters oAuth2Parameters,
                                                        RequestObject requestObject,
                                                        RequestObjectValidator requestObjectValidator)
             throws RequestObjectException {

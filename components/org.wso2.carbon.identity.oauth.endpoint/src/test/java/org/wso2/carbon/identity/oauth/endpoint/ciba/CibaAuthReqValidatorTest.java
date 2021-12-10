@@ -84,4 +84,13 @@ public class CibaAuthReqValidatorTest extends TestOAuthEndpointBase {
         JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
         WhiteboxImpl.invokeMethod(cibaAuthRequestValidator, "validateAudience", claimsSet, authCodeRequest);
     }
+
+    @Test(dataProvider = "provideRequestParams", expectedExceptions = {CibaClientException.class,
+            java.text.ParseException.class})
+    public void testValidateUserHint(String request) throws Exception {
+
+        SignedJWT signedJWT = SignedJWT.parse(request);
+        JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
+        WhiteboxImpl.invokeMethod(cibaAuthRequestValidator, "validateUserHint", claimsSet, authCodeRequest);
+    }
 }

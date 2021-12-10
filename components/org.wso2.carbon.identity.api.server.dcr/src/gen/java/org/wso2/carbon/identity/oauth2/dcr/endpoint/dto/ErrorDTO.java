@@ -20,6 +20,8 @@ public class ErrorDTO  {
   
   private String errorDescription = null;
 
+  private String ref = null;
+
   
   /**
    **/
@@ -44,7 +46,18 @@ public class ErrorDTO  {
     this.errorDescription = errorDescription;
   }
 
-  
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("traceId")
+  public String getRef() {
+    return ref;
+  }
+
+  public void setRef(String ref) {
+    this.ref = ref;
+  }
+
 
   @Override
   public String toString()  {
@@ -53,6 +66,9 @@ public class ErrorDTO  {
     
     sb.append("  error: ").append(error).append("\n");
     sb.append("  error_description: ").append(errorDescription).append("\n");
+    if (!ref.isEmpty()) {
+      sb.append("  traceId: ").append(ref).append("\n");
+    }
     sb.append("}\n");
     return sb.toString();
   }

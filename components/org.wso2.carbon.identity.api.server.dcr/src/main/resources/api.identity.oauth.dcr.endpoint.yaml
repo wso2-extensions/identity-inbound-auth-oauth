@@ -365,3 +365,5 @@ definitions:
         type: string
       error_description:
         type: string
+      traceId:
+        type: string
