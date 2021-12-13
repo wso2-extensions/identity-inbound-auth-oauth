@@ -453,14 +453,14 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         oAuthAppDO.setGrantTypes("dummyGrantType");
         oAuthAppDO.setApplicationName("dummyName");
         oAuthAppDO.setState("ACTIVE");
-        oAuthAppDO.setCallbackUrl("https://wso2.com?dummy1=1&dummy=2");
+        oAuthAppDO.setCallbackUrl("regexp=(https://wso2.com|https://wso2.com?dummy1=1&dummy=2)");
         oAuthAppDO.setAppOwner(new AuthenticatedUser());
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
         when(oAuthAppDAO.getAppInformation(clientId)).thenReturn(oAuthAppDO);
         when(authenticatedUser.getTenantDomain()).thenReturn("carbon.super");
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
-                validateClientInfo(clientId, "https://wso2.com\\?dummy1=1&dummy=2");
+                validateClientInfo(clientId, "https://wso2.com?dummy1=1&dummy=2");
         assertTrue(oAuth2ClientValidationResponseDTO.isValidClient());
     }
 
