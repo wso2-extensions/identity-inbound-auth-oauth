@@ -153,17 +153,8 @@ public class RoleBasedInternalScopeValidator {
             AbstractUserStoreManager userStoreManager
                     = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
 
-            String userName = authenticatedUser.getUserName();
-            if (userName == null) {
-                userName = userStoreManager.getUserNameFromUserID(authenticatedUser.getUserId());
-            }
-            if (IdentityUtil.isUserStoreCaseSensitive(authenticatedUser.getUserStoreDomain(), tenantId)) {
-                if (!IdentityUtil.isUseCaseSensitiveUsernameForCacheKeys(userStoreManager)) {
-                    userName = userName.toLowerCase();
-                }
-            } else {
-                userName = userName.toLowerCase();
-            }
+            String userName = userStoreManager.getUserNameFromUserID(authenticatedUser.getUserId());
+
             return userStoreManager.getHybridRoleListOfUser(userName, authenticatedUser.getUserStoreDomain());
 
         } catch (UserStoreException e) {
