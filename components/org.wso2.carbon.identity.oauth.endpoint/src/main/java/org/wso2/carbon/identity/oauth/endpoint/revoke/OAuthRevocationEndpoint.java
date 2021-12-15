@@ -19,6 +19,8 @@
 package org.wso2.carbon.identity.oauth.endpoint.revoke;
 
 import org.apache.axis2.transport.http.HTTPConstants;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
@@ -27,6 +29,7 @@ import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -39,6 +42,9 @@ import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
@@ -89,12 +95,33 @@ public class OAuthRevocationEndpoint {
 
         try {
             startSuperTenantFlow();
+            Map<String, Object> params = new HashMap<>();
+            if (MapUtils.isNotEmpty(paramMap)) {
+                paramMap.forEach((key, value) -> {
+                    if (TOKEN_PARAM.equals(key) && CollectionUtils.isNotEmpty(value)) {
+                        params.put("token", value.get(0).replaceAll(".", "*"));
+                    } else {
+                        params.put(key, value);
+                    }
+                });
+            }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.SUCCESS, "Successfully received token revocation request.",
+                        "receive-revoke-request", null);
+            }
+
             validateRepeatedParams(request, paramMap);
 
             HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
             String token = getToken(paramMap, httpRequest);
             String callback = getCallback(paramMap, httpRequest);
             if (isEmpty(token)) {
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.FAILED, "'token' parameter is missing in the revoke request.",
+                            "validate-input-parameters", null);
+                }
                 return handleClientFailure(callback);
             }
             String tokenType = getTokenType(paramMap, httpRequest);

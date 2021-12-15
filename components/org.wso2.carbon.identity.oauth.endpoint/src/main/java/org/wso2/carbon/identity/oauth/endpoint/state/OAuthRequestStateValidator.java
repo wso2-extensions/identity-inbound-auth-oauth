@@ -21,7 +21,9 @@ package org.wso2.carbon.identity.oauth.endpoint.state;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.AccessDeniedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.BadRequestException;
@@ -29,6 +31,9 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
@@ -89,6 +94,14 @@ public class OAuthRequestStateValidator {
                 log.debug("Invalid authorization request.\'SessionDataKey\' found in request as parameter and " +
                         "attribute, and both have non NULL objects in cache");
             }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                oAuthMessage.getRequest().getParameterMap().forEach(params::put);
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED,
+                        "invalid 'SessionDataKey' parameter in authorization request",
+                        "validate-input-parameters", null);
+            }
             throw new InvalidRequestException("Invalid authorization request", OAuth2ErrorCodes.INVALID_REQUEST,
                     OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST);
 
@@ -99,6 +112,14 @@ public class OAuthRequestStateValidator {
                 log.debug("Invalid authorization request.\'SessionDataKey\' not found in request as parameter or " +
                         "attribute, and client_id parameter cannot be found in request");
             }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                oAuthMessage.getRequest().getParameterMap().forEach(params::put);
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED,
+                        "invalid 'client_id' and 'SessionDataKey' parameters cannot be found in request",
+                        "validate-input-parameters", null);
+            }
             throw new InvalidRequestException("Invalid authorization request", OAuth2ErrorCodes.INVALID_REQUEST,
                     OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT);
 
@@ -107,6 +128,13 @@ public class OAuthRequestStateValidator {
             if (log.isDebugEnabled()) {
                 log.debug(
                         "Session data not found in SessionDataCache for " + oAuthMessage.getSessionDataKeyFromLogin());
+            }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                oAuthMessage.getRequest().getParameterMap().forEach(params::put);
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED, "Access denied since user session has timed-out.",
+                        "validate-input-parameters", null);
             }
             throw new AccessDeniedException("Session Timed Out", OAuth2ErrorCodes.ACCESS_DENIED, OAuth2ErrorCodes
                     .OAuth2SubErrorCodes.SESSION_TIME_OUT);
@@ -117,6 +145,13 @@ public class OAuthRequestStateValidator {
                 if (log.isDebugEnabled()) {
                     log.debug("Session data not found in SessionDataCache for " + oAuthMessage
                             .getSessionDataKeyFromConsent());
+                }
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    oAuthMessage.getRequest().getParameterMap().forEach(params::put);
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.FAILED, "Access denied since user session has timed-out.",
+                            "validate-input-parameters", null);
                 }
                 throw new AccessDeniedException("Session Timed Out", OAuth2ErrorCodes.ACCESS_DENIED, OAuth2ErrorCodes
                         .OAuth2SubErrorCodes.SESSION_TIME_OUT);
@@ -134,6 +169,9 @@ public class OAuthRequestStateValidator {
             if (log.isDebugEnabled()) {
                 log.debug("Client Id is not present in the authorization request");
             }
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "client_id is not present in the authorization request",
+                    "validate-input-parameters", null);
             throw new InvalidRequestException("Client Id is not present in the authorization request",
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT);
         }
@@ -143,6 +181,9 @@ public class OAuthRequestStateValidator {
             if (log.isDebugEnabled()) {
                 log.debug("Redirect URI is not present in the authorization request");
             }
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "redirect_uri is not present in the authorization request",
+                    "validate-input-parameters", null);
             throw new InvalidRequestException("Redirect URI is not present in the authorization request",
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }

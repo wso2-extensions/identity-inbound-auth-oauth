@@ -28,6 +28,9 @@ import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
@@ -54,12 +57,14 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.Response;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 
-@PrepareForTest({OAuth2Util.class, OAuthServerConfiguration.class, EndpointUtil.class})
+@PrepareForTest({OAuth2Util.class, OAuthServerConfiguration.class, EndpointUtil.class, IdentityTenantUtil.class,
+        LoggerUtils.class})
 public class OAuth2CibaEndpointTest extends PowerMockTestCase {
 
     private static final String REQUEST_PARAM_VALUE_BUILDER = "request_param_value_builder";
@@ -292,6 +297,10 @@ public class OAuth2CibaEndpointTest extends PowerMockTestCase {
                         "iJXU08yIENJQkEgREVNTyBDT05TT0xFIiwiYXBwbGljYXRpb24iOiJQYXlIZXJlIn19.Sx_MjjautinmOV9vvP8yhu" +
                         "suBggOdBCjn1NyprpJoEg"});
 
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(httpServletRequest.getParameterMap()).thenReturn(requestParams);

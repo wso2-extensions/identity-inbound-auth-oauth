@@ -30,7 +30,9 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
@@ -40,6 +42,8 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import java.security.Key;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.JWT_PART_DELIMITER;
@@ -77,6 +81,9 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         if (log.isDebugEnabled()) {
             log.debug("Request Object extracted from the request: " + requestObjectParam);
         }
+        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                OAuthConstants.LogConstants.FAILED, "Request object parsed successfully.", "parse-request-object",
+                null);
         return requestObject;
     }
 
@@ -154,6 +161,13 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             String errorMessage = "No Valid JWT is found for the Request Object.";
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage + "Received Request Object: " + requestObjectString, e);
+            }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("requestObject", requestObjectString);
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED, "Request object is not a valid JWT.",
+                        "parse-request-object", null);
             }
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, errorMessage);
         }
