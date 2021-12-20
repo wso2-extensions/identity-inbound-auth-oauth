@@ -1699,9 +1699,14 @@ public class OAuth2AuthzEndpoint {
             try {
                 params.setMaxAge(Long.parseLong(maxAgeParam));
             } catch (NumberFormatException ex) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Invalid max_age parameter: '" + maxAgeParam + "' sent in the authorization request.");
-                }
+                log.error("Invalid max_age parameter: '" + maxAgeParam + "' sent in the authorization request.");
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> logParams = new HashMap<>();
+                    logParams.put("clientId", params.getClientId());
+                    logParams.put("maxAge", maxAgeParam);
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, logParams,
+                            OAuthConstants.LogConstants.FAILED, "Invalid max_age paramter value",
+                            "validate-input-parameters", null);
                 throw new InvalidRequestException("Invalid max_age parameter value sent in the authorization request" +
                         ".", OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_PARAMETERS);
             }
@@ -2339,10 +2344,6 @@ public class OAuth2AuthzEndpoint {
             String msg = "Error while getting clientId from the IdTokenHint.";
             if (log.isDebugEnabled()) {
                 log.debug(msg, e);
-            }
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "System error occurred.", "validate-id-token-hint", null);
             }
             throw OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED, msg);
         }

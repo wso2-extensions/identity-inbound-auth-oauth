@@ -480,9 +480,6 @@ public class OAuth2Service extends AbstractAdmin {
             }
 
         } catch (InvalidOAuthClientException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Unauthorized client.", e);
-            }
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
                     OAuthConstants.LogConstants.FAILED, "Client is not authorized.", "validate-oauth-client", null);
             log.error("Unauthorized Client", e);
