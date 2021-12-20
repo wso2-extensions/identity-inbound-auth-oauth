@@ -23,7 +23,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.7.83-SNAPSHOT</version>
+        <version>6.7.101-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -298,6 +298,10 @@
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.multi.attribute.login.mgt</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.central.log.mgt</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -367,6 +371,7 @@
                             org.wso2.carbon.idp.mgt; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.base; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.core.*; version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.central.log.mgt.*; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.mgt; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.common.*;version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework.*;version="${carbon.identity.framework.imp.pkg.version.range}",
@@ -396,6 +401,11 @@
                             org.wso2.carbon.identity.openidconnect.*;version="${identity.inbound.auth.oauth.exp.pkg.version}",
                         </Export-Package>
                         <DynamicImport-Package>*</DynamicImport-Package>
+                        <ListenerManager-RequiredServices>
+                            org.wso2.carbon.identity.oauth2.OAuth2Service,
+                            org.wso2.carbon.identity.oauth2.OAuth2ScopeService,
+                            org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl
+                        </ListenerManager-RequiredServices>
                     </instructions>
                 </configuration>
             </plugin>

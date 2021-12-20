@@ -26,10 +26,13 @@ import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -56,16 +59,18 @@ import javax.ws.rs.core.Response;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.doAnswer;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
-@PrepareForTest({EndpointUtil.class})
+@PrepareForTest({EndpointUtil.class, OAuthServerConfiguration.class, LoggerUtils.class, IdentityTenantUtil.class})
 public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
 
     @Mock
@@ -101,6 +106,14 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
                           );
         revocationEndpoint = new OAuthRevocationEndpoint();
+    }
+
+    @BeforeMethod
+    public void setUpBeforeMethod() {
+
+        initMocks(this);
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
     }
 
     @DataProvider(name = "testRevokeAccessTokenDataProvider")
@@ -212,6 +225,10 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
             requestedParams.put(CALLBACK_PARAM, new String[]{""});
         }
 
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         HttpServletRequest request = mockHttpRequest(requestedParams, new HashMap<String, Object>());
         when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(authzHeader);
 

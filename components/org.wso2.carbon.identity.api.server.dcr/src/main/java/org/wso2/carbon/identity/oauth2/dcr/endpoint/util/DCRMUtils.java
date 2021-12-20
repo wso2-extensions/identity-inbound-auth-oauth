@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.dcr.endpoint.util;
 
 import org.apache.commons.logging.Log;
+import org.apache.log4j.MDC;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
@@ -150,8 +151,33 @@ public class DCRMUtils {
         applicationDTO.setClientSecret(application.getClientSecret());
         applicationDTO.setRedirectUris(application.getRedirectUris());
         applicationDTO.setGrantTypes(application.getGrantTypes());
+        applicationDTO.setClientSecretExpiresAt(0L); // currently, we are not setting an expiration time for
+        // the client secret, hence according to the DCR specification we have to set the expiration time to 0.
+        // https://openid.net/specs/openid-connect-registration-1_0.html
 
         return applicationDTO;
+    }
+
+    /**
+     * Check whether correlation id present in the log MDC.
+     *
+     * @return whether the correlation id is present
+     */
+    public static boolean isCorrelationIDPresent() {
+        return MDC.get(DCRMConstants.CORRELATION_ID_MDC) != null;
+    }
+
+    /**
+     * Get correlation id of current thread.
+     *
+     * @return correlation-id
+     */
+    public static String getCorrelation() {
+        String ref = null;
+        if (isCorrelationIDPresent()) {
+            ref = MDC.get(DCRMConstants.CORRELATION_ID_MDC).toString();
+        }
+        return ref;
     }
 
     private static DCRMEndpointException buildDCRMEndpointException(Response.Status status,
@@ -169,6 +195,7 @@ public class DCRMUtils {
             ErrorDTO errorDTO = new ErrorDTO();
             errorDTO.setError(error);
             errorDTO.setErrorDescription(description);
+            errorDTO.setRef(getCorrelation());
             return new DCRMEndpointException(status, errorDTO);
         }
     }

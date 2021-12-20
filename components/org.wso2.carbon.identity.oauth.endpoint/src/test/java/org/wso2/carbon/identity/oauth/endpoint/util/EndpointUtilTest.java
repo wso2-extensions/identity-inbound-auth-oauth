@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.application.authentication.framework.config.buil
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -102,7 +103,7 @@ import static org.testng.Assert.assertTrue;
 @PrepareForTest({SessionDataCache.class, OAuthServerConfiguration.class, OAuth2Util.class, IdentityUtil.class,
         FrameworkUtils.class, OAuthASResponse.class, OAuthResponse.class, PrivilegedCarbonContext.class,
         ServerConfiguration.class, ServiceURLBuilder.class, IdentityTenantUtil.class, EndpointUtil.class,
-        FileBasedConfigurationBuilder.class})
+        FileBasedConfigurationBuilder.class, LoggerUtils.class})
 public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
@@ -574,6 +575,10 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "provideParams")
     public void testValidateParams(Object paramObject, Map<String, String[]> requestParams, boolean expected) {
 
+        mockStatic(IdentityTenantUtil.class);
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         MultivaluedMap<String, String> paramMap = (MultivaluedMap<String, String>) paramObject;
         when(mockedHttpServletRequest.getParameterMap()).thenReturn(requestParams);
         boolean isValid = EndpointUtil.validateParams(mockedHttpServletRequest, mockedHttpServletResponse, paramMap);

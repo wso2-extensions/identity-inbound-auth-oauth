@@ -201,7 +201,7 @@ public class ScopesApiServiceImpl extends ScopesApiService {
         if (isScopeExists) {
             return Response.status(Response.Status.OK).build();
         }
-        return Response.status(Response.Status.NOT_FOUND).build();
+        return Response.status(Response.Status.NOT_FOUND).entity(ScopeUtils.getCorrelation()).build();
     }
 
     /**

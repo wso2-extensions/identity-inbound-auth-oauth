@@ -343,7 +343,8 @@ definitions:
       client_secret:
         type: string
       client_secret_expires_at:
-        type: string
+        type: integer
+        format: int64
       redirect_uris:
         type: array
         items:
@@ -363,4 +364,6 @@ definitions:
       error:
         type: string
       error_description:
+        type: string
+      traceId:
         type: string

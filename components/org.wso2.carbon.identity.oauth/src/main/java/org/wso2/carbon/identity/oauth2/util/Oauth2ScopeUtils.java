@@ -22,7 +22,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -37,7 +39,9 @@ import org.wso2.carbon.user.api.UserStoreException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -272,6 +276,30 @@ public class Oauth2ScopeUtils {
                 }
                 appScopeValidators.remove(validator.getValidatorName());
                 if (!isValid) {
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                        Map<String, Object> configs = new HashMap<>();
+                        configs.put("applicationScopeValidator", validator.getValidatorName());
+                        Map<String, Object> params = new HashMap<>();
+                        if (authzReqMessageContext != null) {
+                            params.put("clientId", authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey());
+                            if (ArrayUtils.isNotEmpty(authzReqMessageContext.getAuthorizationReqDTO().getScopes())) {
+                                List<String> scopes =
+                                        Arrays.asList(authzReqMessageContext.getAuthorizationReqDTO().getScopes());
+                                params.put("scopes", scopes);
+                            }
+                        } else {
+                            params.put("clientId", tokenReqMsgContext.getOauth2AccessTokenReqDTO().getClientId());
+                            if (ArrayUtils.isNotEmpty(tokenReqMsgContext.getOauth2AccessTokenReqDTO().getScope())) {
+                                List<String> scopes =
+                                        Arrays.asList(tokenReqMsgContext.getOauth2AccessTokenReqDTO().getScope());
+                                params.put("scopes", scopes);
+                            }
+                        }
+                        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                                OAuthConstants.LogConstants.FAILED,
+                                "Scope validation failed against the configured application scope validator.",
+                                "validate-scope", configs);
+                    }
                     return false;
                 }
             }

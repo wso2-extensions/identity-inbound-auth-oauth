@@ -23,7 +23,7 @@ public class ApplicationDTO  {
   private String clientSecret = null;
   
   
-  private String clientSecretExpiresAt = null;
+  private Long clientSecretExpiresAt = null;
   
   
   private List<String> redirectUris = new ArrayList<String>();
@@ -63,10 +63,10 @@ public class ApplicationDTO  {
    **/
   @ApiModelProperty(value = "")
   @JsonProperty("client_secret_expires_at")
-  public String getClientSecretExpiresAt() {
+  public Long getClientSecretExpiresAt() {
     return clientSecretExpiresAt;
   }
-  public void setClientSecretExpiresAt(String clientSecretExpiresAt) {
+  public void setClientSecretExpiresAt(Long clientSecretExpiresAt) {
     this.clientSecretExpiresAt = clientSecretExpiresAt;
   }
 

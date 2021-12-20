@@ -159,7 +159,13 @@ public class IntrospectionResponseBuilder {
     public IntrospectionResponseBuilder setAudience(String audience) {
 
         if (StringUtils.isNotBlank(audience)) {
-            parameters.put(IntrospectionResponse.AUD, audience);
+            String[] audienceArray = audience.split(",");
+            if (audienceArray.length == 1) {
+                parameters.put(IntrospectionResponse.AUD, audience);
+            } else {
+                parameters.put(IntrospectionResponse.AUD, audienceArray);
+            }
+
         }
         return this;
     }

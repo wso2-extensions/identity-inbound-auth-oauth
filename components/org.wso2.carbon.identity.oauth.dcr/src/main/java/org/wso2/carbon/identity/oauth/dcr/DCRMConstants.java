@@ -23,6 +23,8 @@ package org.wso2.carbon.identity.oauth.dcr;
  */
 public class DCRMConstants {
 
+    public static final String CORRELATION_ID_MDC = "Correlation-ID";
+
     /**
      * Enum for OAuth DCR service related error messages.
      */

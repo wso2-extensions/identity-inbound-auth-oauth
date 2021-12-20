@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.application.common.model.Claim;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -215,6 +216,8 @@ public class ResponseTypeHandlerUtil {
             OauthTokenIssuer oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
             return generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled, oauthTokenIssuer);
         } catch (InvalidOAuthClientException e) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-authz-code", null);
             throw new IdentityOAuth2Exception(
                     "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
@@ -258,6 +261,8 @@ public class ResponseTypeHandlerUtil {
         try {
             authorizationCode = oauthIssuerImpl.authorizationCode(oauthAuthzMsgCtx);
         } catch (OAuthSystemException e) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-authz-code", null);
             throw new IdentityOAuth2Exception(e.getMessage(), e);
         }
 
@@ -288,6 +293,29 @@ public class ResponseTypeHandlerUtil {
                     ", Using the redirect url : " + authorizationReqDTO.getCallbackUrl() +
                     ", Scope : " + OAuth2Util.buildScopeString(oauthAuthzMsgCtx.getApprovedScope()) +
                     ", validity period : " + validityPeriod);
+        }
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", authorizationReqDTO.getConsumerKey());
+            if (authorizationReqDTO.getUser() != null) {
+                try {
+                    params.put("user", authorizationReqDTO.getUser().getUserId());
+                } catch (UserIdNotFoundException e) {
+                    if (StringUtils.isNotBlank(authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier())) {
+                        params.put("user",
+                                authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier().replaceAll(".",
+                                        "*"));
+                    }
+                }
+            }
+            params.put("requestedScopes", OAuth2Util.buildScopeString(authorizationReqDTO.getScopes()));
+            params.put("redirectUri", authorizationReqDTO.getCallbackUrl());
+
+            Map<String, Object> configs = new HashMap<>();
+            configs.put("authzCodeValidityPeriod", String.valueOf(validityPeriod));
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                    OAuthConstants.LogConstants.SUCCESS, "Issued Authorization Code to user.", "issue-authz-code",
+                    configs);
         }
         return authzCodeDO;
     }
