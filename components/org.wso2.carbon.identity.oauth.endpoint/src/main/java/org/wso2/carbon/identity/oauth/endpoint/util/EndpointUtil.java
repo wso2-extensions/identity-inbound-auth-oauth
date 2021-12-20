@@ -83,6 +83,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
@@ -111,6 +112,7 @@ import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils.getRedirectURL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_REQ_HEADER_AUTH_METHOD_BASIC;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 
 /**
  * Util class which contains common methods used by all the OAuth endpoints.
@@ -944,9 +946,31 @@ public class EndpointUtil {
                     }
                 }
             }
+
             if (CollectionUtils.isNotEmpty(allowedOAuthScopes)) {
-                params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
-                consentRequiredScopes = String.join(" ", allowedOAuthScopes).trim();
+                if (allowedOAuthScopes.contains(SYSTEM_SCOPE)) {
+                    consentRequiredScopes = String.join(" ", allowedOAuthScopes).trim();
+                    params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
+                } else {
+                    // Filter internal scopes from allowed oauth scopes.
+                    String[] requestedInternalScopes = Oauth2ScopeUtils.getRequestedScopes(allowedOAuthScopes.
+                            toArray(new String[allowedOAuthScopes.size()]));
+                    // Remove internal scopes from the allowed scope list.
+                    allowedOAuthScopes.removeAll(Arrays.asList(requestedInternalScopes));
+                    // Find all the internal scopes which can be used by the authenticated user.
+                    List<Scope> allowedInternalScopes =
+                            Oauth2ScopeUtils.getUserAllowedScopes(user, requestedInternalScopes, params.getClientId());
+                    String[] allowedInternalScopesName = Oauth2ScopeUtils.getScopes(allowedInternalScopes);
+
+                    List<String> requestedAndAllowedInternalScopes = new ArrayList<>();
+                    // Filter out the allowed internal scopes from the requested internal scopes.
+                    for (String scope : requestedInternalScopes) {
+                        if (ArrayUtils.contains(allowedInternalScopesName, scope)) {
+                            requestedAndAllowedInternalScopes.add(scope);
+                        }
+                    }
+                    allowedOAuthScopes.addAll(requestedAndAllowedInternalScopes);
+                }
             }
             if (log.isDebugEnabled()) {
                 log.debug("Consent required scopes : " + consentRequiredScopes + " for request from client : " +
