@@ -464,6 +464,23 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         assertTrue(oAuth2ClientValidationResponseDTO.isValidClient());
     }
 
+    /**
+     * DataProvider: regex before escaping, regex after escaping
+     */
+    @DataProvider(name = "validateEscapeQueryParamsDataProvider")
+    public Object[][] validateEscapeQueryParamsDataProvider() {
+        return new Object[][]{
+                {"(https://wso2.com|https://wso2.com?dummy1=1&dummy=2)",
+                        "(https://wso2.com|https://wso2.com\\?dummy1=1&dummy=2)"},
+                {"(wso2?test|wso2test?)", "(wso2?test|wso2test?)"}
+        };
+    }
+
+    @Test(dataProvider = "ValidateEscapeQueryParamsDataProvider")
+    public void testEscapeQueryParamsIfPresent(String regex, String output) {
+        assertEquals(output, oAuth2Service.escapeQueryParamsIfPresent(regex));
+    }
+
     private void setUpRevokeToken() throws Exception {
         when(oAuthEventInterceptorProxy.isEnabled()).thenReturn(true);
         doNothing().when(oAuthEventInterceptorProxy).onPostTokenRevocationByClient

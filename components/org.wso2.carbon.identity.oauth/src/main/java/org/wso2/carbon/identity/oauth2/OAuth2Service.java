@@ -58,6 +58,7 @@ import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.net.URL;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -233,14 +234,30 @@ public class OAuth2Service extends AbstractAdmin {
         String registeredCallbackUrl = oauthApp.getCallbackUrl();
         if (registeredCallbackUrl.startsWith("regexp=")) {
             String callBackRegex = registeredCallbackUrl.substring("regexp=".length());
-            StringBuilder str = new StringBuilder(callBackRegex);
-            if (str.indexOf("?") != -1) {
-                regexp = str.replace(str.indexOf("?"), str.indexOf("?") + 1, "\\?").toString().trim();
-            } else {
-                regexp = callBackRegex;
-            }
+            regexp = escapeQueryParamsIfPresent(callBackRegex);
         }
         return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
+    }
+
+    public String escapeQueryParamsIfPresent(String regex) {
+        String[] regexArray = regex.replaceAll("[()]", "").split("\\|");
+        List<String> escapedRegexArray = new ArrayList<>();
+        for (String regexValue : regexArray) {
+            try {
+                new URL(regexValue).toURI();
+                StringBuilder str = new StringBuilder(regexValue);
+                if (str.indexOf("?") != -1) {
+                    escapedRegexArray.add(str.replace(str.indexOf("?"), str.indexOf("?") + 1, "\\?")
+                            .toString());
+                } else {
+                    escapedRegexArray.add(regexValue);
+                }
+            } catch (Exception e) {
+                // If there was an Exception while creating URL object it is not a URL
+                escapedRegexArray.add(regexValue);
+            }
+        }
+        return "(" + String.join("|", escapedRegexArray) + ")";
     }
 
     /**
