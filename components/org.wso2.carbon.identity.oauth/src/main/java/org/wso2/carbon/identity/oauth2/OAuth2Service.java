@@ -242,7 +242,7 @@ public class OAuth2Service extends AbstractAdmin {
     }
 
     public String escapeQueryParamsIfPresent(String regex) {
-        String[] regexArray = regex.replaceAll("[()]", "").split("\\|");
+        String[] regexArray = regex.substring(1, regex.length() - 1).split("\\|");
         List<String> escapedRegexArray = new ArrayList<>();
         for (String regexValue : regexArray) {
             try {
