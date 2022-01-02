@@ -232,8 +232,8 @@ public class OAuth2Service extends AbstractAdmin {
     private boolean validateCallbackURI(String callbackURI, OAuthAppDO oauthApp) {
         String regexp = null;
         String registeredCallbackUrl = oauthApp.getCallbackUrl();
-        if (registeredCallbackUrl.startsWith("regexp=")) {
-            String callBackRegex = registeredCallbackUrl.substring("regexp=".length());
+        if (registeredCallbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+            String callBackRegex = registeredCallbackUrl.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
             // Using escape characters here when redirect URLs with query parameters are saved as a regex to
             // avoid callback mismatch error. This needs to be improved and fixed in master branch.
             regexp = escapeQueryParamsIfPresent(callBackRegex);
@@ -241,6 +241,11 @@ public class OAuth2Service extends AbstractAdmin {
         return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
     }
 
+    /**
+     * Method to escape query parameters in the redirect urls
+     * @param regex
+     * @return
+     */
     public String escapeQueryParamsIfPresent(String regex) {
         String[] regexArray = regex.substring(1, regex.length() - 1).split("\\|");
         List<String> escapedRegexArray = new ArrayList<>();
