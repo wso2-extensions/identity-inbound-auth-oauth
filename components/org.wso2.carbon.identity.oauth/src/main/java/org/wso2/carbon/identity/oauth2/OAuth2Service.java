@@ -390,7 +390,9 @@ public class OAuth2Service extends AbstractAdmin {
                 return buildErrorResponse(OAuth2ErrorCodes.SERVER_ERROR, "Error occurred while revoking " +
                         "authorization grant for application.");
             } catch (InvalidOAuthClientException e) {
-                log.error("Invalid Client.", e);
+                if (log.isDebugEnabled()) {
+                    log.debug("Client Authentication failed.", e);
+                }
                 return buildErrorResponse(OAuth2ErrorCodes.INVALID_CLIENT, "Client Authentication failed.");
             }
         }
@@ -626,7 +628,9 @@ public class OAuth2Service extends AbstractAdmin {
         } catch (InvalidOAuthClientException e) {
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
                     OAuthConstants.LogConstants.FAILED, "Client is not authorized.", "validate-oauth-client", null);
-            log.error("Unauthorized Client", e);
+            if (log.isDebugEnabled()) {
+                log.debug("Unauthorized client.", e);
+            }
             OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
             revokeRespDTO.setError(true);
             revokeRespDTO.setErrorCode(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT);
@@ -701,7 +705,9 @@ public class OAuth2Service extends AbstractAdmin {
             }
         }
         if (!isOICScope) {
-            log.error("AccessToken does not have the openid scope");
+            if (log.isDebugEnabled()) {
+                log.debug("AccessToken does not have the openid scope");
+            }
             return new Claim[0];
         }
 
