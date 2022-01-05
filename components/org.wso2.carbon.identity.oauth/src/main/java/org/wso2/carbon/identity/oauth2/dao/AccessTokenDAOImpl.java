@@ -282,7 +282,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             IdentityDatabaseUtil.rollbackTransaction(connection);
             // Handle constrain violation issue in JDBC drivers which does not throw
             // SQLIntegrityConstraintViolationException
-            if (StringUtils.containsIgnoreCase(e.getMessage(), "CON_APP_KEY")) {
+            if (StringUtils.containsIgnoreCase(e.getMessage(), "CON_APP_KEY") || (e.getCause() != null &&
+                    StringUtils.containsIgnoreCase(e.getCause().getMessage(), "CON_APP_KEY"))) {
                 if (retryAttemptCounter >= getTokenPersistRetryCount()) {
                     log.error("'CON_APP_KEY' constrain violation retry count exceeds above the maximum count - " +
                             getTokenPersistRetryCount());
