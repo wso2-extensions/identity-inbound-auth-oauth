@@ -60,7 +60,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 
 /**
@@ -81,7 +80,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
     public String[] validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         // filter internal scopes
-        String[] requestedScopes = getRequestedScopes(tokReqMsgCtx.getScope());
+        String[] requestedScopes = Oauth2ScopeUtils.getRequestedScopes(tokReqMsgCtx.getScope());
         //If the token is not requested for specific scopes, return true
         if (ArrayUtils.isEmpty(requestedScopes)) {
             return requestedScopes;
@@ -105,7 +104,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
     public String[] validateScope(OAuthAuthzReqMessageContext authzReqMessageContext) {
 
         // Remove openid scope from the list if available
-        String[] requestedScopes = getRequestedScopes(authzReqMessageContext.getAuthorizationReqDTO
+        String[] requestedScopes = Oauth2ScopeUtils.getRequestedScopes(authzReqMessageContext.getAuthorizationReqDTO
                 ().getScopes());
         //If the token is not requested for specific scopes, return true
         if (ArrayUtils.isEmpty(requestedScopes)) {
@@ -129,18 +128,22 @@ public class JDBCPermissionBasedInternalScopeValidator {
         return scopesToRespond.toArray(new String[0]);
     }
 
-    private String[] getRequestedScopes(String[] scopes) {
+    public String[] validateScope(String[] requestedScopes, AuthenticatedUser authenticatedUser, String clientId) {
 
-        List<String> requestedScopes = new ArrayList<>();
-        if (scopes == null) {
-            return null;
+        List<Scope> userAllowedScopes = getUserAllowedScopes(authenticatedUser, requestedScopes, clientId);
+
+        String[] userAllowedScopesAsArray = getScopes(userAllowedScopes);
+        if (ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
+            return userAllowedScopesAsArray;
         }
-        for (String scope : scopes) {
-            if (scope.startsWith(INTERNAL_SCOPE_PREFIX) || scope.equalsIgnoreCase(SYSTEM_SCOPE)) {
-                requestedScopes.add(scope);
+
+        List<String> scopesToRespond = new ArrayList<>();
+        for (String scope : requestedScopes) {
+            if (ArrayUtils.contains(userAllowedScopesAsArray, scope)) {
+                scopesToRespond.add(scope);
             }
         }
-        return requestedScopes.toArray(new String[0]);
+        return scopesToRespond.toArray(new String[0]);
     }
 
     private String[] getScopes(List<Scope> scopes) {

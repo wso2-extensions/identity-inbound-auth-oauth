@@ -84,6 +84,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
+import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
@@ -963,6 +965,20 @@ public class EndpointUtil {
                 }
             }
             if (CollectionUtils.isNotEmpty(allowedOAuthScopes)) {
+                // filter out internal scopes to be validated
+                List<String> requestedScopes = Oauth2ScopeUtils.getRequestedScopes(allowedOAuthScopes);
+                if (CollectionUtils.isNotEmpty(requestedScopes)) {
+                    // remove the filtered internal scopes from the allowedOAuthScopes list
+                    allowedOAuthScopes.removeAll(requestedScopes);
+
+                    JDBCPermissionBasedInternalScopeValidator scopeValidator =
+                            new JDBCPermissionBasedInternalScopeValidator();
+                    String[] validatedScope = scopeValidator.validateScope(
+                            requestedScopes.toArray(new String[0]), user, params.getClientId());
+
+                    // add validated internal scopes to the allowedOAuthScopes list
+                    allowedOAuthScopes.addAll(Arrays.asList(validatedScope));
+                }
                 params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
                 consentRequiredScopes = String.join(" ", allowedOAuthScopes).trim();
             }
