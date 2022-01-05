@@ -278,7 +278,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         } catch (DataTruncation e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Invalid request", e);
-        } catch (SQLException e) {
+        } catch (Exception e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             // Handle constrain violation issue in JDBC drivers which does not throw
             // SQLIntegrityConstraintViolationException
