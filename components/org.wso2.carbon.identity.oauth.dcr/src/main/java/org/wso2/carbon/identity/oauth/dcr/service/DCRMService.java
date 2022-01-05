@@ -645,10 +645,11 @@ public class DCRMService {
         StringBuilder regexPattern = new StringBuilder();
         for (String redirectURI : redirectURIs) {
             if (DCRMUtils.isRedirectionUriValid(redirectURI)) {
+                String queryParamEscapedUrl = escapeQueryParamsIfPresent(redirectURI);
                 if (regexPattern.length() > 0) {
-                    regexPattern.append("|").append(redirectURI);
+                    regexPattern.append("|").append(queryParamEscapedUrl);
                 } else {
-                    regexPattern.append("(").append(redirectURI);
+                    regexPattern.append("(").append(queryParamEscapedUrl);
                 }
             } else {
                 throw DCRMUtils.generateClientException(
@@ -659,6 +660,21 @@ public class DCRMService {
             regexPattern.append(")");
         }
         return regexPattern.toString();
+    }
+
+    /**
+     * Method to escape query parameters in the redirect urls
+     * @param redirectURI
+     * @return
+     */
+    public String escapeQueryParamsIfPresent(String redirectURI) {
+        StringBuilder redirectURIStr = new StringBuilder(redirectURI);
+        if (redirectURIStr.indexOf("?") != -1) {
+            return redirectURIStr.replace(redirectURIStr.indexOf("?"), redirectURIStr.indexOf("?") + 1, "\\?")
+                    .toString();
+        } else {
+            return redirectURIStr.toString();
+        }
     }
 
     private boolean isUserAuthorized(String clientId) throws DCRMServerException {

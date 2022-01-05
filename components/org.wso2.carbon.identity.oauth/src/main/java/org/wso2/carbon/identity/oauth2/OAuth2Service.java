@@ -58,7 +58,6 @@ import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
-import java.net.URL;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -233,38 +232,9 @@ public class OAuth2Service extends AbstractAdmin {
         String regexp = null;
         String registeredCallbackUrl = oauthApp.getCallbackUrl();
         if (registeredCallbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
-            String callBackRegex = registeredCallbackUrl.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
-            // Using escape characters here when redirect URLs with query parameters are saved as a regex to
-            // avoid callback mismatch error. This needs to be improved and fixed in master branch.
-            regexp = escapeQueryParamsIfPresent(callBackRegex);
+            regexp = registeredCallbackUrl.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
         }
         return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
-    }
-
-    /**
-     * Method to escape query parameters in the redirect urls
-     * @param regex
-     * @return
-     */
-    public String escapeQueryParamsIfPresent(String regex) {
-        String[] regexArray = regex.substring(1, regex.length() - 1).split("\\|");
-        List<String> escapedRegexArray = new ArrayList<>();
-        for (String regexValue : regexArray) {
-            try {
-                new URL(regexValue).toURI();
-                StringBuilder str = new StringBuilder(regexValue);
-                if (str.indexOf("?") != -1) {
-                    escapedRegexArray.add(str.replace(str.indexOf("?"), str.indexOf("?") + 1, "\\?")
-                            .toString());
-                } else {
-                    escapedRegexArray.add(regexValue);
-                }
-            } catch (Exception e) {
-                // If there was an Exception while creating URL object it is not a URL
-                escapedRegexArray.add(regexValue);
-            }
-        }
-        return "(" + String.join("|", escapedRegexArray) + ")";
     }
 
     /**

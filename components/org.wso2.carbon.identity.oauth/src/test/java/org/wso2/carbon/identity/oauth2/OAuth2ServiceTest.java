@@ -60,7 +60,6 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -441,44 +440,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getRealm(anyString(), anyString())).thenThrow(new IdentityException(""));
         assertEquals(oAuth2Service.getUserClaims("test").length, 1);
-    }
-
-    @Test
-    public void testValidateClientInfoWIthQueryParamsInCallbackURL() throws Exception, IdentityOAuth2Exception,
-            InvalidOAuthClientException {
-
-        String clientId = UUID.randomUUID().toString();
-        whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
-        OAuthAppDO oAuthAppDO = new OAuthAppDO();
-        oAuthAppDO.setGrantTypes("dummyGrantType");
-        oAuthAppDO.setApplicationName("dummyName");
-        oAuthAppDO.setState("ACTIVE");
-        oAuthAppDO.setCallbackUrl("regexp=(https://wso2.com|https://wso2.com?dummy1=1&dummy=2)");
-        oAuthAppDO.setAppOwner(new AuthenticatedUser());
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
-        when(oAuthAppDAO.getAppInformation(clientId)).thenReturn(oAuthAppDO);
-        when(authenticatedUser.getTenantDomain()).thenReturn("carbon.super");
-        OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
-                validateClientInfo(clientId, "https://wso2.com?dummy1=1&dummy=2");
-        assertTrue(oAuth2ClientValidationResponseDTO.isValidClient());
-    }
-
-    /**
-     * DataProvider: regex before escaping, regex after escaping
-     */
-    @DataProvider(name = "validateEscapeQueryParamsDataProvider")
-    public Object[][] validateEscapeQueryParamsDataProvider() {
-        return new Object[][]{
-                {"(https://wso2.com|https://wso2.com?dummy1=1&dummy=2)",
-                        "(https://wso2.com|https://wso2.com\\?dummy1=1&dummy=2)"},
-                {"(wso2?test|wso2test?)", "(wso2?test|wso2test?)"}
-        };
-    }
-
-    @Test(dataProvider = "ValidateEscapeQueryParamsDataProvider")
-    public void testEscapeQueryParamsIfPresent(String regex, String output) {
-        assertEquals(output, oAuth2Service.escapeQueryParamsIfPresent(regex));
     }
 
     private void setUpRevokeToken() throws Exception {
