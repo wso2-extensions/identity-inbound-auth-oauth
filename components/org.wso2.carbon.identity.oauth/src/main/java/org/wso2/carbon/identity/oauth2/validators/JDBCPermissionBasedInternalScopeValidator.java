@@ -77,6 +77,11 @@ public class JDBCPermissionBasedInternalScopeValidator {
     private static final String EVERYONE_PERMISSION = "everyone_permission";
     private static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
 
+    /**
+     * Execute Internal scope Validation.
+     * @param tokReqMsgCtx
+     * @return array of validated scopes.
+     */
     public String[] validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         // filter internal scopes
@@ -101,6 +106,11 @@ public class JDBCPermissionBasedInternalScopeValidator {
         return scopesToRespond.toArray(new String[0]);
     }
 
+    /**
+     * Execute Internal Scope Validation.
+     * @param authzReqMessageContext
+     * @return array of validated scopes.
+     */
     public String[] validateScope(OAuthAuthzReqMessageContext authzReqMessageContext) {
 
         // Remove openid scope from the list if available
@@ -128,6 +138,13 @@ public class JDBCPermissionBasedInternalScopeValidator {
         return scopesToRespond.toArray(new String[0]);
     }
 
+    /**
+     * Execute Internal Scope Validation.
+     * @param requestedScopes Array of scopes that needs to be validated.
+     * @param authenticatedUser
+     * @param clientId
+     * @return Array of validated scopes.
+     */
     public String[] validateScope(String[] requestedScopes, AuthenticatedUser authenticatedUser, String clientId) {
 
         List<Scope> userAllowedScopes = getUserAllowedScopes(authenticatedUser, requestedScopes, clientId);

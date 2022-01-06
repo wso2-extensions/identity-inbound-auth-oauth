@@ -965,18 +965,18 @@ public class EndpointUtil {
                 }
             }
             if (CollectionUtils.isNotEmpty(allowedOAuthScopes)) {
-                // filter out internal scopes to be validated
-                List<String> requestedScopes = Oauth2ScopeUtils.getRequestedScopes(allowedOAuthScopes);
-                if (CollectionUtils.isNotEmpty(requestedScopes)) {
-                    // remove the filtered internal scopes from the allowedOAuthScopes list
-                    allowedOAuthScopes.removeAll(requestedScopes);
+                // Filter out internal scopes to be validated.
+                String[] requestedScopes = Oauth2ScopeUtils.getRequestedScopes(
+                        allowedOAuthScopes.toArray(new String[0]));
+                if (ArrayUtils.isNotEmpty(requestedScopes)) {
+                    // Remove the filtered internal scopes from the allowedOAuthScopes list.
+                    allowedOAuthScopes.removeAll(Arrays.asList(requestedScopes));
 
                     JDBCPermissionBasedInternalScopeValidator scopeValidator =
                             new JDBCPermissionBasedInternalScopeValidator();
-                    String[] validatedScope = scopeValidator.validateScope(
-                            requestedScopes.toArray(new String[0]), user, params.getClientId());
+                    String[] validatedScope = scopeValidator.validateScope(requestedScopes, user, params.getClientId());
 
-                    // add validated internal scopes to the allowedOAuthScopes list
+                    // Add validated internal scopes to the allowedOAuthScopes list.
                     allowedOAuthScopes.addAll(Arrays.asList(validatedScope));
                 }
                 params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));

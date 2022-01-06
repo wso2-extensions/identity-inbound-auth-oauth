@@ -334,8 +334,8 @@ public class Oauth2ScopeUtils {
     public static String[] getRequestedScopes(String[] scopes) {
 
         List<String> requestedScopes = new ArrayList<>();
-        if (scopes == null) {
-            return null;
+        if (ArrayUtils.isEmpty(scopes)) {
+            return ArrayUtils.EMPTY_STRING_ARRAY;
         }
         for (String scope : scopes) {
             if (scope.startsWith(INTERNAL_SCOPE_PREFIX) || scope.equalsIgnoreCase(SYSTEM_SCOPE)) {
@@ -343,25 +343,5 @@ public class Oauth2ScopeUtils {
             }
         }
         return requestedScopes.toArray(new String[0]);
-    }
-
-    /**
-     * Iterate through the scopes list to filter out the internal scopes.
-     * @param scopes String list of scopes.
-     * @return String list with internal scopes. Return an empty list if there's not any internal scopes in the
-     * given scopes list.
-     */
-    public static List<String> getRequestedScopes(List<String> scopes) {
-
-        List<String> requestedScopes = new ArrayList<>();
-        if (scopes == null) {
-            return null;
-        }
-        for (String scope : scopes) {
-            if (scope.startsWith(INTERNAL_SCOPE_PREFIX) || scope.equalsIgnoreCase(SYSTEM_SCOPE)) {
-                requestedScopes.add(scope);
-            }
-        }
-        return requestedScopes;
     }
 }
