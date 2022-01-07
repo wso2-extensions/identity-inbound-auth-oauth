@@ -642,24 +642,26 @@ public class DCRMService {
 
     private String createRegexPattern(List<String> redirectURIs) throws DCRMException {
 
-        StringBuilder regexPattern = new StringBuilder();
+        String regexPattern;
+//        StringBuilder regexPattern = new StringBuilder();
+        List<String> escapedUrls = new ArrayList<>();
         for (String redirectURI : redirectURIs) {
             if (DCRMUtils.isRedirectionUriValid(redirectURI)) {
-                String queryParamEscapedUrl = escapeQueryParamsIfPresent(redirectURI);
-                if (regexPattern.length() > 0) {
-                    regexPattern.append("|").append(queryParamEscapedUrl);
-                } else {
-                    regexPattern.append("(").append(queryParamEscapedUrl);
-                }
+                escapedUrls.add(escapeQueryParamsIfPresent(redirectURI));
+//                String queryParamEscapedUrl = escapeQueryParamsIfPresent(redirectURI);
+//                if (regexPattern.length() > 0) {
+//                    regexPattern.append("|").append(queryParamEscapedUrl);
+//                } else {
+//                    regexPattern.append("(").append(queryParamEscapedUrl);
+//                }
             } else {
                 throw DCRMUtils.generateClientException(
                         DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_REDIRECT_URI, redirectURI);
             }
         }
-        if (regexPattern.length() > 0) {
-            regexPattern.append(")");
-        }
-        return regexPattern.toString();
+        regexPattern = ("(".concat(StringUtils.join(escapedUrls, "|"))).concat(")");
+        log.error("#####regexPattern##### " + regexPattern);
+        return regexPattern;
     }
 
     /**
