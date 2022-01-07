@@ -1054,4 +1054,59 @@ public class DCRMServiceTest extends PowerMockTestCase {
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(dummyUserName);
     }
 
+    @DataProvider(name = "redirectUriWithQueryParamsProvider")
+    public Object[][] getReDirecturiWithQueryParams() {
+
+        List<String> redirectUri1 = new ArrayList<>();
+        redirectUri1.add("https://wso2.com");
+        List<String> redirectUri2 = new ArrayList<>();
+        redirectUri2.add("https://wso2.com?dummy1");
+        List<String> redirectUri3 = new ArrayList<>();
+        redirectUri3.add("https://wso2.com");
+        redirectUri3.add("https://wso2.com?dummy1=1%26dummy=2");
+        return new Object[][]{
+                {redirectUri1},
+                {redirectUri2},
+                {redirectUri3}
+        };
+    }
+
+    @Test(dataProvider = "redirectUriWithQueryParamsProvider")
+    public void registerApplicationTestWithRedirectURls(List<String> redirectUri) throws Exception {
+
+        mockApplicationManagementService = mock(ApplicationManagementService.class);
+
+        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+
+        startTenantFlow();
+
+        dummyGrantTypes.add("implicit");
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
+
+        String grantType = StringUtils.join(applicationRegistrationRequest.getGrantTypes(), " ");
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+
+        DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
+        dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
+        when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain)).thenReturn
+                (null, serviceProvider);
+
+        applicationRegistrationRequest.setRedirectUris(redirectUri);
+
+        OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
+        oAuthConsumerApp.setApplicationName(dummyClientName);
+
+        oAuthConsumerApp.setGrantTypes(grantType);
+        oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
+
+        when(mockOAuthAdminService
+                .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
+        when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class)))
+                .thenReturn(oAuthConsumerApp);
+
+        Application application = dcrmService.registerApplication(applicationRegistrationRequest);
+        assertEquals(application.getClientName(), dummyClientName);
+    }
+
 }
