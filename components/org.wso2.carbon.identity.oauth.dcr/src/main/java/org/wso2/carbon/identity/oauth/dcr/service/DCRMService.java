@@ -659,7 +659,7 @@ public class DCRMService {
     }
 
     /**
-     * Method to escape query parameters in the redirect urls
+     * Method to escape query parameter separator in the redirect uris if present.
      * @param redirectURI
      * @return
      */
