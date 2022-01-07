@@ -642,7 +642,7 @@ public class DCRMService {
 
     private String createRegexPattern(List<String> redirectURIs) throws DCRMException {
 
-        String regexPattern;
+        String regexPattern = "";
         List<String> escapedUrls = new ArrayList<>();
         for (String redirectURI : redirectURIs) {
             if (DCRMUtils.isRedirectionUriValid(redirectURI)) {
@@ -652,7 +652,9 @@ public class DCRMService {
                         DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_REDIRECT_URI, redirectURI);
             }
         }
-        regexPattern = ("(".concat(StringUtils.join(escapedUrls, "|"))).concat(")");
+        if (!escapedUrls.isEmpty()) {
+            regexPattern = ("(".concat(StringUtils.join(escapedUrls, "|"))).concat(")");
+        }
         return regexPattern;
     }
 
@@ -662,13 +664,7 @@ public class DCRMService {
      * @return
      */
     public String escapeQueryParamsIfPresent(String redirectURI) {
-        StringBuilder redirectURIStr = new StringBuilder(redirectURI);
-        if (redirectURIStr.indexOf("?") != -1) {
-            return redirectURIStr.replace(redirectURIStr.indexOf("?"), redirectURIStr.indexOf("?") + 1, "\\?")
-                    .toString();
-        } else {
-            return redirectURIStr.toString();
-        }
+        return redirectURI.replaceFirst("\\?", "\\\\?");
     }
 
     private boolean isUserAuthorized(String clientId) throws DCRMServerException {
