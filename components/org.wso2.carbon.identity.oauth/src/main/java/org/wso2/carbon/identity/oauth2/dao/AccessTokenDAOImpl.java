@@ -295,18 +295,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 recoverFromConAppKeyConstraintViolation(accessToken, consumerKey, accessTokenDO,
                         connection, userStoreDomain, retryAttemptCounter + 1);
             } else {
-                if (log.isDebugEnabled()) {
-                    log.debug("Error when storing the access token for consumer key : " + consumerKey, e);
-                }
                 throw new IdentityOAuth2Exception(
                         "Error when storing the access token for consumer key : " + consumerKey, e);
             }
-        } catch (Exception e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error when inserting the access token for the given consumer key : " + consumerKey, e);
-            }
-            throw new IdentityOAuth2Exception("Error when inserting the access token for the given consumer key : " +
-                    consumerKey, e);
         } finally {
             IdentityDatabaseUtil.closeStatement(addScopePrepStmt);
             IdentityDatabaseUtil.closeStatement(insertTokenPrepStmt);
