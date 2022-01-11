@@ -575,16 +575,16 @@ public class DCRMServiceTest extends PowerMockTestCase {
         redirectUri2.add("https://wso2.com?dummy1");
         List<String> redirectUri3 = new ArrayList<>();
         redirectUri3.add("https://wso2.com");
-        redirectUri3.add("https://wso2.com?dummy1=1%26dummy=2");
+        redirectUri3.add("https://wso2.com?dummy1=1&dummy=2");
         return new Object[][]{
-                {redirectUri1},
-                {redirectUri2},
-                {redirectUri3}
+                {redirectUri1, "https://wso2.com"},
+                {redirectUri2, "https://wso2.com?dummy1"},
+                {redirectUri3, "regexp=(https://wso2.com|https://wso2.com\\\\?dummy1=1&dummy=2)"}
         };
     }
 
     @Test(dataProvider = "redirectUriWithQueryParamsProvider")
-    public void registerApplicationTestWithRedirectURls(List<String> redirectUri) throws Exception {
+    public void registerApplicationTestWithRedirectURls(List<String> redirectUri, String callback) throws Exception {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
@@ -611,6 +611,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         oAuthConsumerApp.setGrantTypes(grantType);
         oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
+        oAuthConsumerApp.setCallbackUrl(callback);
 
         when(mockOAuthAdminService
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
@@ -619,6 +620,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         Application application = dcrmService.registerApplication(applicationRegistrationRequest);
         assertEquals(application.getClientName(), dummyClientName);
+        assertEquals(application.getRedirectUris().get(0), callback);
     }
 
 }
