@@ -579,7 +579,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         return new Object[][]{
                 {redirectUri1, "https://wso2.com"},
                 {redirectUri2, "https://wso2.com?dummy1"},
-                {redirectUri3, "regexp=(https://wso2.com|https://wso2.com\\\\?dummy1=1&dummy=2)"}
+                {redirectUri3, "regexp=(https://wso2.com|https://wso2.com\\?dummy1=1&dummy=2)"}
         };
     }
 
