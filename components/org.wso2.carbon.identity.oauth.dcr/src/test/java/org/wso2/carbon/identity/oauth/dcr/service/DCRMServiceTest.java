@@ -567,7 +567,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
     }
 
     @DataProvider(name = "redirectUriWithQueryParamsProvider")
-    public Object[][] getReDirecturiWithQueryParams() {
+    public Object[][] getRedirectUrisWithQueryParams() {
 
         List<String> redirectUri1 = new ArrayList<>();
         redirectUri1.add("https://wso2.com");
