@@ -664,6 +664,7 @@ public class DCRMService {
      * @return
      */
     private String escapeQueryParamsIfPresent(String redirectURI) {
+
         return redirectURI.replaceFirst("\\?", "\\\\?");
     }
 
