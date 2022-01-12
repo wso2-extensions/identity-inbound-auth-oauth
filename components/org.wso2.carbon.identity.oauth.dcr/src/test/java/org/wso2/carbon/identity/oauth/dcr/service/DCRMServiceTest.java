@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
@@ -59,6 +60,9 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
+import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AParams.OAUTH_VERSION;
 
@@ -577,14 +581,16 @@ public class DCRMServiceTest extends PowerMockTestCase {
         redirectUri3.add("https://wso2.com");
         redirectUri3.add("https://wso2.com?dummy1=1&dummy=2");
         return new Object[][]{
-                {redirectUri1, "https://wso2.com"},
-                {redirectUri2, "https://wso2.com?dummy1"},
-                {redirectUri3, "regexp=(https://wso2.com|https://wso2.com\\?dummy1=1&dummy=2)"}
+                {redirectUri1, "https://wso2.com", "https://wso2.com", "https://wso2.com?dummy1"},
+                {redirectUri2, "https://wso2.com?dummy1", "https://wso2.com?dummy1", "https://wso2.com"},
+                {redirectUri3, "regexp=(https://wso2.com|https://wso2.com\\?dummy1=1&dummy=2)",
+                        "https://wso2.com?dummy1=1&dummy=2", "https://wso2.com/?dummy1=1&dummy=2"}
         };
     }
 
     @Test(dataProvider = "redirectUriWithQueryParamsProvider")
-    public void registerApplicationTestWithRedirectURls(List<String> redirectUri, String callback) throws Exception {
+    public void registerApplicationTestWithRedirectURls(List<String> redirectUri, String callback, String validCallback,
+                                                        String invalidCallback) throws Exception {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
@@ -620,7 +626,15 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         Application application = dcrmService.registerApplication(applicationRegistrationRequest);
         assertEquals(application.getClientName(), dummyClientName);
-        assertEquals(application.getRedirectUris().get(0), callback);
+        if (redirectUri.size() > 1) {
+            String regexp = application.getRedirectUris().get(0)
+                    .substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
+            assertTrue(validCallback.matches(regexp));
+            assertFalse(invalidCallback.matches(regexp));
+        } else {
+            assertEquals(application.getRedirectUris().get(0), validCallback);
+            assertNotEquals(application.getRedirectUris().get(0), invalidCallback);
+        }
     }
 
 }
