@@ -522,7 +522,7 @@ public class CibaAuthRequestValidator {
 
         if (currentTimeInMillis + timeStampSkewMillis < notBeforeTimeMillis) {
             if (log.isDebugEnabled()) {
-                log.error("JSON Web Token is used before Not_Before_Time." +
+                log.debug("JSON Web Token is used before Not_Before_Time." +
                         ", Not Before Time(ms) : " + notBeforeTimeMillis +
                         ", TimeStamp Skew : " + timeStampSkewMillis +
                         ", Current Time : " + currentTimeInMillis + ". JWT Rejected.");
@@ -633,7 +633,7 @@ public class CibaAuthRequestValidator {
         // Obtain (sub) from id_token_hint
         try {
             if (log.isDebugEnabled()) {
-                log.info("Extracting 'sub' from this id_token_hint " + idTokenHint);
+                log.debug("Extracting 'sub' from this id_token_hint " + idTokenHint);
             }
             SignedJWT signedJWT = SignedJWT.parse(idTokenHint);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();

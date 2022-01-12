@@ -50,7 +50,9 @@ public class DCRMUtils {
         }
 
         if (IdentityUtil.isBlank(redirectUri)) {
-            log.error("The redirection URI is either null or blank.");
+            if (log.isDebugEnabled()) {
+                log.debug("The redirection URI is either null or blank.");
+            }
             return false;
         }
 

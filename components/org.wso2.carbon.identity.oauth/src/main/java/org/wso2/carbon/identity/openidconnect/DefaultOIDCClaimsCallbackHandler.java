@@ -86,8 +86,10 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             Map<String, Object> userClaimsInOIDCDialect = getUserClaimsInOIDCDialect(tokenReqMessageContext);
             return setClaimsToJwtClaimSet(jwtClaimsSetBuilder, userClaimsInOIDCDialect);
         } catch (OAuthSystemException e) {
-            log.error("Error occurred while adding claims of user: " + tokenReqMessageContext.getAuthorizedUser() +
-                    " to the JWTClaimSet used to build the id_token.", e);
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while adding claims of user: " + tokenReqMessageContext.getAuthorizedUser() +
+                        " to the JWTClaimSet used to build the id_token.", e);
+            }
         }
         return null;
     }

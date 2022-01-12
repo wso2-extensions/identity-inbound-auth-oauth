@@ -86,6 +86,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
@@ -1935,7 +1936,9 @@ public class OAuth2AuthzEndpoint {
             try {
                 params.setMaxAge(Long.parseLong(maxAgeParam));
             } catch (NumberFormatException ex) {
-                log.error("Invalid max_age parameter: '" + maxAgeParam + "' sent in the authorization request.");
+                if (log.isDebugEnabled()) {
+                    log.debug("Invalid max_age parameter: '" + maxAgeParam + "' sent in the authorization request.");
+                }
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     Map<String, Object> logParams = new HashMap<>();
                     logParams.put("clientId", params.getClientId());
@@ -2139,6 +2142,12 @@ public class OAuth2AuthzEndpoint {
 
         try {
             return OAuth2Util.getServiceProvider(clientId);
+        } catch (IdentityOAuth2ClientException e) {
+            String msg = "Couldn't retrieve Service Provider for clientId: " + clientId;
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
+            throw new OAuthSystemException(msg, e);
         } catch (IdentityOAuth2Exception e) {
             String msg = "Couldn't retrieve Service Provider for clientId: " + clientId;
             log.error(msg, e);
@@ -2679,7 +2688,9 @@ public class OAuth2AuthzEndpoint {
             }
         } catch (ParseException e) {
             String msg = "Error while getting clientId from the IdTokenHint.";
-            log.error(msg, e);
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                         OAuthConstants.LogConstants.FAILED, "System error occurred.", "validate-id-token-hint", null);
@@ -2814,7 +2825,9 @@ public class OAuth2AuthzEndpoint {
     private boolean isIdTokenValidationFailed(String idTokenHint) {
 
         if (!OAuth2Util.validateIdToken(idTokenHint)) {
-            log.error("ID token signature validation failed.");
+            if (log.isDebugEnabled()) {
+                log.debug("ID token signature validation failed for the IDTokenHint: " + idTokenHint);
+            }
             return true;
         }
         return false;
