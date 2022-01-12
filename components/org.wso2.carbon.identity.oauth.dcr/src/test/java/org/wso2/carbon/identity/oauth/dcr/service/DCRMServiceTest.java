@@ -581,9 +581,9 @@ public class DCRMServiceTest extends PowerMockTestCase {
         redirectUriList3.add("https://wso2.com");
         redirectUriList3.add("https://wso2.com?dummy1=1&dummy=2");
         return new Object[][]{
-                {redirectUri1, "https://wso2.com", "https://wso2.com", "https://wso2.com?dummy1"},
-                {redirectUri2, "https://wso2.com?dummy1", "https://wso2.com?dummy1", "https://wso2.com"},
-                {redirectUri3, "regexp=(https://wso2.com|https://wso2.com\\?dummy1=1&dummy=2)",
+                {redirectUriList1, "https://wso2.com", "https://wso2.com", "https://wso2.com?dummy1"},
+                {redirectUriList2, "https://wso2.com?dummy1", "https://wso2.com?dummy1", "https://wso2.com"},
+                {redirectUriList3, "regexp=(https://wso2.com|https://wso2.com\\?dummy1=1&dummy=2)",
                         "https://wso2.com?dummy1=1&dummy=2", "https://wso2.com/?dummy1=1&dummy=2"}
         };
     }
