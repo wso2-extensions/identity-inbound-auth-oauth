@@ -139,15 +139,10 @@ public class OAuth2ScopeService {
         try {
             OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
             tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-        } catch (IdentityOAuth2Exception e) {
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             log.error("Error while getting oauth app for client Id: " + clientId, e);
             throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
                     ERROR_CODE_FAILED_TO_GET_ALL_SCOPES, e);
-        } catch (InvalidOAuthClientException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error while getting oauth app for client Id: " + clientId, e);
-            }
-            return null;
         }
         int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
         return getTenantScopes(startIndex, count, includeOIDCScopes, requestedScopes, tenantId);
