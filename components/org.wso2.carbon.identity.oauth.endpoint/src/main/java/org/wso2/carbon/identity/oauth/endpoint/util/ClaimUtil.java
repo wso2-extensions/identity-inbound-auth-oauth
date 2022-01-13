@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoEndpointConfig;
@@ -208,6 +209,11 @@ public class ClaimUtil {
                     log.debug("Subject claim(sub) value: " + subjectClaimValue + " set in returned claims.");
                 }
                 mappedAppClaims.put(OAuth2Util.SUB, subjectClaimValue);
+            } catch (InvalidOAuthClientException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug(" Error while retrieving App information with provided client id.", e);
+                }
+                throw new IdentityOAuth2Exception(e.getMessage());
             } catch (Exception e) {
                 String authorizedUserName = tokenResponse.getAuthorizedUser();
                 if (e instanceof UserStoreException) {

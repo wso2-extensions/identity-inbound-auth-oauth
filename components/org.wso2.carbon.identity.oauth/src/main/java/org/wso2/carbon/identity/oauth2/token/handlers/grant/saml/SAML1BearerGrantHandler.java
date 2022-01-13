@@ -176,14 +176,18 @@ public class SAML1BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             // Validating for multiple assertions
             NodeList assertionList = samlObject.getDOM().getElementsByTagNameNS(SAMLConstants.SAML1_NS, "Assertion");
             if (assertionList.getLength() > 0) {
-                log.error("Invalid schema for SAML Assertion. Nested assertions detected.");
+                if (log.isDebugEnabled()) {
+                    log.debug("Invalid schema for SAML Assertion. Nested assertions detected.");
+                }
                 return false;
             }
 
             if (samlObject instanceof Assertion) {
                 assertion = (Assertion) samlObject;
             } else {
-                log.error("Only Assertion objects are validated in SAML1Bearer Grant Type");
+                if (log.isDebugEnabled()) {
+                    log.debug("Only Assertion objects are validated in SAML1Bearer Grant Type");
+                }
                 return false;
             }
         } catch (IdentityUnmarshallingException e) {

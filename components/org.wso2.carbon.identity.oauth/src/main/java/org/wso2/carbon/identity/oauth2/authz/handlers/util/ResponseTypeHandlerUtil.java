@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -129,7 +130,9 @@ public class ResponseTypeHandlerUtil {
         } catch (InvalidOAuthClientException e) {
             String errorMsg = "Error when instantiating the OAuthIssuer for service provider app with client Id: " +
                     consumerKey + ". Defaulting to OAuthIssuerImpl";
-            log.error(errorMsg, e);
+            if (log.isDebugEnabled()) {
+                log.debug(errorMsg, e);
+            }
             oauthTokenIssuer = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
         }
         return generateAccessToken(oauthAuthzMsgCtx, cacheEnabled, oauthTokenIssuer);
@@ -990,7 +993,12 @@ public class ResponseTypeHandlerUtil {
         if (revocationResponseDTO.isError()) {
             String msg = "Error while revoking tokens for clientId:" + clientId +
                     " Error Message:" + revocationResponseDTO.getErrorMsg();
-            log.error(msg);
+            if (revocationResponseDTO.getErrorCode().equals(OAuth2ErrorCodes.SERVER_ERROR)) {
+                log.error(msg);
+            }
+            if (log.isDebugEnabled()) {
+                log.debug(msg);
+            }
             throw new IdentityOAuth2Exception(msg);
         }
     }

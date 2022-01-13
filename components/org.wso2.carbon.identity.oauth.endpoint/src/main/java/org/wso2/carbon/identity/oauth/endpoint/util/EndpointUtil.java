@@ -1276,8 +1276,13 @@ public class EndpointUtil {
         try {
             OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
             return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (IdentityOAuth2Exception e) {
             log.error("Error while getting oauth app for client Id: " + clientId, e);
+            return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        } catch (InvalidOAuthClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while getting oauth app for client Id: " + clientId, e);
+            }
             return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
     }

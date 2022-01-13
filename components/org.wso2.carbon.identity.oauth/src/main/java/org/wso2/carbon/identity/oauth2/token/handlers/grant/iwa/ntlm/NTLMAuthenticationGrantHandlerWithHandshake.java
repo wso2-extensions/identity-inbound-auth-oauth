@@ -112,7 +112,9 @@ public class NTLMAuthenticationGrantHandlerWithHandshake extends AbstractAuthori
                 tokReqMsgCtx.setAuthorizedUser(OAuth2Util.getUserFromUserName(resourceOwnerUserName));
                 return true;
             } else {
-                log.error("Unknown NTLM token, Type " + tokenType + ":" + token);
+                if (log.isDebugEnabled()) {
+                    log.debug("Unknown NTLM token, Type " + tokenType + ":" + token);
+                }
                 return false;
             }
 

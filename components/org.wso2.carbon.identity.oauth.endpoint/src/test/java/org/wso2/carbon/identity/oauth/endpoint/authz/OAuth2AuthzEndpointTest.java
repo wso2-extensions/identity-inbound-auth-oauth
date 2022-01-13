@@ -88,6 +88,7 @@ import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
@@ -1654,7 +1655,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         return new Object[][]{
                 {CLIENT_ID_VALUE, null},
-                {CLIENT_ID_VALUE, new IdentityOAuth2Exception("Error")},
+                {CLIENT_ID_VALUE, new IdentityApplicationManagementException("Error")},
+                {CLIENT_ID_VALUE, new IdentityOAuth2ClientException("Error")},
                 {"invalidId", null},
         };
     }
@@ -1681,8 +1683,14 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
 
-            if (e instanceof IdentityOAuth2Exception) {
+            if (e instanceof IdentityOAuth2ClientException) {
                 when(tokenPersistenceProcessor.getPreprocessedClientSecret(anyString())).thenThrow(e);
+            }
+
+            if (e instanceof IdentityApplicationManagementException) {
+                ApplicationManagementService appMgtService = mock(ApplicationManagementService.class);
+                OAuth2ServiceComponentHolder.setApplicationMgtService(appMgtService);
+                when(appMgtService.getServiceProviderByClientId(anyString(), any(), anyString())).thenThrow(e);
             }
             try {
                 ServiceProvider result = (ServiceProvider) getServiceProvider.invoke(authzEndpointObject, clientId);
@@ -1692,6 +1700,31 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                     fail("Unexpected Exception");
                 }
             }
+        }
+    }
+
+    @DataProvider(name = "provideHandleMaxAgeParameterData")
+    public Object[][] provideHandleMaxAgeParameterData() {
+
+        return new Object[][]{
+                {"invalidValue", true}
+        };
+    }
+
+    @Test(dataProvider = "provideHandleMaxAgeParameterData")
+    public void testHandleMaxAgeParameter(String value, Boolean state) throws Exception {
+        Method handleMaxAgeParameter =
+                authzEndpointObject.getClass().getDeclaredMethod("handleMaxAgeParameter",
+                        OAuthAuthzRequest.class, OAuth2Parameters.class);
+        handleMaxAgeParameter.setAccessible(true);
+
+        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+        when(oAuthAuthzRequest.getParam(OAuthConstants.OIDCClaims.MAX_AGE)).thenReturn(value);
+
+        try {
+            handleMaxAgeParameter.invoke(authzEndpointObject, oAuthAuthzRequest, oAuth2Parameters);
+        } catch (Exception e1) {
+            assertTrue(state);
         }
     }
 
