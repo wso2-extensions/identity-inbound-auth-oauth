@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
+import org.wso2.carbon.identity.oauth.dcr.util.DCRMUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -1056,24 +1057,26 @@ public class DCRMServiceTest extends PowerMockTestCase {
     @DataProvider(name = "redirectUriWithQueryParamsProvider")
     public Object[][] getRedirectUrisWithQueryParams() {
 
-        List<String> redirectUriList1 = new ArrayList<>();
-        redirectUriList1.add("https://wso2.com");
-        List<String> redirectUriList2 = new ArrayList<>();
-        redirectUriList2.add("https://wso2.com?dummy1");
-        List<String> redirectUriList3 = new ArrayList<>();
-        redirectUriList3.add("https://wso2.com");
-        redirectUriList3.add("https://wso2.com?dummy1=1&dummy=2");
+        List<String> redirectUriList = new ArrayList<>();
+        redirectUriList.add("https://wso2.com");
+        redirectUriList.add("https://wso2.com?dummy1");
+        redirectUriList.add("https://wso2.com?dummy1=1&dummy=2");
+        List<String> validCallbackList = new ArrayList<>();
+        validCallbackList.add("https://wso2.com");
+        validCallbackList.add("https://wso2.com?dummy1");
+        validCallbackList.add("https://wso2.com?dummy1=1&dummy=2");
+        List<String> invalidCallbackList = new ArrayList<>();
+        invalidCallbackList.add("https://wso2.com/");
+        invalidCallbackList.add("https://wso2.com/?dummy1");
+        invalidCallbackList.add("https://wso2.com/?dummy1=1&dummy=2");
         return new Object[][]{
-                {redirectUriList1, "https://wso2.com", "https://wso2.com", "https://wso2.com?dummy1"},
-                {redirectUriList2, "https://wso2.com?dummy1", "https://wso2.com?dummy1", "https://wso2.com"},
-                {redirectUriList3, "regexp=(https://wso2.com|https://wso2.com\\?dummy1=1&dummy=2)",
-                        "https://wso2.com?dummy1=1&dummy=2", "https://wso2.com/?dummy1=1&dummy=2"}
+                {redirectUriList, validCallbackList, invalidCallbackList}
         };
     }
 
     @Test(dataProvider = "redirectUriWithQueryParamsProvider")
-    public void registerApplicationTestWithRedirectURls(List<String> redirectUri, String callback, String validCallback,
-                                                        String invalidCallback) throws Exception {
+    public void registerApplicationTestWithRedirectURls(List<String> redirectUri, List<String> validCallbackList,
+                                                        List<String> invalidCallbackList) throws Exception {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
@@ -1100,7 +1103,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         oAuthConsumerApp.setGrantTypes(grantType);
         oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
-        oAuthConsumerApp.setCallbackUrl(callback);
+        oAuthConsumerApp.setCallbackUrl(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + createRegexPattern(redirectUri));
 
         when(mockOAuthAdminService
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
@@ -1109,15 +1112,31 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         Application application = dcrmService.registerApplication(applicationRegistrationRequest);
         assertEquals(application.getClientName(), dummyClientName);
-        if (redirectUri.size() > 1) {
-            String regexp = application.getRedirectUris().get(0)
-                    .substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
+        String regexp = application.getRedirectUris().get(0)
+                .substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
+        for (String validCallback : validCallbackList) {
             assertTrue(validCallback.matches(regexp));
+        }
+        for (String invalidCallback : invalidCallbackList) {
             assertFalse(invalidCallback.matches(regexp));
-        } else {
-            assertEquals(application.getRedirectUris().get(0), validCallback);
-            assertNotEquals(application.getRedirectUris().get(0), invalidCallback);
         }
     }
 
+    private String createRegexPattern(List<String> redirectURIs) throws DCRMException {
+
+        String regexPattern = "";
+        List<String> escapedUrls = new ArrayList<>();
+        for (String redirectURI : redirectURIs) {
+            if (DCRMUtils.isRedirectionUriValid(redirectURI)) {
+                escapedUrls.add(redirectURI.replaceFirst("\\?", "\\\\?"));
+            } else {
+                throw DCRMUtils.generateClientException(
+                        DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_REDIRECT_URI, redirectURI);
+            }
+        }
+        if (!escapedUrls.isEmpty()) {
+            regexPattern = ("(".concat(StringUtils.join(escapedUrls, "|"))).concat(")");
+        }
+        return regexPattern;
+    }
 }
