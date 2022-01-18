@@ -640,7 +640,7 @@ public class DCRMService {
                 grantTypes.contains(DCRConstants.GrantTypes.IMPLICIT);
     }
 
-    private String createRegexPattern(List<String> redirectURIs) throws DCRMException {
+    protected String createRegexPattern(List<String> redirectURIs) throws DCRMException {
 
         String regexPattern = "";
         List<String> escapedUrls = new ArrayList<>();
