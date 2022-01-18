@@ -1107,7 +1107,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         oAuthConsumerApp.setGrantTypes(grantType);
         oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
-        oAuthConsumerApp.setCallbackUrl(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + createRegexPattern(redirectUri));
+        oAuthConsumerApp.setCallbackUrl(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX +
+                dcrmService.createRegexPattern(redirectUri));
 
         when(mockOAuthAdminService
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
@@ -1124,23 +1125,5 @@ public class DCRMServiceTest extends PowerMockTestCase {
         for (String invalidCallback : invalidCallbackList) {
             assertFalse(invalidCallback.matches(regexp));
         }
-    }
-
-    private String createRegexPattern(List<String> redirectURIs) throws DCRMException {
-
-        String regexPattern = "";
-        List<String> escapedUrls = new ArrayList<>();
-        for (String redirectURI : redirectURIs) {
-            if (DCRMUtils.isRedirectionUriValid(redirectURI)) {
-                escapedUrls.add(redirectURI.replaceFirst("\\?", "\\\\?"));
-            } else {
-                throw DCRMUtils.generateClientException(
-                        DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_REDIRECT_URI, redirectURI);
-            }
-        }
-        if (!escapedUrls.isEmpty()) {
-            regexPattern = ("(".concat(StringUtils.join(escapedUrls, "|"))).concat(")");
-        }
-        return regexPattern;
     }
 }
