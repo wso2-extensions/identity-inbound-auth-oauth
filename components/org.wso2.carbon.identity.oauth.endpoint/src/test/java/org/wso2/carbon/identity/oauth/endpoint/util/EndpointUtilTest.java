@@ -27,6 +27,7 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
@@ -63,6 +64,7 @@ import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
@@ -238,7 +240,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         OAuth2Parameters params = new OAuth2Parameters();
         params.setApplicationName("TestApplication");
         params.setClientId("testClientId");
-        params.setScopes(new HashSet<String>(Arrays.asList("scope1", "scope2")));
+        params.setScopes(new HashSet<String>(Arrays.asList("scope1", "scope2", "internal_login", "SYSTEM")));
 
         return new Object[][]{
                 {params, true, true, false, "QueryString", true},
@@ -295,6 +297,11 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
         EndpointUtil.setOAuthAdminService(mockedOAuthAdminService);
         when(mockedOAuthAdminService.getScopeNames()).thenReturn(new String[0]);
+        JDBCPermissionBasedInternalScopeValidator scopeValidator = mock(
+                JDBCPermissionBasedInternalScopeValidator.class);
+        when(scopeValidator.validateScope(any(), any(), anyString())).thenReturn(new String[] {"internal_login"});
+        PowerMockito.whenNew(JDBCPermissionBasedInternalScopeValidator.class).withNoArguments()
+                .thenReturn(scopeValidator);
 
         String consentUrl;
         try {
@@ -310,6 +317,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
             Assert.assertTrue(consentUrl.contains(URLEncoder.encode("TestApplication", "ISO-8859-1")),
                     "application parameter value is not found in url");
             Assert.assertTrue(consentUrl.contains("scope2"), "scope parameter value is not found in url");
+            Assert.assertTrue(consentUrl.contains("internal_login"), "internal_login scope parameter " +
+                    "value is not found in url");
             if (queryString != null && cacheEntryExists) {
                 Assert.assertTrue(consentUrl.contains(queryString), "spQueryParams value is not found in url");
             }

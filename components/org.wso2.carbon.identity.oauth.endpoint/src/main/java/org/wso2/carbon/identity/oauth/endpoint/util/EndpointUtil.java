@@ -976,8 +976,12 @@ public class EndpointUtil {
                             new JDBCPermissionBasedInternalScopeValidator();
                     String[] validatedScope = scopeValidator.validateScope(requestedScopes, user, params.getClientId());
 
-                    // Add validated internal scopes to the allowedOAuthScopes list.
-                    allowedOAuthScopes.addAll(Arrays.asList(validatedScope));
+                    // Filter out requested scopes from the validated scope array.
+                    for (String scope : requestedScopes) {
+                        if (ArrayUtils.contains(validatedScope, scope)) {
+                            allowedOAuthScopes.add(scope);
+                        }
+                    }
                 }
                 params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
                 consentRequiredScopes = String.join(" ", allowedOAuthScopes).trim();
