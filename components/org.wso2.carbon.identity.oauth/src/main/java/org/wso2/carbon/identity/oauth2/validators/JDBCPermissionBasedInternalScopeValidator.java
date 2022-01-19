@@ -79,7 +79,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
 
     /**
      * Execute Internal scope Validation.
-     * @param tokReqMsgCtx
+     * @param tokReqMsgCtx Oauth token request message.
      * @return array of validated scopes.
      */
     public String[] validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) {
@@ -108,7 +108,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
 
     /**
      * Execute Internal Scope Validation.
-     * @param authzReqMessageContext
+     * @param authzReqMessageContext OAuth authorization request message.
      * @return array of validated scopes.
      */
     public String[] validateScope(OAuthAuthzReqMessageContext authzReqMessageContext) {
@@ -141,8 +141,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
     /**
      * Execute Internal Scope Validation.
      * @param requestedScopes Array of scopes that needs to be validated.
-     * @param authenticatedUser
-     * @param clientId
+     * @param authenticatedUser Authenticated user.
+     * @param clientId ID of the client.
      * @return Array of validated scopes.
      */
     public String[] validateScope(String[] requestedScopes, AuthenticatedUser authenticatedUser, String clientId) {
