@@ -120,22 +120,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
         if (ArrayUtils.isEmpty(requestedScopes)) {
             return requestedScopes;
         }
-        List<Scope> userAllowedScopes =
-                getUserAllowedScopes(authzReqMessageContext.getAuthorizationReqDTO().getUser(), requestedScopes,
-                        authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey());
-
-        String[] userAllowedScopesAsArray = getScopes(userAllowedScopes);
-        if (ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
-            return userAllowedScopesAsArray;
-        }
-
-        List<String> scopesToRespond = new ArrayList<>();
-        for (String scope : requestedScopes) {
-            if (ArrayUtils.contains(userAllowedScopesAsArray, scope)) {
-                scopesToRespond.add(scope);
-            }
-        }
-        return scopesToRespond.toArray(new String[0]);
+        return validateScope(requestedScopes, authzReqMessageContext.getAuthorizationReqDTO().getUser(),
+                authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey());
     }
 
     /**
