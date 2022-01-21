@@ -848,7 +848,7 @@
 
         <!--SAML Common Util Version-->
         <saml.common.util.version>1.0.3</saml.common.util.version>
-        <saml.common.util.version.range>[1.0.0,2.0.0)</saml.common.util.version.range>
+        <saml.common.util.version.range>[1.0.0,3.0.0)</saml.common.util.version.range>
 
         <!-- Commons -->
         <commons-lang.wso2.version>2.6.0.wso2v1</commons-lang.wso2.version>
