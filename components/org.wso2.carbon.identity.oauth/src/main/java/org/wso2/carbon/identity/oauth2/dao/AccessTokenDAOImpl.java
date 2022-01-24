@@ -304,7 +304,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             // SQLIntegrityConstraintViolationException or SQLException.
             if (StringUtils.containsIgnoreCase(e.getMessage(), "CON_APP_KEY") || (e.getCause() != null &&
                     StringUtils.containsIgnoreCase(e.getCause().getMessage(), "CON_APP_KEY"))
-                    || (e.getCause().getCause() != null &&
+                    || (e.getCause() != null && e.getCause().getCause() != null &&
                     StringUtils.containsIgnoreCase(e.getCause().getCause().getMessage(), "CON_APP_KEY"))) {
                 if (retryAttemptCounter >= getTokenPersistRetryCount()) {
                     log.error("'CON_APP_KEY' constrain violation retry count exceeds above the maximum count - " +
