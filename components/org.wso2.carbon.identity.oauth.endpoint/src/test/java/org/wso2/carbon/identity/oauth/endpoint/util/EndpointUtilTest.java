@@ -19,7 +19,10 @@ package org.wso2.carbon.identity.oauth.endpoint.util;
 
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.collections.map.HashedMap;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
@@ -27,6 +30,7 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
@@ -60,9 +64,11 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
@@ -72,12 +78,14 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
@@ -90,12 +98,14 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyMap;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.doAnswer;
+import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.powermock.api.support.membermodification.MemberMatcher.method;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -103,7 +113,7 @@ import static org.testng.Assert.assertTrue;
 @PrepareForTest({SessionDataCache.class, OAuthServerConfiguration.class, OAuth2Util.class, IdentityUtil.class,
         FrameworkUtils.class, OAuthASResponse.class, OAuthResponse.class, PrivilegedCarbonContext.class,
         ServerConfiguration.class, ServiceURLBuilder.class, IdentityTenantUtil.class, EndpointUtil.class,
-        FileBasedConfigurationBuilder.class, LoggerUtils.class})
+        FileBasedConfigurationBuilder.class, LoggerUtils.class, JDBCPermissionBasedInternalScopeValidator.class})
 public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
@@ -238,7 +248,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         OAuth2Parameters params = new OAuth2Parameters();
         params.setApplicationName("TestApplication");
         params.setClientId("testClientId");
-        params.setScopes(new HashSet<String>(Arrays.asList("scope1", "scope2")));
+        params.setScopes(new HashSet<String>(Arrays.asList("scope1", "scope2", "internal_login", "SYSTEM")));
 
         return new Object[][]{
                 {params, true, true, false, "QueryString", true},
@@ -295,6 +305,16 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
         EndpointUtil.setOAuthAdminService(mockedOAuthAdminService);
         when(mockedOAuthAdminService.getScopeNames()).thenReturn(new String[0]);
+        JDBCPermissionBasedInternalScopeValidator scopeValidatorSpy = PowerMockito.spy(
+                new JDBCPermissionBasedInternalScopeValidator());
+        doNothing().when(scopeValidatorSpy, method(JDBCPermissionBasedInternalScopeValidator.class,
+                "endTenantFlow")).withNoArguments();
+        when(scopeValidatorSpy, method(JDBCPermissionBasedInternalScopeValidator.class,
+                "getUserAllowedScopes", AuthenticatedUser.class, String[].class, String.class))
+                .withArguments(any(AuthenticatedUser.class), any(), anyString())
+                .thenReturn(getScopeList());
+        PowerMockito.whenNew(JDBCPermissionBasedInternalScopeValidator.class).withNoArguments()
+                .thenReturn(scopeValidatorSpy);
 
         String consentUrl;
         try {
@@ -309,7 +329,18 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                     "loggedInUser parameter value is not found in url");
             Assert.assertTrue(consentUrl.contains(URLEncoder.encode("TestApplication", "ISO-8859-1")),
                     "application parameter value is not found in url");
-            Assert.assertTrue(consentUrl.contains("scope2"), "scope parameter value is not found in url");
+            List<NameValuePair> nameValuePairList = URLEncodedUtils.parse(consentUrl, StandardCharsets.UTF_8);
+            Optional<NameValuePair> optionalScope = nameValuePairList.stream().filter(nameValuePair ->
+                    nameValuePair.getName().equals("scope")).findAny();
+            Assert.assertTrue(optionalScope.isPresent());
+            NameValuePair scopeNameValuePair = optionalScope.get();
+            String[] scopeArray = scopeNameValuePair.getValue().split(" ");
+            Assert.assertTrue(ArrayUtils.contains(scopeArray, "scope2"), "scope parameter value " +
+                    "is not found in url");
+            Assert.assertTrue(ArrayUtils.contains(scopeArray, "internal_login"), "internal_login " +
+                    "scope parameter value is not found in url");
+            Assert.assertFalse(ArrayUtils.contains(scopeArray, "SYSTEM"), "SYSTEM scope" +
+                    "parameter should not contain in the url.");
             if (queryString != null && cacheEntryExists) {
                 Assert.assertTrue(consentUrl.contains(queryString), "spQueryParams value is not found in url");
             }
@@ -723,5 +754,17 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 thenReturn(USER_INFO_CLAIM_RETRIEVER);
         when(mockedOAuthServerConfiguration.getOpenIDConnectUserInfoEndpointClaimDialect()).
                 thenReturn(USER_INFO_CLAIM_DIALECT);
+    }
+
+    private List<Scope> getScopeList() {
+        List<Scope> scopeList = new ArrayList<>();
+        // Add some sample scopes.
+        scopeList.add(new Scope("internal_login", "Login", "description1"));
+        scopeList.add(new Scope("internal_config_mgt_update", "Update Configs", "description2"));
+        scopeList.add(new Scope("internal_config_mgt_update", "Update Email Configs",
+                "description3"));
+        scopeList.add(new Scope("internal_user_mgt_update", "Update Users", "description4"));
+        scopeList.add(new Scope("internal_list_tenants", "List Tenant", "description5"));
+        return scopeList;
     }
 }

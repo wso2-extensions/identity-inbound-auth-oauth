@@ -44,6 +44,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+
 /**
  * Utility functions related to OAuth 2 scopes.
  */
@@ -320,5 +323,25 @@ public class Oauth2ScopeUtils {
             return Boolean.parseBoolean(property);
         }
         return true;
+    }
+
+    /**
+     * Iterate through the scopes array to filter out the internal scopes.
+     * @param scopes String array of scopes.
+     * @return String array with internal scopes. Return an empty array if there's not any internal scopes in the
+     * given scopes array.
+     */
+    public static String[] getRequestedScopes(String[] scopes) {
+
+        List<String> requestedScopes = new ArrayList<>();
+        if (ArrayUtils.isEmpty(scopes)) {
+            return ArrayUtils.EMPTY_STRING_ARRAY;
+        }
+        for (String scope : scopes) {
+            if (scope.startsWith(INTERNAL_SCOPE_PREFIX) || scope.equalsIgnoreCase(SYSTEM_SCOPE)) {
+                requestedScopes.add(scope);
+            }
+        }
+        return requestedScopes.toArray(new String[0]);
     }
 }

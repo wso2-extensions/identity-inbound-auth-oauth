@@ -84,6 +84,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
+import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
@@ -963,6 +965,24 @@ public class EndpointUtil {
                 }
             }
             if (CollectionUtils.isNotEmpty(allowedOAuthScopes)) {
+                // Filter out internal scopes to be validated.
+                String[] requestedScopes = Oauth2ScopeUtils.getRequestedScopes(
+                        allowedOAuthScopes.toArray(new String[0]));
+                if (ArrayUtils.isNotEmpty(requestedScopes)) {
+                    // Remove the filtered internal scopes from the allowedOAuthScopes list.
+                    allowedOAuthScopes.removeAll(Arrays.asList(requestedScopes));
+
+                    JDBCPermissionBasedInternalScopeValidator scopeValidator =
+                            new JDBCPermissionBasedInternalScopeValidator();
+                    String[] validatedScope = scopeValidator.validateScope(requestedScopes, user, params.getClientId());
+
+                    // Filter out requested scopes from the validated scope array.
+                    for (String scope : requestedScopes) {
+                        if (ArrayUtils.contains(validatedScope, scope)) {
+                            allowedOAuthScopes.add(scope);
+                        }
+                    }
+                }
                 params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
                 consentRequiredScopes = String.join(" ", allowedOAuthScopes).trim();
             }
