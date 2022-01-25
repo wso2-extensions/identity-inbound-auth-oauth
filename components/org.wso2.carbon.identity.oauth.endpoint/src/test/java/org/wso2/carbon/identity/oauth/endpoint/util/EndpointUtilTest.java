@@ -248,7 +248,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         OAuth2Parameters params = new OAuth2Parameters();
         params.setApplicationName("TestApplication");
         params.setClientId("testClientId");
-        params.setScopes(new HashSet<String>(Arrays.asList("scope1", "scope2", "internal_login", "SYSTEM")));
+        params.setScopes(new HashSet<>(Arrays.asList("scope1", "scope2", "internal_login", "SYSTEM",
+                "internal_list_tenants")));
 
         return new Object[][]{
                 {params, true, true, false, "QueryString", true},
@@ -337,8 +338,10 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
             String[] scopeArray = scopeNameValuePair.getValue().split(" ");
             Assert.assertTrue(ArrayUtils.contains(scopeArray, "scope2"), "scope parameter value " +
                     "is not found in url");
-            Assert.assertTrue(ArrayUtils.contains(scopeArray, "internal_login"), "internal_login " +
-                    "scope parameter value is not found in url");
+            Assert.assertTrue(ArrayUtils.contains(scopeArray, "internal_list_tenants"),
+                    "internal_list_tenants parameter value is not found in url");
+            Assert.assertFalse(ArrayUtils.contains(scopeArray, "internal_login"), "internal_login " +
+                    "scope parameter value should not found in url");
             Assert.assertFalse(ArrayUtils.contains(scopeArray, "SYSTEM"), "SYSTEM scope" +
                     "parameter should not contain in the url.");
             if (queryString != null && cacheEntryExists) {
