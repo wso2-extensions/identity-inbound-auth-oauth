@@ -965,7 +965,7 @@ public class EndpointUtil {
                 }
             }
             if (CollectionUtils.isNotEmpty(allowedOAuthScopes)) {
-                // Remove internal_login scope since it is only applicable to any user in the system.
+                // Remove internal_login scope since it is not relevant to the users.
                 allowedOAuthScopes.remove("internal_login");
                 // Filter out internal scopes to be validated.
                 String[] requestedScopes = Oauth2ScopeUtils.getRequestedScopes(
