@@ -31,6 +31,8 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.oauth.Parameters;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -45,20 +47,12 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AUTH_TIME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AZP;
@@ -131,6 +125,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String acrValue = null;
         List<String> amrValues = Collections.emptyList();
 
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         // AuthorizationCode only available for authorization code grant type
         if (getAuthorizationCode(tokenReqMsgCtxt) != null) {
             AuthorizationGrantCacheEntry authzGrantCacheEntry =
@@ -143,6 +138,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 }
                 amrValues = authzGrantCacheEntry.getAmrList();
                 idpSessionKey = getIdpSessionKey(authzGrantCacheEntry);
+                //set essential claims
+                handleEssentialUserClaims(jwtClaimsSetBuilder,authzGrantCacheEntry.getEssentialClaims(),authorizedUser);
             }
         } else {
             amrValues = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getAuthenticationMethodReferences();
@@ -156,7 +153,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         List<String> audience = OAuth2Util.getOIDCAudience(clientId, oAuthAppDO);
 
-        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        //JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         jwtClaimsSetBuilder.issuer(idTokenIssuer);
         jwtClaimsSetBuilder.audience(audience);
         jwtClaimsSetBuilder.claim(AZP, clientId);
@@ -164,7 +161,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         jwtClaimsSetBuilder.issueTime(new Date(currentTimeInMillis));
         jwtClaimsSetBuilder.notBeforeTime(new Date(currentTimeInMillis));
         if (authTime != 0) {
-            jwtClaimsSetBuilder.claim(AUTH_TIME, authTime / 1000);
+            jwtClaimsSetBuilder.claim(AUTH_TIME, authTime );
         }
         if (nonceValue != null) {
             jwtClaimsSetBuilder.claim(NONCE, nonceValue);
@@ -193,8 +190,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (isUnsignedIDToken()) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
-
-
         return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO, getSigningTenantDomain(tokenReqMsgCtxt));
     }
 
@@ -239,8 +234,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
 
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        //set essential claims
+        handleEssentialUserClaimsi(jwtClaimsSetBuilder, authzReqMessageContext.getAuthorizationReqDTO().getEssentialClaims(), authorizedUser);
         jwtClaimsSetBuilder.issuer(issuer);
-
         // Set the audience
         List<String> audience = OAuth2Util.getOIDCAudience(clientId, oAuthAppDO);
         jwtClaimsSetBuilder.audience(audience);
@@ -251,7 +247,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         long authTime = getAuthTime(authzReqMessageContext);
         if (authTime != 0) {
-            jwtClaimsSetBuilder.claim(AUTH_TIME, authTime / 1000);
+            jwtClaimsSetBuilder.claim(AUTH_TIME, authTime );
         }
         if (nonceValue != null) {
             jwtClaimsSetBuilder.claim(OAuthConstants.OIDCClaims.NONCE, nonceValue);
@@ -273,7 +269,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 .addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(authzReqMessageContext));
         jwtClaimsSetBuilder.subject(subject);
         JWTClaimsSet jwtClaimsSet = handleCustomOIDCClaims(authzReqMessageContext, jwtClaimsSetBuilder);
-
         if (isUnsignedIDToken()) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
@@ -797,4 +792,45 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
         return idpSessionKey;
     }
+
+    private void handleEssentialUserClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder, String essentialClaims, AuthenticatedUser authorizedUser) {
+
+        Map<String, String> essentialClaimValueMap = OAuth2Util.getEssentialClaimValueMap(essentialClaims, OAuthConstants.ID_TOKEN);
+
+        for (Map.Entry<ClaimMapping, String> entry : authorizedUser.getUserAttributes().entrySet()) {
+            String key = entry.getKey().getLocalClaim().getClaimUri();
+            String value = entry.getValue();
+
+            String claimValue = essentialClaimValueMap.get(key);
+
+            if (claimValue != null) {//convert stringutil
+                if (claimValue.equals("true") || !(value.equals(claimValue) || value.contains(claimValue))) {
+                    jwtClaimsSetBuilder.claim(key, value);
+                } else {
+                    jwtClaimsSetBuilder.claim(key, claimValue);
+                }
+            }
+        }
+    }
+
+    private void handleEssentialUserClaimsi(JWTClaimsSet.Builder jwtClaimsSetBuilder, String essentialClaims, AuthenticatedUser authorizedUser) {
+        Map<String, String> essentialClaimValueMap = OAuth2Util.getEssentialClaimValueMap(essentialClaims, OAuthConstants.ID_TOKEN);
+
+
+        for (Map.Entry<ClaimMapping, String> entry : authorizedUser.getUserAttributes().entrySet()) {
+            String key = entry.getKey().getLocalClaim() != null ? entry.getKey().getLocalClaim().getClaimUri() : entry.getKey().getRemoteClaim().getClaimUri();
+            String value = entry.getValue();
+
+            String claimValue = essentialClaimValueMap.get(key);
+
+            if (claimValue != null) {
+                if (claimValue.equals("true") || !(value.equals(claimValue) || value.contains(claimValue))) {
+                    jwtClaimsSetBuilder.claim(key, value);
+                } else {
+                    jwtClaimsSetBuilder.claim(key, claimValue);
+                }
+            }
+        }
+    }
 }
+

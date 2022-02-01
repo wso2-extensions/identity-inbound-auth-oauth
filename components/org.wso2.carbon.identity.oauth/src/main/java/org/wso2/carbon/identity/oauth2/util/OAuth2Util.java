@@ -3085,7 +3085,89 @@ public class OAuth2Util {
         }
         return essentialClaimsList;
     }
+   /**private static Map<String, String> filterEssentialClaimJson(String essentialClaims, String claimType){
+        JSONObject jsonObjectClaims = new JSONObject(essentialClaims);
+        Map<String, String> claimValueMap = new HashMap<>();
+        if (jsonObjectClaims.toString().contains(claimType)) {
+            JSONObject newJSON = jsonObjectClaims.getJSONObject(claimType);
+            if (newJSON != null) {
+                Iterator<?> keys = newJSON.keys();
+                while (keys.hasNext()) {
+                    String key = (String) keys.next();
+                    if (!newJSON.isNull(key)) {
+                        String value = newJSON.get(key).toString();
+                        JSONObject jsonObjectValues = new JSONObject(value);
+                        Iterator<?> claimKeyValues = jsonObjectValues.keys();
+                        while (claimKeyValues.hasNext()) {
+                            String claimKey = (String) claimKeyValues.next();
+                            String claimValue = jsonObjectValues.get(claimKey).toString();
+                            claimValueMap.put(claimKey,claimValue);
+                        }
+                    }
+                }
+            }
+        }
+      return claimValueMap;
+    }*/
 
+    public static Map<String, String> getEssentialClaimValueMap(String essentialClaims, String claimType) {
+
+        JSONObject jsonObjectClaims = new JSONObject(essentialClaims);//change name
+        Map<String, String> claimValueMap = new HashMap<>();
+        if (jsonObjectClaims.toString().contains(claimType)) {//changecode
+            JSONObject newJSON = jsonObjectClaims.getJSONObject(claimType);
+            if (newJSON != null) {
+                Iterator<?> keys = newJSON.keys();
+                while (keys.hasNext()) {
+                    String key = (String) keys.next();
+                    if (!newJSON.isNull(key)) {
+                        String value = newJSON.get(key).toString();
+                        JSONObject jsonObjectValues = new JSONObject(value);
+                        Iterator<?> claimKeyValues = jsonObjectValues.keys();
+                        while (claimKeyValues.hasNext()) {
+                            String claimKey = (String) claimKeyValues.next();
+                            String claimValue = jsonObjectValues.get(claimKey).toString();
+                            if (claimKey.equals(OAuthConstants.OAuth20Params.VALUE)) {
+                                claimValueMap.put(key, claimValue);
+                            }
+                            if (Boolean.parseBoolean(claimValue) && claimKey.equals(OAuthConstants.OAuth20Params.ESSENTIAL)) {
+                                claimValueMap.put(key, claimValue);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return claimValueMap;
+    }
+
+    public static Map<String, String> getEssentialClaimsWithValues(String essentialClaims, String claimType) {
+
+        JSONObject jsonObjectClaims = new JSONObject(essentialClaims);
+        Map<String, String> claimValueMap = new HashMap<>();
+        if (jsonObjectClaims.toString().contains(claimType)) {
+            JSONObject newJSON = jsonObjectClaims.getJSONObject(claimType);
+            if (newJSON != null) {
+                Iterator<?> keys = newJSON.keys();
+                while (keys.hasNext()) {
+                    String key = (String) keys.next();
+                    if (!newJSON.isNull(key)) {
+                        String value = newJSON.get(key).toString();
+                        JSONObject jsonObjectValues = new JSONObject(value);
+                        Iterator<?> claimKeyValues = jsonObjectValues.keys();
+                        while (claimKeyValues.hasNext()) {
+                            String claimKey = (String) claimKeyValues.next();
+                            String claimValue = jsonObjectValues.get(claimKey).toString();
+                            if (claimKey.equals("value")) {
+                                claimValueMap.put(key, claimValue);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return claimValueMap;
+    }
     /**
      * Returns the domain name convert to upper case if the domain is not not empty, else return primary domain name.
      *

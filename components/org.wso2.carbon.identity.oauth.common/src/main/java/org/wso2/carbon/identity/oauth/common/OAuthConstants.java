@@ -233,6 +233,9 @@ public final class OAuthConstants {
         public static final String STATE = "state";
         public static final String RESPONSE_TYPE = "response_type";
         public static final String REQUEST = "request";
+        public static final String VALUE = "value";
+        public static final String VALUES = "values";
+
 
         private OAuth20Params() {
 
