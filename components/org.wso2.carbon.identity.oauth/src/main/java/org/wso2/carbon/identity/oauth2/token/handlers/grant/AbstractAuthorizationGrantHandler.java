@@ -56,6 +56,7 @@ import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -332,12 +333,17 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             throws IdentityOAuth2Exception {
 
         // Revoke the existing token and generate new access and refresh tokens.
+        if (OAuthServerConfiguration.getInstance().isInvokeTokenRevocationEventOnRenewal()) {
+            OAuthUtil.invokePreRevocationBySystemListeners(existingTokenBean, Collections.emptyMap());
+        }
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .updateAccessTokenState(existingTokenBean.getTokenId(), OAuthConstants.TokenStates
                         .TOKEN_STATE_REVOKED);
         clearExistingTokenFromCache(tokReqMsgCtx, existingTokenBean);
-
-        return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, null, oauthTokenIssuer);
+        if (OAuthServerConfiguration.getInstance().isInvokeTokenRevocationEventOnRenewal()) {
+            OAuthUtil.invokePostRevocationBySystemListeners(existingTokenBean, Collections.emptyMap());
+        }
+        return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean, oauthTokenIssuer);
     }
 
     private OAuth2AccessTokenRespDTO issueExistingAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
@@ -510,7 +516,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
             return newAccessToken;
         } catch (OAuthSystemException e) {
-            throw new IdentityOAuth2Exception("Error while generating access token");
+            throw new IdentityOAuth2Exception("Error while generating access token", e);
         }
     }
 
@@ -523,7 +529,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
             return refreshToken;
         } catch (OAuthSystemException e) {
-            throw new IdentityOAuth2Exception("Error while issueing refresh token");
+            throw new IdentityOAuth2Exception("Error while issuing refresh token", e);
         }
     }
 
@@ -663,10 +669,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         long expireTimeMillis;
         if (issueRefreshToken()) {
             // Consider both access and refresh expiry time
-            expireTimeMillis = OAuth2Util.getTokenExpireTimeMillis(existingAccessTokenDO);
+            expireTimeMillis = OAuth2Util.getTokenExpireTimeMillis(existingAccessTokenDO, false);
         } else {
             // Consider only access token expiry time
-            expireTimeMillis = OAuth2Util.getAccessTokenExpireMillis(existingAccessTokenDO);
+            expireTimeMillis = OAuth2Util.getAccessTokenExpireMillis(existingAccessTokenDO, false);
         }
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
@@ -850,6 +856,22 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private boolean isRefreshTokenValid(AccessTokenDO existingAccessTokenDO, long validityPeriod, String consumerKey) {
+
+        // A new token needs to be generated when isTokenRenewalPerRequestEnabled is set to true.
+        if (OAuthServerConfiguration.getInstance().isTokenRenewalPerRequestEnabled()) {
+            if (log.isDebugEnabled() && existingAccessTokenDO != null) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.REFRESH_TOKEN)) {
+                    log.debug("`RenewTokenPerRequest` property is enabled. Current refresh token(hashed): " +
+                            DigestUtils.sha256Hex(existingAccessTokenDO.getRefreshToken()) +
+                            " will be invalidated and new refresh token will be issued.");
+                } else {
+                    log.debug("`RenewTokenPerRequest` property is enabled. Current refresh token will be invalidated " +
+                            "and new refresh token will be issued.");
+                }
+            }
+            return false;
+        }
+
         if (isHashDisabled && existingAccessTokenDO != null) {
             long refreshTokenExpireTime = OAuth2Util.getRefreshTokenExpireTimeMillis(existingAccessTokenDO);
             if (TOKEN_STATE_ACTIVE.equals(existingAccessTokenDO.getTokenState())) {

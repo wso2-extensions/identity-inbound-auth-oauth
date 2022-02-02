@@ -194,7 +194,7 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         whenNew(TokenMgtDAO.class).withNoArguments().thenReturn(tokenMgtDAO);
         whenNew(AuthenticatedUser.class).withNoArguments().thenReturn(authenticatedUser);
         when(tokenMgtDAO.getAccessTokensForUser(authenticatedUser)).
-                thenThrow(new IdentityOAuth2Exception("Error occrued"));
+                thenThrow(new IdentityOAuth2Exception("Error occurred"));
 
         IdentityOathEventListener identityOathEventListener = new IdentityOathEventListener();
         assertTrue(identityOathEventListener.doPreSetUserClaimValue(username, claimUri, claimValue, profileName,
@@ -425,7 +425,7 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         when(tokenMgtDAO.retrieveAccessTokens(anyString(), any(AuthenticatedUser.class), anyString(),
                 anyBoolean())).thenReturn(accessTokens);
         when(tokenMgtDAO.retrieveLatestAccessToken(anyString(), any(AuthenticatedUser.class), anyString(), anyString()
-                , anyBoolean())).thenThrow(new IdentityOAuth2Exception("Error Occured"));
+                , anyBoolean())).thenThrow(new IdentityOAuth2Exception("Error occurred"));
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
 
         IdentityOathEventListener listener = new IdentityOathEventListener();

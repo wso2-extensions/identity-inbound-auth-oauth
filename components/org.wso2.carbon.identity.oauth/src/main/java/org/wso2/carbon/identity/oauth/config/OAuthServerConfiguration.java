@@ -57,6 +57,7 @@ import org.wso2.carbon.identity.oauth2.validators.grant.AuthorizationCodeGrantVa
 import org.wso2.carbon.identity.oauth2.validators.grant.ClientCredentialGrantValidator;
 import org.wso2.carbon.identity.oauth2.validators.grant.PasswordGrantValidator;
 import org.wso2.carbon.identity.oauth2.validators.grant.RefreshTokenGrantValidator;
+import org.wso2.carbon.identity.openidconnect.CIBARequestObjectValidatorImpl;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
@@ -201,11 +202,14 @@ public class OAuthServerConfiguration {
             "org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilder";
     private String defaultRequestValidatorClassName =
             "org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl";
+    private String defaultCibaRequestValidatorClassName =
+            "org.wso2.carbon.identity.openidconnect.CIBARequestObjectValidatorImpl";
     private String openIDConnectIDTokenCustomClaimsHanlderClassName =
             "org.wso2.carbon.identity.openidconnect.SAMLAssertionClaimsCallback";
     private IDTokenBuilder openIDConnectIDTokenBuilder = null;
     private Map<String, String> requestObjectBuilderClassNames = new HashMap<>();
     private volatile RequestObjectValidator requestObjectValidator = null;
+    private volatile RequestObjectValidator cibaRequestObjectValidator = null;
     private CustomClaimsCallbackHandler openidConnectIDTokenCustomClaimsCallbackHandler = null;
     private String openIDConnectIDTokenIssuerIdentifier = null;
     private String openIDConnectIDTokenSubClaim = "http://wso2.org/claims/fullname";
@@ -243,6 +247,8 @@ public class OAuthServerConfiguration {
     private boolean isImplicitErrorFragment = true;
     // property added to fix IDENTITY-4112 in backward compatible manner
     private boolean isRevokeResponseHeadersEnabled = true;
+    // Property to invoke token revocation events on Access token renewal in backward compatible manner.
+    private boolean isInvokeTokenRevocationEventOnRenewal = true;
 
     // property to make DisplayName property to be used in consent page
     private boolean showDisplayNameInConsentPage = false;
@@ -400,6 +406,9 @@ public class OAuthServerConfiguration {
 
         // Read the value of UseSPTenantDomain config.
         parseUseSPTenantDomainConfig(oauthElem);
+
+        // Read the value of InvokeTokenRevocationEventOnRenewal config.
+        parseInvokeTokenRevocationEventOnRenewalConfig(oauthElem);
 
         parseRevokeResponseHeadersEnableConfig(oauthElem);
         parseShowDisplayNameInConsentPage(oauthElem);
@@ -979,6 +988,31 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * Returns an instance of CIBARequestObjectValidator
+     *
+     * @return instance of CIBARequestObjectValidator
+     */
+    public RequestObjectValidator getCIBARequestObjectValidator() {
+
+        if (cibaRequestObjectValidator == null) {
+            synchronized (RequestObjectValidator.class) {
+                if (cibaRequestObjectValidator == null) {
+                    try {
+                        Class clazz = Thread.currentThread().getContextClassLoader()
+                                        .loadClass(defaultCibaRequestValidatorClassName);
+                        cibaRequestObjectValidator = (RequestObjectValidator) clazz.newInstance();
+                    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+                        log.warn("Failed to initiate CIBA RequestObjectValidator from identity.xml. " +
+                                "Hence initiating the default implementation", e);
+                        cibaRequestObjectValidator = new CIBARequestObjectValidatorImpl();
+                    }
+                }
+            }
+        }
+        return cibaRequestObjectValidator;
+    }
+
+    /**
      * Return an instance of the RequestObjectBuilder
      *
      * @return instance of the RequestObjectBuilder
@@ -1305,6 +1339,11 @@ public class OAuthServerConfiguration {
 
     public boolean isRevokeResponseHeadersEnabled() {
         return isRevokeResponseHeadersEnabled;
+    }
+
+    public boolean isInvokeTokenRevocationEventOnRenewal() {
+
+        return isInvokeTokenRevocationEventOnRenewal;
     }
 
     /**
@@ -2509,6 +2548,21 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseInvokeTokenRevocationEventOnRenewalConfig(OMElement oauthElem) {
+
+        OMElement invokeTokenRevocationEventOnRenewalElem = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.INVOKE_TOKEN_REVOCATION_EVENT_ON_RENEWAL));
+
+        if (invokeTokenRevocationEventOnRenewalElem != null) {
+            isInvokeTokenRevocationEventOnRenewal =
+                    Boolean.parseBoolean(invokeTokenRevocationEventOnRenewalElem.getText().trim());
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("InvokeTokenRevocationEventOnRenewal is set to : " + isInvokeTokenRevocationEventOnRenewal);
+        }
+    }
+
     private void parseOAuthTokenValueGenerator(OMElement oauthElem) {
 
         OMElement oauthTokenValueGeneratorElement = oauthElem
@@ -2539,6 +2593,12 @@ public class OAuthServerConfiguration {
                 defaultRequestValidatorClassName =
                         openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
                                 REQUEST_OBJECT_VALIDATOR)).getText().trim();
+            }
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
+                    CIBA_REQUEST_OBJECT_VALIDATOR)) != null) {
+                defaultCibaRequestValidatorClassName =
+                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
+                                CIBA_REQUEST_OBJECT_VALIDATOR)).getText().trim();
             }
             if (openIDConnectConfigElem
                     .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_BUILDER)) !=
@@ -3023,6 +3083,7 @@ public class OAuthServerConfiguration {
         public static final String SUPPORTED_CLAIMS = "OpenIDConnectClaims";
         public static final String REQUEST_OBJECT = "RequestObject";
         public static final String REQUEST_OBJECT_VALIDATOR = "RequestObjectValidator";
+        public static final String CIBA_REQUEST_OBJECT_VALIDATOR = "CIBARequestObjectValidator";
         public static final String OPENID_CONNECT_BACK_CHANNEL_LOGOUT_TOKEN_EXPIRATION = "LogoutTokenExpiration";
         // Callback handler related configuration elements
         private static final String OAUTH_CALLBACK_HANDLERS = "OAuthCallbackHandlers";
@@ -3126,6 +3187,8 @@ public class OAuthServerConfiguration {
         private static final String ENABLE_REVOKE_RESPONSE_HEADERS = "EnableRevokeResponseHeaders";
         private static final String IDENTITY_OAUTH_SHOW_DISPLAY_NAME_IN_CONSENT_PAGE = "ShowDisplayNameInConsentPage";
         private static final String REFRESH_TOKEN_ALLOWED = "IsRefreshTokenAllowed";
+        // To invoke token revocation events on Access token renewal.
+        private static final String INVOKE_TOKEN_REVOCATION_EVENT_ON_RENEWAL = "InvokeTokenRevocationEventOnRenewal";
 
         // Oauth access token value generator related.
         private static final String OAUTH_TOKEN_VALUE_GENERATOR = "AccessTokenValueGenerator";

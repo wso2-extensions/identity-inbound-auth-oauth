@@ -46,6 +46,7 @@ public class CibaAuthzHandler {
     private static final Log log = LogFactory.getLog(CibaAuthzHandler.class);
 
     OAuth2AuthzEndpoint authzEndPoint = new OAuth2AuthzEndpoint();
+    private static final String REQUEST_OBJECT = "request_object";
 
     /**
      * Trigger authorize request after building the url.
@@ -65,6 +66,8 @@ public class CibaAuthzHandler {
         cibaAuthRequestWrapper.setParameter(Constants.REDIRECT_URI, authCodeResponse.getCallBackUrl());
         cibaAuthRequestWrapper.setParameter(Constants.CLIENT_ID, authCodeResponse.getClientId());
         cibaAuthRequestWrapper.setParameter(CibaConstants.USER_IDENTITY, authCodeResponse.getUserHint());
+        cibaAuthRequestWrapper.setParameter(REQUEST_OBJECT, request.getParameter(CibaConstants.REQUEST));
+        cibaAuthRequestWrapper.setParameter(Constants.LOGIN_HINT, authCodeResponse.getUserHint());
         if (!StringUtils.isBlank(authCodeResponse.getBindingMessage())) {
             cibaAuthRequestWrapper.setParameter(CibaConstants.BINDING_MESSAGE, authCodeResponse.getBindingMessage());
         }

@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
@@ -38,6 +39,7 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -50,6 +52,7 @@ import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.config.UserStorePreferenceOrderSupplier;
 import org.wso2.carbon.user.core.model.UserMgtContext;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -162,6 +165,14 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             }
             UserStoreManager userStoreManager = getUserStoreManager(tokenReq);
             String tenantAwareUserName = MultitenantUtils.getTenantAwareUsername(tokenReq.getResourceOwnerUsername());
+            String userTenantDomain = MultitenantUtils.getTenantDomain(tokenReq.getResourceOwnerUsername());
+            ResolvedUserResult resolvedUserResult =
+                    FrameworkUtils.processMultiAttributeLoginIdentification(tenantAwareUserName, userTenantDomain);
+            if (resolvedUserResult != null &&
+                    ResolvedUserResult.UserResolvedStatus.SUCCESS.equals(resolvedUserResult.getResolvedStatus())) {
+                tenantAwareUserName = resolvedUserResult.getUser().getUsername();
+                tokenReq.setResourceOwnerUsername(tenantAwareUserName + "@" + userTenantDomain);
+            }
             authenticated = userStoreManager.authenticate(tenantAwareUserName, tokenReq.getResourceOwnerPassword());
             if (log.isDebugEnabled()) {
                 log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: " + authenticated);
@@ -178,18 +189,36 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             } else if (isPublishPasswordGrantLoginEnabled) {
                 publishAuthenticationData(tokenReq, true, serviceProvider);
             }
+        } catch (UserStoreClientException e) {
+            if (isPublishPasswordGrantLoginEnabled) {
+                publishAuthenticationData(tokenReq, false, serviceProvider);
+            }
+            String message = e.getMessage();
+            if (StringUtils.isNotBlank(e.getErrorCode())) {
+                message = e.getErrorCode() + " " + e.getMessage();
+            }
+            throw new IdentityOAuth2Exception(message, e);
         } catch (UserStoreException e) {
             if (isPublishPasswordGrantLoginEnabled) {
                 publishAuthenticationData(tokenReq, false, serviceProvider);
             }
             String message = e.getMessage();
-            if (!(e.getCause() instanceof IdentityException)) {
-                throw new IdentityOAuth2Exception(message, e);
+            // Sometimes client exceptions are wrapped in the super class.
+            // Therefore checking for possible client exception.
+            Throwable rootCause = ExceptionUtils.getRootCause(e);
+            if (rootCause instanceof UserStoreClientException) {
+                message = rootCause.getMessage();
+                String errorCode = ((UserStoreClientException) rootCause).getErrorCode();
+                if (StringUtils.isNotBlank(errorCode)) {
+                    message = errorCode + " " + message;
+                }
             }
-            IdentityException identityException = (IdentityException) (e.getCause());
-            // Set error code to message if available.
-            if (StringUtils.isNotBlank(identityException.getErrorCode())) {
-                message = identityException.getErrorCode() + " " + e.getMessage();
+            if (e.getCause() instanceof IdentityException) {
+                IdentityException identityException = (IdentityException) (e.getCause());
+                // Set error code to message if available.
+                if (StringUtils.isNotBlank(identityException.getErrorCode())) {
+                    message = identityException.getErrorCode() + " " + e.getMessage();
+                }
             }
             throw new IdentityOAuth2Exception(message, e);
         }  finally {

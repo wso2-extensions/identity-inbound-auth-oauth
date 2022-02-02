@@ -83,6 +83,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String SHA256_WITH_RSA = "SHA256withRSA";
     private static final String SHA384_WITH_RSA = "SHA384withRSA";
     private static final String SHA512_WITH_RSA = "SHA512withRSA";
+    private static final String PS256 = "PS256";
     private static final String SHA256_WITH_HMAC = "SHA256withHMAC";
     private static final String SHA384_WITH_HMAC = "SHA384withHMAC";
     private static final String SHA512_WITH_HMAC = "SHA512withHMAC";
@@ -237,7 +238,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                              OAuthAuthzReqMessageContext authorizationContext) throws IdentityOAuth2Exception {
 
         if (JWSAlgorithm.RS256.equals(signatureAlgorithm) || JWSAlgorithm.RS384.equals(signatureAlgorithm) ||
-                JWSAlgorithm.RS512.equals(signatureAlgorithm)) {
+                JWSAlgorithm.RS512.equals(signatureAlgorithm) || JWSAlgorithm.PS256.equals(signatureAlgorithm)) {
             return signJWTWithRSA(jwtClaimsSet, tokenContext, authorizationContext);
         } else if (JWSAlgorithm.HS256.equals(signatureAlgorithm) || JWSAlgorithm.HS384.equals(signatureAlgorithm) ||
                 JWSAlgorithm.HS512.equals(signatureAlgorithm)) {
@@ -374,10 +375,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
-            String certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
             headerBuilder.keyID(OAuth2Util.getKID(OAuth2Util.getCertificate(tenantDomain, tenantId),
                     (JWSAlgorithm) signatureAlgorithm, tenantDomain));
-            headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
+            headerBuilder.x509CertThumbprint(new Base64URL(OAuth2Util.getSHA1ThumbPrint(tenantDomain, tenantId)));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
             return signedJWT.serialize();
@@ -424,6 +424,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                     return JWSAlgorithm.RS384;
                 case SHA512_WITH_RSA:
                     return JWSAlgorithm.RS512;
+                case PS256:
+                    return JWSAlgorithm.PS256;
                 case SHA256_WITH_HMAC:
                     return JWSAlgorithm.HS256;
                 case SHA384_WITH_HMAC:
@@ -499,7 +501,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.claim(OAuthConstants.AUTHORIZED_USER_TYPE,
                 getAuthorizedUserType(authAuthzReqMessageContext, tokenReqMessageContext));
 
-        jwtClaimsSetBuilder.expirationTime(new Date(curTimeInMillis + accessTokenLifeTimeInMillis));
+        jwtClaimsSetBuilder.expirationTime(calculateAccessTokenExpiryTime(accessTokenLifeTimeInMillis,
+                curTimeInMillis));
 
         // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens. But we are keeping this in JWT
         // as well.
@@ -517,6 +520,29 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSet = handleTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
 
         return jwtClaimsSet;
+    }
+
+    /**
+     * Calculates access token expiry time.
+     *
+     * @param accessTokenLifeTimeInMillis accessTokenLifeTimeInMillis
+     * @param curTimeInMillis             currentTimeInMillis
+     * @return expirationTime
+     */
+    private Date calculateAccessTokenExpiryTime(Long accessTokenLifeTimeInMillis, Long curTimeInMillis) {
+
+        Date expirationTime;
+        // When accessTokenLifeTimeInMillis is equal to Long.MAX_VALUE the curTimeInMillis + 
+        // accessTokenLifeTimeInMillis can be a negative value
+        if (curTimeInMillis + accessTokenLifeTimeInMillis < curTimeInMillis) {
+            expirationTime = new Date(Long.MAX_VALUE);
+        } else {
+            expirationTime = new Date(curTimeInMillis + accessTokenLifeTimeInMillis);
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Access token expiry time : " + expirationTime + "ms.");
+        }
+        return expirationTime;
     }
 
     private String getAuthorizedUserType(OAuthAuthzReqMessageContext authAuthzReqMessageContext,

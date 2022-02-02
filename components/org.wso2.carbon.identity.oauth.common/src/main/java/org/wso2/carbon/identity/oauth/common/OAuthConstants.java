@@ -41,6 +41,8 @@ public final class OAuthConstants {
     public static final String HTTP_RESP_HEADER_CACHE_CONTROL = "Cache-Control";
     public static final String HTTP_RESP_HEADER_PRAGMA = "Pragma";
     public static final String HTTP_RESP_HEADER_AUTHENTICATE = "WWW-Authenticate";
+    public static final String HTTP_RESP_CONTENT_TYPE_JSON = "application/json";
+    public static final String HTTP_RESP_CONTENT_TYPE_JWT = "application/jwt";
 
     // OAuth2 response header values
     public static final String HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE = "no-store";
