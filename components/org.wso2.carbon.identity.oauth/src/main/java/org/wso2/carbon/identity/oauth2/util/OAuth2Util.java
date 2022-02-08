@@ -3053,38 +3053,61 @@ public class OAuth2Util {
     /**
      * Returns essential claims according to claim type: id_token/userinfo .
      *
-     * @param essentialClaims
-     * @param claimType
+     * @param claimParamJson Claim parameter JSON value as a String
+     * @param claimResponseType Requested response type:  id_token/userinfo
      * @return essential claims list
      */
-    public static List<String> getEssentialClaims(String essentialClaims, String claimType) {
+    public static List<String> getEssentialClaims(String claimParamJson, String claimResponseType) {
+        Map<String, String> claimValueMap = getEssentialClaimValueMap(claimParamJson,claimResponseType);
 
-        JSONObject jsonObjectClaims = new JSONObject(essentialClaims);
         List<String> essentialClaimsList = new ArrayList<>();
-        if (jsonObjectClaims.toString().contains(claimType)) {
-            JSONObject newJSON = jsonObjectClaims.getJSONObject(claimType);
-            if (newJSON != null) {
-                Iterator<?> keys = newJSON.keys();
-                while (keys.hasNext()) {
-                    String key = (String) keys.next();
-                    if (!newJSON.isNull(key)) {
-                        String value = newJSON.get(key).toString();
-                        JSONObject jsonObjectValues = new JSONObject(value);
-                        Iterator<?> claimKeyValues = jsonObjectValues.keys();
+        for (Map.Entry<String, String> essentialClaimMap : claimValueMap.entrySet()) {
+            if (Boolean.parseBoolean(essentialClaimMap.getValue())) {
+                essentialClaimsList.add(essentialClaimMap.getKey());
+            }
+        }
+        return essentialClaimsList;
+    }
+
+    /**
+     * Returns essential claims with essential claim's value according to
+     * claim response type: id_token/userinfo .
+     *
+     * @param claimParamJson Claim parameter JSON value as a String
+     * @param claimResponseType Requested response type:  id_token/userinfo
+     * @return essential claims and essential claim's value Map
+     */
+    public static Map<String, String> getEssentialClaimValueMap(String claimParamJson, String claimResponseType) {
+
+        JSONObject jsonObjectClaims = new JSONObject(claimParamJson);
+        Map<String, String> claimValueMap = new HashMap<>();
+        if (claimParamJson.contains(claimResponseType)) {
+            JSONObject requestedClaimJson = jsonObjectClaims.getJSONObject(claimResponseType);
+            if (requestedClaimJson != null) {
+                Iterator<?> claimMap = requestedClaimJson.keys();
+                while (claimMap.hasNext()) {
+                    String requestedClaim = (String) claimMap.next();
+                    if (!requestedClaimJson.isNull(requestedClaim)) {
+                        String reqClaimValue = requestedClaimJson.get(requestedClaim).toString();
+                        JSONObject claimValueJsonObj = new JSONObject(reqClaimValue);
+                        Iterator<?> claimKeyValues = claimValueJsonObj.keys();
                         while (claimKeyValues.hasNext()) {
-                            String claimKey = (String) claimKeyValues.next();
-                            String claimValue = jsonObjectValues.get(claimKey).toString();
-                            if (Boolean.parseBoolean(claimValue) &&
-                                    claimKey.equals(OAuthConstants.OAuth20Params.ESSENTIAL)) {
-                                essentialClaimsList.add(key);
+                            String essentialType = (String) claimKeyValues.next();
+                            String essentialValue = claimValueJsonObj.get(essentialType).toString();
+                            if (essentialType.equals(OAuthConstants.OAuth20Params.VALUE)) {
+                                claimValueMap.put(requestedClaim, essentialValue);
+                            }
+                            if (Boolean.parseBoolean(essentialValue) && essentialType.equals(OAuthConstants.OAuth20Params.ESSENTIAL)) {
+                                claimValueMap.put(requestedClaim, essentialValue);
                             }
                         }
                     }
                 }
             }
         }
-        return essentialClaimsList;
-    }
+            return claimValueMap;
+        }
+
 
     /**
      * Returns the domain name convert to upper case if the domain is not not empty, else return primary domain name.
