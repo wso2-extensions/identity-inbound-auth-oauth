@@ -37,7 +37,6 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.owasp.encoder.Encode;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
@@ -168,7 +167,6 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthServerConfiguration;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSSOConsentService;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.retrieveStateForErrorURL;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.DISPLAY;
@@ -237,7 +235,6 @@ public class OAuth2AuthzEndpoint {
     public Response authorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
             throws URISyntaxException, InvalidRequestParentException {
 
-        startSuperTenantFlow();
         OAuthMessage oAuthMessage;
 
         // TODO: 2021-01-22 Check for the flag in request.
@@ -250,6 +247,12 @@ public class OAuth2AuthzEndpoint {
         } catch (InvalidRequestParentException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
             throw e;
+        }
+
+        // Start tenant domain flow if the tenant configuration is not enabled.
+        if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
+            String tenantDomain = EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
+            FrameworkUtils.startTenantFlow(tenantDomain);
         }
 
         try {
@@ -272,7 +275,9 @@ public class OAuth2AuthzEndpoint {
             return handleOAuthSystemException(oAuthMessage, e);
         } finally {
             handleCachePersistence(oAuthMessage);
-            PrivilegedCarbonContext.endTenantFlow();
+            if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
+                FrameworkUtils.endTenantFlow();
+            }
         }
     }
 
