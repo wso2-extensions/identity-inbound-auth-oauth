@@ -816,12 +816,14 @@ public class EndpointUtil {
                     scopesToBeConsented.stream().collect(Collectors.joining(" ")) + " for client : " +
                     oAuth2Parameters.getClientId());
         }
-        // Remove OIDC scopes.
-        scopesToBeConsented.removeAll(getOIDCScopeNames());
         String userId = getUserIdOfAuthenticatedUser(user);
         String appId = getAppIdFromClientId(oAuth2Parameters.getClientId());
+        int tenantId = IdentityTenantUtil.getTenantId(user.getTenantDomain());
+
+        // Remove OIDC scopes.
+        scopesToBeConsented.removeAll(getTenantOIDCScopeNames(tenantId));
         return oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(userId, appId,
-                IdentityTenantUtil.getTenantId(user.getTenantDomain()), scopesToBeConsented);
+                tenantId, scopesToBeConsented);
     }
 
     /**
@@ -905,6 +907,11 @@ public class EndpointUtil {
     private static List<String> getOIDCScopeNames() throws IdentityOAuthAdminException {
 
         return Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames()));
+    }
+
+    private static List<String> getTenantOIDCScopeNames(int tenantId) throws IdentityOAuthAdminException {
+
+        return Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getTenantScopeNames(tenantId)));
     }
 
     private static List<String> getAllowedOAuthScopes(OAuth2Parameters params) throws OAuthSystemException {

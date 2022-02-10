@@ -681,6 +681,31 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
+     * To retrieve all persisted oidc scopes for a tenant.
+     *
+     * @param tenantId
+     * @return list of scopes persisted.
+     * @throws IdentityOAuthAdminException if an error occurs when loading oidc scopes.
+     */
+    public String[] getTenantScopeNames(int tenantId) throws IdentityOAuthAdminException {
+
+        try {
+            List<String> scopeDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                    getScopeNames(tenantId);
+            if (CollectionUtils.isNotEmpty(scopeDTOList)) {
+                return scopeDTOList.toArray(new String[scopeDTOList.size()]);
+            } else {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Could not load oidc scopes for tenant. Hence returning an empty array.");
+                }
+                return new String[0];
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantId, e);
+        }
+    }
+
+    /**
      * To retrieve oidc claims mapped to an oidc scope.
      *
      * @param scope scope
