@@ -28,6 +28,7 @@ import org.testng.IObjectFactory;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
@@ -47,8 +48,9 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
+import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR_DEFAULT;
 
-@PrepareForTest({EndpointUtil.class})
+@PrepareForTest({EndpointUtil.class, FrameworkUtils.class})
 @PowerMockIgnore({"javax.management.*"})
 public class UserInfoEndpointConfigTest extends PowerMockTestCase {
 
@@ -187,6 +189,8 @@ public class UserInfoEndpointConfigTest extends PowerMockTestCase {
     public void testGetUserInfoClaimRetriever(String validatorClass, Class validatorClassType, boolean
             isClassExisting) throws Exception {
 
+        mockStatic(FrameworkUtils.class);
+        when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
         mockStatic(EndpointUtil.class);
         when(EndpointUtil.getUserInfoClaimRetriever()).thenReturn(validatorClass);
         UserInfoClaimRetriever userInfoClaimRetriever = UserInfoEndpointConfig.getInstance()

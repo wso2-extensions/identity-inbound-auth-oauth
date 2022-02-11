@@ -245,6 +245,8 @@ public class OAuthServerConfiguration {
     private boolean isJWTSignedWithSPKey = true;
     // property added to fix IDENTITY-4534 in backward compatible manner
     private boolean isImplicitErrorFragment = true;
+    // Property added to multi value support configurable.
+    private boolean isEnableMultiValueSupport = false;
     // property added to fix IDENTITY-4112 in backward compatible manner
     private boolean isRevokeResponseHeadersEnabled = true;
     // Property to invoke token revocation events on Access token renewal in backward compatible manner.
@@ -1331,6 +1333,11 @@ public class OAuthServerConfiguration {
 
     public boolean isJWTSignedWithSPKey() {
         return isJWTSignedWithSPKey;
+    }
+
+    public boolean isEnableMultiValueSupport() {
+
+        return isEnableMultiValueSupport;
     }
 
     public boolean isImplicitErrorFragment() {
@@ -2765,6 +2772,12 @@ public class OAuthServerConfiguration {
                 isJWTSignedWithSPKey = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
                         getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY)).getText().trim());
             }
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                    ConfigElements.OPENID_CONNECT_ENABLE_MULTI_VALUE_SUPPORT)) != null) {
+                isEnableMultiValueSupport = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_ENABLE_MULTI_VALUE_SUPPORT))
+                        .getText().trim());
+            }
             if (openIDConnectConfigElem
                     .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_CLAIMS)) != null) {
                 String supportedClaimStr = openIDConnectConfigElem
@@ -3080,6 +3093,7 @@ public class OAuthServerConfiguration {
         public static final String SEND_ONLY_LOCALLY_MAPPED_ROLES_OF_IDP = "FederatedRoleManagement"
                 + ".ReturnOnlyMappedLocalRoles";
         public static final String OPENID_CONNECT_ADD_UN_MAPPED_USER_ATTRIBUTES = "AddUnmappedUserAttributes";
+        public static final String OPENID_CONNECT_ENABLE_MULTI_VALUE_SUPPORT = "EnableMultiValueSupport";
         public static final String SUPPORTED_CLAIMS = "OpenIDConnectClaims";
         public static final String REQUEST_OBJECT = "RequestObject";
         public static final String REQUEST_OBJECT_VALIDATOR = "RequestObjectValidator";

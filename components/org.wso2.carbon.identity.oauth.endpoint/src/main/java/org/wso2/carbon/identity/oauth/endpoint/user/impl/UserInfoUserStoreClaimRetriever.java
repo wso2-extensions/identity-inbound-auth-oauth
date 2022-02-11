@@ -18,17 +18,23 @@
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang.StringUtils;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.user.UserInfoClaimRetriever;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * Retrieving claims from the user store for the given claims dialect
  */
 public class UserInfoUserStoreClaimRetriever implements UserInfoClaimRetriever {
+
+    private static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
 
     @Override
     public Map<String, Object> getClaimsMap(Map<ClaimMapping, String> userAttributes) {
@@ -40,10 +46,30 @@ public class UserInfoUserStoreClaimRetriever implements UserInfoClaimRetriever {
                         .getClaimUri())) {
                     continue;
                 }
-                claims.put(entry.getKey().getRemoteClaim().getClaimUri(), entry.getValue());
+                if (OAuthServerConfiguration.getInstance().isEnableMultiValueSupport()) {
+                    String claimValue = entry.getValue();
+                    if (isMultiValuedAttribute(claimValue)) {
+                        String[] attributeValues = entry.getValue().split(Pattern.quote(ATTRIBUTE_SEPARATOR));
+                        claims.put(entry.getKey().getRemoteClaim().getClaimUri(), attributeValues);
+                    } else {
+                        claims.put(entry.getKey().getRemoteClaim().getClaimUri(), claimValue);
+                    }
+                } else {
+                    claims.put(entry.getKey().getRemoteClaim().getClaimUri(), entry.getValue());
+                }
             }
         }
         return claims;
     }
 
+    /**
+     * Check whether claim value is multi attribute or not by using attribute separator.
+     *
+     * @param claimValue String value contains claims.
+     * @return Whether it is multi attribute or not.
+     */
+    private boolean isMultiValuedAttribute(String claimValue) {
+
+        return StringUtils.contains(claimValue, ATTRIBUTE_SEPARATOR);
+    }
 }
