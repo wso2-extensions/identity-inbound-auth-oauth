@@ -249,13 +249,13 @@ public class OAuth2AuthzEndpoint {
             throw e;
         }
 
-        // Start tenant domain flow if the tenant configuration is not enabled.
-        if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
-            String tenantDomain = EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
-            FrameworkUtils.startTenantFlow(tenantDomain);
-        }
-
         try {
+            // Start tenant domain flow if the tenant configuration is not enabled.
+            if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
+                String tenantDomain = EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
+                FrameworkUtils.startTenantFlow(tenantDomain);
+            }
+
             if (isPassthroughToFramework(oAuthMessage)) {
                 return handleAuthFlowThroughFramework(oAuthMessage);
             } else if (isInitialRequestFromClient(oAuthMessage)) {
