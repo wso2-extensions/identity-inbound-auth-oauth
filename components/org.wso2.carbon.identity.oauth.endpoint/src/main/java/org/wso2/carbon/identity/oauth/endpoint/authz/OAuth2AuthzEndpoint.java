@@ -1922,13 +1922,13 @@ public class OAuth2AuthzEndpoint {
     private String getLoginTenantDomain(OAuthMessage oAuthMessage, String clientId) throws InvalidRequestException {
 
         if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
-            return getSpTenantDomain(clientId);
+            return EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
         }
 
         String loginTenantDomain =
                 oAuthMessage.getRequest().getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
         if (StringUtils.isBlank(loginTenantDomain)) {
-            return getSpTenantDomain(clientId);
+            return EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
         }
         return loginTenantDomain;
     }
