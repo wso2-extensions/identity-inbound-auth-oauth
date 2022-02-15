@@ -926,7 +926,7 @@
         <!--Test Dependencies-->
         <junit.version>4.13.1</junit.version>
         <testng.version>6.9.10</testng.version>
-        <jacoco.version>0.7.9</jacoco.version>
+        <jacoco.version>0.8.7</jacoco.version>
         <powermock.version>1.7.4</powermock.version>
         <maven.surefire.plugin.version>2.18.1</maven.surefire.plugin.version>
         <javaee.web.api.version>7.0</javaee.web.api.version>
