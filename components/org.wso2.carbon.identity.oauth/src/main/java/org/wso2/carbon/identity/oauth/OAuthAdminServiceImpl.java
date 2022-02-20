@@ -94,8 +94,6 @@ public class OAuthAdminServiceImpl {
     static final String RESPONSE_TYPE_TOKEN = "token";
     static final String RESPONSE_TYPE_ID_TOKEN = "id_token";
     static final String BINDING_TYPE_NONE = "None";
-    static final String BINDING_TYPE_SSO_SESSION = "sso-session";
-    static final String BINDING_TYPE_COOKIE = "cookie";
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     static List<String> allowedGrants = null;
     static String[] allowedScopeValidators = null;
@@ -377,8 +375,9 @@ public class OAuthAdminServiceImpl {
 
     private void validateBindingType(String bindingType) throws IdentityOAuthClientException {
 
-        if (BINDING_TYPE_COOKIE.equals(bindingType) || BINDING_TYPE_SSO_SESSION.equals(bindingType) ||
-                BINDING_TYPE_NONE.equals(bindingType) || bindingType == null) {
+        if (BINDING_TYPE_NONE.equals(bindingType) || bindingType == null) {
+            return;
+        } else if (OAuth2ServiceComponentHolder.getInstance().getTokenBinder(bindingType).isPresent()) {
             return;
         } else {
             String msg = String.format("'%s' binding type is not allowed.", bindingType);
