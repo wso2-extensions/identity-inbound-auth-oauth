@@ -24,7 +24,6 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthRequestWrapper;
-import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthResponseWrapper;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
@@ -76,28 +75,22 @@ public class CibaAuthzHandler {
             cibaAuthRequestWrapper.setParameter(CibaConstants.TRANSACTION_CONTEXT,
                     authCodeResponse.getTransactionContext());
         }
-        // Create an instance of response.
-        CibaAuthResponseWrapper commonAuthResponseWrapper = new CibaAuthResponseWrapper(response);
-        if (log.isDebugEnabled()) {
-            log.debug("Building AuthorizeRequest wrapper from CIBA component for the user : " +
-                    authCodeResponse.getUserHint() + " to continue the authentication request made by client with " +
-                    "clientID : " + authCodeResponse.getClientId());
-        }
+
         // Fire authorize request and forget.
-        fireAuthzReq(cibaAuthRequestWrapper, commonAuthResponseWrapper);
+        fireAuthzReq(cibaAuthRequestWrapper, response);
     }
 
     /**
      * Initiate the  authorize request.
      *
      * @param requestWrapper  Authentication request wrapper.
-     * @param responseWrapper AuthenticationResponse wrapper.
+     * @param response Authentication response.
      */
-    public void fireAuthzReq(CibaAuthRequestWrapper requestWrapper, CibaAuthResponseWrapper responseWrapper)
+    public void fireAuthzReq(CibaAuthRequestWrapper requestWrapper, HttpServletResponse response)
             throws CibaAuthFailureException {
 
         try {
-            authzEndPoint.authorize(requestWrapper, responseWrapper);
+            authzEndPoint.authorize(requestWrapper, response);
         } catch (URISyntaxException | InvalidRequestParentException e) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
                     "Error in making internal authorization call.", e);

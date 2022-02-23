@@ -135,6 +135,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -203,6 +205,7 @@ public class OAuth2AuthzEndpoint {
     private static final String CODE_CHALLENGE_METHOD = "code_challenge_method";
 
     private static final String formPostRedirectPage = getFormPostRedirectPage();
+    private static final boolean useOAuthResponseJspPage = isOAuthResponseJspPageAvailable();
     private static final String DISPLAY_NAME = "DisplayName";
     private static final String ID_TOKEN = "id_token";
     private static final String ACCESS_CODE = "code";
@@ -391,7 +394,25 @@ public class OAuth2AuthzEndpoint {
 
         if (StringUtils.equals(oAuthMessage.getRequest().getParameter(RESPONSE_MODE), RESPONSE_MODE_FORM_POST)) {
             e.state(retrieveStateForErrorURL(oAuthMessage.getRequest(), oAuth2Parameters));
-            return Response.ok(createErrorFormPage(oAuthMessage.getRequest().getParameter(REDIRECT_URI), e)).build();
+            if (useOAuthResponseJspPage) {
+                try {
+                    HttpServletRequest request = oAuthMessage.getRequest();
+                    HttpServletResponse response = oAuthMessage.getResponse();
+                    String params = buildErrorParams(e);
+                    request.setAttribute("params", params);
+                    request.setAttribute("redirectURI", oAuthMessage.getRequest().getParameter(REDIRECT_URI));
+                    ServletContext authEndpoint = request.getServletContext().getContext("/authenticationendpoint");
+                    RequestDispatcher requestDispatcher = authEndpoint.getRequestDispatcher("/oauth_response.jsp");
+                    requestDispatcher.forward(request, response);
+                    return Response.ok().build();
+                } catch (ServletException | IOException exception) {
+                    log.error("Error occurred while forwarding the request to oauth_response.jsp page.");
+                    return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
+                }
+            } else {
+                return Response.ok(createErrorFormPage(oAuthMessage.getRequest().getParameter(REDIRECT_URI), e))
+                        .build();
+            }
         }
 
         String errorPageURL = getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST,
@@ -432,6 +453,17 @@ public class OAuth2AuthzEndpoint {
             }
         }
         return null;
+    }
+
+    private static boolean isOAuthResponseJspPageAvailable() {
+
+        java.nio.file.Path path = Paths.get(CarbonUtils.getCarbonHome(), "repository", "deployment",
+                "server", "webapps", "authenticationendpoint", "oauth_response.jsp");
+        if (Files.exists(path)) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     private Response handleResponseFromConsent(OAuthMessage oAuthMessage) throws OAuthSystemException,
@@ -721,16 +753,49 @@ public class OAuth2AuthzEndpoint {
                     redirectURL, oAuthMessage.getSessionDataCacheEntry());
         }
 
-        return Response.ok(createFormPage(redirectURL, oauth2Params.getRedirectURI(),
-                authenticatedIdPs, sessionStateValue)).build();
+        if (useOAuthResponseJspPage) {
+            try {
+                HttpServletRequest request = oAuthMessage.getRequest();
+                HttpServletResponse response = oAuthMessage.getResponse();
+                String params = buildParams(redirectURL, authenticatedIdPs, sessionStateValue);
+                request.setAttribute("params", params);
+                request.setAttribute("redirectURI", oauth2Params.getRedirectURI());
+                ServletContext authEndpoint = request.getServletContext().getContext("/authenticationendpoint");
+                RequestDispatcher requestDispatcher = authEndpoint.getRequestDispatcher("/oauth_response.jsp");
+                requestDispatcher.forward(request, response);
+                return Response.ok().build();
+            } catch (ServletException | IOException e) {
+                log.error("Error occurred while forwarding the request to oauth_response.jsp page.");
+                return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
+            }
+        } else {
+            return Response.ok(createFormPage(redirectURL, oauth2Params.getRedirectURI(),
+                    authenticatedIdPs, sessionStateValue)).build();
+        }
     }
 
     private Response handleFormPostResponseModeError(OAuthMessage oAuthMessage,
                                                      OAuthProblemException oauthProblemException) {
 
         OAuth2Parameters oauth2Params = oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters();
-
-        return Response.ok(createErrorFormPage(oauth2Params.getRedirectURI(), oauthProblemException)).build();
+        if (useOAuthResponseJspPage) {
+            try {
+                HttpServletRequest request = oAuthMessage.getRequest();
+                HttpServletResponse response = oAuthMessage.getResponse();
+                String params = buildErrorParams(oauthProblemException);
+                request.setAttribute("params", params);
+                request.setAttribute("redirectURI", oauth2Params.getRedirectURI());
+                ServletContext authEndpoint = request.getServletContext().getContext("/authenticationendpoint");
+                RequestDispatcher requestDispatcher = authEndpoint.getRequestDispatcher("/oauth_response.jsp");
+                requestDispatcher.forward(request, response);
+                return Response.ok().build();
+            } catch (ServletException | IOException exception) {
+                log.error("Error occurred while forwarding the request to oauth_response.jsp page.");
+                return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
+            }
+        } else {
+            return Response.ok(createErrorFormPage(oauth2Params.getRedirectURI(), oauthProblemException)).build();
+        }
     }
 
     private Response handleDeniedConsent(OAuthMessage oAuthMessage) throws OAuthSystemException, URISyntaxException {
@@ -939,9 +1004,25 @@ public class OAuth2AuthzEndpoint {
                     getLoggedInUser(oAuthMessage).getAuthenticatedSubjectIdentifier(),
                     redirectURL, oAuthMessage.getSessionDataCacheEntry());
         }
-
-        return Response.ok(createFormPage(redirectURL, oauth2Params.getRedirectURI(),
-                StringUtils.EMPTY, sessionStateValue)).build();
+        if (useOAuthResponseJspPage) {
+            try {
+                HttpServletRequest request = oAuthMessage.getRequest();
+                HttpServletResponse response = oAuthMessage.getResponse();
+                String params = buildParams(redirectURL, StringUtils.EMPTY, sessionStateValue);
+                request.setAttribute("params", params);
+                request.setAttribute("redirectURI", oauth2Params.getRedirectURI());
+                ServletContext authEndpoint = request.getServletContext().getContext("/authenticationendpoint");
+                RequestDispatcher requestDispatcher = authEndpoint.getRequestDispatcher("/oauth_response.jsp");
+                requestDispatcher.forward(request, response);
+                return Response.ok().build();
+            } catch (ServletException | IOException e) {
+                log.error("Error occurred while forwarding the request to oauth_response.jsp page.");
+                return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
+            }
+        } else {
+            return Response.ok(createFormPage(redirectURL, oauth2Params.getRedirectURI(),
+                    StringUtils.EMPTY, sessionStateValue)).build();
+        }
     }
 
     private void addToAuthenticationResultDetailsToOAuthMessage(OAuthMessage oAuthMessage,
@@ -3082,12 +3163,12 @@ public class OAuth2AuthzEndpoint {
                         return Response.status(HttpServletResponse.SC_OK).entity(responseWrapper.getContent()).build();
                     }
                 } else {
-                    return authorize(requestWrapper, responseWrapper);
+                    return authorize(requestWrapper, oAuthMessage.getResponse());
                 }
             } else {
                 requestWrapper
                         .setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus.UNKNOWN);
-                return authorize(requestWrapper, responseWrapper);
+                return authorize(requestWrapper, oAuthMessage.getResponse());
             }
         } catch (ServletException | IOException | URLBuilderException e) {
             log.error("Error occurred while sending request to authentication framework.");
