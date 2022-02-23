@@ -145,8 +145,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 }
                 amrValues = authzGrantCacheEntry.getAmrList();
                 idpSessionKey = getIdpSessionKey(authzGrantCacheEntry);
-                //set essential claims
-                handleEssentialUserClaims(jwtClaimsSetBuilder, authzGrantCacheEntry.getEssentialClaims(), authorizedUser);
+                // Set essential claims
+                handleEssentialUserClaims(jwtClaimsSetBuilder, authzGrantCacheEntry.getEssentialClaims(),
+                        authorizedUser);
             }
         } else {
             amrValues = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getAuthenticationMethodReferences();
@@ -242,8 +243,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
 
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
-        //set essential claims
-        handleEssentialClaims(jwtClaimsSetBuilder, authzReqMessageContext.getAuthorizationReqDTO().getEssentialClaims(), authorizedUser);
+        // Set essential claims
+        handleEssentialClaims(jwtClaimsSetBuilder,
+                authzReqMessageContext.getAuthorizationReqDTO().getEssentialClaims(), authorizedUser);
 
         jwtClaimsSetBuilder.issuer(issuer);
 
@@ -785,8 +787,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
      * This method will return null for the backchannel grant types (e.g. Password Grant) as no session
      * will be involved in the said flow.
      *
-     * @param accessToken   Access Token.
-     * @return              IDP Session Key.
+     * @param accessToken   Access Token
+     * @return              IDP Session Key
      */
     private String getIdpSessionKey(String accessToken) {
 
@@ -807,12 +809,15 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     /**
      * Create jwtClaimsSetBuilder for requested essential claims. This method is used in the Authorization Code flow.
      *
-     * @param jwtClaimsSetBuilder   JWT Claim Set.
-     * @param essentialClaims Essential Claims.
+     * @param jwtClaimsSetBuilder JWT Claim Set
+     * @param essentialClaims Essential Claims
      * @param authorizedUser Authenticated user
      */
-    private void handleEssentialUserClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder, String essentialClaims, AuthenticatedUser authorizedUser) {
-        Map<String, String> essentialClaimValueMap = OAuth2Util.getEssentialClaimValueMap(essentialClaims, OAuthConstants.ID_TOKEN);
+    private void handleEssentialUserClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                           String essentialClaims, AuthenticatedUser authorizedUser) {
+
+        Map<String, String> essentialClaimValueMap = OAuth2Util.getEssentialClaimValueMap(essentialClaims,
+                OAuthConstants.ID_TOKEN);
 
         for (Map.Entry<ClaimMapping, String> userClaimsMap : authorizedUser.getUserAttributes().entrySet()) {
             String userClaimName = userClaimsMap.getKey().getLocalClaim().getClaimUri();
@@ -834,22 +839,26 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     /**
      * Create jwtClaimsSetBuilder for requested essential claims. This method is used in the Implicit flow.
      *
-     * @param jwtClaimsSetBuilder   JWT Claim Set.
-     * @param essentialClaims Essential Claims.
+     * @param jwtClaimsSetBuilder JWT Claim Set
+     * @param essentialClaims Essential Claims
      * @param authorizedUser Authenticated user
      */
-    private void handleEssentialClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder, String essentialClaims, AuthenticatedUser authorizedUser) {
-        Map<String, String> essentialClaimValueMap = OAuth2Util.getEssentialClaimValueMap(essentialClaims, OAuthConstants.ID_TOKEN);
+    private void handleEssentialClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                       String essentialClaims, AuthenticatedUser authorizedUser) {
+
+        Map<String, String> essentialClaimValueMap = OAuth2Util.getEssentialClaimValueMap(essentialClaims,
+                OAuthConstants.ID_TOKEN);
 
         for (Map.Entry<ClaimMapping, String> userClaimsMap : authorizedUser.getUserAttributes().entrySet()) {
-            String userClaimName = userClaimsMap.getKey().getLocalClaim()
-                    != null ? userClaimsMap.getKey().getLocalClaim().getClaimUri() : userClaimsMap.getKey().getRemoteClaim().getClaimUri();
+            String userClaimName = userClaimsMap.getKey().getLocalClaim() != null ?
+                    userClaimsMap.getKey().getLocalClaim().getClaimUri() :
+                    userClaimsMap.getKey().getRemoteClaim().getClaimUri();
             String userClaimsValue = userClaimsMap.getValue();
 
             String essentialClaimValue = essentialClaimValueMap.get(userClaimName);
 
             if (StringUtils.isNotEmpty(essentialClaimValue)) {
-                if (Boolean.parseBoolean(essentialClaimValue)|| !(userClaimsValue.equals(essentialClaimValue)
+                if (Boolean.parseBoolean(essentialClaimValue) || !(userClaimsValue.equals(essentialClaimValue)
                         || userClaimsValue.contains(essentialClaimValue))) {
                     jwtClaimsSetBuilder.claim(userClaimName, userClaimsValue);
                 } else {

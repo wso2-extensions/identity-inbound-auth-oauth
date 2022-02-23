@@ -345,6 +345,10 @@ public class OAuth2Util {
     public static final String ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE = "Invalid Access Token. Access token is " +
             "not ACTIVE.";
 
+    //supported Essential claims
+    private static final String VALUE = "value";
+    private static final String VALUES = "values";
+
     private OAuth2Util() {
 
     }
@@ -3058,7 +3062,8 @@ public class OAuth2Util {
      * @return essential claims list
      */
     public static List<String> getEssentialClaims(String claimParamJson, String claimResponseType) {
-        Map<String, String> claimValueMap = getEssentialClaimValueMap(claimParamJson,claimResponseType);
+
+        Map<String, String> claimValueMap = getEssentialClaimValueMap(claimParamJson, claimResponseType);
 
         List<String> essentialClaimsList = new ArrayList<>();
         for (Map.Entry<String, String> essentialClaimMap : claimValueMap.entrySet()) {
@@ -3070,8 +3075,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Returns essential claims with essential claim's value according to
-     * claim response type: id_token/userinfo .
+     * Returns essential claims with essential claim's value according to claim response type: id_token/userinfo.
      *
      * @param claimParamJson Claim parameter JSON value as a String
      * @param claimResponseType Requested response type:  id_token/userinfo
@@ -3094,10 +3098,11 @@ public class OAuth2Util {
                         while (claimKeyValues.hasNext()) {
                             String essentialType = (String) claimKeyValues.next();
                             String essentialValue = claimValueJsonObj.get(essentialType).toString();
-                            if (essentialType.equals(OAuthConstants.OAuth20Params.VALUE)) {
+                            if (essentialType.equals(VALUE)) {
                                 claimValueMap.put(requestedClaim, essentialValue);
                             }
-                            if (Boolean.parseBoolean(essentialValue) && essentialType.equals(OAuthConstants.OAuth20Params.ESSENTIAL)) {
+                            if (Boolean.parseBoolean(essentialValue) &&
+                                    essentialType.equals(OAuthConstants.OAuth20Params.ESSENTIAL)) {
                                 claimValueMap.put(requestedClaim, essentialValue);
                             }
                         }
@@ -3107,7 +3112,6 @@ public class OAuth2Util {
         }
             return claimValueMap;
         }
-
 
     /**
      * Returns the domain name convert to upper case if the domain is not not empty, else return primary domain name.
