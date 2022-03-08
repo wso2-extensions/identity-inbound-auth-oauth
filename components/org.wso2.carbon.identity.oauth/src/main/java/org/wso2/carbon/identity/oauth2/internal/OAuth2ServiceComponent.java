@@ -61,6 +61,7 @@ import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.handlers.TokenBindingExpiryEventHandler;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
+import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
@@ -183,6 +184,10 @@ public class OAuth2ServiceComponent {
             // SSO session based access token binder.
             SSOSessionBasedTokenBinder ssoSessionBasedTokenBinder = new SSOSessionBasedTokenBinder();
             bundleContext.registerService(TokenBinderInfo.class.getName(), ssoSessionBasedTokenBinder, null);
+
+            // Device based access token binder.
+            DeviceFlowTokenBinder deviceFlowTokenBinder = new DeviceFlowTokenBinder();
+            bundleContext.registerService(TokenBinderInfo.class.getName(), deviceFlowTokenBinder, null);
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
