@@ -778,7 +778,8 @@ public class ResponseTypeHandlerUtil {
 
         long refreshTokenValidityPeriodInMillis;
         long refreshTokenValidityPeriod = oauthAuthzMsgCtx.getRefreshTokenvalidityPeriod();
-        if (refreshTokenValidityPeriod != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD && refreshTokenValidityPeriod > 0) {
+        if (refreshTokenValidityPeriod != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD &&
+                refreshTokenValidityPeriod >= 0) {
             refreshTokenValidityPeriodInMillis = oauthAuthzMsgCtx.getRefreshTokenvalidityPeriod() *
                     SECOND_TO_MILLISECONDS_FACTOR;
             if (log.isDebugEnabled()) {
