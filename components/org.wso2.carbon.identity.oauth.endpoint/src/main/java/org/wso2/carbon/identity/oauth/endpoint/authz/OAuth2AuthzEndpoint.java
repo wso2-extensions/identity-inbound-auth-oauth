@@ -1884,9 +1884,15 @@ public class OAuth2AuthzEndpoint {
                     log.debug("Request Object Handling failed due to : " + e.getErrorCode() + " for client_id: "
                             + clientId + " of tenantDomain: " + params.getTenantDomain(), e);
                 }
-                return EndpointUtil.getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes
-                                .OAuth2SubErrorCodes.INVALID_REQUEST_OBJECT, e.getErrorCode(), e.getErrorMessage(),
-                        null, params);
+                if (StringUtils.isNotBlank(oAuthMessage.getRequest().getParameter(REQUEST_URI))) {
+                    return EndpointUtil.getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes
+                                    .OAuth2SubErrorCodes.INVALID_REQUEST_URI,
+                            e.getErrorCode(), e.getErrorMessage(), null, params);
+                } else {
+                    return EndpointUtil.getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes
+                                    .OAuth2SubErrorCodes.INVALID_REQUEST_OBJECT, e.getErrorCode(), e.getErrorMessage(),
+                            null, params);
+                }
             }
         }
 
