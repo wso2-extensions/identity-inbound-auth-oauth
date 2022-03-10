@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,6 +30,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -59,7 +61,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -260,6 +264,20 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                             .getCanonicalName(), isValid));
                 }
                 if (!isValid) {
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                        Map<String, Object> configs = new HashMap<>();
+                        configs.put("scopeValidator", scopeHandler.getClass().getCanonicalName());
+                        Map<String, Object> params = new HashMap<>();
+                        params.put("clientId", tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+                        if (ArrayUtils.isNotEmpty(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope())) {
+                            List<String> scopes = Arrays.asList(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope());
+                            params.put("scopes", scopes);
+                        }
+                        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                                OAuthConstants.LogConstants.FAILED,
+                                "Scope validation failed against the configured scope validator.", "validate-scope",
+                                configs);
+                    }
                     break;
                 }
             }
@@ -331,7 +349,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             } catch (IdentityOAuth2Exception e) {
                 String errorMsg = "Error occurred while getting user store domain for User ID : " +
                         authenticatedUser;
-                log.error(errorMsg, e);
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMsg, e);
+                }
                 throw new IdentityOAuth2Exception(errorMsg, e);
             }
         }
@@ -552,7 +572,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
             return newAccessToken;
         } catch (OAuthSystemException e) {
-            throw new IdentityOAuth2Exception("Error while generating access token");
+            throw new IdentityOAuth2Exception("Error while generating access token", e);
         }
     }
 
@@ -565,7 +585,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
             return refreshToken;
         } catch (OAuthSystemException e) {
-            throw new IdentityOAuth2Exception("Error while issueing refresh token");
+            throw new IdentityOAuth2Exception("Error while issueing refresh token", e);
         }
     }
 

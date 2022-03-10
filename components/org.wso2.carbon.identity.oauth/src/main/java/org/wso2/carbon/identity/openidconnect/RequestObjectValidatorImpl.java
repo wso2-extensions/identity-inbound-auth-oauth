@@ -17,44 +17,37 @@
  */
 package org.wso2.carbon.identity.openidconnect;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.SignedJWT;
-import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
-import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.RequestObjectValidatorUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidator;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
-import java.security.PublicKey;
 import java.security.cert.Certificate;
-import java.security.interfaces.RSAPublicKey;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.PS;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
 
 /**
  * This class validates request object parameter value which comes with the OIDC authorization request as an optional
@@ -77,98 +70,22 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     public boolean validateSignature(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws
             RequestObjectException {
 
-        boolean isVerified;
-        Certificate certificate = null;
-        SignedJWT jwt = requestObject.getSignedJWT();
-        try {
-             certificate =
-                    getCertificateForAlias(oAuth2Parameters.getTenantDomain(), oAuth2Parameters.getClientId());
-        } catch (RequestObjectException e) {
-            String message = "Error retrieving public certificate for service provider checking whether a jwks " +
-                    "endpoint is configured for the service provider with client_id: " + oAuth2Parameters.getClientId();
-            log.warn(message);
-            if (log.isDebugEnabled()) {
-
-                log.debug(message, e);
-            }
-        }
-        if (certificate == null) {
-            if (log.isDebugEnabled()) {
-
-                log.debug("Public certificate not configured for Service Provider with " +
-                        "client_id: " + oAuth2Parameters.getClientId() + " of tenantDomain: " + oAuth2Parameters
-                        .getTenantDomain() + ". Fetching the jwks endpoint for validating request object");
-            }
-            String jwksUri = getJWKSEndpoint(oAuth2Parameters);
-            isVerified = isSignatureVerified(jwt, jwksUri);
-        } else {
-            if (log.isDebugEnabled()) {
-
-                log.debug("Public certificate configured for Service Provider with " +
-                        "client_id: " + oAuth2Parameters.getClientId() + " of tenantDomain: " + oAuth2Parameters
-                        .getTenantDomain() + ". Using public certificate  for validating request object");
-            }
-            isVerified = isSignatureVerified(jwt, certificate);
-        }
-        requestObject.setIsSignatureValid(isVerified);
-        return isVerified;
+        return RequestObjectValidatorUtil.validateSignature(requestObject, oAuth2Parameters);
     }
 
     /**
-     * Fetch JWKS endpoint using OAuth2 Parameters.
-     *
-     * @param oAuth2Parameters  oAuth2Parameters
-     */
-    private String getJWKSEndpoint(OAuth2Parameters oAuth2Parameters) throws RequestObjectException {
-
-        String jwksUri = StringUtils.EMPTY;
-        ServiceProviderProperty[] spProperties;
-        try {
-            spProperties = OAuth2Util.getServiceProvider(oAuth2Parameters.getClientId())
-                    .getSpProperties();
-        } catch (IdentityOAuth2Exception e) {
-            throw new RequestObjectException("Error while getting the service provider for client ID " +
-                    oAuth2Parameters.getClientId(), OAuth2ErrorCodes.SERVER_ERROR, e);
-        }
-
-        if (spProperties != null) {
-            for (ServiceProviderProperty spProperty : spProperties) {
-                if (Constants.JWKS_URI.equals(spProperty.getName())) {
-                    jwksUri = spProperty.getValue();
-                    if (log.isDebugEnabled()) {
-                        log.debug("Found jwks endpoint " + jwksUri + " for service provider with client id " +
-                                oAuth2Parameters.getClientId());
-                    }
-                    break;
-                }
-            }
-        } else {
-            return StringUtils.EMPTY;
-        }
-        return jwksUri;
-    }
-
-    /**
+     * @deprecated use @{@link RequestObjectValidatorUtil#isSignatureVerified(SignedJWT, String)}} instead
+     * to verify the signature
      * Validating signature based on jwks endpoint.
      *
      * @param signedJWT signed JWT
      * @param jwksUri   Uri of the JWKS endpoint
      * @throws RequestObjectException
      */
+    @Deprecated
     protected boolean isSignatureVerified(SignedJWT signedJWT, String jwksUri) throws RequestObjectException {
 
-        // Validate the signature of the assertion using the jwks endpoint.
-        if (StringUtils.isNotBlank(jwksUri)) {
-            String jwtString = signedJWT.getParsedString();
-            String alg = signedJWT.getHeader().getAlgorithm().getName();
-            try {
-                return new JWKSBasedJWTValidator().validateSignature(jwtString, jwksUri, alg, MapUtils.EMPTY_MAP);
-            } catch (IdentityOAuth2Exception e) {
-                String errorMessage = "Error occurred while validating request object signature using jwks endpoint";
-                throw new RequestObjectException(errorMessage, OAuth2ErrorCodes.SERVER_ERROR, e);
-            }
-        }
-        return false;
+        return RequestObjectValidatorUtil.isSignatureVerified(signedJWT, jwksUri);
 
     }
 
@@ -208,6 +125,9 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                 return false;
             }
         }
+        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                OAuthConstants.LogConstants.SUCCESS, "Request object validation is successful.",
+                "validate-request-object", null);
         return true;
     }
 
@@ -232,6 +152,13 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                         ", TimeStamp Skew : " + timeStampSkewMillis +
                         ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
                 logAndReturnFalse(msg);
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("requestObjectExpirationTime", expirationTime);
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.FAILED, "Request Object is Expired.", "validate-request-object",
+                            null);
+                }
                 throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Request Object " +
                         "is Expired.");
             }
@@ -247,11 +174,27 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         final String errorMsg = "Request Object and Authorization request contains unmatched ";
 
         if (!isValidParameter(oauthRequest.getClientId(), clientIdInReqObj)) {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientIdInRequest", oauthRequest.getClientId());
+                params.put("clientIdInRequestObject", clientIdInReqObj);
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED, errorMsg + Constants.CLIENT_ID, "validate-request-object",
+                        null);
+            }
             throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMsg + Constants
                     .CLIENT_ID);
         }
 
         if (!isValidParameter(oauthRequest.getResponseType(), responseTypeInReqObj)) {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("responseTypeInRequest", oauthRequest.getResponseType());
+                params.put("responseTypeInRequestObject", responseTypeInReqObj);
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED, errorMsg + Constants.CLIENT_ID, "validate-request-object",
+                        null);
+            }
             throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST,
                     errorMsg + Constants.RESPONSE_TYPE);
         }
@@ -309,7 +252,19 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     protected boolean isValidIssuer(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) {
 
         String issuer = requestObject.getClaimsSet().getIssuer();
-        return StringUtils.isNotEmpty(issuer) && issuer.equals(oAuth2Parameters.getClientId());
+        boolean isValid = StringUtils.isNotEmpty(issuer) && issuer.equals(oAuth2Parameters.getClientId());
+        if (!isValid) {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("issuer", issuer);
+                params.put("clientId", oAuth2Parameters.getClientId());
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED,
+                        "'issuer' field in request object should match with 'client_id' in request.",
+                        "validate-request-object", null);
+            }
+        }
+        return isValid;
     }
 
     private boolean isParamPresent(RequestObject requestObject, String claim) {
@@ -332,9 +287,19 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                 return true;
             }
         }
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("audience", audience);
+
+            Map<String, Object> configs = new HashMap<>();
+            params.put("tokenEndpointUrl", currentAudience);
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                    OAuthConstants.LogConstants.FAILED,
+                    "None of the audiences in request object matched the token endpoint", "validate-request-object",
+                    configs);
+        }
         return logAndReturnFalse("None of the audience values matched the tokenEndpoint Alias: " + currentAudience);
     }
-
 
     /**
      * @deprecated use @{@link RequestObjectValidatorImpl#getX509CertOfOAuthApp(String, String)}} instead
@@ -346,65 +311,58 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     }
 
     /**
-     * Get the X509Certificate object containing the public key of the OAuth client.
+     * @deprecated use @{@link RequestObjectValidatorUtil#getX509CertOfOAuthApp(String, String)}} instead
+     * to get the X509Certificate object containing the public key of the OAuth client.
      *
      * @param clientId clientID of the OAuth client (Service Provider).
      * @param tenantDomain tenant domain of Service Provider.
      * @return X509Certificate object containing the public certificate of the Service Provider.
      */
+    @Deprecated
     protected Certificate getX509CertOfOAuthApp(String clientId, String tenantDomain) throws RequestObjectException {
 
-
-        try {
-            return OAuth2Util.getX509CertOfOAuthApp(clientId, tenantDomain);
-        } catch (IdentityOAuth2Exception e) {
-            String errorMsg = "Error retrieving application certificate of OAuth app with client_id: " + clientId +
-                    " , tenantDomain: " + tenantDomain;
-            if (StringUtils.isNotBlank(e.getMessage())) {
-                // We expect OAuth2Util.getX509CertOfOAuthApp() to throw an exception with a more specific reason for
-                // not being able to retrieve the X509 Cert of the service provider.
-                errorMsg = e.getMessage();
-            }
-            throw new RequestObjectException(errorMsg, e);
-        }
+        return RequestObjectValidatorUtil.getX509CertOfOAuthApp(clientId, tenantDomain);
     }
 
     /**
+     * @deprecated use @{@link RequestObjectValidatorUtil#isSignatureVerified(SignedJWT, Certificate)}} instead
+     * to verify the signature
      * Validate the signedJWT signature with given certificate
      *
-     * @param signedJWT
-     * @param x509Certificate
-     * @return
+     * @param signedJWT Signed JWT
+     * @param x509Certificate X509 Certificate
+     * @return is signature valid
      */
+    @Deprecated
     protected boolean isSignatureVerified(SignedJWT signedJWT, Certificate x509Certificate) {
 
-        JWSVerifier verifier;
-        JWSHeader header = signedJWT.getHeader();
-        if (x509Certificate == null) {
-            return logAndReturnFalse("Unable to locate certificate for JWT " + header.toString());
-        }
+        return RequestObjectValidatorUtil.isSignatureVerified(signedJWT, x509Certificate);
+    }
 
-        String alg = signedJWT.getHeader().getAlgorithm().getName();
-        if (log.isDebugEnabled()) {
-            log.debug("Signature Algorithm found in the JWT Header: " + alg);
-        }
-        if (alg.indexOf(RS) == 0 || alg.indexOf(PS) == 0) {
-            // At this point 'x509Certificate' will never be null.
-            PublicKey publicKey = x509Certificate.getPublicKey();
-            if (publicKey instanceof RSAPublicKey) {
-                verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
-            } else {
-                return logAndReturnFalse("Public key is not an RSA public key.");
+    /**
+     * Check if the redirect uri in the request object is valid.
+     *
+     * @param requestObject    Request object.
+     * @param oAuth2Parameters OAuth2 parameters.
+     * @return True if redirect uri is valid.
+     */
+    protected boolean isValidRedirectUri(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) {
+
+        String redirectUriInReqObj = requestObject.getClaimValue(Constants.REDIRECT_URI);
+        boolean isValid = StringUtils.isBlank(redirectUriInReqObj) || StringUtils.equals(redirectUriInReqObj,
+                oAuth2Parameters.getRedirectURI());
+        if (!isValid) {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("redirectUriInRequest", oAuth2Parameters.getRedirectURI());
+                params.put("redirectUriInRequestObject", redirectUriInReqObj);
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED,
+                        "Redirect URI in request object does not match with redirect URI in request.",
+                        "validate-request-object", null);
             }
-        } else {
-            return logAndReturnFalse("Signature Algorithm not supported yet : " + alg);
         }
-        // At this point 'verifier' will never be null;
-        try {
-            return signedJWT.verify(verifier);
-        } catch (JOSEException e) {
-            return logAndReturnFalse("Unable to verify the signature of the request object: " + signedJWT.serialize());
-        }
+        return isValid;
     }
 
     /**
@@ -414,23 +372,10 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * @return
      */
     private boolean logAndReturnFalse(String errorMessage) {
+
         if (log.isDebugEnabled()) {
             log.debug(errorMessage);
         }
         return false;
-    }
-
-    /**
-     * Check if the redirect uri in the request object is valid.
-     *
-     * @param requestObject Request object.
-     * @param oAuth2Parameters OAuth2 parameters.
-     * @return True if redirect uri is valid.
-     */
-    protected boolean isValidRedirectUri(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) {
-
-        String redirectUriInReqObj = requestObject.getClaimValue(Constants.REDIRECT_URI);
-        return StringUtils.isBlank(redirectUriInReqObj) || StringUtils.equals(redirectUriInReqObj,
-                oAuth2Parameters.getRedirectURI());
     }
 }

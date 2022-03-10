@@ -430,7 +430,8 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
             } else {
                 timeInMillis = Long.parseLong((String) (returnClaims.get(UPDATED_AT)));
             }
-            returnClaims.put(UPDATED_AT, timeInMillis);
+            long timeInSeconds = timeInMillis / 1000;
+            returnClaims.put(UPDATED_AT, timeInSeconds);
         }
     }
 
@@ -457,7 +458,8 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
 
     private void handleRolesClaim(Map<String, Object> returnClaims) {
 
-        if (returnClaims.containsKey(ROLES) && IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
+        if (returnClaims.containsKey(ROLES) && IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()
+                && returnClaims.get(ROLES) instanceof String) {
             String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
             List<String> roles = Arrays.asList(returnClaims.get(ROLES).toString().split(multiAttributeSeparator));
 
@@ -524,7 +526,6 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         } catch (ClaimMetadataException e) {
             String msg = "Error while trying to convert user consented claims to OIDC dialect in tenantDomain: "
                     + tenantDomain;
-            log.error(msg);
             if (log.isDebugEnabled()) {
                 log.debug(msg, e);
             }

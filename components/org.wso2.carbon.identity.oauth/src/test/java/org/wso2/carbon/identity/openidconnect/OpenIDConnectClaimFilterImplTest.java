@@ -150,6 +150,24 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
     }
 
     @Test
+    public void testHandleUpdatedAtClaim() {
+
+        String date = "2021-10-27T11:34:13.791Z";
+        claims = new HashMap<>();
+        claims.put("updated_at", date);
+        String[] requestedScopes = {"profile"};
+        OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = new OIDCScopeClaimCacheEntry();
+        oidcScopeClaimCacheEntry.setScopeClaimMapping(getScopeDTOList());
+        OIDCScopeClaimCache.getInstance().addScopeClaimMap(-1234, oidcScopeClaimCacheEntry);
+        Map<String, Object> filteredClaims = openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(claims,
+                requestedScopes, CLIENT_ID, SP_TENANT_DOMAIN);
+        // Due to the effect of time zone during time conversion, considering only the seconds during comparison
+        // Check is to ensure this claim is in seconds not milliseconds
+        String filteredDate = String.valueOf(filteredClaims.get("updated_at"));
+        Assert.assertEquals(filteredDate.substring(8), "53");
+    }
+
+    @Test
     public void testGetClaimsFilteredByUserConsent() throws Exception {
 
         claims = getClaims();
@@ -298,9 +316,18 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
         scopeDTOForAddress.setDescription("addressDescription");
         String[] claimsForAddress = new String[]{"claim3"};
         scopeDTOForAddress.setClaim(claimsForAddress);
+
+        ScopeDTO scopeDTOForProfile = new ScopeDTO();
+        scopeDTOForProfile.setName("profile");
+        scopeDTOForProfile.setDisplayName("profileDisplayName");
+        scopeDTOForProfile.setDescription("profileDescription");
+        String[] claimsForProfile = new String[]{"updated_at"};
+        scopeDTOForProfile.setClaim(claimsForProfile);
+
         scopeDTOList = new ArrayList<>();
         scopeDTOList.add(scopeDTOForEmail);
         scopeDTOList.add(scopeDTOForAddress);
+        scopeDTOList.add(scopeDTOForProfile);
         return scopeDTOList;
     }
 

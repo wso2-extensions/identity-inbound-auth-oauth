@@ -63,6 +63,8 @@ public class OIDCSessionManagementUtil {
     private static final String RANDOM_ALG_SHA1 = "SHA1PRNG";
     private static final String DIGEST_ALG_SHA256 = "SHA-256";
     private static final String OIDC_SESSION_STATE_MANAGER_CONFIG = "OAuth.OIDCSessionStateManager";
+    private static final String ALLOW_ADDITIONAL_PARAMS_FROM_POST_LOGOUT_REDIRECT_URI = "OAuth" +
+            ".OpenIDConnect.AllowAdditionalParamsFromPostLogoutRedirectURI";
 
     private static final OIDCSessionManager sessionManager = new OIDCSessionManager();
     private static OIDCSessionStateManager oidcSessionStateManager;
@@ -455,6 +457,23 @@ public class OIDCSessionManagementUtil {
     public static boolean isIDTokenEncrypted(String idToken) {
         // Encrypted ID token contains 5 base64 encoded components separated by periods.
         return StringUtils.countMatches(idToken, ".") == 4;
+    }
+
+    /**
+     * Method to retrieve the <AllowAdditionalParamsFromPostLogoutRedirectURI> config from the OAuth Configuration.
+     *
+     * @return Retrieved config (true or false)
+     */
+    public static boolean isAllowAdditionalParamsFromPostLogoutRedirectURIEnabled() {
+
+        String isAllowAdditionalParamsFromPostLogoutRedirectURIEnabled =
+                IdentityUtil.getProperty(ALLOW_ADDITIONAL_PARAMS_FROM_POST_LOGOUT_REDIRECT_URI);
+
+        if (StringUtils.isNotBlank(isAllowAdditionalParamsFromPostLogoutRedirectURIEnabled)) {
+            return Boolean.parseBoolean(isAllowAdditionalParamsFromPostLogoutRedirectURIEnabled);
+        } else {
+            return true;
+        }
     }
 
 }

@@ -17,6 +17,7 @@
 package org.wso2.carbon.identity.oauth.scope.endpoint.exceptions;
 
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ErrorDTO;
+import org.wso2.carbon.identity.oauth.scope.endpoint.util.ScopeUtils;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
@@ -36,6 +37,7 @@ public class ScopeEndpointException extends WebApplicationException {
     public ScopeEndpointException(Response.Status status) {
 
         super(Response.status(status)
+                .entity(ScopeUtils.getCorrelation())
                 .build());
     }
 }

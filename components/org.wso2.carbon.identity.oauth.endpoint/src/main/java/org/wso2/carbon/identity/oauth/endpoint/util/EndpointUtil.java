@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -83,6 +84,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
+import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
@@ -873,11 +876,28 @@ public class EndpointUtil {
                                 userApprovedScopes, null);
                     }
                 }
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> consentParams = new HashMap<>();
+                    consentParams.put("clientId", params.getClientId());
+                    consentParams.put("approvedScopes", userApprovedScopes);
+                    consentParams.put("user", userId);
+
+                    Map<String, Object> configs = new HashMap<>();
+                    configs.put("overrideExistingConsent", String.valueOf(overrideExistingConsent));
+                    LoggerUtils
+                            .triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, consentParams,
+                                    OAuthConstants.LogConstants.SUCCESS, "Successfully persisted oauth scopes.",
+                                    "persist-oauth-scope-consent", configs);
+                }
             }
         } catch (IdentityOAuthAdminException e) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "persist-oauth-scope-consent", null);
             throw new OAuthSystemException(
                     "Error occurred while removing OIDC scopes from approved OAuth scopes.", e);
         } catch (IdentityOAuth2ScopeException e) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "persist-oauth-scope-consent", null);
             throw new OAuthSystemException("Error occurred while storing OAuth scope consent.", e);
         }
     }
@@ -945,6 +965,24 @@ public class EndpointUtil {
                 }
             }
             if (CollectionUtils.isNotEmpty(allowedOAuthScopes)) {
+                // Filter out internal scopes to be validated.
+                String[] requestedScopes = Oauth2ScopeUtils.getRequestedScopes(
+                        allowedOAuthScopes.toArray(new String[0]));
+                if (ArrayUtils.isNotEmpty(requestedScopes)) {
+                    // Remove the filtered internal scopes from the allowedOAuthScopes list.
+                    allowedOAuthScopes.removeAll(Arrays.asList(requestedScopes));
+
+                    JDBCPermissionBasedInternalScopeValidator scopeValidator =
+                            new JDBCPermissionBasedInternalScopeValidator();
+                    String[] validatedScope = scopeValidator.validateScope(requestedScopes, user, params.getClientId());
+
+                    // Filter out requested scopes from the validated scope array.
+                    for (String scope : requestedScopes) {
+                        if (ArrayUtils.contains(validatedScope, scope)) {
+                            allowedOAuthScopes.add(scope);
+                        }
+                    }
+                }
                 params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
                 consentRequiredScopes = String.join(" ", allowedOAuthScopes).trim();
             }
@@ -1091,6 +1129,15 @@ public class EndpointUtil {
                     if (log.isDebugEnabled()) {
                         log.debug("Repeated param found:" + paramEntry.getKey());
                     }
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                        Map<String, Object> logParams = new HashMap<>();
+                        paramMap.forEach(logParams::put);
+                        LoggerUtils
+                                .triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, logParams,
+                                        OAuthConstants.LogConstants.FAILED,
+                                        "Parameter with name: '" + paramEntry.getKey() +
+                                                "' is repeated in the request.", "validate-input-parameters", null);
+                    }
                     return false;
                 }
             }
@@ -1101,6 +1148,16 @@ public class EndpointUtil {
                 if (entry.getValue().length > 1) {
                     if (log.isDebugEnabled()) {
                         log.debug("Repeated param found:" + entry.getKey());
+
+                    }
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                        Map<String, Object> logParams = new HashMap<>();
+                        map.forEach(logParams::put);
+                        LoggerUtils
+                                .triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, logParams,
+                                        OAuthConstants.LogConstants.FAILED,
+                                        "Parameter with name: '" + entry.getKey() + "' is repeated in the request.",
+                                        "validate-input-parameters", null);
                     }
                     return false;
                 }
@@ -1173,6 +1230,14 @@ public class EndpointUtil {
             if (log.isDebugEnabled()) {
                 log.debug("A valid OAuth client could not be found for client_id: " + consumerKey);
             }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", consumerKey);
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED,
+                        "A valid OAuth application could not be found for the given client_id.",
+                        "validate-oauth-client", null);
+            }
             throw new InvalidApplicationClientException("A valid OAuth client could not be found for client_id: " +
                     Encode.forHtml(consumerKey));
         }
@@ -1181,11 +1246,27 @@ public class EndpointUtil {
             if (log.isDebugEnabled()) {
                 log.debug("App is not in active state in client ID: " + consumerKey + ". App state is:" + appState);
             }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", consumerKey);
+                params.put("appState", appState);
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED, "OAuth application is not in active state.",
+                        "validate-oauth-client", null);
+            }
             throw new InvalidApplicationClientException("Oauth application is not in active state");
         }
 
         if (log.isDebugEnabled()) {
             log.debug("Oauth App validation success for consumer key: " + consumerKey);
+        }
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", consumerKey);
+            params.put("appState", appState);
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                    OAuthConstants.LogConstants.SUCCESS, "OAuth Application validation is successful.",
+                    "validate-oauth-client", null);
         }
     }
 
@@ -1199,8 +1280,13 @@ public class EndpointUtil {
         try {
             OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
             return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (IdentityOAuth2Exception e) {
             log.error("Error while getting oauth app for client Id: " + clientId, e);
+            return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        } catch (InvalidOAuthClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while getting oauth app for client Id: " + clientId, e);
+            }
             return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
     }
@@ -1367,7 +1453,7 @@ public class EndpointUtil {
      * @param oAuth2Parameters OAuth2 parameters.
      * @return state
      */
-    private static String retrieveStateForErrorURL(HttpServletRequest request, OAuth2Parameters oAuth2Parameters) {
+    public static String retrieveStateForErrorURL(HttpServletRequest request, OAuth2Parameters oAuth2Parameters) {
 
         String state = null;
         if (oAuth2Parameters != null && oAuth2Parameters.getState() != null) {

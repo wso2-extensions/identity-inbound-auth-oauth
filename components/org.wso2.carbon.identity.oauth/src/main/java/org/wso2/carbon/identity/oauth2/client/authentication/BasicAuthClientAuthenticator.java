@@ -200,8 +200,14 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
         // authorizationHeader should be case-insensitive according to the
         // "The 'Basic' HTTP Authentication Scheme" spec (https://tools.ietf.org/html/rfc7617#page-3),
         // "Note that both scheme and parameter names are matched case-insensitively."
-        return StringUtils.isNotEmpty(authorizationHeader) &&
+        boolean isBasicAuthorizationHeaderExist = StringUtils.isNotEmpty(authorizationHeader) &&
                 authorizationHeader.toUpperCase().startsWith(BASIC_PREFIX.toUpperCase());
+        if (!isBasicAuthorizationHeaderExist) {
+            if (log.isDebugEnabled()) {
+                log.debug("Basic authorization does not exist");
+            }
+        }
+        return isBasicAuthorizationHeaderExist;
     }
 
     protected String getAuthorizationHeader(HttpServletRequest request) {
@@ -209,6 +215,11 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
         String authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION);
         if (StringUtils.isEmpty(authorizationHeader)) {
             authorizationHeader = request.getHeader(SIMPLE_CASE_AUTHORIZATION_HEADER);
+        }
+        if (StringUtils.isBlank(authorizationHeader)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Authorization header is empty");
+            }
         }
         return authorizationHeader;
     }

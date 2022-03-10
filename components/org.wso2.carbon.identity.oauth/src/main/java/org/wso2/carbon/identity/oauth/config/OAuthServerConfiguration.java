@@ -57,6 +57,7 @@ import org.wso2.carbon.identity.oauth2.validators.grant.AuthorizationCodeGrantVa
 import org.wso2.carbon.identity.oauth2.validators.grant.ClientCredentialGrantValidator;
 import org.wso2.carbon.identity.oauth2.validators.grant.PasswordGrantValidator;
 import org.wso2.carbon.identity.oauth2.validators.grant.RefreshTokenGrantValidator;
+import org.wso2.carbon.identity.openidconnect.CIBARequestObjectValidatorImpl;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
@@ -202,11 +203,14 @@ public class OAuthServerConfiguration {
             "org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilder";
     private String defaultRequestValidatorClassName =
             "org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl";
+    private String defaultCibaRequestValidatorClassName =
+            "org.wso2.carbon.identity.openidconnect.CIBARequestObjectValidatorImpl";
     private String openIDConnectIDTokenCustomClaimsHanlderClassName =
             "org.wso2.carbon.identity.openidconnect.SAMLAssertionClaimsCallback";
     private IDTokenBuilder openIDConnectIDTokenBuilder = null;
     private Map<String, String> requestObjectBuilderClassNames = new HashMap<>();
     private volatile RequestObjectValidator requestObjectValidator = null;
+    private volatile RequestObjectValidator cibaRequestObjectValidator = null;
     private CustomClaimsCallbackHandler openidConnectIDTokenCustomClaimsCallbackHandler = null;
     private String openIDConnectIDTokenIssuerIdentifier = null;
     private String openIDConnectIDTokenSubClaim = "http://wso2.org/claims/fullname";
@@ -266,6 +270,9 @@ public class OAuthServerConfiguration {
     private boolean enableIntrospectionDataProviders = false;
     // Property to define the allowed scopes.
     private List<String> allowedScopes = new ArrayList<>();
+
+    // Property to define the filtered claims.
+    private List<String> filteredIntrospectionClaims = new ArrayList<>();
 
     // Property to check whether to drop unregistered scopes.
     private boolean dropUnregisteredScopes = false;
@@ -436,6 +443,9 @@ public class OAuthServerConfiguration {
         // Read config for allowed scopes.
         parseAllowedScopesConfiguration(oauthElem);
 
+        // Read config for filtered claims for introspection response.
+        parseFilteredClaimsForIntrospectionConfiguration(oauthElem);
+
         // Read config for dropping unregistered scopes.
         parseDropUnregisteredScopes(oauthElem);
     }
@@ -455,6 +465,29 @@ public class OAuthServerConfiguration {
             while (scopeIterator.hasNext()) {
                 OMElement scopeElement = (OMElement) scopeIterator.next();
                 allowedScopes.add(scopeElement.getText());
+            }
+        }
+    }
+
+    /**
+     * Parse filtered claims for introspection response configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseFilteredClaimsForIntrospectionConfiguration(OMElement oauthConfigElem) {
+
+        OMElement introspectionClaimsElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.INTROSPECTION_CONFIG));
+        if (introspectionClaimsElem != null) {
+            OMElement filteredClaimsElem = introspectionClaimsElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.FILTERED_CLAIMS));
+            if (filteredClaimsElem != null) {
+                Iterator claimIterator =   filteredClaimsElem.getChildrenWithName(getQNameWithIdentityNS(
+                        ConfigElements.FILTERED_CLAIM));
+                while (claimIterator.hasNext()) {
+                    OMElement claimElement = (OMElement) claimIterator.next();
+                    filteredIntrospectionClaims.add(claimElement.getText());
+                }
             }
         }
     }
@@ -522,6 +555,11 @@ public class OAuthServerConfiguration {
     public List<String> getAllowedScopes() {
 
         return allowedScopes;
+    }
+
+    public List<String> getFilteredIntrospectionClaims() {
+
+        return filteredIntrospectionClaims;
     }
 
     public String getOAuth1RequestTokenUrl() {
@@ -1011,6 +1049,31 @@ public class OAuthServerConfiguration {
             }
         }
         return requestObjectValidator;
+    }
+
+    /**
+     * Returns an instance of CIBARequestObjectValidator
+     *
+     * @return instance of CIBARequestObjectValidator
+     */
+    public RequestObjectValidator getCIBARequestObjectValidator() {
+
+        if (cibaRequestObjectValidator == null) {
+            synchronized (RequestObjectValidator.class) {
+                if (cibaRequestObjectValidator == null) {
+                    try {
+                        Class clazz = Thread.currentThread().getContextClassLoader()
+                                        .loadClass(defaultCibaRequestValidatorClassName);
+                        cibaRequestObjectValidator = (RequestObjectValidator) clazz.newInstance();
+                    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+                        log.warn("Failed to initiate CIBA RequestObjectValidator from identity.xml. " +
+                                "Hence initiating the default implementation", e);
+                        cibaRequestObjectValidator = new CIBARequestObjectValidatorImpl();
+                    }
+                }
+            }
+        }
+        return cibaRequestObjectValidator;
     }
 
     /**
@@ -2650,6 +2713,12 @@ public class OAuthServerConfiguration {
                         openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
                                 REQUEST_OBJECT_VALIDATOR)).getText().trim();
             }
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
+                    CIBA_REQUEST_OBJECT_VALIDATOR)) != null) {
+                defaultCibaRequestValidatorClassName =
+                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
+                                CIBA_REQUEST_OBJECT_VALIDATOR)).getText().trim();
+            }
             if (openIDConnectConfigElem
                     .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_IDTOKEN_BUILDER)) !=
                     null) {
@@ -3141,6 +3210,7 @@ public class OAuthServerConfiguration {
         public static final String SUPPORTED_CLAIMS = "OpenIDConnectClaims";
         public static final String REQUEST_OBJECT = "RequestObject";
         public static final String REQUEST_OBJECT_VALIDATOR = "RequestObjectValidator";
+        public static final String CIBA_REQUEST_OBJECT_VALIDATOR = "CIBARequestObjectValidator";
         public static final String OPENID_CONNECT_BACK_CHANNEL_LOGOUT_TOKEN_EXPIRATION = "LogoutTokenExpiration";
         // Callback handler related configuration elements
         private static final String OAUTH_CALLBACK_HANDLERS = "OAuthCallbackHandlers";
@@ -3271,6 +3341,9 @@ public class OAuthServerConfiguration {
         // Allowed Scopes Config.
         private static final String ALLOWED_SCOPES_ELEMENT = "AllowedScopes";
         private static final String SCOPES_ELEMENT = "Scope";
+        // Filtered Claims For Introspection Response Config.
+        private static final String FILTERED_CLAIMS = "FilteredClaims";
+        private static final String FILTERED_CLAIM = "FilteredClaim";
 
         private static final String DROP_UNREGISTERED_SCOPES = "DropUnregisteredScopes";
 

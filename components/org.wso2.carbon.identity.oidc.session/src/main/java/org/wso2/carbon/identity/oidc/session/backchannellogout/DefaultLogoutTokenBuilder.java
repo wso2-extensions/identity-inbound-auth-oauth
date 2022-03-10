@@ -226,7 +226,9 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
                     JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(tenantDomain, idToken);
                     clientId = OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(decryptedIDToken);
                 } catch (ParseException e) {
-                    log.error("Error in extracting the client ID from the ID token.");
+                    if (log.isDebugEnabled()) {
+                        log.debug("Error in extracting the client ID from the ID token : " + idToken);
+                    }
                 }
                 return clientId;
             }
@@ -404,7 +406,9 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
             try {
                 clientId = extractClientFromIdToken(idTokenHint);
             } catch (ParseException e) {
-                log.error("Error while decoding the ID Token Hint.", e);
+                if (log.isDebugEnabled()) {
+                    log.debug("Error while decoding the ID Token Hint: " + idTokenHint, e);
+                }
             }
         }
         return clientId;
@@ -457,7 +461,9 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
 
             return signedJWT.verify(verifier);
         } catch (JOSEException | ParseException e) {
-            log.error("Error occurred while validating id token signature.", e);
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while validating id token signature.", e);
+            }
             return false;
         } catch (Exception e) {
             log.error("Error occurred while validating id token signature.", e);

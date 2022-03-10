@@ -640,25 +640,32 @@ public class DCRMService {
                 grantTypes.contains(DCRConstants.GrantTypes.IMPLICIT);
     }
 
-    private String createRegexPattern(List<String> redirectURIs) throws DCRMException {
+    protected String createRegexPattern(List<String> redirectURIs) throws DCRMException {
 
-        StringBuilder regexPattern = new StringBuilder();
+        String regexPattern = "";
+        List<String> escapedUrls = new ArrayList<>();
         for (String redirectURI : redirectURIs) {
             if (DCRMUtils.isRedirectionUriValid(redirectURI)) {
-                if (regexPattern.length() > 0) {
-                    regexPattern.append("|").append(redirectURI);
-                } else {
-                    regexPattern.append("(").append(redirectURI);
-                }
+                escapedUrls.add(escapeQueryParamsIfPresent(redirectURI));
             } else {
                 throw DCRMUtils.generateClientException(
                         DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_REDIRECT_URI, redirectURI);
             }
         }
-        if (regexPattern.length() > 0) {
-            regexPattern.append(")");
+        if (!escapedUrls.isEmpty()) {
+            regexPattern = ("(".concat(StringUtils.join(escapedUrls, "|"))).concat(")");
         }
-        return regexPattern.toString();
+        return regexPattern;
+    }
+
+    /**
+     * Method to escape query parameters in the redirect urls
+     * @param redirectURI
+     * @return
+     */
+    private String escapeQueryParamsIfPresent(String redirectURI) {
+
+        return redirectURI.replaceFirst("\\?", "\\\\?");
     }
 
     private boolean isUserAuthorized(String clientId) throws DCRMServerException {

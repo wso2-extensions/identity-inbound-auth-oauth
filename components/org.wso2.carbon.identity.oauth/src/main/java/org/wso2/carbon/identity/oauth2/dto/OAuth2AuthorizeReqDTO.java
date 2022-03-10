@@ -133,7 +133,12 @@ public class OAuth2AuthorizeReqDTO {
     }
 
     public String[] getScopes() {
-        return scopes.clone();
+
+        if (scopes != null) {
+            return scopes.clone();
+        } else {
+            return new String[0];
+        }
     }
 
     public void setScopes(String[] scopes) {

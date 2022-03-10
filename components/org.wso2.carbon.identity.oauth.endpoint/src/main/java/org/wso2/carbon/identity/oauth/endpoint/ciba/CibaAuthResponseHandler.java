@@ -22,7 +22,6 @@ import net.minidev.json.JSONObject;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
@@ -53,7 +52,7 @@ public class CibaAuthResponseHandler {
         // Set the ExpiryTime.
         long expiresIn = cibaAuthCodeResponse.getExpiresIn();
         if (log.isDebugEnabled()) {
-            log.info("Setting ExpiryTime for the response to the  request made by client with clientID : " +
+            log.debug("Setting ExpiryTime for the response to the  request made by client with clientID : " +
                     cibaAuthCodeResponse.getClientId() + ".");
         }
         // Create authentication response.
@@ -110,14 +109,16 @@ public class CibaAuthResponseHandler {
         cibaErrorResponse.put(ERROR, cibaAuthFailureException.getErrorCode());
         cibaErrorResponse.put(ERROR_DESCRIPRION, cibaAuthFailureException.getMessage());
 
-        if (errorCode.equals(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT) || errorCode.equals(ErrorCodes.UNAUTHORIZED_USER)) {
+        Response.ResponseBuilder respBuilder;
+        if (errorCode.equals(OAuth2ErrorCodes.INVALID_CLIENT)) {
+
             // Creating error response for the request.
-            Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED);
-            return respBuilder.entity(cibaErrorResponse.toString()).build();
+            respBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED);
+
         } else {
-            Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
-            return respBuilder.entity(cibaErrorResponse.toString()).build();
+            respBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
         }
+        return respBuilder.entity(cibaErrorResponse.toString()).build();
     }
 
     /**

@@ -18,6 +18,8 @@ package org.wso2.carbon.identity.openidconnect;
 import com.nimbusds.jose.JWSAlgorithm;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.Charsets;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -41,6 +43,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.C_
  * This class is used to inject system claims like c_hash, at_hash into the id_token.
  */
 public class OpenIDConnectSystemClaimImpl implements ClaimProvider {
+
+    public static final Log LOG = LogFactory.getLog(OpenIDConnectSystemClaimImpl.class);
     private static final String SHA384 = "SHA-384";
     private static final String SHA512 = "SHA-512";
     private JWSAlgorithm signatureAlgorithm = null;
@@ -145,8 +149,23 @@ public class OpenIDConnectSystemClaimImpl implements ClaimProvider {
 
     private boolean isAccessTokenHashApplicable(String responseType) {
         // At_hash is generated on an access token. Therefore check whether the response type returns an access_token.
-        // id_token and none response types don't return and access token
-        return !OAuthConstants.ID_TOKEN.equalsIgnoreCase(responseType) &&
-                !OAuthConstants.NONE.equalsIgnoreCase(responseType);
+        for (String respType : getResponseTypes(responseType)) {
+            if (OAuthConstants.TOKEN.equalsIgnoreCase(respType)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String[] getResponseTypes(String responseType) {
+
+        if (isNotBlank(responseType)) {
+            return responseType.split(" ");
+        } else {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Response type not available.");
+            }
+            return new String[0];
+        }
     }
 }

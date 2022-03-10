@@ -75,8 +75,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE_NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_VALIDATION;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties
-        .TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUDIENCE;
 
@@ -691,8 +690,8 @@ public class OAuthAppDAO {
                                                  PreparedStatement preparedStatement,
                                                  String propertyKey,
                                                  String propertyValue) throws SQLException {
-        preparedStatement.setInt(1, tenantId);
-        preparedStatement.setString(2, consumerKey);
+        preparedStatement.setString(1, consumerKey);
+        preparedStatement.setInt(2, tenantId);
         preparedStatement.setString(3, propertyKey);
         preparedStatement.setString(4, propertyValue);
         preparedStatement.addBatch();
@@ -704,8 +703,8 @@ public class OAuthAppDAO {
                                                  String propertyKey,
                                                  String propertyValue) throws SQLException {
         preparedStatement.setString(1, propertyValue);
-        preparedStatement.setInt(2, tenantId);
-        preparedStatement.setString(3, consumerKey);
+        preparedStatement.setString(2, consumerKey);
+        preparedStatement.setInt(3, tenantId);
         preparedStatement.setString(4, propertyKey);
         preparedStatement.addBatch();
     }
@@ -909,8 +908,8 @@ public class OAuthAppDAO {
         ResultSet rSetAudiences = null;
         try {
             prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_SP_OIDC_PROPERTY);
-            prepStmt.setInt(1, IdentityTenantUtil.getTenantId(tenantDomain));
-            prepStmt.setString(2, consumerKey);
+            prepStmt.setString(1, consumerKey);
+            prepStmt.setInt(2, IdentityTenantUtil.getTenantId(tenantDomain));
             prepStmt.setString(3, OPENID_CONNECT_AUDIENCE);
             rSetAudiences = prepStmt.executeQuery();
             while (rSetAudiences.next()) {
@@ -958,8 +957,8 @@ public class OAuthAppDAO {
 
         try (PreparedStatement prepStmt =
                      connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_ALL_SP_OIDC_PROPERTIES)) {
-            prepStmt.setInt(1, IdentityTenantUtil.getTenantId(tenantDomain));
-            prepStmt.setString(2, consumerKey);
+            prepStmt.setString(1, consumerKey);
+            prepStmt.setInt(2, IdentityTenantUtil.getTenantId(tenantDomain));
             prepStmt.execute();
         }
     }
@@ -1219,8 +1218,8 @@ public class OAuthAppDAO {
         ResultSet spOIDCPropertyResultSet = null;
         try {
             prepStatement = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_ALL_SP_OIDC_PROPERTIES);
-            prepStatement.setInt(1, IdentityTenantUtil.getTenantId(spTenantDomain));
-            prepStatement.setString(2, consumerKey);
+            prepStatement.setString(1, consumerKey);
+            prepStatement.setInt(2, IdentityTenantUtil.getTenantId(spTenantDomain));
 
             spOIDCPropertyResultSet = prepStatement.executeQuery();
             while (spOIDCPropertyResultSet.next()) {
@@ -1309,9 +1308,9 @@ public class OAuthAppDAO {
     }
 
     private void handleRequestForANonExistingConsumerKey(String consumerKey) throws InvalidOAuthClientException {
-        String message = "Cannot find an application associated with the given consumer key : " + consumerKey;
+        String message = "application.not.found";
         if (LOG.isDebugEnabled()) {
-            LOG.debug(message);
+            LOG.debug("Cannot find an application associated with the given consumer key.");
         }
         throw new InvalidOAuthClientException(message);
     }

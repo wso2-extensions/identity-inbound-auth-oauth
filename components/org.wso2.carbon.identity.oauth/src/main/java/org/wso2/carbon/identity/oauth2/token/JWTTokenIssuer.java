@@ -79,6 +79,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String SHA512_WITH_EC = "SHA512withEC";
 
     private static final String AUTHORIZATION_PARTY = "azp";
+    private static final String CLIENT_ID = "client_id";
     private static final String AUDIENCE = "aud";
     private static final String SCOPE = "scope";
     private static final String TOKEN_BINDING_REF = "binding_ref";
@@ -361,7 +362,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
     /**
      * This method map signature algorithm define in identity.xml to nimbus signature algorithm format, Strings are
-     * defined inline hence there are not being used any where
+     * defined inline hence there are not being used anywhere
      *
      * @param signatureAlgorithm Signature algorithm.
      * @return JWS algorithm.
@@ -446,6 +447,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.issueTime(new Date(curTimeInMillis));
         jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
         jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis));
+        jwtClaimsSetBuilder.claim(CLIENT_ID, consumerKey);
 
         String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
         if (StringUtils.isNotEmpty(scope)) {
@@ -490,7 +492,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private Date calculateAccessTokenExpiryTime(Long accessTokenLifeTimeInMillis, Long curTimeInMillis) {
 
         Date expirationTime;
-        // When accessTokenLifeTimeInMillis is equal to Long.MAX_VALUE the curTimeInMillis + 
+        // When accessTokenLifeTimeInMillis is equal to Long.MAX_VALUE the curTimeInMillis +
         // accessTokenLifeTimeInMillis can be a negative value
         if (curTimeInMillis + accessTokenLifeTimeInMillis < curTimeInMillis) {
             expirationTime = new Date(Long.MAX_VALUE);
@@ -521,7 +523,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @return authenticated subject identifier.
      */
     private String getAuthenticatedSubjectIdentifier(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
-            OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
+     OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
         return authenticatedUser.getAuthenticatedSubjectIdentifier();
@@ -541,7 +543,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     /**
-     * Get authentication request object from message context
+     * Get authentication request object from message context.
      *
      * @param authAuthzReqMessageContext
      * @param tokenReqMessageContext
@@ -572,7 +574,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @return scope of token.
      */
     private String getScope(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
-            OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
+                            OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
 
         String[] scope;
         String scopeString = null;
@@ -673,7 +675,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     /**
-     * Populate custom claims (For implicit grant)
+     * Populate custom claims (For implicit grant).
      *
      * @param jwtClaimsSetBuilder
      * @param tokenReqMessageContext
@@ -689,7 +691,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     /**
-     * Populate custom claims
+     * Populate custom claims.
      *
      * @param jwtClaimsSetBuilder
      * @param authzReqMessageContext

@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
@@ -68,7 +69,9 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AParams.OAUTH_VERSION;
 
@@ -1054,4 +1057,72 @@ public class DCRMServiceTest extends PowerMockTestCase {
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(dummyUserName);
     }
 
+    @DataProvider(name = "redirectUriWithQueryParamsProvider")
+    public Object[][] getRedirectUrisWithQueryParams() {
+
+        List<String> redirectUriList = new ArrayList<>();
+        redirectUriList.add("https://wso2.com");
+        redirectUriList.add("https://wso2.com?dummy1");
+        redirectUriList.add("https://wso2.com?dummy1=1&dummy=2");
+        List<String> validCallbackList = new ArrayList<>();
+        validCallbackList.add("https://wso2.com");
+        validCallbackList.add("https://wso2.com?dummy1");
+        validCallbackList.add("https://wso2.com?dummy1=1&dummy=2");
+        List<String> invalidCallbackList = new ArrayList<>();
+        invalidCallbackList.add("https://wso2.com/");
+        invalidCallbackList.add("https://wso2.com/?dummy1");
+        invalidCallbackList.add("https://wso2.com/?dummy1=1&dummy=2");
+        return new Object[][]{
+                {redirectUriList, validCallbackList, invalidCallbackList}
+        };
+    }
+
+    @Test(dataProvider = "redirectUriWithQueryParamsProvider")
+    public void registerApplicationTestWithRedirectURls(List<String> redirectUri, List<String> validCallbackList,
+                                                        List<String> invalidCallbackList) throws Exception {
+
+        mockApplicationManagementService = mock(ApplicationManagementService.class);
+
+        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+
+        startTenantFlow();
+
+        dummyGrantTypes.add("implicit");
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
+
+        String grantType = StringUtils.join(applicationRegistrationRequest.getGrantTypes(), " ");
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+
+        DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
+        dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
+        when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain)).thenReturn
+                (null, serviceProvider);
+
+        applicationRegistrationRequest.setRedirectUris(redirectUri);
+
+        OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
+        oAuthConsumerApp.setApplicationName(dummyClientName);
+
+        oAuthConsumerApp.setGrantTypes(grantType);
+        oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
+        oAuthConsumerApp.setCallbackUrl(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX +
+                dcrmService.createRegexPattern(redirectUri));
+
+        when(mockOAuthAdminService
+                .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
+        when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class)))
+                .thenReturn(oAuthConsumerApp);
+
+        Application application = dcrmService.registerApplication(applicationRegistrationRequest);
+        assertEquals(application.getClientName(), dummyClientName);
+        String regexp = application.getRedirectUris().get(0)
+                .substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
+        for (String validCallback : validCallbackList) {
+            assertTrue(validCallback.matches(regexp));
+        }
+        for (String invalidCallback : invalidCallbackList) {
+            assertFalse(invalidCallback.matches(regexp));
+        }
+    }
 }

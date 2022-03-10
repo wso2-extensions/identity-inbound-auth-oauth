@@ -27,6 +27,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
@@ -106,7 +107,8 @@ import static org.testng.AssertJUnit.assertTrue;
         OAuthUtil.class,
         OAuthCache.class,
         AppInfoCache.class,
-        MultitenantUtils.class
+        MultitenantUtils.class,
+        LoggerUtils.class
 })
 public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
@@ -145,6 +147,8 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
         oAuth2Service = new OAuth2Service();
         WhiteboxImpl.setInternalState(OAuthServerConfiguration.getInstance(), "timeStampSkewInSeconds", 3600L);
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
     }
 
     /**
@@ -176,6 +180,8 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     @Test
     public void testAuthorizeWithException() throws IdentityOAuth2Exception {
 
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         String callbackUrl = "dummyCallBackUrl";
         mockStatic(AuthorizationHandlerManager.class);
         when(oAuth2AuthorizeReqDTO.getCallbackUrl()).thenReturn(callbackUrl);
@@ -238,6 +244,8 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     public void testValidateClientInfoWithInvalidClientId() throws Exception {
 
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         when(oAuthAppDAO.getAppInformation(null)).thenReturn(null);
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
                 validateClientInfo(null, "dummyCallbackUrI");
@@ -329,6 +337,8 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "ExceptionForIssueAccessToken")
     public void testExceptionForIssueAccesstoken(Object exception, String errorMsg) throws IdentityException {
 
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         AccessTokenIssuer accessTokenIssuer = mock(AccessTokenIssuer.class);
         mockStatic(AccessTokenIssuer.class);
         when(AccessTokenIssuer.getInstance()).thenReturn(accessTokenIssuer);
@@ -364,6 +374,8 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     public void testRevokeTokenByOAuthClientWithRefreshToken(String grantType, String tokenState) throws Exception {
 
         setUpRevokeToken();
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         RefreshTokenValidationDataDO refreshTokenValidationDataDO = new RefreshTokenValidationDataDO();
         refreshTokenValidationDataDO.setGrantType(GrantType.REFRESH_TOKEN.toString());
         refreshTokenValidationDataDO.setAccessToken("testAccessToken");
@@ -489,6 +501,8 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
             boolean throwInvalidOAuthClientException, boolean failClientAuthentication) throws Exception {
 
         setUpRevokeToken();
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setConsumerKey("testConsumerKey");
         accessTokenDO.setAuthzUser(authenticatedUser);
@@ -529,6 +543,8 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     public void testIdentityExceptionForRevokeTokenByOAuthClient() throws Exception {
 
         setUpRevokeToken();
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         AccessTokenDO accessTokenDO = getAccessToken();
         TokenBinding tokenBinding = new TokenBinding();
         tokenBinding.setBindingReference("dummyReference");
