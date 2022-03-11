@@ -168,6 +168,9 @@ public class SQLQueries {
         public static final String UPDATE_OAUTH_INFO = "UPDATE IDN_OAUTH_CONSUMER_APPS SET APP_NAME=? WHERE " +
                 "CONSUMER_KEY=?";
 
+        public static final String UPDATE_OAUTH_CLIENT_WITH_OWNER = "UPDATE IDN_OAUTH_CONSUMER_APPS SET " +
+                "APP_NAME = ?, USERNAME  = ?, USER_DOMAIN = ? WHERE CONSUMER_KEY=?";
+
         public static final String UPDATE_OAUTH_SECRET_KEY = "UPDATE IDN_OAUTH_CONSUMER_APPS SET CONSUMER_SECRET=? " +
                 "WHERE CONSUMER_KEY=?";
 
