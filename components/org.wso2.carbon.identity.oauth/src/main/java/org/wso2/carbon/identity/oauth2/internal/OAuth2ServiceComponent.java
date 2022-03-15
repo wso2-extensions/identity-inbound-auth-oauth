@@ -90,6 +90,7 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabled;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
 
@@ -185,9 +186,11 @@ public class OAuth2ServiceComponent {
             SSOSessionBasedTokenBinder ssoSessionBasedTokenBinder = new SSOSessionBasedTokenBinder();
             bundleContext.registerService(TokenBinderInfo.class.getName(), ssoSessionBasedTokenBinder, null);
 
-            // Device based access token binder.
-            DeviceFlowTokenBinder deviceFlowTokenBinder = new DeviceFlowTokenBinder();
-            bundleContext.registerService(TokenBinderInfo.class.getName(), deviceFlowTokenBinder, null);
+            // Device based access token binder only if token binding is enabled.
+            if (OAuth2Util.getSupportedGrantTypes().contains(DEVICE_FLOW_GRANT_TYPE)) {
+                DeviceFlowTokenBinder deviceFlowTokenBinder = new DeviceFlowTokenBinder();
+                bundleContext.registerService(TokenBinderInfo.class.getName(), deviceFlowTokenBinder, null);
+            }
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");

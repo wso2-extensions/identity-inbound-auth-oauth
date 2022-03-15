@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.oauth2.token.bindings.impl;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
@@ -34,7 +33,7 @@ import javax.servlet.http.HttpServletResponse;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
 
 /**
- * Device flow mapping
+ * Device flow binder to bind the device code to the token.
  */
 public class DeviceFlowTokenBinder extends AbstractTokenBinder {
 
