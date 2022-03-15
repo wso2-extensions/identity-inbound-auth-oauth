@@ -397,8 +397,7 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
             return false;
         }
 
-	
-	boolean preservedCaseSensitive = Boolean.parseBoolean(System.getProperty("preservedCaseSensitive"));
+        boolean preservedCaseSensitive = Boolean.parseBoolean(System.getProperty("preservedCaseSensitive"));
 
         //Check if the user still has a valid role for this scope.
         Set<String> scopeRoles = new HashSet<>(rolesOfScope);
