@@ -210,16 +210,15 @@ public class AuthorizationHandlerManager {
 
     private boolean isManagementApp(OAuth2AuthorizeReqDTO authzReqDTO) throws IdentityOAuth2Exception {
 
-        ServiceProvider application;
         try {
-            application = OAuth2ServiceComponentHolder.getApplicationMgtService()
+            ServiceProvider application = OAuth2ServiceComponentHolder.getApplicationMgtService()
                     .getServiceProviderByClientId(authzReqDTO.getConsumerKey(), OAuthConstants.Scope.OAUTH2,
                             authzReqDTO.getTenantDomain());
+            return application.isManagementApp();
         } catch (IdentityApplicationManagementException e) {
             throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for " +
                     "client id " + authzReqDTO.getConsumerKey(), e);
         }
-        return application.isManagementApp();
     }
 
     private void addAuthorizedInternalScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
