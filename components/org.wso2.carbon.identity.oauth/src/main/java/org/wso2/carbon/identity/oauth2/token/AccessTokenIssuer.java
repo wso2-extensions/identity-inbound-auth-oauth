@@ -364,15 +364,27 @@ public class AccessTokenIssuer {
             tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
         }
 
-        // Execute Internal SCOPE Validation.
-        JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
-        String[] authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
-        // Execute internal console scopes validation.
-        if (IdentityUtil.isSystemRolesEnabled()) {
-            RoleBasedInternalScopeValidator roleBasedInternalScopeValidator = new RoleBasedInternalScopeValidator();
-            String[] roleBasedInternalConsoleScopes = roleBasedInternalScopeValidator.validateScope(tokReqMsgCtx);
-            authorizedInternalScopes = (String[]) ArrayUtils
-                    .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
+        String[] authorizedInternalScopes = new String[0];
+        boolean isManagementApp = getServiceProvider(tokenReqDTO).isManagementApp();
+        if (isManagementApp) {
+            if (log.isDebugEnabled()) {
+                log.debug("Handling the internal scope validation.");
+            }
+            // Execute Internal SCOPE Validation.
+            JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
+            authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
+            // Execute internal console scopes validation.
+            if (IdentityUtil.isSystemRolesEnabled()) {
+                RoleBasedInternalScopeValidator roleBasedInternalScopeValidator = new RoleBasedInternalScopeValidator();
+                String[] roleBasedInternalConsoleScopes = roleBasedInternalScopeValidator.validateScope(tokReqMsgCtx);
+                authorizedInternalScopes = (String[]) ArrayUtils
+                        .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Skipping the internal scope validation as the application is not" +
+                        " configured as Management App");
+            }
         }
 
         // Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
