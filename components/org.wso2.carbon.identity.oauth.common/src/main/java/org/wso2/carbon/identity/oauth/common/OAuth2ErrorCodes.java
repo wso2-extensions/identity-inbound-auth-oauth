@@ -51,6 +51,7 @@ public class OAuth2ErrorCodes {
         public static final String CERTIFICATE_ERROR = "certificate_error";
         public static final String INVALID_AUTHORIZATION_REQUEST = "invalid_authorization_request";
         public static final String INVALID_REQUEST_OBJECT = "invalid_request_object";
+        public static final String INVALID_REQUEST_URI = "invalid_request_uri";
         public static final String UNEXPECTED_SERVER_ERROR = "unexpected_server_error";
         public static final String INVALID_REQUEST = "invalid_request";
         public static final String CONSENT_DENIED = "consent_denied";
