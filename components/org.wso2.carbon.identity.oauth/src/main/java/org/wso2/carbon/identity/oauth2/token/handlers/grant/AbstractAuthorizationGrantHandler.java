@@ -609,7 +609,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         long validityPeriodFromMsgContext = tokReqMsgCtx.getRefreshTokenvalidityPeriod();
 
         if (validityPeriodFromMsgContext != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD
-                && validityPeriodFromMsgContext >= 0) {
+                && validityPeriodFromMsgContext > 0) {
             refreshTokenValidityPeriodInMillis = validityPeriodFromMsgContext *
                     SECONDS_TO_MILISECONDS_FACTOR;
             if (log.isDebugEnabled()) {
