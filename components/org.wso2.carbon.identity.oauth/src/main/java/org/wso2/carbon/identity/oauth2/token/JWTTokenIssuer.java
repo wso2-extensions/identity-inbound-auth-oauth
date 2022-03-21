@@ -55,7 +55,9 @@ import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getPrivateKey;
@@ -324,6 +326,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         try {
             String tenantDomain = resolveSigningTenantDomain(tokenContext, authorizationContext);
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+
+            // Add claim with signer tenant to jwt claims set.
+            jwtClaimsSet = setSignerRealm(tenantDomain, jwtClaimsSet);
 
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
@@ -725,4 +730,27 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
         return jwtClaimsSetBuilder.build();
     }
+
+    /**
+     * Set signed tenant domain to the JWT token's realm claim.
+     * @param tenantDomain
+     * @param jwtClaimsSet
+     * @return
+     */
+    private JWTClaimsSet setSignerRealm(String tenantDomain, JWTClaimsSet jwtClaimsSet) {
+
+        Map<String, String> realm = new HashMap<>();
+        realm.put(OAuthConstants.OIDCClaims.TENANT, tenantDomain);
+        if (realm.size() > 0) {
+            if (log.isDebugEnabled()) {
+                log.debug("Setting signer tenant domain : " + tenantDomain + " to the 'realm' claim of " +
+                        "jwt token");
+            }
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
+            jwtClaimsSetBuilder.claim(OAuthConstants.OIDCClaims.REALM, realm);
+            jwtClaimsSet = jwtClaimsSetBuilder.build();
+        }
+        return jwtClaimsSet;
+    }
+
 }

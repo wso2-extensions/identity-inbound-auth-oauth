@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -177,11 +178,24 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
     }
 
     private boolean validateSignature(SignedJWT signedJWT, IdentityProvider idp)
-            throws JOSEException, IdentityOAuth2Exception {
+            throws JOSEException, IdentityOAuth2Exception, ParseException {
 
         JWSVerifier verifier = null;
+        X509Certificate x509Certificate;
         JWSHeader header = signedJWT.getHeader();
-        X509Certificate x509Certificate = resolveSignerCertificate(header, idp);
+        JWTClaimsSet jwtClaimsSet = signedJWT.getJWTClaimsSet();
+
+        Map<String, String> realm = (HashMap) jwtClaimsSet.getClaim(OAuthConstants.OIDCClaims.REALM);
+
+        // Get certificate from tenant if available in claims.
+        if (realm != null && realm.get(OAuthConstants.OIDCClaims.TENANT) != null) {
+            String tenantDomain = realm.get(OAuthConstants.OIDCClaims.TENANT);
+            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+            x509Certificate = (X509Certificate) OAuth2Util.getCertificate(tenantDomain, tenantId);
+        } else {
+            x509Certificate = resolveSignerCertificate(header, idp);
+        }
+
         if (x509Certificate == null) {
             throw new IdentityOAuth2Exception("Unable to locate certificate for Identity Provider: " + idp
                     .getDisplayName());
