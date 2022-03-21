@@ -8,9 +8,6 @@
 -->
 
 <html>
-<head>
-    <title>Asgardeo by WSO2</title>
-</head>
 <body onload="javascript:document.getElementById('oauth-response').submit()">
         <p> 
             <a href="javascript:document.getElementById('oauth-response').submit()">Click here</a>
