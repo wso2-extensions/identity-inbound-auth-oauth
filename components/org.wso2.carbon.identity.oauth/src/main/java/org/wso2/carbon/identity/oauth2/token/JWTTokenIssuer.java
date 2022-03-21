@@ -741,15 +741,15 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         Map<String, String> realm = new HashMap<>();
         realm.put(OAuthConstants.OIDCClaims.TENANT, tenantDomain);
-        if (realm.size() > 0) {
-            if (log.isDebugEnabled()) {
-                log.debug("Setting signer tenant domain : " + tenantDomain + " to the 'realm' claim of " +
-                        "jwt token");
-            }
-            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
-            jwtClaimsSetBuilder.claim(OAuthConstants.OIDCClaims.REALM, realm);
-            jwtClaimsSet = jwtClaimsSetBuilder.build();
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting signer tenant domain : " + tenantDomain + " to the 'realm' claim of " +
+                    "jwt token");
         }
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
+        jwtClaimsSetBuilder.claim(OAuthConstants.OIDCClaims.REALM, realm);
+        jwtClaimsSet = jwtClaimsSetBuilder.build();
+
         return jwtClaimsSet;
     }
 

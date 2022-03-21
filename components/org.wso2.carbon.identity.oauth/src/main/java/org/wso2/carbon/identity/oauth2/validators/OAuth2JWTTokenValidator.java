@@ -186,7 +186,6 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         JWTClaimsSet jwtClaimsSet = signedJWT.getJWTClaimsSet();
 
         Map<String, String> realm = (HashMap) jwtClaimsSet.getClaim(OAuthConstants.OIDCClaims.REALM);
-
         // Get certificate from tenant if available in claims.
         if (realm != null && realm.get(OAuthConstants.OIDCClaims.TENANT) != null) {
             String tenantDomain = realm.get(OAuthConstants.OIDCClaims.TENANT);
