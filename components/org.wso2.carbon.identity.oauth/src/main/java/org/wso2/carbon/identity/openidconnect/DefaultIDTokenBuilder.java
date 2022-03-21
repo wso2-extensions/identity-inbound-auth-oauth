@@ -681,7 +681,11 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     private List<String> translateAmrToResponse(List<String> internalList) {
         Set<String> result = new HashSet<>();
         for (String internalValue : internalList) {
-            result.addAll(translateToResponse(internalValue));
+            List<String> translatedToResponse = translateToResponse(internalValue);
+            if (translatedToResponse.isEmpty()) {
+                continue;
+            }
+            result.addAll(translatedToResponse);
         }
         return new ArrayList<>(result);
     }
@@ -693,6 +697,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (authenticationMethodNameTranslator != null) {
             Set<String> externalAmrSet = authenticationMethodNameTranslator
                     .translateToExternalAmr(internalValue, INBOUND_AUTH2_TYPE);
+            // When AMR mapping is not available.
             if (externalAmrSet == null || externalAmrSet.isEmpty()) {
                 if (log.isDebugEnabled()) {
                     log.debug("There was no mapping found to translate AMR from internal to external URI. Internal " +
@@ -700,6 +705,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 }
                 result = new ArrayList<>();
                 result.add(internalValue);
+            } else if (externalAmrSet.contains(String.valueOf(Character.MIN_VALUE))) {
+                // Authentication Method needs to be hidden from the ID Token.
+                return Collections.emptyList();
             } else {
                 result = new ArrayList<>(externalAmrSet);
             }
