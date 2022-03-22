@@ -396,9 +396,23 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
             }
             return false;
         }
+        boolean preservedCaseSensitive = Boolean.parseBoolean(System.getProperty("preservedCaseSensitive"));
 
         //Check if the user still has a valid role for this scope.
         Set<String> scopeRoles = new HashSet<>(rolesOfScope);
+        if (!preservedCaseSensitive) {
+            rolesOfScope.retainAll(Arrays.asList(userRoles));
+        } else {
+            for (String roleOfScope : rolesOfScope) {
+                rolesOfScope.remove(roleOfScope);
+                rolesOfScope.add(roleOfScope.toLowerCase());
+            }
+            ArrayList<String> userRolesLowercase = new ArrayList<>();
+            for (String userRole : userRoles) {
+                userRolesLowercase.add(userRole.toLowerCase());
+            }
+            rolesOfScope.retainAll(userRolesLowercase);
+        }
         rolesOfScope.retainAll(Arrays.asList(userRoles));
 
         if (rolesOfScope.isEmpty()) {
