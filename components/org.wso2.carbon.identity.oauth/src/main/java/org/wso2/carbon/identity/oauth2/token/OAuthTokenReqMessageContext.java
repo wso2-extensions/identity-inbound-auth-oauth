@@ -52,6 +52,8 @@ public class OAuthTokenReqMessageContext {
 
     private TokenBinding tokenBinding;
 
+    private boolean isConsentedToken;
+
     public OAuthTokenReqMessageContext(OAuth2AccessTokenReqDTO oauth2AccessTokenReqDTO) {
 
         this.oauth2AccessTokenReqDTO = oauth2AccessTokenReqDTO;
@@ -158,5 +160,14 @@ public class OAuthTokenReqMessageContext {
 
     public void setAuthorizedInternalScopes(String[] authorizedInternalScopes) {
         this.authorizedInternalScopes = authorizedInternalScopes;
+    }
+    public boolean isConsentedToken() {
+
+        return isConsentedToken;
+    }
+
+    public void setConsentedToken(boolean consentedToken) {
+
+        isConsentedToken = consentedToken;
     }
 }

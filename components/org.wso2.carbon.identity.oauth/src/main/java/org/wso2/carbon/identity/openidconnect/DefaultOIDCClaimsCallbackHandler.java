@@ -174,9 +174,13 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         String token = getAccessToken(requestMsgCtx);
         String authorizationCode = getAuthorizationCode(requestMsgCtx);
         String grantType = requestMsgCtx.getOauth2AccessTokenReqDTO().getGrantType();
-
-        return filterOIDCClaims(token, authorizationCode, grantType, userClaimsInOIDCDialect, user, approvedScopes,
-                clientId, spTenantDomain);
+        // Get the flag which has the record whether the token is a consented one or not.
+        boolean isConsentedToken = false;
+        if (requestMsgCtx.isConsentedToken()) {
+            isConsentedToken = requestMsgCtx.isConsentedToken();
+        }
+        return filterOIDCClaims(token, grantType, userClaimsInOIDCDialect, user, approvedScopes, clientId,
+                spTenantDomain, isConsentedToken);
     }
 
 
@@ -187,7 +191,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                                                  AuthenticatedUser authenticatedUser,
                                                  String[] approvedScopes,
                                                  String clientId,
-                                                 String spTenantDomain) throws OAuthSystemException {
+                                                 String spTenantDomain,
+                                                 boolean isConsentedToken) throws OAuthSystemException {
         Map<String, Object> filteredUserClaimsByOIDCScopes =
                 filterClaimsByScope(userClaimsInOIDCDialect, approvedScopes, clientId, spTenantDomain);
 
@@ -215,7 +220,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
         // Restrict the claims based on user consent given
         return getUserConsentedClaims(filteredUserClaimsByOIDCScopes, authenticatedUser, grantType, clientId,
-                spTenantDomain);
+                spTenantDomain, isConsentedToken);
     }
 
     private boolean isPreserverClaimUrisInAssertion(OAuthTokenReqMessageContext requestMsgCtx) {
@@ -242,7 +247,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                                                        AuthenticatedUser authenticatedUser,
                                                        String grantType,
                                                        String clientId,
-                                                       String spTenantDomain) throws OAuthSystemException {
+                                                       String spTenantDomain,
+                                                       boolean isConsentedToken) throws OAuthSystemException {
 
         ServiceProvider serviceProvider;
         try {
@@ -254,7 +260,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         }
 
         return OIDCClaimUtil.filterUserClaimsBasedOnConsent(userClaims, authenticatedUser, clientId,
-                spTenantDomain, grantType, serviceProvider);
+                spTenantDomain, grantType, serviceProvider, isConsentedToken);
     }
 
     private Map<ClaimMapping, String> getCachedUserAttributes(OAuthTokenReqMessageContext requestMsgCtx) {
@@ -411,9 +417,10 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         String[] approvedScopes = authzReqMessageContext.getApprovedScope();
         String accessToken = getAccessToken(authzReqMessageContext);
         String grantType = OAuthConstants.GrantTypes.IMPLICIT;
+        boolean isConsentedGrant = OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(grantType);
 
-        return filterOIDCClaims(accessToken, StringUtils.EMPTY, grantType, userClaimsInOIDCDialect, user,
-                approvedScopes, clientId, spTenantDomain);
+        return filterOIDCClaims(accessToken, grantType, userClaimsInOIDCDialect, user, approvedScopes,
+                clientId, spTenantDomain, isConsentedGrant);
     }
 
     private Map<String, Object> retrieveClaimsForLocalUser(OAuthAuthzReqMessageContext authzReqMessageContext)

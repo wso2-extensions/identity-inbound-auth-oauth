@@ -50,6 +50,7 @@ import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 
 import java.sql.Timestamp;
 import java.util.Arrays;
@@ -304,6 +305,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             tokenResp.setExpiresInMillis(Long.MAX_VALUE);
         }
         tokenResp.setAuthorizedScopes(scope);
+        tokenResp.setIsConsentedToken(accessTokenBean.isConsentedToken());
         return tokenResp;
     }
 
@@ -540,6 +542,17 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         accessTokenDO.setGrantType(tokenReq.getGrantType());
         accessTokenDO.setIssuedTime(timestamp);
         accessTokenDO.setTokenBinding(tokReqMsgCtx.getTokenBinding());
+
+         /* This code block is to handle the scenarios where the consented token value is not available
+         in the db. Generally based on the grant type, we are setting whether this token will be sent
+         to a consent requested grant. */
+        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+            String previousGrantType = validationBean.getGrantType();
+            if (!StringUtils.equals(OAuthConstants.GrantTypes.REFRESH_TOKEN, previousGrantType) &&
+                    OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(previousGrantType)) {
+                accessTokenDO.setIsConsentedToken(true);
+            }
+        }
 
         // sets accessToken, refreshToken and validity data
         setTokenData(accessTokenDO, tokReqMsgCtx, validationBean, tokenReq, timestamp);

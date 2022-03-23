@@ -262,4 +262,15 @@ public interface AccessTokenDAO {
 
         return null;
     }
+
+    /**
+     * Updates whether the token is issued for a consent required grant.
+     *
+     * @param tokenId ID of the token.
+     * @param isConsentedGrant Grant type which the corresponding token is issued.
+     * @throws IdentityOAuth2Exception If there are any failures in update.
+     */
+    default void updateTokenIsConsented(String tokenId, boolean isConsentedGrant)
+            throws IdentityOAuth2Exception {
+    }
 }
