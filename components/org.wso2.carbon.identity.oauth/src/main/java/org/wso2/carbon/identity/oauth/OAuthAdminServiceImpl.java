@@ -262,6 +262,12 @@ public class OAuthAdminServiceImpl {
                     }
                 }
 
+                ///Check the requirement of having a configured public certificate or JWKS in SP
+                boolean isIdTokenEncryptionEnabled = application.isIdTokenEncryptionEnabled();
+                boolean isRequestObjectSignatureValidationEnabled = application.isRequestObjectSignatureValidationEnabled();
+                handlePublicCertificateConfig(app.getOauthConsumerKey(), tenantDomain, isIdTokenEncryptionEnabled,
+                        isRequestObjectSignatureValidationEnabled);
+
                 AuthenticatedUser defaultAppOwner = buildAuthenticatedUser(tenantAwareLoggedInUser, tenantDomain);
                 AuthenticatedUser appOwner = getAppOwner(application, defaultAppOwner);
                 app.setAppOwner(appOwner);
@@ -471,6 +477,14 @@ public class OAuthAdminServiceImpl {
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error while updating the app information.", e);
         }
+
+        //Check the requirement of having a configured public certificate or JWKS in SP
+        boolean isIdTokenEncryptionEnabled = !oauthappdo.isIdTokenEncryptionEnabled() &&
+                consumerAppDTO.isIdTokenEncryptionEnabled();
+        boolean isRequestObjectSignatureValidation = !oauthappdo.isRequestObjectSignatureValidationEnabled() &&
+                consumerAppDTO.isRequestObjectSignatureValidationEnabled();
+        handlePublicCertificateConfig(oauthConsumerKey, tenantDomain, isIdTokenEncryptionEnabled,
+                isRequestObjectSignatureValidation);
 
         AuthenticatedUser defaultAppOwner = oauthappdo.getAppOwner();
         AuthenticatedUser appOwner = getAppOwner(consumerAppDTO, defaultAppOwner);
@@ -1817,6 +1831,40 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_FOUND_SCOPE,
                     String.format(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_FOUND_SCOPE.getMessage(),
                             scopeName));
+        }
+    }
+
+    /**
+     * Check the requirement of having a configured public certificate or JWKS in SP and throw an exception with a
+     * specific error message if the public certificate or JWKS in SP is not configured.
+     *
+     * @param isIdTokenEncryptionEnabled Is ID token encryption is enabled or not.
+     * @param isRequestObjectSignatureValidation Is request object signature validation is enabled or not.
+     * @param clientId Client ID of the service provider.
+     * @param tenantDomain Tenant domain of the service provider.
+     * @throws IdentityOAuthClientException
+     */
+    private void handlePublicCertificateConfig(String clientId, String tenantDomain, boolean isIdTokenEncryptionEnabled,
+                                               boolean isRequestObjectSignatureValidation)
+            throws IdentityOAuthClientException {
+
+        String blockedProperty = null;
+        try {
+            if (isIdTokenEncryptionEnabled && isRequestObjectSignatureValidation) {
+                blockedProperty = "ID token encryption and request object signature validation";
+            } else if (isIdTokenEncryptionEnabled) {
+                blockedProperty = "ID token encryption";
+            } else if (isRequestObjectSignatureValidation) {
+                blockedProperty = "request object signature validation";
+            } else {
+                return;
+            }
+            if (StringUtils.isBlank(OAuth2Util.getSPJwksUrl(clientId, tenantDomain))) {
+                OAuth2Util.getX509CertOfOAuthApp(clientId, tenantDomain);
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw handleClientError(INVALID_OAUTH_CLIENT, String.format("To use %s, configure the JWKS endpoint or " +
+                    "the certificate of your application", blockedProperty), e);
         }
     }
 }
