@@ -4173,8 +4173,8 @@ public class OAuth2Util {
                 break;
             }
         }
-        if (log.isDebugEnabled()) {
-            if (StringUtils.isNotBlank(jwksUri)) {
+        if (StringUtils.isNotBlank(jwksUri)) {
+            if (log.isDebugEnabled()) {
                 log.debug(String.format("Retrieved jwks uri: %s for the service provider associated with client_id: %s",
                         jwksUri, clientId));
             }
