@@ -50,6 +50,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.user.api.AuthorizationManager;
 import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -334,6 +335,9 @@ public class JDBCPermissionBasedInternalScopeValidator {
         if (username == null) {
             username = OAuth2Util
                     .resolveUsernameFromUserId(authenticatedUser.getTenantDomain(), authenticatedUser.getUserId());
+        }
+        if (StringUtils.isNotEmpty(authenticatedUser.getUserStoreDomain())) {
+            username = UserCoreUtil.addDomainToName(username, authenticatedUser.getUserStoreDomain());
         }
         String[] allowedUIResourcesForUser =
                 authorizationManager.getAllowedUIResourcesForUser(username, "/");
