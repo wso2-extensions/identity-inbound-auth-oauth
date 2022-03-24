@@ -4161,7 +4161,7 @@ public class OAuth2Util {
      * @return Jwks Url
      * @throws IdentityOAuth2Exception
      */
-    private static String getSPJwksUrl(String clientId, String spTenantDomain) throws IdentityOAuth2Exception {
+    public static String getSPJwksUrl(String clientId, String spTenantDomain) throws IdentityOAuth2Exception {
 
         String jwksUri = null;
         ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, spTenantDomain);
