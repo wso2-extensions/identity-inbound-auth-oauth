@@ -1861,6 +1861,10 @@ public class OAuthAdminServiceImpl {
                 return;
             }
             if (StringUtils.isBlank(OAuth2Util.getSPJwksUrl(clientId, tenantDomain))) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug(String.format("Jwks uri is not configured for the service provider associated with " +
+                            "client_id: %s , Checking for x509 certificate.", clientId));
+                }
                 OAuth2Util.getX509CertOfOAuthApp(clientId, tenantDomain);
             }
         } catch (IdentityOAuth2Exception e) {
