@@ -264,7 +264,8 @@ public class OAuthAdminServiceImpl {
 
                 ///Check the requirement of having a configured public certificate or JWKS in SP
                 boolean isIdTokenEncryptionEnabled = application.isIdTokenEncryptionEnabled();
-                boolean isRequestObjectSignatureValidationEnabled = application.isRequestObjectSignatureValidationEnabled();
+                boolean isRequestObjectSignatureValidationEnabled =
+                        application.isRequestObjectSignatureValidationEnabled();
                 handlePublicCertificateConfig(app.getOauthConsumerKey(), tenantDomain, isIdTokenEncryptionEnabled,
                         isRequestObjectSignatureValidationEnabled);
 
