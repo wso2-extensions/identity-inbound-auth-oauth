@@ -267,11 +267,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     /**
-     * Get the tenant domain to sign the the token.
+     * Get the tenant domain to sign the token.
      *
      * @param clientID          Client Id.
      * @param authenticatedUser Authenticated user.
-     * @return Tenant domain to sign thee token.
+     * @return Tenant domain to sign the token.
      * @throws IdentityOAuth2Exception If an error occurred while getting the application information by client id.
      */
     private String getSigningTenantDomain(String clientID, AuthenticatedUser authenticatedUser)
@@ -732,7 +732,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     /**
-     * Set signed tenant domain to the JWT token's realm claim.
+     * Set tenant domain of user to the JWT token's realm claim if signed with user tenant.
      * @param tenantDomain
      * @param jwtClaimsSet
      * @return
@@ -740,17 +740,18 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private JWTClaimsSet setSignerRealm(String tenantDomain, JWTClaimsSet jwtClaimsSet) {
 
         Map<String, String> realm = new HashMap<>();
-        realm.put(OAuthConstants.OIDCClaims.TENANT, tenantDomain);
-
-        if (log.isDebugEnabled()) {
-            log.debug("Setting signer tenant domain : " + tenantDomain + " to the 'realm' claim of " +
-                    "jwt token");
+        if (!OAuthServerConfiguration.getInstance().getUseSPTenantDomainValue()) {
+            realm.put(OAuthConstants.OIDCClaims.SIGNED_KEY_TENANT, tenantDomain);
         }
-        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
-        jwtClaimsSetBuilder.claim(OAuthConstants.OIDCClaims.REALM, realm);
-        jwtClaimsSet = jwtClaimsSetBuilder.build();
-
+        if (realm.size() > 0) {
+            if (log.isDebugEnabled()) {
+                log.debug("Setting authorized user tenant domain : " + tenantDomain +
+                        " used to for token signature to the 'realm' claim of jwt token");
+            }
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
+            jwtClaimsSetBuilder.claim(OAuthConstants.OIDCClaims.REALM, realm);
+            jwtClaimsSet = jwtClaimsSetBuilder.build();
+        }
         return jwtClaimsSet;
     }
-
 }

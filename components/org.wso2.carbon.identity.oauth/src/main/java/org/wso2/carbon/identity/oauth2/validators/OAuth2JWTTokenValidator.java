@@ -181,16 +181,25 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             throws JOSEException, IdentityOAuth2Exception, ParseException {
 
         JWSVerifier verifier = null;
-        X509Certificate x509Certificate;
+        X509Certificate x509Certificate = null;
         JWSHeader header = signedJWT.getHeader();
         JWTClaimsSet jwtClaimsSet = signedJWT.getJWTClaimsSet();
 
         Map<String, String> realm = (HashMap) jwtClaimsSet.getClaim(OAuthConstants.OIDCClaims.REALM);
+
         // Get certificate from tenant if available in claims.
-        if (realm != null && realm.get(OAuthConstants.OIDCClaims.TENANT) != null) {
-            String tenantDomain = realm.get(OAuthConstants.OIDCClaims.TENANT);
-            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-            x509Certificate = (X509Certificate) OAuth2Util.getCertificate(tenantDomain, tenantId);
+        if (realm != null) {
+            String tenantDomain = null;
+            // Get signed key tenant from JWT token or ID token based on claim key.
+            if (realm.get(OAuthConstants.OIDCClaims.SIGNED_KEY_TENANT) != null) {
+                tenantDomain = realm.get(OAuthConstants.OIDCClaims.SIGNED_KEY_TENANT);
+            } else if (realm.get(OAuthConstants.OIDCClaims.TENANT) != null) {
+                tenantDomain = realm.get(OAuthConstants.OIDCClaims.TENANT);
+            }
+            if (tenantDomain != null) {
+                int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+                x509Certificate = (X509Certificate) OAuth2Util.getCertificate(tenantDomain, tenantId);
+            }
         } else {
             x509Certificate = resolveSignerCertificate(header, idp);
         }
