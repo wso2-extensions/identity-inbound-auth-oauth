@@ -484,11 +484,11 @@ public class OAuthAdminServiceImpl {
         //Check the requirement of having a configured public certificate or JWKS in SP
         boolean isIdTokenEncryptionEnabled = !oauthappdo.isIdTokenEncryptionEnabled() &&
                 consumerAppDTO.isIdTokenEncryptionEnabled();
-        boolean isRequestObjectSignatureValidation = !oauthappdo.isRequestObjectSignatureValidationEnabled() &&
+        boolean isRequestObjectSignatureValidationEnabled = !oauthappdo.isRequestObjectSignatureValidationEnabled() &&
                 consumerAppDTO.isRequestObjectSignatureValidationEnabled();
-        if (isIdTokenEncryptionEnabled || isRequestObjectSignatureValidation) {
+        if (isIdTokenEncryptionEnabled || isRequestObjectSignatureValidationEnabled) {
             checkIfPublicCertConfigured(oauthConsumerKey, tenantDomain, isIdTokenEncryptionEnabled,
-                    isRequestObjectSignatureValidation);
+                    isRequestObjectSignatureValidationEnabled);
         }
 
         AuthenticatedUser defaultAppOwner = oauthappdo.getAppOwner();
@@ -1844,18 +1844,18 @@ public class OAuthAdminServiceImpl {
      * specific error message if the public certificate or JWKS in SP is not configured.
      *
      * @param isIdTokenEncryptionEnabled Is ID token encryption is enabled or not.
-     * @param isRequestObjectSignatureValidation Is request object signature validation is enabled or not.
+     * @param isRequestObjectSignatureValidationEnabled Is request object signature validation is enabled or not.
      * @param clientId Client ID of the service provider.
      * @param tenantDomain Tenant domain of the service provider.
      * @throws IdentityOAuthClientException
      */
     private void checkIfPublicCertConfigured(String clientId, String tenantDomain, boolean isIdTokenEncryptionEnabled,
-                                               boolean isRequestObjectSignatureValidation)
+                                               boolean isRequestObjectSignatureValidationEnabled)
             throws IdentityOAuthClientException {
 
         String blockedProperty = null;
         try {
-            if (isIdTokenEncryptionEnabled && isRequestObjectSignatureValidation) {
+            if (isIdTokenEncryptionEnabled && isRequestObjectSignatureValidationEnabled) {
                 blockedProperty = "ID token encryption and request object signature validation";
             } else if (isIdTokenEncryptionEnabled) {
                 blockedProperty = "ID token encryption";
