@@ -266,8 +266,10 @@ public class OAuthAdminServiceImpl {
                 boolean isIdTokenEncryptionEnabled = application.isIdTokenEncryptionEnabled();
                 boolean isRequestObjectSignatureValidationEnabled =
                         application.isRequestObjectSignatureValidationEnabled();
-                handlePublicCertificateConfig(app.getOauthConsumerKey(), tenantDomain, isIdTokenEncryptionEnabled,
-                        isRequestObjectSignatureValidationEnabled);
+                if (isIdTokenEncryptionEnabled || isRequestObjectSignatureValidationEnabled) {
+                    handlePublicCertificateConfig(app.getOauthConsumerKey(), tenantDomain, isIdTokenEncryptionEnabled,
+                            isRequestObjectSignatureValidationEnabled);
+                }
 
                 AuthenticatedUser defaultAppOwner = buildAuthenticatedUser(tenantAwareLoggedInUser, tenantDomain);
                 AuthenticatedUser appOwner = getAppOwner(application, defaultAppOwner);
@@ -484,8 +486,10 @@ public class OAuthAdminServiceImpl {
                 consumerAppDTO.isIdTokenEncryptionEnabled();
         boolean isRequestObjectSignatureValidation = !oauthappdo.isRequestObjectSignatureValidationEnabled() &&
                 consumerAppDTO.isRequestObjectSignatureValidationEnabled();
-        handlePublicCertificateConfig(oauthConsumerKey, tenantDomain, isIdTokenEncryptionEnabled,
-                isRequestObjectSignatureValidation);
+        if (isIdTokenEncryptionEnabled || isRequestObjectSignatureValidation) {
+            handlePublicCertificateConfig(oauthConsumerKey, tenantDomain, isIdTokenEncryptionEnabled,
+                    isRequestObjectSignatureValidation);
+        }
 
         AuthenticatedUser defaultAppOwner = oauthappdo.getAppOwner();
         AuthenticatedUser appOwner = getAppOwner(consumerAppDTO, defaultAppOwner);
@@ -1855,10 +1859,8 @@ public class OAuthAdminServiceImpl {
                 blockedProperty = "ID token encryption and request object signature validation";
             } else if (isIdTokenEncryptionEnabled) {
                 blockedProperty = "ID token encryption";
-            } else if (isRequestObjectSignatureValidation) {
-                blockedProperty = "request object signature validation";
             } else {
-                return;
+                blockedProperty = "request object signature validation";
             }
             if (StringUtils.isBlank(OAuth2Util.getSPJwksUrl(clientId, tenantDomain))) {
                 if (LOG.isDebugEnabled()) {
