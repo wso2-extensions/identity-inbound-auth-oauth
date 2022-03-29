@@ -55,7 +55,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -689,7 +689,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
      * +
      */
     private List<String> translateAmrToResponse(List<String> internalList) {
-        Set<String> result = new HashSet<>();
+        Set<String> result = new LinkedHashSet<>();
         for (String internalValue : internalList) {
             List<String> translatedToResponse = translateToResponse(internalValue);
             if (translatedToResponse.isEmpty()) {
