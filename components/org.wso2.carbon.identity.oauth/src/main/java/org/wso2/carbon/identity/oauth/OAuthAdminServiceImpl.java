@@ -267,7 +267,7 @@ public class OAuthAdminServiceImpl {
                 boolean isRequestObjectSignatureValidationEnabled =
                         application.isRequestObjectSignatureValidationEnabled();
                 if (isIdTokenEncryptionEnabled || isRequestObjectSignatureValidationEnabled) {
-                    handlePublicCertificateConfig(app.getOauthConsumerKey(), tenantDomain, isIdTokenEncryptionEnabled,
+                    checkIfPublicCertConfigured(app.getOauthConsumerKey(), tenantDomain, isIdTokenEncryptionEnabled,
                             isRequestObjectSignatureValidationEnabled);
                 }
 
@@ -487,7 +487,7 @@ public class OAuthAdminServiceImpl {
         boolean isRequestObjectSignatureValidation = !oauthappdo.isRequestObjectSignatureValidationEnabled() &&
                 consumerAppDTO.isRequestObjectSignatureValidationEnabled();
         if (isIdTokenEncryptionEnabled || isRequestObjectSignatureValidation) {
-            handlePublicCertificateConfig(oauthConsumerKey, tenantDomain, isIdTokenEncryptionEnabled,
+            checkIfPublicCertConfigured(oauthConsumerKey, tenantDomain, isIdTokenEncryptionEnabled,
                     isRequestObjectSignatureValidation);
         }
 
@@ -1849,7 +1849,7 @@ public class OAuthAdminServiceImpl {
      * @param tenantDomain Tenant domain of the service provider.
      * @throws IdentityOAuthClientException
      */
-    private void handlePublicCertificateConfig(String clientId, String tenantDomain, boolean isIdTokenEncryptionEnabled,
+    private void checkIfPublicCertConfigured(String clientId, String tenantDomain, boolean isIdTokenEncryptionEnabled,
                                                boolean isRequestObjectSignatureValidation)
             throws IdentityOAuthClientException {
 
