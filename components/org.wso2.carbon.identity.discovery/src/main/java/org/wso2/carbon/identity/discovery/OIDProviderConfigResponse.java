@@ -77,7 +77,7 @@ public class OIDProviderConfigResponse {
     private Boolean backchannelLogoutSupported;
     private Boolean backchannelLogoutSessionSupported;
     private String[] codeChallengeMethodsSupported;
-    private Object deviceAuthorizationEndpoint;
+    private String deviceAuthorizationEndpoint;
 
     public String getIssuer() {
         return issuer;
@@ -478,12 +478,12 @@ public class OIDProviderConfigResponse {
         this.codeChallengeMethodsSupported = codeChallengeMethodsSupported;
     }
 
-    public Object getDeviceAuthorizationEndpoint() {
+    public String getDeviceAuthorizationEndpoint() {
 
         return deviceAuthorizationEndpoint;
     }
 
-    public void setDeviceAuthorizationEndpoint(Object deviceAuthorizationEndpoint) {
+    public void setDeviceAuthorizationEndpoint(String deviceAuthorizationEndpoint) {
 
         this.deviceAuthorizationEndpoint = deviceAuthorizationEndpoint;
     }
