@@ -282,6 +282,7 @@ public class OAuthServerConfiguration {
     private long deviceCodeExpiryTime = 600000L;
     private int deviceCodePollingInterval = 5000;
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
+    private String deviceAuthzEPUrl = null;
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -612,6 +613,10 @@ public class OAuthServerConfiguration {
         return oauth2IntrospectionEPUrl;
     }
 
+    public String getDeviceAuthzEPUrl() {
+
+        return deviceAuthzEPUrl;
+    }
     /**
      * instantiate the OAuth token generator. to override the default implementation, one can specify the custom class
      * in the identity.xml.
@@ -1939,6 +1944,13 @@ public class OAuthServerConfiguration {
                 oauth2ErrorPageUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.DEVICE_AUTHZ_EP_URL));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                deviceAuthzEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
     }
 
     private void parseRefreshTokenRenewalConfiguration(OMElement oauthConfigElem) {
@@ -3154,6 +3166,7 @@ public class OAuthServerConfiguration {
         public static final String OIDC_DISCOVERY_EP_URL = "OIDCDiscoveryEPUrl";
         public static final String OAUTH2_ERROR_PAGE_URL = "OAuth2ErrorPage";
         public static final String OIDC_CONSENT_PAGE_URL = "OIDCConsentPage";
+        public static final String DEVICE_AUTHZ_EP_URL = "OAuth2DeviceAuthzEPUrl";
 
         // JWT Generator
         public static final String AUTHORIZATION_CONTEXT_TOKEN_GENERATION = "AuthorizationContextTokenGeneration";
