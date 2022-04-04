@@ -691,7 +691,7 @@ public class TokenValidationHandler {
                 log.debug("Access Token has infinite lifetime");
             }
         } else {
-            if (OAuth2Util.getTokenExpireTimeMillis(accessTokenDO, true) == 0) {
+            if (OAuth2Util.getAccessTokenExpireMillis(accessTokenDO, true) == 0) {
                 if (log.isDebugEnabled()) {
                     log.debug("Access Token has expired");
                 }

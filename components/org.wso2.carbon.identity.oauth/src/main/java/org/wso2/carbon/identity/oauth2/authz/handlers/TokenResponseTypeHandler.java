@@ -150,8 +150,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
                                 + " from cache");
                     }
 
-                    long expireTime = OAuth2Util.getTokenExpireTimeMillis(existingAccessTokenDO);
-
+                    long expireTime = OAuth2Util.getAccessTokenExpireMillis(existingAccessTokenDO);
                     if ((expireTime > 0 || expireTime < 0)) {
                         // Return still valid existing access token when JWTTokenIssuer is not used.
                         if (isNotRenewAccessTokenPerRequest(oauthAuthzMsgCtx)) {
@@ -228,7 +227,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
                                 + " from database");
                     }
 
-                    long expiryTime = OAuth2Util.getTokenExpireTimeMillis(existingAccessTokenDO);
+                    long expiryTime = OAuth2Util.getAccessTokenExpireMillis(existingAccessTokenDO);
                     long refreshTokenExpiryTime = OAuth2Util.getRefreshTokenExpireTimeMillis(existingAccessTokenDO);
 
                     if (OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(existingAccessTokenDO.getTokenState())
