@@ -27,8 +27,11 @@ import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
 import org.apache.oltu.oauth2.as.issuer.UUIDValueGenerator;
 import org.apache.oltu.oauth2.as.issuer.ValueGenerator;
+import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
+import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
@@ -46,6 +49,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
+import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.TokenIssuerDO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
@@ -65,6 +69,8 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
 import org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl;
 import org.wso2.carbon.utils.CarbonUtils;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -205,6 +211,8 @@ public class OAuthServerConfiguration {
             "org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl";
     private String defaultCibaRequestValidatorClassName =
             "org.wso2.carbon.identity.openidconnect.CIBARequestObjectValidatorImpl";
+    private String defaultOAuthAuthzRequestClassName =
+            "org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest";
     private String openIDConnectIDTokenCustomClaimsHanlderClassName =
             "org.wso2.carbon.identity.openidconnect.SAMLAssertionClaimsCallback";
     private IDTokenBuilder openIDConnectIDTokenBuilder = null;
@@ -1110,6 +1118,30 @@ public class OAuthServerConfiguration {
             }
         }
         return requestObjectBuilder;
+    }
+
+    /**
+     * Returns an instance of OAuthAuthzRequest
+     *
+     * @return instance of OAuthAuthzRequest
+     */
+    public OAuthAuthzRequest getOAuthAuthzRequest(HttpServletRequest request)
+            throws OAuthProblemException, OAuthSystemException {
+
+        OAuthAuthzRequest oAuthAuthzRequest;
+        try {
+            Class clazz = Thread.currentThread().getContextClassLoader()
+                    .loadClass(defaultOAuthAuthzRequestClassName);
+
+            Constructor<?> constructor = clazz.getConstructor(HttpServletRequest.class);
+            oAuthAuthzRequest = (OAuthAuthzRequest) constructor.newInstance(request);
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
+                NoSuchMethodException | InvocationTargetException e) {
+            log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
+                    "Hence initiating the default implementation");
+            oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
+        }
+        return oAuthAuthzRequest;
     }
 
     public Set<String> getSupportedResponseTypeNames() {
@@ -2954,6 +2986,12 @@ public class OAuthServerConfiguration {
                     requestObjectEnabled = false;
                 }
             }
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
+                    OAUTH_AUTHZ_REQUEST)) != null) {
+                defaultOAuthAuthzRequestClassName =
+                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
+                                OAUTH_AUTHZ_REQUEST)).getText().trim();
+            }
         }
     }
 
@@ -3223,6 +3261,7 @@ public class OAuthServerConfiguration {
         public static final String SUPPORTED_CLAIMS = "OpenIDConnectClaims";
         public static final String REQUEST_OBJECT = "RequestObject";
         public static final String REQUEST_OBJECT_VALIDATOR = "RequestObjectValidator";
+        public static final String OAUTH_AUTHZ_REQUEST = "OAuthAuthzRequest";
         public static final String CIBA_REQUEST_OBJECT_VALIDATOR = "CIBARequestObjectValidator";
         public static final String OPENID_CONNECT_BACK_CHANNEL_LOGOUT_TOKEN_EXPIRATION = "LogoutTokenExpiration";
         // Callback handler related configuration elements
