@@ -415,7 +415,12 @@ public class EndpointUtil {
         if (request == null) {
             return redirectURL;
         }
-        return getRedirectURL(redirectURL, request);
+        if (isAllowAdditionalParamsFromErrorUrlEnabled()) {
+            // Appending additional parameters if the <AllowAdditionalParamsFromErrorUrl> config is enabled
+            return getRedirectURL(redirectURL, request);
+        } else {
+            return redirectURL;
+        }
     }
 
     /**

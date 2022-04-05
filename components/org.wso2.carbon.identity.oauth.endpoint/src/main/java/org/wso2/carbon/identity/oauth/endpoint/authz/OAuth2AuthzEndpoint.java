@@ -386,6 +386,9 @@ public class OAuth2AuthzEndpoint {
             log.debug(e.getError(), e);
         }
 
+        String errorCode = e.getError() != null ? e.getError() : OAuth2ErrorCodes.INVALID_REQUEST;
+        String errorDescription = e.getDescription() != null ? e.getDescription() : e.getMessage();
+        String state = e.getState();
         OAuth2Parameters oAuth2Parameters = getOAuth2ParamsFromOAuthMessage(oAuthMessage);
 
         if (StringUtils.equals(oAuthMessage.getRequest().getParameter(RESPONSE_MODE), RESPONSE_MODE_FORM_POST)) {
@@ -393,8 +396,11 @@ public class OAuth2AuthzEndpoint {
             return Response.ok(createErrorFormPage(oAuthMessage.getRequest().getParameter(REDIRECT_URI), e)).build();
         }
 
-        String errorPageURL = getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST,
-                OAuth2ErrorCodes.OAuth2SubErrorCodes.UNEXPECTED_SERVER_ERROR, e.getMessage(), null,
+        if (StringUtils.isBlank(oAuth2Parameters.getState()) && StringUtils.isNotBlank(state)) {
+            oAuth2Parameters.setState(state);
+        }
+        String errorPageURL = getErrorPageURL(oAuthMessage.getRequest(), errorCode,
+                OAuth2ErrorCodes.OAuth2SubErrorCodes.UNEXPECTED_SERVER_ERROR, errorDescription, null,
                 oAuth2Parameters);
         if (OAuthServerConfiguration.getInstance().isRedirectToRequestedRedirectUriEnabled()) {
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(errorPageURL)).build();

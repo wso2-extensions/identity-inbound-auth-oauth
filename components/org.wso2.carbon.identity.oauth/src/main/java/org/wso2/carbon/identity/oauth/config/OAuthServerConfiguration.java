@@ -1136,10 +1136,21 @@ public class OAuthServerConfiguration {
             Constructor<?> constructor = clazz.getConstructor(HttpServletRequest.class);
             oAuthAuthzRequest = (OAuthAuthzRequest) constructor.newInstance(request);
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
-                NoSuchMethodException | InvocationTargetException e) {
+                NoSuchMethodException e) {
             log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
                     "Hence initiating the default implementation");
             oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
+        } catch (InvocationTargetException e) {
+            // Handle OAuthProblemException & OAuthSystemException thrown from extended class.
+            if (e.getTargetException() instanceof OAuthProblemException) {
+                throw (OAuthProblemException) e.getTargetException();
+            } else if (e.getTargetException() instanceof OAuthSystemException) {
+                throw (OAuthSystemException) e.getTargetException();
+            } else {
+                log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
+                        "Hence initiating the default implementation");
+                oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
+            }
         }
         return oAuthAuthzRequest;
     }
