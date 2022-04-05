@@ -280,8 +280,8 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
                 anyString(), anyString(), anyString())).thenReturn("SP1");
 
         if (mockServiceProvider) {
-            when(mockedApplicationManagementService.getApplicationExcludingFileBasedSPs(anyString(), anyString())).
-                    thenReturn(mockedServiceProvider);
+            when(mockedApplicationManagementService.getServiceProviderByClientId(anyString(), anyString(),
+                    anyString())).thenReturn(mockedServiceProvider);
         }
 
         when(mockedValidationTokenResponseDTO.getAuthorizedUser()).thenReturn(AUTHORIZED_USER);
@@ -336,6 +336,7 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.isFederatedUser(any(AuthenticatedUser.class))).thenCallRealMethod();
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(mockedOAuthAppDO);
         when(OAuth2Util.getTenantDomainOfOauthApp(any(OAuthAppDO.class))).thenReturn("carbon.super");
+        when(OAuth2Util.getServiceProvider(anyString(), anyString())).thenCallRealMethod();
     }
 
     private AccessTokenDO getAccessTokenDO(String clientId, AuthenticatedUser authenticatedUser) {
