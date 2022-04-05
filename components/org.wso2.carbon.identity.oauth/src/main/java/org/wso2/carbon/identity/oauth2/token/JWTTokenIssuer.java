@@ -746,7 +746,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         if (realm.size() > 0) {
             if (log.isDebugEnabled()) {
                 log.debug("Setting authorized user tenant domain : " + tenantDomain +
-                        " used to for token signature to the 'realm' claim of jwt token");
+                        " used for signing the token to the 'realm' claim of jwt token");
             }
             JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
             jwtClaimsSetBuilder.claim(OAuthConstants.OIDCClaims.REALM, realm);
