@@ -24,6 +24,7 @@ import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -188,11 +189,11 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         Map<String, String> realm = (HashMap) jwtClaimsSet.getClaim(OAuthConstants.OIDCClaims.REALM);
 
         // Get certificate from tenant if available in claims.
-        if (realm != null && !realm.isEmpty()) {
+        if (MapUtils.isNotEmpty(realm)) {
             String tenantDomain = null;
             // Get signed key tenant from JWT token or ID token based on claim key.
-            if (realm.get(OAuthConstants.OIDCClaims.SIGNED_KEY_TENANT) != null) {
-                tenantDomain = realm.get(OAuthConstants.OIDCClaims.SIGNED_KEY_TENANT);
+            if (realm.get(OAuthConstants.OIDCClaims.SIGNING_TENANT) != null) {
+                tenantDomain = realm.get(OAuthConstants.OIDCClaims.SIGNING_TENANT);
             } else if (realm.get(OAuthConstants.OIDCClaims.TENANT) != null) {
                 tenantDomain = realm.get(OAuthConstants.OIDCClaims.TENANT);
             }

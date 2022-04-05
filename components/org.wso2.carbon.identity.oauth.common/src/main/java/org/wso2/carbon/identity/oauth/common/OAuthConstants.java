@@ -436,7 +436,7 @@ public final class OAuthConstants {
         public static final String USERSTORE = "userstore";
         public static final String IDP_SESSION_KEY = "isk";
         // JWT Token signed tenant key sent in realm claim.
-        public static final String SIGNED_KEY_TENANT = "signed_key_tenant";
+        public static final String SIGNING_TENANT = "signing_tenant";
 
         private OIDCClaims() {
 

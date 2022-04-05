@@ -741,7 +741,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         Map<String, String> realm = new HashMap<>();
         if (!OAuthServerConfiguration.getInstance().getUseSPTenantDomainValue()) {
-            realm.put(OAuthConstants.OIDCClaims.SIGNED_KEY_TENANT, tenantDomain);
+            realm.put(OAuthConstants.OIDCClaims.SIGNING_TENANT, tenantDomain);
         }
         if (realm.size() > 0) {
             if (log.isDebugEnabled()) {
