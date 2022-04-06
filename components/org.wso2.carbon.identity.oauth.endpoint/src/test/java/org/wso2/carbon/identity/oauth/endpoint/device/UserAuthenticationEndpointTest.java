@@ -208,7 +208,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
         if (expectedValue == HttpServletResponse.SC_ACCEPTED) {
             Assert.assertNotNull(response1);
         } else {
-            Assert.assertNull(response1);
+            Assert.assertNotNull(response1.getMetadata().get("Location").get(0).toString());
         }
     }
 

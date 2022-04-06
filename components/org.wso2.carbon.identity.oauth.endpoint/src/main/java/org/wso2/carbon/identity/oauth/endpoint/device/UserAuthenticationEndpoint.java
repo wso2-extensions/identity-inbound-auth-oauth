@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Instant;
 
@@ -62,7 +63,8 @@ import javax.ws.rs.core.Response;
 public class UserAuthenticationEndpoint {
 
     private static final Log log = LogFactory.getLog(UserAuthenticationEndpoint.class);
-
+    public static final String ERROR = "error";
+    public static final String INVALID_CODE_ERROR_KEY = "invalid.code";
     private OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
     private DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
     private DeviceAuthService deviceAuthService;
@@ -86,9 +88,9 @@ public class UserAuthenticationEndpoint {
                 if (log.isDebugEnabled()) {
                     log.debug("user_code is missing in the request.");
                 }
-                response.sendRedirect(ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH)
-                        .addParameter("error", OAuth2ErrorCodes.INVALID_REQUEST).build().getAbsolutePublicURL());
-                return null;
+                String error = ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH)
+                        .addParameter(ERROR, INVALID_CODE_ERROR_KEY).build().getAbsolutePublicURL();
+                return Response.status(HttpServletResponse.SC_FOUND).location(URI.create(error)).build();
             }
             String clientId = deviceAuthService.getClientId(userCode);
             DeviceFlowDO deviceFlowDODetails =
@@ -111,14 +113,12 @@ public class UserAuthenticationEndpoint {
                 if (log.isDebugEnabled()) {
                     log.debug("Incorrect user_code.");
                 }
-                response.sendRedirect(ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH)
-                        .addParameter("error", OAuth2ErrorCodes.INVALID_REQUEST).build().getAbsolutePublicURL());
-                return null;
+                String error = ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH)
+                        .addParameter(ERROR, INVALID_CODE_ERROR_KEY).build().getAbsolutePublicURL();
+                return Response.status(HttpServletResponse.SC_FOUND).location(URI.create(error)).build();
             }
         } catch (IdentityOAuth2Exception e) {
             return handleIdentityOAuth2Exception(e);
-        } catch (IOException e) {
-            return handleIOException(e);
         } catch (URLBuilderException e) {
             return handleURLBuilderException(e);
         } catch (URISyntaxException e) {
