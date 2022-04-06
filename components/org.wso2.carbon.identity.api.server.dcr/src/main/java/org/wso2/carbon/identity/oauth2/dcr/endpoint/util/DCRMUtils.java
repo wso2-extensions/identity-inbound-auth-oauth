@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth2.dcr.endpoint.util;
 
 import org.apache.commons.logging.Log;
-import org.apache.logging.log4j.ThreadContext;
+import org.slf4j.MDC;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
@@ -164,7 +164,7 @@ public class DCRMUtils {
      * @return whether the correlation id is present
      */
     public static boolean isCorrelationIDPresent() {
-        return ThreadContext.get(DCRMConstants.CORRELATION_ID_MDC) != null;
+        return MDC.get(DCRMConstants.CORRELATION_ID_MDC) != null;
     }
 
     /**
@@ -175,7 +175,7 @@ public class DCRMUtils {
     public static String getCorrelation() {
         String ref = null;
         if (isCorrelationIDPresent()) {
-            ref = ThreadContext.get(DCRMConstants.CORRELATION_ID_MDC).toString();
+            ref = MDC.get(DCRMConstants.CORRELATION_ID_MDC);
         }
         return ref;
     }
