@@ -25,10 +25,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
@@ -46,7 +44,6 @@ import org.wso2.carbon.identity.oauth.user.UserInfoClaimRetriever;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
@@ -74,7 +71,6 @@ import static org.wso2.carbon.identity.core.util.IdentityUtil.isTokenLoggable;
 public class ClaimUtil {
 
     private static final String SP_DIALECT = "http://wso2.org/oidc/claim";
-    private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private static final Log log = LogFactory.getLog(ClaimUtil.class);
 
     private ClaimUtil() {
@@ -137,7 +133,7 @@ public class ClaimUtil {
                 OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
                 String spTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
 
-                ServiceProvider serviceProvider = getServiceProvider(clientId, spTenantDomain);
+                ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, spTenantDomain);
                 ClaimMapping[] requestedLocalClaimMappings = serviceProvider.getClaimConfig().getClaimMappings();
                 String subjectClaimURI = getSubjectClaimUri(serviceProvider, requestedLocalClaimMappings);
 
@@ -317,21 +313,6 @@ public class ClaimUtil {
             }
         }
         return subjectClaimURI;
-    }
-
-    private static ServiceProvider getServiceProvider(String clientId, String spTenantDomain)
-            throws IdentityApplicationManagementException, UserInfoEndpointException {
-
-        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
-        String spName = applicationMgtService.getServiceProviderNameByClientId(clientId, INBOUND_AUTH2_TYPE,
-                spTenantDomain);
-        ServiceProvider serviceProvider = applicationMgtService.getApplicationExcludingFileBasedSPs(spName,
-                spTenantDomain);
-        if (serviceProvider == null) {
-            throw new UserInfoEndpointException("Cannot retrieve service provider: " + spName + " in " +
-                    "tenantDomain: " + spTenantDomain);
-        }
-        return serviceProvider;
     }
 
     private static String getClientID(AccessTokenDO accessTokenDO) throws UserInfoEndpointException {
