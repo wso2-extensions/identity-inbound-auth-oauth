@@ -499,6 +499,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
             mockServiceURLBuilder();
             try {
+                when(oAuthServerConfiguration.getOAuthAuthzRequest(any())).thenThrow(OAuthProblemException
+                        .error("invalid_request"));
                 response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
             } catch (InvalidRequestParentException ire) {
                 InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
@@ -1065,7 +1067,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         Response response;
         try {
-            when(carbonOAuthAuthzRequest.getResponseType()).thenReturn(ResponseType.TOKEN.toString());
+            if (StringUtils.isNotBlank(clientId)) {
+                OAuthAuthzRequest oAuthAuthzRequest = new CarbonOAuthAuthzRequest(httpServletRequest);
+                when(oAuthServerConfiguration.getOAuthAuthzRequest(any())).thenReturn(oAuthAuthzRequest);
+            } else {
+                when(oAuthServerConfiguration.getOAuthAuthzRequest(any())).thenThrow(OAuthProblemException
+                        .error("invalid_request"));
+            }
             response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
         } catch (InvalidRequestParentException ire) {
             InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
