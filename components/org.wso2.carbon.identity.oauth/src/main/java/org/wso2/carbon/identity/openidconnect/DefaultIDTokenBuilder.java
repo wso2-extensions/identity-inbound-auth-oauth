@@ -821,9 +821,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
      * Check the requirement of having a configured public certificate or JWKS in SP and throw an exception with an
      * error message if the public certificate or JWKS in SP is not configured.
      *
-     * @param clientId Client ID of the service provider.
+     * @param clientId     Client ID of the service provider.
      * @param tenantDomain Tenant domain of the service provider.
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception Error when a JWKS endpoint or the certificate is not configured.
      */
     private void checkIfPublicCertConfigured(String clientId, String tenantDomain) throws IdentityOAuth2Exception {
 
