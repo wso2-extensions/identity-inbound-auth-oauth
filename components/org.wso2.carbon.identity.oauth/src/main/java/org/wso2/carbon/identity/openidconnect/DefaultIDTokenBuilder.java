@@ -296,6 +296,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                               String signingTenantDomain) throws IdentityOAuth2Exception {
 
         if (oAuthAppDO.isIdTokenEncryptionEnabled()) {
+            checkIfPublicCertConfigured(clientId, spTenantDomain);
             setupEncryptionAlgorithms(oAuthAppDO, clientId);
             return OAuth2Util.encryptJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain,
                     encryptionAlgorithm, encryptionMethod, spTenantDomain,
@@ -814,5 +815,30 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             log.debug("Session context identifier not available when retrieving using the access token.");
         }
         return idpSessionKey;
+    }
+
+    /**
+     * Check the requirement of having a configured public certificate or JWKS in SP and throw an exception with an
+     * error message if the public certificate or JWKS in SP is not configured.
+     *
+     * @param clientId Client ID of the service provider.
+     * @param tenantDomain Tenant domain of the service provider.
+     * @throws IdentityOAuth2Exception
+     */
+    private void checkIfPublicCertConfigured(String clientId, String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            if (StringUtils.isBlank(OAuth2Util.getSPJwksUrl(clientId, tenantDomain))) {
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Jwks uri is not configured for the service provider associated with " +
+                            "client_id: %s , Checking for x509 certificate.", clientId));
+                }
+                OAuth2Util.getX509CertOfOAuthApp(clientId, tenantDomain);
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw new IdentityOAuth2Exception("You have enabled ID token encryption without configuring a " +
+                    "certificate or JWKS endpoint. Configure the JWKS endpoint or the certificate of your " +
+                    "application to get the ID token.");
+        }
     }
 }
