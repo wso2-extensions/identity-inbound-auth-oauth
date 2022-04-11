@@ -3314,8 +3314,14 @@ public class OAuth2Util {
                 // Build the Certificate object from cert content.
                 return IdentityUtil.convertPEMEncodedContentToCertificate(certificateContent);
             } else {
-                throw new IdentityOAuth2Exception("Public certificate not configured for Service Provider with " +
-                        "client_id: " + clientId + " of tenantDomain: " + tenantDomain);
+                String errorMsg = StringUtils.EMPTY;
+                if (checkIfIDTokenEncryptionEnabled(clientId)) {
+                    errorMsg =  "You have enabled ID token encryption without configuring a certificate or JWKS " +
+                            "endpoint. Configure the JWKS endpoint or the certificate of your application to proceed.";
+                }
+                throw new IdentityOAuth2Exception(String.format("Public certificate not configured for Service " +
+                        "Provider with client_id: " + clientId + " of tenantDomain: " + tenantDomain + ". %s",
+                        errorMsg));
             }
         } catch (CertificateException e) {
             throw new IdentityOAuth2Exception("Error while building X509 cert of oauth app with client_id: "
@@ -4389,5 +4395,28 @@ public class OAuth2Util {
             }
         }
         return IdentityTenantUtil.getTenantDomainFromContext();
+    }
+
+    /**
+     * check if ID token encryption is enabled or not
+     *
+     * @param clientId     OAuth2/OIDC Client Identifier
+     * @return true if ID token encryption is enabled
+     * @throws IdentityOAuth2Exception
+     */
+    private static boolean checkIfIDTokenEncryptionEnabled(String clientId) throws IdentityOAuth2Exception {
+
+        // Initialize OAuthAppDO using the client ID.
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        } catch (InvalidOAuthClientException e) {
+            String error = "Error occurred while getting app information for client_id: " + clientId;
+            throw new IdentityOAuth2Exception(error, e);
+        }
+        if (oAuthAppDO.isIdTokenEncryptionEnabled()) {
+            return true;
+        }
+        return false;
     }
 }
