@@ -838,7 +838,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         } catch (IdentityOAuth2Exception e) {
             throw new IdentityOAuth2Exception("You have enabled ID token encryption without configuring a " +
                     "certificate or JWKS endpoint. Configure the JWKS endpoint or the certificate of your " +
-                    "application to get the ID token.");
+                    "application to get the ID token.", e);
         }
     }
 }
