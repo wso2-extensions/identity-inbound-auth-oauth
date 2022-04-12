@@ -837,9 +837,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 OAuth2Util.getX509CertOfOAuthApp(clientId, tenantDomain);
             }
         } catch (IdentityOAuth2Exception e) {
-            throw new IdentityOAuth2Exception("You have enabled ID token encryption without configuring a " +
-                    "certificate or JWKS endpoint. Configure the JWKS endpoint or the certificate of your " +
-                    "application to get the ID token.", e);
+            throw new IdentityOAuth2Exception("Cannot encrypt the ID token as the service Provider with client_id: "
+                    + clientId + " of tenantDomain: " + tenantDomain + " does not have a public certificate or a " +
+                    "JWKS endpoint configured.", e);
         }
     }
 }
