@@ -4169,16 +4169,8 @@ public class OAuth2Util {
      */
     public static String getSPJwksUrl(String clientId, String spTenantDomain) throws IdentityOAuth2Exception {
 
-        String jwksUri = null;
         ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, spTenantDomain);
-        ServiceProviderProperty[] spPropertyArray = serviceProvider.getSpProperties();
-        //get jwks uri from sp-properties
-        for (ServiceProviderProperty spProperty : spPropertyArray) {
-            if (Constants.JWKS_URI.equals(spProperty.getName())) {
-                jwksUri = spProperty.getValue();
-                break;
-            }
-        }
+        String jwksUri = serviceProvider.getJwksUri();
         if (StringUtils.isNotBlank(jwksUri)) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Retrieved jwks uri: %s for the service provider associated with client_id: %s",
