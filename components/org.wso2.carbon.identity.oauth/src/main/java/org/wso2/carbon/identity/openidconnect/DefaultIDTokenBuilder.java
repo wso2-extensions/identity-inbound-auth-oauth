@@ -296,7 +296,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                               String signingTenantDomain) throws IdentityOAuth2Exception {
 
         if (oAuthAppDO.isIdTokenEncryptionEnabled()) {
-            checkIfPublicCertConfigured(clientId, spTenantDomain);
+            checkIfPublicCertConfiguredForEncryption(clientId, spTenantDomain);
             setupEncryptionAlgorithms(oAuthAppDO, clientId);
             return OAuth2Util.encryptJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain,
                     encryptionAlgorithm, encryptionMethod, spTenantDomain,
@@ -825,7 +825,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
      * @param tenantDomain Tenant domain of the service provider.
      * @throws IdentityOAuth2Exception Error when a JWKS endpoint or the certificate is not configured.
      */
-    private void checkIfPublicCertConfigured(String clientId, String tenantDomain) throws IdentityOAuth2Exception {
+    private void checkIfPublicCertConfiguredForEncryption(String clientId, String tenantDomain)
+            throws IdentityOAuth2Exception {
 
         try {
             if (StringUtils.isBlank(OAuth2Util.getSPJwksUrl(clientId, tenantDomain))) {
