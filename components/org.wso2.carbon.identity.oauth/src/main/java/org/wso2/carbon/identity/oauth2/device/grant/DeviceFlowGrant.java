@@ -73,6 +73,12 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
         deviceFlowDO.setDeviceCode(deviceCode);
         if (Constants.NOT_EXIST.equals(deviceStatus)) {
             throw new IdentityOAuth2Exception(DeviceErrorCodes.INVALID_REQUEST, DeviceErrorCodes.INVALID_REQUEST);
+        }
+        Timestamp newPollTime = new Timestamp(date.getTime());
+        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setLastPollTime(deviceCode, newPollTime);
+        if (!isValidPollTime(newPollTime, deviceFlowDO)) {
+            throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.SLOW_DOWN,
+                    DeviceErrorCodes.SubDeviceErrorCodes.SLOW_DOWN);
         } else if (Constants.EXPIRED.equals(deviceStatus) || isExpiredDeviceCode(deviceFlowDO, date)) {
             throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN,
                     DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN);
@@ -82,16 +88,8 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
                     Constants.EXPIRED);
             setPropertiesForTokenGeneration(oAuthTokenReqMessageContext, deviceFlowDO);
         } else if (Constants.USED.equals(deviceStatus) || Constants.PENDING.equals(deviceStatus)) {
-            Timestamp newPollTime = new Timestamp(date.getTime());
-            if (isValidPollTime(newPollTime, deviceFlowDO)) {
-                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setLastPollTime(deviceCode, newPollTime);
-                throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.AUTHORIZATION_PENDING,
-                        DeviceErrorCodes.SubDeviceErrorCodes.AUTHORIZATION_PENDING);
-            } else {
-                DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setLastPollTime(deviceCode, newPollTime);
-                throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.SLOW_DOWN,
-                        DeviceErrorCodes.SubDeviceErrorCodes.SLOW_DOWN);
-            }
+            throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.AUTHORIZATION_PENDING,
+                    DeviceErrorCodes.SubDeviceErrorCodes.AUTHORIZATION_PENDING);
         }
         return authStatus;
     }
