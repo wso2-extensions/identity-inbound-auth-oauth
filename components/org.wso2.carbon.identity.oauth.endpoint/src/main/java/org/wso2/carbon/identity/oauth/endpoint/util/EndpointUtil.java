@@ -744,7 +744,7 @@ public class EndpointUtil {
                     // When request_uri requests come without redirect_uri, we need to append it to the SPQueryParams
                     // to be used in storing consent data
                     entry.setQueryString(entry.getQueryString() +
-                            "&" + PROP_REDIRECT_URI + "=" + params.getRedirectURI());
+                            "&" + PROP_REDIRECT_URI + "=" + URLEncoder.encode(params.getRedirectURI(), UTF_8));
                 }
                 queryString = URLEncoder.encode(entry.getQueryString(), UTF_8);
             }
