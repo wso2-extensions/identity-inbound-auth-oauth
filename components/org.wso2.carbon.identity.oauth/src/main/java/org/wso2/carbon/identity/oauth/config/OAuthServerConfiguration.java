@@ -1123,7 +1123,10 @@ public class OAuthServerConfiguration {
     /**
      * Returns an instance of OAuthAuthzRequest
      *
-     * @return instance of OAuthAuthzRequest
+     * @param request http servlet request.
+     * @return instance of OAuthAuthzRequest.
+     * @throws OAuthProblemException thrown when initializing the OAuthAuthzRequestClass instance.
+     * @throws OAuthSystemException thrown when initializing the OAuthAuthzRequestClass instance.
      */
     public OAuthAuthzRequest getOAuthAuthzRequest(HttpServletRequest request)
             throws OAuthProblemException, OAuthSystemException {
@@ -2997,11 +3000,10 @@ public class OAuthServerConfiguration {
                     requestObjectEnabled = false;
                 }
             }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
-                    OAUTH_AUTHZ_REQUEST)) != null) {
-                defaultOAuthAuthzRequestClassName =
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
-                                OAUTH_AUTHZ_REQUEST)).getText().trim();
+            OMElement oAuthAuthzRequest = openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
+                    (ConfigElements.OAUTH_AUTHZ_REQUEST));
+            if (oAuthAuthzRequest != null) {
+                defaultOAuthAuthzRequestClassName = oAuthAuthzRequest.getText().trim();
             }
         }
     }

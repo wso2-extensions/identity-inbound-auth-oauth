@@ -386,15 +386,16 @@ public class OAuth2AuthzEndpoint {
             log.debug(e.getError(), e);
         }
 
-        String errorCode = e.getError() != null ? e.getError() : OAuth2ErrorCodes.INVALID_REQUEST;
-        String errorDescription = e.getDescription() != null ? e.getDescription() : e.getMessage();
-        String state = e.getState();
         OAuth2Parameters oAuth2Parameters = getOAuth2ParamsFromOAuthMessage(oAuthMessage);
 
         if (StringUtils.equals(oAuthMessage.getRequest().getParameter(RESPONSE_MODE), RESPONSE_MODE_FORM_POST)) {
             e.state(retrieveStateForErrorURL(oAuthMessage.getRequest(), oAuth2Parameters));
             return Response.ok(createErrorFormPage(oAuthMessage.getRequest().getParameter(REDIRECT_URI), e)).build();
         }
+
+        String errorCode = e.getError() != null ? e.getError() : OAuth2ErrorCodes.INVALID_REQUEST;
+        String errorDescription = e.getDescription() != null ? e.getDescription() : e.getMessage();
+        String state = e.getState();
 
         if (StringUtils.isBlank(oAuth2Parameters.getState()) && StringUtils.isNotBlank(state)) {
             oAuth2Parameters.setState(state);
