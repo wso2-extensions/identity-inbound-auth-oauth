@@ -820,21 +820,17 @@ public class OAuthAppDAO {
             throws IdentityApplicationManagementException, IdentityOAuthAdminException {
 
         if (validateUserForOwnerUpdate(serviceProvider)) {
-            try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-                try (PreparedStatement statement = connection.prepareStatement(
-                        SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_CLIENT_WITH_OWNER)) {
+            try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+                 PreparedStatement statement = connection.prepareStatement(
+                         SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_CLIENT_WITH_OWNER)) {
                     statement.setString(1, serviceProvider.getApplicationName());
                     statement.setString(2, serviceProvider.getOwner().getUserName());
                     statement.setString(3, serviceProvider.getOwner().getUserStoreDomain());
                     statement.setString(4, consumerKey);
                     statement.execute();
                     IdentityDatabaseUtil.commitTransaction(connection);
-                } catch (SQLException e1) {
-                    IdentityDatabaseUtil.rollbackTransaction(connection);
-                    throw new IdentityApplicationManagementException("Error while executing the SQL statement.", e1);
-                }
             } catch (SQLException e) {
-                throw new IdentityApplicationManagementException("Error while getting the DB connection.", e);
+                throw new IdentityApplicationManagementException("Error while executing the SQL statement.", e);
             }
         } else {
             updateOAuthConsumerApp(serviceProvider.getApplicationName(), consumerKey);
