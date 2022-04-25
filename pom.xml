@@ -492,22 +492,12 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-core</artifactId>
-                <version>${com.fasterxml.jackson.core.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-core-asl</artifactId>
-                <version>${jackson.version}</version>
+                <version>${com.fasterxml.jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
                 <version>${jackson-databind.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-jaxrs</artifactId>
-                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework</groupId>
@@ -913,10 +903,8 @@
         <maven.buildnumber.plugin.version>1.4</maven.buildnumber.plugin.version>
 
         <!--Swagger Dependency Version-->
-        <jackson.version>1.8.6</jackson.version>
-        <jackson-databind.version>2.10.5.1</jackson-databind.version>
-        <com.fasterxml.jackson.core.version>2.9.9</com.fasterxml.jackson.core.version>
-        <com.fasterxml.jackson.version>2.9.7</com.fasterxml.jackson.version>
+        <jackson-databind.version>2.13.2.1</jackson-databind.version>
+        <com.fasterxml.jackson.version>2.13.2</com.fasterxml.jackson.version>
         <spring-web.version>4.3.29.RELEASE</spring-web.version>
         <swagger-jaxrs.version>1.6.2</swagger-jaxrs.version>
         <!-- httpclient dependency Version-->
