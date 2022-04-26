@@ -392,7 +392,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     }
 
     /**
-     * Update the application name if OAuth application presents.
+     * Update the application name and owner if OAuth application presents.
      *
      * @param serviceProvider Service provider
      * @throws IdentityApplicationManagementException
@@ -420,8 +420,11 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         }
 
         OAuthAppDAO dao = new OAuthAppDAO();
-        dao.updateOAuthConsumerApp(serviceProvider.getApplicationName(),
-                authenticationRequestConfigConfig.getInboundAuthKey());
+        try {
+            dao.updateOAuthConsumerApp(serviceProvider, authenticationRequestConfigConfig.getInboundAuthKey());
+        } catch (IdentityOAuthAdminException e) {
+            throw new IdentityApplicationManagementException("Error occurred while updating oauth consumer app.", e);
+        }
     }
 
     private void removeEntriesFromCache(Set<String> consumerKeys) throws IdentityOAuth2Exception {
