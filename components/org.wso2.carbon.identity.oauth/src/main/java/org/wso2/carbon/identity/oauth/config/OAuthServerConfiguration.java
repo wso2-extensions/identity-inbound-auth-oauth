@@ -27,11 +27,8 @@ import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
 import org.apache.oltu.oauth2.as.issuer.UUIDValueGenerator;
 import org.apache.oltu.oauth2.as.issuer.ValueGenerator;
-import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
-import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
-import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
@@ -49,7 +46,6 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
-import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.TokenIssuerDO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
@@ -69,8 +65,6 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
 import org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl;
 import org.wso2.carbon.utils.CarbonUtils;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1121,41 +1115,13 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * Returns an instance of OAuthAuthzRequest
+     * Returns the configured OAuthAuthzRequest class name. If not configured, the default class name will be returned.
      *
-     * @param request http servlet request.
-     * @return instance of OAuthAuthzRequest.
-     * @throws OAuthProblemException thrown when initializing the OAuthAuthzRequestClass instance.
-     * @throws OAuthSystemException thrown when initializing the OAuthAuthzRequestClass instance.
+     * @return OAuthAuthzRequest implementation class name.
      */
-    public OAuthAuthzRequest getOAuthAuthzRequest(HttpServletRequest request)
-            throws OAuthProblemException, OAuthSystemException {
+    public String getOAuthAuthzRequestClass() {
 
-        OAuthAuthzRequest oAuthAuthzRequest;
-        try {
-            Class clazz = Thread.currentThread().getContextClassLoader()
-                    .loadClass(defaultOAuthAuthzRequestClassName);
-
-            Constructor<?> constructor = clazz.getConstructor(HttpServletRequest.class);
-            oAuthAuthzRequest = (OAuthAuthzRequest) constructor.newInstance(request);
-        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
-                NoSuchMethodException e) {
-            log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
-                    "Hence initiating the default implementation");
-            oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
-        } catch (InvocationTargetException e) {
-            // Handle OAuthProblemException & OAuthSystemException thrown from extended class.
-            if (e.getTargetException() instanceof OAuthProblemException) {
-                throw (OAuthProblemException) e.getTargetException();
-            } else if (e.getTargetException() instanceof OAuthSystemException) {
-                throw (OAuthSystemException) e.getTargetException();
-            } else {
-                log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
-                        "Hence initiating the default implementation");
-                oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
-            }
-        }
-        return oAuthAuthzRequest;
+        return defaultOAuthAuthzRequestClassName;
     }
 
     public Set<String> getSupportedResponseTypeNames() {

@@ -499,8 +499,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
             mockServiceURLBuilder();
             try {
-                when(oAuthServerConfiguration.getOAuthAuthzRequest(any())).thenThrow(OAuthProblemException
-                        .error("invalid_request"));
                 response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
             } catch (InvalidRequestParentException ire) {
                 InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
@@ -1067,13 +1065,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         Response response;
         try {
-            if (StringUtils.isNotBlank(clientId)) {
-                OAuthAuthzRequest oAuthAuthzRequest = new CarbonOAuthAuthzRequest(httpServletRequest);
-                when(oAuthServerConfiguration.getOAuthAuthzRequest(any())).thenReturn(oAuthAuthzRequest);
-            } else {
-                when(oAuthServerConfiguration.getOAuthAuthzRequest(any())).thenThrow(OAuthProblemException
-                        .error("invalid_request"));
-            }
             response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
         } catch (InvalidRequestParentException ire) {
             InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
@@ -1851,7 +1842,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
         when(oAuthMessage.getClientId()).thenReturn(CLIENT_ID_VALUE);
-        when(carbonOAuthAuthzRequest.getResponseType()).thenReturn(ResponseType.TOKEN.toString());
         handleOAuthAuthorizationRequest.invoke(authzEndpointObject, oAuthMessage);
         assertNotNull(cacheEntry[0], "Parameters not saved in cache");
         assertEquals(cacheEntry[0].getoAuth2Parameters().getDisplayName(), savedDisplayName);
@@ -2018,7 +2008,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 return invocation.getArguments()[0];
             }
         });
-        when(oAuthServerConfiguration.getOAuthAuthzRequest(any())).thenReturn(carbonOAuthAuthzRequest);
+        when(oAuthServerConfiguration.getOAuthAuthzRequestClass())
+                .thenReturn("org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest");
     }
 
     @DataProvider(name = "provideFailedAuthenticationErrorInfo")
