@@ -2008,7 +2008,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 return invocation.getArguments()[0];
             }
         });
-        when(oAuthServerConfiguration.getOAuthAuthzRequestClass())
+        when(oAuthServerConfiguration.getOAuthAuthzRequestClassName())
                 .thenReturn("org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest");
     }
 

@@ -205,7 +205,8 @@ public class OAuthServerConfiguration {
             "org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl";
     private String defaultCibaRequestValidatorClassName =
             "org.wso2.carbon.identity.openidconnect.CIBARequestObjectValidatorImpl";
-    private String defaultOAuthAuthzRequestClassName =
+    private String oAuthAuthzRequestClassName;
+    public static final String DEFAULT_OAUTH_AUTHZ_REQUEST_CLASSNAME =
             "org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest";
     private String openIDConnectIDTokenCustomClaimsHanlderClassName =
             "org.wso2.carbon.identity.openidconnect.SAMLAssertionClaimsCallback";
@@ -1119,9 +1120,9 @@ public class OAuthServerConfiguration {
      *
      * @return OAuthAuthzRequest implementation class name.
      */
-    public String getOAuthAuthzRequestClass() {
+    public String getOAuthAuthzRequestClassName() {
 
-        return defaultOAuthAuthzRequestClassName;
+        return oAuthAuthzRequestClassName;
     }
 
     public Set<String> getSupportedResponseTypeNames() {
@@ -2967,10 +2968,9 @@ public class OAuthServerConfiguration {
                 }
             }
             OMElement oAuthAuthzRequest = openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
-                    (ConfigElements.OAUTH_AUTHZ_REQUEST));
-            if (oAuthAuthzRequest != null) {
-                defaultOAuthAuthzRequestClassName = oAuthAuthzRequest.getText().trim();
-            }
+                    (ConfigElements.OAUTH_AUTHZ_REQUEST_CLASS));
+            oAuthAuthzRequestClassName = (oAuthAuthzRequest != null) ? oAuthAuthzRequest.getText().trim() :
+                    DEFAULT_OAUTH_AUTHZ_REQUEST_CLASSNAME;
         }
     }
 
@@ -3240,7 +3240,7 @@ public class OAuthServerConfiguration {
         public static final String SUPPORTED_CLAIMS = "OpenIDConnectClaims";
         public static final String REQUEST_OBJECT = "RequestObject";
         public static final String REQUEST_OBJECT_VALIDATOR = "RequestObjectValidator";
-        public static final String OAUTH_AUTHZ_REQUEST = "OAuthAuthzRequest";
+        public static final String OAUTH_AUTHZ_REQUEST_CLASS = "OAuthAuthzRequestClass";
         public static final String CIBA_REQUEST_OBJECT_VALIDATOR = "CIBARequestObjectValidator";
         public static final String OPENID_CONNECT_BACK_CHANNEL_LOGOUT_TOKEN_EXPIRATION = "LogoutTokenExpiration";
         // Callback handler related configuration elements
