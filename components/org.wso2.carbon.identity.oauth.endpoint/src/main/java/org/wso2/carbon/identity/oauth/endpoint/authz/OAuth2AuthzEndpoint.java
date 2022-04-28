@@ -1557,7 +1557,7 @@ public class OAuth2AuthzEndpoint {
      *
      * @return boolean whether the default class name is configured.
      */
-    private boolean isDeafultOAuthAuthzRequestClassConfigured() {
+    private boolean isDefaultOAuthAuthzRequestClassConfigured() {
 
         String oauthAuthzRequestClassName = OAuthServerConfiguration.getInstance().getOAuthAuthzRequestClassName();
         return OAuthServerConfiguration.DEFAULT_OAUTH_AUTHZ_REQUEST_CLASSNAME.equals(oauthAuthzRequestClassName);
@@ -1596,7 +1596,7 @@ public class OAuth2AuthzEndpoint {
 
         OAuthAuthzRequest oAuthAuthzRequest;
 
-        if (isDeafultOAuthAuthzRequestClassConfigured()) {
+        if (isDefaultOAuthAuthzRequestClassConfigured()) {
             oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
         } else {
             try {
