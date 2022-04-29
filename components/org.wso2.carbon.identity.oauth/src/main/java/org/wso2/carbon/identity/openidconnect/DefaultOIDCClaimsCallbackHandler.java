@@ -703,23 +703,16 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         for (Map.Entry<String, Object> claimEntry : userClaimsInOIDCDialect.entrySet()) {
             String claimValue = claimEntry.getValue().toString();
             String claimKey = claimEntry.getKey();
-            if (isMultiValuedAttribute(claimValue)) {
-                if (claimEntry.getKey().equals(ADDRESS)) {
-                    if (jwtClaimsSet.getClaim(claimKey) == null) {
-                        jwtClaimsSetBuilder.claim(claimEntry.getKey(), claimEntry.getValue());
+            if (isMultiValuedAttribute(claimKey, claimValue)) {
+                JSONArray claimValues = new JSONArray();
+                String[] attributeValues = claimValue.split(Pattern.quote(ATTRIBUTE_SEPARATOR));
+                for (String attributeValue : attributeValues) {
+                    if (StringUtils.isNotBlank(attributeValue)) {
+                        claimValues.add(attributeValue);
                     }
                 }
-                else {
-                    JSONArray claimValues = new JSONArray();
-                    String[] attributeValues = claimValue.split(Pattern.quote(ATTRIBUTE_SEPARATOR));
-                    for (String attributeValue : attributeValues) {
-                        if (StringUtils.isNotBlank(attributeValue)) {
-                            claimValues.add(attributeValue);
-                        }
-                    }
-                    if (jwtClaimsSet.getClaim(claimKey) == null) {
-                        jwtClaimsSetBuilder.claim(claimEntry.getKey(), claimValues);
-                    }
+                if (jwtClaimsSet.getClaim(claimKey) == null) {
+                    jwtClaimsSetBuilder.claim(claimEntry.getKey(), claimValues);
                 }
             } else {
                 if (jwtClaimsSet.getClaim(claimKey) == null) {
@@ -750,7 +743,12 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         return !authzReqMessageContext.getAuthorizationReqDTO().getUser().isFederatedUser();
     }
 
-    private boolean isMultiValuedAttribute(String claimValue) {
+    private boolean isMultiValuedAttribute(String claimKey, String claimValue) {
+
+        // Address claim contains multi attribute separator but its not a multi valued attribute.
+        if (claimKey.equals(ADDRESS)) {
+            return false;
+        }
         return StringUtils.contains(claimValue, ATTRIBUTE_SEPARATOR);
     }
 }
