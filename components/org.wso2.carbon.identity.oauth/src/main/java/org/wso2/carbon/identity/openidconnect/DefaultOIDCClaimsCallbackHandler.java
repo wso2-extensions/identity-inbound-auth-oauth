@@ -67,6 +67,7 @@ import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
 
 /**
  * Default implementation of {@link CustomClaimsCallbackHandler}. This callback handler populates available user
@@ -703,15 +704,22 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             String claimValue = claimEntry.getValue().toString();
             String claimKey = claimEntry.getKey();
             if (isMultiValuedAttribute(claimValue)) {
-                JSONArray claimValues = new JSONArray();
-                String[] attributeValues = claimValue.split(Pattern.quote(ATTRIBUTE_SEPARATOR));
-                for (String attributeValue : attributeValues) {
-                    if (StringUtils.isNotBlank(attributeValue)) {
-                        claimValues.add(attributeValue);
+                if (claimEntry.getKey().equals(ADDRESS)) {
+                    if (jwtClaimsSet.getClaim(claimKey) == null) {
+                        jwtClaimsSetBuilder.claim(claimEntry.getKey(), claimEntry.getValue());
                     }
                 }
-                if (jwtClaimsSet.getClaim(claimKey) == null) {
-                    jwtClaimsSetBuilder.claim(claimEntry.getKey(), claimValues);
+                else {
+                    JSONArray claimValues = new JSONArray();
+                    String[] attributeValues = claimValue.split(Pattern.quote(ATTRIBUTE_SEPARATOR));
+                    for (String attributeValue : attributeValues) {
+                        if (StringUtils.isNotBlank(attributeValue)) {
+                            claimValues.add(attributeValue);
+                        }
+                    }
+                    if (jwtClaimsSet.getClaim(claimKey) == null) {
+                        jwtClaimsSetBuilder.claim(claimEntry.getKey(), claimValues);
+                    }
                 }
             } else {
                 if (jwtClaimsSet.getClaim(claimKey) == null) {
