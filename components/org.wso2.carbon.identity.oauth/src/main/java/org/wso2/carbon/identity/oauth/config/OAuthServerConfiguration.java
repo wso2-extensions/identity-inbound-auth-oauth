@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
+import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.TokenIssuerDO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
@@ -205,6 +206,8 @@ public class OAuthServerConfiguration {
             "org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl";
     private String defaultCibaRequestValidatorClassName =
             "org.wso2.carbon.identity.openidconnect.CIBARequestObjectValidatorImpl";
+    private String oAuthAuthzRequestClassName;
+    public static final String DEFAULT_OAUTH_AUTHZ_REQUEST_CLASSNAME = CarbonOAuthAuthzRequest.class.getName();
     private String openIDConnectIDTokenCustomClaimsHanlderClassName =
             "org.wso2.carbon.identity.openidconnect.SAMLAssertionClaimsCallback";
     private IDTokenBuilder openIDConnectIDTokenBuilder = null;
@@ -1110,6 +1113,16 @@ public class OAuthServerConfiguration {
             }
         }
         return requestObjectBuilder;
+    }
+
+    /**
+     * Returns the configured OAuthAuthzRequest class name. If not configured, the default class name will be returned.
+     *
+     * @return OAuthAuthzRequest implementation class name.
+     */
+    public String getOAuthAuthzRequestClassName() {
+
+        return oAuthAuthzRequestClassName;
     }
 
     public Set<String> getSupportedResponseTypeNames() {
@@ -2954,6 +2967,10 @@ public class OAuthServerConfiguration {
                     requestObjectEnabled = false;
                 }
             }
+            OMElement oAuthAuthzRequest = openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
+                    (ConfigElements.OAUTH_AUTHZ_REQUEST_CLASS));
+            oAuthAuthzRequestClassName = (oAuthAuthzRequest != null) ? oAuthAuthzRequest.getText().trim() :
+                    DEFAULT_OAUTH_AUTHZ_REQUEST_CLASSNAME;
         }
     }
 
@@ -3223,6 +3240,7 @@ public class OAuthServerConfiguration {
         public static final String SUPPORTED_CLAIMS = "OpenIDConnectClaims";
         public static final String REQUEST_OBJECT = "RequestObject";
         public static final String REQUEST_OBJECT_VALIDATOR = "RequestObjectValidator";
+        public static final String OAUTH_AUTHZ_REQUEST_CLASS = "OAuthAuthzRequestClass";
         public static final String CIBA_REQUEST_OBJECT_VALIDATOR = "CIBARequestObjectValidator";
         public static final String OPENID_CONNECT_BACK_CHANNEL_LOGOUT_TOKEN_EXPIRATION = "LogoutTokenExpiration";
         // Callback handler related configuration elements
