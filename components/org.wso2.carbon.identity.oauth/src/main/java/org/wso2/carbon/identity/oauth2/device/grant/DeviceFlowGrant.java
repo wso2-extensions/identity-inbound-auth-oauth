@@ -76,10 +76,10 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
         DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setLastPollTime(deviceCode, newPollTime);
         if (!isValidPollTime(newPollTime, deviceFlowDO)) {
             throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.SLOW_DOWN,
-                    DeviceErrorCodes.SubDeviceErrorCodes.SLOW_DOWN);
+                    DeviceErrorCodes.SubDeviceErrorCodesDescriptions.SLOW_DOWN);
         } else if (Constants.EXPIRED.equals(deviceStatus) || isExpiredDeviceCode(deviceFlowDO, date)) {
             throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN,
-                    DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN);
+                    DeviceErrorCodes.SubDeviceErrorCodesDescriptions.EXPIRED_TOKEN);
         } else if (Constants.AUTHORIZED.equals(deviceStatus)) {
             authStatus = true;
             DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setDeviceCodeExpired(deviceCode,
@@ -87,7 +87,7 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
             setPropertiesForTokenGeneration(oAuthTokenReqMessageContext, deviceFlowDO);
         } else if (Constants.USED.equals(deviceStatus) || Constants.PENDING.equals(deviceStatus)) {
             throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.AUTHORIZATION_PENDING,
-                    DeviceErrorCodes.SubDeviceErrorCodes.AUTHORIZATION_PENDING);
+                    DeviceErrorCodes.SubDeviceErrorCodesDescriptions.AUTHORIZATION_PENDING);
         }
         return authStatus;
     }

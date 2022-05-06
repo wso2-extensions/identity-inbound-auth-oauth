@@ -41,4 +41,15 @@ public class DeviceErrorCodes {
         public static final String EXPIRED_TOKEN = "expired_token";
 
     }
+
+    /**
+     * Error codes descriptions that will be used in polling.
+     */
+    public static class SubDeviceErrorCodesDescriptions {
+
+        public static final String SLOW_DOWN = "Forbidden";
+        public static final String AUTHORIZATION_PENDING = "Precondition Required";
+        public static final String EXPIRED_TOKEN = "Forbidden";
+
+    }
 }
