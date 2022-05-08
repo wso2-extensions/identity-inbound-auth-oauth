@@ -67,6 +67,7 @@ import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
 
 /**
  * Default implementation of {@link CustomClaimsCallbackHandler}. This callback handler populates available user
@@ -702,7 +703,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         for (Map.Entry<String, Object> claimEntry : userClaimsInOIDCDialect.entrySet()) {
             String claimValue = claimEntry.getValue().toString();
             String claimKey = claimEntry.getKey();
-            if (isMultiValuedAttribute(claimValue)) {
+            if (isMultiValuedAttribute(claimKey, claimValue)) {
                 JSONArray claimValues = new JSONArray();
                 String[] attributeValues = claimValue.split(Pattern.quote(ATTRIBUTE_SEPARATOR));
                 for (String attributeValue : attributeValues) {
@@ -742,7 +743,12 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         return !authzReqMessageContext.getAuthorizationReqDTO().getUser().isFederatedUser();
     }
 
-    private boolean isMultiValuedAttribute(String claimValue) {
+    private boolean isMultiValuedAttribute(String claimKey, String claimValue) {
+
+        // Address claim contains multi attribute separator but its not a multi valued attribute.
+        if (claimKey.equals(ADDRESS)) {
+            return false;
+        }
         return StringUtils.contains(claimValue, ATTRIBUTE_SEPARATOR);
     }
 }

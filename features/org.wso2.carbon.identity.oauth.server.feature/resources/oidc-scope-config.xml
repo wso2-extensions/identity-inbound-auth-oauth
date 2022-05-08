@@ -29,6 +29,6 @@
         <Claim>phone_number,phone_number_verified</Claim>
     </Scope>
     <Scope id="address" displayName="Address" description="View the address of the user.">
-        <Claim>address,street_address</Claim>
+        <Claim>address,street_address,locality,region,postal_code,country</Claim>
     </Scope>
 </Scopes>
