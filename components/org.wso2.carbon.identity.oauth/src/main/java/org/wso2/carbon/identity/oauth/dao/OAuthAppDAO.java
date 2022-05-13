@@ -820,7 +820,7 @@ public class OAuthAppDAO {
             throws IdentityApplicationManagementException, IdentityOAuthAdminException {
 
         if (validateUserForOwnerUpdate(serviceProvider)) {
-            try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+            try (Connection connection = IdentityDatabaseUtil.getDBConnection(true);
                  PreparedStatement statement = connection.prepareStatement(
                          SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_CLIENT_WITH_OWNER)) {
                     statement.setString(1, serviceProvider.getApplicationName());
