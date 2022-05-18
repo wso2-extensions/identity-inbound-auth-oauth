@@ -109,6 +109,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String spTenantDomain = getSpTenantDomain(tokenReqMsgCtxt);
         String idTokenIssuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
         String accessToken = tokenRespDTO.getAccessToken();
+//        Boolean federated = tokenReqMsgCtxt.getAuthorizedUser().isFederatedUser();
 
         // Initialize OAuthAppDO using the client ID.
         OAuthAppDO oAuthAppDO;
@@ -188,6 +189,10 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (idpSessionKey != null) {
             jwtClaimsSetBuilder.claim(IDP_SESSION_KEY, idpSessionKey);
         }
+//        if (federated) {
+//            jwtClaimsSetBuilder.claim("associated_tenants", Arrays.asList(new String[]{"inte2"}));
+//            jwtClaimsSetBuilder.claim("default_tenant", "inte2");
+//        }
         setUserRealm(authorizedUser, jwtClaimsSetBuilder);
         setAdditionalClaims(tokenReqMsgCtxt, tokenRespDTO, jwtClaimsSetBuilder);
 
