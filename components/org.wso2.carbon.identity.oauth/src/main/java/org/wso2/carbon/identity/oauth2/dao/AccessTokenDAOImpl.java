@@ -170,7 +170,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         }
 
         String sql;
-        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+//        sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN;
+        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()
+                && (!StringUtils.equalsIgnoreCase("EnterpriseIDP", authenticatedIDP))) {
             sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN_WITH_IDP_NAME;
         } else {
             sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN;
@@ -222,7 +224,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 insertTokenPrepStmt.setString(18, NONE);
             }
             insertTokenPrepStmt.setString(19, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()
+                    && (!StringUtils.equalsIgnoreCase("EnterpriseIDP", authenticatedIDP))) {
                 insertTokenPrepStmt.setString(20, authenticatedIDP);
                 insertTokenPrepStmt.setInt(21, tenantId);
             }
