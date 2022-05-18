@@ -253,7 +253,9 @@ public class ResponseTypeHandlerUtil {
         // set code issued time.this is needed by downstream handlers.
         oauthAuthzMsgCtx.setCodeIssuedTime(timestamp.getTime());
 
-        if (authorizationReqDTO.getUser() != null && authorizationReqDTO.getUser().isFederatedUser()) {
+        if (authorizationReqDTO.getUser() != null
+                && authorizationReqDTO.getUser().getTenantDomain() == null
+                && authorizationReqDTO.getUser().isFederatedUser()) {
             //if a federated user, treat the tenant domain as similar to application domain.
             authorizationReqDTO.getUser().setTenantDomain(authorizationReqDTO.getTenantDomain());
         }
