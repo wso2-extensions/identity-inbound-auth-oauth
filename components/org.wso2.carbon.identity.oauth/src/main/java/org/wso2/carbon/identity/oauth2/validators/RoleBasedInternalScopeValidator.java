@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.validators;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
@@ -174,8 +175,15 @@ public class RoleBasedInternalScopeValidator {
 
             String userName = userStoreManager.getUserNameFromUserID(authenticatedUser.getUserId());
 
-            return userStoreManager.getHybridRoleListOfUser(UserCoreUtil.removeDomainFromName(userName),
-                    authenticatedUser.getUserStoreDomain());
+            if (StringUtils.isEmpty(userName)) {
+                userName = authenticatedUser.getUserName();
+            }
+
+            if (StringUtils.isNotEmpty(userName)) {
+                userName = UserCoreUtil.removeDomainFromName(userName);
+            }
+
+            return userStoreManager.getHybridRoleListOfUser(userName, authenticatedUser.getUserStoreDomain());
 
         } catch (UserStoreException e) {
             String error =
