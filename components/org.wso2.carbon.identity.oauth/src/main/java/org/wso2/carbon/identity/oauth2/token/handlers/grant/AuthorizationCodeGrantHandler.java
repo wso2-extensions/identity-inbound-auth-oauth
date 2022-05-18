@@ -296,7 +296,14 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             throw new IdentityOAuth2Exception("User id not found for user: "
                     + authzCodeDO.getAuthorizedUser().getLoggableUserId(), e);
         }
-        invokePostAccessTokenRevocationListeners(tokenId);
+        String accessToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                .getAccessTokenByTokenId(tokenId);
+        // Fetching AccessTokenDO from DB before revoking the token
+        AccessTokenDO accessTokenDO = null;
+        if (StringUtils.isNotBlank(accessToken)) {
+            accessTokenDO = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .getAccessToken(accessToken, true);
+        }
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessToken(tokenId, userId);
 
         if (log.isDebugEnabled()) {
@@ -309,24 +316,22 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                         "active. So revoking the access tokens issued for the authorization code.");
             }
         }
+        invokePostAccessTokenRevocationListeners(accessTokenDO);
     }
 
-    private void invokePostAccessTokenRevocationListeners(String accessTokenId) throws IdentityOAuth2Exception {
-
-        String accessToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                .getAccessTokenByTokenId(accessTokenId);
-        if (StringUtils.isNotBlank(accessToken)) {
-            AccessTokenDO accessTokenDO = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                    .getAccessToken(accessToken, true);
-            if (accessTokenDO != null) {
-                OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
-                        .getOAuthEventInterceptorProxy();
-                if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
-                    try {
-                        oAuthEventInterceptorProxy.onPostTokenRevocationBySystem(accessTokenDO, new HashMap<>());
-                    } catch (IdentityOAuth2Exception e) {
-                        log.error("Error occurred when invoking post access token revoke listener. ", e);
-                    }
+    /**
+     * Invokes Post Access Token Revocation Listeners
+     * @param accessTokenDO nullable AccessTokenDO
+     */
+    private void invokePostAccessTokenRevocationListeners(AccessTokenDO accessTokenDO) {
+        if (accessTokenDO != null) {
+            OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                    .getOAuthEventInterceptorProxy();
+            if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+                try {
+                    oAuthEventInterceptorProxy.onPostTokenRevocationBySystem(accessTokenDO, new HashMap<>());
+                } catch (IdentityOAuth2Exception e) {
+                    log.error("Error occurred when invoking post access token revoke listener. ", e);
                 }
             }
         }
