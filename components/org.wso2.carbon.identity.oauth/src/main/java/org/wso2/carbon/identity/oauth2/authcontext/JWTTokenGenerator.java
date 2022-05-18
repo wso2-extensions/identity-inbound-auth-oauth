@@ -75,6 +75,7 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -221,6 +222,7 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
         claimsSetBuilder.claim(API_GATEWAY_ID + "/subscriber", subscriber);
         claimsSetBuilder.claim(API_GATEWAY_ID + "/applicationname", applicationName);
         claimsSetBuilder.claim(API_GATEWAY_ID + "/enduser", authzUser);
+        claimsSetBuilder.jwtID(UUID.randomUUID().toString());
         //TODO: check setting audience
 
         if (claimsRetriever != null) {

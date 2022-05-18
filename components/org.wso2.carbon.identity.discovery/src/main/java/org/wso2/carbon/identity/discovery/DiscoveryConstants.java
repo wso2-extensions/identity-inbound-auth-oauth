@@ -345,4 +345,11 @@ public class DiscoveryConstants {
      authorization server does not support PKCE.
      */
     public static final String CODE_CHALLENGE_METHODS_SUPPORTED = "code_challenge_methods_supported";
+
+    /**
+     * device_authorization_endpoint
+     * OPTIONAL. URL of the authorization server's device authorization endpoint,
+     * as defined in OAuth 2.0 Device Grant [rfc8628]
+     */
+    public static final String DEVICE_AUTHORIZATION_ENDPOINT = "device_authorization_endpoint";
 }

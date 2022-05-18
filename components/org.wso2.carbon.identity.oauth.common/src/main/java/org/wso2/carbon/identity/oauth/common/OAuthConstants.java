@@ -292,6 +292,7 @@ public final class OAuthConstants {
         public static final String OAUTH2_ERROR_EP_URL = "/authenticationendpoint/oauth2_error.do";
         public static final String OIDC_DEFAULT_LOGOUT_RESPONSE_URL = "/authenticationendpoint/oauth2_logout.do";
         public static final String OIDC_LOGOUT_CONSENT_EP_URL = "/authenticationendpoint/oauth2_logout_consent.do";
+        public static final String DEVICE_AUTHZ_EP_URL = "oauth2/device_authorize";
 
         private OAuth20Endpoints() {
 
@@ -434,6 +435,8 @@ public final class OAuthConstants {
         public static final String TENANT = "tenant";
         public static final String USERSTORE = "userstore";
         public static final String IDP_SESSION_KEY = "isk";
+        // JWT Token signer tenant key sent in realm claim.
+        public static final String SIGNING_TENANT = "signing_tenant";
 
         private OIDCClaims() {
 

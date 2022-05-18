@@ -332,11 +332,10 @@ public class ResponseTypeHandlerUtil {
     public static OAuth2AuthorizeRespDTO buildAccessTokenResponseDTO(OAuth2AuthorizeRespDTO respDTO,
                                                                      AccessTokenDO accessTokenDO) {
 
-        long expireTime = OAuth2Util.getTokenExpireTimeMillis(accessTokenDO, false);
+        long expireTime = OAuth2Util.getAccessTokenExpireMillis(accessTokenDO, false);
         if (log.isDebugEnabled()) {
             if (expireTime > 0) {
-                log.debug("Access Token" +
-                        " is valid for another " + expireTime + "ms");
+                log.debug("Access Token is valid for another " + expireTime + "ms");
             } else {
                 log.debug("Infinite lifetime Access Token found in cache");
             }
@@ -716,7 +715,7 @@ public class ResponseTypeHandlerUtil {
     private static long getAccessTokenExpiryTimeMillis(AccessTokenDO tokenBean) throws IdentityOAuth2Exception {
 
         // Consider both access and refresh expiry time
-        long expireTimeMillis = OAuth2Util.getTokenExpireTimeMillis(tokenBean);
+        long expireTimeMillis = OAuth2Util.getTokenExpireTimeMillis(tokenBean, true);
 
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {

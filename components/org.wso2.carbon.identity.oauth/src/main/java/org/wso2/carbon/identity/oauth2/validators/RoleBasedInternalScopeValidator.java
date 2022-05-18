@@ -155,7 +155,8 @@ public class RoleBasedInternalScopeValidator {
 
             String userName = userStoreManager.getUserNameFromUserID(authenticatedUser.getUserId());
 
-            return userStoreManager.getHybridRoleListOfUser(userName, authenticatedUser.getUserStoreDomain());
+            return userStoreManager.getHybridRoleListOfUser(UserCoreUtil.removeDomainFromName(userName),
+                    authenticatedUser.getUserStoreDomain());
 
         } catch (UserStoreException e) {
             String error =

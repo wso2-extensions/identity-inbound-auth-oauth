@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
+import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.TokenIssuerDO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
@@ -205,6 +206,8 @@ public class OAuthServerConfiguration {
             "org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl";
     private String defaultCibaRequestValidatorClassName =
             "org.wso2.carbon.identity.openidconnect.CIBARequestObjectValidatorImpl";
+    private String oAuthAuthzRequestClassName;
+    public static final String DEFAULT_OAUTH_AUTHZ_REQUEST_CLASSNAME = CarbonOAuthAuthzRequest.class.getName();
     private String openIDConnectIDTokenCustomClaimsHanlderClassName =
             "org.wso2.carbon.identity.openidconnect.SAMLAssertionClaimsCallback";
     private IDTokenBuilder openIDConnectIDTokenBuilder = null;
@@ -282,6 +285,7 @@ public class OAuthServerConfiguration {
     private long deviceCodeExpiryTime = 600000L;
     private int deviceCodePollingInterval = 5000;
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
+    private String deviceAuthzEPUrl = null;
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -612,6 +616,10 @@ public class OAuthServerConfiguration {
         return oauth2IntrospectionEPUrl;
     }
 
+    public String getDeviceAuthzEPUrl() {
+
+        return deviceAuthzEPUrl;
+    }
     /**
      * instantiate the OAuth token generator. to override the default implementation, one can specify the custom class
      * in the identity.xml.
@@ -1105,6 +1113,16 @@ public class OAuthServerConfiguration {
             }
         }
         return requestObjectBuilder;
+    }
+
+    /**
+     * Returns the configured OAuthAuthzRequest class name. If not configured, the default class name will be returned.
+     *
+     * @return OAuthAuthzRequest implementation class name.
+     */
+    public String getOAuthAuthzRequestClassName() {
+
+        return oAuthAuthzRequestClassName;
     }
 
     public Set<String> getSupportedResponseTypeNames() {
@@ -1937,6 +1955,13 @@ public class OAuthServerConfiguration {
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2ErrorPageUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.DEVICE_AUTHZ_EP_URL));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                deviceAuthzEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
     }
@@ -2942,6 +2967,10 @@ public class OAuthServerConfiguration {
                     requestObjectEnabled = false;
                 }
             }
+            OMElement oAuthAuthzRequest = openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
+                    (ConfigElements.OAUTH_AUTHZ_REQUEST_CLASS));
+            oAuthAuthzRequestClassName = (oAuthAuthzRequest != null) ? oAuthAuthzRequest.getText().trim() :
+                    DEFAULT_OAUTH_AUTHZ_REQUEST_CLASSNAME;
         }
     }
 
@@ -3154,6 +3183,7 @@ public class OAuthServerConfiguration {
         public static final String OIDC_DISCOVERY_EP_URL = "OIDCDiscoveryEPUrl";
         public static final String OAUTH2_ERROR_PAGE_URL = "OAuth2ErrorPage";
         public static final String OIDC_CONSENT_PAGE_URL = "OIDCConsentPage";
+        public static final String DEVICE_AUTHZ_EP_URL = "OAuth2DeviceAuthzEPUrl";
 
         // JWT Generator
         public static final String AUTHORIZATION_CONTEXT_TOKEN_GENERATION = "AuthorizationContextTokenGeneration";
@@ -3210,6 +3240,7 @@ public class OAuthServerConfiguration {
         public static final String SUPPORTED_CLAIMS = "OpenIDConnectClaims";
         public static final String REQUEST_OBJECT = "RequestObject";
         public static final String REQUEST_OBJECT_VALIDATOR = "RequestObjectValidator";
+        public static final String OAUTH_AUTHZ_REQUEST_CLASS = "OAuthAuthzRequestClass";
         public static final String CIBA_REQUEST_OBJECT_VALIDATOR = "CIBARequestObjectValidator";
         public static final String OPENID_CONNECT_BACK_CHANNEL_LOGOUT_TOKEN_EXPIRATION = "LogoutTokenExpiration";
         // Callback handler related configuration elements

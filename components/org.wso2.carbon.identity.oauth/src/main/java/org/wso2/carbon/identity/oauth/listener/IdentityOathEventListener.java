@@ -41,6 +41,8 @@ import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
@@ -222,6 +224,40 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                                               UserStoreManager userStoreManager) throws UserStoreException {
 
         return postUpdateUserListOfRole(deletedUsers, newUsers, userStoreManager);
+    }
+
+    @Override
+    public boolean doPreDeleteRole(String roleName, UserStoreManager userStoreManager) throws UserStoreException {
+
+        /*
+         This get invoked during a group deletion. If it is a group, there should be a role associated with the group
+          in order to revoke the tokens.
+         */
+        if (!isEnable()) {
+            return true;
+        }
+        if (!(userStoreManager instanceof AbstractUserStoreManager)) {
+            return true;
+        }
+        AbstractUserStoreManager abstractUserStoreManager = (AbstractUserStoreManager) userStoreManager;
+        List<User> userList = abstractUserStoreManager.getUserListOfRoleWithID(roleName);
+        // Check whether the group has any associated roles.
+        String domainName = UserCoreUtil.getDomainName(abstractUserStoreManager.getRealmConfiguration());
+        List<String> roles = abstractUserStoreManager.getHybridRoleListOfGroup(roleName,
+                domainName);
+
+        // Revoke the tokens if this group has some associated roles.
+        if (CollectionUtils.isNotEmpty(roles)) {
+            for (User user : userList) {
+                OAuthUtil.removeUserClaimsFromCache(user.getUsername(), userStoreManager);
+                OAuthUtil.revokeTokens(user.getUsername(), userStoreManager);
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("No roles associated with the group: " + roleName);
+            }
+        }
+        return true;
     }
 
     @Override

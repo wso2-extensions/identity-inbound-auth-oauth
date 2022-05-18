@@ -77,7 +77,7 @@ public class OIDProviderConfigResponse {
     private Boolean backchannelLogoutSupported;
     private Boolean backchannelLogoutSessionSupported;
     private String[] codeChallengeMethodsSupported;
-
+    private String deviceAuthorizationEndpoint;
 
     public String getIssuer() {
         return issuer;
@@ -478,6 +478,16 @@ public class OIDProviderConfigResponse {
         this.codeChallengeMethodsSupported = codeChallengeMethodsSupported;
     }
 
+    public String getDeviceAuthorizationEndpoint() {
+
+        return deviceAuthorizationEndpoint;
+    }
+
+    public void setDeviceAuthorizationEndpoint(String deviceAuthorizationEndpoint) {
+
+        this.deviceAuthorizationEndpoint = deviceAuthorizationEndpoint;
+    }
+
     public Map<String, Object> getConfigMap() {
         Map<String, Object> configMap = new HashMap<String, Object>();
         configMap.put(DiscoveryConstants.ISSUER.toLowerCase(), this.issuer);
@@ -540,6 +550,7 @@ public class OIDProviderConfigResponse {
         configMap.put(DiscoveryConstants.BACKCHANNEL_LOGOUT_SESSION_SUPPORTED, this.backchannelLogoutSessionSupported);
         configMap.put(DiscoveryConstants.RESPONSE_MODES_SUPPORTED, this.responseModesSupported);
         configMap.put(DiscoveryConstants.CODE_CHALLENGE_METHODS_SUPPORTED, this.codeChallengeMethodsSupported);
+        configMap.put(DiscoveryConstants.DEVICE_AUTHORIZATION_ENDPOINT, this.deviceAuthorizationEndpoint);
         return configMap;
     }
 }

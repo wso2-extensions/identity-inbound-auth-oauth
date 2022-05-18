@@ -27,6 +27,7 @@ import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -486,33 +487,50 @@ public class OAuthAppDAO {
 
     private boolean validateUserForOwnerUpdate(OAuthAppDO oAuthAppDO) throws IdentityOAuthAdminException {
 
-        try {
-            String userName = null;
-            String usernameWithDomain = null;
-            if (oAuthAppDO.getAppOwner() != null) {
-                userName = oAuthAppDO.getAppOwner().getUserName();
-                if (StringUtils.isEmpty(userName) || CarbonConstants.REGISTRY_SYSTEM_USERNAME.equals(userName)) {
-                    return false;
-                }
-                String domainName = oAuthAppDO.getAppOwner().getUserStoreDomain();
-                usernameWithDomain = UserCoreUtil.addDomainToName(userName, domainName);
+        String userName = null;
+        String domainName = null;
+        if (oAuthAppDO.getAppOwner() != null) {
+            userName = oAuthAppDO.getAppOwner().getUserName();
+            if (StringUtils.isEmpty(userName) || CarbonConstants.REGISTRY_SYSTEM_USERNAME.equals(userName)) {
+                return false;
             }
+            domainName = oAuthAppDO.getAppOwner().getUserStoreDomain();
+        }
+       return isUserExists(userName, domainName);
+    }
 
+    private boolean isUserExists(String userName, String domainName) throws IdentityOAuthAdminException {
+
+        String usernameWithDomain = UserCoreUtil.addDomainToName(userName, domainName);
+        try {
             UserRealm realm = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUserRealm();
             if (realm == null || StringUtils.isEmpty(usernameWithDomain)) {
                 return false;
             }
-
-            boolean isUserExist = realm.getUserStoreManager().isExistingUser(usernameWithDomain);
-            if (!isUserExist) {
-                throw new IdentityOAuthAdminException("User validation failed for owner update in the application: " +
-                        oAuthAppDO.getApplicationName() + " as user is not existing.");
-            }
+            return realm.getUserStoreManager().isExistingUser(usernameWithDomain);
         } catch (UserStoreException e) {
-            throw handleError("User validation failed for owner update in the application: " +
-                    oAuthAppDO.getApplicationName(), e);
+            throw handleError("Error while checking user existence of user: " + usernameWithDomain, e);
         }
-        return true;
+    }
+
+    /**
+     * Validate existence before oauth application update.
+     *
+     * @param serviceProvider Service Provider.
+     * @return Whether app owner is valid.
+     * @throws IdentityOAuthAdminException When error occurred while validating app owner.
+     */
+    private boolean validateUserForOwnerUpdate(ServiceProvider serviceProvider) throws IdentityOAuthAdminException {
+
+        if (serviceProvider.getOwner() == null) {
+            return false;
+        }
+        String userName = serviceProvider.getOwner().getUserName();
+        if (StringUtils.isEmpty(userName) || CarbonConstants.REGISTRY_SYSTEM_USERNAME.equals(userName)) {
+            return false;
+        }
+        String domainName = serviceProvider.getOwner().getUserStoreDomain();
+        return isUserExists(userName, domainName);
     }
 
     private String getSqlQuery(boolean isUserValidForOwnerUpdate) {
@@ -787,6 +805,35 @@ public class OAuthAppDAO {
             }
         } catch (SQLException e) {
             throw new IdentityApplicationManagementException("Error while executing the SQL statement.", e);
+        }
+    }
+
+    /**
+     * Update app name and owner in oauth client if the app owner is valid, Otherwise update only the app name.
+     *
+     * @param serviceProvider Service provider.
+     * @param consumerKey     Consumer key of the Oauth app.
+     * @throws IdentityApplicationManagementException Error while updating Oauth app details.
+     * @throws IdentityOAuthAdminException            Error occurred while validating app owner.
+     */
+    public void updateOAuthConsumerApp(ServiceProvider serviceProvider, String consumerKey)
+            throws IdentityApplicationManagementException, IdentityOAuthAdminException {
+
+        if (validateUserForOwnerUpdate(serviceProvider)) {
+            try (Connection connection = IdentityDatabaseUtil.getDBConnection(true);
+                 PreparedStatement statement = connection.prepareStatement(
+                         SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_CLIENT_WITH_OWNER)) {
+                    statement.setString(1, serviceProvider.getApplicationName());
+                    statement.setString(2, serviceProvider.getOwner().getUserName());
+                    statement.setString(3, serviceProvider.getOwner().getUserStoreDomain());
+                    statement.setString(4, consumerKey);
+                    statement.execute();
+                    IdentityDatabaseUtil.commitTransaction(connection);
+            } catch (SQLException e) {
+                throw new IdentityApplicationManagementException("Error while executing the SQL statement.", e);
+            }
+        } else {
+            updateOAuthConsumerApp(serviceProvider.getApplicationName(), consumerKey);
         }
     }
 
