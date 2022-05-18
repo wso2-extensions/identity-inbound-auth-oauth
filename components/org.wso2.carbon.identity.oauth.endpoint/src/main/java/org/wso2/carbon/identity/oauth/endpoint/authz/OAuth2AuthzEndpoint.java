@@ -90,7 +90,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
-import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -2139,9 +2138,7 @@ public class OAuth2AuthzEndpoint {
 
     private OAuth2ClientValidationResponseDTO validateClient(OAuthMessage oAuthMessage) {
 
-        String redirectUri = oAuthMessage.getRequest().getParameter(REDIRECT_URI);
-        String responseType = oAuthMessage.getRequest().getParameter(Constants.RESPONSE_TYPE);
-        return getOAuth2Service().validateClientInfo(oAuthMessage.getClientId(), redirectUri, responseType);
+        return getOAuth2Service().validateClientInfo(oAuthMessage.getRequest());
     }
 
     /**
@@ -3182,7 +3179,7 @@ public class OAuth2AuthzEndpoint {
             }
         }
 
-        if (sessionStateObj.isAddSessionState()) {
+        if (sessionStateObj.isAddSessionState() && StringUtils.isNotEmpty(oAuth2Parameters.getRedirectURI())) {
             String sessionStateParam = OIDCSessionManagementUtil.getSessionStateParam(oAuth2Parameters.getClientId(),
                     oAuth2Parameters.getRedirectURI(),
                     opBrowserStateCookie == null ?

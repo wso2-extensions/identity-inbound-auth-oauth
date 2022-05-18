@@ -188,7 +188,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                     tenantId = resultSet.getInt(6);
                     userDomain = resultSet.getString(7);
                     authenticatedIDP = resultSet.getString(8);
-                   scopes = getScopesForCodeId(resultSet.getString(9), connection);
+                    scopes = getScopesForCodeId(resultSet.getString(9), connection);
                     isMatchingDeviceCodeAndClientId = true;
                 }
                 if (isMatchingDeviceCodeAndClientId) {

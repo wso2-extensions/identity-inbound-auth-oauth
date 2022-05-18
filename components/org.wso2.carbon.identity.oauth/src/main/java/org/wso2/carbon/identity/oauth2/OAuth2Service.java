@@ -22,7 +22,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
-import org.owasp.encoder.Encode;
 import org.wso2.carbon.core.AbstractAdmin;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -31,15 +30,17 @@ import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
+import org.wso2.carbon.identity.oauth2.authz.validators.DefaultResponseTypeRequestValidator;
+import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
-import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -56,6 +57,7 @@ import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -68,9 +70,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
+
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isValidTokenBinding;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 
 /**
  * OAuth2 Service which is used to issue authorization codes or access tokens upon authorizing by the
@@ -80,7 +83,6 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTen
 public class OAuth2Service extends AbstractAdmin {
 
     private static final Log log = LogFactory.getLog(OAuth2Service.class);
-    private static final String APP_STATE_ACTIVE = "ACTIVE";
 
     /**
      * Process the authorization request and issue an authorization code or access token depending
@@ -120,198 +122,45 @@ public class OAuth2Service extends AbstractAdmin {
         }
     }
 
-    @Deprecated
-    public OAuth2ClientValidationResponseDTO validateClientInfo(String clientId, String callbackURI) {
-
-        return validateClientInfo(clientId, callbackURI, null);
-    }
-
     /**
      * Check Whether the provided client_id and the callback URL are valid.
      *
      * @param clientId      client_id available in the request, Not null parameter.
      * @param callbackURI   callback_uri available in the request, can be null.
-     * @param responseType  responseType used in the request.
      * @return <code>OAuth2ClientValidationResponseDTO</code> bean with validity information,
      * callback, App Name, Error Code and Error Message when appropriate.
+     *
+     * Deprecated to use {{{@link #validateClientInfo(HttpServletRequest)}}}
      */
-    public OAuth2ClientValidationResponseDTO validateClientInfo(String clientId, String callbackURI,
-                                                                String responseType) {
+    @Deprecated
+    public OAuth2ClientValidationResponseDTO validateClientInfo(String clientId, String callbackURI) {
 
-        OAuth2ClientValidationResponseDTO validationResponseDTO =
-                new OAuth2ClientValidationResponseDTO();
-
-        if (log.isDebugEnabled()) {
-            log.debug("Validate Client information request for client_id : " + clientId + " , callback_uri " +
-                    callbackURI + " and responseType " + responseType);
-        }
-
-        try {
-            String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
-            validateRequestTenantDomain(appTenantDomain);
-
-            if (StringUtils.isBlank(clientId)) {
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                            OAuthConstants.LogConstants.FAILED, "client_id cannot be empty.",
-                            "validate-input-parameters", null);
-                }
-                throw new InvalidOAuthClientException("Invalid client_id. No OAuth application has been registered " +
-                        "with the given client_id");
-            }
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
-            String appState = appDO.getState();
-
-            if (StringUtils.isEmpty(appState)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("A valid OAuth client could not be found for client_id: " + clientId);
-                }
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", clientId);
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED,
-                            "A valid OAuth application could not be found for given client_id.",
-                            "validate-input-parameters", null);
-                }
-                throw new InvalidOAuthClientException("A valid OAuth client could not be found for client_id: " +
-                        Encode.forHtml(clientId));
-            }
-
-            if (!appState.equalsIgnoreCase(APP_STATE_ACTIVE)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("App is not in active state in client ID: " + clientId + ". App state is: " + appState);
-                }
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", clientId);
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "OAuth application is not in active state.",
-                            "validate-input-parameters", null);
-                }
-                throw new InvalidOAuthClientException("Oauth application is not in active state");
-            }
-
-            if (StringUtils.isEmpty(appDO.getGrantTypes()) || (StringUtils.isEmpty(appDO.getCallbackUrl()) &&
-                    !StringUtils.equals(responseType, Constants.RESPONSE_TYPE_DEVICE))) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Registered App found for the given Client Id : " + clientId + " ,App Name : " + appDO
-                            .getApplicationName() + ", does not support the requested grant type.");
-                }
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", clientId);
-
-                    Map<String, Object> configurations = new HashMap<>();
-                    configurations.put("callbackUrl", appDO.getCallbackUrl());
-                    configurations.put("supportedGrantTypes", appDO.getGrantTypes());
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED,
-                            "The OAuth client is not authorized to use the requested grant type.",
-                            "validate-input-parameters", configurations);
-                }
-                validationResponseDTO.setValidClient(false);
-                validationResponseDTO.setErrorCode(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT);
-                validationResponseDTO
-                        .setErrorMsg("The authenticated client is not authorized to use this authorization grant type");
-                return validationResponseDTO;
-            }
-
-            OAuth2Util.setClientTenatId(IdentityTenantUtil.getTenantId(appDO.getUser().getTenantDomain()));
-
-            // Valid Client, No callback has provided. Use the callback provided during the registration.
-            if (callbackURI == null) {
-                validationResponseDTO.setValidClient(true);
-                validationResponseDTO.setCallbackURL(appDO.getCallbackUrl());
-                validationResponseDTO.setApplicationName(appDO.getApplicationName());
-                validationResponseDTO.setPkceMandatory(appDO.isPkceMandatory());
-                validationResponseDTO.setPkceSupportPlain(appDO.isPkceSupportPlain());
-                return validationResponseDTO;
-            }
-
-            if (log.isDebugEnabled()) {
-                log.debug("Registered App found for the given Client Id : " + clientId + " ,App Name : " + appDO
-                        .getApplicationName() + ", Callback URL : " + appDO.getCallbackUrl());
-            }
-
-            if (validateCallbackURI(callbackURI, appDO, responseType)) {
-                validationResponseDTO.setValidClient(true);
-                validationResponseDTO.setApplicationName(appDO.getApplicationName());
-                validationResponseDTO.setCallbackURL(callbackURI);
-                validationResponseDTO.setPkceMandatory(appDO.isPkceMandatory());
-                validationResponseDTO.setPkceSupportPlain(appDO.isPkceSupportPlain());
-                return validationResponseDTO;
-            } else {    // Provided callback URL does not match the registered callback url.
-                log.warn("Provided Callback URL does not match with the provided one.");
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", clientId);
-                    params.put("redirectUri", callbackURI);
-
-                    Map<String, Object> configurations = new HashMap<>();
-                    configurations.put("redirectUri", appDO.getApplicationName());
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED,
-                            "redirect_uri in request does not match with the registered one.",
-                            "validate-input-parameters", configurations);
-                }
-                validationResponseDTO.setValidClient(false);
-                validationResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CALLBACK);
-                validationResponseDTO.setErrorMsg("callback.not.match");
-                return validationResponseDTO;
-            }
-        } catch (InvalidOAuthClientException e) {
-            // There is no such Client ID being registered. So it is a request from an invalid client.
-            if (log.isDebugEnabled()) {
-                log.debug("Error while retrieving the Application Information", e);
-            }
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", clientId);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "Cannot find an application associated with the given client_id", "validate-oauth-client",
-                        null);
-            }
-            validationResponseDTO.setValidClient(false);
-            validationResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
-            validationResponseDTO.setErrorMsg(e.getMessage());
-            return validationResponseDTO;
-        } catch (IdentityOAuth2Exception e) {
-            log.error("Error when reading the Application Information.", e);
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "Server error occurred.", "validate-input-parameters", null);
-            validationResponseDTO.setValidClient(false);
-            validationResponseDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
-            validationResponseDTO.setErrorMsg("Error when processing the authorization request.");
-            return validationResponseDTO;
-        }
+        return new OAuth2ClientValidationResponseDTO();
     }
 
     /**
-     * Validate Client with a callback url in the request.
+     * Check Whether the provided client information satisfy the response type validation
      *
-     * @param callbackURI callback url in the request.
-     * @param oauthApp OAuth application data object
-     * @param responseType
-     * @return boolean If application callback url is defined as a regexp check weather it matches the given url
-     * Or check weather callback urls are equal
+     * @param request      The HttpServletRequest front the client.
+     * @return <code>OAuth2ClientValidationResponseDTO</code> bean with validity information,
+     * callback, App Name, Error Code and Error Message when appropriate.
      */
-    private boolean validateCallbackURI(String callbackURI, OAuthAppDO oauthApp, String responseType) {
+    public OAuth2ClientValidationResponseDTO validateClientInfo(HttpServletRequest request) {
 
-        if (StringUtils.equals(responseType, Constants.RESPONSE_TYPE_DEVICE)) {
-            return true;
-        }
-        String regexp = null;
-        String registeredCallbackUrl = oauthApp.getCallbackUrl();
-        if (registeredCallbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
-            regexp = registeredCallbackUrl.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("Comparing provided callback URL: " + callbackURI + " with configured callback: " +
-                    registeredCallbackUrl);
-        }
-        return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
+        ResponseTypeRequestValidator validator = getResponseTypeRequestValidator(request);
+        return validator.validateClientInfo(request);
+    }
+
+    /**
+     * Check Whether the provided inputs from the client satisfy the response type validation
+     *
+     * @param request      The HttpServletRequest front the client.
+     * @throws InvalidOAuthRequestException InvalidOAuthRequestException.
+     */
+    public void validateInputParameters(HttpServletRequest request) throws InvalidOAuthRequestException {
+
+        ResponseTypeRequestValidator validator = getResponseTypeRequestValidator(request);
+        validator.validateInputParameters(request);
     }
 
     /**
@@ -953,6 +802,17 @@ public class OAuth2Service extends AbstractAdmin {
         } else {
             tokenRespDTO.setErrorMsg("Invalid Client");
         }
+    }
+
+    private ResponseTypeRequestValidator getResponseTypeRequestValidator(HttpServletRequest request) {
+
+        String responseType = request.getParameter(Constants.RESPONSE_TYPE);
+        ResponseTypeRequestValidator validator = OAuth2ServiceComponentHolder.getInstance()
+                .getResponseTypeRequestValidator(responseType);
+        if (validator == null) {
+            validator = new DefaultResponseTypeRequestValidator();
+        }
+        return validator;
     }
 }
 

@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuthenticator;
@@ -55,6 +56,7 @@ import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthent
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
+import org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
@@ -183,6 +185,9 @@ public class OAuth2ServiceComponent {
             // SSO session based access token binder.
             SSOSessionBasedTokenBinder ssoSessionBasedTokenBinder = new SSOSessionBasedTokenBinder();
             bundleContext.registerService(TokenBinderInfo.class.getName(), ssoSessionBasedTokenBinder, null);
+
+            bundleContext.registerService(ResponseTypeRequestValidator.class.getName(),
+                    new DeviceFlowResponseTypeRequestValidator(), null);
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
@@ -410,6 +415,29 @@ public class OAuth2ServiceComponent {
         if (tokenBinderInfo instanceof TokenBinder) {
             OAuth2ServiceComponentHolder.getInstance().removeTokenBinder((TokenBinder) tokenBinderInfo);
         }
+    }
+
+    @Reference(name = "response.type.request.validator",
+            service = ResponseTypeRequestValidator.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetResponseTypeRequestValidator")
+    protected void setResponseTypeRequestValidator(ResponseTypeRequestValidator validator) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the response type request validator for: " + validator.getResponseType());
+        }
+        OAuth2ServiceComponentHolder.getInstance().addResponseTypeRequestValidator(validator);
+
+    }
+
+    protected void unsetResponseTypeRequestValidator(ResponseTypeRequestValidator validator) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Un-setting the response type request validator for: " + validator.getResponseType());
+        }
+        OAuth2ServiceComponentHolder.getInstance().removeResponseTypeRequestValidator(validator);
+
     }
 
     @Reference(

@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
@@ -35,7 +36,9 @@ import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -53,6 +56,7 @@ public class OAuth2ServiceComponentHolder {
     private static List<ClaimProvider> claimProviders = new ArrayList<>();
     private static boolean idpIdColumnEnabled = false;
     private List<TokenBinder> tokenBinders = new ArrayList<>();
+    private Map<String, ResponseTypeRequestValidator> responseTypeRequestValidators = new HashMap<>();
     private OAuthAdminServiceImpl oauthAdminService;
     private static AuthenticationDataPublisher authenticationDataPublisherProxy;
     private static KeyIDProvider keyIDProvider = null;
@@ -201,6 +205,21 @@ public class OAuth2ServiceComponentHolder {
     public void removeTokenBinder(TokenBinder tokenBinder) {
 
         this.tokenBinders.remove(tokenBinder);
+    }
+
+    public ResponseTypeRequestValidator getResponseTypeRequestValidator(String responseType) {
+
+        return responseTypeRequestValidators.get(responseType);
+    }
+
+    public void addResponseTypeRequestValidator(ResponseTypeRequestValidator validator) {
+
+        this.responseTypeRequestValidators.put(validator.getResponseType(), validator);
+    }
+
+    public void removeResponseTypeRequestValidator(ResponseTypeRequestValidator validator) {
+
+        this.responseTypeRequestValidators.remove(validator.getResponseType());
     }
 
     public OAuthAdminServiceImpl getOAuthAdminService() {

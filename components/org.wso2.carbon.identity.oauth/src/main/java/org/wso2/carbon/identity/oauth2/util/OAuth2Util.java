@@ -1466,7 +1466,7 @@ public class OAuth2Util {
         }
     }
 
-    private static boolean isNotSuperTenant(String tenantDomain) {
+    public static boolean isNotSuperTenant(String tenantDomain) {
 
         return (StringUtils.isNotBlank(tenantDomain) &&
                 !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain));

@@ -23,8 +23,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.client.utils.URIBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -36,6 +38,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 
 import java.net.URISyntaxException;
+
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isNotSuperTenant;
 
 /**
  * Device response type handler.
@@ -62,23 +66,30 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
         DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setAuthzUserAndStatus(userCode,
                 Constants.AUTHORIZED, authenticatedUser);
         OAuthAppDO oAuthAppDO = (OAuthAppDO) oauthAuthzMsgCtx.getProperty("OAuthAppDO");
-        respDTO.setCallbackURI(getRedirectionURI(oAuthAppDO.getApplicationName()));
+        String redirectionURI = getRedirectionURI(oAuthAppDO.getApplicationName(),
+                oauthAuthzMsgCtx.getAuthorizationReqDTO().getTenantDomain());
+        respDTO.setCallbackURI(redirectionURI);
         return respDTO;
     }
 
     /**
-     * This method is used to generate the device flow authentication completed page URI
+     * This method is used to generate the device flow authentication completed page URI.
      *
-     * @param appName Service provider name.
+     * @param appName       Service provider name.
+     * @param tenantDomain  Tenant domain.
      * @return Redirection URI
      */
-    private String getRedirectionURI(String appName) throws IdentityOAuth2Exception {
+    private String getRedirectionURI(String appName, String tenantDomain) throws IdentityOAuth2Exception {
 
         try {
             String pageURI = ServiceURLBuilder.create().addPath(Constants.DEVICE_SUCCESS_ENDPOINT_PATH)
                     .build().getAbsolutePublicURL();
             URIBuilder uriBuilder = new URIBuilder(pageURI);
             uriBuilder.addParameter(Constants.APP_NAME, appName);
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && isNotSuperTenant(tenantDomain)) {
+                // Append tenant domain to path when the tenant-qualified url mode is disabled.
+                uriBuilder.addParameter(FrameworkUtils.TENANT_DOMAIN, tenantDomain);
+            }
             return uriBuilder.build().toString();
         } catch (URISyntaxException | URLBuilderException e) {
             throw new IdentityOAuth2Exception("Error occurred when getting the device flow  authentication completed" +

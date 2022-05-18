@@ -154,27 +154,28 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
         };
     }
 
-    @Test
-    public void testhandleErrorResponse() throws Exception {
+    @Test(dataProvider = "errorResponseValues")
+    public void testhandleErrorResponse(String code, String clientId) throws Exception {
 
         OAuthClientAuthnContext context = new OAuthClientAuthnContext();
-        context.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
-        context.setClientId("sample-client");
+        context.setErrorCode(code);
+        context.setErrorMessage(code);
+        context.setClientId(clientId);
         DeviceEndpoint deviceEndpoint = new DeviceEndpoint();
         Response response = WhiteboxImpl.invokeMethod(deviceEndpoint, "handleErrorResponse", context);
         String res = (String) response.getEntity();
-        assertTrue(res.contains(OAuth2ErrorCodes.INVALID_CLIENT));
+        assertTrue(res.contains(code));
+    }
 
-        context.setClientId(null);
-        response = WhiteboxImpl.invokeMethod(deviceEndpoint, "handleErrorResponse", context);
-        res = (String) response.getEntity();
-        assertTrue(res.contains(OAuth2ErrorCodes.INVALID_REQUEST));
+    @DataProvider
+    public static Object[][] errorResponseValues() {
 
-        context.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
-        context.setErrorMessage(OAuth2ErrorCodes.SERVER_ERROR);
-        response = WhiteboxImpl.invokeMethod(deviceEndpoint, "handleErrorResponse", context);
-        res = (String) response.getEntity();
-        assertTrue(res.contains(OAuth2ErrorCodes.SERVER_ERROR));
+        return new Object[][]{
+                {OAuth2ErrorCodes.INVALID_CLIENT, "sample-client"},
+                {OAuth2ErrorCodes.INVALID_REQUEST, null},
+                {OAuth2ErrorCodes.SERVER_ERROR, null}
+
+        };
     }
 
     /**

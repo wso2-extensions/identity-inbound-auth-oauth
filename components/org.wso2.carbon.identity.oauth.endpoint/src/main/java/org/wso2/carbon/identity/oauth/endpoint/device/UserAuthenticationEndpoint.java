@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.device;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -89,7 +90,7 @@ public class UserAuthenticationEndpoint {
             }
             DeviceFlowDO deviceFlowDODetails =
                     deviceAuthService.getDetailsByUserCode(userCode);
-            if (deviceFlowDODetails != null && !isExpiredUserCode(deviceFlowDODetails)) {
+            if (!isExpiredUserCode(deviceFlowDODetails)) {
                 String clientId = deviceFlowDODetails.getConsumerKey();
                 deviceAuthService.setAuthenticationStatus(userCode);
                 CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request);
@@ -97,7 +98,7 @@ public class UserAuthenticationEndpoint {
                 commonAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, Constants.RESPONSE_TYPE_DEVICE);
                 commonAuthRequestWrapper.setParameter(Constants.REDIRECTION_URI, deviceFlowDO.getCallbackUri());
                 List<String> scopes = deviceFlowDODetails.getScopes();
-                if (scopes != null) {
+                if (CollectionUtils.isNotEmpty(scopes)) {
                     String scope = String.join(Constants.SEPARATED_WITH_SPACE, scopes);
                     commonAuthRequestWrapper.setParameter(Constants.SCOPE, scope);
                 }
@@ -153,6 +154,9 @@ public class UserAuthenticationEndpoint {
 
     private boolean isExpiredUserCode(DeviceFlowDO deviceFlowDO) throws IdentityOAuth2Exception {
 
+        if (deviceFlowDO == null) {
+            return false;
+        }
         // If status changed from PENDING (!PENDING) , then that user_code CANNOT be reused.
         if (!StringUtils.equals(deviceFlowDO.getStatus(), Constants.PENDING)) {
             return true;

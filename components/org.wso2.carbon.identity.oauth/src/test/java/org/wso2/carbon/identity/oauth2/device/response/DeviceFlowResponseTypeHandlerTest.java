@@ -77,7 +77,7 @@ public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
     }
 
     @Test
-    public void testIssue() throws IdentityOAuth2Exception, InvalidOAuthClientException, SQLException,
+    public void testSuccessIssue() throws IdentityOAuth2Exception, InvalidOAuthClientException, SQLException,
             URLBuilderException {
 
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {

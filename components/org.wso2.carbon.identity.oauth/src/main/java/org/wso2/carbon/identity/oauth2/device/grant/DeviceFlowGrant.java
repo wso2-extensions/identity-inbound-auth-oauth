@@ -74,7 +74,7 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
         }
         Timestamp newPollTime = new Timestamp(date.getTime());
         DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setLastPollTime(deviceCode, newPollTime);
-        if (!isValidPollTime(newPollTime, deviceFlowDO)) {
+        if (!isWithinValidPollInterval(newPollTime, deviceFlowDO)) {
             throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.SLOW_DOWN,
                     DeviceErrorCodes.SubDeviceErrorCodesDescriptions.SLOW_DOWN);
         } else if (Constants.EXPIRED.equals(deviceStatus) || isExpiredDeviceCode(deviceFlowDO, date)) {
@@ -137,7 +137,7 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
      * @param deviceFlowDO DO class that contains values from database.
      * @return true or false.
      */
-    private static boolean isValidPollTime(Timestamp newPollTime, DeviceFlowDO deviceFlowDO) {
+    private static boolean isWithinValidPollInterval(Timestamp newPollTime, DeviceFlowDO deviceFlowDO) {
 
         return newPollTime.getTime() - deviceFlowDO.getLastPollTime().getTime() > deviceFlowDO.getPollTime();
     }
