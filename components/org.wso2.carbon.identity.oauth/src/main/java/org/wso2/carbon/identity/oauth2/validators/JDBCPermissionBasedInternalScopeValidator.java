@@ -165,6 +165,10 @@ public class JDBCPermissionBasedInternalScopeValidator {
                 return new ArrayList<>();
             }
             boolean isSystemScope = ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE);
+            //TODO remove this logic
+            if (authenticatedUser.isFederatedUser()) {
+                authenticatedUser.setTenantDomain("intt1");
+            }
             int tenantId = IdentityTenantUtil.getTenantId(authenticatedUser.getTenantDomain());
             startTenantFlow(authenticatedUser.getTenantDomain(), tenantId);
             AuthorizationManager authorizationManager = OAuthComponentServiceHolder.getInstance().getRealmService()
