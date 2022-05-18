@@ -34,6 +34,8 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeValidationResult;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -294,6 +296,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             throw new IdentityOAuth2Exception("User id not found for user: "
                     + authzCodeDO.getAuthorizedUser().getLoggableUserId(), e);
         }
+        invokePostAccessTokenRevocationListeners(tokenId);
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessToken(tokenId, userId);
 
         if (log.isDebugEnabled()) {
@@ -304,6 +307,27 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             } else {
                 log.debug("Validated authorization code for client: " + authzCodeDO.getConsumerKey() + " is not " +
                         "active. So revoking the access tokens issued for the authorization code.");
+            }
+        }
+    }
+
+    private void invokePostAccessTokenRevocationListeners(String accessTokenId) throws IdentityOAuth2Exception {
+
+        String accessToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                .getAccessTokenByTokenId(accessTokenId);
+        if (StringUtils.isNotBlank(accessToken)) {
+            AccessTokenDO accessTokenDO = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .getAccessToken(accessToken, true);
+            if (accessTokenDO != null) {
+                OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                        .getOAuthEventInterceptorProxy();
+                if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+                    try {
+                        oAuthEventInterceptorProxy.onPostTokenRevocationBySystem(accessTokenDO, new HashMap<>());
+                    } catch (IdentityOAuth2Exception e) {
+                        log.error("Error occurred when invoking post access token revoke listener. ", e);
+                    }
+                }
             }
         }
     }
