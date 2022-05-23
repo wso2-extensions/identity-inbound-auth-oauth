@@ -81,7 +81,6 @@ public class DeviceAuthServiceImpl implements DeviceAuthService {
     }
 
     @Override
-    @Deprecated
     public boolean validateClientInfo(String clientId) throws IdentityOAuth2Exception {
 
         return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().checkClientIdExist(clientId);

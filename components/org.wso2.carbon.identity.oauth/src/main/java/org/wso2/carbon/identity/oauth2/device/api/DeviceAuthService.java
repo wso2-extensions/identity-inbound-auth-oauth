@@ -86,7 +86,11 @@ public interface DeviceAuthService {
      * @param clientId    Consumer key of the application.
      * @param redirectURI Redirection uri of the application.
      * @throws IdentityOAuth2Exception Error while storing redirect uri.
+     *
+     * @deprecated because device flow service layer should not update application detail.
+     * Deprecated for removal.
      */
+    @Deprecated
     void setCallbackUri(String clientId, String redirectURI) throws IdentityOAuth2Exception;
 
     /**
@@ -95,7 +99,11 @@ public interface DeviceAuthService {
      * @param userCode Code that is used to correlate two devices.
      * @return client id
      * @throws IdentityOAuth2Exception Error while getting client id for user code.
+     *
+     * @deprecated because the client id of the user is included in {{{@link #getDetailsByUserCode(String)}}}.
+     * Deprecated for removal.
      */
+    @Deprecated
     String getClientId(String userCode) throws IdentityOAuth2Exception;
 
     /**
@@ -104,7 +112,11 @@ public interface DeviceAuthService {
      * @param userCode Code that is used to correlate two devices.
      * @return scopes
      * @throws IdentityOAuth2Exception Error while getting scopes for user code.
+     *
+     * @deprecated because the scopes of the user is included in {{@link #getDetailsByUserCode(String)}}.
+     * Deprecated for removal.
      */
+    @Deprecated
     String[] getScope(String userCode) throws IdentityOAuth2Exception;
 
     /**
@@ -122,6 +134,9 @@ public interface DeviceAuthService {
      * @param clientId Consumer key of the application.
      * @return true or false.
      * @throws IdentityOAuth2Exception Error while validate the client id.
+     *
+     * @deprecated because device flow service layer should not validate the client information.
+     * Deprecated for removal.
      */
     @Deprecated
     boolean validateClientInfo(String clientId) throws IdentityOAuth2Exception;
