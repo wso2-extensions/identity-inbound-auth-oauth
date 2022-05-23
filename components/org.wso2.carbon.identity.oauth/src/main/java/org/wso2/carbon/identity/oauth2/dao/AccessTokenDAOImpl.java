@@ -166,6 +166,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
         if (log.isDebugEnabled()) {
             String username;
+            // Need  to check this
             if (isFederatedUser(accessTokenDO)) {
                 username = accessTokenDO.getAuthzUser().getAuthenticatedSubjectIdentifier();
             } else {
