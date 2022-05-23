@@ -3145,7 +3145,7 @@ public class OAuth2Util {
      */
     public static String getUserStoreForFederatedUser(AuthenticatedUser authenticatedUser) throws
             IdentityOAuth2Exception {
-
+        // check this method
         if (authenticatedUser == null) {
             throw new IllegalArgumentException("Authenticated user cannot be null");
         }
