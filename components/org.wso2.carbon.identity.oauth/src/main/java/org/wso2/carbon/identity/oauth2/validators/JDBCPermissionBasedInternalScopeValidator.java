@@ -166,9 +166,9 @@ public class JDBCPermissionBasedInternalScopeValidator {
             }
             boolean isSystemScope = ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE);
             //TODO remove this logic
-            if (authenticatedUser.isFederatedUser()) {
-                authenticatedUser.setTenantDomain("intt1");
-            }
+//            if (authenticatedUser.isFederatedUser()) {
+//                authenticatedUser.setTenantDomain("intt1");
+//            }
             int tenantId = IdentityTenantUtil.getTenantId(authenticatedUser.getTenantDomain());
             startTenantFlow(authenticatedUser.getTenantDomain(), tenantId);
             AuthorizationManager authorizationManager = OAuthComponentServiceHolder.getInstance().getRealmService()
@@ -183,12 +183,18 @@ public class JDBCPermissionBasedInternalScopeValidator {
             local user not federated user.
              */
             if (authenticatedUser.isFederatedUser()) {
+                // TODO need to decide the exact condition.
+                if (StringUtils.equalsIgnoreCase(clientId, "console")) {
+                    allowedUIResourcesForUser =
+                            getAllowedUIResourcesForNotAssociatedFederatedUserWithRoles(authenticatedUser,
+                                    authorizationManager);
+
                 /*
                 There is a flow where 'Assert identity using mapped local subject identifier' flag enabled but the
                 federated user doesn't have any association in localIDP, to handle this case we check for 'Assert
                 identity using mapped local subject identifier' flag and get roles from userStore.
                  */
-                if (isSPAlwaysSendMappedLocalSubjectId(clientId)) {
+                } else if (isSPAlwaysSendMappedLocalSubjectId(clientId)) {
                     allowedUIResourcesForUser = getAllowedUIResourcesOfUser(authenticatedUser, authorizationManager);
                 } else {
                     // Handle not account associated federated users.
@@ -311,6 +317,31 @@ public class JDBCPermissionBasedInternalScopeValidator {
         return allowedUIResourcesListForUser.toArray(new String[0]);
     }
 
+    private String[] getAllowedUIResourcesForNotAssociatedFederatedUserWithRoles(AuthenticatedUser authenticatedUser,
+                                                                        AuthorizationManager authorizationManager)
+            throws UserStoreException, IdentityOAuth2Exception {
+
+        List<String> allowedUIResourcesListForUser = new ArrayList<>();
+
+        List<String> userRolesList = getValuesOfRolesFromUserAttributes(authenticatedUser.getUserAttributes());
+
+        List<String> extendedUserRolesList = new ArrayList(userRolesList);
+        // Add internal prefix before the roles & check.
+        extendedUserRolesList.addAll(userRolesList.stream().map(x -> "INTERNAL/" + x).collect(Collectors.toList()));
+        // Loop through each local role and get permissions.
+        for (String userRole : extendedUserRolesList) {
+            for (String allowedUIResource : authorizationManager.getAllowedUIResourcesForRole(userRole, "/")) {
+                if (!allowedUIResourcesListForUser.contains(allowedUIResource)) {
+                    allowedUIResourcesListForUser.add(allowedUIResource);
+                }
+            }
+        }
+        // Add everyone permission to allowed permission.
+        allowedUIResourcesListForUser.add(EVERYONE_PERMISSION);
+
+        return allowedUIResourcesListForUser.toArray(new String[0]);
+    }
+
     /**
      * Get groups params Roles from User attributes.
      *
@@ -323,6 +354,20 @@ public class JDBCPermissionBasedInternalScopeValidator {
             for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
                 if (entry.getKey().getRemoteClaim() != null) {
                     if (StringUtils.equals(entry.getKey().getRemoteClaim().getClaimUri(), OAuth2Constants.GROUPS)) {
+                        return Arrays.asList(entry.getValue().split(Pattern.quote(ATTRIBUTE_SEPARATOR)));
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private List<String> getValuesOfRolesFromUserAttributes(Map<ClaimMapping, String> userAttributes) {
+
+        if (MapUtils.isNotEmpty(userAttributes)) {
+            for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
+                if (entry.getKey().getRemoteClaim() != null) {
+                    if (StringUtils.equals(entry.getKey().getRemoteClaim().getClaimUri(), "roles")) {
                         return Arrays.asList(entry.getValue().split(Pattern.quote(ATTRIBUTE_SEPARATOR)));
                     }
                 }

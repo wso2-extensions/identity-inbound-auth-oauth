@@ -18,12 +18,15 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -36,10 +39,12 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
@@ -70,7 +75,12 @@ public class RoleBasedInternalScopeValidator {
 
         // Get the roles of the authenticated user.
         AuthenticatedUser authenticatedUser = tokReqMsgCtx.getAuthorizedUser();
-        List<String> roles = getRolesOfTheUser(authenticatedUser);
+        List<String> roles;
+        if (authenticatedUser.isFederatedUser()) {
+            roles = getValuesOfRolesFromUserAttributes(authenticatedUser.getUserAttributes());
+        } else {
+            roles = getRolesOfTheUser(authenticatedUser);
+        }
         List<String> rolesWithoutInternalDomain = removeInternalDomain(roles);
 
         // Get the configured system roles list with the scopes.
@@ -116,7 +126,12 @@ public class RoleBasedInternalScopeValidator {
 
         // Get the roles of the authenticated user.
         AuthenticatedUser authenticatedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
-        List<String> roles = getRolesOfTheUser(authenticatedUser);
+        List<String> roles;
+        if (authenticatedUser.isFederatedUser()) {
+            roles = getValuesOfRolesFromUserAttributes(authenticatedUser.getUserAttributes());
+        } else {
+            roles = getRolesOfTheUser(authenticatedUser);
+        }
         List<String> rolesWithoutInternalDomain = removeInternalDomain(roles);
 
         // Get the configured system roles list with the scopes.
@@ -201,5 +216,20 @@ public class RoleBasedInternalScopeValidator {
             }
         }
         return requestedScopes.toArray(new String[0]);
+    }
+
+    private List<String> getValuesOfRolesFromUserAttributes(Map<ClaimMapping, String> userAttributes) {
+
+        if (MapUtils.isNotEmpty(userAttributes)) {
+            for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
+                if (entry.getKey().getRemoteClaim() != null) {
+                    if (StringUtils.equals(entry.getKey().getRemoteClaim().getClaimUri(), "roles")) {
+                        return Arrays.asList(entry.getValue().
+                                split(Pattern.quote(FrameworkUtils.getMultiAttributeSeparator())));
+                    }
+                }
+            }
+        }
+        return null;
     }
 }

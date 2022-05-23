@@ -363,6 +363,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                     log.debug("User attributes not found in cache. Trying to retrieve attribute for federated " +
                             "user: " + authzReqMessageContext.getAuthorizationReqDTO().getUser());
                 }
+                // Need to check
                 userClaimsInOIDCDialect = retrieveClaimsForFederatedUser(authzReqMessageContext);
             }
         } else {
