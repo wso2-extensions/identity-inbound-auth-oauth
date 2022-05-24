@@ -284,6 +284,7 @@ public class DCRMService {
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String spName = registrationRequest.getClientName();
         String templateName = registrationRequest.getSpTemplateName();
+        boolean isManagementApp = registrationRequest.isManagementApp();
 
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(spName)) {
@@ -303,7 +304,8 @@ public class DCRMService {
         }
 
         // Create a service provider.
-        ServiceProvider serviceProvider = createServiceProvider(applicationOwner, tenantDomain, spName, templateName);
+        ServiceProvider serviceProvider = createServiceProvider(applicationOwner, tenantDomain, spName, templateName,
+                isManagementApp);
 
         OAuthConsumerAppDTO createdApp;
         try {
@@ -424,8 +426,8 @@ public class DCRMService {
         return createdApp;
     }
 
-    private ServiceProvider createServiceProvider(String applicationOwner, String tenantDomain,
-                                                  String spName, String templateName) throws DCRMException {
+    private ServiceProvider createServiceProvider(String applicationOwner, String tenantDomain, String spName,
+                                                  String templateName, boolean isManagementApp) throws DCRMException {
         // Create the Service Provider
         ServiceProvider sp = new ServiceProvider();
         sp.setApplicationName(spName);
@@ -434,6 +436,7 @@ public class DCRMService {
         user.setTenantDomain(tenantDomain);
         sp.setOwner(user);
         sp.setDescription("Service Provider for application " + spName);
+        sp.setManagementApp(isManagementApp);
 
         createServiceProvider(sp, tenantDomain, applicationOwner, templateName);
 

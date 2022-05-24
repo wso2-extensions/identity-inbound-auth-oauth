@@ -37,6 +37,7 @@ public class ApplicationRegistrationRequest implements Serializable {
     private String consumerSecret = null;
     private String spTemplateName = null;
     private String backchannelLogoutUri = null;
+    private boolean isManagementApp;
 
     public List<String> getRedirectUris() {
 
@@ -126,5 +127,26 @@ public class ApplicationRegistrationRequest implements Serializable {
     public void setSpTemplateName(String spTemplateName) {
 
         this.spTemplateName = spTemplateName;
+    }
+
+    /**
+     * Set whether the app is a management app or not.
+     *
+     * @param isManagementApp Denotes whether app is a management app.
+     */
+    public void setIsManagementApp(boolean isManagementApp) {
+
+        this.isManagementApp = isManagementApp;
+    }
+
+
+    /**
+     * Returns true is the app is a management app.
+     *
+     * @return true if it is a management app.
+     */
+    public boolean isManagementApp() {
+
+        return this.isManagementApp;
     }
 }
