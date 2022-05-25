@@ -3385,4 +3385,22 @@ public class OAuthServerConfiguration {
         private static final String DEVICE_CODE_KEY_SET = "KeySet";
     }
 
+    /**
+     * Check whether introspecting tokens from different tenants is allowed.
+     *
+     * @return true/false Allow or block cross tenant token inspection.
+     */
+    public static boolean isCrossTenantTokenInspectionAllowed() {
+
+        String allowCrossTenantTokenInspectionConfigValue = IdentityUtil.getProperty(
+                OAuthConstants.ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION);
+
+        /* If config is null, the property must be set to the default value which is true to
+        ensure backward compatibility. */
+        if (allowCrossTenantTokenInspectionConfigValue == null) {
+            return OAuthConstants.ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION_DEFAULT;
+        }
+        return Boolean.parseBoolean(allowCrossTenantTokenInspectionConfigValue);
+    }
+
 }

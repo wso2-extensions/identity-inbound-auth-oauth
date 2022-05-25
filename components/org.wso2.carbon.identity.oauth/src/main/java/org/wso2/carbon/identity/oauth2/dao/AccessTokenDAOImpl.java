@@ -87,6 +87,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     private static final String IDN_OAUTH2_ACCESS_TOKEN = "IDN_OAUTH2_ACCESS_TOKEN";
     private boolean isTokenCleanupFeatureEnabled = OAuthServerConfiguration.getInstance().isTokenCleanupEnabled();
     private boolean isTenantQualifiedUrlsEnabled = IdentityTenantUtil.isTenantQualifiedUrlsEnabled();
+    private boolean isCrossTenantTokenInspectionAllowed
+            = OAuthServerConfiguration.getInstance().isCrossTenantTokenInspectionAllowed();
     private static final String DEFAULT_TOKEN_TO_SESSION_MAPPING = "DEFAULT";
 
     private static final Log log = LogFactory.getLog(AccessTokenDAOImpl.class);
@@ -890,14 +892,14 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             if (includeExpired) {
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    if ((isTenantQualifiedUrlsEnabled || !OAuth2Util.isCrossTenantTokenInspectionAllowed())
+                    if ((isTenantQualifiedUrlsEnabled || !isCrossTenantTokenInspectionAllowed)
                             && tenantDomain != null) {
                         sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_TENANT_ACCESS_TOKEN_IDP_NAME;
                     } else {
                         sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN_IDP_NAME;
                     }
                 } else {
-                    if ((isTenantQualifiedUrlsEnabled || !OAuth2Util.isCrossTenantTokenInspectionAllowed())
+                    if ((isTenantQualifiedUrlsEnabled || !isCrossTenantTokenInspectionAllowed)
                             && tenantDomain != null) {
                         sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_TENANT_ACCESS_TOKEN;
                     } else {
@@ -906,14 +908,14 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
             } else {
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    if ((isTenantQualifiedUrlsEnabled || !OAuth2Util.isCrossTenantTokenInspectionAllowed())
+                    if ((isTenantQualifiedUrlsEnabled || !isCrossTenantTokenInspectionAllowed)
                             && tenantDomain != null) {
                         sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN_IDP_NAME;
                     } else {
                         sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME;
                     }
                 } else {
-                    if ((isTenantQualifiedUrlsEnabled || !OAuth2Util.isCrossTenantTokenInspectionAllowed())
+                    if ((isTenantQualifiedUrlsEnabled || !isCrossTenantTokenInspectionAllowed)
                             && tenantDomain != null) {
                         sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN;
                     } else {
@@ -928,7 +930,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt.setString(1,
                     getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(accessTokenIdentifier));
-            if ((isTenantQualifiedUrlsEnabled || !OAuth2Util.isCrossTenantTokenInspectionAllowed())
+            if ((isTenantQualifiedUrlsEnabled || !isCrossTenantTokenInspectionAllowed)
                     && tenantDomain != null) {
                 prepStmt.setInt(2, IdentityTenantUtil.getTenantId(tenantDomain));
             }
