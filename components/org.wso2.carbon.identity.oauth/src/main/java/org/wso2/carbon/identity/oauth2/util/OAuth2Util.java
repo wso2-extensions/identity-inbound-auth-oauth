@@ -4383,5 +4383,4 @@ public class OAuth2Util {
         }
         return IdentityTenantUtil.getTenantDomainFromContext();
     }
-
 }
