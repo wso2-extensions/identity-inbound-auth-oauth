@@ -890,13 +890,15 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             if (includeExpired) {
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    if (isTenantQualifiedUrlsEnabled && tenantDomain != null) {
+                    if ((isTenantQualifiedUrlsEnabled && tenantDomain != null) ||
+                            !OAuth2Util.isCrossTenantTokenInspectionAllowed()) {
                         sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_TENANT_ACCESS_TOKEN_IDP_NAME;
                     } else {
                         sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN_IDP_NAME;
                     }
                 } else {
-                    if (isTenantQualifiedUrlsEnabled && tenantDomain != null) {
+                    if ((isTenantQualifiedUrlsEnabled && tenantDomain != null) ||
+                            !OAuth2Util.isCrossTenantTokenInspectionAllowed()) {
                         sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_TENANT_ACCESS_TOKEN;
                     } else {
                         sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN;
@@ -904,13 +906,15 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
             } else {
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    if (isTenantQualifiedUrlsEnabled && tenantDomain != null) {
+                    if ((isTenantQualifiedUrlsEnabled && tenantDomain != null) ||
+                            !OAuth2Util.isCrossTenantTokenInspectionAllowed()) {
                         sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN_IDP_NAME;
                     } else {
                         sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME;
                     }
                 } else {
-                    if (isTenantQualifiedUrlsEnabled && tenantDomain != null) {
+                    if ((isTenantQualifiedUrlsEnabled && tenantDomain != null) ||
+                            !OAuth2Util.isCrossTenantTokenInspectionAllowed()) {
                         sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN;
                     } else {
                         sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN;
