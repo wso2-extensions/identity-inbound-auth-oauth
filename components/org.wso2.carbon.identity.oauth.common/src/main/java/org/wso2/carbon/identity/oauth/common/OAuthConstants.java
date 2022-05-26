@@ -151,7 +151,7 @@ public final class OAuthConstants {
     public static final String TOKEN_EXPIRE_TIME_RESOURCE_PATH = "/identity/config/spTokenExpireTime";
 
     public static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
-    public static final boolean ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION_DEFAULT = false;
+    public static final boolean ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION_DEFAULT = true;
 
     //AccessTokenDO context property name
     public static final String ACCESS_TOKEN_DO = "AccessTokenDO";
