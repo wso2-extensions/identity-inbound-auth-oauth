@@ -2168,7 +2168,6 @@ public class OAuthServerConfiguration {
         }
     }
 
-
     private void parseSupportedGrantTypesConfig(OMElement oauthConfigElem) {
 
         OMElement supportedGrantTypesElem =
@@ -3186,6 +3185,7 @@ public class OAuthServerConfiguration {
     }
 
     public boolean isCrossTenantTokenInspectionAllowed() {
+
         return allowCrossTenantIntrospection;
     }
 
