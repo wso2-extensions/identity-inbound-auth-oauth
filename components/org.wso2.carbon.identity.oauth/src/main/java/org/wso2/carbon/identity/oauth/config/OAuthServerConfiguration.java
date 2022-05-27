@@ -150,6 +150,7 @@ public class OAuthServerConfiguration {
     private boolean assertionsUserNameEnabled = false;
     private boolean accessTokenPartitioningEnabled = false;
     private boolean redirectToRequestedRedirectUriEnabled = true;
+    private boolean allowCrossTenantIntrospection = true;
     private String accessTokenPartitioningDomains = null;
     private TokenPersistenceProcessor persistenceProcessor = null;
     private Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
@@ -452,6 +453,9 @@ public class OAuthServerConfiguration {
 
         // Read config for dropping unregistered scopes.
         parseDropUnregisteredScopes(oauthElem);
+
+        // Read config for cross tenant allow
+        parseAllowCrossTenantIntrospection(oauthElem);
     }
 
     /**
@@ -2164,6 +2168,7 @@ public class OAuthServerConfiguration {
         }
     }
 
+
     private void parseSupportedGrantTypesConfig(OMElement oauthConfigElem) {
 
         OMElement supportedGrantTypesElem =
@@ -3163,6 +3168,28 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * Parses the AllowCrossTenantTokenIntrospection configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseAllowCrossTenantIntrospection(OMElement oauthConfigElem) {
+
+        OMElement allowCrossTenantIntrospectionElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION));
+        if (allowCrossTenantIntrospectionElem != null) {
+            allowCrossTenantIntrospection = Boolean.parseBoolean(allowCrossTenantIntrospectionElem.getText());
+        } else {
+            /* If config is null, the property must be set to the default value which is true to
+        ensure backward compatibility. */
+            allowCrossTenantIntrospection = true;
+        }
+    }
+
+    public boolean isCrossTenantTokenInspectionAllowed() {
+        return allowCrossTenantIntrospection;
+    }
+
+    /**
      * Localpart names for the OAuth configuration in identity.xml.
      */
     private class ConfigElements {
@@ -3383,24 +3410,10 @@ public class OAuthServerConfiguration {
         private static final String DEVICE_CODE_EXPIRY_TIME = "ExpiryTime";
         private static final String DEVICE_CODE_POLLING_INTERVAL = "PollingInterval";
         private static final String DEVICE_CODE_KEY_SET = "KeySet";
+
+        // Allow Cross Tenant Introspection Config
+        public static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
     }
 
-    /**
-     * Check whether introspecting tokens from different tenants is allowed.
-     *
-     * @return true/false Allow or block cross tenant token inspection.
-     */
-    public static boolean isCrossTenantTokenInspectionAllowed() {
-
-        String allowCrossTenantTokenInspectionConfigValue = IdentityUtil.getProperty(
-                OAuthConstants.ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION);
-
-        /* If config is null, the property must be set to the default value which is true to
-        ensure backward compatibility. */
-        if (allowCrossTenantTokenInspectionConfigValue == null) {
-            return OAuthConstants.ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION_DEFAULT;
-        }
-        return Boolean.parseBoolean(allowCrossTenantTokenInspectionConfigValue);
-    }
 
 }
