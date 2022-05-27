@@ -3415,5 +3415,4 @@ public class OAuthServerConfiguration {
         private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
     }
 
-
 }
