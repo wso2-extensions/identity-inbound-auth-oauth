@@ -454,7 +454,7 @@ public class OAuthServerConfiguration {
         // Read config for dropping unregistered scopes.
         parseDropUnregisteredScopes(oauthElem);
 
-        // Read config for cross tenant allow
+        // Read config for cross tenant allow.
         parseAllowCrossTenantIntrospection(oauthElem);
     }
 
@@ -3411,8 +3411,8 @@ public class OAuthServerConfiguration {
         private static final String DEVICE_CODE_POLLING_INTERVAL = "PollingInterval";
         private static final String DEVICE_CODE_KEY_SET = "KeySet";
 
-        // Allow Cross Tenant Introspection Config
-        public static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
+        // Allow Cross Tenant Introspection Config.
+        private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
     }
 
 
