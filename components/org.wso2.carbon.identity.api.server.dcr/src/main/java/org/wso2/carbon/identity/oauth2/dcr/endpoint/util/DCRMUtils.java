@@ -152,9 +152,10 @@ public class DCRMUtils {
         applicationDTO.setClientSecret(application.getClientSecret());
         applicationDTO.setRedirectUris(application.getRedirectUris());
         applicationDTO.setGrantTypes(application.getGrantTypes());
-        applicationDTO.setClientSecretExpiresAt(0L); // currently, we are not setting an expiration time for
-        // the client secret, hence according to the DCR specification we have to set the expiration time to 0.
-        // https://openid.net/specs/openid-connect-registration-1_0.html
+        /* Currently, we are not setting an expiration time for the client secret, hence according to the DCR
+        specification we have to set the expiration time to 0.
+        https://openid.net/specs/openid-connect-registration-1_0.html */
+        applicationDTO.setClientSecretExpiresAt(0L);
 
         return applicationDTO;
     }
