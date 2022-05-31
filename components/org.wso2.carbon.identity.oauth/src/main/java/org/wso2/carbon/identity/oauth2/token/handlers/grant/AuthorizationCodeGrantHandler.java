@@ -49,6 +49,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserId;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTimeToExpire;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validatePKCE;
@@ -298,13 +299,13 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         }
         String accessToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .getAccessTokenByTokenId(tokenId);
-        // Fetching AccessTokenDO from DB before revoking the token
+        // Fetching AccessTokenDO from DB before revoking the token.
         AccessTokenDO accessTokenDO = null;
         if (StringUtils.isNotBlank(accessToken)) {
-            accessTokenDO = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                    .getAccessToken(accessToken, true);
+            accessTokenDO = OAuth2Util.getAccessTokenDOFromTokenIdentifier(accessToken, true);
         }
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessToken(tokenId, userId);
+        clearAccessTokenOAuthCache(accessTokenDO);
 
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)) {
@@ -324,15 +325,17 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
      * @param accessTokenDO nullable AccessTokenDO
      */
     private void invokePostAccessTokenRevocationListeners(AccessTokenDO accessTokenDO) {
-        if (accessTokenDO != null) {
-            OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
-                    .getOAuthEventInterceptorProxy();
-            if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
-                try {
-                    oAuthEventInterceptorProxy.onPostTokenRevocationBySystem(accessTokenDO, new HashMap<>());
-                } catch (IdentityOAuth2Exception e) {
-                    log.error("Error occurred when invoking post access token revoke listener. ", e);
-                }
+
+        if (accessTokenDO == null) {
+            return;
+        }
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            try {
+                oAuthEventInterceptorProxy.onPostTokenRevocationBySystem(accessTokenDO, new HashMap<>());
+            } catch (IdentityOAuth2Exception e) {
+                log.error("Error occurred when invoking post access token revoke listener. ", e);
             }
         }
     }
@@ -567,6 +570,35 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             return OAuth2Util.getAppInformationByClientId(clientId);
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for client: " + clientId);
+        }
+    }
+
+    /**
+     * Method to remove access token cache entries from the OAuthCache
+     *
+     * @param accessTokenDO AccessTokenDO
+     */
+    private void clearAccessTokenOAuthCache(AccessTokenDO accessTokenDO) {
+
+        if (cacheEnabled && accessTokenDO != null) {
+            // remove the access token from the cache.
+            String tokenBindingReference = NONE;
+            if (accessTokenDO.getTokenBinding() != null &&
+                    StringUtils.isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
+                tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
+            }
+
+            OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
+                    OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
+            OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
+                    OAuth2Util.buildScopeString(accessTokenDO.getScope()));
+            OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
+            OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
+
+            if (log.isDebugEnabled()) {
+                log.debug("The access token issued for client " + accessTokenDO.getConsumerKey() +
+                        " was removed from the cache.");
+            }
         }
     }
 }
