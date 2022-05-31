@@ -30,6 +30,7 @@ public class RegistrationRequestDTO  {
   private String spTemplateName = null;
   private String backchannelLogoutUri = null;
   private boolean backchannelLogoutSessionRequired;
+  private boolean isManagementApp;
 
   @ApiModelProperty(required = true)
   @JsonProperty("redirect_uris")
@@ -191,6 +192,18 @@ public class RegistrationRequestDTO  {
     this.spTemplateName = spTemplateName;
   }
 
+  @ApiModelProperty
+  @JsonProperty("is_management_app")
+  public boolean isManagementApp() {
+
+    return isManagementApp;
+  }
+
+  public void setManagementApp(boolean isManagementApp) {
+
+    this.isManagementApp = isManagementApp;
+  }
+
   @Override
   public String toString()  {
     StringBuilder sb = new StringBuilder();
@@ -212,6 +225,7 @@ public class RegistrationRequestDTO  {
     sb.append("  ext_param_sp_template: ").append(spTemplateName).append("\n");
     sb.append("  backchannel_logout_uri: ").append(backchannelLogoutUri).append("\n");
     sb.append("  backchannel_logout_session_required: ").append(backchannelLogoutSessionRequired).append("\n");
+    sb.append("  is_management_app: ").append(isManagementApp).append("\n");
     sb.append("}\n");
     return sb.toString();
   }
