@@ -341,13 +341,15 @@ public class JDBCPermissionBasedInternalScopeValidator {
 
         List<String> extendedUserRolesList = new ArrayList(userRolesList);
         // Add internal prefix before the roles & check.
-        extendedUserRolesList.addAll(userRolesList.stream().map(x -> "INTERNAL/" + x).collect(Collectors.toList()));
-        // Loop through each local role and get permissions.
-        for (String userRole : extendedUserRolesList) {
-            for (String allowedUIResource : authorizationManager
-                    .getAllowedUIResourcesForRole(userRole, "/")) {
-                if (!allowedUIResourcesListForUser.contains(allowedUIResource)) {
-                    allowedUIResourcesListForUser.add(allowedUIResource);
+        if (userRolesList.size() > 0) {
+            extendedUserRolesList.addAll(userRolesList.stream().map(x -> "INTERNAL/" + x).collect(Collectors.toList()));
+            // Loop through each local role and get permissions.
+            for (String userRole : extendedUserRolesList) {
+                for (String allowedUIResource :
+                        authorizationManager.getAllowedUIResourcesForRole(userRole, "/")) {
+                    if (!allowedUIResourcesListForUser.contains(allowedUIResource)) {
+                        allowedUIResourcesListForUser.add(allowedUIResource);
+                    }
                 }
             }
         }
