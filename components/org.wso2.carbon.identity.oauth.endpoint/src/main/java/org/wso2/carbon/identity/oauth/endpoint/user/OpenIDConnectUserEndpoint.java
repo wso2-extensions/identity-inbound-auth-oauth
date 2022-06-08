@@ -47,6 +47,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
@@ -177,6 +178,7 @@ public class OpenIDConnectUserEndpoint {
         return Response.status(res.getResponseStatus())
                 .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, "Bearer error=\"" + ex.getErrorCode() + "\"")
                 .entity(res.getBody())
+                .type(MediaType.APPLICATION_JSON_TYPE)
                 .build();
     }
 
