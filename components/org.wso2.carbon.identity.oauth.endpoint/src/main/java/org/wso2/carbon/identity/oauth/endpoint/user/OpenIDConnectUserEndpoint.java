@@ -155,9 +155,12 @@ public class OpenIDConnectUserEndpoint {
         OAuthResponse response = OAuthASResponse.errorResponse(statusCode)
                 .setError(OAuth2ErrorCodes.SERVER_ERROR)
                 .setErrorDescription(ex.getMessage()).buildJSONMessage();
-        return Response.status(response.getResponseStatus()).entity(response.getBody()).build();
+        return Response.status(response.getResponseStatus())
+                .entity(response.getBody())
+                .type(MediaType.APPLICATION_JSON_TYPE)
+                .build();
     }
-
+g
     private Response buildBadRequestErrorResponse(UserInfoEndpointException ex,
                                                   int statusCode) throws OAuthSystemException {
 
@@ -165,7 +168,10 @@ public class OpenIDConnectUserEndpoint {
                 .setError(ex.getErrorCode())
                 .setErrorDescription(ex.getErrorMessage())
                 .buildJSONMessage();
-        return Response.status(res.getResponseStatus()).entity(res.getBody()).build();
+        return Response.status(res.getResponseStatus())
+                .entity(res.getBody())
+                .type(MediaType.APPLICATION_JSON_TYPE)
+                .build();
     }
 
     private Response getErrorResponseWithAuthenticateHeader(UserInfoEndpointException ex,
