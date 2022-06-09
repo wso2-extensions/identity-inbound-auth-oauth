@@ -160,7 +160,7 @@ public class OpenIDConnectUserEndpoint {
                 .type(MediaType.APPLICATION_JSON_TYPE)
                 .build();
     }
-g
+
     private Response buildBadRequestErrorResponse(UserInfoEndpointException ex,
                                                   int statusCode) throws OAuthSystemException {
 
