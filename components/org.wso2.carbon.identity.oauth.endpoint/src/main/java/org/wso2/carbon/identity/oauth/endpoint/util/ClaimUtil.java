@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityConstants;
@@ -72,7 +73,7 @@ import static org.wso2.carbon.identity.core.util.IdentityUtil.isTokenLoggable;
 public class ClaimUtil {
 
     private static final String SP_DIALECT = "http://wso2.org/oidc/claim";
-    private static final String ATTRIBUTE_SEPARATOR = ",";
+    private static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
     private static final Log log = LogFactory.getLog(ClaimUtil.class);
 
     private ClaimUtil() {
