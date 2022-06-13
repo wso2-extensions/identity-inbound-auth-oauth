@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityConstants;
@@ -59,6 +60,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
@@ -71,6 +73,7 @@ import static org.wso2.carbon.identity.core.util.IdentityUtil.isTokenLoggable;
 public class ClaimUtil {
 
     private static final String SP_DIALECT = "http://wso2.org/oidc/claim";
+    private static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
     private static final Log log = LogFactory.getLog(ClaimUtil.class);
 
     private ClaimUtil() {
@@ -173,9 +176,10 @@ public class ClaimUtil {
                             }
 
                             String oidcClaimUri = spToLocalClaimMappings.get(entry.getKey());
+                            String claimValue = entry.getValue();
                             if (oidcClaimUri != null) {
                                 if (entry.getKey().equals(subjectClaimURI)) {
-                                    subjectClaimValue = entry.getValue();
+                                    subjectClaimValue = claimValue;
                                     if (!isSubjectClaimInRequested) {
                                         if (log.isDebugEnabled()) {
                                             log.debug("Subject claim: " + entry.getKey() + " is not a requested " +
@@ -184,10 +188,17 @@ public class ClaimUtil {
                                         continue;
                                     }
                                 }
-                                mappedAppClaims.put(oidcClaimUri, entry.getValue());
+
+                                if (isMultiValuedAttribute(claimValue)) {
+                                    String[] attributeValues = processMultiValuedAttribute(claimValue);
+                                    mappedAppClaims.put(oidcClaimUri, attributeValues);
+                                } else {
+                                    mappedAppClaims.put(oidcClaimUri, claimValue);
+                                }
+
                                 if (log.isDebugEnabled() &&
                                         isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
-                                    log.debug("Mapped claim: key -  " + oidcClaimUri + " value -" + entry.getValue());
+                                    log.debug("Mapped claim: key -  " + oidcClaimUri + " value -" + claimValue);
                                 }
                             }
                         }
@@ -360,5 +371,27 @@ public class ClaimUtil {
             return new HashMap<>();
         }
         return cacheEntry.getUserAttributes();
+    }
+
+    /**
+     * Check whether claim value is multivalued attribute or not by using attribute separator.
+     *
+     * @param claimValue String value contains claims.
+     * @return Whether it is multivalued attribute or not.
+     */
+    public static boolean isMultiValuedAttribute(String claimValue) {
+
+        return StringUtils.contains(claimValue, ATTRIBUTE_SEPARATOR);
+    }
+
+    /**
+     * Split multivalued attribute string value by attribute separator.
+     *
+     * @param claimValue String value contains claims.
+     * @return String array of multivalued claim values.
+     */
+    public static String[] processMultiValuedAttribute(String claimValue) {
+
+        return claimValue.split(Pattern.quote(ATTRIBUTE_SEPARATOR));
     }
 }
