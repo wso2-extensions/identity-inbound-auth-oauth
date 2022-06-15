@@ -89,13 +89,14 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
     private String retrieveTokenBindingValueFromRequest(HttpServletRequest request) throws OAuthSystemException {
 
         Cookie[] cookies = request.getCookies();
-        if (ArrayUtils.isEmpty(cookies)) {
+        String commonAuthCookieValueFromRequestAttribute = (String) request.getAttribute(COMMONAUTH_COOKIE);
+
+        if (ArrayUtils.isEmpty(cookies) && StringUtils.isEmpty(commonAuthCookieValueFromRequestAttribute)) {
             throw new OAuthSystemException("Failed to retrieve token binding value.");
         }
 
         Optional<Cookie> commonAuthCookieOptional = Arrays.stream(cookies)
                 .filter(t -> COMMONAUTH_COOKIE.equals(t.getName())).findAny();
-        String commonAuthCookieValueFromRequestAttribute = (String) request.getAttribute(COMMONAUTH_COOKIE);
 
         if ((!commonAuthCookieOptional.isPresent() || StringUtils.isBlank(commonAuthCookieOptional.get().getValue()))
                 && StringUtils.isEmpty(commonAuthCookieValueFromRequestAttribute)) {
