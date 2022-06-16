@@ -100,14 +100,8 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         Map<String, Object> claimsToBeReturned = new HashMap<>();
         Map<String, Object> addressScopeClaims = new HashMap<>();
 
-        // Map<"openid", "first_name,last_name,username">
-        Map<String, List<String>> scopeClaimsMap = new HashMap<>();
-        int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
-        //load oidc scopes and mapped claims from the cache or db.
-        List<ScopeDTO> oidcScopesList = getOIDCScopes(tenantId);
-        for (ScopeDTO scope : oidcScopesList) {
-            scopeClaimsMap.put(scope.getName(), Arrays.asList(scope.getClaim()));
-        }
+        Map<String, List<String>> scopeClaimsMap = getOIDCScopeClaimMap(spTenantDomain);
+
         if (MapUtils.isNotEmpty(scopeClaimsMap)) {
             List<String> addressScopeClaimUris = getAddressScopeClaimUris(scopeClaimsMap);
             // Iterate through scopes requested in the OAuth2/OIDC request to filter claims
@@ -153,16 +147,10 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
     @Override
     public List<String> getClaimsFilteredByOIDCScopes(Set<String> requestedScopes, String spTenantDomain) {
 
-        // Map<"openid", "first_name,last_name,username">
-        Map<String, List<String>> scopeClaimsMap = new HashMap<>();
-        int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
         List<String> filteredClaims = new ArrayList<>();
-        //load oidc scopes and mapped claims from the cache or db.
-        List<ScopeDTO> oidcScopesList = getOIDCScopes(tenantId);
-        if (CollectionUtils.isNotEmpty(oidcScopesList)) {
-            for (ScopeDTO scope : oidcScopesList) {
-                scopeClaimsMap.put(scope.getName(), Arrays.asList(scope.getClaim()));
-            }
+        Map<String, List<String>> scopeClaimsMap = getOIDCScopeClaimMap(spTenantDomain);
+
+        if (MapUtils.isNotEmpty(scopeClaimsMap)) {
             // Iterate through scopes requested in the OAuth2/OIDC request to filter claims
             for (String requestedScope : requestedScopes) {
                 // Check if requested scope is a supported OIDC scope value
@@ -218,6 +206,32 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
             List<String> userConsentedClaimUris = getUserConsentedLocalClaimURIs(authenticatedUser, serviceProvider);
             List<String> userConsentClaimUrisInOIDCDialect = getOIDCClaimURIs(userConsentedClaimUris, spTenantDomain);
 
+            boolean hasAddressClaims = false;
+            JSONObject consentedAddressClaims = new JSONObject();
+            Map<String, List<String>> scopeClaimsMap = getOIDCScopeClaimMap(spTenantDomain);
+
+            if (MapUtils.isNotEmpty(scopeClaimsMap)) {
+                List<String> addressScopeClaimUris = getAddressScopeClaimUris(scopeClaimsMap);
+                if (addressScopeClaimUris != null) {
+                    consentedAddressClaims = (JSONObject) userClaims.get(ADDRESS);
+                    for (String addressScopeClaimEntry : addressScopeClaimUris) {
+                        if (userConsentClaimUrisInOIDCDialect.contains(addressScopeClaimEntry)) {
+                            hasAddressClaims = true;
+                            userConsentClaimUrisInOIDCDialect.remove(addressScopeClaimEntry);
+                        } else {
+                            if (consentedAddressClaims.keySet().contains(addressScopeClaimEntry)) {
+                                consentedAddressClaims.remove(addressScopeClaimEntry);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (hasAddressClaims) {
+                userConsentClaimUrisInOIDCDialect.add(ADDRESS);
+                userClaims.put(ADDRESS, consentedAddressClaims);
+            }
+
             return userClaims.keySet().stream()
                     .filter(userConsentClaimUrisInOIDCDialect::contains)
                     .collect(Collectors.toMap(key -> key, userClaims::get));
@@ -229,6 +243,26 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         }
 
         return userClaims;
+    }
+
+    /**
+     * Retrieve the OIDC scope claim map for the given SP tenant domain.
+     *
+     * @param spTenantDomain Tenant domain of the SP.
+     * @return OIDC scope claim map for the tenant.
+     */
+    private Map<String, List<String>> getOIDCScopeClaimMap(String spTenantDomain) {
+
+        // Map<"openid", "first_name,last_name,username">
+        Map<String, List<String>> scopeClaimsMap = new HashMap<>();
+        int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
+
+        //load oidc scopes and mapped claims from the cache or db.
+        List<ScopeDTO> oidcScopesList = getOIDCScopes(tenantId);
+        for (ScopeDTO scope : oidcScopesList) {
+            scopeClaimsMap.put(scope.getName(), Arrays.asList(scope.getClaim()));
+        }
+        return scopeClaimsMap;
     }
 
     private boolean isConsentManagementServiceDisabled(ServiceProvider serviceProvider) {
