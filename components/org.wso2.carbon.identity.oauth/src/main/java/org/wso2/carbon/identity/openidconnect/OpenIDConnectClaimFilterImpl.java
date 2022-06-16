@@ -210,18 +210,16 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
             JSONObject consentedAddressClaims = new JSONObject();
             Map<String, List<String>> scopeClaimsMap = getOIDCScopeClaimMap(spTenantDomain);
 
-            if (MapUtils.isNotEmpty(scopeClaimsMap)) {
+            if (userClaims.containsKey(ADDRESS) && MapUtils.isNotEmpty(scopeClaimsMap)) {
                 List<String> addressScopeClaimUris = getAddressScopeClaimUris(scopeClaimsMap);
-                if (addressScopeClaimUris != null) {
-                    consentedAddressClaims = (JSONObject) userClaims.get(ADDRESS);
-                    for (String addressScopeClaimEntry : addressScopeClaimUris) {
-                        if (userConsentClaimUrisInOIDCDialect.contains(addressScopeClaimEntry)) {
-                            hasAddressClaims = true;
-                            userConsentClaimUrisInOIDCDialect.remove(addressScopeClaimEntry);
-                        } else {
-                            if (consentedAddressClaims.keySet().contains(addressScopeClaimEntry)) {
-                                consentedAddressClaims.remove(addressScopeClaimEntry);
-                            }
+                consentedAddressClaims = (JSONObject) userClaims.get(ADDRESS);
+                for (String addressScopeClaimEntry : addressScopeClaimUris) {
+                    if (userConsentClaimUrisInOIDCDialect.contains(addressScopeClaimEntry)) {
+                        hasAddressClaims = true;
+                        userConsentClaimUrisInOIDCDialect.remove(addressScopeClaimEntry);
+                    } else {
+                        if (consentedAddressClaims.containsKey(addressScopeClaimEntry)) {
+                            consentedAddressClaims.remove(addressScopeClaimEntry);
                         }
                     }
                 }
