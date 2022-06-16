@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.oauth.listener.OAuthTokenSessionMappingEventHand
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -309,5 +310,22 @@ public class OAuthServiceComponent {
             log.debug("UnSetting the User Session Management Service");
         }
         OAuth2ServiceComponentHolder.setUserSessionManagementService(null);
+    }
+
+    @Reference(
+            name = "RoleManagementServiceComponent",
+            service = RoleManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRoleManagementService"
+    )
+    private void setRoleManagementService(RoleManagementService roleManagementService) {
+
+        OAuthComponentServiceHolder.getInstance().setRoleManagementService(roleManagementService);
+    }
+
+    private void unsetRoleManagementService(RoleManagementService roleManagementService) {
+
+        OAuthComponentServiceHolder.getInstance().setRoleManagementService(null);
     }
 }

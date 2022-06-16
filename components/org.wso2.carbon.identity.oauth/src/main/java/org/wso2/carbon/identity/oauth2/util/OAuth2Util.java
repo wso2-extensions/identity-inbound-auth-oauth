@@ -72,7 +72,6 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -184,6 +183,7 @@ import javax.xml.namespace.QName;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_TOKEN_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.DEVICE_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_CONSENT_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_DCR_EP_URL;
@@ -1415,6 +1415,11 @@ public class OAuth2Util {
             URI uriModified = new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(), ("/t/" +
                     tenantDomain + uri.getPath()), uri.getQuery(), uri.getFragment());
             return uriModified.toString();
+        }
+
+        public static String getDeviceAuthzEPUrl() {
+
+            return buildUrl(DEVICE_AUTHZ_EP_URL, OAuthServerConfiguration.getInstance()::getDeviceAuthzEPUrl);
         }
     }
 
@@ -4161,21 +4166,15 @@ public class OAuth2Util {
      * @return Jwks Url
      * @throws IdentityOAuth2Exception
      */
-    private static String getSPJwksUrl(String clientId, String spTenantDomain) throws IdentityOAuth2Exception {
+    public static String getSPJwksUrl(String clientId, String spTenantDomain) throws IdentityOAuth2Exception {
 
-        String jwksUri = null;
         ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, spTenantDomain);
-        ServiceProviderProperty[] spPropertyArray = serviceProvider.getSpProperties();
-        //get jwks uri from sp-properties
-        for (ServiceProviderProperty spProperty : spPropertyArray) {
-            if (Constants.JWKS_URI.equals(spProperty.getName())) {
-                jwksUri = spProperty.getValue();
-                break;
+        String jwksUri = serviceProvider.getJwksUri();
+        if (StringUtils.isNotBlank(jwksUri)) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Retrieved jwks uri: %s for the service provider associated with client_id: %s",
+                        jwksUri, clientId));
             }
-        }
-        if (log.isDebugEnabled()) {
-            log.debug(String.format("Retrieved jwks uri: %s for the service provider associated with client_id: %s",
-                    jwksUri, clientId));
         }
         return jwksUri;
     }

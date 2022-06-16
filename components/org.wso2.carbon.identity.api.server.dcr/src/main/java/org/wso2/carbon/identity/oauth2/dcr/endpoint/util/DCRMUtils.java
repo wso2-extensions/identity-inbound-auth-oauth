@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth2.dcr.endpoint.util;
 
 import org.apache.commons.logging.Log;
-import org.apache.logging.log4j.ThreadContext;
+import org.slf4j.MDC;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
@@ -68,6 +68,7 @@ public class DCRMUtils {
         appRegistrationRequest.setConsumerSecret(registrationRequestDTO.getClientSecret());
         appRegistrationRequest.setSpTemplateName(registrationRequestDTO.getSpTemplateName());
         appRegistrationRequest.setBackchannelLogoutUri(registrationRequestDTO.getBackchannelLogoutUri());
+        appRegistrationRequest.setIsManagementApp(registrationRequestDTO.isManagementApp());
         return appRegistrationRequest;
 
     }
@@ -151,9 +152,10 @@ public class DCRMUtils {
         applicationDTO.setClientSecret(application.getClientSecret());
         applicationDTO.setRedirectUris(application.getRedirectUris());
         applicationDTO.setGrantTypes(application.getGrantTypes());
-        applicationDTO.setClientSecretExpiresAt(0L); // currently, we are not setting an expiration time for
-        // the client secret, hence according to the DCR specification we have to set the expiration time to 0.
-        // https://openid.net/specs/openid-connect-registration-1_0.html
+        /* Currently, we are not setting an expiration time for the client secret, hence according to the DCR
+        specification we have to set the expiration time to 0.
+        https://openid.net/specs/openid-connect-registration-1_0.html */
+        applicationDTO.setClientSecretExpiresAt(0L);
 
         return applicationDTO;
     }
@@ -164,7 +166,7 @@ public class DCRMUtils {
      * @return whether the correlation id is present
      */
     public static boolean isCorrelationIDPresent() {
-        return ThreadContext.get(DCRMConstants.CORRELATION_ID_MDC) != null;
+        return MDC.get(DCRMConstants.CORRELATION_ID_MDC) != null;
     }
 
     /**
@@ -175,7 +177,7 @@ public class DCRMUtils {
     public static String getCorrelation() {
         String ref = null;
         if (isCorrelationIDPresent()) {
-            ref = ThreadContext.get(DCRMConstants.CORRELATION_ID_MDC).toString();
+            ref = MDC.get(DCRMConstants.CORRELATION_ID_MDC);
         }
         return ref;
     }

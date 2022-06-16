@@ -458,7 +458,8 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
 
     private void handleRolesClaim(Map<String, Object> returnClaims) {
 
-        if (returnClaims.containsKey(ROLES) && IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
+        if (returnClaims.containsKey(ROLES) && IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()
+                && returnClaims.get(ROLES) instanceof String) {
             String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
             List<String> roles = Arrays.asList(returnClaims.get(ROLES).toString().split(multiAttributeSeparator));
 

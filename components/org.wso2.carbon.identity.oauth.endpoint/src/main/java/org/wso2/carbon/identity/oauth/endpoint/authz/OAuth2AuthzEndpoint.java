@@ -110,6 +110,8 @@ import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
@@ -235,6 +237,8 @@ public class OAuth2AuthzEndpoint {
 
         OAuth2AuthzEndpoint.openIDConnectClaimFilter = openIDConnectClaimFilter;
     }
+
+    private static Class<? extends OAuthAuthzRequest> oAuthAuthzRequestClass;
 
     @GET
     @Path("/")
@@ -420,8 +424,15 @@ public class OAuth2AuthzEndpoint {
             }
         }
 
-        String errorPageURL = getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST,
-                OAuth2ErrorCodes.OAuth2SubErrorCodes.UNEXPECTED_SERVER_ERROR, e.getMessage(), null,
+        String errorCode = StringUtils.isNotBlank(e.getError()) ? e.getError() : OAuth2ErrorCodes.INVALID_REQUEST;
+        String errorDescription = StringUtils.isNotBlank(e.getDescription()) ? e.getDescription() : e.getMessage();
+        String state = e.getState();
+
+        if (StringUtils.isBlank(oAuth2Parameters.getState()) && StringUtils.isNotBlank(state)) {
+            oAuth2Parameters.setState(state);
+        }
+        String errorPageURL = getErrorPageURL(oAuthMessage.getRequest(), errorCode,
+                OAuth2ErrorCodes.OAuth2SubErrorCodes.UNEXPECTED_SERVER_ERROR, errorDescription, null,
                 oAuth2Parameters);
         if (OAuthServerConfiguration.getInstance().isRedirectToRequestedRedirectUriEnabled()) {
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(errorPageURL)).build();
@@ -1587,7 +1598,7 @@ public class OAuth2AuthzEndpoint {
             setSPAttributeToRequest(oAuthMessage.getRequest(), validationResponse.getApplicationName(), tenantDomain);
         }
 
-        OAuthAuthzRequest oauthRequest = new CarbonOAuthAuthzRequest(oAuthMessage.getRequest());
+        OAuthAuthzRequest oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
 
         OAuth2Parameters params = new OAuth2Parameters();
         String sessionDataKey = UUIDGenerator.generateUUID();
@@ -1625,6 +1636,79 @@ public class OAuth2AuthzEndpoint {
         } catch (IdentityOAuth2Exception e) {
             return handleException(e);
         }
+    }
+
+    /**
+     * Method to check whether the configured OAuthAuthzRequestImplementation is the default implementation.
+     *
+     * @return boolean whether the default class name is configured.
+     */
+    private boolean isDefaultOAuthAuthzRequestClassConfigured() {
+
+        String oauthAuthzRequestClassName = OAuthServerConfiguration.getInstance().getOAuthAuthzRequestClassName();
+        return OAuthServerConfiguration.DEFAULT_OAUTH_AUTHZ_REQUEST_CLASSNAME.equals(oauthAuthzRequestClassName);
+    }
+
+    /**
+     * Load OAuthAuthzRequest class.
+     *
+     * @return OAuthAuthzRequest Class.
+     * @throws ClassNotFoundException when configured class name is invalid.
+     */
+    private static Class<? extends OAuthAuthzRequest> getOAuthAuthzRequestClass() throws ClassNotFoundException {
+
+        if (oAuthAuthzRequestClass == null) {
+
+            String oauthAuthzRequestClassName =
+                    OAuthServerConfiguration.getInstance().getOAuthAuthzRequestClassName();
+            oAuthAuthzRequestClass = (Class<? extends OAuthAuthzRequest>) Thread.currentThread()
+                    .getContextClassLoader().loadClass(oauthAuthzRequestClassName);
+
+        }
+        return oAuthAuthzRequestClass;
+    }
+
+    /**
+     * Returns an instance of OAuthAuthzRequest. If the configured classname is invalid the default implementation
+     * will be returned.
+     *
+     * @param request http servlet request.
+     * @return instance of OAuthAuthzRequest.
+     * @throws OAuthProblemException thrown when initializing the OAuthAuthzRequestClass instance.
+     * @throws OAuthSystemException thrown when initializing the OAuthAuthzRequestClass instance.
+     */
+    private OAuthAuthzRequest getOAuthAuthzRequest(HttpServletRequest request)
+            throws OAuthProblemException, OAuthSystemException {
+
+        OAuthAuthzRequest oAuthAuthzRequest;
+
+        if (isDefaultOAuthAuthzRequestClassConfigured()) {
+            oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
+        } else {
+            try {
+                Class<? extends OAuthAuthzRequest> clazz = getOAuthAuthzRequestClass();
+                // Validations will be performed when initializing the class instance.
+                Constructor<?> constructor = clazz.getConstructor(HttpServletRequest.class);
+                oAuthAuthzRequest = (OAuthAuthzRequest) constructor.newInstance(request);
+            } catch (InvocationTargetException e) {
+                // Handle OAuthProblemException & OAuthSystemException thrown from extended class.
+                if (e.getTargetException() instanceof OAuthProblemException) {
+                    throw (OAuthProblemException) e.getTargetException();
+                } else if (e.getTargetException() instanceof OAuthSystemException) {
+                    throw (OAuthSystemException) e.getTargetException();
+                } else {
+                    log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
+                            "Hence initiating the default implementation");
+                    oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
+                }
+            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
+                    NoSuchMethodException e) {
+                log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
+                        "Hence initiating the default implementation");
+                oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
+            }
+        }
+        return oAuthAuthzRequest;
     }
 
     /**
@@ -1970,9 +2054,15 @@ public class OAuth2AuthzEndpoint {
                     log.debug("Request Object Handling failed due to : " + e.getErrorCode() + " for client_id: "
                             + clientId + " of tenantDomain: " + params.getTenantDomain(), e);
                 }
-                return EndpointUtil.getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes
-                                .OAuth2SubErrorCodes.INVALID_REQUEST_OBJECT, e.getErrorCode(), e.getErrorMessage(),
-                        null, params);
+                if (StringUtils.isNotBlank(oAuthMessage.getRequest().getParameter(REQUEST_URI))) {
+                    return EndpointUtil.getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes
+                                    .OAuth2SubErrorCodes.INVALID_REQUEST_URI,
+                            e.getErrorCode(), e.getErrorMessage(), null, params);
+                } else {
+                    return EndpointUtil.getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes
+                                    .OAuth2SubErrorCodes.INVALID_REQUEST_OBJECT, e.getErrorCode(), e.getErrorMessage(),
+                            null, params);
+                }
             }
         }
 

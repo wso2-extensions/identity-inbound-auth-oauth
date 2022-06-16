@@ -55,7 +55,9 @@ import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getPrivateKey;
@@ -265,11 +267,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     /**
-     * Get the tenant domain to sign the the token.
+     * Get the tenant domain to sign the token.
      *
      * @param clientID          Client Id.
      * @param authenticatedUser Authenticated user.
-     * @return Tenant domain to sign thee token.
+     * @return Tenant domain to sign the token.
      * @throws IdentityOAuth2Exception If an error occurred while getting the application information by client id.
      */
     private String getSigningTenantDomain(String clientID, AuthenticatedUser authenticatedUser)
@@ -324,6 +326,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         try {
             String tenantDomain = resolveSigningTenantDomain(tokenContext, authorizationContext);
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+
+            // Add claim with signer tenant to jwt claims set.
+            jwtClaimsSet = setSignerRealm(tenantDomain, jwtClaimsSet);
 
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
@@ -724,5 +729,29 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSetBuilder.claim(TOKEN_BINDING_TYPE, tokReqMsgCtx.getTokenBinding().getBindingType());
         }
         return jwtClaimsSetBuilder.build();
+    }
+
+    /**
+     * Set tenant domain of user to the JWT token's realm claim if signed with user tenant.
+     * @param tenantDomain
+     * @param jwtClaimsSet
+     * @return
+     */
+    private JWTClaimsSet setSignerRealm(String tenantDomain, JWTClaimsSet jwtClaimsSet) {
+
+        Map<String, String> realm = new HashMap<>();
+        if (!OAuthServerConfiguration.getInstance().getUseSPTenantDomainValue()) {
+            realm.put(OAuthConstants.OIDCClaims.SIGNING_TENANT, tenantDomain);
+        }
+        if (realm.size() > 0) {
+            if (log.isDebugEnabled()) {
+                log.debug("Setting authorized user tenant domain : " + tenantDomain +
+                        " used for signing the token to the 'realm' claim of jwt token");
+            }
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
+            jwtClaimsSetBuilder.claim(OAuthConstants.OIDCClaims.REALM, realm);
+            jwtClaimsSet = jwtClaimsSetBuilder.build();
+        }
+        return jwtClaimsSet;
     }
 }

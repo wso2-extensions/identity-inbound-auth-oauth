@@ -26,6 +26,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -34,6 +35,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.util.JdbcUtils;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -84,6 +86,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     private static final int DEFAULT_TOKEN_PERSIST_RETRY_COUNT = 5;
     private static final String IDN_OAUTH2_ACCESS_TOKEN = "IDN_OAUTH2_ACCESS_TOKEN";
     private boolean isTokenCleanupFeatureEnabled = OAuthServerConfiguration.getInstance().isTokenCleanupEnabled();
+    private boolean isTenantQualifiedUrlsEnabled = IdentityTenantUtil.isTenantQualifiedUrlsEnabled();
+    private boolean isCrossTenantTokenInspectionAllowed
+            = OAuthServerConfiguration.getInstance().isCrossTenantTokenInspectionAllowed();
     private static final String DEFAULT_TOKEN_TO_SESSION_MAPPING = "DEFAULT";
 
     private static final Log log = LogFactory.getLog(AccessTokenDAOImpl.class);
@@ -875,6 +880,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             log.debug("Retrieving information of access token(hashed): " + DigestUtils.sha256Hex
                     (accessTokenIdentifier));
         }
+
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         AccessTokenDO dataDO = null;
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement prepStmt = null;
@@ -885,15 +892,35 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             if (includeExpired) {
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN_IDP_NAME;
+                    if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
+                            && tenantDomain != null) {
+                        sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_TENANT_ACCESS_TOKEN_IDP_NAME;
+                    } else {
+                        sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN_IDP_NAME;
+                    }
                 } else {
-                    sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN;
+                    if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
+                            && tenantDomain != null) {
+                        sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_TENANT_ACCESS_TOKEN;
+                    } else {
+                        sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN;
+                    }
                 }
             } else {
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME;
+                    if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
+                            && tenantDomain != null) {
+                        sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN_IDP_NAME;
+                    } else {
+                        sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME;
+                    }
                 } else {
-                    sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN;
+                    if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
+                            && tenantDomain != null) {
+                        sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN;
+                    } else {
+                        sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN;
+                    }
                 }
             }
 
@@ -903,6 +930,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt.setString(1,
                     getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(accessTokenIdentifier));
+            if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
+                    && tenantDomain != null) {
+                prepStmt.setInt(2, IdentityTenantUtil.getTenantId(tenantDomain));
+            }
             resultSet = prepStmt.executeQuery();
 
             int iterateId = 0;
@@ -914,7 +945,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String consumerKey = getPersistenceProcessor().getPreprocessedClientId(resultSet.getString(1));
                     String authorizedUser = resultSet.getString(2);
                     int tenantId = resultSet.getInt(3);
-                    String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
+                    tenantDomain = OAuth2Util.getTenantDomain(tenantId);
                     String userDomain = resultSet.getString(4);
                     String[] scope = OAuth2Util.buildScopeArray(resultSet.getString(5));
                     Timestamp issuedTime = resultSet.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
@@ -2251,7 +2282,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 // For JWT tokens, always issue a new token expiring the existing token.
                 if (oauthTokenIssuer.renewAccessTokenPerRequest(tokReqMsgCtx)) {
                     updateAccessTokenState(connection, latestActiveToken.getTokenId(), OAuthConstants.TokenStates
-                            .TOKEN_STATE_EXPIRED, UUID.randomUUID().toString(), userStoreDomain,
+                                    .TOKEN_STATE_EXPIRED, UUID.randomUUID().toString(), userStoreDomain,
                             latestActiveToken.getGrantType());
                     // Update token issued time make this token as latest token & try to store it again.
                     accessTokenDO.setIssuedTime(new Timestamp(new Date().getTime()));
@@ -2279,7 +2310,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 } else if (!(OAuth2Util.getAccessTokenExpireMillis(latestActiveToken) == 0)) {
                     // If the last active token in the database is expired, update the token status in the database.
                     updateAccessTokenState(connection, latestActiveToken.getTokenId(), OAuthConstants.TokenStates
-                            .TOKEN_STATE_EXPIRED, UUID.randomUUID().toString(), userStoreDomain,
+                                    .TOKEN_STATE_EXPIRED, UUID.randomUUID().toString(), userStoreDomain,
                             latestActiveToken.getGrantType());
 
                     // Update token issued time make this token as latest token & try to store it again.
@@ -2290,7 +2321,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 } else {
                     // Inactivate latest active token.
                     updateAccessTokenState(connection, latestActiveToken.getTokenId(), OAuthConstants.TokenStates
-                            .TOKEN_STATE_INACTIVE, UUID.randomUUID().toString(), userStoreDomain,
+                                    .TOKEN_STATE_INACTIVE, UUID.randomUUID().toString(), userStoreDomain,
                             latestActiveToken.getGrantType());
 
                     // Update token issued time make this token as latest token & try to store it again.

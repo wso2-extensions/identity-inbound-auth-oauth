@@ -55,7 +55,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -146,6 +146,16 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             }
         } else {
             amrValues = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getAuthenticationMethodReferences();
+            if (OAuthConstants.GrantTypes.REFRESH_TOKEN.equalsIgnoreCase(
+                    tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getGrantType())) {
+                AuthorizationGrantCacheEntry authorizationGrantCacheEntryFromToken =
+                        getAuthorizationGrantCacheEntryFromToken(tokenRespDTO.getAccessToken());
+                if (authorizationGrantCacheEntryFromToken != null) {
+                    if (isAuthTimeRequired(authorizationGrantCacheEntryFromToken)) {
+                        authTime = authorizationGrantCacheEntryFromToken.getAuthTime();
+                    }
+                }
+            }
             idpSessionKey = getIdpSessionKey(accessToken);
         }
 
@@ -286,6 +296,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                               String signingTenantDomain) throws IdentityOAuth2Exception {
 
         if (oAuthAppDO.isIdTokenEncryptionEnabled()) {
+            checkIfPublicCertConfiguredForEncryption(clientId, spTenantDomain);
             setupEncryptionAlgorithms(oAuthAppDO, clientId);
             return OAuth2Util.encryptJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain,
                     encryptionAlgorithm, encryptionMethod, spTenantDomain,
@@ -679,9 +690,13 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
      * +
      */
     private List<String> translateAmrToResponse(List<String> internalList) {
-        Set<String> result = new HashSet<>();
+        Set<String> result = new LinkedHashSet<>();
         for (String internalValue : internalList) {
-            result.addAll(translateToResponse(internalValue));
+            List<String> translatedToResponse = translateToResponse(internalValue);
+            if (translatedToResponse.isEmpty()) {
+                continue;
+            }
+            result.addAll(translatedToResponse);
         }
         return new ArrayList<>(result);
     }
@@ -693,6 +708,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (authenticationMethodNameTranslator != null) {
             Set<String> externalAmrSet = authenticationMethodNameTranslator
                     .translateToExternalAmr(internalValue, INBOUND_AUTH2_TYPE);
+            // When AMR mapping is not available.
             if (externalAmrSet == null || externalAmrSet.isEmpty()) {
                 if (log.isDebugEnabled()) {
                     log.debug("There was no mapping found to translate AMR from internal to external URI. Internal " +
@@ -700,6 +716,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 }
                 result = new ArrayList<>();
                 result.add(internalValue);
+            } else if (externalAmrSet.contains(String.valueOf(Character.MIN_VALUE))) {
+                // Authentication Method needs to be hidden from the ID Token.
+                return Collections.emptyList();
             } else {
                 result = new ArrayList<>(externalAmrSet);
             }
@@ -796,5 +815,31 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             log.debug("Session context identifier not available when retrieving using the access token.");
         }
         return idpSessionKey;
+    }
+
+    /**
+     * Check the requirement of having a configured public certificate or JWKS in SP and throw an exception with an
+     * error message if the public certificate or JWKS in SP is not configured.
+     *
+     * @param clientId     Client ID of the service provider.
+     * @param tenantDomain Tenant domain of the service provider.
+     * @throws IdentityOAuth2Exception Error when a JWKS endpoint or the certificate is not configured.
+     */
+    private void checkIfPublicCertConfiguredForEncryption(String clientId, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        try {
+            if (StringUtils.isBlank(OAuth2Util.getSPJwksUrl(clientId, tenantDomain))) {
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Jwks uri is not configured for the service provider associated with " +
+                            "client_id: %s , Checking for x509 certificate.", clientId));
+                }
+                OAuth2Util.getX509CertOfOAuthApp(clientId, tenantDomain);
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw new IdentityOAuth2Exception("Cannot encrypt the ID token as the service Provider with client_id: "
+                    + clientId + " of tenantDomain: " + tenantDomain + " does not have a public certificate or a " +
+                    "JWKS endpoint configured.", e);
+        }
     }
 }
