@@ -436,10 +436,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     @Test(dataProvider = "provideParams", groups = "testWithConnection")
     public void testAuthorize(Object flowStatusObject, String[] clientId, String sessionDataKayConsent,
                               String toCommonAuth, String scope, String sessionDataKey, Exception e, int expectedStatus,
-                              String expectedError, String responseMode, boolean useOAuthResponseJspPageValue)
+                              String expectedError, String responseMode, boolean isOAuthResponseJspPageAvailable)
             throws Exception {
 
         AuthenticatorFlowStatus flowStatus = (AuthenticatorFlowStatus) flowStatusObject;
+        mockOAuthServerConfiguration();
 
         Map<String, String[]> requestParams = new HashMap<>();
         Map<String, Object> requestAttributes = new HashMap<>();
@@ -452,12 +453,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         requestParams.put(OAuthConstants.OAuth20Params.SCOPE, new String[]{scope});
         if (StringUtils.equals(responseMode, RESPONSE_MODE_FORM_POST)) {
             requestParams.put(RESPONSE_MODE, new String[]{RESPONSE_MODE_FORM_POST});
-            Field useOAuthResponseJspPage = oAuth2AuthzEndpoint.getClass().getDeclaredField("useOAuthResponseJspPage");
-            useOAuthResponseJspPage.setAccessible(true);
-            Field modifiersField = Field.class.getDeclaredField("modifiers");
-            modifiersField.setAccessible(true);
-            modifiersField.setInt(useOAuthResponseJspPage, useOAuthResponseJspPage.getModifiers() & ~Modifier.FINAL);
-            useOAuthResponseJspPage.set(null, useOAuthResponseJspPageValue);
+            when(oAuthServerConfiguration.isOAuthResponseJspPageAvailable())
+                    .thenReturn(isOAuthResponseJspPageAvailable);
         }
 
         requestAttributes.put(FrameworkConstants.RequestParams.FLOW_STATUS, flowStatus);
@@ -500,8 +497,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(sessionDataCache.getValueFromCache(consentDataCacheKey)).thenReturn(consentCacheEntry);
         when(loginCacheEntry.getoAuth2Parameters()).thenReturn(setOAuth2Parameters(
                 new HashSet<>(Collections.singletonList(OAuthConstants.Scope.OPENID)), APP_NAME, null, null));
-
-        mockOAuthServerConfiguration();
 
         mockEndpointUtil(false);
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
@@ -562,7 +557,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             }
         } else {
             if (expectedError != null) {
-                if (useOAuthResponseJspPageValue) {
+                if (isOAuthResponseJspPageAvailable) {
                     assertEquals(response.getStatus(), 200);
                 } else {
                     // Check if the error response is of form post mode
@@ -1575,19 +1570,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         createErrorFormPage.setAccessible(true);
         value = (String) createErrorFormPage.invoke(authzEndpointObject, APP_REDIRECT_URL, oAuthProblemException);
         assertNotNull(value, "Form post error page is null");
-    }
-
-    @Test(dataProvider = "providePathExistsData")
-    public void testIsOAuthResponseJspPageAvailable(String carbonHome, boolean fileExists) throws Exception {
-
-        spy(CarbonUtils.class);
-        doReturn(carbonHome).when(CarbonUtils.class, "getCarbonHome");
-
-        Method isOAuthResponseJspPageAvailable = authzEndpointObject.getClass()
-                .getDeclaredMethod("isOAuthResponseJspPageAvailable");
-        isOAuthResponseJspPageAvailable.setAccessible(true);
-        boolean useOAuthResponseJspPage = (boolean) isOAuthResponseJspPageAvailable.invoke(authzEndpointObject);
-        assertEquals(useOAuthResponseJspPage, fileExists, "useOAuthResponseJspPage value is incorrect");
     }
 
     @DataProvider(name = "provideSendRequestToFrameworkData")

@@ -129,7 +129,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Scanner;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.UUID;
@@ -207,7 +206,6 @@ public class OAuth2AuthzEndpoint {
     private static final String CODE_CHALLENGE_METHOD = "code_challenge_method";
 
     private static final String formPostRedirectPage = getFormPostRedirectPage();
-    private static final boolean useOAuthResponseJspPage = isOAuthResponseJspPageAvailable();
     private static final String DISPLAY_NAME = "DisplayName";
     private static final String ID_TOKEN = "id_token";
     private static final String ACCESS_CODE = "code";
@@ -403,21 +401,10 @@ public class OAuth2AuthzEndpoint {
 
         if (StringUtils.equals(oAuthMessage.getRequest().getParameter(RESPONSE_MODE), RESPONSE_MODE_FORM_POST)) {
             e.state(retrieveStateForErrorURL(oAuthMessage.getRequest(), oAuth2Parameters));
-            if (useOAuthResponseJspPage) {
-                try {
-                    HttpServletRequest request = oAuthMessage.getRequest();
-                    HttpServletResponse response = oAuthMessage.getResponse();
-                    String params = buildErrorParams(e);
-                    request.setAttribute(PARAMETERS, params);
-                    request.setAttribute(FORM_POST_REDIRECT_URI, oAuthMessage.getRequest().getParameter(REDIRECT_URI));
-                    ServletContext authEndpoint = request.getServletContext().getContext(AUTHENTICATION_ENDPOINT);
-                    RequestDispatcher requestDispatcher = authEndpoint.getRequestDispatcher(OAUTH_RESPONSE_JSP_PAGE);
-                    requestDispatcher.forward(request, response);
-                    return Response.ok().build();
-                } catch (ServletException | IOException exception) {
-                    log.error("Error occurred while forwarding the request to oauth_response.jsp page.", exception);
-                    return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
-                }
+            if (OAuthServerConfiguration.getInstance().isOAuthResponseJspPageAvailable()) {
+                String params = buildErrorParams(e);
+                String redirectURI = oAuthMessage.getRequest().getParameter(REDIRECT_URI);
+                return forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
             } else {
                 return Response.ok(createErrorFormPage(oAuthMessage.getRequest().getParameter(REDIRECT_URI), e))
                         .build();
@@ -461,25 +448,14 @@ public class OAuth2AuthzEndpoint {
                 "identity", "pages", "oauth_response.html");
         if (Files.exists(path)) {
             try {
-                return new Scanner(Files.newInputStream(path), "UTF-8").useDelimiter("\\A").next();
+                return new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
             } catch (IOException e) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Failed to find OAuth From post response page in : " + path.toString());
+                    log.debug("Failed to find OAuth From post response page in : " + path);
                 }
             }
         }
         return null;
-    }
-
-    private static boolean isOAuthResponseJspPageAvailable() {
-
-        java.nio.file.Path path = Paths.get(CarbonUtils.getCarbonHome(), "repository", "deployment",
-                "server", "webapps", "authenticationendpoint", "oauth_response.jsp");
-        if (Files.exists(path)) {
-            return true;
-        } else {
-            return false;
-        }
     }
 
     private Response handleResponseFromConsent(OAuthMessage oAuthMessage) throws OAuthSystemException,
@@ -769,21 +745,10 @@ public class OAuth2AuthzEndpoint {
                     redirectURL, oAuthMessage.getSessionDataCacheEntry());
         }
 
-        if (useOAuthResponseJspPage) {
-            try {
-                HttpServletRequest request = oAuthMessage.getRequest();
-                HttpServletResponse response = oAuthMessage.getResponse();
-                String params = buildParams(redirectURL, authenticatedIdPs, sessionStateValue);
-                request.setAttribute(PARAMETERS, params);
-                request.setAttribute(FORM_POST_REDIRECT_URI, oauth2Params.getRedirectURI());
-                ServletContext authEndpoint = request.getServletContext().getContext(AUTHENTICATION_ENDPOINT);
-                RequestDispatcher requestDispatcher = authEndpoint.getRequestDispatcher(OAUTH_RESPONSE_JSP_PAGE);
-                requestDispatcher.forward(request, response);
-                return Response.ok().build();
-            } catch (ServletException | IOException e) {
-                log.error("Error occurred while forwarding the request to oauth_response.jsp page.", e);
-                return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
-            }
+        if (OAuthServerConfiguration.getInstance().isOAuthResponseJspPageAvailable()) {
+            String params = buildParams(redirectURL, authenticatedIdPs, sessionStateValue);
+            String redirectURI = oauth2Params.getRedirectURI();
+            return forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
         } else {
             return Response.ok(createFormPage(redirectURL, oauth2Params.getRedirectURI(),
                     authenticatedIdPs, sessionStateValue)).build();
@@ -794,21 +759,10 @@ public class OAuth2AuthzEndpoint {
                                                      OAuthProblemException oauthProblemException) {
 
         OAuth2Parameters oauth2Params = oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters();
-        if (useOAuthResponseJspPage) {
-            try {
-                HttpServletRequest request = oAuthMessage.getRequest();
-                HttpServletResponse response = oAuthMessage.getResponse();
-                String params = buildErrorParams(oauthProblemException);
-                request.setAttribute(PARAMETERS, params);
-                request.setAttribute(FORM_POST_REDIRECT_URI, oauth2Params.getRedirectURI());
-                ServletContext authEndpoint = request.getServletContext().getContext(AUTHENTICATION_ENDPOINT);
-                RequestDispatcher requestDispatcher = authEndpoint.getRequestDispatcher(OAUTH_RESPONSE_JSP_PAGE);
-                requestDispatcher.forward(request, response);
-                return Response.ok().build();
-            } catch (ServletException | IOException exception) {
-                log.error("Error occurred while forwarding the request to oauth_response.jsp page.", exception);
-                return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
-            }
+        if (OAuthServerConfiguration.getInstance().isOAuthResponseJspPageAvailable()) {
+            String params = buildErrorParams(oauthProblemException);
+            String redirectURI = oauth2Params.getRedirectURI();
+            return forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
         } else {
             return Response.ok(createErrorFormPage(oauth2Params.getRedirectURI(), oauthProblemException)).build();
         }
@@ -1020,21 +974,10 @@ public class OAuth2AuthzEndpoint {
                     getLoggedInUser(oAuthMessage).getAuthenticatedSubjectIdentifier(),
                     redirectURL, oAuthMessage.getSessionDataCacheEntry());
         }
-        if (useOAuthResponseJspPage) {
-            try {
-                HttpServletRequest request = oAuthMessage.getRequest();
-                HttpServletResponse response = oAuthMessage.getResponse();
-                String params = buildParams(redirectURL, StringUtils.EMPTY, sessionStateValue);
-                request.setAttribute(PARAMETERS, params);
-                request.setAttribute(FORM_POST_REDIRECT_URI, oauth2Params.getRedirectURI());
-                ServletContext authEndpoint = request.getServletContext().getContext(AUTHENTICATION_ENDPOINT);
-                RequestDispatcher requestDispatcher = authEndpoint.getRequestDispatcher(OAUTH_RESPONSE_JSP_PAGE);
-                requestDispatcher.forward(request, response);
-                return Response.ok().build();
-            } catch (ServletException | IOException e) {
-                log.error("Error occurred while forwarding the request to oauth_response.jsp page.", e);
-                return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
-            }
+        if (OAuthServerConfiguration.getInstance().isOAuthResponseJspPageAvailable()) {
+            String params = buildParams(redirectURL, StringUtils.EMPTY, sessionStateValue);
+            String redirectURI = oauth2Params.getRedirectURI();
+            return forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
         } else {
             return Response.ok(createFormPage(redirectURL, oauth2Params.getRedirectURI(),
                     StringUtils.EMPTY, sessionStateValue)).build();
@@ -3660,5 +3603,22 @@ public class OAuth2AuthzEndpoint {
         }
 
         return pkceChallengeMethod;
+    }
+
+    private Response forwardToOauthResponseJSP(OAuthMessage oAuthMessage, String params, String redirectURI) {
+
+        try {
+            HttpServletRequest request = oAuthMessage.getRequest();
+            HttpServletResponse response = oAuthMessage.getResponse();
+            request.setAttribute(PARAMETERS, params);
+            request.setAttribute(FORM_POST_REDIRECT_URI, redirectURI);
+            ServletContext authEndpoint = request.getServletContext().getContext(AUTHENTICATION_ENDPOINT);
+            RequestDispatcher requestDispatcher = authEndpoint.getRequestDispatcher(OAUTH_RESPONSE_JSP_PAGE);
+            requestDispatcher.forward(request, response);
+            return Response.ok().build();
+        } catch (ServletException | IOException exception) {
+            log.error("Error occurred while forwarding the request to oauth_response.jsp page.", exception);
+            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
+        }
     }
 }

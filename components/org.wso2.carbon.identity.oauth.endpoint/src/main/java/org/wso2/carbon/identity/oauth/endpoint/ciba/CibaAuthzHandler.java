@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthRequestWrapper;
+import org.wso2.carbon.identity.oauth.ciba.wrappers.CibaAuthResponseWrapper;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
@@ -78,6 +79,25 @@ public class CibaAuthzHandler {
 
         // Fire authorize request and forget.
         fireAuthzReq(cibaAuthRequestWrapper, response);
+    }
+
+    /**
+     * Initiate the  authorize request.
+     *
+     * @param requestWrapper  Authentication request wrapper.
+     * @param responseWrapper AuthenticationResponse wrapper.
+     * @deprecated use {@link #fireAuthzReq(CibaAuthRequestWrapper, HttpServletResponse)} instead.
+     */
+    @Deprecated
+    public void fireAuthzReq(CibaAuthRequestWrapper requestWrapper, CibaAuthResponseWrapper responseWrapper)
+            throws CibaAuthFailureException {
+
+        try {
+            authzEndPoint.authorize(requestWrapper, responseWrapper);
+        } catch (URISyntaxException | InvalidRequestParentException e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
+                    "Error in making internal authorization call.", e);
+        }
     }
 
     /**

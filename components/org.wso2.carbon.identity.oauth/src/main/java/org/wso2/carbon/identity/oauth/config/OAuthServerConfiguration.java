@@ -66,6 +66,8 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
 import org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl;
 import org.wso2.carbon.utils.CarbonUtils;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -127,6 +129,7 @@ public class OAuthServerConfiguration {
     private static String oidcDiscoveryUrl = null;
     private static String oauth2ConsentPageUrl = null;
     private static String oauth2ErrorPageUrl = null;
+    private static boolean isOAuthResponseJspPageAvailable = false;
     private long authorizationCodeValidityPeriodInSeconds = 300;
     private long userAccessTokenValidityPeriodInSeconds = 3600;
     private long applicationAccessTokenValidityPeriodInSeconds = 3600;
@@ -456,6 +459,9 @@ public class OAuthServerConfiguration {
 
         // Read config for cross tenant allow.
         parseAllowCrossTenantIntrospection(oauthElem);
+
+        // Set the availability of oauth_response.jsp page.
+        setOAuthResponseJspPageAvailable();
     }
 
     /**
@@ -3187,6 +3193,23 @@ public class OAuthServerConfiguration {
     public boolean isCrossTenantTokenInspectionAllowed() {
 
         return allowCrossTenantIntrospection;
+    }
+
+    private static void setOAuthResponseJspPageAvailable() {
+
+        java.nio.file.Path path = Paths.get(CarbonUtils.getCarbonHome(), "repository", "deployment",
+                "server", "webapps", "authenticationendpoint", "oauth_response.jsp");
+        isOAuthResponseJspPageAvailable = Files.exists(path);
+    }
+
+    /**
+     * Check if the oauth_response.jsp page is available.
+     *
+     * @return true if the oauth_response.jsp page is available.
+     */
+    public boolean isOAuthResponseJspPageAvailable() {
+
+        return isOAuthResponseJspPageAvailable;
     }
 
     /**
