@@ -205,7 +205,7 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
 
             List<String> userConsentedClaimUris = getUserConsentedLocalClaimURIs(authenticatedUser, serviceProvider);
             List<String> userConsentClaimUrisInOIDCDialect = getOIDCClaimURIs(userConsentedClaimUris, spTenantDomain);
-            handleConsentOfAddressClaims(spTenantDomain, userClaims, userConsentClaimUrisInOIDCDialect);
+            handleConsentOfAddressClaim(spTenantDomain, userClaims, userConsentClaimUrisInOIDCDialect);
 
             return userClaims.keySet().stream()
                     .filter(userConsentClaimUrisInOIDCDialect::contains)
@@ -221,14 +221,14 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
     }
 
     /**
-     * Handles filtering claims of the address scope based on user consent as they are added as
-     * sub-claims of address claim.
+     * Handles filtering the fields of address claim from the user consented claims.
+     * https://openid.net/specs/openid-connect-core-1_0.html#AddressClaim
      *
      * @param spTenantDomain Tenant domain of the SP.
      * @param userClaims User attributes available for the SP.
      * @param userConsentClaimUrisInOIDCDialect Claim URIs that received user consent, in OIDC dialect.
      */
-    private void handleConsentOfAddressClaims(String spTenantDomain, Map<String, Object> userClaims,
+    private void handleConsentOfAddressClaim(String spTenantDomain, Map<String, Object> userClaims,
                                               List<String> userConsentClaimUrisInOIDCDialect) {
 
         boolean hasAddressClaims = false;
@@ -242,6 +242,10 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
                 if (userConsentClaimUrisInOIDCDialect.contains(addressScopeClaimEntry)) {
                     hasAddressClaims = true;
                     userConsentClaimUrisInOIDCDialect.remove(addressScopeClaimEntry);
+                    if (log.isDebugEnabled()) {
+                        log.debug("Consent available for sub-claim: " + addressScopeClaimEntry +
+                                " of address claim.");
+                    }
                 } else {
                     if (consentedAddressClaims.containsKey(addressScopeClaimEntry)) {
                         consentedAddressClaims.remove(addressScopeClaimEntry);
@@ -253,7 +257,8 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
             userConsentClaimUrisInOIDCDialect.add(ADDRESS);
             userClaims.put(ADDRESS, consentedAddressClaims);
             if (log.isDebugEnabled()) {
-                log.debug("Claims under address scope are added to the ID token as address claims.");
+                log.debug("Adding sub-claims: " + consentedAddressClaims.keySet() + " to the ID token " +
+                        "under the address claim.");
             }
         }
     }
@@ -270,7 +275,7 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         Map<String, List<String>> scopeClaimsMap = new HashMap<>();
         int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
 
-        //load oidc scopes and mapped claims from the cache or db.
+        // Load OIDC scopes and mapped claims from the cache or db.
         List<ScopeDTO> oidcScopesList = getOIDCScopes(tenantId);
         for (ScopeDTO scope : oidcScopesList) {
             scopeClaimsMap.put(scope.getName(), Arrays.asList(scope.getClaim()));
