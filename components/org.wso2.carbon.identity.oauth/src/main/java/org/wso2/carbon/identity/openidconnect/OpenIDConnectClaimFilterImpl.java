@@ -205,30 +205,7 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
 
             List<String> userConsentedClaimUris = getUserConsentedLocalClaimURIs(authenticatedUser, serviceProvider);
             List<String> userConsentClaimUrisInOIDCDialect = getOIDCClaimURIs(userConsentedClaimUris, spTenantDomain);
-
-            boolean hasAddressClaims = false;
-            JSONObject consentedAddressClaims = new JSONObject();
-            Map<String, List<String>> scopeClaimsMap = getOIDCScopeClaimMap(spTenantDomain);
-
-            if (userClaims.containsKey(ADDRESS) && MapUtils.isNotEmpty(scopeClaimsMap)) {
-                List<String> addressScopeClaimUris = getAddressScopeClaimUris(scopeClaimsMap);
-                consentedAddressClaims = (JSONObject) userClaims.get(ADDRESS);
-                for (String addressScopeClaimEntry : addressScopeClaimUris) {
-                    if (userConsentClaimUrisInOIDCDialect.contains(addressScopeClaimEntry)) {
-                        hasAddressClaims = true;
-                        userConsentClaimUrisInOIDCDialect.remove(addressScopeClaimEntry);
-                    } else {
-                        if (consentedAddressClaims.containsKey(addressScopeClaimEntry)) {
-                            consentedAddressClaims.remove(addressScopeClaimEntry);
-                        }
-                    }
-                }
-            }
-
-            if (hasAddressClaims) {
-                userConsentClaimUrisInOIDCDialect.add(ADDRESS);
-                userClaims.put(ADDRESS, consentedAddressClaims);
-            }
+            handleConsentOfAddressClaims(spTenantDomain, userClaims, userConsentClaimUrisInOIDCDialect);
 
             return userClaims.keySet().stream()
                     .filter(userConsentClaimUrisInOIDCDialect::contains)
@@ -241,6 +218,44 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         }
 
         return userClaims;
+    }
+
+    /**
+     * Handles filtering claims of the address scope based on user consent as they are added as
+     * sub-claims of address claim.
+     *
+     * @param spTenantDomain Tenant domain of the SP.
+     * @param userClaims User attributes available for the SP.
+     * @param userConsentClaimUrisInOIDCDialect Claim URIs that received user consent, in OIDC dialect.
+     */
+    private void handleConsentOfAddressClaims(String spTenantDomain, Map<String, Object> userClaims,
+                                              List<String> userConsentClaimUrisInOIDCDialect) {
+
+        boolean hasAddressClaims = false;
+        JSONObject consentedAddressClaims = new JSONObject();
+        Map<String, List<String>> scopeClaimsMap = getOIDCScopeClaimMap(spTenantDomain);
+
+        if (userClaims.containsKey(ADDRESS) && MapUtils.isNotEmpty(scopeClaimsMap)) {
+            List<String> addressScopeClaimUris = getAddressScopeClaimUris(scopeClaimsMap);
+            consentedAddressClaims = (JSONObject) userClaims.get(ADDRESS);
+            for (String addressScopeClaimEntry : addressScopeClaimUris) {
+                if (userConsentClaimUrisInOIDCDialect.contains(addressScopeClaimEntry)) {
+                    hasAddressClaims = true;
+                    userConsentClaimUrisInOIDCDialect.remove(addressScopeClaimEntry);
+                } else {
+                    if (consentedAddressClaims.containsKey(addressScopeClaimEntry)) {
+                        consentedAddressClaims.remove(addressScopeClaimEntry);
+                    }
+                }
+            }
+        }
+        if (hasAddressClaims) {
+            userConsentClaimUrisInOIDCDialect.add(ADDRESS);
+            userClaims.put(ADDRESS, consentedAddressClaims);
+            if (log.isDebugEnabled()) {
+                log.debug("Claims under address scope are added to the ID token as address claims.");
+            }
+        }
     }
 
     /**
