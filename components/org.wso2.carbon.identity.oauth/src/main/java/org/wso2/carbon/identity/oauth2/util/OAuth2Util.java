@@ -4042,6 +4042,16 @@ public class OAuth2Util {
     }
 
     /**
+     * Check whether the CONSENTED_TOKEN column is available in IDN_OAUTH2_ACCESS_TOKEN table.
+     *
+     * @return True if the column is available.
+     */
+    public static boolean checkConsentedTokenColumnAvailable() {
+
+        return FrameworkUtils.isTableColumnExists("IDN_OAUTH2_ACCESS_TOKEN", "CONSENTED_TOKEN");
+    }
+
+    /**
      * This can be used to load the oauth scope permissions bindings in oauth-scope-bindings.xml file.
      */
     public static void initiateOAuthScopePermissionsBindings(int tenantId) {

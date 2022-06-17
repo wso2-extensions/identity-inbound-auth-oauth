@@ -193,6 +193,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         tokenReqMsgCtxt.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
         tokenReqMsgCtxt.addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(tokenReqMsgCtxt));
+        if (tokenRespDTO.getIsConsentedToken()) {
+            tokenReqMsgCtxt.setConsentedToken(tokenRespDTO.getIsConsentedToken());
+        }
         jwtClaimsSetBuilder.subject(subjectClaim);
         JWTClaimsSet jwtClaimsSet = handleOIDCCustomClaims(tokenReqMsgCtxt, jwtClaimsSetBuilder);
 

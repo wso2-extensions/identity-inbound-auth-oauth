@@ -92,6 +92,7 @@ import javax.xml.stream.XMLStreamReader;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabled;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkConsentedTokenColumnAvailable;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
 
 /**
@@ -296,6 +297,18 @@ public class OAuth2ServiceComponent {
                         "Setting isIDPIdColumnEnabled to false.");
             }
             OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(false);
+        }
+
+        boolean isConsentedTokenColumnAvailable = checkConsentedTokenColumnAvailable();
+        OAuth2ServiceComponentHolder.setConsentedTokenColumnEnabled(isConsentedTokenColumnAvailable);
+        if (log.isDebugEnabled()) {
+            if (isConsentedTokenColumnAvailable) {
+                log.debug("CONSENTED_TOKEN column is available in IDN_OAUTH2_ACCESS_TOKEN table. Hence setting " +
+                        "consentedColumnAvailable to true.");
+            } else {
+                log.debug("CONSENTED_TOKEN column is not available in IDN_OAUTH2_ACCESS_TOKEN table. Hence " +
+                        "setting consentedColumnAvailable to false.");
+            }
         }
     }
 

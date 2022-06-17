@@ -52,6 +52,7 @@ public class OAuth2ServiceComponentHolder {
     private static List<OAuthClientAuthenticator> authenticationHandlers = new ArrayList<>();
     private static List<ClaimProvider> claimProviders = new ArrayList<>();
     private static boolean idpIdColumnEnabled = false;
+    private static boolean consentedTokenColumnEnabled = false;
     private List<TokenBinder> tokenBinders = new ArrayList<>();
     private OAuthAdminServiceImpl oauthAdminService;
     private static AuthenticationDataPublisher authenticationDataPublisherProxy;
@@ -120,6 +121,16 @@ public class OAuth2ServiceComponentHolder {
     public static void setIDPIdColumnEnabled(boolean idpIdColumnEnabled) {
 
         OAuth2ServiceComponentHolder.idpIdColumnEnabled = idpIdColumnEnabled;
+    }
+
+    public static boolean isConsentedTokenColumnEnabled() {
+
+        return consentedTokenColumnEnabled;
+    }
+
+    public static void setConsentedTokenColumnEnabled(boolean consentedTokenColumnEnabled) {
+
+        OAuth2ServiceComponentHolder.consentedTokenColumnEnabled = consentedTokenColumnEnabled;
     }
 
     public static RegistryService getRegistryService() {

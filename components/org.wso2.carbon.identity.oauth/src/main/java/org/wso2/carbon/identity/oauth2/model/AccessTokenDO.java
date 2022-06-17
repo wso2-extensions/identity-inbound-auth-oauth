@@ -50,6 +50,8 @@ public class AccessTokenDO extends CacheEntry {
 
     private String grantType;
 
+    private boolean isConsentedToken;
+
     private Timestamp issuedTime;
 
     private Timestamp refreshTokenIssuedTime;
@@ -279,6 +281,16 @@ public class AccessTokenDO extends CacheEntry {
 
     public void setGrantType(String grantType) {
         this.grantType = grantType;
+    }
+
+    public boolean isConsentedToken() {
+
+        return isConsentedToken;
+    }
+
+    public void setIsConsentedToken(boolean isConsentedGrant) {
+
+        this.isConsentedToken = isConsentedGrant;
     }
 
     public TokenBinding getTokenBinding() {
