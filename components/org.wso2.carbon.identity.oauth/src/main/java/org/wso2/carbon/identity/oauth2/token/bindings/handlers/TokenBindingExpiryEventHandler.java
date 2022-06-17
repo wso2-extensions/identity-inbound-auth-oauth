@@ -284,7 +284,10 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                     && accessTokenDO.getAuthzUser() != null) {
                 AuthenticatedUser authenticatedUser = new AuthenticatedUser(accessTokenDO.getAuthzUser());
                 try {
-                    if (StringUtils.equalsIgnoreCase(userId, authenticatedUser.getUserId())) {
+                    if (authenticatedUser.isFederatedUser()
+                            && StringUtils.equalsIgnoreCase(user.getUserName(), authenticatedUser.getUserName())) {
+                        revokeFederatedTokens(consumerKey, user, accessTokenDO, tokenBindingReference);
+                    } else if (StringUtils.equalsIgnoreCase(userId, authenticatedUser.getUserId())) {
                         revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
                     }
                 } catch (UserIdNotFoundException e) {
@@ -360,6 +363,25 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser(), OAuth2Util.buildScopeString
                 (accessTokenDO.getScope()));
         OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser());
+        OAuthUtil.clearOAuthCache(accessTokenDO);
+        OAuthUtil.invokePreRevocationBySystemListeners(accessTokenDO, Collections.emptyMap());
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()}, OAuth2Util.isHashEnabled());
+        OAuthUtil.invokePostRevocationBySystemListeners(accessTokenDO, Collections.emptyMap());
+    }
+
+    private void revokeFederatedTokens(String consumerKey, AuthenticatedUser user, AccessTokenDO accessTokenDO,
+                                       String tokenBindingReference) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Revoking tokens for the application with consumerKey:" + consumerKey + " for the user: "
+                    + user.getLoggableUserId());
+        }
+        OAuthUtil.clearOAuthCache(consumerKey, user, OAuth2Util.buildScopeString
+                (accessTokenDO.getScope()), tokenBindingReference);
+        OAuthUtil.clearOAuthCache(consumerKey, user, OAuth2Util.buildScopeString
+                (accessTokenDO.getScope()));
+        OAuthUtil.clearOAuthCache(consumerKey, user);
         OAuthUtil.clearOAuthCache(accessTokenDO);
         OAuthUtil.invokePreRevocationBySystemListeners(accessTokenDO, Collections.emptyMap());
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
