@@ -1012,8 +1012,8 @@
         <spring-web.version>4.3.29.RELEASE</spring-web.version>
         <swagger-jaxrs.version>1.6.2</swagger-jaxrs.version>
         <!-- httpclient dependency Version-->
-        <http.client.version>4.3.6.wso2v1</http.client.version>
-        <http.core.version>4.3.3.wso2v1</http.core.version>
+        <http.client.version>4.5.13.wso2v1</http.client.version>
+        <http.core.version>4.4.15.wso2v1</http.core.version>
 
         <!--Test Dependencies-->
         <junit.version>4.13.1</junit.version>
