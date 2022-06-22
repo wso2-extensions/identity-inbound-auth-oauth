@@ -199,6 +199,13 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
 
             String tenantAwareUserName = MultitenantUtils.getTenantAwareUsername(username);
             String userTenantDomain = MultitenantUtils.getTenantDomain(username);
+
+            if (OAuth2Util.checkPasswordResetEnforcementEnabled()) {
+                if (OAuth2Util.hadPasswordExpired(userTenantDomain, tenantAwareUserName)){
+                    throw new IdentityOAuth2Exception("Password expired for user with username: " + tenantAwareUserName);
+                }
+            }
+
             ResolvedUserResult resolvedUserResult =
                     FrameworkUtils.processMultiAttributeLoginIdentification(tenantAwareUserName, userTenantDomain);
             String userId = null;
