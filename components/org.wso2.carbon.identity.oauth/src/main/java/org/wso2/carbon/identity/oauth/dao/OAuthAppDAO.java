@@ -1357,7 +1357,7 @@ public class OAuthAppDAO {
     private void handleRequestForANonExistingConsumerKey(String consumerKey) throws InvalidOAuthClientException {
         String message = "application.not.found";
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Cannot find an application associated with the given consumer key.");
+            LOG.debug("Cannot find an application associated with the given consumer key: " + consumerKey);
         }
         throw new InvalidOAuthClientException(message);
     }

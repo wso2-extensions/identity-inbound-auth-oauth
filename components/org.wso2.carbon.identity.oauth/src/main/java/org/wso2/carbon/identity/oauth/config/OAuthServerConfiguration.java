@@ -66,6 +66,8 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
 import org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl;
 import org.wso2.carbon.utils.CarbonUtils;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -127,6 +129,7 @@ public class OAuthServerConfiguration {
     private static String oidcDiscoveryUrl = null;
     private static String oauth2ConsentPageUrl = null;
     private static String oauth2ErrorPageUrl = null;
+    private static boolean isOAuthResponseJspPageAvailable = false;
     private long authorizationCodeValidityPeriodInSeconds = 300;
     private long userAccessTokenValidityPeriodInSeconds = 3600;
     private long applicationAccessTokenValidityPeriodInSeconds = 3600;
@@ -150,6 +153,7 @@ public class OAuthServerConfiguration {
     private boolean assertionsUserNameEnabled = false;
     private boolean accessTokenPartitioningEnabled = false;
     private boolean redirectToRequestedRedirectUriEnabled = true;
+    private boolean allowCrossTenantIntrospection = true;
     private String accessTokenPartitioningDomains = null;
     private TokenPersistenceProcessor persistenceProcessor = null;
     private Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
@@ -452,6 +456,12 @@ public class OAuthServerConfiguration {
 
         // Read config for dropping unregistered scopes.
         parseDropUnregisteredScopes(oauthElem);
+
+        // Read config for cross tenant allow.
+        parseAllowCrossTenantIntrospection(oauthElem);
+
+        // Set the availability of oauth_response.jsp page.
+        setOAuthResponseJspPageAvailable();
     }
 
     /**
@@ -3163,6 +3173,46 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * Parses the AllowCrossTenantTokenIntrospection configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseAllowCrossTenantIntrospection(OMElement oauthConfigElem) {
+
+        OMElement allowCrossTenantIntrospectionElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION));
+        if (allowCrossTenantIntrospectionElem != null) {
+            allowCrossTenantIntrospection = Boolean.parseBoolean(allowCrossTenantIntrospectionElem.getText());
+        } else {
+            /* If config is null, the property must be set to the default value which is true to
+        ensure backward compatibility. */
+            allowCrossTenantIntrospection = true;
+        }
+    }
+
+    public boolean isCrossTenantTokenInspectionAllowed() {
+
+        return allowCrossTenantIntrospection;
+    }
+
+    private static void setOAuthResponseJspPageAvailable() {
+
+        java.nio.file.Path path = Paths.get(CarbonUtils.getCarbonHome(), "repository", "deployment",
+                "server", "webapps", "authenticationendpoint", "oauth_response.jsp");
+        isOAuthResponseJspPageAvailable = Files.exists(path);
+    }
+
+    /**
+     * Check if the oauth_response.jsp page is available.
+     *
+     * @return true if the oauth_response.jsp page is available.
+     */
+    public boolean isOAuthResponseJspPageAvailable() {
+
+        return isOAuthResponseJspPageAvailable;
+    }
+
+    /**
      * Localpart names for the OAuth configuration in identity.xml.
      */
     private class ConfigElements {
@@ -3383,6 +3433,9 @@ public class OAuthServerConfiguration {
         private static final String DEVICE_CODE_EXPIRY_TIME = "ExpiryTime";
         private static final String DEVICE_CODE_POLLING_INTERVAL = "PollingInterval";
         private static final String DEVICE_CODE_KEY_SET = "KeySet";
+
+        // Allow Cross Tenant Introspection Config.
+        private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
     }
 
 }

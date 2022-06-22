@@ -26,6 +26,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -34,6 +35,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.util.JdbcUtils;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -84,6 +86,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     private static final int DEFAULT_TOKEN_PERSIST_RETRY_COUNT = 5;
     private static final String IDN_OAUTH2_ACCESS_TOKEN = "IDN_OAUTH2_ACCESS_TOKEN";
     private boolean isTokenCleanupFeatureEnabled = OAuthServerConfiguration.getInstance().isTokenCleanupEnabled();
+    private boolean isTenantQualifiedUrlsEnabled = IdentityTenantUtil.isTenantQualifiedUrlsEnabled();
+    private boolean isCrossTenantTokenInspectionAllowed
+            = OAuthServerConfiguration.getInstance().isCrossTenantTokenInspectionAllowed();
     private static final String DEFAULT_TOKEN_TO_SESSION_MAPPING = "DEFAULT";
 
     private static final Log log = LogFactory.getLog(AccessTokenDAOImpl.class);
@@ -171,9 +176,17 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
         String sql;
         if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-            sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN_WITH_IDP_NAME;
+            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN_WITH_IDP_NAME_WITH_CONSENTED_TOKEN;
+            } else {
+                sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN_WITH_IDP_NAME;
+            }
         } else {
-            sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN;
+            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN_WITH_CONSENTED_TOKEN;
+            } else {
+                sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN;
+            }
         }
         sql = OAuth2Util.getTokenPartitionedSqlByUserStore(sql, userDomain);
         String sqlAddScopes = OAuth2Util.getTokenPartitionedSqlByUserStore(SQLQueries.INSERT_OAUTH2_TOKEN_SCOPE,
@@ -221,12 +234,26 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             } else {
                 insertTokenPrepStmt.setString(18, NONE);
             }
-            insertTokenPrepStmt.setString(19, getPersistenceProcessor().getProcessedClientId(consumerKey));
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                insertTokenPrepStmt.setString(20, authenticatedIDP);
-                insertTokenPrepStmt.setInt(21, tenantId);
+                if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                    insertTokenPrepStmt.setString(19, Boolean.toString(accessTokenDO.isConsentedToken()));
+                    insertTokenPrepStmt.setString(20, authenticatedIDP);
+                    insertTokenPrepStmt.setInt(21, tenantId);
+                    insertTokenPrepStmt.setString(22, getPersistenceProcessor().getProcessedClientId(consumerKey));
+                } else {
+                    insertTokenPrepStmt.setString(19, authenticatedIDP);
+                    insertTokenPrepStmt.setInt(20, tenantId);
+                    insertTokenPrepStmt.setString(21, getPersistenceProcessor().getProcessedClientId(consumerKey));
+                }
+            } else {
+                if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                    insertTokenPrepStmt.setString(19, Boolean.toString(accessTokenDO.isConsentedToken()));
+                    insertTokenPrepStmt.setString(20, getPersistenceProcessor().getProcessedClientId(consumerKey));
+                } else {
+                    insertTokenPrepStmt.setString(19, getPersistenceProcessor().getProcessedClientId(consumerKey));
+                }
             }
-            insertTokenPrepStmt.execute();
+            insertTokenPrepStmt.executeUpdate();
 
             String accessTokenId = accessTokenDO.getTokenId();
             addScopePrepStmt = connection.prepareStatement(sqlAddScopes);
@@ -404,49 +431,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         ResultSet resultSet = null;
         try {
 
-            String sql;
-            String driverName = connection.getMetaData().getDriverName();
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                if (driverName.contains("MySQL")
-                        || driverName.contains("MariaDB")
-                        || driverName.contains("H2")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MYSQL;
-                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_DB2SQL;
-                } else if (driverName.contains("MS SQL")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
-                } else if (driverName.contains("Microsoft")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
-                } else if (driverName.contains("PostgreSQL")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_POSTGRESQL;
-                } else if (driverName.contains("Informix")) {
-                    // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_INFORMIX;
-
-                } else {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_ORACLE;
-                }
-            } else {
-                if (driverName.contains("MySQL")
-                        || driverName.contains("MariaDB")
-                        || driverName.contains("H2")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_MYSQL;
-                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_DB2SQL;
-                } else if (driverName.contains("MS SQL")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_MSSQL;
-                } else if (driverName.contains("Microsoft")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_MSSQL;
-                } else if (driverName.contains("PostgreSQL")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_POSTGRESQL;
-                } else if (driverName.contains("Informix")) {
-                    // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_INFORMIX;
-
-                } else {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_ORACLE;
-                }
-            }
+            String sql = getLatestAccessTokenQuerySQL(connection);
 
             if (!includeExpiredTokens) {
                 sql = sql.replace("TOKEN_SCOPE_HASH=?", "TOKEN_SCOPE_HASH=? AND TOKEN_STATE='ACTIVE'");
@@ -516,6 +501,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String tokenId = resultSet.getString(9);
                     String subjectIdentifier = resultSet.getString(10);
                     String grantType = resultSet.getString(11);
+                    String isConsentedToken = StringUtils.EMPTY;
+                    if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                        isConsentedToken = resultSet.getString(12);
+                    }
                     // data loss at dividing the validity period but can be neglected
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(tenantAwareUsernameWithNoUserDomain,
                             userDomain, tenantDomain, authenticatedIDP);
@@ -529,6 +518,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     accessTokenDO.setTokenState(tokenState);
                     accessTokenDO.setTokenId(tokenId);
                     accessTokenDO.setGrantType(grantType);
+                    if (StringUtils.isNotEmpty(isConsentedToken)) {
+                        accessTokenDO.setIsConsentedToken(Boolean.parseBoolean(isConsentedToken));
+                    }
                     if (StringUtils.isNotBlank(tokenBindingReference) && !NONE.equals(tokenBindingReference)) {
                         setTokenBindingToAccessTokenDO(accessTokenDO, connection, tokenId);
                     }
@@ -553,6 +545,98 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
         }
+    }
+
+    private String getLatestAccessTokenQuerySQL(Connection connection) throws SQLException {
+
+        String sql;
+        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                if (connection.getMetaData().getDriverName().contains("MySQL")
+                        || connection.getMetaData().getDriverName().contains("H2")) {
+                    sql = SQLQueries.
+                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MYSQL;
+                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                    sql = SQLQueries.
+                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_DB2SQL;
+                } else if (connection.getMetaData().getDriverName().contains("MS SQL")) {
+                    sql = SQLQueries.
+                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
+                } else if (connection.getMetaData().getDriverName().contains("Microsoft")) {
+                    sql = SQLQueries.
+                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
+                } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
+                    sql = SQLQueries.
+                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_POSTGRESQL;
+                } else if (connection.getMetaData().getDriverName().contains("Informix")) {
+                    // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
+                    sql = SQLQueries.
+                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_INFORMIX;
+                } else {
+                    sql = SQLQueries.
+                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_ORACLE;
+                }
+            } else {
+                if (connection.getMetaData().getDriverName().contains("MySQL")
+                        || connection.getMetaData().getDriverName().contains("H2")) {
+                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MYSQL;
+                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_DB2SQL;
+                } else if (connection.getMetaData().getDriverName().contains("MS SQL")) {
+                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
+                } else if (connection.getMetaData().getDriverName().contains("Microsoft")) {
+                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
+                } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
+                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_POSTGRESQL;
+                } else if (connection.getMetaData().getDriverName().contains("Informix")) {
+                    // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
+                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_INFORMIX;
+                } else {
+                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_ORACLE;
+                }
+            }
+        } else {
+            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                if (connection.getMetaData().getDriverName().contains("MySQL")
+                        || connection.getMetaData().getDriverName().contains("H2")) {
+                    sql = SQLQueries.GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_MYSQL;
+                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                    sql = SQLQueries.GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_DB2SQL;
+                } else if (connection.getMetaData().getDriverName().contains("MS SQL")) {
+                    sql = SQLQueries.GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_MSSQL;
+                } else if (connection.getMetaData().getDriverName().contains("Microsoft")) {
+                    sql = SQLQueries.GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_MSSQL;
+                } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
+                    sql = SQLQueries.
+                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_POSTGRESQL;
+                } else if (connection.getMetaData().getDriverName().contains("Informix")) {
+                    // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
+                    sql = SQLQueries.
+                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_INFORMIX;
+                } else {
+                    sql = SQLQueries.GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_ORACLE;
+                }
+            } else {
+                if (connection.getMetaData().getDriverName().contains("MySQL")
+                        || connection.getMetaData().getDriverName().contains("H2")) {
+                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_MYSQL;
+                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_DB2SQL;
+                } else if (connection.getMetaData().getDriverName().contains("MS SQL")) {
+                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_MSSQL;
+                } else if (connection.getMetaData().getDriverName().contains("Microsoft")) {
+                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_MSSQL;
+                } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
+                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_POSTGRESQL;
+                } else if (connection.getMetaData().getDriverName().contains("Informix")) {
+                    // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
+                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_INFORMIX;
+                } else {
+                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_ORACLE;
+                }
+            }
+        }
+        return sql;
     }
 
     private AccessTokenDO getLatestAccessTokenByState(Connection connection, String consumerKey,
@@ -875,6 +959,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             log.debug("Retrieving information of access token(hashed): " + DigestUtils.sha256Hex
                     (accessTokenIdentifier));
         }
+
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         AccessTokenDO dataDO = null;
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement prepStmt = null;
@@ -885,15 +971,35 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             if (includeExpired) {
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN_IDP_NAME;
+                    if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
+                            && tenantDomain != null) {
+                        sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_TENANT_ACCESS_TOKEN_IDP_NAME;
+                    } else {
+                        sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN_IDP_NAME;
+                    }
                 } else {
-                    sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN;
+                    if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
+                            && tenantDomain != null) {
+                        sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_TENANT_ACCESS_TOKEN;
+                    } else {
+                        sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN;
+                    }
                 }
             } else {
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME;
+                    if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
+                            && tenantDomain != null) {
+                        sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN_IDP_NAME;
+                    } else {
+                        sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME;
+                    }
                 } else {
-                    sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN;
+                    if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
+                            && tenantDomain != null) {
+                        sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN;
+                    } else {
+                        sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN;
+                    }
                 }
             }
 
@@ -903,6 +1009,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt.setString(1,
                     getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(accessTokenIdentifier));
+            if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
+                    && tenantDomain != null) {
+                prepStmt.setInt(2, IdentityTenantUtil.getTenantId(tenantDomain));
+            }
             resultSet = prepStmt.executeQuery();
 
             int iterateId = 0;
@@ -914,7 +1024,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String consumerKey = getPersistenceProcessor().getPreprocessedClientId(resultSet.getString(1));
                     String authorizedUser = resultSet.getString(2);
                     int tenantId = resultSet.getInt(3);
-                    String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
+                    tenantDomain = OAuth2Util.getTenantDomain(tenantId);
                     String userDomain = resultSet.getString(4);
                     String[] scope = OAuth2Util.buildScopeArray(resultSet.getString(5));
                     Timestamp issuedTime = resultSet.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
@@ -1125,6 +1235,20 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 OAuth2TokenUtil.postUpdateAccessToken(tokenId, tokenState, true);
             }
         }
+    }
+
+    private boolean isPreviousTokenConsented(Connection connection, String tokenId)
+            throws SQLException {
+
+        String sql = SQLQueries.GET_TOKEN_IS_CONSENTED_OR_NOT;
+        PreparedStatement prepStmt = connection.prepareStatement(sql);
+        prepStmt.setString(1, tokenId);
+        ResultSet resultSet = prepStmt.executeQuery();
+        String initialGrant = StringUtils.EMPTY;
+        while (resultSet.next()) {
+            initialGrant = resultSet.getString(1);
+        }
+        return Boolean.parseBoolean(initialGrant);
     }
 
     private void updateAccessTokenState(Connection connection, String tokenId, String tokenState, String tokenStateId,
@@ -1836,6 +1960,11 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         boolean tokenUpdateSuccessful;
         Connection connection = IdentityDatabaseUtil.getDBConnection(true);
         try {
+            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled() && !accessTokenDO.isConsentedToken()) {
+                // Check whether the previous token is issued for a consent required grant or not.
+                boolean isPreviousTokenConsented = isPreviousTokenConsented(connection, oldAccessTokenId);
+                accessTokenDO.setIsConsentedToken(isPreviousTokenConsented);
+            }
             // update existing token as inactive
             updateAccessTokenState(connection, oldAccessTokenId, tokenState, tokenStateId, userStoreDomain, grantType);
 
@@ -2251,7 +2380,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 // For JWT tokens, always issue a new token expiring the existing token.
                 if (oauthTokenIssuer.renewAccessTokenPerRequest(tokReqMsgCtx)) {
                     updateAccessTokenState(connection, latestActiveToken.getTokenId(), OAuthConstants.TokenStates
-                            .TOKEN_STATE_EXPIRED, UUID.randomUUID().toString(), userStoreDomain,
+                                    .TOKEN_STATE_EXPIRED, UUID.randomUUID().toString(), userStoreDomain,
                             latestActiveToken.getGrantType());
                     // Update token issued time make this token as latest token & try to store it again.
                     accessTokenDO.setIssuedTime(new Timestamp(new Date().getTime()));
@@ -2279,7 +2408,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 } else if (!(OAuth2Util.getAccessTokenExpireMillis(latestActiveToken) == 0)) {
                     // If the last active token in the database is expired, update the token status in the database.
                     updateAccessTokenState(connection, latestActiveToken.getTokenId(), OAuthConstants.TokenStates
-                            .TOKEN_STATE_EXPIRED, UUID.randomUUID().toString(), userStoreDomain,
+                                    .TOKEN_STATE_EXPIRED, UUID.randomUUID().toString(), userStoreDomain,
                             latestActiveToken.getGrantType());
 
                     // Update token issued time make this token as latest token & try to store it again.
@@ -2290,7 +2419,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 } else {
                     // Inactivate latest active token.
                     updateAccessTokenState(connection, latestActiveToken.getTokenId(), OAuthConstants.TokenStates
-                            .TOKEN_STATE_INACTIVE, UUID.randomUUID().toString(), userStoreDomain,
+                                    .TOKEN_STATE_INACTIVE, UUID.randomUUID().toString(), userStoreDomain,
                             latestActiveToken.getGrantType());
 
                     // Update token issued time make this token as latest token & try to store it again.
@@ -2791,6 +2920,38 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             return new HashSet<>(tokenMap.values());
         } catch (DataAccessException e) {
             throw new IdentityOAuth2Exception("Error occurred while retrieving access tokens.", e);
+        }
+    }
+
+    public void updateTokenIsConsented(String tokenId, boolean isConsentedGrant)
+            throws IdentityOAuth2Exception {
+
+        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Updating the token's last issued grant type for token with id: " + tokenId + " to: " +
+                        isConsentedGrant);
+            }
+
+            String sql = SQLQueries.UPDATE_TOKEN_CONSENTED_TOKEN;
+            try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+                try (PreparedStatement prepStmt = connection.prepareStatement(sql)) {
+                    prepStmt.setString(1, Boolean.toString(isConsentedGrant));
+                    prepStmt.setString(2, tokenId);
+                    prepStmt.executeUpdate();
+                    IdentityDatabaseUtil.commitTransaction(connection);
+                } catch (SQLException e) {
+                    IdentityDatabaseUtil.rollbackTransaction(connection); // ToDo add the exception here
+                    throw new IdentityOAuth2Exception("Error while updating the access token.", e);
+                }
+            } catch (SQLException e) {
+                throw new IdentityOAuth2Exception("Error while updating Access Token with ID: " + tokenId +
+                        " to last issued grant type : ", e);
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("CONSENTED_TOKEN column is not available. Since not updating the token with id: "
+                        + tokenId + " to: " + isConsentedGrant);
+            }
         }
     }
 }
