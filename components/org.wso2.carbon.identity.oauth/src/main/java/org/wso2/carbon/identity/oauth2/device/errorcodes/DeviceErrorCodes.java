@@ -48,7 +48,7 @@ public class DeviceErrorCodes {
     public static class SubDeviceErrorCodesDescriptions {
 
         public static final String SLOW_DOWN = "Forbidden";
-        public static final String AUTHORIZATION_PENDING = "Precondition Required";
+        public static final String AUTHORIZATION_PENDING = "Precondition required";
         public static final String EXPIRED_TOKEN = "Forbidden";
 
     }

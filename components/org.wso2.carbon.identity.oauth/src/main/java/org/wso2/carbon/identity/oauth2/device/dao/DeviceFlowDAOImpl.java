@@ -627,16 +627,13 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             log.debug("Getting scopes for codeId: " + codeId);
         }
         List<String> scopeSet = new ArrayList<>();
-
-        try {
-            try (PreparedStatement prepStmt =
-                         connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.GET_SCOPES_FOR_CODE_ID)) {
-                ResultSet resultSet;
-                prepStmt.setString(1, codeId);
-                resultSet = prepStmt.executeQuery();
-                while (resultSet.next()) {
-                    scopeSet.add(resultSet.getString(1));
-                }
+        try (PreparedStatement prepStmt =
+                     connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.GET_SCOPES_FOR_CODE_ID)) {
+            ResultSet resultSet;
+            prepStmt.setString(1, codeId);
+            resultSet = prepStmt.executeQuery();
+            while (resultSet.next()) {
+                scopeSet.add(resultSet.getString(1));
             }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when getting scopes for codeId: " + codeId, e);

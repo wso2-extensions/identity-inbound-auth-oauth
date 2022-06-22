@@ -175,9 +175,6 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
         if (!parametersToValidate.contains(REDIRECT_URI)) {
             OAuth2ClientValidationResponseDTO validationResponseDTO = new OAuth2ClientValidationResponseDTO();
             validationResponseDTO.setValidClient(true);
-            validationResponseDTO.setApplicationName(appDO.getApplicationName());
-            validationResponseDTO.setPkceMandatory(appDO.isPkceMandatory());
-            validationResponseDTO.setPkceSupportPlain(appDO.isPkceSupportPlain());
             return validationResponseDTO;
         }
 
@@ -212,9 +209,6 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
         if (callbackURI == null) {
             validationResponseDTO.setValidClient(true);
             validationResponseDTO.setCallbackURL(appDO.getCallbackUrl());
-            validationResponseDTO.setApplicationName(appDO.getApplicationName());
-            validationResponseDTO.setPkceMandatory(appDO.isPkceMandatory());
-            validationResponseDTO.setPkceSupportPlain(appDO.isPkceSupportPlain());
             return validationResponseDTO;
         }
 
@@ -225,10 +219,7 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
 
         if (validateCallbackURI(callbackURI, appDO)) {
             validationResponseDTO.setValidClient(true);
-            validationResponseDTO.setApplicationName(appDO.getApplicationName());
             validationResponseDTO.setCallbackURL(callbackURI);
-            validationResponseDTO.setPkceMandatory(appDO.isPkceMandatory());
-            validationResponseDTO.setPkceSupportPlain(appDO.isPkceSupportPlain());
         } else {    // Provided callback URL does not match the registered callback url.
             log.warn("Provided Callback URL does not match with the provided one.");
             if (LoggerUtils.isDiagnosticLogsEnabled()) {

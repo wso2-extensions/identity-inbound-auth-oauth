@@ -155,7 +155,7 @@ public class UserAuthenticationEndpoint {
     private boolean isExpiredUserCode(DeviceFlowDO deviceFlowDO) throws IdentityOAuth2Exception {
 
         if (deviceFlowDO == null) {
-            return false;
+            return true;
         }
         // If status changed from PENDING (!PENDING) , then that user_code CANNOT be reused.
         if (!StringUtils.equals(deviceFlowDO.getStatus(), Constants.PENDING)) {

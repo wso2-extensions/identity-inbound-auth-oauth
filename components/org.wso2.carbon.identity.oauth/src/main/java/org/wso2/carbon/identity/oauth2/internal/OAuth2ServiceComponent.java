@@ -432,20 +432,18 @@ public class OAuth2ServiceComponent {
             unbind = "unsetResponseTypeRequestValidator")
     protected void setResponseTypeRequestValidator(ResponseTypeRequestValidator validator) {
 
+        OAuth2ServiceComponentHolder.getInstance().addResponseTypeRequestValidator(validator);
         if (log.isDebugEnabled()) {
             log.debug("Setting the response type request validator for: " + validator.getResponseType());
         }
-        OAuth2ServiceComponentHolder.getInstance().addResponseTypeRequestValidator(validator);
-
     }
 
     protected void unsetResponseTypeRequestValidator(ResponseTypeRequestValidator validator) {
 
+        OAuth2ServiceComponentHolder.getInstance().removeResponseTypeRequestValidator(validator);
         if (log.isDebugEnabled()) {
             log.debug("Un-setting the response type request validator for: " + validator.getResponseType());
         }
-        OAuth2ServiceComponentHolder.getInstance().removeResponseTypeRequestValidator(validator);
-
     }
 
     @Reference(

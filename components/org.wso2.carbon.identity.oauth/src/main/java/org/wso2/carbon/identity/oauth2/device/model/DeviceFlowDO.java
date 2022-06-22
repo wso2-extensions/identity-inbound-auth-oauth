@@ -32,11 +32,17 @@ public class DeviceFlowDO {
 
     private String userCode;
 
+    /**
+     * Deprecated to use {@link #consumerKey}
+     */
     @Deprecated
     private String consumerKeyID;
 
     private String consumerKey;
 
+    /**
+     * Deprecated to use {@link #scopes}
+     */
     @Deprecated
     private String scope;
 
@@ -76,12 +82,18 @@ public class DeviceFlowDO {
         this.userCode = userCode;
     }
 
+    /**
+     * Deprecated to use {@link #getConsumerKey()}
+     */
     @Deprecated
     public String getConsumerKeyID() {
 
         return consumerKeyID;
     }
 
+    /**
+     * Deprecated to use {@link #setConsumerKey(String)}
+     */
     @Deprecated
     public void setConsumerKeyID(String consumerKeyID) {
 
@@ -98,12 +110,18 @@ public class DeviceFlowDO {
         this.consumerKey = consumerKey;
     }
 
+    /**
+     * Deprecated to use {@link #getScopes()}
+     */
     @Deprecated
     public String getScope() {
 
         return scope;
     }
 
+    /**
+     * Deprecated to use {@link #setScopes(List)}
+     */
     @Deprecated
     public void setScope(String scope) {
 

@@ -213,8 +213,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
                 validateClientInfo(mockHttpServletRequest);
         assertNotNull(oAuth2ClientValidationResponseDTO);
         assertTrue(oAuth2ClientValidationResponseDTO.isValidClient());
-        assertEquals(oAuth2ClientValidationResponseDTO.getApplicationName(), oAuthAppDO.getApplicationName());
-        assertEquals(oAuth2ClientValidationResponseDTO.isPkceMandatory(), oAuthAppDO.isPkceMandatory());
     }
 
     @Test
