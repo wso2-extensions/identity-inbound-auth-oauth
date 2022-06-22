@@ -1565,7 +1565,7 @@ public class OAuth2AuthzEndpoint {
             validationResponse.setApplicationName(appDO.getApplicationName());
             validationResponse.setPkceMandatory(appDO.isPkceMandatory());
             validationResponse.setPkceSupportPlain(appDO.isPkceSupportPlain());
-        } catch (InvalidOAuthClientException|IdentityOAuth2Exception e) {
+        } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
             throw new OAuthSystemException("Error while retrieving app information for client_id : " + clientId, e);
         }
     }

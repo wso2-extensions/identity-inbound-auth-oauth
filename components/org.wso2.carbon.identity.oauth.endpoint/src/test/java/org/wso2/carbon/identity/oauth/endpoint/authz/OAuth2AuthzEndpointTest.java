@@ -80,6 +80,7 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
@@ -1032,6 +1033,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             checkErrorCode = false;
         }
 
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.validatePKCECodeChallenge(anyString(), anyString())).thenCallRealMethod();
+        when(OAuth2Util.validatePKCECodeVerifier(anyString())).thenCallRealMethod();
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
 
@@ -1042,10 +1046,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_REQUEST);
             validationResponseDTO.setErrorMsg("client is invalid");
         }
-        validationResponseDTO.setPkceMandatory(supportPlainPkce);
-        validationResponseDTO.setPkceSupportPlain(supportPlainPkce);
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO.setPkceMandatory(supportPlainPkce);
+        oAuthAppDO.setPkceSupportPlain(supportPlainPkce);
+        when(OAuth2Util.getAppInformationByClientId(any())).thenReturn(oAuthAppDO);
         when(oAuth2Service.validateClientInfo(any())).thenReturn(validationResponseDTO);
-
         if (StringUtils.equals(expectedLocation, LOGIN_PAGE_URL) ||
                 StringUtils.equals(expectedLocation, ERROR_PAGE_URL)) {
             CommonAuthenticationHandler handler = mock(CommonAuthenticationHandler.class);

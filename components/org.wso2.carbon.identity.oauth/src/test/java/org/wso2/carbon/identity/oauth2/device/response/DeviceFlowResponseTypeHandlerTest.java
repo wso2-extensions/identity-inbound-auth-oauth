@@ -83,6 +83,7 @@ public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             mockStatic(OAuth2Util.class);
             when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+            when(OAuth2Util.getDeviceFlowCompletionPageURI(anyString(), anyString())).thenCallRealMethod();
             mockStatic(IdentityDatabaseUtil.class);
             when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
