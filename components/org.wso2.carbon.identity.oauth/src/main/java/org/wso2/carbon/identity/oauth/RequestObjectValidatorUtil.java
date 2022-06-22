@@ -150,8 +150,8 @@ public class RequestObjectValidatorUtil {
             try {
                 return new JWKSBasedJWTValidator().validateSignature(jwtString, jwksUri, alg, MapUtils.EMPTY_MAP);
             } catch (IdentityOAuth2Exception e) {
-                if (e.getCause() instanceof BadJWTException) {
-                    log.error(e.getCause().getMessage());
+                if (e.getCause() != null && e.getCause() instanceof BadJWTException) {
+                    log.info(e.getCause().getMessage());
                 }
                 String errorMessage = "Error occurred while validating request object signature using jwks endpoint";
                 throw new RequestObjectException(errorMessage, OAuth2ErrorCodes.SERVER_ERROR, e);
