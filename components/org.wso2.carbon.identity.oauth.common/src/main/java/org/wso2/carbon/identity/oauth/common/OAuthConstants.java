@@ -156,7 +156,7 @@ public final class OAuthConstants {
     //JWT claim for authorized user type
     public static final String AUTHORIZED_USER_TYPE = "aut";
 
-    //Context tenant domain passed with request parameters
+    // Context tenant domain passed with request parameters.
     public static final String TENANT_DOMAIN_FROM_CONTEXT = "tenant_domain_from_context";
 
     private OAuthConstants() {
