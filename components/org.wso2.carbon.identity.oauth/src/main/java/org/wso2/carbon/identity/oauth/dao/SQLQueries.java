@@ -44,6 +44,9 @@ public class SQLQueries {
                 "APP_ACCESS_TOKEN_EXPIRE_TIME, REFRESH_TOKEN_EXPIRE_TIME, ID_TOKEN_EXPIRE_TIME) " +
                 "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ";
 
+        public static final String ADD_OAUTH_APP_CALLBACK_URL = "INSERT INTO IDN_OAUTH_CONSUMER_APPS_CALLBACK_URLS" +
+                "(APP_ID, APP_URL_ID, CALLBACK_URL, TENANT_ID) VALUES (?,?,?,?)";
+
         public static final String ADD_SP_OIDC_PROPERTY = "INSERT INTO IDN_OIDC_PROPERTY " +
                 "(TENANT_ID, CONSUMER_KEY, PROPERTY_KEY, PROPERTY_VALUE) VALUES (?,?,?,?) ";
 

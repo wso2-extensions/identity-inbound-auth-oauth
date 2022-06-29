@@ -157,6 +157,7 @@ public class OAuthAppDAO {
                         appId = getAppIdByClientId(connection, consumerAppDO.getOauthConsumerKey());
                     }
                     addScopeValidators(connection, appId, consumerAppDO.getScopeValidators());
+                    addOAuthAppCallbackUrls(connection, appId, spTenantId, consumerAppDO.getCallbackUrls());
                     // Handle OIDC Related Properties. These are persisted in IDN_OIDC_PROPERTY table.
                     addServiceProviderOIDCProperties(connection, consumerAppDO, processedClientId, spTenantId);
                     IdentityDatabaseUtil.commitTransaction(connection);
@@ -181,6 +182,26 @@ public class OAuthAppDAO {
         } else {
             String msg = "An application with the same name already exists.";
             throw new IdentityOAuthClientException(Error.DUPLICATE_OAUTH_CLIENT.getErrorCode(), msg);
+        }
+    }
+
+    private void addOAuthAppCallbackUrls(Connection connection, int appId, int tenantId, List<String> callbackUrls)
+            throws SQLException {
+
+        if (callbackUrls != null && !callbackUrls.isEmpty()) {
+            LOG.debug(String.format("Adding %d Callback Urls registered for OAuth appId %d",
+                    callbackUrls.size(), appId));
+            try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
+                    .ADD_OAUTH_APP_CALLBACK_URL)) {
+                for (int callbackUrlIndex = 0; callbackUrlIndex < callbackUrls.size(); callbackUrlIndex++) {
+                    stmt.setInt(1, appId);
+                    stmt.setInt(2, callbackUrlIndex);
+                    stmt.setString(3, callbackUrls.get(callbackUrlIndex));
+                    stmt.setInt(4, tenantId);
+                    stmt.addBatch();
+                }
+                stmt.executeBatch();
+            }
         }
     }
 
