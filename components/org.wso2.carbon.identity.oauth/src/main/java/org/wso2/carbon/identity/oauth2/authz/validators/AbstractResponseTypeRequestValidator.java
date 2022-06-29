@@ -136,7 +136,7 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
                             OAuthConstants.LogConstants.FAILED, "OAuth application is not in active state.",
                             "validate-input-parameters", null);
                 }
-                throw new InvalidOAuthClientException("Oauth application is not in active state");
+                throw new InvalidOAuthClientException("Oauth application is not in active state.");
             }
             return validateCallBack(clientId, callbackURI, appDO);
         } catch (InvalidOAuthClientException e) {
