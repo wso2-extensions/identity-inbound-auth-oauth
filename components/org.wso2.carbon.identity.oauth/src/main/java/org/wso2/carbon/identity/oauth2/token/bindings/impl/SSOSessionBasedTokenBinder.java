@@ -90,25 +90,19 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
 
         Cookie[] cookies = request.getCookies();
         String commonAuthCookieValueFromRequestAttribute = (String) request.getAttribute(COMMONAUTH_COOKIE);
-        if (ArrayUtils.isEmpty(cookies)) {
-            if (StringUtils.isNotEmpty(commonAuthCookieValueFromRequestAttribute)) {
-                return DigestUtils.sha256Hex(commonAuthCookieValueFromRequestAttribute);
+        if (ArrayUtils.isNotEmpty(cookies)) {
+            Optional<Cookie> commonAuthCookieOptional = Arrays.stream(cookies)
+                    .filter(t -> COMMONAUTH_COOKIE.equals(t.getName())).findAny();
+
+            if (commonAuthCookieOptional.isPresent() &&
+                    StringUtils.isNotBlank(commonAuthCookieOptional.get().getValue())) {
+                return DigestUtils.sha256Hex(commonAuthCookieOptional.get().getValue());
             }
-            throw new OAuthSystemException("Failed to retrieve token binding value.");
         }
-
-        Optional<Cookie> commonAuthCookieOptional = Arrays.stream(cookies)
-                .filter(t -> COMMONAUTH_COOKIE.equals(t.getName())).findAny();
-
-        if ((!commonAuthCookieOptional.isPresent() || StringUtils.isBlank(commonAuthCookieOptional.get().getValue()))
-                && StringUtils.isEmpty(commonAuthCookieValueFromRequestAttribute)) {
-            throw new OAuthSystemException("Failed to retrieve token binding value.");
+        if (StringUtils.isNotEmpty(commonAuthCookieValueFromRequestAttribute)) {
+            return DigestUtils.sha256Hex(commonAuthCookieValueFromRequestAttribute);
         }
-
-        // Get the session context key value form common auth cookie value.
-        return commonAuthCookieOptional
-                .map(cookie -> DigestUtils.sha256Hex(cookie.getValue()))
-                .orElseGet(() -> DigestUtils.sha256Hex(commonAuthCookieValueFromRequestAttribute));
+        throw new OAuthSystemException("Failed to retrieve token binding value.");
     }
 
     @Override
