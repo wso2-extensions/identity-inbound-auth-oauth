@@ -188,7 +188,7 @@ public class OAuthAppDAO {
     private void addOAuthAppCallbackUrls(Connection connection, int appId, int tenantId, List<String> callbackUrls)
             throws SQLException {
 
-        if (callbackUrls != null && !callbackUrls.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(callbackUrls)) {
             LOG.debug(String.format("Adding %d Callback Urls registered for OAuth appId %d",
                     callbackUrls.size(), appId));
             try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
@@ -203,6 +203,39 @@ public class OAuthAppDAO {
                 stmt.executeBatch();
             }
         }
+    }
+
+    private List<String> getOAuthAppCallbackUrls(Connection connection, int id) throws SQLException {
+
+        List<String> callbackUrls = new ArrayList<>();
+        try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
+                .GET_OAUTH_APP_CALLBACK_URLS)) {
+            stmt.setInt(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    callbackUrls.add(rs.getString(1));
+                }
+            }
+        }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Retrieving %d Callback URLs registered for OAuth appId %d",
+                    callbackUrls.size(), id));
+        }
+        return callbackUrls;
+    }
+
+    private void updateOAuthAppCallbackUrls(Connection connection, int appId, int tenantId, List<String> callbackUrls)
+            throws SQLException {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Removing Callback URLs registered for OAuth appId %d", appId));
+        }
+        try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
+                .REMOVE_OAUTH_APP_CALLBACK_URLS)) {
+            stmt.setInt(1, appId);
+            stmt.execute();
+        }
+        addOAuthAppCallbackUrls(connection, appId, tenantId, callbackUrls);
     }
 
     private boolean isDuplicateClient(SQLException e) {
@@ -318,6 +351,7 @@ public class OAuthAppDAO {
                             String spTenantDomain = authenticatedUser.getTenantDomain();
                             handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
                             oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
+                            oauthApp.setCallbackUrls(getOAuthAppCallbackUrls(connection, oauthApp.getId()));
                             oauthApps.add(oauthApp);
                         }
                     }
@@ -388,6 +422,7 @@ public class OAuthAppDAO {
                             String spTenantDomain = authenticatedUser.getTenantDomain();
                             handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
                             oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
+                            oauthApp.setCallbackUrls(getOAuthAppCallbackUrls(connection, oauthApp.getId()));
                         }
                     }
 
@@ -458,6 +493,7 @@ public class OAuthAppDAO {
                             String spTenantDomain = user.getTenantDomain();
                             handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
                             oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
+                            oauthApp.setCallbackUrls(getOAuthAppCallbackUrls(connection, oauthApp.getId()));
                         }
                     }
 
@@ -487,6 +523,9 @@ public class OAuthAppDAO {
                     setValuesToStatementWithPKCENoOwnerUpdate(oauthAppDO, prepStmt);
                 }
                 int count = prepStmt.executeUpdate();
+                AuthenticatedUser appOwner = oauthAppDO.getAppOwner();
+                int spTenantId = IdentityTenantUtil.getTenantId(appOwner.getTenantDomain());
+                updateOAuthAppCallbackUrls(connection, oauthAppDO.getId(), spTenantId, oauthAppDO.getCallbackUrls());
                 updateScopeValidators(connection, oauthAppDO.getId(), oauthAppDO.getScopeValidators());
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("No. of records updated for updating consumer application. : " + count);
