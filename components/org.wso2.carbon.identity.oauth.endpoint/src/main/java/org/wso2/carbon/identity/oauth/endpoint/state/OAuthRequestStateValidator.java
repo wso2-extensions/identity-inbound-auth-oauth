@@ -18,12 +18,12 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.state;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.AccessDeniedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.BadRequestException;
@@ -38,6 +38,7 @@ import java.util.Map;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.USER_CONSENT_RESPONSE;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 
 /**
  * This class validate the OAuth request state.
@@ -45,8 +46,6 @@ import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.
 public class OAuthRequestStateValidator {
 
     private static final Log log = LogFactory.getLog(OAuthRequestStateValidator.class);
-    private static final String REDIRECT_URI = "redirect_uri";
-    private static final String REQUEST_URI = "request_uri";
 
     public OAuthAuthorizeState validateAndGetState(OAuthMessage oAuthMessage) throws InvalidRequestParentException {
 
@@ -165,27 +164,10 @@ public class OAuthRequestStateValidator {
 
     private void validateInputParameters(OAuthMessage oAuthMessage) throws InvalidRequestException {
 
-        if (StringUtils.isBlank(oAuthMessage.getClientId())) {
-            if (log.isDebugEnabled()) {
-                log.debug("Client Id is not present in the authorization request");
-            }
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "client_id is not present in the authorization request",
-                    "validate-input-parameters", null);
-            throw new InvalidRequestException("Client Id is not present in the authorization request",
-                    OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT);
-        }
-
-        if (StringUtils.isBlank(oAuthMessage.getRequest().getParameter(REQUEST_URI)) &&
-                StringUtils.isBlank(oAuthMessage.getRequest().getParameter(REDIRECT_URI))) {
-            if (log.isDebugEnabled()) {
-                log.debug("Redirect URI is not present in the authorization request");
-            }
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "redirect_uri is not present in the authorization request",
-                    "validate-input-parameters", null);
-            throw new InvalidRequestException("Redirect URI is not present in the authorization request",
-                    OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
+        try {
+            getOAuth2Service().validateInputParameters(oAuthMessage.getRequest());
+        } catch (InvalidOAuthRequestException e) {
+            throw new InvalidRequestException(e.getMessage(), e.getErrorCode(), e.getSubErrorCode());
         }
     }
 

@@ -31,12 +31,15 @@ import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
+import org.wso2.carbon.identity.oauth2.authz.validators.DefaultResponseTypeRequestValidator;
+import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -55,6 +58,7 @@ import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -66,6 +70,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isValidTokenBinding;
@@ -122,11 +128,14 @@ public class OAuth2Service extends AbstractAdmin {
     /**
      * Check Whether the provided client_id and the callback URL are valid.
      *
-     * @param clientId    client_id available in the request, Not null parameter.
-     * @param callbackURI callback_uri available in the request, can be null.
+     * @param clientId      client_id available in the request, Not null parameter.
+     * @param callbackURI   callback_uri available in the request, can be null.
      * @return <code>OAuth2ClientValidationResponseDTO</code> bean with validity information,
      * callback, App Name, Error Code and Error Message when appropriate.
+     *
+     * Deprecated to use {{{@link #validateClientInfo(HttpServletRequest)}}}
      */
+    @Deprecated
     public OAuth2ClientValidationResponseDTO validateClientInfo(String clientId, String callbackURI) {
 
         OAuth2ClientValidationResponseDTO validationResponseDTO =
@@ -297,6 +306,31 @@ public class OAuth2Service extends AbstractAdmin {
                     registeredCallbackUrl);
         }
         return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
+    }
+
+    /**
+     * Check Whether the provided client information satisfy the response type validation
+     *
+     * @param request      The HttpServletRequest front the client.
+     * @return <code>OAuth2ClientValidationResponseDTO</code> bean with validity information,
+     * callback, App Name, Error Code and Error Message when appropriate.
+     */
+    public OAuth2ClientValidationResponseDTO validateClientInfo(HttpServletRequest request) {
+
+        ResponseTypeRequestValidator validator = getResponseTypeRequestValidator(request);
+        return validator.validateClientInfo(request);
+    }
+
+    /**
+     * Check Whether the provided inputs from the client satisfy the response type validation
+     *
+     * @param request      The HttpServletRequest front the client.
+     * @throws InvalidOAuthRequestException InvalidOAuthRequestException.
+     */
+    public void validateInputParameters(HttpServletRequest request) throws InvalidOAuthRequestException {
+
+        ResponseTypeRequestValidator validator = getResponseTypeRequestValidator(request);
+        validator.validateInputParameters(request);
     }
 
     /**
@@ -938,6 +972,17 @@ public class OAuth2Service extends AbstractAdmin {
         } else {
             tokenRespDTO.setErrorMsg("Invalid Client");
         }
+    }
+
+    private ResponseTypeRequestValidator getResponseTypeRequestValidator(HttpServletRequest request) {
+
+        String responseType = request.getParameter(Constants.RESPONSE_TYPE);
+        ResponseTypeRequestValidator validator = OAuth2ServiceComponentHolder.getInstance()
+                .getResponseTypeRequestValidator(responseType);
+        if (validator == null) {
+            validator = new DefaultResponseTypeRequestValidator();
+        }
+        return validator;
     }
 }
 

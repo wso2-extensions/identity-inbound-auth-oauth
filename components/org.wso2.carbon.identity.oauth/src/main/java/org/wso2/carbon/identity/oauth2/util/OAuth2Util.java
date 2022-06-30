@@ -56,6 +56,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.oltu.oauth2.common.exception.OAuthRuntimeException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.json.JSONException;
@@ -197,6 +198,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoi
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_CONSENT_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_WEB_FINGER_EP_URL;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
 
 /**
  * Utility methods for OAuth 2.0 implementation
@@ -1420,6 +1422,32 @@ public class OAuth2Util {
         public static String getDeviceAuthzEPUrl() {
 
             return buildUrl(DEVICE_AUTHZ_EP_URL, OAuthServerConfiguration.getInstance()::getDeviceAuthzEPUrl);
+        }
+    }
+
+    /**
+     * This method is used to generate the device flow authentication completed page URI.
+     *
+     * @param appName       Service provider name.
+     * @param tenantDomain  Tenant domain.
+     * @return Redirection URI
+     */
+    public static String getDeviceFlowCompletionPageURI(String appName, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        try {
+            String pageURI = ServiceURLBuilder.create().addPath(DEVICE_SUCCESS_ENDPOINT_PATH)
+                    .build().getAbsolutePublicURL();
+            URIBuilder uriBuilder = new URIBuilder(pageURI);
+            uriBuilder.addParameter(org.wso2.carbon.identity.oauth2.device.constants.Constants.APP_NAME, appName);
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && isNotSuperTenant(tenantDomain)) {
+                // Append tenant domain to path when the tenant-qualified url mode is disabled.
+                uriBuilder.addParameter(FrameworkUtils.TENANT_DOMAIN, tenantDomain);
+            }
+            return uriBuilder.build().toString();
+        } catch (URISyntaxException | URLBuilderException e) {
+            throw new IdentityOAuth2Exception("Error occurred when getting the device flow  authentication completed" +
+                    " page URI.", e);
         }
     }
 

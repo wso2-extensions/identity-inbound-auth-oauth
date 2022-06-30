@@ -80,6 +80,7 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
@@ -152,6 +153,7 @@ import static org.mockito.Matchers.anySet;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.doAnswer;
+import static org.powermock.api.mockito.PowerMockito.doCallRealMethod;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
@@ -500,12 +502,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         mockEndpointUtil(false);
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
+        doCallRealMethod().when(oAuth2Service).validateInputParameters(httpServletRequest);
         if (ArrayUtils.isNotEmpty(clientId) && (clientId[0].equalsIgnoreCase("invalidId") || clientId[0]
                 .equalsIgnoreCase(INACTIVE_CLIENT_ID_VALUE) || StringUtils.isEmpty(clientId[0]))) {
-            when(oAuth2Service.validateClientInfo(clientId[0], APP_REDIRECT_URL)).thenCallRealMethod();
+            when(oAuth2Service.validateClientInfo(httpServletRequest)).thenCallRealMethod();
 
         } else {
-            when(oAuth2Service.validateClientInfo(anyString(), anyString()))
+            when(oAuth2Service.validateClientInfo(httpServletRequest))
                     .thenReturn(oAuth2ClientValidationResponseDTO);
             when(oAuth2ClientValidationResponseDTO.isValidClient()).thenReturn(true);
         }
@@ -1057,6 +1060,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             checkErrorCode = false;
         }
 
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.validatePKCECodeChallenge(anyString(), anyString())).thenCallRealMethod();
+        when(OAuth2Util.validatePKCECodeVerifier(anyString())).thenCallRealMethod();
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
 
@@ -1067,10 +1073,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_REQUEST);
             validationResponseDTO.setErrorMsg("client is invalid");
         }
-        validationResponseDTO.setPkceMandatory(supportPlainPkce);
-        validationResponseDTO.setPkceSupportPlain(supportPlainPkce);
-        when(oAuth2Service.validateClientInfo(anyString(), anyString())).thenReturn(validationResponseDTO);
-
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO.setPkceMandatory(supportPlainPkce);
+        oAuthAppDO.setPkceSupportPlain(supportPlainPkce);
+        when(OAuth2Util.getAppInformationByClientId(any())).thenReturn(oAuthAppDO);
+        when(oAuth2Service.validateClientInfo(any())).thenReturn(validationResponseDTO);
         if (StringUtils.equals(expectedLocation, LOGIN_PAGE_URL) ||
                 StringUtils.equals(expectedLocation, ERROR_PAGE_URL)) {
             CommonAuthenticationHandler handler = mock(CommonAuthenticationHandler.class);
@@ -1847,7 +1854,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         OAuth2ClientValidationResponseDTO validationResponseDTO = new OAuth2ClientValidationResponseDTO();
         validationResponseDTO.setValidClient(true);
         validationResponseDTO.setCallbackURL(APP_REDIRECT_URL);
-        when(oAuth2Service.validateClientInfo(anyString(), anyString())).thenReturn(validationResponseDTO);
+        when(oAuth2Service.validateClientInfo(any())).thenReturn(validationResponseDTO);
 
         Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> responseTypeValidators = new Hashtable<>();
         responseTypeValidators.put(ResponseType.CODE.toString(), CodeValidator.class);
@@ -1907,6 +1914,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
+        doCallRealMethod().when(oAuth2Service).validateInputParameters(httpServletRequest);
 
         Response response;
         try {
