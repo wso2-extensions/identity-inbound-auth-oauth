@@ -744,6 +744,9 @@
                                     </td>
                                     <td><input class="text-box-big" id="callback" name="callback"
                                                type="text" value="<%=Encode.forHtmlAttribute(app.getCallbackUrl())%>"/>
+                                        <div class="sectionHelp">
+                                            <fmt:message key='callback.url.hint'/>
+                                        </div>
                                     </td>
                                 </tr>
                                 <tr id="pkce_enable">

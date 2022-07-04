@@ -221,7 +221,7 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             validationResponseDTO.setValidClient(true);
             validationResponseDTO.setCallbackURL(callbackURI);
         } else {    // Provided callback URL does not match the registered callback url.
-            log.warn("Provided Callback URL does not match with the provided one.");
+            log.warn("Provided Callback URL does not match with the registered one.");
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 params.put("clientId", clientId);
@@ -260,6 +260,20 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             log.debug("Comparing provided callback URL: " + callbackURI + " with configured callback: " +
                     registeredCallbackUrl);
         }
-        return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
+        if (callbackURI.matches(OAuthConstants.LOOPBACK_IP_REGEX)) {
+            callbackURI = callbackURI.replaceFirst(OAuthConstants.LOOPBACK_IP_PORT_REGEX, "");
+            if (regexp != null) {
+                regexp = regexp.replaceAll(OAuthConstants.LOOPBACK_IP_PORT_REGEX, "");
+                if (!callbackURI.matches(regexp)) {
+                    log.debug("Regex might contain port number capture group/groups for loopback ip address");
+                    return false;
+                }
+                return true;
+            } else {
+                registeredCallbackUrl = registeredCallbackUrl.replaceFirst(
+                        OAuthConstants.LOOPBACK_IP_PORT_REGEX,"");
+            }
+        }
+        return (regexp != null && callbackURI.matches(regexp))|| registeredCallbackUrl.equals(callbackURI);
     }
 }
