@@ -271,9 +271,9 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
                 return true;
             } else {
                 registeredCallbackUrl = registeredCallbackUrl.replaceFirst(
-                        OAuthConstants.LOOPBACK_IP_PORT_REGEX,"");
+                        OAuthConstants.LOOPBACK_IP_PORT_REGEX, "");
             }
         }
-        return (regexp != null && callbackURI.matches(regexp))|| registeredCallbackUrl.equals(callbackURI);
+        return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
     }
 }
