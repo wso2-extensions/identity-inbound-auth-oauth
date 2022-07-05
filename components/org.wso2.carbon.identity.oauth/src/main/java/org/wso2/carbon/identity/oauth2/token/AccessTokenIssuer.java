@@ -322,7 +322,7 @@ public class AccessTokenIssuer {
                 errorCode = e.getErrorCode();
             }
         }
-        // TODO validate this logic.
+
         if (tokReqMsgCtx.getAuthorizedUser() != null && tokReqMsgCtx.getAuthorizedUser().isFederatedUser()
                 && tokReqMsgCtx.getAuthorizedUser().getTenantDomain() == null) {
             tokReqMsgCtx.getAuthorizedUser().setTenantDomain(tenantDomainOfApp);

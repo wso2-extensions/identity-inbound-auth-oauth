@@ -87,9 +87,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authzCodeDO.getAuthorizedUser());
         try {
             String sql;
-//            sql = SQLQueries.STORE_AUTHORIZATION_CODE_WITH_PKCE;
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled() &&
-                    (!StringUtils.equalsIgnoreCase("EnterpriseIDP", authenticatedIDP))) {
+            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                 sql = SQLQueries.STORE_AUTHORIZATION_CODE_WITH_PKCE_IDP_NAME;
             } else {
                 sql = SQLQueries.STORE_AUTHORIZATION_CODE_WITH_PKCE;
@@ -113,8 +111,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             //insert the hash value of the authorization code
             prepStmt.setString(13, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCode));
             prepStmt.setString(14, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()
-                    && (!StringUtils.equalsIgnoreCase("EnterpriseIDP", authenticatedIDP))) {
+            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                 prepStmt.setString(15, authenticatedIDP);
                 prepStmt.setInt(16, tenantId);
             }
@@ -748,7 +745,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     addScopePrepStmt.addBatch();
                 }
             }
-             addScopePrepStmt.executeBatch();
+            addScopePrepStmt.executeBatch();
         }
     }
 
