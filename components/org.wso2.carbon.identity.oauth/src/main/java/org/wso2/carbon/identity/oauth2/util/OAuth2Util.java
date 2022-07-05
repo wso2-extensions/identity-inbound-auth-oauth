@@ -51,6 +51,7 @@ import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -70,6 +71,7 @@ import org.wso2.carbon.identity.application.authentication.framework.store.UserS
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -214,6 +216,7 @@ public class OAuth2Util {
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
     public static final String OPENID_SCOPE = "openid";
+    public static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
     /*
      * Maintain a separate parameter "OPENID_CONNECT_AUDIENCE_IDENTITY_CONFIG" to get the audience from the identity.xml
      * when user didn't add any audience in the UI while creating service provider.
@@ -222,6 +225,7 @@ public class OAuth2Util {
     private static final String OPENID_CONNECT_AUDIENCES = "Audiences";
     private static final String DOT_SEPARATER = ".";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
+    private static final String FEDERATED_ROLE_CLAIM_URI = "roles";
 
     public static final String DEFAULT_TOKEN_TYPE = "Default";
 
@@ -3145,7 +3149,7 @@ public class OAuth2Util {
      */
     public static String getUserStoreForFederatedUser(AuthenticatedUser authenticatedUser) throws
             IdentityOAuth2Exception {
-        // check this method
+
         if (authenticatedUser == null) {
             throw new IllegalArgumentException("Authenticated user cannot be null");
         }
@@ -4423,5 +4427,26 @@ public class OAuth2Util {
             }
         }
         return IdentityTenantUtil.getTenantDomainFromContext();
+    }
+
+    /**
+     * Get user role list from federated user attributes.
+     * Used in OIDC flow.
+     *
+     * @param userAttributes User attribute
+     * @return user role-list
+     */
+    public static List<String> getValuesOfRolesFromFederatedUserAttributes(Map<ClaimMapping, String> userAttributes) {
+
+        if (MapUtils.isNotEmpty(userAttributes)) {
+            for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
+                if (entry.getKey().getRemoteClaim() != null) {
+                    if (StringUtils.equals(entry.getKey().getRemoteClaim().getClaimUri(), FEDERATED_ROLE_CLAIM_URI)) {
+                        return Arrays.asList(entry.getValue().split(Pattern.quote(ATTRIBUTE_SEPARATOR)));
+                    }
+                }
+            }
+        }
+        return Collections.emptyList();
     }
 }

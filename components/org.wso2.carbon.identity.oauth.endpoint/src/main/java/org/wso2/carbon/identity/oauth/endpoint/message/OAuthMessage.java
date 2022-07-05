@@ -55,7 +55,7 @@ public class OAuthMessage {
     protected String sessionDataKeyFromConsent;
 
     protected OAuthMessage(HttpServletRequest request, HttpServletResponse response) {
-        // TODO Check this
+
         this.request = request;
         this.response = response;
         SessionDataCacheKey cacheKey;
