@@ -473,6 +473,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     newTokenBean.setIsConsentedToken(true);
                 }
             }
+            tokReqMsgCtx.setConsentedToken(newTokenBean.isConsentedToken());
         }
         newTokenBean.setTokenType(getTokenType());
         newTokenBean.setIssuedTime(timestamp);

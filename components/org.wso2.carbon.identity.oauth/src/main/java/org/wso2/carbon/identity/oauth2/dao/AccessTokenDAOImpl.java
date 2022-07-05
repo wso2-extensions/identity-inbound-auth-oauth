@@ -85,6 +85,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     private static final String OAUTH_TOKEN_PERSISTENCE_RETRY_COUNT = "OAuth.TokenPersistence.RetryCount";
     private static final int DEFAULT_TOKEN_PERSIST_RETRY_COUNT = 5;
     private static final String IDN_OAUTH2_ACCESS_TOKEN = "IDN_OAUTH2_ACCESS_TOKEN";
+    private static final String CONSENTED_TOKEN_COLUMN_NAME = "CONSENTED_TOKEN";
     private boolean isTokenCleanupFeatureEnabled = OAuthServerConfiguration.getInstance().isTokenCleanupEnabled();
     private boolean isTenantQualifiedUrlsEnabled = IdentityTenantUtil.isTenantQualifiedUrlsEnabled();
     private boolean isCrossTenantTokenInspectionAllowed
@@ -969,6 +970,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         try {
             String sql;
 
+            boolean isConsentedColumnDataFetched = false;
             if (includeExpired) {
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                     if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
@@ -989,16 +991,36 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                     if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
                             && tenantDomain != null) {
-                        sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN_IDP_NAME;
+                        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                            sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN_IDP_NAME_WITH_CONSENTED_TOKEN;
+                            isConsentedColumnDataFetched = true;
+                        } else {
+                            sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN_IDP_NAME;
+                        }
                     } else {
-                        sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME;
+                        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                            sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME_WITH_CONSENTED_TOKEN;
+                            isConsentedColumnDataFetched = true;
+                        } else {
+                            sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME;
+                        }
                     }
                 } else {
                     if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
                             && tenantDomain != null) {
-                        sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN;
+                        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                            sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN_WITH_CONSENTED_TOKEN;
+                            isConsentedColumnDataFetched = true;
+                        } else {
+                            sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN;
+                        }
                     } else {
-                        sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN;
+                        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                            sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_WITH_CONSENTED_TOKEN;
+                            isConsentedColumnDataFetched = true;
+                        } else {
+                            sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN;
+                        }
                     }
                 }
             }
@@ -1043,6 +1065,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         authenticatedIDP = resultSet.getString(16);
                     }
 
+                    boolean isConsentedToken = false;
+                    if (isConsentedColumnDataFetched) {
+                        int consentedTokenColumnIndex = resultSet.findColumn(CONSENTED_TOKEN_COLUMN_NAME);
+                        isConsentedToken = resultSet.getBoolean(consentedTokenColumnIndex);
+                    }
+
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authorizedUser,
                             userDomain, tenantDomain, authenticatedIDP);
                     ServiceProvider serviceProvider;
@@ -1063,6 +1091,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     dataDO.setTokenId(tokenId);
                     dataDO.setGrantType(grantType);
                     dataDO.setTenantID(tenantId);
+                    dataDO.setIsConsentedToken(isConsentedToken);
 
                     if (StringUtils.isNotBlank(tokenBindingReference) && !NONE.equals(tokenBindingReference)) {
                         setTokenBindingToAccessTokenDO(dataDO, connection, tokenId);
