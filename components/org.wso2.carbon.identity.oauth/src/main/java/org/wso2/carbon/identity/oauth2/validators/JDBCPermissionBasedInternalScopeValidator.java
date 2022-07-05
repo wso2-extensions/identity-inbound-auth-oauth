@@ -27,7 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
@@ -67,6 +66,8 @@ import java.util.stream.Collectors;
 
 import static java.util.Objects.nonNull;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.ATTRIBUTE_SEPARATOR;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getValuesOfRolesFromFederatedUserAttributes;
 
 /**
  * The JDBC Scope Validation implementation. This validates the Resource's scope (stored in IDN_OAUTH2_RESOURCE_SCOPE)
@@ -81,7 +82,6 @@ public class JDBCPermissionBasedInternalScopeValidator {
     private static final String ROOT = "/";
     private static final String ADMIN_PERMISSION_ROOT = "/permission/admin";
     private static final String EVERYONE_PERMISSION = "everyone_permission";
-    private static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
 
     /**
      * Execute Internal scope Validation.
@@ -174,10 +174,6 @@ public class JDBCPermissionBasedInternalScopeValidator {
                 return new ArrayList<>();
             }
             boolean isSystemScope = ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE);
-            //TODO remove this logic
-//            if (authenticatedUser.isFederatedUser()) {
-//                authenticatedUser.setTenantDomain("intt1");
-//            }
             int tenantId = IdentityTenantUtil.getTenantId(authenticatedUser.getTenantDomain());
             startTenantFlow(authenticatedUser.getTenantDomain(), tenantId);
             AuthorizationManager authorizationManager = OAuthComponentServiceHolder.getInstance().getRealmService()
@@ -192,11 +188,10 @@ public class JDBCPermissionBasedInternalScopeValidator {
             local user not federated user.
              */
             if (authenticatedUser.isFederatedUser()) {
-                // TODO need to decide the exact condition.
+                // TODO need to decide on the exact condition.
                 if (StringUtils.equalsIgnoreCase(clientId, "console")) {
-                    allowedUIResourcesForUser =
-                            getAllowedUIResourcesForNotAssociatedFederatedUserWithRoles(authenticatedUser,
-                                    authorizationManager);
+                    allowedUIResourcesForUser = getAllowedUIResourcesForNotAssociatedFederatedUserWithRoles(
+                            authenticatedUser, authorizationManager);
 
                 /*
                 There is a flow where 'Assert identity using mapped local subject identifier' flag enabled but the
@@ -342,14 +337,15 @@ public class JDBCPermissionBasedInternalScopeValidator {
 
         List<String> allowedUIResourcesListForUser = new ArrayList<>();
 
-        List<String> userRolesList = getValuesOfRolesFromUserAttributes(authenticatedUser.getUserAttributes());
+        List<String> userRolesList = getValuesOfRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
 
         List<String> extendedUserRolesList = new ArrayList(userRolesList);
         // Add internal prefix before the roles & check.
         extendedUserRolesList.addAll(userRolesList.stream().map(x -> "INTERNAL/" + x).collect(Collectors.toList()));
         // Loop through each local role and get permissions.
         for (String userRole : extendedUserRolesList) {
-            for (String allowedUIResource : authorizationManager.getAllowedUIResourcesForRole(userRole, "/")) {
+            for (String allowedUIResource : authorizationManager
+                    .getAllowedUIResourcesForRole(userRole, "/")) {
                 if (!allowedUIResourcesListForUser.contains(allowedUIResource)) {
                     allowedUIResourcesListForUser.add(allowedUIResource);
                 }
@@ -373,20 +369,6 @@ public class JDBCPermissionBasedInternalScopeValidator {
             for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
                 if (entry.getKey().getRemoteClaim() != null) {
                     if (StringUtils.equals(entry.getKey().getRemoteClaim().getClaimUri(), OAuth2Constants.GROUPS)) {
-                        return Arrays.asList(entry.getValue().split(Pattern.quote(ATTRIBUTE_SEPARATOR)));
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    private List<String> getValuesOfRolesFromUserAttributes(Map<ClaimMapping, String> userAttributes) {
-
-        if (MapUtils.isNotEmpty(userAttributes)) {
-            for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
-                if (entry.getKey().getRemoteClaim() != null) {
-                    if (StringUtils.equals(entry.getKey().getRemoteClaim().getClaimUri(), "roles")) {
                         return Arrays.asList(entry.getValue().split(Pattern.quote(ATTRIBUTE_SEPARATOR)));
                     }
                 }

@@ -221,10 +221,6 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                                             existingTokenBean)
             throws IdentityOAuth2Exception {
         try {
-            // TODO remove this logic.
-//            if (userStoreDomain == null) {
-//                userStoreDomain = "CUSTOMER-DEFAULT";
-//            }
             newTokenBean.setAuthorizationCode(oAuth2AccessTokenReqDTO.getAuthorizationCode());
             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                     .insertAccessToken(newAccessToken, oAuth2AccessTokenReqDTO.getClientId(),
