@@ -47,8 +47,10 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
 import org.wso2.carbon.identity.openidconnect.RequestParamRequestObjectBuilder;
 
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
@@ -336,6 +338,11 @@ public class OAuth2CibaEndpointTest extends PowerMockTestCase {
         Map<String, RequestObjectBuilder> requestObjectBuilderMap = new HashMap<>();
         requestObjectBuilderMap.put(REQUEST_PARAM_VALUE_BUILDER, requestParamRequestObjectBuilder);
         when((oauthServerConfigurationMock.getRequestObjectBuilders())).thenReturn(requestObjectBuilderMap);
+
+        List<String> cibaAudiences = new ArrayList<>();
+        cibaAudiences.add("https://localhost:9443/oauth2/ciba");
+        cibaAudiences.add("https://localhost:9443/oauth2/token");
+        when((oauthServerConfigurationMock.getCibaAudiences())).thenReturn(cibaAudiences);
 
         mockStatic(EndpointUtil.class);
         when(EndpointUtil.getCibaAuthService()).thenReturn(authService);

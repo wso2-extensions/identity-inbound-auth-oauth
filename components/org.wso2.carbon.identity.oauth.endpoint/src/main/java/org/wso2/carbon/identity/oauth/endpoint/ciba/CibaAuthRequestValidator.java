@@ -275,7 +275,7 @@ public class CibaAuthRequestValidator {
         if (!checkNotBeforeTime(nbfTime, currentTime, skewTime)) {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                        claimsSet.getIssuer() + ".The request is with invalid  value for (nbf).");
+                        claimsSet.getIssuer() + ".The request is with invalid value for (nbf).");
             }
             throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "Cannot use this JWT.Failed (nbf).");
         }
@@ -393,35 +393,28 @@ public class CibaAuthRequestValidator {
         List<String> aud = claimsSet.getAudience();
         String clientId = claimsSet.getIssuer();
 
-        try {
-            // Validation for aud-audience.
-            if (aud.isEmpty()) {
-                // No value for audience found in the request.
-                if (log.isDebugEnabled()) {
-                    log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                            claimsSet.getIssuer() + ".The request is missing the mandatory parameter 'aud'.");
-                }
-                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, " Missing (aud) parameter.");
+        // Validation for aud-audience.
+        if (aud.isEmpty()) {
+            // No value for audience found in the request.
+            if (log.isDebugEnabled()) {
+                log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
+                        claimsSet.getIssuer() + ".The request is missing the mandatory parameter 'aud'.");
             }
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, " Missing (aud) parameter.");
+        }
 
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
-            String domain = OAuth2Util.getTenantDomainOfOauthApp(appDO);
+        // Getting expected audience dynamically from configs.
+        List<String> expectedAudience = OAuthServerConfiguration.getInstance().getCibaAudiences();
 
-            // Getting expected audience dynamically from configs.
-            String expectedAudience = OAuth2Util.getIdTokenIssuer(domain);
-
-            // Validation for aud-audience to meet mandated value.
-            if (!aud.contains(expectedAudience)) {
-                // The audience value does not suit mandated value.
-                if (log.isDebugEnabled()) {
-                    log.debug("Invalid CIBA Authentication Request made by client with clientID: " + clientId +
-                            ". Expected audience: " + expectedAudience + ".");
-                }
-                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Parameter (aud) does not meet the expected value: " + expectedAudience + ".");
+        // Validation for aud-audience to meet mandated value.
+        if (!expectedAudience.contains(aud.get(0))) {
+            // The audience value does not suit mandated value.
+            if (log.isDebugEnabled()) {
+                log.debug("Invalid CIBA Authentication Request made by client with clientID: " + clientId +
+                        ". Expected audience: " + expectedAudience + ".");
             }
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error in validating for (aud).", e);
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Parameter (aud) does not meet the expected value: " + expectedAudience + ".");
         }
     }
 
@@ -498,7 +491,7 @@ public class CibaAuthRequestValidator {
             }
 
             if (!clientId.equals(authenticatedClient)) {
-                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_CLIENT,
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
                         "Issuer does not match with the authenticated client.");
             }
             validateClient(request);
@@ -528,9 +521,22 @@ public class CibaAuthRequestValidator {
                         ", Current Time : " + currentTimeInMillis + ". JWT Rejected.");
             }
             return false;
-        } else {
-            return true;
         }
+        if (OAuthServerConfiguration.getInstance().isFapiCiba()) {
+            // FAPI mandates nbf should be within 60 mins of current time
+            if (currentTimeInMillis + timeStampSkewMillis - notBeforeTimeMillis >
+                    CibaConstants.MAXIMUM_NOT_BEFORE_TIME_IN_SEC * CibaConstants.SEC_TO_MILLISEC_FACTOR) {
+
+                if (log.isDebugEnabled()) {
+                    log.error("Not_Before_Time in JWT is older than 60 minutes" +
+                            ", Not Before Time(ms) : " + notBeforeTimeMillis +
+                            ", TimeStamp Skew : " + timeStampSkewMillis +
+                            ", Current Time : " + currentTimeInMillis + ". JWT Rejected.");
+                }
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

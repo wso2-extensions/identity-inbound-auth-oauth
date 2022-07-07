@@ -28,6 +28,7 @@ public class CibaConstants {
     public static final long EXPIRES_IN_DEFAULT_VALUE_IN_SEC = 3600;
     public static final long INTERVAL_DEFAULT_VALUE_IN_SEC = 2;
     public static final long MAXIMUM_REQUESTED_EXPIRY_IN_SEC = 3600;
+    public static final long MAXIMUM_NOT_BEFORE_TIME_IN_SEC = 3600;
     public static final long SEC_TO_MILLISEC_FACTOR = 1000;
     public static final String INTERVAL = "interval";
     public static final String AUTH_REQ_ID = "auth_req_id";
