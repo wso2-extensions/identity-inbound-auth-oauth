@@ -323,9 +323,13 @@ public class AccessTokenIssuer {
             }
         }
 
-        if (tokReqMsgCtx.getAuthorizedUser() != null && tokReqMsgCtx.getAuthorizedUser().isFederatedUser()
-                && tokReqMsgCtx.getAuthorizedUser().getTenantDomain() == null) {
-            tokReqMsgCtx.getAuthorizedUser().setTenantDomain(tenantDomainOfApp);
+        if (tokReqMsgCtx.getAuthorizedUser() != null && tokReqMsgCtx.getAuthorizedUser().isFederatedUser()) {
+            // if federated role based authorization is engaged cannot overwrite the user tenant.
+            if (!Boolean.parseBoolean(IdentityUtil.getProperty(
+                    IdentityConstants.SystemRoles.ENABLE_FEDERATED_IDP_ROLE_BASED_AUTHORIZATION))
+                    || tokReqMsgCtx.getAuthorizedUser().getTenantDomain() == null) {
+                tokReqMsgCtx.getAuthorizedUser().setTenantDomain(tenantDomainOfApp);
+            }
         }
 
         if (!isValidGrant) {

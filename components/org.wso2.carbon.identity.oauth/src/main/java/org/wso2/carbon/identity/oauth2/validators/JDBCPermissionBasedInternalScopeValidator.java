@@ -32,7 +32,9 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.RoleMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeBindingCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeBindingCacheKey;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -188,10 +190,11 @@ public class JDBCPermissionBasedInternalScopeValidator {
             local user not federated user.
              */
             if (authenticatedUser.isFederatedUser()) {
-                // TODO need to decide on the exact condition.
-                if (StringUtils.equalsIgnoreCase(clientId, "console")) {
-                    allowedUIResourcesForUser = getAllowedUIResourcesForNotAssociatedFederatedUserWithRoles(
-                            authenticatedUser, authorizationManager);
+                if (StringUtils.equalsIgnoreCase(clientId, "console") && Boolean.parseBoolean(IdentityUtil.getProperty(
+                        IdentityConstants.SystemRoles.ENABLE_FEDERATED_IDP_ROLE_BASED_AUTHORIZATION))) {
+                    allowedUIResourcesForUser =
+                            getAllowedUIResourcesForNotAssociatedFederatedUserWithRoles(authenticatedUser,
+                                    authorizationManager);
 
                 /*
                 There is a flow where 'Assert identity using mapped local subject identifier' flag enabled but the
@@ -336,9 +339,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
             throws UserStoreException, IdentityOAuth2Exception {
 
         List<String> allowedUIResourcesListForUser = new ArrayList<>();
-
         List<String> userRolesList = getValuesOfRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
-
         List<String> extendedUserRolesList = new ArrayList(userRolesList);
         // Add internal prefix before the roles & check.
         if (userRolesList.size() > 0) {

@@ -253,11 +253,14 @@ public class ResponseTypeHandlerUtil {
         // set code issued time.this is needed by downstream handlers.
         oauthAuthzMsgCtx.setCodeIssuedTime(timestamp.getTime());
 
-        if (authorizationReqDTO.getUser() != null
-                && authorizationReqDTO.getUser().getTenantDomain() == null
-                && authorizationReqDTO.getUser().isFederatedUser()) {
-            //if a federated user, treat the tenant domain as similar to application domain.
-            authorizationReqDTO.getUser().setTenantDomain(authorizationReqDTO.getTenantDomain());
+        if (authorizationReqDTO.getUser() != null && authorizationReqDTO.getUser().isFederatedUser()) {
+            // if federated role based authorization is engaged cannot overwrite the user tenant.
+            if (!Boolean.parseBoolean(IdentityUtil.getProperty(
+                    IdentityConstants.SystemRoles.ENABLE_FEDERATED_IDP_ROLE_BASED_AUTHORIZATION))
+                    || authorizationReqDTO.getUser().getTenantDomain() == null) {
+                //if a federated user, treat the tenant domain as similar to application domain.
+                authorizationReqDTO.getUser().setTenantDomain(authorizationReqDTO.getTenantDomain());
+            }
         }
 
         try {
