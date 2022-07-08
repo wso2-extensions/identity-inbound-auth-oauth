@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -80,7 +81,8 @@ public class RoleBasedInternalScopeValidator {
         // Get the roles of the authenticated user.
         AuthenticatedUser authenticatedUser = tokReqMsgCtx.getAuthorizedUser();
         List<String> roles;
-        if (authenticatedUser.isFederatedUser()) {
+        if (authenticatedUser.isFederatedUser() && Boolean.parseBoolean(IdentityUtil.getProperty(
+                IdentityConstants.SystemRoles.ENABLE_FEDERATED_IDP_ROLE_BASED_AUTHORIZATION))) {
             roles = getValuesOfRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
         } else {
             roles = getRolesOfTheUser(authenticatedUser);
@@ -131,7 +133,8 @@ public class RoleBasedInternalScopeValidator {
         // Get the roles of the authenticated user.
         AuthenticatedUser authenticatedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
         List<String> roles;
-        if (authenticatedUser.isFederatedUser()) {
+        if (authenticatedUser.isFederatedUser() && Boolean.parseBoolean(IdentityUtil.getProperty(
+                IdentityConstants.SystemRoles.ENABLE_FEDERATED_IDP_ROLE_BASED_AUTHORIZATION))) {
             roles = getValuesOfRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
         } else {
             roles = getRolesOfTheUser(authenticatedUser);
@@ -186,11 +189,11 @@ public class RoleBasedInternalScopeValidator {
                     = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
 
             String userName = userStoreManager.getUserNameFromUserID(authenticatedUser.getUserId());
-
+            // if the username is empty try to set it as authenticated username.
             if (StringUtils.isEmpty(userName)) {
                 userName = authenticatedUser.getUserName();
             }
-
+            // Remove domain name from username.
             if (StringUtils.isNotEmpty(userName)) {
                 userName = UserCoreUtil.removeDomainFromName(userName);
             }
