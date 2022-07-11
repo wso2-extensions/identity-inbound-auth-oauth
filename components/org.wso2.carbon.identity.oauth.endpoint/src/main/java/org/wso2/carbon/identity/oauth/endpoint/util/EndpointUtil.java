@@ -43,6 +43,10 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
+import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -90,6 +94,8 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 import org.wso2.carbon.idp.mgt.IdpManager;
+import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
+import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.io.IOException;
@@ -125,6 +131,7 @@ public class EndpointUtil {
     private static final String OPENID = "openid";
     private static final String OIDC = "oidc";
     private static final String OAUTH2_AUTHORIZE = "/oauth2/authorize";
+    public static final String OAUTH2_CIBA_ENDPOINT = "oauth2/ciba";
     private static final String UTF_8 = "UTF-8";
     private static final String PROP_CLIENT_ID = "client_id";
     private static final String PROP_GRANT_TYPE = "response_type";
@@ -145,6 +152,7 @@ public class EndpointUtil {
     private static CibaAuthServiceImpl cibaAuthService;
     private static IdpManager idpManager;
     private static final String ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL = "OAuth.AllowAdditionalParamsFromErrorUrl";
+    private static final String IDP_ENTITY_ID = "IdPEntityId";
 
     public static void setIdpManager(IdpManager idpManager) {
 
@@ -1529,4 +1537,25 @@ public class EndpointUtil {
         return !(params != null && StringUtils.isNotBlank(params.getRedirectURI()) &&
                 StringUtils.startsWith(redirectURL, params.getRedirectURI()));
     }
+
+    /**
+     * Used to get the issuer identifier url for a given service provider.
+     *
+     * @param clientId Client Id.
+     * @return Issuer identifier url.
+     * @throws IdentityProviderManagementException IdentityProviderManagementException.
+     */
+    public static String getIssuerIdentifierFromClientId(String clientId) throws IdentityProviderManagementException {
+
+        IdentityProvider identityProvider = IdentityProviderManager.getInstance()
+                .getResidentIdP(getSPTenantDomainFromClientId(clientId));
+        FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
+        // Get OIDC authenticator
+        FederatedAuthenticatorConfig oidcAuthenticatorConfig =
+                IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
+                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
+        return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(), IDP_ENTITY_ID)
+                .getValue();
+    }
+
 }

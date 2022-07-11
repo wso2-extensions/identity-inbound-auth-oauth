@@ -27,6 +27,8 @@ import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
@@ -35,14 +37,22 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
+import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
+import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_TOKEN_EP_URL;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.OAUTH2_CIBA_ENDPOINT;
 
 /**
  * Handles the validation of ciba authentication request.
@@ -173,21 +183,30 @@ public class CibaAuthRequestValidator {
     private void validateBindingMessage(JWTClaimsSet claimsSet) throws CibaAuthFailureException {
 
         try {
-            // Validation for binding_message.
-            if ((claimsSet.getClaim(CibaConstants.BINDING_MESSAGE)) == null) {
-                // Request has claim for binding_message.
-                return;
-            }
 
-            if (StringUtils.isBlank(claimsSet.getStringClaim(CibaConstants.BINDING_MESSAGE))) {
-                // Binding_message with a blank value which is not acceptable.
-                if (log.isDebugEnabled()) {
-                    log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                            claimsSet.getIssuer() +
-                            ".The request is with invalid  value for (binding_message).");
+            // Request has claim for binding_message(optional).
+            if (claimsSet.getClaim(CibaConstants.BINDING_MESSAGE) != null) {
+                // Validate binding message is not blank
+                String bindingMessage = claimsSet.getStringClaim(CibaConstants.BINDING_MESSAGE);
+                if (StringUtils.isBlank(bindingMessage)) {
+                    // Binding_message with a blank value which is not acceptable.
+                    if (log.isDebugEnabled()) {
+                        log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
+                                claimsSet.getIssuer() +
+                                ".The request is with invalid  value for (binding_message).");
+                    }
+                    throw new CibaAuthFailureException(ErrorCodes.INVALID_BINDING_MESSAGE,
+                            "Invalid value for (binding_message).");
+                } else {
+                    // Validate binding message contain only plain text
+                    Pattern specialCharactersPattern = Pattern.compile("[^a-z0-9 ]", Pattern.CASE_INSENSITIVE);
+                    Matcher specialCharactersPatternMatcher = specialCharactersPattern.matcher(bindingMessage);
+                    boolean isSpecialCharactersAvailable = specialCharactersPatternMatcher.find();
+                    if (isSpecialCharactersAvailable) {
+                        throw new CibaAuthFailureException(ErrorCodes.INVALID_BINDING_MESSAGE,
+                                "Invalid characters present in (binding_message).");
+                    }
                 }
-                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Invalid value for (binding_message).");
             }
         } catch (ParseException e) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error in validating request parameters.",
@@ -404,7 +423,30 @@ public class CibaAuthRequestValidator {
         }
 
         // Getting expected audience dynamically from configs.
-        List<String> expectedAudience = OAuthServerConfiguration.getInstance().getCibaAudiences();
+        List<String> expectedAudience = new ArrayList<>();
+        try {
+            // Token endpoint
+            expectedAudience.add(ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build()
+                    .getAbsolutePublicURL());
+            // CIBA endpoint
+            expectedAudience.add(ServiceURLBuilder.create().addPath(OAUTH2_CIBA_ENDPOINT).build()
+                    .getAbsolutePublicURL());
+        } catch (URLBuilderException e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, " Failed to build audience URLs.", e);
+        }
+
+        try {
+            // Issuer identifier
+            expectedAudience.add(EndpointUtil.getIssuerIdentifierFromClientId(clientId));
+        } catch (IdentityProviderManagementException e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, " Unable to get issuer identifier for " +
+                    "the service provider", e);
+        }
+
+        if (aud.size() > 1) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, " Multiple values for audience " +
+                    "present in the request.");
+        }
 
         // Validation for aud-audience to meet mandated value.
         if (!expectedAudience.contains(aud.get(0))) {

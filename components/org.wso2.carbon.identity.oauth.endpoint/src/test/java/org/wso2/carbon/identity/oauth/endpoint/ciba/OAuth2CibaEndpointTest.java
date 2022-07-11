@@ -31,6 +31,9 @@ import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.ServiceURL;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
@@ -47,10 +50,9 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
 import org.wso2.carbon.identity.openidconnect.RequestParamRequestObjectBuilder;
 
 import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
@@ -65,7 +67,8 @@ import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 
-@PrepareForTest({OAuth2Util.class, OAuthServerConfiguration.class, EndpointUtil.class, IdentityTenantUtil.class,
+@PrepareForTest({OAuth2Util.class, OAuthServerConfiguration.class, EndpointUtil.class, ServiceURL.class,
+        ServiceURLBuilder.class, IdentityTenantUtil.class,
         LoggerUtils.class})
 public class OAuth2CibaEndpointTest extends PowerMockTestCase {
 
@@ -281,6 +284,10 @@ public class OAuth2CibaEndpointTest extends PowerMockTestCase {
 
         when(oAuthAppDO.getGrantTypes()).thenReturn(CibaConstants.OAUTH_CIBA_GRANT_TYPE);
 
+        mockServiceURLBuilder();
+        mockStatic(EndpointUtil.class);
+        when(EndpointUtil.getIssuerIdentifierFromClientId(any())).thenReturn("https://localhost:9443/oauth2/token");
+
         OAuth2CibaEndpoint cibaEndpoint = new OAuth2CibaEndpoint();
         Response response = cibaEndpoint.ciba(httpServletRequest, httpServletResponse, new MultivaluedHashMap());
         Assert.assertEquals(expectedStatus, response.getStatus());
@@ -339,12 +346,10 @@ public class OAuth2CibaEndpointTest extends PowerMockTestCase {
         requestObjectBuilderMap.put(REQUEST_PARAM_VALUE_BUILDER, requestParamRequestObjectBuilder);
         when((oauthServerConfigurationMock.getRequestObjectBuilders())).thenReturn(requestObjectBuilderMap);
 
-        List<String> cibaAudiences = new ArrayList<>();
-        cibaAudiences.add("https://localhost:9443/oauth2/ciba");
-        cibaAudiences.add("https://localhost:9443/oauth2/token");
-        when((oauthServerConfigurationMock.getCibaAudiences())).thenReturn(cibaAudiences);
+        mockServiceURLBuilder();
 
         mockStatic(EndpointUtil.class);
+        when(EndpointUtil.getIssuerIdentifierFromClientId(any())).thenReturn("https://localhost:9443/oauth2/token");
         when(EndpointUtil.getCibaAuthService()).thenReturn(authService);
 
         mockStatic(EndpointUtil.class);
@@ -360,6 +365,53 @@ public class OAuth2CibaEndpointTest extends PowerMockTestCase {
 
         Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse,  new MultivaluedHashMap());
         Assert.assertEquals(200, response.getStatus());
+    }
+
+    private void mockServiceURLBuilder() throws URLBuilderException {
+
+        ServiceURLBuilder builder = new ServiceURLBuilder() {
+
+            String path = "";
+            @Override
+            public ServiceURLBuilder addPath(String... strings) {
+
+                path = "";
+                Arrays.stream(strings).forEach(x -> {
+                    path += "/" + x;
+                });
+                return this;
+            }
+
+            @Override
+            public ServiceURLBuilder addParameter(String s, String s1) {
+
+                return this;
+            }
+
+            @Override
+            public ServiceURLBuilder setFragment(String s) {
+
+                return this;
+            }
+
+            @Override
+            public ServiceURLBuilder addFragmentParameter(String s, String s1) {
+
+                return this;
+            }
+
+            @Override
+            public ServiceURL build() throws URLBuilderException {
+
+                ServiceURL serviceURL = PowerMockito.mock(ServiceURL.class);
+                when(serviceURL.getAbsolutePublicURL()).thenReturn("https://localhost:9443" + path);
+                when(serviceURL.getRelativeInternalURL()).thenReturn(path);
+                return serviceURL;
+            }
+        };
+
+        mockStatic(ServiceURLBuilder.class);
+        when(ServiceURLBuilder.create()).thenReturn(builder);
     }
 
 }

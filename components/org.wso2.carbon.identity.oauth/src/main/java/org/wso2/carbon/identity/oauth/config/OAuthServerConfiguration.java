@@ -174,7 +174,6 @@ public class OAuthServerConfiguration {
     private List<String> supportedTokenTypes = new ArrayList<>();
     private Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
     private String[] supportedClaims = null;
-    private List<String> cibaAudiences = new ArrayList<>();
     private boolean isFapiCiba = false;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
     private String saml2TokenCallbackHandlerName = null;
@@ -3226,6 +3225,7 @@ public class OAuthServerConfiguration {
         public static final String OAUTH1_ACCESS_TOKEN_URL = "OAuth1AccessTokenUrl";
         public static final String OAUTH2_AUTHZ_EP_URL = "OAuth2AuthzEPUrl";
         public static final String OAUTH2_TOKEN_EP_URL = "OAuth2TokenEPUrl";
+        public static final String OAUTH2_CIBA_EP_URL = "OAuth2CibaEPUrl";
         public static final String OAUTH2_USERINFO_EP_URL = "OAuth2UserInfoEPUrl";
         public static final String OAUTH2_REVOCATION_EP_URL = "OAuth2RevokeEPUrl";
         public static final String OAUTH2_INTROSPECTION_EP_URL = "OAuth2IntrospectEPUrl";
@@ -3292,8 +3292,6 @@ public class OAuthServerConfiguration {
                 + ".ReturnOnlyMappedLocalRoles";
         public static final String OPENID_CONNECT_ADD_UN_MAPPED_USER_ATTRIBUTES = "AddUnmappedUserAttributes";
         public static final String SUPPORTED_CLAIMS = "OpenIDConnectClaims";
-        public static final String SUPPORTED_AUDIENCES = "Audiences";
-        public static final String AUDIENCE = "Audience";
         public static final String REQUEST_OBJECT = "RequestObject";
         public static final String REQUEST_OBJECT_VALIDATOR = "RequestObjectValidator";
         public static final String OAUTH_AUTHZ_REQUEST_CLASS = "OAuthAuthzRequestClass";
