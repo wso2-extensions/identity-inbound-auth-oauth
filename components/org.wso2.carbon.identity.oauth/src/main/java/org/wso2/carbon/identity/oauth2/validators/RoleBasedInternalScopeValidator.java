@@ -53,7 +53,7 @@ import static java.util.Objects.nonNull;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getValuesOfRolesFromFederatedUserAttributes;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getRolesFromFederatedUserAttributes;
 
 /**
  * The role based internal console scopes validation implementation. This will validate the configured console scopes
@@ -83,7 +83,7 @@ public class RoleBasedInternalScopeValidator {
         List<String> roles;
         if (authenticatedUser.isFederatedUser() && Boolean.parseBoolean(IdentityUtil.getProperty(
                 IdentityConstants.SystemRoles.ENABLE_FEDERATED_IDP_ROLE_BASED_AUTHORIZATION))) {
-            roles = getValuesOfRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
+            roles = getRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
         } else {
             roles = getRolesOfTheUser(authenticatedUser);
         }
@@ -135,7 +135,7 @@ public class RoleBasedInternalScopeValidator {
         List<String> roles;
         if (authenticatedUser.isFederatedUser() && Boolean.parseBoolean(IdentityUtil.getProperty(
                 IdentityConstants.SystemRoles.ENABLE_FEDERATED_IDP_ROLE_BASED_AUTHORIZATION))) {
-            roles = getValuesOfRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
+            roles = getRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
         } else {
             roles = getRolesOfTheUser(authenticatedUser);
         }

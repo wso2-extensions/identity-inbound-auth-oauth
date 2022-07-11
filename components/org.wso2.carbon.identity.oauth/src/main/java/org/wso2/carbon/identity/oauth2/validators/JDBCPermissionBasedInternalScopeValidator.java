@@ -24,6 +24,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -54,6 +55,7 @@ import org.wso2.carbon.user.api.AuthorizationManager;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.common.User;
+import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
@@ -69,7 +71,7 @@ import java.util.stream.Collectors;
 import static java.util.Objects.nonNull;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.ATTRIBUTE_SEPARATOR;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getValuesOfRolesFromFederatedUserAttributes;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getRolesFromFederatedUserAttributes;
 
 /**
  * The JDBC Scope Validation implementation. This validates the Resource's scope (stored in IDN_OAUTH2_RESOURCE_SCOPE)
@@ -190,18 +192,25 @@ public class JDBCPermissionBasedInternalScopeValidator {
             local user not federated user.
              */
             if (authenticatedUser.isFederatedUser()) {
-                if (StringUtils.equalsIgnoreCase(clientId, "console") && Boolean.parseBoolean(IdentityUtil.getProperty(
-                        IdentityConstants.SystemRoles.ENABLE_FEDERATED_IDP_ROLE_BASED_AUTHORIZATION))) {
-                    allowedUIResourcesForUser =
-                            getAllowedUIResourcesForNotAssociatedFederatedUserWithRoles(authenticatedUser,
-                                    authorizationManager);
-
                 /*
-                There is a flow where 'Assert identity using mapped local subject identifier' flag enabled but the
-                federated user doesn't have any association in localIDP, to handle this case we check for 'Assert
-                identity using mapped local subject identifier' flag and get roles from userStore.
+                 * If the role based authorization feature is enabled & particular applications in the listed under the
+                 * required application list then retrieve permissions from the FIdp user roles.
+                 * Since tenant flow is enabled, permission will be fetched from user login(federated) tenant
+                 * not the application tenant.
                  */
+                if (Boolean.parseBoolean(IdentityUtil.getProperty(
+                        IdentityConstants.SystemRoles.ENABLE_FEDERATED_IDP_ROLE_BASED_AUTHORIZATION))
+                        && IdentityUtil.getFederatedRoleBasedAuthorizationEnabledApplications().contains((
+                        OAuth2Util.getServiceProvider(clientId).getApplicationName()))) {
+                    allowedUIResourcesForUser =
+                            getAllowedUIResourcesForNonAssociatedFederatedUserWithRoles(
+                                    authenticatedUser, authorizationManager);
                 } else if (isSPAlwaysSendMappedLocalSubjectId(clientId)) {
+                   /*
+                    There is a flow where 'Assert identity using mapped local subject identifier' flag enabled but the
+                    federated user doesn't have any association in localIDP, to handle this case we check for 'Assert
+                    identity using mapped local subject identifier' flag and get roles from userStore.
+                     */
                     allowedUIResourcesForUser = getAllowedUIResourcesOfUser(authenticatedUser, authorizationManager);
                 } else {
                     // Handle not account associated federated users.
@@ -334,22 +343,29 @@ public class JDBCPermissionBasedInternalScopeValidator {
         return allowedUIResourcesListForUser.toArray(new String[0]);
     }
 
-    private String[] getAllowedUIResourcesForNotAssociatedFederatedUserWithRoles(AuthenticatedUser authenticatedUser,
-                                                                        AuthorizationManager authorizationManager)
+    private String[] getAllowedUIResourcesForNonAssociatedFederatedUserWithRoles(AuthenticatedUser authenticatedUser,
+                                                                                 AuthorizationManager authorizationManager)
             throws UserStoreException, IdentityOAuth2Exception {
 
         List<String> allowedUIResourcesListForUser = new ArrayList<>();
-        List<String> userRolesList = getValuesOfRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
-        List<String> extendedUserRolesList = new ArrayList(userRolesList);
-        // Add internal prefix before the roles & check.
+        List<String> userRolesList = getRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
+
         if (userRolesList.size() > 0) {
-            extendedUserRolesList.addAll(userRolesList.stream().map(x -> "INTERNAL/" + x).collect(Collectors.toList()));
-            // Loop through each local role and get permissions.
-            for (String userRole : extendedUserRolesList) {
-                for (String allowedUIResource :
-                        authorizationManager.getAllowedUIResourcesForRole(userRole, "/")) {
-                    if (!allowedUIResourcesListForUser.contains(allowedUIResource)) {
-                        allowedUIResourcesListForUser.add(allowedUIResource);
+            for (String  role: userRolesList) {
+                String modifiedRole = role;
+
+                // Add internal prefix before normal roles .
+                if (!modifiedRole.contains(CarbonConstants.DOMAIN_SEPARATOR)) {
+                    modifiedRole = UserCoreConstants.INTERNAL_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + modifiedRole;
+                }
+
+                // Loop through each internal local role and get permissions.
+                if (modifiedRole.startsWith(UserCoreConstants.INTERNAL_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR)) {
+                    for (String allowedUIResource :
+                            authorizationManager.getAllowedUIResourcesForRole(modifiedRole, ROOT)) {
+                        if (!allowedUIResourcesListForUser.contains(allowedUIResource)) {
+                            allowedUIResourcesListForUser.add(allowedUIResource);
+                        }
                     }
                 }
             }
