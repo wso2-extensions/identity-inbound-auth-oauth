@@ -71,6 +71,8 @@ import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
+import org.wso2.carbon.identity.organization.management.role.management.service.RoleManager;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
@@ -579,6 +581,52 @@ public class OAuth2ServiceComponent {
         OAuth2ServiceComponentHolder.getInstance().setScopeClaimMappingDAO(new ScopeClaimMappingDAOImpl());
         if (log.isDebugEnabled()) {
             log.debug("Scope Claim DAO implementation got removed: " + scopeClaimMappingDAO.getClass().getName());
+        }
+    }
+
+    @Reference(
+            name = "carbon.organization.management.component",
+            service = OrganizationManager.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationManager"
+    )
+    protected void setOrganizationManager(OrganizationManager organizationManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting organization management service");
+        }
+        OAuth2ServiceComponentHolder.setOrganizationManager(organizationManager);
+    }
+
+    protected void unsetOrganizationManager(OrganizationManager organizationManager) {
+
+        OAuth2ServiceComponentHolder.setOrganizationManager(null);
+        if (log.isDebugEnabled()) {
+            log.debug("Unset organization management service.");
+        }
+    }
+
+    @Reference(
+            name = "carbon.organization.management.role.management.component",
+            service = RoleManager.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationRoleManager"
+    )
+    protected void setOrganizationRoleManager(RoleManager roleManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting organization role management service");
+        }
+        OAuth2ServiceComponentHolder.setRoleManager(roleManager);
+    }
+
+    protected void unsetOrganizationRoleManager(RoleManager roleManager) {
+
+        OAuth2ServiceComponentHolder.setRoleManager(null);
+        if (log.isDebugEnabled()) {
+            log.debug("Unset organization role management service.");
         }
     }
 

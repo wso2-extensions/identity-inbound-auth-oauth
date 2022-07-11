@@ -48,7 +48,9 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.AuthorizationManager;
+import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
@@ -61,6 +63,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static java.util.Objects.nonNull;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 
 /**
@@ -194,6 +197,22 @@ public class JDBCPermissionBasedInternalScopeValidator {
             } else {
                 allowedUIResourcesForUser = getAllowedUIResourcesOfUser(authenticatedUser, authorizationManager);
             }
+
+            //Add permission based on user's organization roles.
+            Tenant tenant =
+                    OAuthComponentServiceHolder.getInstance().getRealmService().getTenantManager().getTenant(tenantId);
+            if (nonNull(tenant) && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID())) {
+                String organizationId = tenant.getAssociatedOrganizationUUID();
+                try {
+                    List<String> organizationPermissions = OAuth2ServiceComponentHolder.getRoleManager()
+                            .getUserOrganizationPermissions(authenticatedUser.getUserId(), organizationId);
+                    allowedUIResourcesForUser =
+                            (String[]) ArrayUtils.addAll(allowedUIResourcesForUser, organizationPermissions.toArray());
+                } catch (OrganizationManagementException e) {
+                    log.error("Error while retrieving the organization permissions of the user.");
+                }
+            }
+
             Set<Scope> allScopes = getScopesOfPermissionType(tenantId);
             if (ArrayUtils.contains(allowedUIResourcesForUser, ROOT) || ArrayUtils.contains(allowedUIResourcesForUser,
                     PERMISSION_ROOT)) {

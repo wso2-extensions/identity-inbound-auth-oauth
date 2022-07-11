@@ -32,6 +32,8 @@ import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
+import org.wso2.carbon.identity.organization.management.role.management.service.RoleManager;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
@@ -63,6 +65,8 @@ public class OAuth2ServiceComponentHolder {
     private static KeyIDProvider keyIDProvider = null;
     private IdpManager idpManager;
     private static UserSessionManagementService userSessionManagementService;
+    private static OrganizationManager organizationManager;
+    private static RoleManager roleManager;
     private List<ScopeDTO> oidcScopesClaims = new ArrayList<>();
     private List<Scope> oauthScopeBinding = new ArrayList<>();
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
@@ -322,6 +326,26 @@ public class OAuth2ServiceComponentHolder {
     public static UserSessionManagementService getUserSessionManagementService() {
 
         return userSessionManagementService;
+    }
+
+    public static OrganizationManager getOrganizationManager() {
+
+        return organizationManager;
+    }
+
+    public static void setOrganizationManager(OrganizationManager organizationManager) {
+
+        OAuth2ServiceComponentHolder.organizationManager = organizationManager;
+    }
+
+    public static RoleManager getRoleManager() {
+
+        return roleManager;
+    }
+
+    public static void setRoleManager(RoleManager roleManager) {
+
+        OAuth2ServiceComponentHolder.roleManager = roleManager;
     }
 
     public void setOIDCScopesClaims(List<ScopeDTO> oidcScopesClaims) {
