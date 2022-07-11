@@ -965,18 +965,22 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
 
+        if (StringUtils.isEmpty(tenantDomain)) {
+            throw new IdentityOAuth2Exception("Tenant Domain should be needed for further execution");
+        }
+
         try {
             String sql;
 
             if (includeExpired) {
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    if (!isCrossTenantTokenInspectionAllowed && tenantDomain != null) {
+                    if (!isCrossTenantTokenInspectionAllowed) {
                         sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_TENANT_ACCESS_TOKEN_IDP_NAME;
                     } else {
                         sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN_IDP_NAME;
                     }
                 } else {
-                    if (!isCrossTenantTokenInspectionAllowed && tenantDomain != null) {
+                    if (!isCrossTenantTokenInspectionAllowed) {
                         sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_TENANT_ACCESS_TOKEN;
                     } else {
                         sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN;
@@ -984,13 +988,13 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
             } else {
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    if (!isCrossTenantTokenInspectionAllowed && tenantDomain != null) {
+                    if (!isCrossTenantTokenInspectionAllowed) {
                         sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN_IDP_NAME;
                     } else {
                         sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME;
                     }
                 } else {
-                    if (!isCrossTenantTokenInspectionAllowed && tenantDomain != null) {
+                    if (!isCrossTenantTokenInspectionAllowed) {
                         sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN;
                     } else {
                         sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN;
@@ -1004,7 +1008,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt.setString(1,
                     getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(accessTokenIdentifier));
-            if (!isCrossTenantTokenInspectionAllowed && tenantDomain != null) {
+            if (!isCrossTenantTokenInspectionAllowed) {
                 prepStmt.setInt(2, IdentityTenantUtil.getTenantId(tenantDomain));
             }
             resultSet = prepStmt.executeQuery();
