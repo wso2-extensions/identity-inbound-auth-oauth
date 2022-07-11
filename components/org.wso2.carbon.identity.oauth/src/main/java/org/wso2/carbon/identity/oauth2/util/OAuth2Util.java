@@ -4481,12 +4481,12 @@ public class OAuth2Util {
      * @param userAttributes User attribute
      * @return user role-list
      */
-    public static List<String> getValuesOfRolesFromFederatedUserAttributes(Map<ClaimMapping, String> userAttributes) {
+    public static List<String> getRolesFromFederatedUserAttributes(Map<ClaimMapping, String> userAttributes) {
 
         if (MapUtils.isNotEmpty(userAttributes)) {
             for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
-                if (entry.getKey().getRemoteClaim() != null) {
-                    if (StringUtils.equals(entry.getKey().getRemoteClaim().getClaimUri(), FEDERATED_ROLE_CLAIM_URI)) {
+                if (entry.getKey() != null && entry.getKey().getRemoteClaim() != null) {
+                    if (StringUtils.equals(FEDERATED_ROLE_CLAIM_URI, entry.getKey().getRemoteClaim().getClaimUri())) {
                         return Arrays.asList(entry.getValue().split(Pattern.quote(ATTRIBUTE_SEPARATOR)));
                     }
                 }
