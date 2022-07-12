@@ -135,6 +135,7 @@ public class AccessTokenDO extends CacheEntry {
         newTokenDO.setAuthorizationCode(tokenDO.getAuthorizationCode());
         newTokenDO.setGrantType(tokenDO.getGrantType());
         newTokenDO.setTokenBinding(tokenDO.getTokenBinding());
+        newTokenDO.setIsConsentedToken(tokenDO.isConsentedToken());
 
         return newTokenDO;
     }
