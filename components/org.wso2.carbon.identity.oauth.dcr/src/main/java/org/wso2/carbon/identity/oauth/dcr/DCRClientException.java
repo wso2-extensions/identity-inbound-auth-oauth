@@ -22,6 +22,7 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Fra
 /**
  * Exception class used to handle DCR client related exceptions.
  */
+@Deprecated
 public class DCRClientException extends FrameworkClientException {
 
     public DCRClientException(String message) {

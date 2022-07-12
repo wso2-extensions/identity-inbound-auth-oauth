@@ -29,6 +29,7 @@ import java.util.List;
  * This is the DataHolder class of DynamicClientRegistration bundle. This holds a reference to the
  * ApplicationManagementService.
  */
+@Deprecated
 public class DCRDataHolder {
 
     private static DCRDataHolder thisInstance = new DCRDataHolder();
