@@ -996,4 +996,9 @@
             <Permission>/permission/admin/manage/identity/organizationmgt/update</Permission>
         </Permissions>
     </Scope>
+    <Scope name="internal_organization_switch" displayName="Switch Organization">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/organizationmgt/view/switch</Permission>
+        </Permissions>
+    </Scope>
 </Scopes>
