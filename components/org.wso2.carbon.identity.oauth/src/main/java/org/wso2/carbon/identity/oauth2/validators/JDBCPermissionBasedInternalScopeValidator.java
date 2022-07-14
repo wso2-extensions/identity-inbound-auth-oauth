@@ -83,6 +83,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
 
     /**
      * Execute Internal scope Validation.
+     *
      * @param tokReqMsgCtx Oauth token request message.
      * @return array of validated scopes.
      */
@@ -112,6 +113,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
 
     /**
      * Execute Internal Scope Validation.
+     *
      * @param authzReqMessageContext OAuth authorization request message.
      * @return array of validated scopes.
      */
@@ -130,9 +132,10 @@ public class JDBCPermissionBasedInternalScopeValidator {
 
     /**
      * Execute Internal Scope Validation.
-     * @param requestedScopes Array of scopes that needs to be validated.
+     *
+     * @param requestedScopes   Array of scopes that needs to be validated.
      * @param authenticatedUser Authenticated user.
-     * @param clientId ID of the client.
+     * @param clientId          ID of the client.
      * @return Array of validated scopes.
      */
     public String[] validateScope(String[] requestedScopes, AuthenticatedUser authenticatedUser, String clientId) {
@@ -161,6 +164,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
 
     private List<Scope> getUserAllowedScopes(AuthenticatedUser authenticatedUser, String[] requestedScopes,
                                              String clientId) {
+
         List<Scope> userAllowedScopes = new ArrayList<>();
 
         try {
@@ -195,21 +199,14 @@ public class JDBCPermissionBasedInternalScopeValidator {
                             getAllowedUIResourcesForNotAssociatedFederatedUser(authenticatedUser, authorizationManager);
                 }
             } else {
-                allowedUIResourcesForUser = getAllowedUIResourcesOfUser(authenticatedUser, authorizationManager);
-            }
-
-            //Add permission based on user's organization roles.
-            Tenant tenant =
-                    OAuthComponentServiceHolder.getInstance().getRealmService().getTenantManager().getTenant(tenantId);
-            if (nonNull(tenant) && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID())) {
-                String organizationId = tenant.getAssociatedOrganizationUUID();
-                try {
-                    List<String> organizationPermissions = OAuth2ServiceComponentHolder.getRoleManager()
-                            .getUserOrganizationPermissions(authenticatedUser.getUserId(), organizationId);
-                    allowedUIResourcesForUser =
-                            (String[]) ArrayUtils.addAll(allowedUIResourcesForUser, organizationPermissions.toArray());
-                } catch (OrganizationManagementException e) {
-                    log.error("Error while retrieving the organization permissions of the user.");
+                Tenant tenant =
+                        OAuthComponentServiceHolder.getInstance().getRealmService().getTenantManager()
+                                .getTenant(tenantId);
+                if (nonNull(tenant) && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID())) {
+                    allowedUIResourcesForUser = retrieveUserOrganizationPermission(authenticatedUser,
+                            tenant.getAssociatedOrganizationUUID());
+                } else {
+                    allowedUIResourcesForUser = getAllowedUIResourcesOfUser(authenticatedUser, authorizationManager);
                 }
             }
 
@@ -280,6 +277,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
     /**
      * Method user to get list of federated users permissions using idp role mapping for not account associated
      * federated users.
+     *
      * @param authenticatedUser    FederatedAuthenticatedUser
      * @param authorizationManager AuthorizationManager
      * @return List of permissions
@@ -360,6 +358,22 @@ public class JDBCPermissionBasedInternalScopeValidator {
         }
         String[] allowedUIResourcesForUser =
                 authorizationManager.getAllowedUIResourcesForUser(username, "/");
+        return (String[]) ArrayUtils.add(allowedUIResourcesForUser, EVERYONE_PERMISSION);
+    }
+
+    private String[] retrieveUserOrganizationPermission(AuthenticatedUser authenticatedUser, String organizationId)
+            throws UserIdNotFoundException {
+        //Add permission based on user's organization roles.
+        String[] allowedUIResourcesForUser = null;
+        if (StringUtils.isNotBlank(organizationId)) {
+            try {
+                List<String> organizationPermissions = OAuth2ServiceComponentHolder.getRoleManager()
+                        .getUserOrganizationPermissions(authenticatedUser.getUserId(), organizationId);
+                allowedUIResourcesForUser = organizationPermissions.toArray(new String[0]);
+            } catch (OrganizationManagementException e) {
+                log.error("Error while retrieving the organization permissions of the user.");
+            }
+        }
         return (String[]) ArrayUtils.add(allowedUIResourcesForUser, EVERYONE_PERMISSION);
     }
 
