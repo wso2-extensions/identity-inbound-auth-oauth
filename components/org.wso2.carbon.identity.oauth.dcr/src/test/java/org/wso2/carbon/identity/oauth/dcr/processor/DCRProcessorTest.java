@@ -126,8 +126,7 @@ public class DCRProcessorTest extends PowerMockTestCase {
         DCRMessageContext dcrMessageContext = mock(DCRMessageContext.class);
         whenNew(DCRMessageContext.class).withArguments(identityRequest).thenReturn(dcrMessageContext);
 
-        String errorMessage = "/identity/register API was deprecated. Refer the WSO2 documentation for more " +
-                "information (https://is.docs.wso2.com).";
+        String errorMessage = "/identity/register API was deprecated.";
 
         if (request.equals("RegistrationRequest")) {
             try {
