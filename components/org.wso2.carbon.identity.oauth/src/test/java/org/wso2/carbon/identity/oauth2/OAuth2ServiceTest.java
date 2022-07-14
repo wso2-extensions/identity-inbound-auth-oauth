@@ -236,26 +236,31 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     public Object[][] validateLoopbackCallbackURIDataProvider() {
 
         return new Object[][]{
-                //regular redirect URL registered
+                // Regular redirect URL registered.
                 {"https://sampleapp.com/callback", "https://sampleapp.com/callback", true},
                 {"https://sampleapp.com/callback", "https://127.0.0.1:8080/callback", false},
-                //loopback redirect URL registered
+
+                // Loopback redirect URL registered.
                 {"https://127.0.0.1:8080/callback", "https://127.0.0.1:8081/callback", true},
                 {"https://127.0.0.1:8080/anothercallback", "https://127.0.0.1:8080/callback", false},
                 {"https://127.0.0.1:8080/callback", "https://localhost:8080/callback", false},
                 {"https://127.0.0.1:8080/callback", "https://sampleapp.com/callback", false},
-                //simple regex based registered callback URI with loopback URL
+
+                // Simple regex based registered callback URI with loopback URL.
                 {"regexp=(https://((sampleapp.com)|(127.0.0.1:8000))(/callback))",
                         "https://sampleapp.com/callback", true},
                 {"regexp=(https://((sampleapp.com)|(127.0.0.1:8000))(/callback))",
                         "https://127.0.0.1:8001/callback", true},
                 {"regexp=(https://((sampleapp.com)|(127.0.0.1:8000))(/callback))",
                         "https://127.0.0.1:8001/callback", true},
-                //regex with dynamic query values
+
+                // Regex with dynamic query values.
                 {"regexp=https://127.0.0.1:8090\\?id=(.*)", "https://127.0.0.1:8080?id=hg7", true},
                 {"regexp=https://127.0.0.1:8090/callbak\\?id=(.*)", "https://127.0.0.1:8080?id=hg7", false},
-                //regex with a range of port numbers
+
+                // Regex with a range of port numbers.
                 {"regexp=((https://127.0.0.1:)([8][0]{2}[0-7])(/callback))", "https://127.0.0.1:8089/callback", false},
+                {"regexp=((https://127.0.0.1:)([8][0]{2}[0-7])(/callback))", "https://127.0.0.1:8087/callback", false},
                 {"regexp=((https://127.0.0.2:)([8][0]{2}[0-7])(/callback))", "https://127.0.0.2:8089/callback", false},
         };
     }
