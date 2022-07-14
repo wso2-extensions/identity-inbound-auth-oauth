@@ -819,8 +819,8 @@
         <carbon.identity.framework.imp.pkg.version.range>[5.17.5, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
-        <carbon.identity.organization.management.version>1.0.46-SNAPSHOT</carbon.identity.organization.management.version>
-        <carbon.identity.organization.management.version.range>[1.0.0, 2.0.0)
+        <carbon.identity.organization.management.version>1.0.46</carbon.identity.organization.management.version>
+        <carbon.identity.organization.management.version.range>[1.0.46, 2.0.0)
         </carbon.identity.organization.management.version.range>
 
         <!--Carbon component version-->
