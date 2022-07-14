@@ -231,7 +231,11 @@
                 <artifactId>org.wso2.carbon.identity.application.authentication.endpoint.util</artifactId>
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
-
+            <dependency>
+                <groupId>org.wso2.carbon.identity.organization.management</groupId>
+                <artifactId>org.wso2.carbon.identity.organization.management.service</artifactId>
+                <version>${carbon.identity.organization.management.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.organization.management</groupId>
                 <artifactId>org.wso2.carbon.identity.organization.management.role.management.service</artifactId>
@@ -815,7 +819,7 @@
         <carbon.identity.framework.imp.pkg.version.range>[5.17.5, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
-        <carbon.identity.organization.management.version>1.0.38-SNAPSHOT</carbon.identity.organization.management.version>
+        <carbon.identity.organization.management.version>1.0.46-SNAPSHOT</carbon.identity.organization.management.version>
         <carbon.identity.organization.management.version.range>[1.0.0, 2.0.0)
         </carbon.identity.organization.management.version.range>
 
