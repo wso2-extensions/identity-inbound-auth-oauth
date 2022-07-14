@@ -61,13 +61,12 @@ public class DCRProcessor extends IdentityProcessor {
         if (!isIdentityRegisterEnabled) {
             if (log.isDebugEnabled()) {
                 log.debug("Identity Register endpoint was deprecated. To enable the DCR API endpoint add the " +
-                        "following config to deployment.toml file. \n " +
+                        "following config to deployment.toml file. \n" +
                         "[[legacy_feature]] \n" +
                         "id = identity/register \n" +
                         "enable = true");
             }
-            String errorMessage = "/identity/register API was deprecated. Refer the WSO2 documentation for more " +
-                    "information (https://is.docs.wso2.com).";
+            String errorMessage = "/identity/register API was deprecated.";
             throw IdentityException.error(RegistrationException.class, ErrorCodes.FORBIDDEN.toString(), errorMessage);
         }
         DCRMessageContext dcrMessageContext = new DCRMessageContext(identityRequest);
