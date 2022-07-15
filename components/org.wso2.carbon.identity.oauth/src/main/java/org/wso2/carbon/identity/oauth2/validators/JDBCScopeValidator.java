@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
@@ -55,6 +56,9 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ResourceScopeCacheEntry;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.role.management.service.models.Role;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -68,6 +72,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+
+import static java.util.Objects.nonNull;
 
 /**
  * The JDBC Scope Validation implementation. This validates the Resource's scope (stored in IDN_OAUTH2_RESOURCE_SCOPE)
@@ -464,6 +470,25 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
 
         RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
         int tenantId = getTenantId(user);
+
+        Tenant tenant =
+                OAuthComponentServiceHolder.getInstance().getRealmService().getTenantManager().getTenant(tenantId);
+        if (nonNull(tenant) && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID()) &&
+                !user.isFederatedUser()) {
+            String organizationId = tenant.getAssociatedOrganizationUUID();
+            try {
+                List<Role> organizationRoles = OAuth2ServiceComponentHolder.getRoleManager()
+                        .getUserOrganizationRoles(user.getUserId(), organizationId);
+                if (nonNull(organizationRoles) && !organizationRoles.isEmpty()) {
+                    return organizationRoles.stream().map(Role::getDisplayName).toArray(String[]::new);
+                }
+            } catch (UserIdNotFoundException e) {
+                log.error("Error while retrieving user identifier", e);
+            } catch (OrganizationManagementException e) {
+                log.error("Error while retrieving user organization roles", e);
+            }
+        }
+
         try {
             if (tenantId != MultitenantConstants.SUPER_TENANT_ID) {
                 PrivilegedCarbonContext.startTenantFlow();
@@ -491,10 +516,8 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
         return userRoles;
     }
 
-    private int getTenantId (User user) throws UserStoreException {
+    private int getTenantId(User user) throws UserStoreException {
 
-        int tenantId = IdentityTenantUtil.getTenantId(user.getTenantDomain());
-
-        return tenantId;
+        return IdentityTenantUtil.getTenantId(user.getTenantDomain());
     }
 }

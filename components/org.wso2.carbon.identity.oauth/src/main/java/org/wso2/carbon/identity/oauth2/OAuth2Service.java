@@ -241,7 +241,7 @@ public class OAuth2Service extends AbstractAdmin {
                 validationResponseDTO.setPkceSupportPlain(appDO.isPkceSupportPlain());
                 return validationResponseDTO;
             } else {    // Provided callback URL does not match the registered callback url.
-                log.warn("Provided Callback URL does not match with the provided one.");
+                log.warn("Provided Callback URL does not match with the registered one.");
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     Map<String, Object> params = new HashMap<>();
                     params.put("clientId", clientId);
