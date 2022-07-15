@@ -235,6 +235,12 @@
                 <groupId>org.wso2.carbon.identity.organization.management</groupId>
                 <artifactId>org.wso2.carbon.identity.organization.management.service</artifactId>
                 <version>${carbon.identity.organization.management.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.wso2.carbon.identity.organization.management</groupId>
+                        <artifactId>org.wso2.carbon.identity.organization.management.authz.service</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.organization.management</groupId>
