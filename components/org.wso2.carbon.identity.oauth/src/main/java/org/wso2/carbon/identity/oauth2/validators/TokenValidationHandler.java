@@ -474,8 +474,18 @@ public class TokenValidationHandler {
             if (accessTokenDO.getValidityPeriodInMillis() < 0) {
                 introResp.setExp(Long.MAX_VALUE);
             } else {
-                introResp.setExp(
-                        (accessTokenDO.getValidityPeriodInMillis() + accessTokenDO.getIssuedTime().getTime()) / 1000);
+                if (accessTokenDO.getValidityPeriodInMillis() + accessTokenDO.getIssuedTime().getTime() < 0) {
+                    // When the access token have a long validity period (eg: 9223372036854775000), the calculated
+                    // expiry time will be a negative value. The reason is that, max value of long data type of Java is
+                    // "9223372036854775807". So, when the addition of the validity period and the issued time exceeds
+                    // this max value, it will result in a negative value. In those instances, we set the expiry time as
+                    // the max value of long data type.
+                    introResp.setExp(Long.MAX_VALUE);
+                } else {
+                    introResp.setExp(
+                            (accessTokenDO.getValidityPeriodInMillis() + accessTokenDO.getIssuedTime().getTime()) /
+                                    1000);
+                }
             }
 
             // should be in seconds
