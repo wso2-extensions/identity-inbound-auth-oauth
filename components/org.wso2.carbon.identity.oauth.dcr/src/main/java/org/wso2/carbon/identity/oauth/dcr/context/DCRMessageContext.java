@@ -26,6 +26,7 @@ import java.util.Map;
 /**
  * Context class related to DCR Message.
  */
+@Deprecated
 public class DCRMessageContext extends MessageContext {
 
     private static final long serialVersionUID = -737090105446050708L;

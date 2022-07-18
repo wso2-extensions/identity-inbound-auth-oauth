@@ -38,6 +38,7 @@ import javax.ws.rs.core.HttpHeaders;
 /**
  * UnRegistration Request Factory.
  */
+@Deprecated
 public class UnregistrationRequestFactory extends HttpIdentityRequestFactory {
 
     private static final Log log = LogFactory.getLog(UnregistrationRequestFactory.class);
