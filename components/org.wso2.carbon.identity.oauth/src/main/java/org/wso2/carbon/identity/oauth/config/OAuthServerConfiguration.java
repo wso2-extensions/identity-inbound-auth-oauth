@@ -463,6 +463,8 @@ public class OAuthServerConfiguration {
 
         // Set the availability of oauth_response.jsp page.
         setOAuthResponseJspPageAvailable();
+        // Read config for FAPI
+        parseFapiConfiguration(oauthElem);
     }
 
     /**
@@ -497,12 +499,30 @@ public class OAuthServerConfiguration {
             OMElement filteredClaimsElem = introspectionClaimsElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.FILTERED_CLAIMS));
             if (filteredClaimsElem != null) {
-                Iterator claimIterator =   filteredClaimsElem.getChildrenWithName(getQNameWithIdentityNS(
+                Iterator claimIterator = filteredClaimsElem.getChildrenWithName(getQNameWithIdentityNS(
                         ConfigElements.FILTERED_CLAIM));
                 while (claimIterator.hasNext()) {
                     OMElement claimElement = (OMElement) claimIterator.next();
                     filteredIntrospectionClaims.add(claimElement.getText());
                 }
+            }
+        }
+    }
+
+    /**
+     * Parse FAPI configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseFapiConfiguration(OMElement oauthConfigElem) {
+
+        OMElement fapiElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.FAPI));
+        if (fapiElem != null) {
+            OMElement cibaElement = fapiElem.getFirstChildWithName(getQNameWithIdentityNS(
+                    ConfigElements.OPENID_CONNECT_CIBA));
+            if (cibaElement != null) {
+                isFapiCiba = Boolean.parseBoolean(cibaElement.getText().trim());
             }
         }
     }
@@ -537,6 +557,13 @@ public class OAuthServerConfiguration {
         if (dropUnregisteredScopesElement != null) {
             dropUnregisteredScopes = Boolean.parseBoolean(dropUnregisteredScopesElement.getText());
         }
+    }
+
+    /**
+     * This method returns if FAPI is enabled for CIBA in identity.xml.
+     */
+    public boolean isFapiCiba() {
+        return isFapiCiba;
     }
 
     public Set<OAuthCallbackHandlerMetaData> getCallbackHandlerMetaData() {
@@ -3174,7 +3201,6 @@ public class OAuthServerConfiguration {
     }
 
     /**
-<<<<<<< HEAD
      * Parses the AllowCrossTenantTokenIntrospection configuration.
      *
      * @param oauthConfigElem oauthConfigElem.
@@ -3225,7 +3251,6 @@ public class OAuthServerConfiguration {
         public static final String OAUTH1_ACCESS_TOKEN_URL = "OAuth1AccessTokenUrl";
         public static final String OAUTH2_AUTHZ_EP_URL = "OAuth2AuthzEPUrl";
         public static final String OAUTH2_TOKEN_EP_URL = "OAuth2TokenEPUrl";
-        public static final String OAUTH2_CIBA_EP_URL = "OAuth2CibaEPUrl";
         public static final String OAUTH2_USERINFO_EP_URL = "OAuth2UserInfoEPUrl";
         public static final String OAUTH2_REVOCATION_EP_URL = "OAuth2RevokeEPUrl";
         public static final String OAUTH2_INTROSPECTION_EP_URL = "OAuth2IntrospectEPUrl";
@@ -3440,7 +3465,8 @@ public class OAuthServerConfiguration {
 
         // Allow Cross Tenant Introspection Config.
         private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
-        private static final String OPENID_CONNECT_FAPI_CIBA = "fapi";
+        // FAPI configurations
+        private static final String FAPI = "FAPI";
     }
 
 }
