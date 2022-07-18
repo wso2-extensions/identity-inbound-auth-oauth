@@ -3465,7 +3465,8 @@ public class OAuthServerConfiguration {
 
         // Allow Cross Tenant Introspection Config.
         private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
-        // FAPI configurations
+
+        // FAPI Configurations
         private static final String FAPI = "FAPI";
     }
 

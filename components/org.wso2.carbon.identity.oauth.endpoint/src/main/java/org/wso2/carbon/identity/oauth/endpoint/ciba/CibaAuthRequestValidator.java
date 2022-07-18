@@ -555,6 +555,7 @@ public class CibaAuthRequestValidator {
      */
     private boolean checkNotBeforeTime(long notBeforeTimeMillis, long currentTimeInMillis, long timeStampSkewMillis) {
 
+        // Check if nbf is less than the current time
         if (currentTimeInMillis + timeStampSkewMillis < notBeforeTimeMillis) {
             if (log.isDebugEnabled()) {
                 log.debug("JSON Web Token is used before Not_Before_Time." +
@@ -570,7 +571,7 @@ public class CibaAuthRequestValidator {
                     CibaConstants.MAXIMUM_NOT_BEFORE_TIME_IN_SEC * CibaConstants.SEC_TO_MILLISEC_FACTOR) {
 
                 if (log.isDebugEnabled()) {
-                    log.error("Not_Before_Time in JWT is older than 60 minutes" +
+                    log.debug("Not_Before_Time in JWT is older than 60 minutes" +
                             ", Not Before Time(ms) : " + notBeforeTimeMillis +
                             ", TimeStamp Skew : " + timeStampSkewMillis +
                             ", Current Time : " + currentTimeInMillis + ". JWT Rejected.");

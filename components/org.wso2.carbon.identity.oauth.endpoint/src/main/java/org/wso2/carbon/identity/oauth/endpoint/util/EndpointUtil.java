@@ -42,9 +42,9 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationRequest;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
-import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -93,9 +93,9 @@ import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalSco
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
-import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
+import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.io.IOException;
