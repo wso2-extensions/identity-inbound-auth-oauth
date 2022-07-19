@@ -36,7 +36,6 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
-import org.wso2.carbon.identity.application.mgt.internal.ApplicationManagementServiceComponentHolder;
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -48,6 +47,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthAppRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
@@ -94,7 +94,7 @@ import static org.powermock.reflect.Whitebox.invokeMethod;
 
 @PowerMockIgnore({"javax.net.*", "javax.security.*", "javax.crypto.*"})
 @PrepareForTest({OAuthAdminServiceImpl.class, IdentityCoreServiceComponent.class, ConfigurationContextService.class,
-        OAuthUtil.class, OAuthAppDAO.class, OAuth2Util.class, ApplicationManagementServiceComponentHolder.class,
+        OAuthUtil.class, OAuthAppDAO.class, OAuth2Util.class, OAuthComponentServiceHolder.class,
         IdentityUtil.class})
 public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
 
@@ -126,7 +126,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     @Mock
     AbstractUserStoreManager mockAbstractUserStoreManager;
     @Mock
-    ApplicationManagementServiceComponentHolder mockApplicationManagementServiceComponentHolder;
+    OAuthComponentServiceHolder mockOAuthComponentServiceHolder;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -516,10 +516,10 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         consumerAppDTO.setOAuthVersion("new-oauth-version");
         consumerAppDTO.setUsername(appOwner.toFullQualifiedUsername());
 
-        mockStatic(ApplicationManagementServiceComponentHolder.class);
-        Mockito.when(ApplicationManagementServiceComponentHolder.getInstance())
-                .thenReturn(mockApplicationManagementServiceComponentHolder);
-        Mockito.when(mockApplicationManagementServiceComponentHolder.getRealmService()).thenReturn(realmService);
+        mockStatic(OAuthComponentServiceHolder.class);
+        Mockito.when(OAuthComponentServiceHolder.getInstance())
+                .thenReturn(mockOAuthComponentServiceHolder);
+        Mockito.when(mockOAuthComponentServiceHolder.getRealmService()).thenReturn(realmService);
         Mockito.when(realmService.getTenantManager()).thenReturn(tenantManager);
         Mockito.when(tenantManager.getTenant(anyInt())).thenReturn(mockTenant);
         Mockito.when(mockTenant.getAssociatedOrganizationUUID()).thenReturn(null);
@@ -753,10 +753,10 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
 
     private void mockUserstore() throws Exception {
 
-        mockStatic(ApplicationManagementServiceComponentHolder.class);
-        Mockito.when(ApplicationManagementServiceComponentHolder.getInstance())
-                .thenReturn(mockApplicationManagementServiceComponentHolder);
-        Mockito.when(mockApplicationManagementServiceComponentHolder.getRealmService()).thenReturn(realmService);
+        mockStatic(OAuthComponentServiceHolder.class);
+        Mockito.when(OAuthComponentServiceHolder.getInstance())
+                .thenReturn(mockOAuthComponentServiceHolder);
+        Mockito.when(mockOAuthComponentServiceHolder.getRealmService()).thenReturn(realmService);
         Mockito.when(realmService.getTenantManager()).thenReturn(tenantManager);
         Mockito.when(tenantManager.getTenant(anyInt())).thenReturn(mockTenant);
         Mockito.when(mockTenant.getAssociatedOrganizationUUID()).thenReturn(null);

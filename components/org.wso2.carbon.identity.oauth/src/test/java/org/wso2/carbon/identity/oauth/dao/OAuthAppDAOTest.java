@@ -29,7 +29,6 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
-import org.wso2.carbon.identity.application.mgt.internal.ApplicationManagementServiceComponentHolder;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -86,7 +85,7 @@ import static org.wso2.carbon.identity.oauth.Error.DUPLICATE_OAUTH_CLIENT;
                 IdentityUtil.class,
                 MultitenantUtils.class,
                 OAuthComponentServiceHolder.class,
-                ApplicationManagementServiceComponentHolder.class
+                OAuthComponentServiceHolder.class
         }
 )
 @PowerMockIgnore({"javax.*", "org.w3c.*", "org.xml.*"})
@@ -139,7 +138,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     AbstractUserStoreManager mockAbstractUserStoreManager;
 
     @Mock
-    ApplicationManagementServiceComponentHolder mockApplicationManagementServiceComponentHolder;
+    OAuthComponentServiceHolder mockOAuthComponentServiceHolder;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -790,10 +789,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
     private void mockUserstore() throws Exception {
 
-        mockStatic(ApplicationManagementServiceComponentHolder.class);
-        Mockito.when(ApplicationManagementServiceComponentHolder.getInstance())
-                .thenReturn(mockApplicationManagementServiceComponentHolder);
-        Mockito.when(mockApplicationManagementServiceComponentHolder.getRealmService()).thenReturn(mockedRealmService);
+        mockStatic(OAuthComponentServiceHolder.class);
+        Mockito.when(OAuthComponentServiceHolder.getInstance())
+                .thenReturn(mockOAuthComponentServiceHolder);
+        Mockito.when(mockOAuthComponentServiceHolder.getRealmService()).thenReturn(mockedRealmService);
         Mockito.when(mockedRealmService.getTenantManager()).thenReturn(mockedTenantManager);
         Mockito.when(mockedTenantManager.getTenant(anyInt())).thenReturn(mockTenant);
         Mockito.when(mockTenant.getAssociatedOrganizationUUID()).thenReturn(null);
