@@ -33,7 +33,6 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.RoleMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeBindingCache;
@@ -54,8 +53,8 @@ import org.wso2.carbon.identity.organization.management.service.exception.Organi
 import org.wso2.carbon.user.api.AuthorizationManager;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
@@ -71,6 +70,7 @@ import java.util.stream.Collectors;
 import static java.util.Objects.nonNull;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.ATTRIBUTE_SEPARATOR;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.FIDP_ROLE_BASED_AUTHZ_APP_CONFIG;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getRolesFromFederatedUserAttributes;
 
 /**
@@ -198,10 +198,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
                  * Since tenant flow is enabled, permission will be fetched from user login(federated) tenant
                  * not the application tenant.
                  */
-                if (Boolean.parseBoolean(IdentityUtil.getProperty(
-                        IdentityConstants.SystemRoles.ENABLE_FEDERATED_IDP_ROLE_BASED_AUTHORIZATION))
-                        && IdentityUtil.getFederatedRoleBasedAuthorizationEnabledApplications().contains((
-                        OAuth2Util.getServiceProvider(clientId).getApplicationName()))) {
+                if (IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG)
+                        .contains((OAuth2Util.getServiceProvider(clientId).getApplicationName()))) {
                     allowedUIResourcesForUser =
                             getAllowedPermissionsUsingRoleForNonAssociatedFederatedUsers(authenticatedUser,
                                     authorizationManager);

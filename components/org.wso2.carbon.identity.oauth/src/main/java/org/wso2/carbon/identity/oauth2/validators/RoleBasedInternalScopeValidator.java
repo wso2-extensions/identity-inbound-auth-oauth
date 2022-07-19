@@ -24,13 +24,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.role.management.service.models.Role;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.Tenant;
@@ -41,11 +41,11 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -53,6 +53,7 @@ import static java.util.Objects.nonNull;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.FIDP_ROLE_BASED_AUTHZ_APP_CONFIG;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getRolesFromFederatedUserAttributes;
 
 /**
@@ -81,8 +82,22 @@ public class RoleBasedInternalScopeValidator {
         // Get the roles of the authenticated user.
         AuthenticatedUser authenticatedUser = tokReqMsgCtx.getAuthorizedUser();
         List<String> roles;
-        if (authenticatedUser.isFederatedUser() && Boolean.parseBoolean(IdentityUtil.getProperty(
-                IdentityConstants.SystemRoles.ENABLE_FEDERATED_IDP_ROLE_BASED_AUTHORIZATION))) {
+
+        // Find whether federated role based authorization is engaged or not.
+        Boolean isfederatedRoleBasedAuthzEnabled = false;
+        if (authenticatedUser.isFederatedUser()) {
+            Optional<String> optionalClientId = Optional.ofNullable(tokReqMsgCtx)
+                    .map(tokenReqDTO -> tokenReqDTO.getOauth2AccessTokenReqDTO())
+                    .map(clientId -> clientId.getClientId());
+            if (optionalClientId.isPresent()) {
+                String appName = OAuth2Util.getServiceProvider(optionalClientId.get()).getApplicationName();
+                isfederatedRoleBasedAuthzEnabled = IdentityUtil
+                        .getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG)
+                        .contains(appName);
+            }
+        }
+
+        if (isfederatedRoleBasedAuthzEnabled) {
             roles = getRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
         } else {
             roles = getRolesOfTheUser(authenticatedUser);
@@ -133,8 +148,22 @@ public class RoleBasedInternalScopeValidator {
         // Get the roles of the authenticated user.
         AuthenticatedUser authenticatedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
         List<String> roles;
-        if (authenticatedUser.isFederatedUser() && Boolean.parseBoolean(IdentityUtil.getProperty(
-                IdentityConstants.SystemRoles.ENABLE_FEDERATED_IDP_ROLE_BASED_AUTHORIZATION))) {
+
+        // Find whether federated role based authorization is engaged or not.
+        Boolean isfederatedRoleBasedAuthzEnabled = false;
+        if (authenticatedUser.isFederatedUser()) {
+            Optional<String> optionalClientId = Optional.ofNullable(authzReqMessageContext)
+                    .map(authzReqMC -> authzReqMC.getAuthorizationReqDTO())
+                    .map(consumerKey -> consumerKey.getConsumerKey());
+            if (optionalClientId.isPresent()) {
+                String appName = OAuth2Util.getServiceProvider(optionalClientId.get()).getApplicationName();
+                isfederatedRoleBasedAuthzEnabled = IdentityUtil
+                        .getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG)
+                        .contains(appName);
+            }
+        }
+
+        if (isfederatedRoleBasedAuthzEnabled) {
             roles = getRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
         } else {
             roles = getRolesOfTheUser(authenticatedUser);
