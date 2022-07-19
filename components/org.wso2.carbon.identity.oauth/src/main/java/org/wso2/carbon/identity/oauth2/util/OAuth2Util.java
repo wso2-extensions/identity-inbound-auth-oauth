@@ -51,7 +51,6 @@ import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -4483,15 +4482,15 @@ public class OAuth2Util {
      */
     public static List<String> getRolesFromFederatedUserAttributes(Map<ClaimMapping, String> userAttributes) {
 
-        if (MapUtils.isNotEmpty(userAttributes)) {
-            for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
-                if (entry.getKey() != null && entry.getKey().getRemoteClaim() != null) {
-                    if (StringUtils.equals(FEDERATED_ROLE_CLAIM_URI, entry.getKey().getRemoteClaim().getClaimUri())) {
-                        return Arrays.asList(entry.getValue().split(Pattern.quote(ATTRIBUTE_SEPARATOR)));
-                    }
-                }
-            }
+        Optional<ClaimMapping> roleClaimMapping = Optional.ofNullable(userAttributes).get().entrySet().stream()
+                .map(entry -> entry.getKey())
+                .filter(claim -> StringUtils.equals(FEDERATED_ROLE_CLAIM_URI, claim.getRemoteClaim().getClaimUri()))
+                .findFirst();
+
+        if (roleClaimMapping.isPresent()) {
+            return Arrays.asList(userAttributes.get(roleClaimMapping.get()).split(Pattern.quote(ATTRIBUTE_SEPARATOR)));
         }
+
         return Collections.emptyList();
     }
 }
