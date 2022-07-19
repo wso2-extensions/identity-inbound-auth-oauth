@@ -29,7 +29,6 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.User;
-import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -507,7 +506,7 @@ public class OAuthAppDAO {
         String usernameWithDomain = UserCoreUtil.addDomainToName(userName, domainName);
         try {
             String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-            Optional<User> user = ApplicationMgtUtil.getUser(tenantDomain, usernameWithDomain);
+            Optional<User> user = OAuthUtil.getUser(tenantDomain, usernameWithDomain);
             return user.isPresent();
         } catch (IdentityApplicationManagementException e) {
             throw handleError("Error while checking user existence of user: " + usernameWithDomain, e);

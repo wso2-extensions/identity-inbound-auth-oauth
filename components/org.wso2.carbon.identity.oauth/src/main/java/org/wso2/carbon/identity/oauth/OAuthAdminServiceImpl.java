@@ -28,7 +28,6 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
-import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -117,7 +116,7 @@ public class OAuthAdminServiceImpl {
         String loggedInUser;
         try {
             loggedInUser =
-                    ApplicationMgtUtil.getUsername(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+                    OAuthUtil.getUsername(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
         } catch (IdentityApplicationManagementException e) {
             String msg = "User not logged in to register OAuth consumer.";
             throw handleClientError(AUTHENTICATED_USER_NOT_FOUND, msg, e);
@@ -146,7 +145,7 @@ public class OAuthAdminServiceImpl {
         OAuthConsumerAppDTO[] dtos = new OAuthConsumerAppDTO[0];
         try {
             String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-            userName = ApplicationMgtUtil.getUsername(tenantDomain);
+            userName = OAuthUtil.getUsername(tenantDomain);
         } catch (IdentityApplicationManagementException e) {
             String msg = "User not logged in to get all registered OAuth Applications.";
             if (LOG.isDebugEnabled()) {
@@ -255,7 +254,7 @@ public class OAuthAdminServiceImpl {
             if (tenantAwareLoggedInUsername != null) {
                 defaultAppOwner = buildAuthenticatedUser(tenantAwareLoggedInUsername, tenantDomain);
             } else {
-                Optional<User> tenantAwareLoggedInUser = ApplicationMgtUtil.getUser(tenantDomain, null);
+                Optional<User> tenantAwareLoggedInUser = OAuthUtil.getUser(tenantDomain, null);
                 if (tenantAwareLoggedInUser.isPresent()) {
                     defaultAppOwner = new AuthenticatedUser(tenantAwareLoggedInUser.get());
                 }
@@ -1010,7 +1009,7 @@ public class OAuthAdminServiceImpl {
             if (tenantAwareLoggedInUserName != null) {
                 loggedInUser = buildAuthenticatedUser(tenantAwareLoggedInUserName, tenantDomain);
             } else {
-                Optional<User> tenantAwareLoggedInUser = ApplicationMgtUtil.getUser(tenantDomain, null);
+                Optional<User> tenantAwareLoggedInUser = OAuthUtil.getUser(tenantDomain, null);
                 if (tenantAwareLoggedInUser.isPresent()) {
                     loggedInUser = new AuthenticatedUser(tenantAwareLoggedInUser.get());
                 }
@@ -1109,7 +1108,7 @@ public class OAuthAdminServiceImpl {
                 if (tenantAwareLoggedInUserName != null) {
                     user = buildAuthenticatedUser(tenantAwareLoggedInUserName, tenantDomain);
                 } else {
-                    Optional<User> tenantAwareLoggedInUser = ApplicationMgtUtil.getUser(tenantDomain, null);
+                    Optional<User> tenantAwareLoggedInUser = OAuthUtil.getUser(tenantDomain, null);
                     if (tenantAwareLoggedInUser.isPresent()) {
                         user = new AuthenticatedUser(tenantAwareLoggedInUser.get());
                     }
@@ -1278,7 +1277,7 @@ public class OAuthAdminServiceImpl {
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String tenantAwareUserName = null;
         try {
-            tenantAwareUserName = ApplicationMgtUtil.getUsername(tenantDomain);
+            tenantAwareUserName = OAuthUtil.getUsername(tenantDomain);
             OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
                     .updateApproveAlwaysForAppConsentByResourceOwner(tenantAwareUserName,
                             tenantDomain, appName, state);
@@ -1719,7 +1718,7 @@ public class OAuthAdminServiceImpl {
                 // Since the app owner sent in OAuthConsumerAppDTO is a valid one we set the appOwner to be
                 // the one sent in the OAuthConsumerAppDTO.
                 String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-                Optional<User> maybeAppOwner = ApplicationMgtUtil.getUser(tenantDomain, tenantAwareAppOwnerInRequest);
+                Optional<User> maybeAppOwner = OAuthUtil.getUser(tenantDomain, tenantAwareAppOwnerInRequest);
                 if (maybeAppOwner.isPresent()) {
                     appOwner = new AuthenticatedUser(maybeAppOwner.get());
                 } else {
