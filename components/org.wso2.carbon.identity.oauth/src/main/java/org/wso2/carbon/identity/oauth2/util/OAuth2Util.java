@@ -305,6 +305,11 @@ public class OAuth2Util {
      */
     public static final String APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS = "applicationAccessTokenExpireTime";
 
+    /**
+     * FIdp Role Based authentication application config.
+     */
+    public static final String FIDP_ROLE_BASED_AUTHZ_APP_CONFIG = "FIdPRoleBasedAuthzApplications.AppName";
+
     private static final Log log = LogFactory.getLog(OAuth2Util.class);
     private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private static final String INTERNAL_LOGIN_SCOPE = "internal_login";
