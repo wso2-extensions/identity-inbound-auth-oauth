@@ -31,7 +31,6 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
-import org.wso2.carbon.identity.application.mgt.internal.ApplicationManagementServiceComponentHolder;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -692,14 +691,14 @@ public final class OAuthUtil {
             if (tenantID == MultitenantConstants.SUPER_TENANT_ID) {
                 user = getUserFromTenant(username, userId, tenantID);
             } else {
-                Tenant tenant = ApplicationManagementServiceComponentHolder.getInstance().getRealmService()
+                Tenant tenant = OAuthComponentServiceHolder.getInstance().getRealmService()
                         .getTenantManager().getTenant(tenantID);
                 String accessedOrganizationId = tenant.getAssociatedOrganizationUUID();
                 if (accessedOrganizationId == null) {
                     user = getUserFromTenant(username, userId, tenantID);
                 } else {
                     Optional<org.wso2.carbon.user.core.common.User> resolvedUser =
-                            ApplicationManagementServiceComponentHolder.getInstance()
+                            OAuthComponentServiceHolder.getInstance()
                                     .getOrganizationUserResidentResolverService()
                                     .resolveUserFromResidentOrganization(username, userId, accessedOrganizationId);
                     if (resolvedUser.isPresent()) {
@@ -731,7 +730,7 @@ public final class OAuthUtil {
         User user = null;
         try {
             AbstractUserStoreManager userStoreManager =
-                    (AbstractUserStoreManager) ApplicationManagementServiceComponentHolder.getInstance()
+                    (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance()
                             .getRealmService().getTenantUserRealm(tenantId).getUserStoreManager();
             if (username != null && userStoreManager.isExistingUser(username)) {
                 user = new User(userStoreManager.getUser(null, username));

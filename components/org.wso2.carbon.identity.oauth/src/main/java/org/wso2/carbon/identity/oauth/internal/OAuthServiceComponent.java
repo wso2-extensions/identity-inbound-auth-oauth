@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.oauth.listener.OAuthTokenSessionMappingEventHand
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
@@ -327,5 +328,31 @@ public class OAuthServiceComponent {
     private void unsetRoleManagementService(RoleManagementService roleManagementService) {
 
         OAuthComponentServiceHolder.getInstance().setRoleManagementService(null);
+    }
+
+    @Reference(
+            name = "organization.user.resident.resolver.service",
+            service = OrganizationUserResidentResolverService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationUserResidentResolverService"
+    )
+    protected void setOrganizationUserResidentResolverService(
+            OrganizationUserResidentResolverService organizationUserResidentResolverService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the organization user resident resolver service.");
+        }
+        OAuthComponentServiceHolder.getInstance().setOrganizationUserResidentResolverService(
+                organizationUserResidentResolverService);
+    }
+
+    protected void unsetOrganizationUserResidentResolverService(
+            OrganizationUserResidentResolverService organizationUserResidentResolverService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unset organization user resident resolver service.");
+        }
+        OAuthComponentServiceHolder.getInstance().setOrganizationUserResidentResolverService(null);
     }
 }
