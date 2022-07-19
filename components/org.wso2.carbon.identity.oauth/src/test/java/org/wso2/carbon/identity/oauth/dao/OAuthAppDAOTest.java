@@ -789,6 +789,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     }
 
     private void mockUserstore() throws Exception {
+
         mockStatic(ApplicationManagementServiceComponentHolder.class);
         Mockito.when(ApplicationManagementServiceComponentHolder.getInstance())
                 .thenReturn(mockApplicationManagementServiceComponentHolder);

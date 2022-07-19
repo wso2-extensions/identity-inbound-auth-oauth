@@ -702,10 +702,7 @@ public final class OAuthUtil {
                                     .getOrganizationUserResidentResolverService()
                                     .resolveUserFromResidentOrganization(username, userId, accessedOrganizationId);
                     if (resolvedUser.isPresent()) {
-                        user = new User();
-                        user.setUserName(resolvedUser.get().getUsername());
-                        user.setUserStoreDomain(resolvedUser.get().getUserStoreDomain());
-                        user.setTenantDomain(resolvedUser.get().getTenantDomain());
+                        user = getApplicationUser(resolvedUser.get());
                     }
                 }
             }
@@ -733,13 +730,22 @@ public final class OAuthUtil {
                     (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance()
                             .getRealmService().getTenantUserRealm(tenantId).getUserStoreManager();
             if (username != null && userStoreManager.isExistingUser(username)) {
-                user = new User(userStoreManager.getUser(null, username));
+                user = getApplicationUser(userStoreManager.getUser(null, username));
             } else if (userId != null && userStoreManager.isExistingUserWithID(userId)) {
-                user = new User(userStoreManager.getUser(userId, null));
+                user = getApplicationUser(userStoreManager.getUser(userId, null));
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new IdentityApplicationManagementException("Error finding user in tenant.", e);
         }
+        return user;
+    }
+
+    private static User getApplicationUser(org.wso2.carbon.user.core.common.User coreUser) {
+
+        User user = new User();
+        user.setUserName(coreUser.getUsername());
+        user.setUserStoreDomain(coreUser.getUserStoreDomain());
+        user.setTenantDomain(coreUser.getTenantDomain());
         return user;
     }
 
@@ -761,4 +767,6 @@ public final class OAuthUtil {
         }
         return username;
     }
+
+
 }

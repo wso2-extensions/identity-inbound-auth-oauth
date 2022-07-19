@@ -752,6 +752,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     }
 
     private void mockUserstore() throws Exception {
+
         mockStatic(ApplicationManagementServiceComponentHolder.class);
         Mockito.when(ApplicationManagementServiceComponentHolder.getInstance())
                 .thenReturn(mockApplicationManagementServiceComponentHolder);

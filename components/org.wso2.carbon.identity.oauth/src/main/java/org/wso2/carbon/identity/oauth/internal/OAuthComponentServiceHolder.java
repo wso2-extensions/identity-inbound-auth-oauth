@@ -27,7 +27,6 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
