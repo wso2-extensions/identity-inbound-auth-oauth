@@ -20,11 +20,13 @@ package org.wso2.carbon.identity.oauth.endpoint.jwks;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.util.Base64;
+import com.nimbusds.jose.util.Base64URL;
+import net.minidev.json.JSONArray;
+import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -39,6 +41,8 @@ import org.wso2.carbon.utils.CarbonUtils;
 import java.io.FileInputStream;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -107,7 +111,7 @@ public class JwksEndpoint {
     }
 
     private String buildResponse(Map<String, Certificate> certificates)
-            throws IdentityOAuth2Exception, ParseException {
+            throws IdentityOAuth2Exception, ParseException, CertificateEncodingException {
 
         JSONArray jwksArray = new JSONArray();
         JSONObject jwksJson = new JSONObject();
@@ -119,14 +123,22 @@ public class JwksEndpoint {
         // Create JWKS for different algorithms using new KeyID creation method.
         for (Map.Entry certificateWithAlias : certificates.entrySet()) {
             for (JWSAlgorithm algorithm : diffAlgorithms) {
-                Certificate cert = (Certificate) certificateWithAlias.getValue();
+                List<Base64> certList = new ArrayList<>();
+                X509Certificate cert = (X509Certificate) certificateWithAlias.getValue();
                 String alias = (String) certificateWithAlias.getKey();
                 RSAPublicKey publicKey = (RSAPublicKey) cert.getPublicKey();
                 RSAKey.Builder jwk = new RSAKey.Builder(publicKey);
                 jwk.keyID(OAuth2Util.getKID(cert, algorithm, getTenantDomain()));
                 jwk.algorithm(algorithm);
                 jwk.keyUse(KeyUse.parse(KEY_USE));
-                jwksArray.put(jwk.build().toJSONObject());
+                try {
+                    certList.add(Base64.encode(cert.getEncoded()));
+                    jwk.x509CertChain(certList);
+                    jwk.x509CertSHA256Thumbprint(Base64URL.encode(OAuth2Util.getThumbPrint(cert, alias)));
+                } catch (CertificateEncodingException exception) {
+                    throw new CertificateEncodingException("Unable to encode the public certificate", exception);
+                }
+                jwksArray.add(jwk.build().toJSONObject());
             }
         }
         jwksJson.put(KEYS, jwksArray);
