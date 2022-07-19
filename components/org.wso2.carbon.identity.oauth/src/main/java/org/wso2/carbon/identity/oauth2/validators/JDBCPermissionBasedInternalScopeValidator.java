@@ -203,8 +203,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
                         && IdentityUtil.getFederatedRoleBasedAuthorizationEnabledApplications().contains((
                         OAuth2Util.getServiceProvider(clientId).getApplicationName()))) {
                     allowedUIResourcesForUser =
-                            getAllowedUIResourcesForNonAssociatedFederatedUserWithRoles(
-                                    authenticatedUser, authorizationManager);
+                            getAllowedPermissionsUsingRoleForNonAssociatedFederatedUsers(authenticatedUser,
+                                    authorizationManager);
                 } else if (isSPAlwaysSendMappedLocalSubjectId(clientId)) {
                    /*
                     There is a flow where 'Assert identity using mapped local subject identifier' flag enabled but the
@@ -343,33 +343,44 @@ public class JDBCPermissionBasedInternalScopeValidator {
         return allowedUIResourcesListForUser.toArray(new String[0]);
     }
 
-    private String[] getAllowedUIResourcesForNonAssociatedFederatedUserWithRoles(AuthenticatedUser authenticatedUser,
-                                                                                 AuthorizationManager authorizationManager)
+    /**
+     * Retrieve list of permissions using roles of federated user.
+     *
+     * @param authenticatedUser    FederatedAuthenticatedUser
+     * @param authorizationManager AuthorizationManager
+     * @return List of permissions
+     * @throws UserStoreException      UserStoreException
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception
+     */
+    private String[] getAllowedPermissionsUsingRoleForNonAssociatedFederatedUsers(
+            AuthenticatedUser authenticatedUser, AuthorizationManager authorizationManager)
             throws UserStoreException, IdentityOAuth2Exception {
 
         List<String> allowedUIResourcesListForUser = new ArrayList<>();
         List<String> userRolesList = getRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
 
-        if (userRolesList.size() > 0) {
-            for (String  role: userRolesList) {
-                String modifiedRole = role;
+        for (String  role: userRolesList) {
+            String modifiedRole = role;
 
-                // Add internal prefix before normal roles .
-                if (!modifiedRole.contains(CarbonConstants.DOMAIN_SEPARATOR)) {
-                    modifiedRole = UserCoreConstants.INTERNAL_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + modifiedRole;
-                }
+            // Add internal prefix before normal roles.
+            if (!modifiedRole.contains(CarbonConstants.DOMAIN_SEPARATOR)) {
+                modifiedRole = UserCoreConstants.INTERNAL_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + modifiedRole;
+            }
 
-                // Loop through each internal local role and get permissions.
-                if (modifiedRole.startsWith(UserCoreConstants.INTERNAL_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR)) {
-                    for (String allowedUIResource :
-                            authorizationManager.getAllowedUIResourcesForRole(modifiedRole, ROOT)) {
-                        if (!allowedUIResourcesListForUser.contains(allowedUIResource)) {
-                            allowedUIResourcesListForUser.add(allowedUIResource);
-                        }
-                    }
+            // Continue if it is not internal role.
+            if (!modifiedRole.startsWith(UserCoreConstants.INTERNAL_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR)) {
+                continue;
+            }
+
+            // Loop through each internal local role and get permissions.
+            for (String allowedUIResource :
+                    authorizationManager.getAllowedUIResourcesForRole(modifiedRole, ROOT)) {
+                if (!allowedUIResourcesListForUser.contains(allowedUIResource)) {
+                    allowedUIResourcesListForUser.add(allowedUIResource);
                 }
             }
         }
+
         // Add everyone permission to allowed permission.
         allowedUIResourcesListForUser.add(EVERYONE_PERMISSION);
 
