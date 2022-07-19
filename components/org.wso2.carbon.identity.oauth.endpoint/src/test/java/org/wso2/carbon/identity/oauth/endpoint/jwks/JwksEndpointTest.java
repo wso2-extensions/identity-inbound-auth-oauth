@@ -158,6 +158,7 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
         if ("foo.com".equals(tenantDomain)) {
             when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA")).thenReturn(JWSAlgorithm.RS256);
         }
+        when(OAuth2Util.getThumbPrint(any(), anyString())).thenReturn("dummyThumbPrintValue");
         mockStatic(KeyStoreManager.class);
         when(KeyStoreManager.getInstance(anyInt())).thenReturn(keyStoreManager);
         when(keyStoreManager.getKeyStore("foo-com.jks")).thenReturn(getKeyStoreFromFile("foo-com.jks", "foo.com"));
