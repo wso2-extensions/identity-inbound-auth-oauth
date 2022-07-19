@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth.dao;
 
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.AfterClass;
@@ -28,6 +29,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.mgt.internal.ApplicationManagementServiceComponentHolder;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -41,6 +43,9 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
+import org.wso2.carbon.user.api.Tenant;
+import org.wso2.carbon.user.api.UserRealm;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -53,6 +58,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
@@ -79,7 +85,8 @@ import static org.wso2.carbon.identity.oauth.Error.DUPLICATE_OAUTH_CLIENT;
                 IdentityTenantUtil.class,
                 IdentityUtil.class,
                 MultitenantUtils.class,
-                OAuthComponentServiceHolder.class
+                OAuthComponentServiceHolder.class,
+                ApplicationManagementServiceComponentHolder.class
         }
 )
 @PowerMockIgnore({"javax.*", "org.w3c.*", "org.xml.*"})
@@ -121,6 +128,18 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
     @Mock
     private OAuthComponentServiceHolder mockedOAuthComponentServiceHolder;
+
+    @Mock
+    Tenant mockTenant;
+
+    @Mock
+    UserRealm mockUserRealmFromRealmService;
+
+    @Mock
+    AbstractUserStoreManager mockAbstractUserStoreManager;
+
+    @Mock
+    ApplicationManagementServiceComponentHolder mockApplicationManagementServiceComponentHolder;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -285,6 +304,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 "WHERE APP_ID=?";
 
         setupMocksForTest();
+        mockUserstore();
         try (Connection connection = getConnection(DB_NAME);
              PreparedStatement preparedStatement = connection.prepareStatement(getAppFields);
              PreparedStatement preparedStatementGetValidators = connection.prepareStatement(getScopeValidators);
@@ -362,6 +382,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     public void testUpdateConsumerApplicationWithExceptions() throws Exception {
 
         setupMocksForTest();
+        mockUserstore();
         try (Connection connection = getConnection(DB_NAME)) {
             mockIdentityUtilDataBaseConnection(connection);
             OAuthAppDO oAuthAppDO = getDefaultOAuthAppDO();
@@ -765,5 +786,18 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             }
         }
         return false;
+    }
+
+    private void mockUserstore() throws Exception {
+        mockStatic(ApplicationManagementServiceComponentHolder.class);
+        Mockito.when(ApplicationManagementServiceComponentHolder.getInstance())
+                .thenReturn(mockApplicationManagementServiceComponentHolder);
+        Mockito.when(mockApplicationManagementServiceComponentHolder.getRealmService()).thenReturn(mockedRealmService);
+        Mockito.when(mockedRealmService.getTenantManager()).thenReturn(mockedTenantManager);
+        Mockito.when(mockedTenantManager.getTenant(anyInt())).thenReturn(mockTenant);
+        Mockito.when(mockTenant.getAssociatedOrganizationUUID()).thenReturn(null);
+
+        Mockito.when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockUserRealmFromRealmService);
+        Mockito.when(mockUserRealmFromRealmService.getUserStoreManager()).thenReturn(mockAbstractUserStoreManager);
     }
 }
