@@ -4228,7 +4228,15 @@ public class OAuth2Util {
      */
     public static void validateRequestTenantDomain(String tenantDomainOfApp) throws InvalidOAuthClientException {
 
-        validateRequestTenantDomain(tenantDomainOfApp, null);
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            // In tenant qualified URL mode we would always have the tenant domain in the context.
+            String tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
+            if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
+                // This means the tenant domain sent in the request and app's tenant domain do not match.
+                throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in " +
+                        "tenantDomain: " + tenantDomainFromContext);
+            }
+        }
     }
 
     /**
@@ -4249,15 +4257,15 @@ public class OAuth2Util {
             if (contextTenantDomainFromTokenReqDTO.isPresent() &&
                     StringUtils.isNotBlank(contextTenantDomainFromTokenReqDTO.get())) {
                 tenantDomainFromContext = contextTenantDomainFromTokenReqDTO.get();
-            } else {
-                tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
-            }
 
-            // In tenant qualified URL mode we would always have the tenant domain in the context.
-            if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
-                // This means the tenant domain sent in the request and app's tenant domain do not match.
-                throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in "
-                        + "tenantDomain: " + tenantDomainFromContext);
+                // In tenant qualified URL mode we would always have the tenant domain in the context.
+                if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
+                    // This means the tenant domain sent in the request and app's tenant domain do not match.
+                    throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in "
+                            + "tenantDomain: " + tenantDomainFromContext);
+                }
+            } else {
+                validateRequestTenantDomain(tenantDomainOfApp);
             }
         }
     }
