@@ -136,7 +136,9 @@ public class JwksEndpoint {
                     jwk.x509CertChain(certList);
                     jwk.x509CertSHA256Thumbprint(Base64URL.encode(OAuth2Util.getThumbPrint(cert, alias)));
                 } catch (CertificateEncodingException exception) {
-                    throw new CertificateEncodingException("Unable to encode the public certificate", exception);
+                    String errorMessage = "Unable to encode the public certificate with alias: " + alias + " in the " +
+                            "tenant domain: " + getTenantDomain();
+                    throw new CertificateEncodingException(errorMessage, exception);
                 }
                 jwksArray.add(jwk.build().toJSONObject());
             }
