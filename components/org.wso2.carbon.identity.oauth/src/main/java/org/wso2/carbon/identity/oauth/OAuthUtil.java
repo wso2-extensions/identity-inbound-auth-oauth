@@ -759,7 +759,7 @@ public final class OAuthUtil {
     public static String getUsername(String tenantDomain) throws IdentityApplicationManagementException {
 
         String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-        if (username == null) {
+        if (StringUtils.isBlank(username)) {
             Optional<User> maybeUser = getUser(tenantDomain, null);
             User user = maybeUser
                     .orElseThrow(() -> new IdentityApplicationManagementException("Error resolving user."));
@@ -767,6 +767,4 @@ public final class OAuthUtil {
         }
         return username;
     }
-
-
 }

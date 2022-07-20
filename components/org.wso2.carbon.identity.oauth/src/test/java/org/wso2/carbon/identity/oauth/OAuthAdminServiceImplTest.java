@@ -122,8 +122,6 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     @Mock
     Tenant mockTenant;
     @Mock
-    UserRealm mockUserRealmFromRealmService;
-    @Mock
     AbstractUserStoreManager mockAbstractUserStoreManager;
     @Mock
     OAuthComponentServiceHolder mockOAuthComponentServiceHolder;
@@ -516,16 +514,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         consumerAppDTO.setOAuthVersion("new-oauth-version");
         consumerAppDTO.setUsername(appOwner.toFullQualifiedUsername());
 
-        mockStatic(OAuthComponentServiceHolder.class);
-        Mockito.when(OAuthComponentServiceHolder.getInstance())
-                .thenReturn(mockOAuthComponentServiceHolder);
-        Mockito.when(mockOAuthComponentServiceHolder.getRealmService()).thenReturn(realmService);
-        Mockito.when(realmService.getTenantManager()).thenReturn(tenantManager);
-        Mockito.when(tenantManager.getTenant(anyInt())).thenReturn(mockTenant);
-        Mockito.when(mockTenant.getAssociatedOrganizationUUID()).thenReturn(null);
-
-        Mockito.when(realmService.getTenantUserRealm(anyInt())).thenReturn(mockUserRealmFromRealmService);
-        Mockito.when(mockUserRealmFromRealmService.getUserStoreManager()).thenReturn(mockAbstractUserStoreManager);
+        mockOAuthComponentServiceHolder();
 
         String tenantDomain = MultitenantUtils.getTenantDomain(appOwnerInRequest);
         String userStoreDomain = UserCoreUtil.extractDomainFromName(appOwnerInRequest);
@@ -753,22 +742,22 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
 
     private void mockUserstore() throws Exception {
 
+        mockOAuthComponentServiceHolder();
+        Mockito.when(userStoreManager.isExistingUser(anyString())).thenReturn(true);
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.isUserStoreCaseSensitive(anyString(), anyInt())).thenReturn(true);
+    }
+
+    private void mockOAuthComponentServiceHolder() throws Exception {
+
         mockStatic(OAuthComponentServiceHolder.class);
         Mockito.when(OAuthComponentServiceHolder.getInstance())
                 .thenReturn(mockOAuthComponentServiceHolder);
         Mockito.when(mockOAuthComponentServiceHolder.getRealmService()).thenReturn(realmService);
-        Mockito.when(realmService.getTenantManager()).thenReturn(tenantManager);
         Mockito.when(tenantManager.getTenant(anyInt())).thenReturn(mockTenant);
         Mockito.when(mockTenant.getAssociatedOrganizationUUID()).thenReturn(null);
-
         Mockito.when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
-        Mockito.when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
-        Mockito.when(userStoreManager.isExistingUser(anyString())).thenReturn(true);
-
-        Mockito.when(realmService.getTenantUserRealm(anyInt())).thenReturn(mockUserRealmFromRealmService);
-        Mockito.when(mockUserRealmFromRealmService.getUserStoreManager()).thenReturn(mockAbstractUserStoreManager);
-
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.isUserStoreCaseSensitive(anyString(), anyInt())).thenReturn(true);
+        Mockito.when(userRealm.getUserStoreManager()).thenReturn(mockAbstractUserStoreManager);
     }
 }

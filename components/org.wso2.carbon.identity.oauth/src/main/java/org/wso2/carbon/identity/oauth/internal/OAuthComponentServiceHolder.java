@@ -223,11 +223,21 @@ public class OAuthComponentServiceHolder {
         return roleManagementService;
     }
 
+    /**
+     * Get OrganizationUserResidentResolverService instance.
+     *
+     * @return OrganizationUserResidentResolverService instance.
+     */
     public OrganizationUserResidentResolverService getOrganizationUserResidentResolverService() {
 
         return organizationUserResidentResolverService;
     }
 
+    /**
+     * Set OrganizationUserResidentResolverService instance.
+     *
+     * @param organizationUserResidentResolverService OrganizationUserResidentResolverService instance.
+     */
     public void setOrganizationUserResidentResolverService(
             OrganizationUserResidentResolverService organizationUserResidentResolverService) {
 

@@ -118,7 +118,7 @@ public class OAuthAdminServiceImpl {
             loggedInUser =
                     OAuthUtil.getUsername(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
         } catch (IdentityApplicationManagementException e) {
-            String msg = "User not logged in to register OAuth consumer.";
+            String msg = "Error while retrieving the username of the logged user.";
             throw handleClientError(AUTHENTICATED_USER_NOT_FOUND, msg, e);
         }
         if (LOG.isDebugEnabled()) {
@@ -1727,7 +1727,7 @@ public class OAuthAdminServiceImpl {
                             defaultAppOwner.toFullQualifiedUsername() + " as app owner.");
                 }
             } catch (IdentityApplicationManagementException e) {
-                throw handleError("Error while retrieving the user store manager for user: " +
+                throw handleError("Error resolving the user requested as application owner: " +
                         applicationOwnerInRequest, e);
             }
 

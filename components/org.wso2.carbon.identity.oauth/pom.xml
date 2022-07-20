@@ -257,11 +257,6 @@
             <classifier>runtime</classifier>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <scope>test</scope>
-        </dependency>
         <!-- https://mvnrepository.com/artifact/org.powermock/powermock-module-testng -->
         <dependency>
             <groupId>org.powermock</groupId>
