@@ -23,6 +23,7 @@ import org.apache.axis2.engine.AxisConfiguration;
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Matchers;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.internal.util.reflection.Whitebox;
 import org.powermock.api.mockito.PowerMockito;
@@ -37,6 +38,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -45,6 +47,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthAppRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
@@ -55,9 +58,11 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.user.api.RealmConfiguration;
+import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -75,6 +80,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
@@ -88,7 +94,8 @@ import static org.powermock.reflect.Whitebox.invokeMethod;
 
 @PowerMockIgnore({"javax.net.*", "javax.security.*", "javax.crypto.*"})
 @PrepareForTest({OAuthAdminServiceImpl.class, IdentityCoreServiceComponent.class, ConfigurationContextService.class,
-        OAuthUtil.class, OAuthAppDAO.class, OAuth2Util.class})
+        OAuthUtil.class, OAuthAppDAO.class, OAuth2Util.class, OAuthComponentServiceHolder.class,
+        IdentityUtil.class})
 public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
 
     private static final String CONSUMER_KEY = "consumer:key";
@@ -112,6 +119,12 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     private AxisConfiguration axisConfiguration;
     @Mock
     private TenantManager tenantManager;
+    @Mock
+    Tenant mockTenant;
+    @Mock
+    AbstractUserStoreManager mockAbstractUserStoreManager;
+    @Mock
+    OAuthComponentServiceHolder mockOAuthComponentServiceHolder;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -179,6 +192,8 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(-1234);
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
 
+        mockUserstore();
+
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
@@ -234,6 +249,8 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
         doNothing().when(oAuthAppDAO).addOAuthApplication(Matchers.any(OAuthAppDO.class));
 
+        mockUserstore();
+
         try {
             oAuthAdminServiceImpl.registerOAuthApplicationData(oAuthConsumerAppDTO);
         } catch (IdentityOAuthAdminException e) {
@@ -274,6 +291,8 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(null);
 
         whenNew(OAuthAppDAO.class).withAnyArguments().thenReturn(oAuthAppDAO);
+
+        mockUserstore();
 
         OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
         oAuthAdminServiceImpl.getAllOAuthApplicationData();
@@ -493,9 +512,26 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         consumerAppDTO.setOauthConsumerKey(consumerKey);
         consumerAppDTO.setOauthConsumerSecret("some-consumer-secret");
         consumerAppDTO.setOAuthVersion("new-oauth-version");
-
-
         consumerAppDTO.setUsername(appOwner.toFullQualifiedUsername());
+
+        mockOAuthComponentServiceHolder();
+
+        String tenantDomain = MultitenantUtils.getTenantDomain(appOwnerInRequest);
+        String userStoreDomain = UserCoreUtil.extractDomainFromName(appOwnerInRequest);
+        String domainFreeName = UserCoreUtil.removeDomainFromName(appOwnerInRequest);
+        String username = MultitenantUtils.getTenantAwareUsername(domainFreeName);
+
+        org.wso2.carbon.user.core.common.User user = new org.wso2.carbon.user.core.common.User();
+        user.setUsername(username);
+        user.setTenantDomain(tenantDomain);
+        user.setUserStoreDomain(userStoreDomain);
+        Mockito.when(mockAbstractUserStoreManager.getUser(any(), anyString())).thenReturn(user);
+        Mockito.when(mockAbstractUserStoreManager.isExistingUser(anyString())).thenReturn(appOwnerInRequestExists);
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.isUserStoreCaseSensitive(anyString(), anyInt())).thenReturn(true);
+        when(IdentityUtil.addDomainToName(anyString(), anyString())).thenCallRealMethod();
+
         oAuthAdminServiceImpl.updateConsumerApplication(consumerAppDTO);
         OAuthConsumerAppDTO updatedOAuthConsumerApp = oAuthAdminServiceImpl.getOAuthApplicationData(consumerKey);
         Assert.assertEquals(updatedOAuthConsumerApp.getApplicationName(), consumerAppDTO.getApplicationName(),
@@ -702,5 +738,26 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
 
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
         invokeMethod(oAuthAdminService, "validateAudiences", appDTO);
+    }
+
+    private void mockUserstore() throws Exception {
+
+        mockOAuthComponentServiceHolder();
+        Mockito.when(userStoreManager.isExistingUser(anyString())).thenReturn(true);
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.isUserStoreCaseSensitive(anyString(), anyInt())).thenReturn(true);
+    }
+
+    private void mockOAuthComponentServiceHolder() throws Exception {
+
+        mockStatic(OAuthComponentServiceHolder.class);
+        Mockito.when(OAuthComponentServiceHolder.getInstance())
+                .thenReturn(mockOAuthComponentServiceHolder);
+        Mockito.when(mockOAuthComponentServiceHolder.getRealmService()).thenReturn(realmService);
+        Mockito.when(tenantManager.getTenant(anyInt())).thenReturn(mockTenant);
+        Mockito.when(mockTenant.getAssociatedOrganizationUUID()).thenReturn(null);
+        Mockito.when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
+        Mockito.when(userRealm.getUserStoreManager()).thenReturn(mockAbstractUserStoreManager);
     }
 }
