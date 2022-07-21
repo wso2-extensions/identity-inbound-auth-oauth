@@ -257,10 +257,10 @@ public class ResponseTypeHandlerUtil {
         AuthenticatedUser authenticatedUser = authorizationReqDTO.getUser();
         if (authenticatedUser != null && authenticatedUser.isFederatedUser()) {
             String appName = OAuth2Util.getServiceProvider(authorizationReqDTO.getConsumerKey()).getApplicationName();
-            // if federated role based authorization is engaged cannot overwrite the user tenant.
+            // If federated role-based authorization is engaged skip overwriting the user tenant domain.
             if (!IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG).contains(appName)
                     || authenticatedUser.getTenantDomain() == null) {
-                //if a federated user, treat the tenant domain as similar to application domain.
+                // If a federated user, treat the tenant domain as similar to the application domain.
                 authenticatedUser.setTenantDomain(authorizationReqDTO.getTenantDomain());
             }
         }
