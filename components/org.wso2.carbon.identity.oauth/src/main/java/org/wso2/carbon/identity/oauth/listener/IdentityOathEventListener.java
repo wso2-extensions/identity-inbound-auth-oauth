@@ -41,6 +41,8 @@ import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
@@ -187,6 +189,20 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
+    public boolean doPostUpdateInternalRoleListOfUser(String userName, String[] deletedInternalRoles,
+                                                      String[] newInternalRoles, UserStoreManager userStoreManager)
+            throws UserStoreException {
+
+        if (!isEnable()) {
+            return true;
+        }
+        if (ArrayUtils.isNotEmpty(deletedInternalRoles)) {
+            OAuthUtil.revokeTokens(userName, userStoreManager);
+        }
+        return OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
+    }
+
+    @Override
     public boolean doPreUpdateUserListOfRole(String roleName, String[] deletedUsers, String[] newUsers,
                                              UserStoreManager userStoreManager) throws UserStoreException {
 
@@ -206,6 +222,53 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
     @Override
     public boolean doPostUpdateUserListOfRole(String roleName, String[] deletedUsers, String[] newUsers,
                                               UserStoreManager userStoreManager) throws UserStoreException {
+
+        return postUpdateUserListOfRole(deletedUsers, newUsers, userStoreManager);
+    }
+
+    @Override
+    public boolean doPreDeleteRole(String roleName, UserStoreManager userStoreManager) throws UserStoreException {
+
+        /*
+         This get invoked during a group deletion. If it is a group, there should be a role associated with the group
+          in order to revoke the tokens.
+         */
+        if (!isEnable()) {
+            return true;
+        }
+        if (!(userStoreManager instanceof AbstractUserStoreManager)) {
+            return true;
+        }
+        AbstractUserStoreManager abstractUserStoreManager = (AbstractUserStoreManager) userStoreManager;
+        List<User> userList = abstractUserStoreManager.getUserListOfRoleWithID(roleName);
+        // Check whether the group has any associated roles.
+        String domainName = UserCoreUtil.getDomainName(abstractUserStoreManager.getRealmConfiguration());
+        List<String> roles = abstractUserStoreManager.getHybridRoleListOfGroup(roleName,
+                domainName);
+
+        // Revoke the tokens if this group has some associated roles.
+        if (CollectionUtils.isNotEmpty(roles)) {
+            for (User user : userList) {
+                OAuthUtil.removeUserClaimsFromCache(user.getUsername(), userStoreManager);
+                OAuthUtil.revokeTokens(user.getUsername(), userStoreManager);
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("No roles associated with the group: " + roleName);
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean doPostUpdateUserListOfInternalRole(String roleName, String[] deletedUsers, String[] newUsers,
+                                                      UserStoreManager userStoreManager) throws UserStoreException {
+
+        return postUpdateUserListOfRole(deletedUsers, newUsers, userStoreManager);
+    }
+
+    private boolean postUpdateUserListOfRole(String[] deletedUsers, String[] newUsers,
+                                             UserStoreManager userStoreManager) throws UserStoreException {
 
         if (!isEnable()) {
             return true;
@@ -311,10 +374,12 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         authenticatedUser.setUserStoreDomain(UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration()));
 
         ClaimMetaDataCacheEntry cacheEntry = ClaimMetaDataCache.getInstance().getValueFromCache(
-                new ClaimMetaDataCacheKey(authenticatedUser));
+                new ClaimMetaDataCacheKey(authenticatedUser),
+                IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId()));
         if (cacheEntry == null) {
             return;
         }
-        ClaimCache.getInstance().clearCacheEntry(cacheEntry.getClaimCacheKey());
+        ClaimCache.getInstance().clearCacheEntry(cacheEntry.getClaimCacheKey(),
+                IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId()));
     }
 }

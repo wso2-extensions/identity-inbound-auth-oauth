@@ -23,11 +23,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.Claim;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -35,6 +37,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -127,7 +130,9 @@ public class ResponseTypeHandlerUtil {
         } catch (InvalidOAuthClientException e) {
             String errorMsg = "Error when instantiating the OAuthIssuer for service provider app with client Id: " +
                     consumerKey + ". Defaulting to OAuthIssuerImpl";
-            log.error(errorMsg, e);
+            if (log.isDebugEnabled()) {
+                log.debug(errorMsg, e);
+            }
             oauthTokenIssuer = OAuthServerConfiguration.getInstance().getIdentityOauthTokenIssuer();
         }
         return generateAccessToken(oauthAuthzMsgCtx, cacheEnabled, oauthTokenIssuer);
@@ -150,11 +155,17 @@ public class ResponseTypeHandlerUtil {
 
         String scope = OAuth2Util.buildScopeString(oauthAuthzMsgCtx.getApprovedScope());
         String consumerKey = authorizationReqDTO.getConsumerKey();
-        String authorizedUser = authorizationReqDTO.getUser().toString();
+        String authorizedUserId;
+        try {
+            authorizedUserId = authorizationReqDTO.getUser().getUserId();
+        } catch (UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving the user id for user: "
+                    + authorizationReqDTO.getUser().getLoggableUserId());
+        }
 
-        synchronized ((consumerKey + ":" + authorizedUser + ":" + scope).intern()) {
+        synchronized ((consumerKey + ":" + authorizedUserId + ":" + scope).intern()) {
 
-            AccessTokenDO existingTokenBean = getExistingToken(oauthAuthzMsgCtx, cacheEnabled);
+            AccessTokenDO existingTokenBean = getExistingToken(oauthAuthzMsgCtx, authorizedUserId, cacheEnabled);
 
             // Return a new access token in each request when JWTTokenIssuer is used.
             if (isNotRenewAccessTokenPerRequest(oauthIssuerImpl, oauthAuthzMsgCtx)) {
@@ -166,7 +177,8 @@ public class ResponseTypeHandlerUtil {
                         if (log.isDebugEnabled()) {
                             log.debug("RenewTokenPerRequest configuration active. " +
                                     "Proceeding to revoke any existing active tokens for client Id: "
-                                    + consumerKey + ", user: " + authorizedUser + " and scope: " + scope + ".");
+                                    + consumerKey + ", user: " + authorizationReqDTO.getUser().getLoggableUserId()
+                                    + " and scope: " + scope + ".");
                         }
 
                         revokeExistingToken(existingTokenBean.getConsumerKey(), existingTokenBean.getAccessToken());
@@ -185,12 +197,14 @@ public class ResponseTypeHandlerUtil {
 
                 if (log.isDebugEnabled()) {
                     log.debug("No active access token found for client Id: " + consumerKey + ", user: " +
-                            authorizedUser + " and scope: " + scope + ". Therefore issuing new token");
+                            authorizationReqDTO.getUser().getLoggableUserId() + " and scope: " + scope
+                            + ". Therefore issuing new token");
                 }
             }
 
             // Issue a new access token.
-            return generateNewAccessToken(oauthAuthzMsgCtx, existingTokenBean, oauthIssuerImpl, cacheEnabled);
+            return generateNewAccessToken(oauthAuthzMsgCtx, existingTokenBean, oauthIssuerImpl, authorizedUserId,
+                    cacheEnabled);
         }
     }
 
@@ -202,6 +216,8 @@ public class ResponseTypeHandlerUtil {
             OauthTokenIssuer oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
             return generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled, oauthTokenIssuer);
         } catch (InvalidOAuthClientException e) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-authz-code", null);
             throw new IdentityOAuth2Exception(
                     "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
@@ -245,6 +261,8 @@ public class ResponseTypeHandlerUtil {
         try {
             authorizationCode = oauthIssuerImpl.authorizationCode(oauthAuthzMsgCtx);
         } catch (OAuthSystemException e) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-authz-code", null);
             throw new IdentityOAuth2Exception(e.getMessage(), e);
         }
 
@@ -276,6 +294,29 @@ public class ResponseTypeHandlerUtil {
                     ", Scope : " + OAuth2Util.buildScopeString(oauthAuthzMsgCtx.getApprovedScope()) +
                     ", validity period : " + validityPeriod);
         }
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", authorizationReqDTO.getConsumerKey());
+            if (authorizationReqDTO.getUser() != null) {
+                try {
+                    params.put("user", authorizationReqDTO.getUser().getUserId());
+                } catch (UserIdNotFoundException e) {
+                    if (StringUtils.isNotBlank(authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier())) {
+                        params.put("user",
+                                authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier().replaceAll(".",
+                                        "*"));
+                    }
+                }
+            }
+            params.put("requestedScopes", OAuth2Util.buildScopeString(authorizationReqDTO.getScopes()));
+            params.put("redirectUri", authorizationReqDTO.getCallbackUrl());
+
+            Map<String, Object> configs = new HashMap<>();
+            configs.put("authzCodeValidityPeriod", String.valueOf(validityPeriod));
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                    OAuthConstants.LogConstants.SUCCESS, "Issued Authorization Code to user.", "issue-authz-code",
+                    configs);
+        }
         return authzCodeDO;
     }
 
@@ -291,11 +332,10 @@ public class ResponseTypeHandlerUtil {
     public static OAuth2AuthorizeRespDTO buildAccessTokenResponseDTO(OAuth2AuthorizeRespDTO respDTO,
                                                                      AccessTokenDO accessTokenDO) {
 
-        long expireTime = OAuth2Util.getTokenExpireTimeMillis(accessTokenDO);
+        long expireTime = OAuth2Util.getAccessTokenExpireMillis(accessTokenDO, false);
         if (log.isDebugEnabled()) {
             if (expireTime > 0) {
-                log.debug("Access Token" +
-                        " is valid for another " + expireTime + "ms");
+                log.debug("Access Token is valid for another " + expireTime + "ms");
             } else {
                 log.debug("Infinite lifetime Access Token found in cache");
             }
@@ -332,6 +372,7 @@ public class ResponseTypeHandlerUtil {
             newRespDTO.setAuthorizationCode(respDTO.getAuthorizationCode());
             buildIdToken(oauthAuthzMsgCtx, newRespDTO);
             respDTO.setIdToken(newRespDTO.getIdToken());
+            respDTO.setOidcSessionId(newRespDTO.getOidcSessionId());
         }
         return  respDTO;
     }
@@ -376,7 +417,12 @@ public class ResponseTypeHandlerUtil {
         Claim claimOfKey = new Claim();
         claimOfKey.setClaimUri(OAuth2Util.SUB);
         key.setRemoteClaim(claimOfKey);
-        String sub = authorizeReqDTO.getUser().getUserName();
+        String sub = null;
+        try {
+            sub = authorizeReqDTO.getUser().getUserId();
+        } catch (UserIdNotFoundException e) {
+            // Ignoring the unavailability of the user id, since it is handled later.
+        }
 
         AccessTokenDO accessTokenDO = getAccessTokenDO(accessToken, msgCtx);
         if (accessTokenDO != null && StringUtils.isNotBlank(accessTokenDO.getTokenId())) {
@@ -419,18 +465,18 @@ public class ResponseTypeHandlerUtil {
         }
     }
 
-    private static AccessTokenDO getExistingToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, boolean cacheEnabled)
+    private static AccessTokenDO getExistingToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, String authorizedUserId,
+                                                  boolean cacheEnabled)
             throws IdentityOAuth2Exception {
 
         AccessTokenDO existingTokenBean = null;
         OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
         String scope = OAuth2Util.buildScopeString(oauthAuthzMsgCtx.getApprovedScope());
         String consumerKey = authorizationReqDTO.getConsumerKey();
-        String authorizedUser = authorizationReqDTO.getUser().toString();
-        String authenticatedIDP = authorizationReqDTO.getUser().getFederatedIdPName();
+        String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizationReqDTO.getUser());
 
         if (cacheEnabled) {
-            existingTokenBean = getExistingTokenFromCache(consumerKey, scope, authorizedUser, authenticatedIDP);
+            existingTokenBean = getExistingTokenFromCache(consumerKey, scope, authorizedUserId, authenticatedIDP);
         }
 
         if (existingTokenBean == null) {
@@ -439,25 +485,25 @@ public class ResponseTypeHandlerUtil {
         return existingTokenBean;
     }
 
-    private static AccessTokenDO getExistingTokenFromCache(String consumerKey, String scope, String authorizedUser,
+    private static AccessTokenDO getExistingTokenFromCache(String consumerKey, String scope, String authorizedUserId,
                                                            String authenticatedIDP)
             throws IdentityOAuth2Exception {
 
         AccessTokenDO existingTokenBean = null;
-        OAuthCacheKey cacheKey = getOAuthCacheKey(consumerKey, scope, authorizedUser, authenticatedIDP);
+        OAuthCacheKey cacheKey = getOAuthCacheKey(consumerKey, scope, authorizedUserId, authenticatedIDP);
         CacheEntry cacheEntry = OAuthCache.getInstance().getValueFromCache(cacheKey);
-        if (cacheEntry != null && cacheEntry instanceof AccessTokenDO) {
+        if (cacheEntry instanceof AccessTokenDO) {
             existingTokenBean = (AccessTokenDO) cacheEntry;
             if (log.isDebugEnabled()) {
                 if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                     log.debug("Retrieved active access token(hashed): " + DigestUtils.sha256Hex(existingTokenBean
                             .getAccessToken()) + " in state: " + existingTokenBean.getTokenState() + " for client " +
-                            "Id: " + consumerKey + ", user: " + authorizedUser + " and scope: " + scope + " from" +
+                            "Id: " + consumerKey + ", user: " + authorizedUserId + " and scope: " + scope + " from" +
                             " cache.");
 
                 } else {
                     log.debug("Retrieved active access token in state: " + existingTokenBean.getTokenState() + " for " +
-                            "" + "client Id: " + consumerKey + ", user: " + authorizedUser + " and scope: " + scope +
+                            "" + "client Id: " + consumerKey + ", user: " + authorizedUserId + " and scope: " + scope +
                             " from cache.");
                 }
             }
@@ -494,21 +540,26 @@ public class ResponseTypeHandlerUtil {
             long expireTime = getAccessTokenExpiryTimeMillis(existingToken);
             if (TOKEN_STATE_ACTIVE.equals(existingToken.getTokenState()) && expireTime != 0 && cacheEnabled) {
                 // Active token retrieved from db, adding to cache if cacheEnabled
-                addTokenToCache(getOAuthCacheKey(consumerKey, scope, authorizedUser.toString(),
-                        authorizedUser.getFederatedIdPName()), existingToken);
+                try {
+                    addTokenToCache(getOAuthCacheKey(consumerKey, scope, authorizedUser.getUserId(),
+                            OAuth2Util.getAuthenticatedIDP(authorizedUser)), existingToken);
+                } catch (UserIdNotFoundException e) {
+                    throw new IdentityOAuth2Exception("Error occurred while retrieving the user id for user: "
+                            + authorizationReqDTO.getUser().getLoggableUserId());
+                }
             }
         }
         return existingToken;
     }
 
     private static AccessTokenDO generateNewAccessToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, AccessTokenDO
-            existingTokenBean, OauthTokenIssuer oauthIssuerImpl, boolean cacheEnabled) throws IdentityOAuth2Exception {
+            existingTokenBean, OauthTokenIssuer oauthIssuerImpl, String authorizedUserId, boolean cacheEnabled)
+            throws IdentityOAuth2Exception {
 
         OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
         String scope = OAuth2Util.buildScopeString(oauthAuthzMsgCtx.getApprovedScope());
         String consumerKey = authorizationReqDTO.getConsumerKey();
-        String authorizedUser = authorizationReqDTO.getUser().toString();
-        String authenticatedIDP = authorizationReqDTO.getUser().getFederatedIdPName();
+        String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizationReqDTO.getUser());
 
         OAuthAppDO oAuthAppBean = getOAuthApp(consumerKey);
         Timestamp timestamp = new Timestamp(new Date().getTime());
@@ -522,7 +573,7 @@ public class ResponseTypeHandlerUtil {
         deactivateCurrentAuthorizationCode(newTokenBean.getAuthorizationCode(), newTokenBean.getTokenId());
         //update cache with newly added token
         if (isHashDisabled && cacheEnabled) {
-            addTokenToCache(getOAuthCacheKey(consumerKey, scope, authorizedUser, authenticatedIDP),
+            addTokenToCache(getOAuthCacheKey(consumerKey, scope, authorizedUserId, authenticatedIDP),
                     newTokenBean);
         }
         return newTokenBean;
@@ -664,7 +715,7 @@ public class ResponseTypeHandlerUtil {
     private static long getAccessTokenExpiryTimeMillis(AccessTokenDO tokenBean) throws IdentityOAuth2Exception {
 
         // Consider both access and refresh expiry time
-        long expireTimeMillis = OAuth2Util.getTokenExpireTimeMillis(tokenBean);
+        long expireTimeMillis = OAuth2Util.getTokenExpireTimeMillis(tokenBean, true);
 
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
@@ -799,8 +850,9 @@ public class ResponseTypeHandlerUtil {
                     // no valid refresh token found in existing Token
                     if (log.isDebugEnabled()) {
                         if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.REFRESH_TOKEN)) {
-                            log.debug("Refresh token: " + tokenBean.getRefreshToken() + " for client: " + tokenBean
-                                    .getConsumerKey() + " is expired. Issuing a new refresh token.");
+                            log.debug("Refresh token(hashed): " + DigestUtils.sha256Hex(tokenBean.getRefreshToken()) +
+                                    " for client: " + tokenBean.getConsumerKey() + " is expired. Issuing a new " +
+                                    "refresh token.");
 
                         } else {
                             log.debug("Refresh token for client: " + tokenBean.getConsumerKey() + " is expired. " +
@@ -881,10 +933,10 @@ public class ResponseTypeHandlerUtil {
         return grantType;
     }
 
-    private static OAuthCacheKey getOAuthCacheKey(String consumerKey, String scope, String authorizedUser,
+    private static OAuthCacheKey getOAuthCacheKey(String consumerKey, String scope, String authorizedUserId,
                                                   String authenticatedIDP) {
 
-        String cacheKeyString = OAuth2Util.buildCacheKeyStringForToken(consumerKey, scope, authorizedUser,
+        String cacheKeyString = OAuth2Util.buildCacheKeyStringForTokenWithUserId(consumerKey, scope, authorizedUserId,
                 authenticatedIDP);
         return new OAuthCacheKey(cacheKeyString);
     }
@@ -940,7 +992,12 @@ public class ResponseTypeHandlerUtil {
         if (revocationResponseDTO.isError()) {
             String msg = "Error while revoking tokens for clientId:" + clientId +
                     " Error Message:" + revocationResponseDTO.getErrorMsg();
-            log.error(msg);
+            if (revocationResponseDTO.getErrorCode().equals(OAuth2ErrorCodes.SERVER_ERROR)) {
+                log.error(msg);
+            }
+            if (log.isDebugEnabled()) {
+                log.debug(msg);
+            }
             throw new IdentityOAuth2Exception(msg);
         }
     }

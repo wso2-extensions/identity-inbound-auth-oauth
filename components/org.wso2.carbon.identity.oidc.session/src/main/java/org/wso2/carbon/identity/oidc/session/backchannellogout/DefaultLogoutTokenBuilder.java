@@ -24,16 +24,13 @@ import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.json.JSONObject;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
-import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
-import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
-import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -60,6 +57,8 @@ import java.util.UUID;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
+
 /**
  * This is the logout token generator for the OpenID Connect back-channel logout Implementation. This
  * Logout token Generator utilizes the Nimbus SDK to build the Logout token.
@@ -72,6 +71,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     private static final String OPENID_IDP_ENTITY_ID = "IdPEntityId";
     private static final String ERROR_GET_RESIDENT_IDP =
             "Error while getting Resident Identity Provider of '%s' tenant.";
+    private static final String BACKCHANNEL_LOGOUT_EVENT = "http://schemas.openid.net/event/backchannel-logout";
 
     public DefaultLogoutTokenBuilder() throws IdentityOAuth2Exception {
 
@@ -86,12 +86,24 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
         Map<String, String> logoutTokenList = new HashMap<>();
         // Send logout token to all RPs.
         Cookie opbsCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
-        OIDCSessionState sessionState = getSessionState(opbsCookie != null ? opbsCookie.getValue() : null);
+        // For backward compatibility, SUPER_TENANT_DOMAIN was added as the cache maintained tenant.
+        OIDCSessionState sessionState = getSessionState(opbsCookie != null ? opbsCookie.getValue() : null,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         if (sessionState != null) {
             Set<String> sessionParticipants = getSessionParticipants(sessionState);
             if (!sessionParticipants.isEmpty()) {
                 for (String clientID : sessionParticipants) {
-                    OAuthAppDO oAuthAppDO = getOAuthAppDO(clientID);
+                    OAuthAppDO oAuthAppDO;
+                    try {
+                        oAuthAppDO = getOAuthAppDO(clientID);
+                    } catch (InvalidOAuthClientException e) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("The application with client id: " + clientID
+                                    + " does not exists. This application may be deleted after"
+                                    + " this session is created. So skipping it in logout token list.", e);
+                        }
+                        continue;
+                    }
                     String tenantDomain = oAuthAppDO.getAppOwner().getTenantDomain();
                     if (StringUtils.equals(clientID, getClientId(request, tenantDomain))) {
                         // No need to send logout token if the client id of the RP initiated logout is known.
@@ -108,9 +120,17 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     public Map<String, String> buildLogoutToken(String opbscookie) throws IdentityOAuth2Exception,
             InvalidOAuthClientException {
 
+        // For backward compatibility, SUPER_TENANT_DOMAIN was added as the cache maintained tenant.
+        return buildLogoutToken(opbscookie, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    @Override
+    public Map<String, String> buildLogoutToken(String opbscookie, String tenantDomain) throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
+
         Map<String, String> logoutTokenList = new HashMap<>();
         // Send logout token to all RPs.
-        OIDCSessionState sessionState = getSessionState(opbscookie);
+        OIDCSessionState sessionState = getSessionState(opbscookie, tenantDomain);
         if (sessionState != null) {
             Set<String> sessionParticipants = getSessionParticipants(sessionState);
             if (!sessionParticipants.isEmpty()) {
@@ -123,10 +143,19 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     }
 
     private void addToLogoutTokenList(Map<String, String> logoutTokenList,
-                                      OIDCSessionState sessionState, String clientID) throws IdentityOAuth2Exception,
-            InvalidOAuthClientException {
+                                      OIDCSessionState sessionState, String clientID) throws IdentityOAuth2Exception {
 
-        OAuthAppDO oAuthAppDO = getOAuthAppDO(clientID);
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = getOAuthAppDO(clientID);
+        } catch (InvalidOAuthClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("The application with client id: " + clientID
+                        + " does not exists. This application may be deleted after"
+                        + " this session is created. So skipping it in logout token list.", e);
+            }
+            return;
+        }
         String backChannelLogoutUrl = oAuthAppDO.getBackChannelLogoutUrl();
         if (StringUtils.isNotBlank(backChannelLogoutUrl)) {
             // Send back-channel logout request to all RPs those registered their back-channel logout uri.
@@ -161,7 +190,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
         Date iat = new Date(currentTimeInMillis);
         String sid = getSidClaim(sessionState);
-        JSONObject event = new JSONObject().put("http://schemas.openidnet/event/backchannel-logout",
+        JSONObject event = new JSONObject().appendField(BACKCHANNEL_LOGOUT_EVENT,
                 new JSONObject());
 
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
@@ -169,7 +198,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
         jwtClaimsSetBuilder.issuer(iss);
         jwtClaimsSetBuilder.audience(audience);
         jwtClaimsSetBuilder.claim("jti", jti);
-        jwtClaimsSetBuilder.claim("event", event);
+        jwtClaimsSetBuilder.claim("events", event);
         jwtClaimsSetBuilder.expirationTime(new Date(currentTimeInMillis + logoutTokenValidityInMillis));
         jwtClaimsSetBuilder.claim("iat", iat);
         jwtClaimsSetBuilder.claim("sid", sid);
@@ -197,7 +226,9 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
                     JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(tenantDomain, idToken);
                     clientId = OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(decryptedIDToken);
                 } catch (ParseException e) {
-                    log.error("Error in extracting the client ID from the ID token.");
+                    if (log.isDebugEnabled()) {
+                        log.debug("Error in extracting the client ID from the ID token : " + idToken);
+                    }
                 }
                 return clientId;
             }
@@ -241,11 +272,11 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
      * @param opbscookie OpbsCookie.
      * @return OIDCSessionState
      */
-    private OIDCSessionState getSessionState(String opbscookie) {
+    private OIDCSessionState getSessionState(String opbscookie, String tenantDomain) {
 
         if (StringUtils.isNotEmpty(opbscookie)) {
             OIDCSessionState sessionState =
-                    OIDCSessionManagementUtil.getSessionManager().getOIDCSessionState(opbscookie);
+                    OIDCSessionManagementUtil.getSessionManager().getOIDCSessionState(opbscookie, tenantDomain);
             return sessionState;
         }
         return null;
@@ -294,18 +325,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
      */
     private String getIssuer(String tenantDomain) throws IdentityOAuth2Exception {
 
-        IdentityProvider identityProvider = getResidentIdp(tenantDomain);
-        FederatedAuthenticatorConfig[] fedAuthnConfigs =
-                identityProvider.getFederatedAuthenticatorConfigs();
-        // Get OIDC authenticator.
-        FederatedAuthenticatorConfig oidcAuthenticatorConfig =
-                IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
-                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
-        // Setting issuer.
-        String issuer =
-                IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
-                        OPENID_IDP_ENTITY_ID).getValue();
-        return issuer;
+        return getIdTokenIssuer(tenantDomain);
     }
 
     /**
@@ -386,7 +406,9 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
             try {
                 clientId = extractClientFromIdToken(idTokenHint);
             } catch (ParseException e) {
-                log.error("Error while decoding the ID Token Hint.", e);
+                if (log.isDebugEnabled()) {
+                    log.debug("Error while decoding the ID Token Hint: " + idTokenHint, e);
+                }
             }
         }
         return clientId;
@@ -439,7 +461,9 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
 
             return signedJWT.verify(verifier);
         } catch (JOSEException | ParseException e) {
-            log.error("Error occurred while validating id token signature.", e);
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while validating id token signature.", e);
+            }
             return false;
         } catch (Exception e) {
             log.error("Error occurred while validating id token signature.", e);

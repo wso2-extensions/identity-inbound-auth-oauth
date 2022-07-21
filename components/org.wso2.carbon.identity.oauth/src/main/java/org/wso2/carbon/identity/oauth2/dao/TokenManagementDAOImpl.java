@@ -173,9 +173,12 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     validationDataDO.setGrantType(resultSet.getString(10));
                     String subjectIdentifier = resultSet.getString(11);
                     validationDataDO.setTokenBindingReference(resultSet.getString(12));
+                    validationDataDO.setAccessTokenIssuedTime(
+                            resultSet.getTimestamp(13, Calendar.getInstance(TimeZone.getTimeZone(UTC))));
+                    validationDataDO.setAccessTokenValidityInMillis(resultSet.getLong(14));
                     String authenticatedIDP = null;
                     if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                        authenticatedIDP = resultSet.getString(13);
+                        authenticatedIDP = resultSet.getString(15);
                     }
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain,
                             authenticatedIDP);
@@ -353,7 +356,9 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         }
 
         if (username == null || applicationName == null) {
-            log.error("Could not remove consent of user " + username + " for application " + applicationName);
+            if (log.isDebugEnabled()) {
+                log.debug("Could not remove consent of user " + username + " for application " + applicationName);
+            }
             return;
         }
 
@@ -397,7 +402,9 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         }
 
         if (username == null || applicationName == null) {
-            log.error("Could not remove consent of user " + username + " for application " + applicationName);
+            if (log.isDebugEnabled()) {
+                log.debug("Could not remove consent of user " + username + " for application " + applicationName);
+            }
             return;
         }
 
@@ -425,6 +432,39 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
     }
 
     /**
+     * Revoke the OAuth consents by the application name and tenant domain.
+     *
+     * @param applicationName Name of the OAuth application
+     * @param tenantDomain    Tenant domain of the application
+     * @throws IdentityOAuth2Exception If an unexpected error occurs
+     */
+    @Override
+    public void revokeOAuthConsentsByApplication(String applicationName, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        // TODO: Modify the functionality to revoke all OAuth consents of SaaS applications.
+        if (log.isDebugEnabled()) {
+            String message = String.format("Revoking all OAuth consents given for application: %s in " +
+                    "tenant domain: %s.", applicationName, tenantDomain);
+            log.debug(message);
+        }
+
+        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            try (PreparedStatement ps = connection.prepareStatement(SQLQueries.DELETE_USER_RPS_OF_APPLICATION)) {
+                ps.setInt(1, tenantId);
+                ps.setString(2, applicationName);
+                ps.execute();
+                IdentityDatabaseUtil.commitTransaction(connection);
+            }
+        } catch (SQLException e) {
+            String errorMsg = String.format("Error revoking all OAuth consents given for application: %s in " +
+                    "tenant domain: %s.", applicationName, tenantDomain);
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        }
+    }
+
+    /**
      * Update the OAuth Consent Approve Always which is recorded in the IDN_OPENID_USER_RPS table against
      * the user for a particular Application
      *
@@ -443,8 +483,10 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         }
 
         if (tenantAwareUserName == null || applicationName == null) {
-            log.error("Could not remove consent of user " + tenantAwareUserName +
-                    " for application " + applicationName);
+            if (log.isDebugEnabled()) {
+                log.debug("Could not remove consent of user " + tenantAwareUserName +
+                        " for application " + applicationName);
+            }
             return;
         }
 
@@ -607,7 +649,9 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         }
 
         if (consumerKey == null) {
-            log.error("Couldn't revoke token for tenant ID: " + tenantId + " because of null consumer key");
+            if (log.isDebugEnabled()) {
+                log.debug("Couldn't revoke token for tenant ID: " + tenantId + " because of null consumer key");
+            }
             return;
         }
 
@@ -683,8 +727,8 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         try {
             int tenantId = OAuth2Util.getTenantId(tenantDomain);
 
-            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserId(SQLQueries.
-                    GET_DISTINCT_APPS_AUTHORIZED_BY_USER_ALL_TIME, authzUser.toString());
+            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(SQLQueries.
+                    GET_DISTINCT_APPS_AUTHORIZED_BY_USER_ALL_TIME, authzUser.getUserStoreDomain());
 
             if (!isUsernameCaseSensitive) {
                 sqlQuery = sqlQuery.replace(AUTHZ_USER, LOWER_AUTHZ_USER);

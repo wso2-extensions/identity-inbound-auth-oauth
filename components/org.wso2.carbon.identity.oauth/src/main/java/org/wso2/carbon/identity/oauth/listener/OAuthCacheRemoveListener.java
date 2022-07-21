@@ -17,10 +17,11 @@
  */
 package org.wso2.carbon.identity.oauth.listener;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.application.common.listener.AbstractCacheListener;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
+import org.wso2.carbon.identity.core.cache.AbstractCacheListener;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -48,30 +49,36 @@ public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKe
             return;
         }
         AccessTokenDO accessTokenDO = (AccessTokenDO) cacheEntry;
-
-        if (log.isDebugEnabled()) {
-            log.debug("OAuth cache removed for consumer id : " + accessTokenDO.getConsumerKey());
-        }
-
-        String userName = accessTokenDO.getAuthzUser().toString();
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(userName);
-        String cacheKeyString;
-        if (isUsernameCaseSensitive) {
-            cacheKeyString = accessTokenDO.getConsumerKey() + ":" + userName + ":" +
-                    OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":" +
-                    accessTokenDO.getAuthzUser().getFederatedIdPName();
+        if (StringUtils.equalsIgnoreCase(cacheEntryEvent.getKey().getCacheKeyString(),
+                accessTokenDO.getAccessToken())) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth cache removed for consumer id : " + accessTokenDO.getConsumerKey() + " and token " +
+                        "identifier: " + accessTokenDO.getTokenId());
+            }
         } else {
-            cacheKeyString = accessTokenDO.getConsumerKey() + ":" + userName.toLowerCase() + ":" +
-                    OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":" +
-                    accessTokenDO.getAuthzUser().getFederatedIdPName();
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth cache removed for cache key: " + cacheEntryEvent.getKey().getCacheKeyString());
+            }
         }
 
-        OAuthCacheKey oauthcacheKey = new OAuthCacheKey(cacheKeyString);
         OAuthCache oauthCache = OAuthCache.getInstance();
 
-        oauthCache.clearCacheEntry(oauthcacheKey);
-        oauthcacheKey = new OAuthCacheKey(accessTokenDO.getAccessToken());
+        OAuthCacheKey oauthcacheKey = new OAuthCacheKey(accessTokenDO.getAccessToken());
+        oauthCache.clearCacheEntry(oauthcacheKey, accessTokenDO.getAuthzUser().getTenantDomain());
 
-        oauthCache.clearCacheEntry(oauthcacheKey);
+        try {
+            String userId = accessTokenDO.getAuthzUser().getUserId();
+            String cacheKeyString;
+            cacheKeyString = accessTokenDO.getConsumerKey() + ":" + userId + ":" +
+                    OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":" +
+                    accessTokenDO.getAuthzUser().getFederatedIdPName();
+
+            oauthcacheKey = new OAuthCacheKey(cacheKeyString);
+
+            oauthCache.clearCacheEntry(oauthcacheKey);
+        } catch (UserIdNotFoundException e) {
+            throw new CacheEntryListenerException("User id not found for user: "
+                    + accessTokenDO.getAuthzUser().getLoggableUserId());
+        }
     }
 }

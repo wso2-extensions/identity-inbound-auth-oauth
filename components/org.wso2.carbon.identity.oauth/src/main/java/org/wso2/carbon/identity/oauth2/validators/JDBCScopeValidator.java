@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
@@ -55,6 +56,9 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ResourceScopeCacheEntry;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.role.management.service.models.Role;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -68,6 +72,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+
+import static java.util.Objects.nonNull;
 
 /**
  * The JDBC Scope Validation implementation. This validates the Resource's scope (stored in IDN_OAUTH2_RESOURCE_SCOPE)
@@ -86,6 +92,7 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
     private static final String SCOPE_VALIDATOR_NAME = "Role based scope validator";
     private static final String OPENID = "openid";
     private static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
+    private static final String PRESERVE_CASE_SENSITIVITY = "preservedCaseSensitive";
 
     private static final Log log = LogFactory.getLog(JDBCScopeValidator.class);
 
@@ -170,13 +177,13 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
         }
 
         try {
-            User authzUser = accessTokenDO.getAuthzUser();
+            AuthenticatedUser authzUser = accessTokenDO.getAuthzUser();
             int tenantId = getTenantId(authzUser);
             String[] userRoles = getUserRoles(authzUser);
 
             if (ArrayUtils.isEmpty(userRoles)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("No roles associated for the user " + authzUser.getUserName());
+                    log.debug("No roles associated for the user " + authzUser.getLoggableUserId());
                 }
                 return false;
             }
@@ -270,12 +277,14 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
             for (String scope : requestedScopes) {
                 if (!isScopeValid(scope, tenantId)) {
                     // If the scope is not registered return false.
-                    log.error("Requested scope " + scope + " is invalid");
+                    if (log.isDebugEnabled()) {
+                        log.debug("Requested scope " + scope + " is invalid");
+                    }
                     return false;
                 }
                 if (!isUserAuthorizedForScope(scope, userRoles, tenantId)) {
                     if (log.isDebugEnabled()) {
-                        log.debug("User " + user.getUserName() + "in not authorised for scope " + scope);
+                        log.debug("User " + user.getLoggableUserId() + "in not authorised for scope " + scope);
                     }
                     return false;
                 }
@@ -394,9 +403,24 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
             }
             return false;
         }
+        boolean preservedCaseSensitive = Boolean.parseBoolean(System.getProperty(PRESERVE_CASE_SENSITIVITY));
 
         //Check if the user still has a valid role for this scope.
         Set<String> scopeRoles = new HashSet<>(rolesOfScope);
+        if (preservedCaseSensitive) {
+            rolesOfScope.retainAll(Arrays.asList(userRoles));
+        } else {
+            Set<String> rolesOfScopeLowerCase = new HashSet<>();
+            for (String roleOfScope : rolesOfScope) {
+                rolesOfScopeLowerCase.add(roleOfScope.toLowerCase());
+            }
+            rolesOfScope = rolesOfScopeLowerCase;
+            ArrayList<String> userRolesLowercase = new ArrayList<>();
+            for (String userRole : userRoles) {
+                userRolesLowercase.add(userRole.toLowerCase());
+            }
+            rolesOfScope.retainAll(userRolesLowercase);
+        }
         rolesOfScope.retainAll(Arrays.asList(userRoles));
 
         if (rolesOfScope.isEmpty()) {
@@ -438,7 +462,7 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
         return false;
     }
 
-    private String[] getUserRoles(User user) throws UserStoreException {
+    private String[] getUserRoles(AuthenticatedUser user) throws UserStoreException {
 
         UserStoreManager userStoreManager;
         String[] userRoles;
@@ -446,6 +470,25 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
 
         RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
         int tenantId = getTenantId(user);
+
+        Tenant tenant =
+                OAuthComponentServiceHolder.getInstance().getRealmService().getTenantManager().getTenant(tenantId);
+        if (nonNull(tenant) && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID()) &&
+                !user.isFederatedUser()) {
+            String organizationId = tenant.getAssociatedOrganizationUUID();
+            try {
+                List<Role> organizationRoles = OAuth2ServiceComponentHolder.getRoleManager()
+                        .getUserOrganizationRoles(user.getUserId(), organizationId);
+                if (nonNull(organizationRoles) && !organizationRoles.isEmpty()) {
+                    return organizationRoles.stream().map(Role::getDisplayName).toArray(String[]::new);
+                }
+            } catch (UserIdNotFoundException e) {
+                log.error("Error while retrieving user identifier", e);
+            } catch (OrganizationManagementException e) {
+                log.error("Error while retrieving user organization roles", e);
+            }
+        }
+
         try {
             if (tenantId != MultitenantConstants.SUPER_TENANT_ID) {
                 PrivilegedCarbonContext.startTenantFlow();
@@ -465,24 +508,16 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
 
         if (ArrayUtils.isNotEmpty(userRoles)) {
             if (log.isDebugEnabled()) {
-                StringBuilder logMessage = new StringBuilder("Found roles of user ");
-                logMessage.append(user.getUserName());
-                logMessage.append(" ");
-                logMessage.append(String.join(",", userRoles));
-                log.debug(logMessage.toString());
+                String logMessage = "Found roles of user " + user.getLoggableUserId() + " "
+                        + String.join(",", userRoles);
+                log.debug(logMessage);
             }
         }
         return userRoles;
     }
 
-    private int getTenantId (User user) throws UserStoreException {
+    private int getTenantId(User user) throws UserStoreException {
 
-        int tenantId = IdentityTenantUtil.getTenantId(user.getTenantDomain());
-
-        if (tenantId == 0 || tenantId == -1) {
-            tenantId = IdentityTenantUtil.getTenantIdOfUser(user.getUserName());
-        }
-
-        return tenantId;
+        return IdentityTenantUtil.getTenantId(user.getTenantDomain());
     }
 }

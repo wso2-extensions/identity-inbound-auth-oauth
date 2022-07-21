@@ -39,13 +39,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.AUTHORIZATION_CODE;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.COOKIE_BASED_TOKEN_BINDER;
 
 /**
  * This class provides the cookie based token binder implementation.
  */
 public class CookieBasedTokenBinder extends AbstractTokenBinder {
-
-    private static final String BINDING_TYPE = "cookie";
 
     private static final String COOKIE_NAME = "atbv";
 
@@ -54,7 +53,7 @@ public class CookieBasedTokenBinder extends AbstractTokenBinder {
     @Override
     public String getBindingType() {
 
-        return BINDING_TYPE;
+        return COOKIE_BASED_TOKEN_BINDER;
     }
 
     @Override
@@ -139,19 +138,7 @@ public class CookieBasedTokenBinder extends AbstractTokenBinder {
 
     @Override
     public void clearTokenBindingElements(HttpServletRequest request, HttpServletResponse response) {
-
-        Cookie[] cookies = request.getCookies();
-        if (ArrayUtils.isNotEmpty(cookies)) {
-            Arrays.stream(cookies).filter(t -> COOKIE_NAME.equals(t.getName())).findAny().ifPresent(cookie -> {
-                ServletCookie servletCookie = new ServletCookie(cookie.getName(), cookie.getValue());
-                servletCookie.setMaxAge(0);
-                servletCookie.setSecure(true);
-                servletCookie.setHttpOnly(true);
-                servletCookie.setPath("/");
-                servletCookie.setSameSite(SameSiteCookie.NONE);
-                response.addCookie(servletCookie);
-            });
-        }
+        // Not required as we not clear the atbv cookie from the browser.
     }
 
     @Override

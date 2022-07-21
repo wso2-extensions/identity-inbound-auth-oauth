@@ -18,7 +18,9 @@
 
 package org.wso2.carbon.identity.oauth2.device.api;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 
 /**
  * Device authentication service.
@@ -30,12 +32,45 @@ public interface DeviceAuthService {
      *
      * @param deviceCode Code that is used to identify the device.
      * @param userCode   Code that is used to correlate two devices.
+     * @param quantifier Quantized time period user_code belongs.
+     * @param clientId   Consumer key of the application.
+     * @param scopes     Requested scopes.
+     * @return Unique user_code.
+     * @throws IdentityOAuth2Exception Error while storing device flow parameters.
+     */
+    default String generateDeviceResponse(String deviceCode, String userCode, long quantifier, String clientId,
+                                          String scopes) throws IdentityOAuth2Exception {
+
+        throw new NotImplementedException("Not Implemented.");
+    }
+
+    /**
+     * Store device flow parameters and scopes in different tables.
+     * @deprecated
+     * This method is no longer acceptable.
+     * @link DeviceAuthService#generateDeviceResponse(String, String, long, String, String).
+     *
+     * @param deviceCode Code that is used to identify the device.
+     * @param userCode   Code that is used to correlate two devices.
      * @param clientId   Consumer key of the application.
      * @param scopes     Requested scopes.
      * @throws IdentityOAuth2Exception Error while storing device flow parameters.
      */
+    @Deprecated
     void generateDeviceResponse(String deviceCode, String userCode, String clientId, String scopes)
             throws IdentityOAuth2Exception;
+
+    /**
+     * Get details for user_code.
+     *
+     * @param userCode Code that is used to correlate user and device.
+     * @return Map of values.
+     * @throws IdentityOAuth2Exception Error while getting details for user code.
+     */
+    default DeviceFlowDO getDetailsByUserCode(String userCode) throws IdentityOAuth2Exception {
+
+        throw new NotImplementedException("Not Implemented.");
+    }
 
     /**
      * Store scopes in a different table.
@@ -51,7 +86,11 @@ public interface DeviceAuthService {
      * @param clientId    Consumer key of the application.
      * @param redirectURI Redirection uri of the application.
      * @throws IdentityOAuth2Exception Error while storing redirect uri.
+     *
+     * @deprecated because device flow service layer should not update application detail.
+     * Deprecated for removal.
      */
+    @Deprecated
     void setCallbackUri(String clientId, String redirectURI) throws IdentityOAuth2Exception;
 
     /**
@@ -60,7 +99,11 @@ public interface DeviceAuthService {
      * @param userCode Code that is used to correlate two devices.
      * @return client id
      * @throws IdentityOAuth2Exception Error while getting client id for user code.
+     *
+     * @deprecated because the client id of the user is included in {{{@link #getDetailsByUserCode(String)}}}.
+     * Deprecated for removal.
      */
+    @Deprecated
     String getClientId(String userCode) throws IdentityOAuth2Exception;
 
     /**
@@ -69,7 +112,11 @@ public interface DeviceAuthService {
      * @param userCode Code that is used to correlate two devices.
      * @return scopes
      * @throws IdentityOAuth2Exception Error while getting scopes for user code.
+     *
+     * @deprecated because the scopes of the user is included in {{@link #getDetailsByUserCode(String)}}.
+     * Deprecated for removal.
      */
+    @Deprecated
     String[] getScope(String userCode) throws IdentityOAuth2Exception;
 
     /**
@@ -87,6 +134,10 @@ public interface DeviceAuthService {
      * @param clientId Consumer key of the application.
      * @return true or false.
      * @throws IdentityOAuth2Exception Error while validate the client id.
+     *
+     * @deprecated because device flow service layer should not validate the client information.
+     * Deprecated for removal.
      */
+    @Deprecated
     boolean validateClientInfo(String clientId) throws IdentityOAuth2Exception;
 }

@@ -79,7 +79,7 @@ public class OIDCDiscoveryEndpointTest extends PowerMockIdentityBaseTest {
                 {"token", sampleConfigMap, HttpServletResponse.SC_OK},
                 {"oidcdiscovery", sampleConfigMap, HttpServletResponse.SC_OK},
                 {"invalid_tokenEp", sampleConfigMap,
-                        HttpServletResponse.SC_INTERNAL_SERVER_ERROR},
+                        HttpServletResponse.SC_BAD_REQUEST},
         };
     }
 

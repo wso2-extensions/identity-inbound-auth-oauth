@@ -58,8 +58,7 @@ public class OpenIDConnectUserRPStore {
         repDO.setUserName(getAuthenticatedSubjectIdentifier(user));
         repDO.setTrustedAlways(trustedAlways);
 
-        OAuthAppDO oAuthAppDO = getOAuthApp(clientId);
-        int tenantId = getTenantId(user, oAuthAppDO);
+        int tenantId = IdentityTenantUtil.getTenantId(user.getTenantDomain());
 
         OpenIDUserRPDAO dao = new OpenIDUserRPDAO();
         dao.createOrUpdate(repDO, tenantId);
@@ -76,8 +75,7 @@ public class OpenIDConnectUserRPStore {
 
         OpenIDUserRPDAO dao = new OpenIDUserRPDAO();
 
-        OAuthAppDO oAuthAppDO = getOAuthApp(clientId);
-        int tenantId = getTenantId(user, oAuthAppDO);
+        int tenantId = IdentityTenantUtil.getTenantId(user.getTenantDomain());
 
         OpenIDUserRPDO rpDO = dao.getOpenIDUserRP(getAuthenticatedSubjectIdentifier(user), appName, tenantId);
         return rpDO != null && rpDO.isTrustedAlways();
@@ -91,7 +89,7 @@ public class OpenIDConnectUserRPStore {
                                      String clientId) throws OAuthSystemException {
 
         OAuthAppDO oAuthAppDO = getOAuthApp(clientId);
-        int tenantId = getTenantId(user, oAuthAppDO);
+        int tenantId = IdentityTenantUtil.getTenantId(user.getTenantDomain());
         String appName = oAuthAppDO.getApplicationName();
 
         OpenIDUserRPDAO dao = new OpenIDUserRPDAO();
@@ -104,17 +102,6 @@ public class OpenIDConnectUserRPStore {
     private String getAuthenticatedSubjectIdentifier(AuthenticatedUser user) {
 
         return user.getAuthenticatedSubjectIdentifier();
-    }
-
-    private int getTenantId(AuthenticatedUser user, OAuthAppDO oauthApp) throws OAuthSystemException {
-
-        int tenantId;
-        if (user.getUserName() != null) {
-            tenantId = IdentityTenantUtil.getTenantId(user.getTenantDomain());
-        } else {
-            tenantId = IdentityTenantUtil.getTenantId(OAuth2Util.getTenantDomainOfOauthApp(oauthApp));
-        }
-        return tenantId;
     }
 
     private OAuthAppDO getOAuthApp(String clientId) throws OAuthSystemException {

@@ -61,6 +61,29 @@ public interface AccessTokenDAO {
         return getLatestAccessToken(consumerKey, authzUser, userStoreDomain, scope, includeExpiredTokens);
     }
 
+    /**
+     * Get tokenId by binding reference.
+     * @param bindingRef BindingRef.
+     * @return TokenId.
+     * @throws IdentityOAuth2Exception
+     */
+    default Set<String> getTokenIdBySessionIdentifier(String bindingRef) throws IdentityOAuth2Exception {
+
+        return null;
+    }
+
+    /**
+     * Store tokenId to sessioncontext identifier mapping.
+     * @param sessionIdentifier SessionIdentifier.
+     * @param tokenId TokenId.
+     * @param tenantId TenantId.
+     * @throws IdentityOAuth2Exception
+     */
+    default void storeTokenToSessionMapping(String sessionIdentifier, String tokenId, int tenantId)
+            throws IdentityOAuth2Exception {
+
+    }
+
     Set<AccessTokenDO> getAccessTokens(String consumerKey, AuthenticatedUser userName,
                                        String userStoreDomain, boolean includeExpired) throws IdentityOAuth2Exception;
 
@@ -136,6 +159,14 @@ public interface AccessTokenDAO {
                                            String tokenStateId, AccessTokenDO accessTokenDO,
                                            String userStoreDomain) throws IdentityOAuth2Exception;
 
+    default void invalidateAndCreateNewAccessToken(String oldAccessTokenId, String tokenState, String consumerKey,
+                                                   String tokenStateId, AccessTokenDO accessTokenDO,
+                                                   String userStoreDomain, String grantType)
+            throws IdentityOAuth2Exception {
+        invalidateAndCreateNewAccessToken(oldAccessTokenId, tokenState, consumerKey, tokenStateId, accessTokenDO,
+                userStoreDomain);
+    }
+
     void updateUserStoreDomain(int tenantId, String currentUserStoreDomain,
                                String newUserStoreDomain) throws IdentityOAuth2Exception;
 
@@ -170,9 +201,23 @@ public interface AccessTokenDAO {
      *
      * @param tokenId         ID of the access token to update the state.
      * @param tokenState      state to update.
+     * @deprecated to use {{@link #updateAccessTokenState(String, String, String)}}
      * @throws IdentityOAuth2Exception
      */
     void updateAccessTokenState(String tokenId, String tokenState) throws IdentityOAuth2Exception;
+
+    /**
+     * Update access token to the given state.
+     *
+     * @param tokenId         ID of the access token to update the state.
+     * @param tokenState      state to update.
+     * @param grantType      state to update.
+     * @throws IdentityOAuth2Exception
+     */
+    default void updateAccessTokenState(String tokenId, String tokenState, String grantType)
+            throws IdentityOAuth2Exception {
+        updateAccessTokenState(tokenId, tokenState);
+    }
 
     default Set<AccessTokenDO> getActiveTokenSetWithTokenIdByConsumerKeyForOpenidScope(String consumerKey)
             throws IdentityOAuth2Exception {
@@ -195,6 +240,18 @@ public interface AccessTokenDAO {
     }
 
     /**
+     * Retrieve the active access tokens with a given access token binding reference.
+     *
+     * @param bindingRef access token binding reference
+     * @return set of active access objects
+     * @throws IdentityOAuth2Exception if the retrieval process fails
+     */
+    default Set<AccessTokenDO> getAccessTokensByBindingRef(String bindingRef) throws IdentityOAuth2Exception {
+
+        return Collections.emptySet();
+    }
+
+    /**
      * Retrieve the access token for a given token id.
      *
      * @param tokenId token id.
@@ -204,5 +261,16 @@ public interface AccessTokenDAO {
     default String getAccessTokenByTokenId(String tokenId) throws IdentityOAuth2Exception {
 
         return null;
+    }
+
+    /**
+     * Updates whether the token is issued for a consent required grant.
+     *
+     * @param tokenId ID of the token.
+     * @param isConsentedGrant Grant type which the corresponding token is issued.
+     * @throws IdentityOAuth2Exception If there are any failures in update.
+     */
+    default void updateTokenIsConsented(String tokenId, boolean isConsentedGrant)
+            throws IdentityOAuth2Exception {
     }
 }

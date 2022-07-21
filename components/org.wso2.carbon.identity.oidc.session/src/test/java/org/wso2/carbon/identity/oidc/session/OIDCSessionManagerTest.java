@@ -22,11 +22,14 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionParticipantCache;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionParticipantCacheEntry;
 import org.wso2.carbon.identity.oidc.session.servlet.TestOIDCSessionBase;
 import org.wso2.carbon.identity.oidc.session.servlet.TestUtil;
 
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
@@ -34,7 +37,7 @@ import static org.testng.Assert.assertNull;
 /**
  * Unit test coverage for OIDCSessionManager
  */
-@PrepareForTest({OIDCSessionParticipantCache.class, OIDCSessionParticipantCacheEntry.class})
+@PrepareForTest({OIDCSessionParticipantCache.class, OIDCSessionParticipantCacheEntry.class, IdentityTenantUtil.class})
 public class OIDCSessionManagerTest extends TestOIDCSessionBase {
 
     @Mock
@@ -49,37 +52,45 @@ public class OIDCSessionManagerTest extends TestOIDCSessionBase {
 
         oidcSessionManager = new OIDCSessionManager();
         TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).
+                thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        when(IdentityTenantUtil.getTenantDomain(MultitenantConstants.SUPER_TENANT_ID)).
+                thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
     }
 
     @Test
     public void testStoreOIDCSessionState() {
 
-        oidcSessionManager.storeOIDCSessionState(SESSION_ID, oidcSessionState);
-        assertNotNull(oidcSessionManager.getOIDCSessionState(SESSION_ID), "Session Id is not stored in OIDCSession " +
-                "state");
+        oidcSessionManager.storeOIDCSessionState(SESSION_ID, oidcSessionState,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        assertNotNull(oidcSessionManager.getOIDCSessionState(SESSION_ID, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME),
+                "Session Id is not stored in OIDCSession state");
     }
 
     @Test
     public void testRemoveOIDCSessionState() {
 
-        oidcSessionManager.removeOIDCSessionState(SESSION_ID);
-        assertNull(oidcSessionManager.getOIDCSessionState(SESSION_ID), "Session Id is removed from OIDCSession " +
-                "state");
+        oidcSessionManager.removeOIDCSessionState(SESSION_ID, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        assertNull(oidcSessionManager.getOIDCSessionState(SESSION_ID, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME),
+                "Session Id is removed from OIDCSession state");
     }
 
     @Test
     public void testRestoreOIDCSessionState() {
 
         OIDCSessionState oidcSessionState = new OIDCSessionState();
-        oidcSessionManager.restoreOIDCSessionState(SESSION_ID, NEW_SESSION_ID, oidcSessionState);
-        assertNotNull(oidcSessionManager.getOIDCSessionState(NEW_SESSION_ID), "Session Id is not stored in " +
+        oidcSessionManager.restoreOIDCSessionState(SESSION_ID, NEW_SESSION_ID, oidcSessionState,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        assertNotNull(oidcSessionManager.getOIDCSessionState(NEW_SESSION_ID,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME), "Session Id is not stored in " +
                 "OIDCSession state");
     }
 
     @Test
     public void testSessionNotExists() {
 
-        assertFalse(oidcSessionManager.sessionExists(SESSION_ID));
+        assertFalse(oidcSessionManager.sessionExists(SESSION_ID, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
     }
 
 }

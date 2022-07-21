@@ -75,6 +75,7 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -198,14 +199,11 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             appDO = appDAO.getAppInformation(clientId);
             // Adding the OAuthAppDO as a context property for further use
             messageContext.addProperty("OAuthAppDO", appDO);
-        } catch (IdentityOAuth2Exception e) {
-            log.debug(e.getMessage(), e);
-            throw new IdentityOAuth2Exception(e.getMessage());
-        } catch (InvalidOAuthClientException e) {
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             log.debug(e.getMessage(), e);
             throw new IdentityOAuth2Exception(e.getMessage());
         }
-        String subscriber = appDO.getUser().toString();
+        String subscriber = appDO.getAppOwner().toString();
         String applicationName = appDO.getApplicationName();
 
         //generating expiring timestamp
@@ -224,6 +222,7 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
         claimsSetBuilder.claim(API_GATEWAY_ID + "/subscriber", subscriber);
         claimsSetBuilder.claim(API_GATEWAY_ID + "/applicationname", applicationName);
         claimsSetBuilder.claim(API_GATEWAY_ID + "/enduser", authzUser);
+        claimsSetBuilder.jwtID(UUID.randomUUID().toString());
         //TODO: check setting audience
 
         if (claimsRetriever != null) {
@@ -245,7 +244,7 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
 
             if (requestedClaims != null) {
                 cacheKey = new ClaimCacheKey(authenticatedUser);
-                result = claimsLocalCache.getValueFromCache(cacheKey);
+                result = claimsLocalCache.getValueFromCache(cacheKey, tenantDomain);
             }
 
             SortedMap<String, String> claimValues = null;
@@ -254,10 +253,10 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             } else if (isExistingUser) {
                 claimValues = claimsRetriever.getClaims(authzUser, requestedClaims);
                 UserClaims userClaims = new UserClaims(claimValues);
-                claimsLocalCache.addToCache(cacheKey, userClaims);
+                claimsLocalCache.addToCache(cacheKey, userClaims, tenantDomain);
 
                 ClaimMetaDataCache.getInstance().addToCache(new ClaimMetaDataCacheKey(authenticatedUser),
-                        new ClaimMetaDataCacheEntry(cacheKey));
+                        new ClaimMetaDataCacheEntry(cacheKey), tenantDomain);
             }
 
             if (isExistingUser) {

@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.event.IdentityEventConstants.EventProperty;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.backchannellogout.LogoutRequestSender;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
@@ -64,8 +65,9 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
                     log.debug("OPBS cookie with value " + opbsCookieId + " found. " +
                             "Initiating session termination.");
                 }
-                LogoutRequestSender.getInstance().sendLogoutRequests(opbsCookieId);
-                OIDCSessionManagementUtil.getSessionManager().removeOIDCSessionState(opbsCookieId);
+                String tenantDomain = OAuth2Util.resolveTenantDomain(getHttpRequestFromEvent(event));
+                LogoutRequestSender.getInstance().sendLogoutRequests(opbsCookieId, tenantDomain);
+                OIDCSessionManagementUtil.getSessionManager().removeOIDCSessionState(opbsCookieId, tenantDomain);
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("There is no valid OIDC based service provider in the session to be terminated by " +

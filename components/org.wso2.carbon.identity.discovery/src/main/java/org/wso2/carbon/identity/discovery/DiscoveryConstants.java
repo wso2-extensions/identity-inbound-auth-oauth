@@ -70,7 +70,7 @@ public class DiscoveryConstants {
      */
     public static final String INTROSPECTION_ENDPOINT = "Introspection_endpoint";
     /**
-     * introspection_endpoint_auth_methods_supported
+     * introspection_endpoint_auth_methods_supported.
      * OPTIONAL. JSON array containing a list of Client Authentication methods supported by this Introspection
      * Endpoint. The options are client_secret_post, client_secret_basic, client_secret_jwt, and
      * private_key_jwt, as described in Section 9 of OpenID Connect Core 1.0 [OpenID.Core]. Other
@@ -345,4 +345,11 @@ public class DiscoveryConstants {
      authorization server does not support PKCE.
      */
     public static final String CODE_CHALLENGE_METHODS_SUPPORTED = "code_challenge_methods_supported";
+
+    /**
+     * device_authorization_endpoint
+     * OPTIONAL. URL of the authorization server's device authorization endpoint,
+     * as defined in OAuth 2.0 Device Grant [rfc8628]
+     */
+    public static final String DEVICE_AUTHORIZATION_ENDPOINT = "device_authorization_endpoint";
 }

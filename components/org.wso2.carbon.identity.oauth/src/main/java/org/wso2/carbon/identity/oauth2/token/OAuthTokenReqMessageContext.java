@@ -48,7 +48,11 @@ public class OAuthTokenReqMessageContext {
 
     private Properties properties = new Properties();
 
+    private String[] authorizedInternalScopes;
+
     private TokenBinding tokenBinding;
+
+    private boolean isConsentedToken;
 
     public OAuthTokenReqMessageContext(OAuth2AccessTokenReqDTO oauth2AccessTokenReqDTO) {
 
@@ -148,5 +152,23 @@ public class OAuthTokenReqMessageContext {
     public void setTokenBinding(TokenBinding tokenBinding) {
 
         this.tokenBinding = tokenBinding;
+    }
+
+    public String[] getAuthorizedInternalScopes() {
+        return authorizedInternalScopes;
+    }
+
+    public void setAuthorizedInternalScopes(String[] authorizedInternalScopes) {
+        this.authorizedInternalScopes = authorizedInternalScopes;
+    }
+
+    public boolean isConsentedToken() {
+
+        return isConsentedToken;
+    }
+
+    public void setConsentedToken(boolean consentedToken) {
+
+        isConsentedToken = consentedToken;
     }
 }

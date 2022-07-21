@@ -24,6 +24,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
@@ -44,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
+import static org.wso2.carbon.identity.oauth2.util.JdbcUtils.isH2DB;
 
 /**
  * This class handles all the DAO layer activities which are related to OIDC request object.
@@ -173,10 +175,11 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
     private void insertRequestObjectClaims(int requestObjectId, List<List<RequestedClaim>> claims,
                                            Connection connection) throws IdentityOAuth2Exception {
 
-        String sqlStmt = SQLQueries.STORE_IDN_OIDC_REQ_OBJECT_CLAIMS;
         PreparedStatement prepStmt = null;
         Map<Integer, List<String>> claimValues = new HashMap<>();
         try {
+            String sqlStmt = isH2DB() ? SQLQueries.STORE_IDN_OIDC_REQ_OBJECT_CLAIMS_H2 :
+                    SQLQueries.STORE_IDN_OIDC_REQ_OBJECT_CLAIMS;
             connection.setAutoCommit(false);
             String dbProductName = connection.getMetaData().getDatabaseProductName();
             prepStmt = connection.prepareStatement(sqlStmt, new String[]{
@@ -223,7 +226,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                 }
             }
             IdentityDatabaseUtil.commitTransaction(connection);
-        } catch (SQLException e) {
+        } catch (DataAccessException | SQLException e) {
             try {
                 connection.rollback();
             } catch (SQLException e1) {
@@ -305,7 +308,8 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         List<RequestedClaim> essentialClaims = new ArrayList<>();
         try {
             connection = IdentityDatabaseUtil.getDBConnection(false);
-            String sql = SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_SESSION_DATA_KEY;
+            String sql = isH2DB() ? SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_SESSION_DATA_KEY_H2 :
+                    SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_SESSION_DATA_KEY;
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, sessionDataKey);
@@ -319,7 +323,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                 requestedClaim.setValue(resultSet.getString(3));
                 essentialClaims.add(requestedClaim);
             }
-        } catch (SQLException e) {
+        } catch (DataAccessException | SQLException e) {
             String errorMsg = "Error occurred while retrieving request object by session data key: " + sessionDataKey +
                     ", isUserInfo: " + isUserInfo;
             throw new IdentityOAuth2Exception(errorMsg, e);
@@ -343,11 +347,12 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
         List<RequestedClaim> essentialClaims = new ArrayList<>();
+        String tokenId = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().
+                getTokenIdByAccessToken(token);
         try {
             connection = IdentityDatabaseUtil.getDBConnection(false);
-            String sql = SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_TOKEN;
-            String tokenId = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().
-                    getTokenIdByAccessToken(token);
+            String sql = isH2DB() ? SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_TOKEN_H2 :
+                    SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_TOKEN;
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, tokenId);
@@ -361,7 +366,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                 requestedClaim.setValue(resultSet.getString(3));
                 essentialClaims.add(requestedClaim);
             }
-        } catch (SQLException e) {
+        } catch (DataAccessException | SQLException e) {
             String errorMsg = "Error occurred while retrieving request object.";
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
@@ -402,7 +407,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         PreparedStatement ps = null;
         try {
             connection = IdentityDatabaseUtil.getDBConnection();
-            deleteRequestObjectReferenceforCode(tokenId);
+            deleteRequestObjectReferenceforCode(connection, tokenId);
             String sql = SQLQueries.UPDATE_REQUEST_OBJECT_TOKEN_FOR_CODE;
             ps = connection.prepareStatement(sql);
             ps.setString(1, tokenId);
@@ -422,20 +427,15 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         }
     }
 
-    private void deleteRequestObjectReferenceforCode(String tokenId) throws IdentityOAuthAdminException {
+    private void deleteRequestObjectReferenceforCode(Connection connection, String tokenId)
+            throws IdentityOAuthAdminException {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
-            try (PreparedStatement prepStmt = connection
-                    .prepareStatement(SQLQueries.DELETE_REQ_OBJECT_TOKEN_FOR_CODE)) {
-                prepStmt.setString(1, tokenId);
-                prepStmt.execute();
-                IdentityDatabaseUtil.commitTransaction(connection);
-            } catch (SQLException e1) {
-                IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw handleError("Can not delete existing entry for the same token id" + tokenId, e1);
-            }
-        } catch (SQLException e) {
-            throw handleError("Can not delete existing entry for the same token id" + tokenId, e);
+        try (PreparedStatement prepStmt = connection
+                .prepareStatement(SQLQueries.DELETE_REQ_OBJECT_TOKEN_FOR_CODE)) {
+            prepStmt.setString(1, tokenId);
+            prepStmt.execute();
+        } catch (SQLException e1) {
+            throw handleError("Can not delete existing entry for the same token id" + tokenId, e1);
         }
     }
 

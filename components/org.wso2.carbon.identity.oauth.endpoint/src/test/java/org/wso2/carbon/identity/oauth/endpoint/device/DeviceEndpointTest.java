@@ -24,6 +24,10 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.junit.Assert;
 import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.annotations.BeforeTest;
@@ -31,14 +35,18 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.core.ServiceURL;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
@@ -59,6 +67,7 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
@@ -72,7 +81,8 @@ import static org.testng.Assert.assertEquals;
         EndpointUtil.class, FrameworkUtils.class, EndpointUtil.class, OpenIDConnectUserRPStore.class,
         CarbonOAuthAuthzRequest.class, IdentityTenantUtil.class, OAuthResponse.class, SignedJWT.class,
         OIDCSessionManagementUtil.class, CarbonUtils.class, SessionDataCache.class, IdentityUtil.class,
-        DeviceFlowPersistenceFactory.class, HttpServletRequest.class})
+        DeviceFlowPersistenceFactory.class, HttpServletRequest.class, OAuthServerConfiguration.class,
+        TokenPersistenceProcessor.class, ServiceURLBuilder.class, ServiceURL.class})
 public class DeviceEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -80,6 +90,12 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
     HttpServletResponse httpServletResponse;
+
+    @Mock
+    OAuthServerConfiguration oAuthServerConfiguration;
+
+    @Mock
+    private TokenPersistenceProcessor tokenPersistenceProcessor;
 
     @Mock
     DeviceFlowPersistenceFactory deviceFlowPersistenceFactory;
@@ -93,13 +109,12 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
     @Mock
     DeviceAuthServiceImpl deviceAuthService;
 
-    private DeviceEndpoint deviceEndpoint = new DeviceEndpoint();
 
     private static final String CLIENT_ID_VALUE = "ca19a540f544777860e44e75f605d927";
     private static final String TEST_URL = "testURL";
 
     @BeforeTest
-    public void setUp() {
+    public void setUp() throws Exception {
 
         System.setProperty(CarbonBaseConstants.CARBON_HOME, Paths.get(System.getProperty("user.dir"),
                 "src", "test", "resources").toString());
@@ -117,6 +132,7 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
     @Test(dataProvider = "provideValues")
     public void testStringValueInSeconds(long value) throws Exception {
 
+        DeviceEndpoint deviceEndpoint = new DeviceEndpoint();
         String realValue = "1";
         assertEquals(WhiteboxImpl.invokeMethod(deviceEndpoint, "stringValueInSeconds", value),
                 realValue);
@@ -134,7 +150,31 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
         return new Object[][]{
                 {"testClientId", HttpServletResponse.SC_BAD_REQUEST, false},
                 {null, HttpServletResponse.SC_BAD_REQUEST, false},
-                {"testClientId", HttpServletResponse.SC_BAD_REQUEST, true}
+                {"testClientId", HttpServletResponse.SC_OK, true}
+        };
+    }
+
+    @Test(dataProvider = "errorResponseValues")
+    public void testhandleErrorResponse(String code, String clientId) throws Exception {
+
+        OAuthClientAuthnContext context = new OAuthClientAuthnContext();
+        context.setErrorCode(code);
+        context.setErrorMessage(code);
+        context.setClientId(clientId);
+        DeviceEndpoint deviceEndpoint = new DeviceEndpoint();
+        Response response = WhiteboxImpl.invokeMethod(deviceEndpoint, "handleErrorResponse", context);
+        String res = (String) response.getEntity();
+        assertTrue(res.contains(code));
+    }
+
+    @DataProvider
+    public static Object[][] errorResponseValues() {
+
+        return new Object[][]{
+                {OAuth2ErrorCodes.INVALID_CLIENT, "sample-client"},
+                {OAuth2ErrorCodes.INVALID_REQUEST, null},
+                {OAuth2ErrorCodes.SERVER_ERROR, null}
+
         };
     }
 
@@ -149,12 +189,26 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
      */
     @Test(dataProvider = "dataValues")
     public void testDevice(String clientId, int expectedStatus, boolean status)
-            throws IdentityOAuth2Exception, OAuthSystemException {
+            throws Exception {
+
+        DeviceEndpoint deviceEndpoint = PowerMockito.spy(new DeviceEndpoint());
+        mockOAuthServerConfiguration();
+        mockStatic(ServiceURLBuilder.class);
+        mockStatic(ServiceURL.class);
+
+        ServiceURLBuilder mockServiceURLBuilder = Mockito.mock(ServiceURLBuilder.class);
+        ServiceURL mockServiceURL = Mockito.mock(ServiceURL.class);
+        when(ServiceURLBuilder.create()).thenReturn(mockServiceURLBuilder);
+        when(mockServiceURLBuilder.addPath(anyString())).thenReturn(mockServiceURLBuilder);
+        when(mockServiceURLBuilder.addParameter(anyString(), anyString())).thenReturn(mockServiceURLBuilder);
+        when(mockServiceURLBuilder.build()).thenReturn(mockServiceURL);
+        when(mockServiceURL.getAbsolutePublicURL())
+                .thenReturn("http://localhost:9443/authenticationendpoint/device.do");
 
         mockStatic(HttpServletRequest.class);
         OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
         oAuthClientAuthnContext.setClientId(clientId);
-        oAuthClientAuthnContext.setAuthenticated(true);
+        oAuthClientAuthnContext.setAuthenticated(status);
         when(request.getAttribute(anyString())).thenReturn(oAuthClientAuthnContext);
         DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
         deviceEndpoint.setDeviceAuthService(deviceAuthService);
@@ -169,8 +223,27 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
         when(DeviceFlowPersistenceFactory.getInstance()).thenReturn(deviceFlowPersistenceFactory);
         when(deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
         when(deviceFlowDAO.checkClientIdExist(anyString())).thenReturn(status);
+        PowerMockito.when(deviceEndpoint, "getValidationObject", httpServletRequest)
+                .thenReturn(oAuthClientAuthnContext);
         response = deviceEndpoint.authorize(httpServletRequest, new MultivaluedHashMap<String, String>(),
                 httpServletResponse);
         Assert.assertEquals(expectedStatus, response.getStatus());
+    }
+
+    private void mockOAuthServerConfiguration() throws Exception {
+
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+        when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+        when(oAuthServerConfiguration.getDeviceCodeKeySet()).thenReturn("abcdefghijklmnopABCDEFGHIJ123456789");
+        when(oAuthServerConfiguration.getDeviceCodeExpiryTime()).thenReturn(60000L);
+        when(oAuthServerConfiguration.isRedirectToRequestedRedirectUriEnabled()).thenReturn(false);
+        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocation) {
+
+                return invocation.getArguments()[0];
+            }
+        });
     }
 }

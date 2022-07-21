@@ -88,14 +88,13 @@ public class CibaAuthServiceImpl implements CibaAuthService {
             return CibaConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC;
         } else if (requestedExpiry < CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC) {
             return requestedExpiry;
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("The requested_expiry: " + requestedExpiry + " exceeds default maximum value: " +
-                        CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC + " for the CIBA authentication request made " +
-                        "by: " + cibaAuthCodeRequest.getIssuer());
-            }
-            return CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC;
         }
+        if (log.isDebugEnabled()) {
+            log.debug("The requested_expiry: " + requestedExpiry + " exceeds default maximum value: " +
+                    CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC + " for the CIBA authentication request made " +
+                    "by: " + cibaAuthCodeRequest.getIssuer());
+        }
+        return CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC;
     }
 
     /**
@@ -151,11 +150,9 @@ public class CibaAuthServiceImpl implements CibaAuthService {
             if (StringUtils.isNotBlank(cibaAuthCodeRequest.getBindingMessage())) {
                 cibaAuthCodeResponse.setBindingMessage(cibaAuthCodeRequest.getBindingMessage());
             }
-
             if (StringUtils.isNotBlank(cibaAuthCodeRequest.getTransactionContext())) {
                 cibaAuthCodeResponse.setTransactionDetails(cibaAuthCodeRequest.getTransactionContext());
             }
-
             if (log.isDebugEnabled()) {
                 log.debug("Successful in creating AuthCodeResponse for the client: " + clientID);
             }

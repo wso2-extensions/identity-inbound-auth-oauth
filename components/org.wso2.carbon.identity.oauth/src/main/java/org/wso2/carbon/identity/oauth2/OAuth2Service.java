@@ -25,17 +25,21 @@ import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.owasp.encoder.Encode;
 import org.wso2.carbon.core.AbstractAdmin;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
+import org.wso2.carbon.identity.oauth2.authz.validators.DefaultResponseTypeRequestValidator;
+import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -54,16 +58,20 @@ import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isValidTokenBinding;
@@ -104,6 +112,8 @@ public class OAuth2Service extends AbstractAdmin {
                     AuthorizationHandlerManager.getInstance();
             return authzHandlerManager.handleAuthorization(oAuth2AuthorizeReqDTO);
         } catch (Exception e) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "authorize-client", null);
             log.error("Error occurred when processing the authorization request. Returning an error back to client.",
                     e);
             OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
@@ -118,11 +128,14 @@ public class OAuth2Service extends AbstractAdmin {
     /**
      * Check Whether the provided client_id and the callback URL are valid.
      *
-     * @param clientId    client_id available in the request, Not null parameter.
-     * @param callbackURI callback_uri available in the request, can be null.
+     * @param clientId      client_id available in the request, Not null parameter.
+     * @param callbackURI   callback_uri available in the request, can be null.
      * @return <code>OAuth2ClientValidationResponseDTO</code> bean with validity information,
      * callback, App Name, Error Code and Error Message when appropriate.
+     *
+     * Deprecated to use {{{@link #validateClientInfo(HttpServletRequest)}}}
      */
+    @Deprecated
     public OAuth2ClientValidationResponseDTO validateClientInfo(String clientId, String callbackURI) {
 
         OAuth2ClientValidationResponseDTO validationResponseDTO =
@@ -138,6 +151,11 @@ public class OAuth2Service extends AbstractAdmin {
             validateRequestTenantDomain(appTenantDomain);
 
             if (StringUtils.isBlank(clientId)) {
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                            OAuthConstants.LogConstants.FAILED, "client_id cannot be empty.",
+                            "validate-input-parameters", null);
+                }
                 throw new InvalidOAuthClientException("Invalid client_id. No OAuth application has been registered " +
                         "with the given client_id");
             }
@@ -148,6 +166,14 @@ public class OAuth2Service extends AbstractAdmin {
                 if (log.isDebugEnabled()) {
                     log.debug("A valid OAuth client could not be found for client_id: " + clientId);
                 }
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("clientId", clientId);
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.FAILED,
+                            "A valid OAuth application could not be found for given client_id.",
+                            "validate-input-parameters", null);
+                }
                 throw new InvalidOAuthClientException("A valid OAuth client could not be found for client_id: " +
                         Encode.forHtml(clientId));
             }
@@ -156,6 +182,13 @@ public class OAuth2Service extends AbstractAdmin {
                 if (log.isDebugEnabled()) {
                     log.debug("App is not in active state in client ID: " + clientId + ". App state is: " + appState);
                 }
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("clientId", clientId);
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.FAILED, "OAuth application is not in active state.",
+                            "validate-input-parameters", null);
+                }
                 throw new InvalidOAuthClientException("Oauth application is not in active state");
             }
 
@@ -163,6 +196,18 @@ public class OAuth2Service extends AbstractAdmin {
                 if (log.isDebugEnabled()) {
                     log.debug("Registered App found for the given Client Id : " + clientId + " ,App Name : " + appDO
                             .getApplicationName() + ", does not support the requested grant type.");
+                }
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("clientId", clientId);
+
+                    Map<String, Object> configurations = new HashMap<>();
+                    configurations.put("callbackUrl", appDO.getCallbackUrl());
+                    configurations.put("supportedGrantTypes", appDO.getGrantTypes());
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.FAILED,
+                            "The OAuth client is not authorized to use the requested grant type.",
+                            "validate-input-parameters", configurations);
                 }
                 validationResponseDTO.setValidClient(false);
                 validationResponseDTO.setErrorCode(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT);
@@ -196,10 +241,22 @@ public class OAuth2Service extends AbstractAdmin {
                 validationResponseDTO.setPkceSupportPlain(appDO.isPkceSupportPlain());
                 return validationResponseDTO;
             } else {    // Provided callback URL does not match the registered callback url.
-                log.warn("Provided Callback URL does not match with the provided one.");
+                log.warn("Provided Callback URL does not match with the registered one.");
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("clientId", clientId);
+                    params.put("redirectUri", callbackURI);
+
+                    Map<String, Object> configurations = new HashMap<>();
+                    configurations.put("redirectUri", appDO.getApplicationName());
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.FAILED,
+                            "redirect_uri in request does not match with the registered one.",
+                            "validate-input-parameters", configurations);
+                }
                 validationResponseDTO.setValidClient(false);
                 validationResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CALLBACK);
-                validationResponseDTO.setErrorMsg("Registered callback does not match with the provided url.");
+                validationResponseDTO.setErrorMsg("callback.not.match");
                 return validationResponseDTO;
             }
         } catch (InvalidOAuthClientException e) {
@@ -207,12 +264,22 @@ public class OAuth2Service extends AbstractAdmin {
             if (log.isDebugEnabled()) {
                 log.debug("Error while retrieving the Application Information", e);
             }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", clientId);
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED,
+                        "Cannot find an application associated with the given client_id", "validate-oauth-client",
+                        null);
+            }
             validationResponseDTO.setValidClient(false);
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
             validationResponseDTO.setErrorMsg(e.getMessage());
             return validationResponseDTO;
         } catch (IdentityOAuth2Exception e) {
             log.error("Error when reading the Application Information.", e);
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "Server error occurred.", "validate-input-parameters", null);
             validationResponseDTO.setValidClient(false);
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
             validationResponseDTO.setErrorMsg("Error when processing the authorization request.");
@@ -234,7 +301,36 @@ public class OAuth2Service extends AbstractAdmin {
         if (registeredCallbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
             regexp = registeredCallbackUrl.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
         }
+        if (log.isDebugEnabled()) {
+            log.debug("Comparing provided callback URL: " + callbackURI + " with configured callback: " +
+                    registeredCallbackUrl);
+        }
         return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
+    }
+
+    /**
+     * Check Whether the provided client information satisfy the response type validation
+     *
+     * @param request      The HttpServletRequest front the client.
+     * @return <code>OAuth2ClientValidationResponseDTO</code> bean with validity information,
+     * callback, App Name, Error Code and Error Message when appropriate.
+     */
+    public OAuth2ClientValidationResponseDTO validateClientInfo(HttpServletRequest request) {
+
+        ResponseTypeRequestValidator validator = getResponseTypeRequestValidator(request);
+        return validator.validateClientInfo(request);
+    }
+
+    /**
+     * Check Whether the provided inputs from the client satisfy the response type validation
+     *
+     * @param request      The HttpServletRequest front the client.
+     * @throws InvalidOAuthRequestException InvalidOAuthRequestException.
+     */
+    public void validateInputParameters(HttpServletRequest request) throws InvalidOAuthRequestException {
+
+        ResponseTypeRequestValidator validator = getResponseTypeRequestValidator(request);
+        validator.validateInputParameters(request);
     }
 
     /**
@@ -267,15 +363,32 @@ public class OAuth2Service extends AbstractAdmin {
             tokenRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
             tokenRespDTO.setErrorMsg("Invalid Client");
             return tokenRespDTO;
+        } catch (IdentityOAuth2ClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Error occurred while issuing access token for Client ID : %s , " +
+                                "User ID: %s , Scope : %s  and Grant Type :  %s.", tokenReqDTO.getClientId(),
+                        tokenReqDTO.getResourceOwnerUsername(), Arrays.toString(tokenReqDTO.getScope()),
+                        tokenReqDTO.getGrantType()), e);
+            }
+            OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
+            tokenRespDTO.setError(true);
+            handleErrorCode(tokenRespDTO, e.getErrorCode());
+            handleErrorMessage(tokenRespDTO, e.getMessage());
+            return tokenRespDTO;
         } catch (Exception e) { // in case of an error, consider it as a system error
             log.error("Error occurred while issuing the access token for Client ID : " +
                     tokenReqDTO.getClientId() + ", User ID " + tokenReqDTO.getResourceOwnerUsername() +
                     ", Scope : " + Arrays.toString(tokenReqDTO.getScope()) + " and Grant Type : " +
                     tokenReqDTO.getGrantType(), e);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                        OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-access-token", null);
+            }
             OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
             tokenRespDTO.setError(true);
-            if (e.getCause() != null && e.getCause().getCause() != null &&
-                    e.getCause().getCause() instanceof SQLIntegrityConstraintViolationException) {
+            if (e.getCause() != null && e.getCause().getCause() != null && (
+                    e.getCause().getCause() instanceof SQLIntegrityConstraintViolationException || e.getCause()
+                            .getCause() instanceof SQLException)) {
                 tokenRespDTO.setErrorCode("sql_error");
             } else {
                 tokenRespDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
@@ -299,6 +412,25 @@ public class OAuth2Service extends AbstractAdmin {
                 .getOAuthEventInterceptorProxy();
         OAuthClientAuthnContext oAuthClientAuthnContext = revokeRequestDTO.getoAuthClientAuthnContext();
 
+        if (!isClientAuthenticated(oAuthClientAuthnContext)) {
+            try {
+                // Returns the authentication failure error if the client doesn't support implicit grant
+                if (!isImplicitGrantSupportedClient(revokeRequestDTO.getConsumerKey())) {
+                    return buildErrorResponse(getErrorCode(oAuthClientAuthnContext),
+                            getErrorMessage(oAuthClientAuthnContext));
+                }
+            } catch (IdentityOAuth2Exception  e) {
+                log.error("Error occurred while checking client authentication.", e);
+                return buildErrorResponse(OAuth2ErrorCodes.SERVER_ERROR, "Error occurred while revoking " +
+                        "authorization grant for application.");
+            } catch (InvalidOAuthClientException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Client Authentication failed.", e);
+                }
+                return buildErrorResponse(OAuth2ErrorCodes.INVALID_CLIENT, "Client Authentication failed.");
+            }
+        }
+
         //Invoke pre listeners
 
         if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
@@ -306,6 +438,8 @@ public class OAuth2Service extends AbstractAdmin {
                 Map<String, Object> paramMap = new HashMap<>();
                 oAuthEventInterceptorProxy.onPreTokenRevocationByClient(revokeRequestDTO, paramMap);
             } catch (IdentityOAuth2Exception e) {
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                        OAuthConstants.LogConstants.FAILED, "System error occurred.", "revoke-token", null);
                 log.error(e);
                 revokeResponseDTO.setError(true);
                 revokeResponseDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
@@ -357,9 +491,29 @@ public class OAuth2Service extends AbstractAdmin {
                                         .equals(refreshTokenDO.getRefreshTokenState()) ||
                                         OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED
                                                 .equals(refreshTokenDO.getRefreshTokenState()))) {
-                            invokePostRevocationListeners(revokeRequestDTO, revokeResponseDTO, accessTokenDO,
-                                    refreshTokenDO);
-                            return revokeResponseDTO;
+                            Map<String, Object> params = new HashMap<>();
+                            params.put("clientId", revokeRequestDTO.getConsumerKey());
+                            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                                if (refreshTokenDO == null ||
+                                        StringUtils.isEmpty(refreshTokenDO.getRefreshTokenState())) {
+                                    LoggerUtils.triggerDiagnosticLogEvent(
+                                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                                            OAuthConstants.LogConstants.FAILED, "Invalid token.", "revoke-token", null);
+                                } else if (OAuthConstants.TokenStates.TOKEN_STATE_REVOKED
+                                        .equals(refreshTokenDO.getRefreshTokenState())) {
+                                    LoggerUtils.triggerDiagnosticLogEvent(
+                                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                                            OAuthConstants.LogConstants.SUCCESS, "Provided token is already revoked.",
+                                            "revoke-token", null);
+                                } else if (OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE
+                                        .equals(refreshTokenDO.getRefreshTokenState())) {
+                                    LoggerUtils.triggerDiagnosticLogEvent(
+                                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                                            OAuthConstants.LogConstants.SUCCESS, "Provided token is in inactive state.",
+                                            "revoke-token", null);
+                                }
+                            }
+                            refreshTokenDO = null;
                         }
                     }
                 }
@@ -373,6 +527,13 @@ public class OAuth2Service extends AbstractAdmin {
                 }
 
                 if (!isClientAuthenticated(oAuthClientAuthnContext, grantType)) {
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                        Map<String, Object> params = new HashMap<>();
+                        params.put("clientId", revokeRequestDTO.getConsumerKey());
+                        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                                OAuthConstants.LogConstants.FAILED, "OAuth client authentication is unsuccessful.",
+                                "revoke-token", null);
+                    }
                     OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
                     revokeRespDTO.setError(true);
                     revokeRespDTO.setErrorCode(getErrorCode(oAuthClientAuthnContext));
@@ -406,6 +567,21 @@ public class OAuth2Service extends AbstractAdmin {
                         if ((OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey()).
                                 isTokenBindingValidationEnabled()) && (!isValidTokenBinding(accessTokenDO.
                                 getTokenBinding(), revokeRequestDTO.getRequest()))) {
+                            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                                Map<String, Object> params = new HashMap<>();
+                                params.put("clientId", accessTokenDO.getConsumerKey());
+                                if (accessTokenDO.getTokenBinding() != null) {
+                                    params.put("tokenBindingType", accessTokenDO.getTokenBinding().getBindingType());
+                                    params.put("tokenBindingValue", accessTokenDO.getTokenBinding().getBindingValue());
+                                }
+                                Map<String, Object> configs = new HashMap<>();
+                                configs.put("isTokenBindingValidationEnabled", "true");
+                                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                                        params, OAuthConstants.LogConstants.FAILED,
+                                        "Valid token binding value not present in the request.",
+                                        "validate-token-binding", configs);
+                            }
+
                             revokeResponseDTO.setError(true);
                             revokeResponseDTO.setErrorCode(OAuth2ErrorCodes.ACCESS_DENIED);
                             revokeResponseDTO.setErrorMsg("Valid token binding value not present in the request.");
@@ -421,10 +597,10 @@ public class OAuth2Service extends AbstractAdmin {
                         OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                                 OAuth2Util.buildScopeString(accessTokenDO.getScope()));
                         OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), accessTokenDO.getAuthzUser());
-                        OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
+                        OAuthUtil.clearOAuthCache(accessTokenDO);
                         String scope = OAuth2Util.buildScopeString(accessTokenDO.getScope());
-                        String authorizedUser = accessTokenDO.getAuthzUser().toString();
-                        synchronized ((revokeRequestDTO.getConsumerKey() + ":" + authorizedUser + ":" + scope + ":"
+                        String userId = accessTokenDO.getAuthzUser().getUserId();
+                        synchronized ((revokeRequestDTO.getConsumerKey() + ":" + userId + ":" + scope + ":"
                                 + tokenBindingReference).intern()) {
                             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                                     .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()});
@@ -434,13 +610,48 @@ public class OAuth2Service extends AbstractAdmin {
                                 accessTokenDO.getRefreshToken(),
                                 accessTokenDO.getAuthzUser().toString());
                     } else {
+                        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                            Map<String, Object> params = new HashMap<>();
+                            params.put("clientId", accessTokenDO.getConsumerKey());
+                            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                                    params, OAuthConstants.LogConstants.FAILED, "Client is not authorized.",
+                                    "validate-oauth-client", null);
+                        }
+
                         throw new InvalidOAuthClientException("Unauthorized Client");
                     }
                 }
                 invokePostRevocationListeners(revokeRequestDTO, revokeResponseDTO, accessTokenDO, refreshTokenDO);
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    if (accessTokenDO != null) {
+                        params.put("clientId", accessTokenDO.getConsumerKey());
+                    }
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.SUCCESS, "Token revocation is successful.", "revoke-tokens",
+                            null);
+                }
                 return revokeResponseDTO;
 
             } else {
+                Map<String, Object> params = new HashMap<>();
+                if (StringUtils.isNotBlank(revokeRequestDTO.getConsumerKey())) {
+                    params.put("clientId", revokeRequestDTO.getConsumerKey());
+                } else {
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                                OAuthConstants.LogConstants.FAILED, "'client_id' is empty in request.",
+                                "validate-input-parameters", null);
+                    }
+                }
+                if (StringUtils.isBlank(revokeRequestDTO.getToken())) {
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                                OAuthConstants.LogConstants.FAILED, "'token' is empty in request.",
+                                "validate-input-parameters", null);
+                    }
+                }
+
                 revokeResponseDTO.setError(true);
                 revokeResponseDTO.setErrorCode(oAuthClientAuthnContext.getErrorCode());
                 revokeResponseDTO.setErrorMsg(oAuthClientAuthnContext.getErrorMessage());
@@ -449,7 +660,11 @@ public class OAuth2Service extends AbstractAdmin {
             }
 
         } catch (InvalidOAuthClientException e) {
-            log.error("Unauthorized Client", e);
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "Client is not authorized.", "validate-oauth-client", null);
+            if (log.isDebugEnabled()) {
+                log.debug("Unauthorized client.", e);
+            }
             OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
             revokeRespDTO.setError(true);
             revokeRespDTO.setErrorCode(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT);
@@ -457,6 +672,8 @@ public class OAuth2Service extends AbstractAdmin {
             invokePostRevocationListeners(revokeRequestDTO, revokeResponseDTO, accessTokenDO, refreshTokenDO);
             return revokeRespDTO;
         } catch (IdentityException e) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "revoke-tokens", null);
             log.error("Error occurred while revoking authorization grant for applications", e);
             OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
             revokeRespDTO.setError(true);
@@ -522,7 +739,9 @@ public class OAuth2Service extends AbstractAdmin {
             }
         }
         if (!isOICScope) {
-            log.error("AccessToken does not have the openid scope");
+            if (log.isDebugEnabled()) {
+                log.debug("AccessToken does not have the openid scope");
+            }
             return new Claim[0];
         }
 
@@ -617,11 +836,13 @@ public class OAuth2Service extends AbstractAdmin {
         try {
             OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(consumerKey);
             return appDO.getState();
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            String msg = "Error while finding application state for application with client_id: " + consumerKey;
-            log.error(msg);
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error while finding application state for application with client_id: " + consumerKey, e);
+            return null;
+        } catch (InvalidOAuthClientException e) {
             if (log.isDebugEnabled()) {
-                log.debug(msg, e);
+                log.debug("Error while finding an application associated with the given consumer key " +
+                        consumerKey, e);
             }
             return null;
         }
@@ -663,6 +884,19 @@ public class OAuth2Service extends AbstractAdmin {
                 ()) || StringUtils.equals(OAuthConstants.GrantTypes.IMPLICIT, grantType);
     }
 
+    private boolean isClientAuthenticated(OAuthClientAuthnContext oAuthClientAuthnContext) {
+
+        return oAuthClientAuthnContext != null &&
+                oAuthClientAuthnContext.isAuthenticated() && !oAuthClientAuthnContext.isMultipleAuthenticatorsEngaged();
+    }
+
+    private boolean isImplicitGrantSupportedClient(String consumerKey) throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
+
+        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+        return (oAuthAppDO != null && oAuthAppDO.getGrantTypes().contains(OAuthConstants.GrantTypes.IMPLICIT));
+    }
+
     private String getErrorMessage(OAuthClientAuthnContext oAuthClientAuthnContext) {
         String errorMessage = "Unauthorized Client";
         if (oAuthClientAuthnContext != null && StringUtils.isNotEmpty(oAuthClientAuthnContext.getErrorMessage())) {
@@ -679,6 +913,14 @@ public class OAuth2Service extends AbstractAdmin {
         return errorCode;
     }
 
+    private OAuthRevocationResponseDTO buildErrorResponse(String errorCode, String errorMessage) {
+
+        OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
+        revokeRespDTO.setError(true);
+        revokeRespDTO.setErrorCode(errorCode);
+        revokeRespDTO.setErrorMsg(errorMessage);
+        return revokeRespDTO;
+    }
 
     /**
      * Handles authorization requests denied by user.
@@ -712,6 +954,35 @@ public class OAuth2Service extends AbstractAdmin {
                     + oauth2Params.getClientId(), e);
         }
         return null;
+    }
+
+    private void handleErrorCode(OAuth2AccessTokenRespDTO tokenRespDTO, String errorCode) {
+
+        if (StringUtils.isNotBlank(errorCode)) {
+            tokenRespDTO.setErrorCode(errorCode);
+        } else {
+            tokenRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
+        }
+    }
+
+    private void handleErrorMessage(OAuth2AccessTokenRespDTO tokenRespDTO, String errorMessage) {
+
+        if (StringUtils.isNotBlank(errorMessage)) {
+            tokenRespDTO.setErrorMsg(errorMessage);
+        } else {
+            tokenRespDTO.setErrorMsg("Invalid Client");
+        }
+    }
+
+    private ResponseTypeRequestValidator getResponseTypeRequestValidator(HttpServletRequest request) {
+
+        String responseType = request.getParameter(Constants.RESPONSE_TYPE);
+        ResponseTypeRequestValidator validator = OAuth2ServiceComponentHolder.getInstance()
+                .getResponseTypeRequestValidator(responseType);
+        if (validator == null) {
+            validator = new DefaultResponseTypeRequestValidator();
+        }
+        return validator;
     }
 }
 

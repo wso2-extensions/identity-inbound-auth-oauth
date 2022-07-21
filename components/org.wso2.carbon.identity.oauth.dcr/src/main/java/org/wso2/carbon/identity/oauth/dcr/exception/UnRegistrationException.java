@@ -5,6 +5,7 @@ import org.wso2.carbon.identity.oauth.dcr.DCRException;
 /**
  * Exception class used to handle exceptions occur during un registering an OAuth application.
  */
+@Deprecated
 public class UnRegistrationException extends DCRException {
 
     public UnRegistrationException(String message) {

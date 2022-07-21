@@ -34,6 +34,7 @@ import java.util.Optional;
 
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.DELETE_TOKEN_BINDING_BY_TOKEN_ID;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID;
+import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID_AND_BINDING_REF;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_REF_EXISTS;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.STORE_TOKEN_BINDING;
 
@@ -65,9 +66,42 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
     }
 
     @Override
+    public Optional<TokenBinding> getTokenBindingByBindingRef(String tokenId, String bindingRef)
+            throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Getting token binding for the token id: " + tokenId + " and token binding ref: " + bindingRef);
+        }
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+             PreparedStatement preparedStatement =
+                     connection.prepareStatement(RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID_AND_BINDING_REF)) {
+            preparedStatement.setString(1, tokenId);
+            preparedStatement.setString(2, bindingRef);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    TokenBinding tokenBinding = new TokenBinding(
+                            resultSet.getString("TOKEN_BINDING_TYPE"),
+                            bindingRef,
+                            resultSet.getString("TOKEN_BINDING_VALUE"));
+                    return Optional.of(tokenBinding);
+                }
+                return Optional.empty();
+            }
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Failed to get token binding for the token id: " + tokenId + " and " +
+                    "token binding ref: " + bindingRef, e);
+        }
+    }
+
+    @Override
     public boolean isTokenBindingExistsForBindingReference(String tokenBindingReference)
             throws IdentityOAuth2Exception {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Checking for token binding existence for the binding reference: "
+                    + tokenBindingReference);
+        }
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
                 PreparedStatement preparedStatement = connection.prepareStatement(RETRIEVE_TOKEN_BINDING_REF_EXISTS)) {
             preparedStatement.setString(1, tokenBindingReference);
@@ -87,6 +121,19 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
     @Override
     public void storeTokenBinding(TokenBinding tokenBinding, int tenantId) throws IdentityOAuth2Exception {
 
+        if (tokenBinding == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Token binding information is not available. " +
+                        "Returning without proceeding to store token binding information.");
+            }
+            return;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Storing token binding information" +
+                    " accessTokenId: " + tokenBinding.getTokenId() +
+                    " bindingType: " + tokenBinding.getBindingType() +
+                    " bindingRef: " + tokenBinding.getBindingReference());
+        }
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
                 PreparedStatement preparedStatement = connection.prepareStatement(STORE_TOKEN_BINDING)) {
             preparedStatement.setString(1, tokenBinding.getTokenId());

@@ -51,6 +51,11 @@ public class OAuth2AuthorizeReqDTO {
     private RequestObject requestObject;
     private String requestUriParamClaims;
     private String sessionDataKey;
+    // Identifier of the authenticated framework session. This will be included as a claim in the ID token.
+    private String idpSessionIdentifier;
+    // Set the login tenant domain.
+    private String loggedInTenantDomain;
+    private boolean isRequestObjectFlow;
 
     public String getSessionDataKey() {
         return sessionDataKey;
@@ -128,7 +133,12 @@ public class OAuth2AuthorizeReqDTO {
     }
 
     public String[] getScopes() {
-        return scopes.clone();
+
+        if (scopes != null) {
+            return scopes.clone();
+        } else {
+            return new String[0];
+        }
     }
 
     public void setScopes(String[] scopes) {
@@ -221,5 +231,41 @@ public class OAuth2AuthorizeReqDTO {
 
     public Cookie[] getCookie() {
         return this.cookies;
+    }
+
+    public String getIdpSessionIdentifier() {
+        return idpSessionIdentifier;
+    }
+
+    public void setIdpSessionIdentifier(String idpSessionIdentifier) {
+        this.idpSessionIdentifier = idpSessionIdentifier;
+    }
+
+    public String getLoggedInTenantDomain() {
+        return this.loggedInTenantDomain;
+    }
+
+    public void setLoggedInTenantDomain(String loggedInTenantDomain) {
+        this.loggedInTenantDomain = loggedInTenantDomain;
+    }
+
+
+    /**
+     *
+     * @return  Whether the flow has request object or not.
+     */
+    public boolean isRequestObjectFlow() {
+
+        return isRequestObjectFlow;
+    }
+
+    /**
+     * Sets whether the the flow has request object or not.
+     *
+     * @param isRequestObjectFlow   Is flow has request object or not.
+     */
+    public void setRequestObjectFlow(boolean isRequestObjectFlow) {
+
+        this.isRequestObjectFlow = isRequestObjectFlow;
     }
 }

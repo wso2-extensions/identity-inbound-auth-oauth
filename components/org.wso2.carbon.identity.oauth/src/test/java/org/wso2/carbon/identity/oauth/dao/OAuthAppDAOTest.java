@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth.dao;
 
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.AfterClass;
@@ -32,6 +33,7 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.IdentityOAuthClientException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -40,6 +42,9 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
+import org.wso2.carbon.user.api.Tenant;
+import org.wso2.carbon.user.api.UserRealm;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -52,6 +57,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
@@ -64,6 +70,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static org.wso2.carbon.identity.oauth.Error.DUPLICATE_OAUTH_CLIENT;
 
 /*
  * Unit tests for OAuthAppDAO
@@ -77,6 +84,7 @@ import static org.testng.Assert.fail;
                 IdentityTenantUtil.class,
                 IdentityUtil.class,
                 MultitenantUtils.class,
+                OAuthComponentServiceHolder.class,
                 OAuthComponentServiceHolder.class
         }
 )
@@ -119,6 +127,18 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
     @Mock
     private OAuthComponentServiceHolder mockedOAuthComponentServiceHolder;
+
+    @Mock
+    Tenant mockTenant;
+
+    @Mock
+    UserRealm mockUserRealmFromRealmService;
+
+    @Mock
+    AbstractUserStoreManager mockAbstractUserStoreManager;
+
+    @Mock
+    OAuthComponentServiceHolder mockOAuthComponentServiceHolder;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -165,9 +185,9 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     }
 
     /**
-     * Test adding duplicate OAuth apps.
+     * Test adding two OAuth apps with same name.
      */
-    @Test(expectedExceptions = IdentityOAuthAdminException.class)
+    @Test
     public void testAddDuplicateOAuthApplication() throws Exception {
         setupMocksForTest();
 
@@ -176,8 +196,47 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         try (Connection connection = getConnection(DB_NAME)) {
             mockIdentityUtilDataBaseConnection(connection);
             addOAuthApplication(appDO);
-            // This should throw an exception
-            appDAO.addOAuthApplication(appDO);
+
+            try {
+                // This should throw an exception
+                OAuthAppDO secondApp = getDefaultOAuthAppDO();
+                secondApp.setOauthConsumerKey("secondClientID");
+                secondApp.setOauthConsumerSecret("secondClientSecret");
+
+                appDAO.addOAuthApplication(secondApp);
+                fail("Application creation with duplicate name did not fail as expected.");
+            } catch (Exception e) {
+                assertTrue(e instanceof IdentityOAuthClientException);
+                assertEquals(((IdentityOAuthClientException) e).getErrorCode(), DUPLICATE_OAUTH_CLIENT.getErrorCode());
+            }
+        }
+    }
+
+    /**
+     * Test adding two OAuth apps with same clientID.
+     */
+    @Test
+    public void testAddOAuthApplicationWithDuplicateClientId() throws Exception {
+        setupMocksForTest();
+
+        OAuthAppDAO appDAO = new OAuthAppDAO();
+
+        try (Connection connection = getConnection(DB_NAME)) {
+            mockIdentityUtilDataBaseConnection(connection);
+            OAuthAppDO firstApp = getDefaultOAuthAppDO();
+            addOAuthApplication(firstApp);
+
+            try {
+                // Change the name of the second app.
+                OAuthAppDO secondApp = getDefaultOAuthAppDO();
+                secondApp.setApplicationName(UUID.randomUUID().toString());
+                // This should throw an exception
+                appDAO.addOAuthApplication(secondApp);
+                fail("Application creation with duplicate clientID did not fail as expected.");
+            } catch (Exception e) {
+                assertTrue(e instanceof IdentityOAuthClientException);
+                assertEquals(((IdentityOAuthClientException) e).getErrorCode(), DUPLICATE_OAUTH_CLIENT.getErrorCode());
+            }
         }
     }
 
@@ -244,6 +303,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 "WHERE APP_ID=?";
 
         setupMocksForTest();
+        mockUserstore();
         try (Connection connection = getConnection(DB_NAME);
              PreparedStatement preparedStatement = connection.prepareStatement(getAppFields);
              PreparedStatement preparedStatementGetValidators = connection.prepareStatement(getScopeValidators);
@@ -321,6 +381,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     public void testUpdateConsumerApplicationWithExceptions() throws Exception {
 
         setupMocksForTest();
+        mockUserstore();
         try (Connection connection = getConnection(DB_NAME)) {
             mockIdentityUtilDataBaseConnection(connection);
             OAuthAppDO oAuthAppDO = getDefaultOAuthAppDO();
@@ -724,5 +785,19 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             }
         }
         return false;
+    }
+
+    private void mockUserstore() throws Exception {
+
+        mockStatic(OAuthComponentServiceHolder.class);
+        Mockito.when(OAuthComponentServiceHolder.getInstance())
+                .thenReturn(mockOAuthComponentServiceHolder);
+        Mockito.when(mockOAuthComponentServiceHolder.getRealmService()).thenReturn(mockedRealmService);
+        Mockito.when(mockedRealmService.getTenantManager()).thenReturn(mockedTenantManager);
+        Mockito.when(mockedTenantManager.getTenant(anyInt())).thenReturn(mockTenant);
+        Mockito.when(mockTenant.getAssociatedOrganizationUUID()).thenReturn(null);
+
+        Mockito.when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockUserRealmFromRealmService);
+        Mockito.when(mockUserRealmFromRealmService.getUserStoreManager()).thenReturn(mockAbstractUserStoreManager);
     }
 }

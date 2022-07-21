@@ -38,6 +38,7 @@ public class OAuthTokenPersistenceFactory {
     private RequestObjectDAO requestObjectDAO;
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
     private TokenBindingMgtDAO tokenBindingMgtDAO;
+    private OAuthUserConsentedScopesDAO oauthUserConsentedScopesDAO;
 
     public OAuthTokenPersistenceFactory() {
 
@@ -48,6 +49,7 @@ public class OAuthTokenPersistenceFactory {
         this.requestObjectDAO = new RequestObjectDAOImpl();
         this.scopeClaimMappingDAO = new CacheBackedScopeClaimMappingDAOImpl();
         this.tokenBindingMgtDAO = new TokenBindingMgtDAOImpl();
+        this.oauthUserConsentedScopesDAO = new CacheBackedOAuthUserConsentedScopesDAOImpl();
     }
 
     public static OAuthTokenPersistenceFactory getInstance() {
@@ -88,5 +90,10 @@ public class OAuthTokenPersistenceFactory {
     public TokenBindingMgtDAO getTokenBindingMgtDAO() {
 
         return tokenBindingMgtDAO;
+    }
+
+    public OAuthUserConsentedScopesDAO getOAuthUserConsentedScopesDAO() {
+
+        return oauthUserConsentedScopesDAO;
     }
 }

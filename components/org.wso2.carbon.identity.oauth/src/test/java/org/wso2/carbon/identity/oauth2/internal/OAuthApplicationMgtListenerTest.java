@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.internal;
 
-import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.AfterClass;
@@ -44,18 +43,14 @@ import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.TestOAuthDAOBase;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
-import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
 
 import java.sql.Connection;
-import java.util.HashSet;
-import java.util.Set;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -83,9 +78,6 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
 
     @Mock
     private OAuthServerConfiguration mockOauthServicerConfig;
-
-    @Mock
-    private TokenMgtDAO mockTokenMgtDAO;
 
     @Mock
     private AuthorizationGrantCache mockAuthorizationGrantCache;
@@ -124,8 +116,6 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockOauthServicerConfig);
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
         when(mockOauthServicerConfig.getPersistenceProcessor()).thenReturn(processor);
-
-        whenNew(TokenMgtDAO.class).withNoArguments().thenReturn(mockTokenMgtDAO);
 
         mockStatic(AuthorizationGrantCache.class);
         when(AuthorizationGrantCache.getInstance()).thenReturn(mockAuthorizationGrantCache);
@@ -250,22 +240,6 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
         try (Connection connection = getConnection(DB_NAME)) {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
             when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
-            if (StringUtils.equals(authType, OAUTH2) || StringUtils.equals(authType, OAUTH)) {
-                Set<String> accessTokens = new HashSet<>();
-                accessTokens.add("accessToken1");
-                accessTokens.add("accessToken2");
-                accessTokens.add("accessToken3");
-
-                Set<String> authCodes = new HashSet<>();
-                authCodes.add("authCode1");
-                authCodes.add("authCode2");
-                when(mockTokenMgtDAO.getActiveTokensForConsumerKey(anyString())).thenReturn(accessTokens);
-                when(mockTokenMgtDAO.getAuthorizationCodesForConsumerKey(anyString())).thenReturn(authCodes);
-            } else {
-                when(mockTokenMgtDAO.getActiveTokensForConsumerKey(anyString())).thenReturn(new HashSet<>());
-                when(mockTokenMgtDAO.getActiveAuthorizationCodesForConsumerKey(anyString()))
-                        .thenReturn(new HashSet<>());
-            }
 
             if (cacheEnabled) {
                 when(mockAuthorizationGrantCache.getValueFromCacheByToken(any(AuthorizationGrantCacheKey.class)))

@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.dcr.service;
 
+import com.google.gson.Gson;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -184,13 +185,27 @@ public class DCRMService {
         // Update Service Provider
         ServiceProvider sp = getServiceProvider(appDTO.getApplicationName(), tenantDomain);
         if (StringUtils.isNotEmpty(clientName)) {
+            // Check whether a service provider already exists for the name we are trying
+            // to register the OAuth app with.
+            if (!appDTO.getApplicationName().equals(clientName) && isServiceProviderExist(clientName, tenantDomain)) {
+                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.CONFLICT_EXISTING_APPLICATION,
+                        clientName);
+            }
+
             // Regex validation of the application name.
             if (!DCRMUtils.isRegexValidated(clientName)) {
                 throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
                         DCRMUtils.getSPValidatorRegex(), null);
             }
-            sp.setApplicationName(clientName);
-            updateServiceProvider(sp, tenantDomain, applicationOwner);
+            if (sp == null) {
+                throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.FAILED_TO_GET_SP,
+                        appDTO.getApplicationName(), null);
+            }
+            // Need to create a deep clone, since modifying the fields of the original object,
+            // will modify the cached SP object.
+            ServiceProvider clonedSP = cloneServiceProvider(sp);
+            clonedSP.setApplicationName(clientName);
+            updateServiceProvider(clonedSP, tenantDomain, applicationOwner);
         }
 
         // Update application
@@ -269,6 +284,7 @@ public class DCRMService {
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String spName = registrationRequest.getClientName();
         String templateName = registrationRequest.getSpTemplateName();
+        boolean isManagementApp = registrationRequest.isManagementApp();
 
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(spName)) {
@@ -288,7 +304,8 @@ public class DCRMService {
         }
 
         // Create a service provider.
-        ServiceProvider serviceProvider = createServiceProvider(applicationOwner, tenantDomain, spName, templateName);
+        ServiceProvider serviceProvider = createServiceProvider(applicationOwner, tenantDomain, spName, templateName,
+                isManagementApp);
 
         OAuthConsumerAppDTO createdApp;
         try {
@@ -409,8 +426,8 @@ public class DCRMService {
         return createdApp;
     }
 
-    private ServiceProvider createServiceProvider(String applicationOwner, String tenantDomain,
-                                                  String spName, String templateName) throws DCRMException {
+    private ServiceProvider createServiceProvider(String applicationOwner, String tenantDomain, String spName,
+                                                  String templateName, boolean isManagementApp) throws DCRMException {
         // Create the Service Provider
         ServiceProvider sp = new ServiceProvider();
         sp.setApplicationName(spName);
@@ -419,6 +436,7 @@ public class DCRMService {
         user.setTenantDomain(tenantDomain);
         sp.setOwner(user);
         sp.setDescription("Service Provider for application " + spName);
+        sp.setManagementApp(isManagementApp);
 
         createServiceProvider(sp, tenantDomain, applicationOwner, templateName);
 
@@ -625,25 +643,32 @@ public class DCRMService {
                 grantTypes.contains(DCRConstants.GrantTypes.IMPLICIT);
     }
 
-    private String createRegexPattern(List<String> redirectURIs) throws DCRMException {
+    protected String createRegexPattern(List<String> redirectURIs) throws DCRMException {
 
-        StringBuilder regexPattern = new StringBuilder();
+        String regexPattern = "";
+        List<String> escapedUrls = new ArrayList<>();
         for (String redirectURI : redirectURIs) {
             if (DCRMUtils.isRedirectionUriValid(redirectURI)) {
-                if (regexPattern.length() > 0) {
-                    regexPattern.append("|").append(redirectURI);
-                } else {
-                    regexPattern.append("(").append(redirectURI);
-                }
+                escapedUrls.add(escapeQueryParamsIfPresent(redirectURI));
             } else {
                 throw DCRMUtils.generateClientException(
                         DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_REDIRECT_URI, redirectURI);
             }
         }
-        if (regexPattern.length() > 0) {
-            regexPattern.append(")");
+        if (!escapedUrls.isEmpty()) {
+            regexPattern = ("(".concat(StringUtils.join(escapedUrls, "|"))).concat(")");
         }
-        return regexPattern.toString();
+        return regexPattern;
+    }
+
+    /**
+     * Method to escape query parameters in the redirect urls
+     * @param redirectURI
+     * @return
+     */
+    private String escapeQueryParamsIfPresent(String redirectURI) {
+
+        return redirectURI.replaceFirst("\\?", "\\\\?");
     }
 
     private boolean isUserAuthorized(String clientId) throws DCRMServerException {
@@ -693,5 +718,18 @@ public class DCRMService {
             throw new DCRMServerException(String.format(DCRMConstants.ErrorMessages.FAILED_TO_VALIDATE_TENANT_DOMAIN
                     .getMessage(), clientId));
         }
+    }
+
+    /**
+     * Create a deep copy of the input Service Provider.
+     *
+     * @param serviceProvider Service Provider.
+     * @return Clone of serviceProvider.
+     */
+    private ServiceProvider cloneServiceProvider(ServiceProvider serviceProvider) {
+
+        Gson gson = new Gson();
+        ServiceProvider clonedServiceProvider = gson.fromJson(gson.toJson(serviceProvider), ServiceProvider.class);
+        return clonedServiceProvider;
     }
 }

@@ -20,6 +20,8 @@ package org.wso2.carbon.identity.oidc.session.cache;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oidc.session.servlet.TestUtil;
 
 import static org.powermock.api.mockito.PowerMockito.mock;
@@ -30,6 +32,8 @@ import static org.testng.Assert.assertNull;
 /**
  * Unit test coverage for OIDCSessionParticipantCache class.
  */
+@WithCarbonHome
+@WithRealmService
 public class OIDCSessionParticipantCacheTest extends PowerMockTestCase {
 
     private static final String SESSION_ID = "090907ce-eab0-40d2-a46d-acd4bb33f0d0";
@@ -47,9 +51,9 @@ public class OIDCSessionParticipantCacheTest extends PowerMockTestCase {
         OIDCSessionParticipantCacheKey key = mock(OIDCSessionParticipantCacheKey.class);
         OIDCSessionParticipantCacheEntry entry = mock(OIDCSessionParticipantCacheEntry.class);
         when(key.getSessionID()).thenReturn(SESSION_ID);
-        OIDCSessionParticipantCache.getInstance().addToCache(key, entry);
-        assertNotNull(OIDCSessionParticipantCache.getInstance().getValueFromCache(key),
-                "OIDCSessionParticipantCacheEntry is null");
+        OIDCSessionParticipantCache.getInstance().addToCache(key, entry, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        assertNotNull(OIDCSessionParticipantCache.getInstance().getValueFromCache(key,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME), "OIDCSessionParticipantCacheEntry is null");
     }
 
     @Test
@@ -58,8 +62,8 @@ public class OIDCSessionParticipantCacheTest extends PowerMockTestCase {
         TestUtil.startTenantFlow("carbon.super");
         OIDCSessionParticipantCacheKey key = mock(OIDCSessionParticipantCacheKey.class);
         when(key.getSessionID()).thenReturn(SESSION_ID);
-        OIDCSessionParticipantCache.getInstance().clearCacheEntry(key);
-        assertNull(OIDCSessionParticipantCache.getInstance().getValueFromCache(key),
-                "OIDCSessionParticipantCacheEntry is not null");
+        OIDCSessionParticipantCache.getInstance().clearCacheEntry(key, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        assertNull(OIDCSessionParticipantCache.getInstance().getValueFromCache(key,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME), "OIDCSessionParticipantCacheEntry is not null");
     }
 }

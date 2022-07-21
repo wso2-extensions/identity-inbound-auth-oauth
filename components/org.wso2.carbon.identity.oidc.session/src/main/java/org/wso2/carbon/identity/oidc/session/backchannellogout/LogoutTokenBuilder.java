@@ -35,7 +35,11 @@ public interface LogoutTokenBuilder {
      * @param request HttpServletRequest
      * @return a map of logout tokens and corresponding back-channel logout URLs.
      * @throws IdentityOAuth2Exception
+     *
+     * @deprecated
+     * Use {@link #buildLogoutToken(String, String)} instead.
      */
+    @Deprecated
     Map<String, String> buildLogoutToken(HttpServletRequest request)
             throws IdentityOAuth2Exception, InvalidOAuthClientException;
 
@@ -45,7 +49,26 @@ public interface LogoutTokenBuilder {
      * @param opbsCookie Opbscookie value.
      * @return A map of logout tokens and corresponding back-channel logout URLs.
      * @throws IdentityOAuth2Exception
+     *
+     * @deprecated This method was deprecated to move OIDC SessionParticipantCache to the tenant space.
+     * Use {@link #buildLogoutToken(String, String)} instead.
      */
+    @Deprecated
     Map<String, String> buildLogoutToken(String opbsCookie)
             throws IdentityOAuth2Exception, InvalidOAuthClientException;
+
+    /**
+     * Returns logout token and back-channel logout uri map.
+     *
+     * @param opbsCookie Opbscookie value.
+     * @param tenantDomain Tenant Domain.
+     * @return A map of logout tokens and corresponding back-channel logout URLs.
+     * @throws IdentityOAuth2Exception
+     * @throws InvalidOAuthClientException
+     */
+    default Map<String, String> buildLogoutToken(String opbsCookie, String tenantDomain)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        return buildLogoutToken(opbsCookie);
+    }
 }

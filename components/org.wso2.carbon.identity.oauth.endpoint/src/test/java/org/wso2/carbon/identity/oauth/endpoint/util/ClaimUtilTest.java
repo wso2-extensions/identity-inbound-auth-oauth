@@ -22,9 +22,11 @@ import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.Claim;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
@@ -51,7 +53,7 @@ import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
-import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -62,13 +64,16 @@ import java.util.Set;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.isNull;
+import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 
 @PrepareForTest({IdentityTenantUtil.class, OAuth2Util.class, OAuthServerConfiguration.class,
-        OAuth2ServiceComponentHolder.class, ClaimMetadataHandler.class, IdentityUtil.class})
+        OAuth2ServiceComponentHolder.class, ClaimMetadataHandler.class, IdentityUtil.class, FrameworkUtils.class,
+        AbstractUserStoreManager.class})
 public class ClaimUtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
@@ -80,8 +85,7 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
     @Mock
     private OAuthServerConfiguration mockedOAuthServerConfiguration;
 
-    @Mock
-    private UserStoreManager mockedUserStoreManager;
+    private AbstractUserStoreManager mockedUserStoreManager;
 
     @Mock
     private ApplicationManagementService mockedApplicationManagementService;
@@ -186,6 +190,11 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
         roleMappings[1] = mapping2;
     }
 
+    @BeforeTest
+    public void initTest() {
+        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
+    }
+
     @DataProvider(name = "provideDataForGetClaimsFromUser")
     public Object[][] provideDataForGetClaimsFromUser() {
 
@@ -253,8 +262,14 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
 
         mockOAuth2Util();
 
-        AccessTokenDO accessTokenDO = getAccessTokenDO(clientId, getAuthenticatedUser("carbon.super", userStoreDomain,
-                "test-user", isFederated));
+        AuthenticatedUser authenticatedUser = getAuthenticatedUser("carbon.super", userStoreDomain,
+                "test-user", isFederated, "4b4414e1-916b-4475-aaee-6b0751c29f11");
+
+        mockStatic(FrameworkUtils.class);
+        when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+                .thenReturn("4b4414e1-916b-4475-aaee-6b0751c29f11");
+
+        AccessTokenDO accessTokenDO = getAccessTokenDO(clientId, authenticatedUser);
         if (mockAccessTokenDO) {
             when(OAuth2Util.getAccessTokenDOfromTokenIdentifier(anyString())).thenReturn(accessTokenDO);
         }
@@ -265,12 +280,13 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
                 anyString(), anyString(), anyString())).thenReturn("SP1");
 
         if (mockServiceProvider) {
-            when(mockedApplicationManagementService.getApplicationExcludingFileBasedSPs(anyString(), anyString())).
-                    thenReturn(mockedServiceProvider);
+            when(mockedApplicationManagementService.getServiceProviderByClientId(anyString(), anyString(),
+                    anyString())).thenReturn(mockedServiceProvider);
         }
 
         when(mockedValidationTokenResponseDTO.getAuthorizedUser()).thenReturn(AUTHORIZED_USER);
         when(mockedValidationTokenResponseDTO.getAuthorizationContextToken()).thenReturn(mockedAuthzContextToken);
+        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
 
         when(mockedServiceProvider.getClaimConfig()).thenReturn(mockedClaimConfig);
@@ -285,10 +301,10 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
                 anyString(), isNull(Set.class), anyString(), anyBoolean())).thenReturn(spToLocalClaimMappings);
 
         if (userClaimsMap != null) {
-            when(mockedUserStoreManager.getUserClaimValues(anyString(), any(String[].class), anyString())).
+            when(mockedUserStoreManager.getUserClaimValuesWithID(anyString(), any(String[].class), anyString())).
                     thenReturn(userClaimsMap);
         } else {
-            when(mockedUserStoreManager.getUserClaimValues(anyString(), any(String[].class), anyString())).
+            when(mockedUserStoreManager.getUserClaimValuesWithID(anyString(), any(String[].class), anyString())).
                     thenThrow(new UserStoreException("UserNotFound"));
         }
 
@@ -320,15 +336,7 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.isFederatedUser(any(AuthenticatedUser.class))).thenCallRealMethod();
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(mockedOAuthAppDO);
         when(OAuth2Util.getTenantDomainOfOauthApp(any(OAuthAppDO.class))).thenReturn("carbon.super");
-    }
-
-    private AccessTokenDO getAccessTokenDO(String clientId, String userStoreDomain, boolean isFederated) {
-
-        AuthenticatedUser authenticatedUser = getAuthenticatedUser(userStoreDomain, isFederated);
-        AccessTokenDO accessTokenDO = new AccessTokenDO();
-        accessTokenDO.setConsumerKey(clientId);
-        accessTokenDO.setAuthzUser(authenticatedUser);
-        return accessTokenDO;
+        when(OAuth2Util.getServiceProvider(anyString(), anyString())).thenCallRealMethod();
     }
 
     private AccessTokenDO getAccessTokenDO(String clientId, AuthenticatedUser authenticatedUser) {
@@ -339,21 +347,14 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
         return accessTokenDO;
     }
 
-    private AuthenticatedUser getAuthenticatedUser(String userStoreDomain, boolean isFederated) {
-
-        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-        authenticatedUser.setUserStoreDomain(userStoreDomain);
-        authenticatedUser.setFederatedUser(isFederated);
-        return authenticatedUser;
-    }
-
     private AuthenticatedUser getAuthenticatedUser(String tenantDomain, String userStoreDomain, String username,
-                                                   boolean isFederated) {
+                                                   boolean isFederated, String userId) {
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setTenantDomain(tenantDomain);
         authenticatedUser.setUserStoreDomain(userStoreDomain);
         authenticatedUser.setUserName(username);
+        authenticatedUser.setUserId(userId);
         authenticatedUser.setFederatedUser(isFederated);
         return authenticatedUser;
     }

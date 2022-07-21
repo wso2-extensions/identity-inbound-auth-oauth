@@ -18,18 +18,20 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
-import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -38,16 +40,21 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
+import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
-import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.common.AuthenticationResult;
+import org.wso2.carbon.user.core.constants.UserCoreClaimConstants;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
-import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
+import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertTrue;
@@ -62,35 +69,42 @@ import static org.wso2.carbon.user.core.UserCoreConstants.PRIMARY_DEFAULT_DOMAIN
                 UserCoreUtil.class,
                 OAuthComponentServiceHolder.class,
                 OAuthServerConfiguration.class,
-                IdentityUtil.class
+                IdentityUtil.class,
+                FrameworkUtils.class,
+                AbstractUserStoreManager.class
         }
 )
 public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
 
-    @Mock
     private OAuthTokenReqMessageContext tokReqMsgCtx;
-    @Mock
     private OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO;
-    @Mock
     private ApplicationManagementService applicationManagementService;
-    @Mock
     private ServiceProvider serviceProvider;
-    @Mock
     private OAuthComponentServiceHolder oAuthComponentServiceHolder;
-    @Mock
     private RealmService realmService;
-    @Mock
     private UserRealm userRealm;
-    @Mock
-    private UserStoreManager userStoreManager;
-    @Mock
+    private AbstractUserStoreManager userStoreManager;
     private OAuthServerConfiguration serverConfiguration;
-    @Mock
     private OauthTokenIssuer oauthIssuer;
-    @Mock
     private LocalAndOutboundAuthenticationConfig localAndOutboundAuthenticationConfig;
 
     private static final String CLIENT_ID = "IbWwXLf5MnKSY6x6gnR_7gd7f1wa";
+
+    @BeforeMethod
+    public void init() {
+
+        tokReqMsgCtx = mock(OAuthTokenReqMessageContext.class);
+        oAuth2AccessTokenReqDTO = mock(OAuth2AccessTokenReqDTO.class);
+        applicationManagementService = mock(ApplicationManagementService.class);
+        serviceProvider = mock(ServiceProvider.class);
+        oAuthComponentServiceHolder = mock(OAuthComponentServiceHolder.class);
+        realmService = mock(RealmService.class);
+        userRealm = mock(UserRealm.class);
+        userStoreManager = mock(AbstractUserStoreManager.class);
+        serverConfiguration = mock(OAuthServerConfiguration.class);
+        oauthIssuer = mock(OauthTokenIssuer.class);
+        localAndOutboundAuthenticationConfig = mock(LocalAndOutboundAuthenticationConfig.class);
+    }
 
     @DataProvider(name = "ValidateGrantDataProvider")
     public Object[][] buildScopeString() {
@@ -121,7 +135,10 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
 
         mockStatic(OAuth2ServiceComponentHolder.class);
         when(OAuth2ServiceComponentHolder.getApplicationMgtService()).thenReturn(applicationManagementService);
-
+        mockStatic(FrameworkUtils.class);
+        ResolvedUserResult resolvedUserResult = new ResolvedUserResult(ResolvedUserResult.UserResolvedStatus.FAIL);
+        when(FrameworkUtils.processMultiAttributeLoginIdentification(anyString(), anyString())).
+                thenReturn(resolvedUserResult);
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantIdOfUser(anyString())).thenReturn(1);
 
@@ -135,7 +152,18 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(oAuthComponentServiceHolder.getRealmService()).thenReturn(realmService);
         when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
-        when(userStoreManager.authenticate(anyString(), any())).thenReturn(true);
+
+        org.wso2.carbon.user.core.common.User userObj
+                = new org.wso2.carbon.user.core.common.User("c2de9b28-f258-4df0-ba29-f4803e4e821a",
+                username, username);
+        userObj.setTenantDomain("dummyTenantDomain");
+        resolvedUserResult.setUser(userObj);
+
+        AuthenticationResult authenticationResult =
+                new AuthenticationResult(AuthenticationResult.AuthenticationStatus.SUCCESS);
+        authenticationResult.setAuthenticatedUser(userObj);
+        when(userStoreManager.authenticateWithID(eq(UserCoreClaimConstants.USERNAME_CLAIM_URI),
+                anyString(), anyObject(), eq(UserCoreConstants.DEFAULT_PROFILE))).thenReturn(authenticationResult);
 
         when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
                 .thenReturn(serviceProvider);
@@ -158,9 +186,7 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
                 {"carbon.super", true, true, new IdentityApplicationManagementException("Error"),
                         "Error while retrieving service provider"},
                 {"carbon.super", true, true, new UserStoreException(), "Error while retrieving user store"},
-                {"wso2.com", false, true, null, "Authentication failed for user"},
-                {"wso2.com", true, false, null, "Cross tenant access of non Saas application"},
-
+                {"wso2.com", false, true, null, "Authentication failed for user"}
         };
     }
 
@@ -188,7 +214,10 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuth2ServiceComponentHolder.class);
         when(OAuth2ServiceComponentHolder.getApplicationMgtService()).thenReturn(applicationManagementService);
         OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
-
+        mockStatic(FrameworkUtils.class);
+        ResolvedUserResult resolvedUserResult = new ResolvedUserResult(ResolvedUserResult.UserResolvedStatus.FAIL);
+        when(FrameworkUtils.processMultiAttributeLoginIdentification(anyString(), anyString())).
+                thenReturn(resolvedUserResult);
         if (e instanceof IdentityApplicationManagementException) {
             when(applicationManagementService
                     .getServiceProviderByClientId(anyString(), anyString(), anyString())).thenThrow(e);
@@ -200,13 +229,29 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
                     .thenReturn(localAndOutboundAuthenticationConfig);
         }
         when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
-        when(userStoreManager.authenticate(anyString(), anyString())).thenReturn(authenticated);
+
         if (e instanceof UserStoreException) {
             when(userRealm.getUserStoreManager()).thenThrow(e);
         } else {
             when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
-
         }
+
+        AuthenticationResult authenticationResult;
+
+        if (authenticated) {
+            org.wso2.carbon.user.core.common.User userObj
+                    = new org.wso2.carbon.user.core.common.User("c2de9b28-f258-4df0-ba29-f4803e4e821a",
+                    "username", "username");
+            userObj.setTenantDomain("dummyTenantDomain");
+            resolvedUserResult.setUser(userObj);
+            authenticationResult = new AuthenticationResult(AuthenticationResult.AuthenticationStatus.SUCCESS);
+            authenticationResult.setAuthenticatedUser(userObj);
+        } else {
+            authenticationResult = new AuthenticationResult(AuthenticationResult.AuthenticationStatus.FAIL);
+        }
+
+        when(userStoreManager.authenticateWithID(eq(UserCoreClaimConstants.USERNAME_CLAIM_URI),
+                anyString(), anyObject(), eq(UserCoreConstants.DEFAULT_PROFILE))).thenReturn(authenticationResult);
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantIdOfUser(anyString())).thenReturn(1);

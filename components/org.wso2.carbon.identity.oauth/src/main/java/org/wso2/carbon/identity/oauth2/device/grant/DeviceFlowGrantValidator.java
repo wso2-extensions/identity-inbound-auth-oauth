@@ -32,7 +32,6 @@ public class DeviceFlowGrantValidator extends AbstractValidator<HttpServletReque
     public DeviceFlowGrantValidator() {
 
         requiredParams.add(OAuth.OAUTH_GRANT_TYPE);
-        requiredParams.add(Constants.CLIENT_ID);
         requiredParams.add(Constants.DEVICE_CODE);
     }
 }

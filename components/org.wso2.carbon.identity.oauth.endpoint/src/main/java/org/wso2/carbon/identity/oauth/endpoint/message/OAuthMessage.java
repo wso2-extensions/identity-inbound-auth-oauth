@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth.endpoint.message;
 
 import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
@@ -47,6 +48,7 @@ public class OAuthMessage {
     protected SessionDataCacheEntry resultFromLogin = null;
     protected SessionDataCacheEntry resultFromConsent = null;
     protected SessionDataCacheEntry sessionDataCacheEntry = null;
+    protected AuthorizationGrantCacheEntry authorizationGrantCacheEntry = null;
 
     protected boolean forceAuthenticate = false;
     protected boolean isPassiveAuthentication = false;
@@ -189,6 +191,16 @@ public class OAuthMessage {
     public void setSessionDataCacheEntry(SessionDataCacheEntry sessionDataCacheEntry) {
 
         this.sessionDataCacheEntry = sessionDataCacheEntry;
+    }
+
+    public AuthorizationGrantCacheEntry getAuthorizationGrantCacheEntry() {
+
+        return authorizationGrantCacheEntry;
+    }
+
+    public void setAuthorizationGrantCacheEntry(AuthorizationGrantCacheEntry authorizationGrantCacheEntry) {
+
+        this.authorizationGrantCacheEntry = authorizationGrantCacheEntry;
     }
 
     /**

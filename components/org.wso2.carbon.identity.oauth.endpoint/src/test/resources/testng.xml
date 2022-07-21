@@ -27,6 +27,7 @@
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStoreTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpointTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.introspection.IntrospectionResponseBuilderTest" />
+            <class name="org.wso2.carbon.identity.oauth.endpoint.introspection.OAuth2IntrospectionEndpointTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.user.OpenIDConnectUserEndpointTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.device.DeviceEndpointTest"/>
             <class name="org.wso2.carbon.identity.oauth.endpoint.device.UserAuthenticationEndpointTest"/>
@@ -41,6 +42,7 @@
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtilTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStoreTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpointTest" />
+            <class name="org.wso2.carbon.identity.oauth.endpoint.introspection.OAuth2IntrospectionEndpointTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.user.OpenIDConnectUserEndpointTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.OIDCDiscoveryEndpointTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.ciba.OAuth2CibaEndpointTest" />
@@ -82,6 +84,7 @@
         <classes>
             <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoEndpointConfigTest"/>
             <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoISAccessTokenValidatorTest"/>
+            <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoUserStoreClaimRetrieverTest"/>
             <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilderTest"/>
             <class name="org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJWTResponseTest"/>
         </classes>

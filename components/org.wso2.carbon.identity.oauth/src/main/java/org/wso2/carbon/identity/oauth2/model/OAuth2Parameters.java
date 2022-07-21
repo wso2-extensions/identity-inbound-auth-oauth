@@ -32,6 +32,7 @@ public class OAuth2Parameters implements Serializable {
     private String applicationName;
     private String redirectURI;
     private Set<String> scopes;
+    private Set<String> consentRequiredScopes;
     private String state;
     private String responseType;
     private String clientId;
@@ -50,6 +51,8 @@ public class OAuth2Parameters implements Serializable {
     private String essentialClaims;
     private String displayName;
     private String sessionDataKey;
+    private String loginTenantDomain;
+    private boolean isRequestObjectFlow;
 
     public String getSessionDataKey() {
         return sessionDataKey;
@@ -105,6 +108,16 @@ public class OAuth2Parameters implements Serializable {
 
     public void setRedirectURI(String redirectURI) {
         this.redirectURI = redirectURI;
+    }
+
+    public Set<String> getConsentRequiredScopes() {
+
+        return consentRequiredScopes;
+    }
+
+    public void setConsentRequiredScopes(Set<String> consentRequiredScopes) {
+
+        this.consentRequiredScopes = consentRequiredScopes;
     }
 
     public Set<String> getScopes() {
@@ -247,5 +260,42 @@ public class OAuth2Parameters implements Serializable {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+    }
+
+    /**
+     * @return the tenant domain the user's session should be created.
+     */
+    public String getLoginTenantDomain() {
+
+        return loginTenantDomain;
+    }
+
+    /**
+     * Sets the tenant domain where the user's session should be created.
+     *
+     * @param loginTenantDomain the tenant domain where the user's session is created.
+     */
+    public void setLoginTenantDomain(String loginTenantDomain) {
+
+        this.loginTenantDomain = loginTenantDomain;
+    }
+
+    /**
+     *
+     * @return  Whether the flow has request object or not.
+     */
+    public boolean isRequestObjectFlow() {
+
+        return isRequestObjectFlow;
+    }
+
+    /**
+     * Sets whether the the flow has request object or not.
+     *
+     * @param isRequestObjectFlow   Is flow has request object or not.
+     */
+    public void setRequestObjectFlow(boolean isRequestObjectFlow) {
+
+        this.isRequestObjectFlow = isRequestObjectFlow;
     }
 }

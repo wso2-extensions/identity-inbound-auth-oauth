@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.discovery.DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery;
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildServiceUrl;
 
 /**
@@ -136,6 +137,9 @@ public class ProviderConfigBuilder {
         providerConfig.setBackchannelLogoutSupported(Boolean.TRUE);
         providerConfig.setBackchannelLogoutSessionSupported(Boolean.TRUE);
 
+        if (OAuth2Util.getSupportedGrantTypes().contains(DEVICE_FLOW_GRANT_TYPE)) {
+            providerConfig.setDeviceAuthorizationEndpoint(OAuth2Util.OAuthURL.getDeviceAuthzEPUrl());
+        }
         return providerConfig;
     }
 }

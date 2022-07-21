@@ -18,12 +18,18 @@
 
 package org.wso2.carbon.identity.oauth;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.xml.security.utils.Base64;
+import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -41,9 +47,12 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
+import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
@@ -52,15 +61,14 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-import static org.wso2.carbon.identity.application.authentication.framework.util
-        .FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
-import static org.wso2.carbon.identity.application.authentication.framework.util
-        .FrameworkConstants.Config.PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.Config.PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 
 /**
@@ -101,151 +109,247 @@ public final class OAuthUtil {
         }
     }
 
+    /**
+     * @deprecated use {@link #clearOAuthCache(String, AuthenticatedUser)} instead.
+     * @param consumerKey
+     * @param authorizedUser
+     */
+    @Deprecated
     public static void clearOAuthCache(String consumerKey, User authorizedUser) {
 
-        String user = UserCoreUtil.addDomainToName(authorizedUser.getUserName(), authorizedUser.getUserStoreDomain());
-        user = UserCoreUtil.addTenantDomainToEntry(user, authorizedUser.getTenantDomain());
-        String authenticatedIDP;
         if (authorizedUser instanceof AuthenticatedUser) {
-            authenticatedIDP = ((AuthenticatedUser) authorizedUser).getFederatedIdPName();
+            clearOAuthCache(consumerKey, (AuthenticatedUser) authorizedUser);
         } else {
-            authenticatedIDP = null;
             if (LOG.isDebugEnabled()) {
                 LOG.debug("User object is not an instance of AuthenticatedUser therefore cannot resolve " +
                         "authenticatedIDP name.");
             }
-            clearOAuthCache(consumerKey, user);
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser(authorizedUser);
+            String userId;
+            try {
+                userId = authenticatedUser.getUserId();
+            } catch (UserIdNotFoundException e) {
+                LOG.error("User id cannot be found for user: " + authenticatedUser.getLoggableUserId());
+                return;
+            }
+            clearOAuthCache(consumerKey, userId);
+            clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, null);
         }
-
-        clearOAuthCacheWithAuthenticatedIDP(consumerKey, user, authenticatedIDP);
     }
 
+    /**
+     * Clear OAuth cache based on the application and authorized user.
+     *
+     * @param consumerKey       Client id of the application the token issued to.
+     * @param authorizedUser    authorized user.
+     */
+    public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser) {
+
+        String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizedUser);
+        String userId;
+        try {
+            userId = authorizedUser.getUserId();
+        } catch (UserIdNotFoundException e) {
+            LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
+            return;
+        }
+        clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, authenticatedIDP);
+    }
+
+    /**
+     * @deprecated use {@link #clearOAuthCache(String, AuthenticatedUser, String)} instead.
+     * @param consumerKey
+     * @param authorizedUser
+     * @param scope
+     */
+    @Deprecated
     public static void clearOAuthCache(String consumerKey, User authorizedUser, String scope) {
 
-        String user = UserCoreUtil.addDomainToName(authorizedUser.getUserName(), authorizedUser.getUserStoreDomain());
-        user = UserCoreUtil.addTenantDomainToEntry(user, authorizedUser.getTenantDomain());
         String authenticatedIDP;
         if (authorizedUser instanceof AuthenticatedUser) {
-            authenticatedIDP = ((AuthenticatedUser) authorizedUser).getFederatedIdPName();
+            clearOAuthCache(consumerKey, (AuthenticatedUser) authorizedUser, scope);
         } else {
             authenticatedIDP = null;
             if (LOG.isDebugEnabled()) {
                 LOG.debug("User object is not an instance of AuthenticatedUser therefore cannot resolve " +
                         "authenticatedIDP name.");
             }
-            clearOAuthCache(consumerKey, user, scope);
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser(authorizedUser);
+            String userId;
+            try {
+                userId = authenticatedUser.getUserId();
+            } catch (UserIdNotFoundException e) {
+                LOG.error("User id cannot be found for user: " + authenticatedUser.getLoggableUserId());
+                return;
+            }
+            clearOAuthCache(consumerKey, userId, scope);
+            clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, scope, authenticatedIDP,
+                    authenticatedUser.getTenantDomain());
         }
+    }
 
-        clearOAuthCacheWithAuthenticatedIDP(consumerKey, user, scope, authenticatedIDP);
+    /**
+     * Clear OAuth cache based on the application, authorized user and scope list.
+     *
+     * @param consumerKey       Client id of the application the token issued to.
+     * @param authorizedUser    authorized user.
+     * @param scope             scope string.
+     */
+    public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser, String scope) {
+
+        String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizedUser);
+
+        String userId;
+        try {
+            userId = authorizedUser.getUserId();
+        } catch (UserIdNotFoundException e) {
+            LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
+            return;
+        }
+        clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, scope, authenticatedIDP,
+                authorizedUser.getTenantDomain());
     }
 
     /**
      * Clear OAuth cache.
+     * @deprecated use {@link #clearOAuthCache(String, AuthenticatedUser, String, String)} instead.
      *
      * @param consumerKey consumer key.
      * @param authorizedUser authorized user.
      * @param scope scope.
      * @param tokenBindingReference token binding reference.
      */
+    @Deprecated
     public static void clearOAuthCache(String consumerKey, User authorizedUser, String scope,
             String tokenBindingReference) {
 
-        String user = UserCoreUtil.addDomainToName(authorizedUser.getUserName(), authorizedUser.getUserStoreDomain());
-        user = UserCoreUtil.addTenantDomainToEntry(user, authorizedUser.getTenantDomain());
-        String authenticatedIDP;
         if (authorizedUser instanceof AuthenticatedUser) {
-            authenticatedIDP = ((AuthenticatedUser) authorizedUser).getFederatedIdPName();
+            clearOAuthCache(consumerKey, (AuthenticatedUser) authorizedUser, scope, tokenBindingReference);
         } else {
-            authenticatedIDP = null;
             if (LOG.isDebugEnabled()) {
                 LOG.debug("User is not an instance of AuthenticatedUser therefore cannot resolve authenticatedIDP "
                         + "name");
             }
-            clearOAuthCache(consumerKey, user, scope);
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser(authorizedUser);
+            String userId;
+            try {
+                userId = authenticatedUser.getUserId();
+            } catch (UserIdNotFoundException e) {
+                LOG.error("User id cannot be found for user: " + authenticatedUser.getLoggableUserId());
+                return;
+            }
+            clearOAuthCache(consumerKey, userId, scope);
+            clearOAuthCache(buildCacheKeyStringForToken(consumerKey, scope, userId, null,
+                    tokenBindingReference));
         }
-
-        clearOAuthCache(buildCacheKeyStringForToken(consumerKey, scope, user, authenticatedIDP, tokenBindingReference));
     }
 
-    @Deprecated
-    public static void clearOAuthCache(String consumerKey, String authorizedUser) {
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (!isUsernameCaseSensitive) {
-            authorizedUser = authorizedUser.toLowerCase();
+    /**
+     * Clear OAuth cache based on the application, authorized user, scope list and token binding reference.
+     *
+     * @param consumerKey           Client id of the application the token issued to.
+     * @param authorizedUser        Authorized user.
+     * @param scope                 Scope list.
+     * @param tokenBindingReference Token binding reference.
+     */
+    public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser, String scope,
+                                       String tokenBindingReference) {
+
+        String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizedUser);
+
+        String userId;
+        String tenantDomain;
+        try {
+            userId = authorizedUser.getUserId();
+            tenantDomain = authorizedUser.getTenantDomain();
+
+        } catch (UserIdNotFoundException e) {
+            LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
+            return;
         }
-        clearOAuthCache(consumerKey + ":" + authorizedUser);
+        clearOAuthCacheByTenant(buildCacheKeyStringForToken(consumerKey, scope, userId,
+                authenticatedIDP, tokenBindingReference), tenantDomain);
+    }
+
+
+    private static void clearOAuthCache(String consumerKey, String authorizedUserId) {
+
+        clearOAuthCache(consumerKey + ":" + authorizedUserId);
     }
 
     /**
      * Clear OAuth cache.
      *
      * @param consumerKey      Consumer key.
-     * @param authorizedUser   Authorized user.
+     * @param authorizedUserId   Authorized user.
      * @param authenticatedIDP Authenticated IdP.
      */
-    private static void clearOAuthCacheWithAuthenticatedIDP(String consumerKey, String authorizedUser,
+    private static void clearOAuthCacheWithAuthenticatedIDP(String consumerKey, String authorizedUserId,
                                                             String authenticatedIDP) {
 
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (!isUsernameCaseSensitive) {
-            authorizedUser = authorizedUser.toLowerCase();
-        }
-        clearOAuthCache(consumerKey + ":" + authorizedUser + ":" + authenticatedIDP);
+        clearOAuthCache(consumerKey + ":" + authorizedUserId + ":" + authenticatedIDP);
     }
 
-    @Deprecated
-    public static void clearOAuthCache(String consumerKey, String authorizedUser, String scope) {
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (!isUsernameCaseSensitive) {
-            authorizedUser = authorizedUser.toLowerCase();
-        }
-        clearOAuthCache(consumerKey + ":" + authorizedUser + ":" + scope);
+    private static void clearOAuthCache(String consumerKey, String authorizedUserId, String scope) {
+
+        clearOAuthCache(consumerKey + ":" + authorizedUserId + ":" + scope);
     }
 
     /**
      * Clear OAuth cache.
      *
      * @param consumerKey      Consumer key.
-     * @param authorizedUser   Authorized user.
+     * @param authorizedUserId   Authorized user.
      * @param scope            Scopes.
      * @param authenticatedIDP Authenticated IdP.
      */
-    private static void clearOAuthCacheWithAuthenticatedIDP(String consumerKey, String authorizedUser, String scope,
-                                                           String authenticatedIDP) {
+    private static void clearOAuthCacheWithAuthenticatedIDP(String consumerKey, String authorizedUserId, String scope
+            , String authenticatedIDP, String tenantDomain) {
 
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (!isUsernameCaseSensitive) {
-            authorizedUser = authorizedUser.toLowerCase();
-        }
-        clearOAuthCache(consumerKey + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP);
+        clearOAuthCacheByTenant(consumerKey + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP,
+                tenantDomain);
     }
 
     /**
      * Build the cache key string when storing token info in cache.
+     * @deprecated use {@link #clearOAuthCache(String, AuthenticatedUser, String, String)} instead.
      *
      * @param clientId         ClientId of the App.
      * @param scope            Scopes used.
-     * @param authorizedUser   Authorised user.
+     * @param authorizedUserId   Authorised user.
      * @param authenticatedIDP Authenticated IdP.
      * @param tokenBindingReference Token binding reference.
      * @return Cache key string combining the input parameters.
      */
-    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser,
+    @Deprecated
+    public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUserId,
             String authenticatedIDP, String tokenBindingReference) {
 
-        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-        if (isUsernameCaseSensitive) {
-            return clientId + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
-        } else {
-            return clientId + ":" + authorizedUser.toLowerCase() + ":" + scope + ":" + authenticatedIDP + ":"
-                    + tokenBindingReference;
-        }
+        return OAuth2Util.buildCacheKeyStringForTokenWithUserId(clientId, scope, authorizedUserId,
+                authenticatedIDP, tokenBindingReference);
     }
 
     public static void clearOAuthCache(String oauthCacheKey) {
 
         OAuthCacheKey cacheKey = new OAuthCacheKey(oauthCacheKey);
         OAuthCache.getInstance().clearCacheEntry(cacheKey);
+    }
+
+    public static void clearOAuthCacheByTenant(String oauthCacheKey, String tenantDomain) {
+
+        OAuthCacheKey cacheKey = new OAuthCacheKey(oauthCacheKey);
+        OAuthCache.getInstance().clearCacheEntry(cacheKey, tenantDomain);
+    }
+
+    public static void clearOAuthCache(AccessTokenDO accessTokenDO) {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Clearing cache for access token as cache key of user: " +
+                    accessTokenDO.getAuthzUser().getLoggableUserId());
+        }
+        OAuthCacheKey cacheKey = new OAuthCacheKey(accessTokenDO.getAccessToken());
+        String tenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
+        OAuthCache.getInstance().clearCacheEntry(cacheKey,  tenantDomain);
     }
 
     public static AuthenticatedUser getAuthenticatedUser(String fullyQualifiedUserName) {
@@ -404,7 +508,7 @@ public final class OAuthUtil {
         authenticatedUser.setUserStoreDomain(UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration()));
         ClaimCacheKey cacheKey = new ClaimCacheKey(authenticatedUser);
         if (cacheKey != null) {
-            claimCache.clearCacheEntry(cacheKey);
+            claimCache.clearCacheEntry(cacheKey, userStoreManager.getTenantId());
         }
         return true;
     }
@@ -459,6 +563,10 @@ public final class OAuthUtil {
                 throw new UserStoreException(e);
             }
 
+            if (LOG.isDebugEnabled() && CollectionUtils.isNotEmpty(accessTokenDOs)) {
+                LOG.debug("ACTIVE or EXPIRED access tokens found for the client: " + clientId + " for the user: "
+                        + username);
+            }
             boolean isTokenPreservingAtPasswordUpdateEnabled =
                     Boolean.parseBoolean(IdentityUtil.getProperty(PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE));
             String currentTokenBindingReference = "";
@@ -488,9 +596,11 @@ public final class OAuthUtil {
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                         OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
+                OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                         OAuth2Util.buildScopeString(accessTokenDO.getScope()));
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
-                OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
+                OAuthUtil.clearOAuthCache(accessTokenDO);
                 // Get unique scopes list
                 scopes.add(OAuth2Util.buildScopeString(accessTokenDO.getScope()));
                 accessTokens.add(accessTokenDO);
@@ -560,5 +670,101 @@ public final class OAuthUtil {
             }
         }
         return true;
+    }
+
+    /**
+     * Resolve user.
+     *
+     * @param tenantDomain The tenant domain which user is trying to access.
+     * @param username     The username of resolving user.
+     * @return User object.
+     * @throws IdentityApplicationManagementException Error when user cannot be resolved.
+     */
+    public static Optional<User> getUser(String tenantDomain, String username)
+            throws IdentityApplicationManagementException {
+
+        User user = null;
+        try {
+            int tenantID = IdentityTenantUtil.getTenantId(tenantDomain);
+            String userId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUserId();
+
+            if (tenantID == MultitenantConstants.SUPER_TENANT_ID) {
+                user = getUserFromTenant(username, userId, tenantID);
+            } else {
+                Tenant tenant = OAuthComponentServiceHolder.getInstance().getRealmService()
+                        .getTenantManager().getTenant(tenantID);
+                String accessedOrganizationId = tenant.getAssociatedOrganizationUUID();
+                if (accessedOrganizationId == null) {
+                    user = getUserFromTenant(username, userId, tenantID);
+                } else {
+                    Optional<org.wso2.carbon.user.core.common.User> resolvedUser =
+                            OAuthComponentServiceHolder.getInstance()
+                                    .getOrganizationUserResidentResolverService()
+                                    .resolveUserFromResidentOrganization(username, userId, accessedOrganizationId);
+                    if (resolvedUser.isPresent()) {
+                        user = getApplicationUser(resolvedUser.get());
+                    }
+                }
+            }
+        } catch (org.wso2.carbon.user.api.UserStoreException | OrganizationManagementException e) {
+            throw new IdentityApplicationManagementException("Error resolving user.", e);
+        }
+        return Optional.ofNullable(user);
+    }
+
+    /**
+     * Get user from tenant by username or user id.
+     *
+     * @param username The username.
+     * @param userId   The user id.
+     * @param tenantId The tenant id where user resides.
+     * @return User object from tenant userStoreManager.
+     * @throws IdentityApplicationManagementException Error when user cannot be resolved.
+     */
+    private static User getUserFromTenant(String username, String userId, int tenantId)
+            throws IdentityApplicationManagementException {
+
+        User user = null;
+        try {
+            AbstractUserStoreManager userStoreManager =
+                    (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance()
+                            .getRealmService().getTenantUserRealm(tenantId).getUserStoreManager();
+            if (username != null && userStoreManager.isExistingUser(username)) {
+                user = getApplicationUser(userStoreManager.getUser(null, username));
+            } else if (userId != null && userStoreManager.isExistingUserWithID(userId)) {
+                user = getApplicationUser(userStoreManager.getUser(userId, null));
+            }
+        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            throw new IdentityApplicationManagementException("Error finding user in tenant.", e);
+        }
+        return user;
+    }
+
+    private static User getApplicationUser(org.wso2.carbon.user.core.common.User coreUser) {
+
+        User user = new User();
+        user.setUserName(coreUser.getUsername());
+        user.setUserStoreDomain(coreUser.getUserStoreDomain());
+        user.setTenantDomain(coreUser.getTenantDomain());
+        return user;
+    }
+
+    /**
+     * Get user's username.
+     *
+     * @param tenantDomain The tenant domain which user is trying to access.
+     * @return username  The username.
+     * @throws IdentityApplicationManagementException Error when user cannot be resolved.
+     */
+    public static String getUsername(String tenantDomain) throws IdentityApplicationManagementException {
+
+        String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
+        if (StringUtils.isBlank(username)) {
+            Optional<User> maybeUser = getUser(tenantDomain, null);
+            User user = maybeUser
+                    .orElseThrow(() -> new IdentityApplicationManagementException("Error resolving user."));
+            username = IdentityUtil.addDomainToName(user.getUserName(), user.getUserStoreDomain());
+        }
+        return username;
     }
 }

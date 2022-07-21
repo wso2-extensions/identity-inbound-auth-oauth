@@ -16,9 +16,10 @@
 
 package org.wso2.carbon.identity.oauth.listener;
 
-import org.wso2.carbon.identity.application.common.listener.AbstractCacheListener;
+import org.wso2.carbon.identity.core.cache.AbstractCacheListener;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheEntry;
+import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheKey;
 
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryListenerException;
@@ -28,18 +29,20 @@ import javax.cache.event.CacheEntryRemovedListener;
  * Claim Meta Data Cache Remove Listener.
  */
 public class ClaimMetaDataCacheRemoveListener
-        extends AbstractCacheListener<ClaimMetaDataCacheEntry, ClaimMetaDataCacheEntry>
-        implements CacheEntryRemovedListener<ClaimMetaDataCacheEntry, ClaimMetaDataCacheEntry> {
+        extends AbstractCacheListener<ClaimMetaDataCacheKey, ClaimMetaDataCacheEntry>
+        implements CacheEntryRemovedListener<ClaimMetaDataCacheKey, ClaimMetaDataCacheEntry> {
 
     @Override
-    public void entryRemoved(CacheEntryEvent<? extends ClaimMetaDataCacheEntry,
-            ? extends ClaimMetaDataCacheEntry> cacheEntryEvent) throws CacheEntryListenerException {
+    public void entryRemoved(CacheEntryEvent<? extends ClaimMetaDataCacheKey, ? extends ClaimMetaDataCacheEntry>
+                                         cacheEntryEvent) throws CacheEntryListenerException {
+
 
         if (cacheEntryEvent == null || cacheEntryEvent.getValue() == null ||
                 cacheEntryEvent.getValue().getClaimCacheKey() == null) {
             return;
         }
 
-        ClaimCache.getInstance().clearCacheEntry(cacheEntryEvent.getValue().getClaimCacheKey());
+        ClaimCache.getInstance().clearCacheEntry(cacheEntryEvent.getValue().getClaimCacheKey(),
+                cacheEntryEvent.getKey().getAuthenticatedUser().getTenantDomain());
     }
 }

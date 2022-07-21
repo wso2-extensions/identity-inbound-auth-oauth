@@ -75,10 +75,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)) {
                 log.debug("Persisting authorization code (hashed): " + DigestUtils.sha256Hex(authzCode) + " for " +
-                        "client: " + consumerKey + " user: " + authzCodeDO.getAuthorizedUser().toString());
+                        "client: " + consumerKey + " user: " + authzCodeDO.getAuthorizedUser().getLoggableUserId());
             } else {
                 log.debug("Persisting authorization code for client: " + consumerKey + " user: " + authzCodeDO
-                        .getAuthorizedUser().toString());
+                        .getAuthorizedUser().getLoggableUserId());
             }
         }
         Connection connection = IdentityDatabaseUtil.getDBConnection();
@@ -134,7 +134,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
-
+        boolean deactivateAuthorizationCode;
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)) {
                 StringBuilder stringBuilder = new StringBuilder();
@@ -143,7 +143,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                             .append(DigestUtils.sha256Hex(authzCodeDO.getAuthorizationCode()))
                             .append(" client: ")
                             .append(authzCodeDO.getConsumerKey()).append(" user: ")
-                            .append(authzCodeDO.getAuthorizedUser().toString())
+                            .append(authzCodeDO.getAuthorizedUser().getLoggableUserId())
                             .append("\n");
                 }
                 log.debug(stringBuilder.toString());
@@ -152,7 +152,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 for (AuthzCodeDO authzCodeDO : authzCodeDOs) {
                     stringBuilder.append("Deactivating authorization code client: ")
                             .append(authzCodeDO.getConsumerKey()).append(" user: ")
-                            .append(authzCodeDO.getAuthorizedUser().toString())
+                            .append(authzCodeDO.getAuthorizedUser().getLoggableUserId())
                             .append("\n");
                 }
                 log.debug(stringBuilder.toString());
@@ -168,14 +168,16 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             }
             prepStmt.executeBatch();
             IdentityDatabaseUtil.commitTransaction(connection);
-
-            // To revoke request objects which are persisted against the code.
-            OAuth2TokenUtil.postRevokeCodes(authzCodeDOs, OAuthConstants.AuthorizationCodeState.INACTIVE);
+            deactivateAuthorizationCode = true;
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error when deactivating authorization code", e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+        }
+        if (deactivateAuthorizationCode) {
+            // To revoke request objects which are persisted against the code.
+            OAuth2TokenUtil.postRevokeCodes(authzCodeDOs, OAuthConstants.AuthorizationCodeState.INACTIVE);
         }
     }
 
@@ -307,28 +309,28 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 log.debug("Changing state of authorization code  to: " + newState);
             }
         }
-
+        boolean tokenUpdateSuccessful;
         String authCodeStoreTable = OAuthConstants.AUTHORIZATION_CODE_STORE_TABLE;
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
         try {
-            String sqlQuery = SQLQueries.UPDATE_AUTHORIZATION_CODE_STATE.replace(IDN_OAUTH2_AUTHORIZATION_CODE,
-                    authCodeStoreTable);
-            prepStmt = connection.prepareStatement(sqlQuery);
+            prepStmt = connection.prepareStatement(SQLQueries.UPDATE_AUTHORIZATION_CODE_STATE);
             prepStmt.setString(1, newState);
             prepStmt.setString(2, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCode));
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
-
-            //If the code state is updated to inactive or expired request object which is persisted against the code
-            // should be updated/removed.
-            OAuth2TokenUtil.postRevokeCode(authzCode, newState, null);
+            tokenUpdateSuccessful = true;
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while updating the state of Authorization Code : " +
                     authzCode.toString(), e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+        }
+        if (tokenUpdateSuccessful) {
+            //If the code state is updated to inactive or expired request object which is persisted against the code
+            // should be updated/removed.
+            OAuth2TokenUtil.postRevokeCode(authzCode, newState, null, null);
         }
     }
 
@@ -345,7 +347,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     .getAuthorizationCode()));
 
         }
-
+        boolean deactivateAuthorizationCode;
         PreparedStatement prepStmt = null;
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         try {
@@ -355,15 +357,17 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     getHashingPersistenceProcessor().getProcessedAuthzCode(authzCodeDO.getAuthorizationCode()));
             prepStmt.executeUpdate();
             IdentityDatabaseUtil.commitTransaction(connection);
-
-            // To revoke the request object which is persisted against the code.
-            OAuth2TokenUtil.postRevokeCode(authzCodeDO.getAuthzCodeId(), OAuthConstants.
-                    AuthorizationCodeState.INACTIVE, authzCodeDO.getOauthTokenId());
+            deactivateAuthorizationCode = true;
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error when deactivating authorization code", e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+        }
+        if (deactivateAuthorizationCode) {
+            // To revoke the request object which is persisted against the code.
+            OAuth2TokenUtil.postRevokeCode(authzCodeDO.getAuthzCodeId(), OAuthConstants.
+                    AuthorizationCodeState.INACTIVE, authzCodeDO.getOauthTokenId(), authzCodeDO.getAuthorizationCode());
         }
     }
 
@@ -443,7 +447,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement ps = null;
-        ResultSet rs = null;
+        ResultSet rs;
         List<AuthzCodeDO> authorizationCodes = new ArrayList<>();
         String authzUser = authenticatedUser.getUserName();
         String tenantDomain = authenticatedUser.getTenantDomain();
@@ -474,11 +478,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 String[] scope = OAuth2Util.buildScopeArray(rs.getString(5));
                 String callbackUrl = rs.getString(6);
                 String consumerKey = rs.getString(7);
+                String idpName = rs.getString(8);
 
-                AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userStoreDomain, tenantDomain);
-                user.setUserName(authzUser);
-                user.setUserStoreDomain(userStoreDomain);
-                user.setTenantDomain(tenantDomain);
+                AuthenticatedUser user = OAuth2Util
+                        .createAuthenticatedUser(authzUser, userStoreDomain, tenantDomain, idpName);
 
                 //Authorization codes returned by this method will be used to clear claims cached against them.
                 // We will only return authz codes that would contain such cached clams in order to improve performance.
@@ -608,9 +611,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
                 AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userStoreDomain, OAuth2Util
                         .getTenantDomain(tenantId), authenticatedIDP);
-                user.setUserName(authzUser);
-                user.setUserStoreDomain(userStoreDomain);
-                user.setTenantDomain(OAuth2Util.getTenantDomain(tenantId));
 
                 // If the scope value is empty. It could have stored in the IDN_OAUTH2_AUTHZ_CODE_SCOPE table
                 // for on demand scope migration.
@@ -735,9 +735,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
         try (PreparedStatement addScopePrepStmt = connection.prepareStatement(SQLQueries.INSERT_OAUTH2_CODE_SCOPE)) {
             String authzCodeId = authzCodeDO.getAuthzCodeId();
-
-            if (authzCodeDO.getScope() != null && authzCodeDO.getScope().length > 0) {
-                for (String scope : authzCodeDO.getScope()) {
+            if (authzCodeDO.getScope() != null) {
+                // Get the distinct set of scopes.
+                Set<String> scopes = new HashSet<>(Arrays.asList(authzCodeDO.getScope()));
+                for (String scope : scopes) {
                     addScopePrepStmt.setString(1, authzCodeId);
                     addScopePrepStmt.setString(2, scope);
                     addScopePrepStmt.setInt(3, tenantId);
@@ -829,8 +830,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     }
 
     private AuthzCodeDO createAuthzCodeDo(String consumerKey, String authorizationKey, AuthenticatedUser user,
-            String codeState, String scopeString, String callbackUrl, String codeId, String pkceCodeChallenge,
-            String pkceCodeChallengeMethod, Timestamp issuedTime, long validityPeriod, String tokenBindingReference) {
+                                          String codeState, String scopeString, String callbackUrl, String codeId,
+                                          String pkceCodeChallenge, String pkceCodeChallengeMethod,
+                                          Timestamp issuedTime, long validityPeriod, String tokenBindingReference) {
 
         return new AuthzCodeDO(user, OAuth2Util.buildScopeArray(scopeString), issuedTime, validityPeriod, callbackUrl,
                 consumerKey, authorizationKey, codeId, codeState, pkceCodeChallenge, pkceCodeChallengeMethod,
@@ -838,7 +840,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     }
 
     private boolean isActiveAuthzCodeIssuedForOidcFlow(String[] scope, long issuedTimeInMillis,
-            long validityPeriodInMillis) {
+                                                       long validityPeriodInMillis) {
 
         return isAuthorizationCodeIssuedForOpenidScope(scope) && (
                 OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodInMillis) > 0);

@@ -31,12 +31,15 @@ import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
+import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 
@@ -49,6 +52,7 @@ import java.util.Map;
 import javax.sql.DataSource;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -62,7 +66,7 @@ import static org.testng.Assert.assertTrue;
  * Test class to test UserInfoJWTResponse.
  */
 @PrepareForTest({AuthorizationGrantCache.class, JDBCPersistenceManager.class,
-        OAuthServerConfiguration.class})
+        OAuthServerConfiguration.class, FrameworkUtils.class})
 @PowerMockIgnore({"javax.management.*"})
 public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
 
@@ -72,6 +76,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
     @BeforeClass
     public void setup() throws Exception {
 
+        OAuth2ServiceComponentHolder.getInstance().setScopeClaimMappingDAO(new ScopeClaimMappingDAOImpl());
         TestUtils.initiateH2Base();
         con = TestUtils.getConnection();
         userInfoJWTResponse = new UserInfoJWTResponse();
@@ -103,8 +108,14 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         try {
             AuthenticatedUser authenticatedUser = (AuthenticatedUser) authorizedUser;
             prepareForSubjectClaimTest(authenticatedUser, inputClaims, appendTenantDomain, appendUserStoreDomain);
+            updateAuthenticatedSubjectIdentifier(authenticatedUser, appendTenantDomain, appendUserStoreDomain,
+                    inputClaims);
 
             mockObjectsRelatedToTokenValidation();
+
+            mockStatic(FrameworkUtils.class);
+            when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+                    .thenReturn(authenticatedUser.getUserId());
 
             userInfoJWTResponse = spy(new UserInfoJWTResponse());
             when(userInfoJWTResponse.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
@@ -163,6 +174,17 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         initSingleClaimTest(claimUri, claimValue);
         mockDataSource();
         mockObjectsRelatedToTokenValidation();
+        mockStatic(FrameworkUtils.class);
+        when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+                .thenReturn(AUTHORIZED_USER_ID);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserName(AUTHORIZED_USER_NAME);
+        authenticatedUser.setTenantDomain(TENANT_DOT_COM);
+        authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
+        authenticatedUser.setUserId(AUTHORIZED_USER_ID);
+        authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHORIZED_USER_ID);
+        mockAccessTokenDOInOAuth2Util(authenticatedUser);
         String responseString =
                 userInfoJWTResponse.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 
@@ -182,6 +204,18 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         initSingleClaimTest(claimUri, claimValue);
         mockDataSource();
         mockObjectsRelatedToTokenValidation();
+        mockStatic(FrameworkUtils.class);
+        when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+                .thenReturn(AUTHORIZED_USER_ID);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserName(AUTHORIZED_USER_NAME);
+        authenticatedUser.setTenantDomain(TENANT_DOT_COM);
+        authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
+        authenticatedUser.setUserId(AUTHORIZED_USER_ID);
+        authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHORIZED_USER_ID);
+        mockAccessTokenDOInOAuth2Util(authenticatedUser);
+
         String responseString =
                 userInfoJWTResponse.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 
@@ -212,6 +246,17 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
             prepareForResponseClaimTest(inputClaims, oidcScopeMap, getClaimsFromCache);
             mockDataSource();
             mockObjectsRelatedToTokenValidation();
+            mockStatic(FrameworkUtils.class);
+            when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+                    .thenReturn(AUTHORIZED_USER_ID);
+
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            authenticatedUser.setUserName(AUTHORIZED_USER_NAME);
+            authenticatedUser.setTenantDomain(TENANT_DOT_COM);
+            authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
+            authenticatedUser.setUserId(AUTHORIZED_USER_ID);
+            authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHORIZED_USER_ID);
+            mockAccessTokenDOInOAuth2Util(authenticatedUser);
             String responseString =
                     userInfoJWTResponse.getResponseString(
                             getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED, requestedScopes));

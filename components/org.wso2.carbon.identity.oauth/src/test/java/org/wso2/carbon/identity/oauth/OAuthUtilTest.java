@@ -72,7 +72,7 @@ public class OAuthUtilTest {
         assertNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should clear the cached value against the cache key.");
 
         // Clear all the cached values to make sure no side effect on other tests.
-        oAuthCache.clear();
+        oAuthCache.clear(-1234);
     }
 
     @Test(dataProvider = "testClearOAuthCache")
@@ -89,7 +89,7 @@ public class OAuthUtilTest {
         assertNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should clear the cached value against the cache key.");
 
         // Clear all the cached values to make sure no side effect on other tests.
-        oAuthCache.clear();
+        oAuthCache.clear(-1234);
     }
 
     @Test
@@ -110,7 +110,7 @@ public class OAuthUtilTest {
         assertNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should clear the cached value against the cache key.");
 
         // Clear all the cached values to make sure no side effect on other tests.
-        oAuthCache.clear();
+        oAuthCache.clear(-1234);
     }
 
     @Test(dataProvider = "testClearOAuthCache")
@@ -128,7 +128,7 @@ public class OAuthUtilTest {
         assertNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should clear the cached value against the cache key.");
 
         // Clear all the cached values to make sure no side effect on other tests.
-        oAuthCache.clear();
+        oAuthCache.clear(-1234);
     }
 
     @Test
@@ -149,7 +149,7 @@ public class OAuthUtilTest {
         assertNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should clear the cached value against the cache key.");
 
         // Clear all the cached values to make sure no side effect on other tests.
-        oAuthCache.clear();
+        oAuthCache.clear(-1234);
     }
 
     @Test(dataProvider = "testGetAuthenticatedUser")

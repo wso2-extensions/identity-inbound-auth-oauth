@@ -16,9 +16,13 @@
 
 package org.wso2.carbon.identity.oauth.util;
 
-import org.wso2.carbon.identity.application.common.cache.BaseCache;
+import org.wso2.carbon.identity.core.cache.AbstractCacheListener;
+import org.wso2.carbon.identity.core.cache.BaseCache;
 import org.wso2.carbon.identity.oauth.listener.ClaimMetaDataCacheRemoveListener;
 import org.wso2.carbon.utils.CarbonUtils;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Claim Meta Data Cache.
@@ -28,10 +32,15 @@ public class ClaimMetaDataCache extends BaseCache<ClaimMetaDataCacheKey, ClaimMe
     private static final String CLAIM_META_DATA_CACHE_NAME = "ClaimMetaDataCache";
 
     private static ClaimMetaDataCache instance = new ClaimMetaDataCache();
+    private static final List<AbstractCacheListener<ClaimMetaDataCacheKey, ClaimMetaDataCacheEntry>>
+            cacheListeners = new ArrayList<>();
+
+    static {
+        cacheListeners.add(new ClaimMetaDataCacheRemoveListener());
+    }
 
     private ClaimMetaDataCache() {
-        super(CLAIM_META_DATA_CACHE_NAME);
-        super.addListener(new ClaimMetaDataCacheRemoveListener());
+        super(CLAIM_META_DATA_CACHE_NAME, cacheListeners);
     }
 
     public static ClaimMetaDataCache getInstance() {

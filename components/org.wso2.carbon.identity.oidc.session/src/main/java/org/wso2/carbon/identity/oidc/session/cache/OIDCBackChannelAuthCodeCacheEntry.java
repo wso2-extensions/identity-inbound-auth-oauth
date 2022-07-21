@@ -17,12 +17,13 @@
  */
 package org.wso2.carbon.identity.oidc.session.cache;
 
-import org.wso2.carbon.identity.application.common.cache.CacheEntry;
+import org.wso2.carbon.identity.core.cache.CacheEntry;
 
 /**
  * This class holds sessionID required for Authorization code flow in OIDCBackChannel logout and gets cahched againts
  * Authorizarion code.
  */
+@Deprecated
 public class OIDCBackChannelAuthCodeCacheEntry extends CacheEntry {
 
     private static final long serialVersionUID = 5350707130037370099L;

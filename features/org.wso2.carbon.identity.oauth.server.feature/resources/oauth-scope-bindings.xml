@@ -886,4 +886,114 @@
         <Permission>/permission/admin/manage/identity/cors/origins/view</Permission>
     </Permissions>
 </Scope>
+    <Scope name="internal_oidc_scope_mgt_view" displayName="View Scope">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/oidcscopemgt/view</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_oidc_scope_mgt_create" displayName="Create Scope">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/oidcscopemgt/create</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_oidc_scope_mgt_update" displayName="Update Scope">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/oidcscopemgt/update</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_oidc_scope_mgt_delete" displayName="Delete Scope">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/oidcscopemgt/delete</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_oauth_scope_mgt_view" displayName="View Scope">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/oauthscopemgt/view</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_oauth_scope_mgt_create" displayName="Create Scope">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/oauthscopemgt/create</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_oauth_scope_mgt_update" displayName="Update Scope">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/oauthscopemgt/update</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_oauth_scope_mgt_delete" displayName="Delete Scope">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/oauthscopemgt/delete</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_governance_view" displayName="View Governance Connector">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/governance/view</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_governance_update" displayName="Update Governance Connector">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/governance/update</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_group_mgt_create" displayName="Create Groups">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/groupmgt/create</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_group_mgt_delete" displayName="Delete Groups">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/groupmgt/delete</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_group_mgt_view" displayName="View Groups">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/groupmgt/view</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_group_mgt_update" displayName="Update Groups">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/groupmgt/update</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_secret_mgt_add" displayName="Add Secret">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/secretmgt/add</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_secret_mgt_update" displayName="Update Secret">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/secretmgt/update</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_secret_mgt_view" displayName="View Secret">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/secretmgt/view</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_secret_mgt_delete" displayName="Delete Secret">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/secretmgt/delete</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_organization_create" displayName="Create Organization">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/organizationmgt/create</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_organization_view" displayName="View Organization">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/organizationmgt/view</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_organization_delete" displayName="Delete Organization">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/organizationmgt/delete</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_organization_update" displayName="Update Organization">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/organizationmgt/update</Permission>
+        </Permissions>
+    </Scope>
 </Scopes>

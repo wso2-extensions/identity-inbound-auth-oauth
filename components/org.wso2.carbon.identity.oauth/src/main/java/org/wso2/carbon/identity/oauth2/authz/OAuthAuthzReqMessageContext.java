@@ -45,6 +45,8 @@ public class OAuthAuthzReqMessageContext {
 
     private long codeIssuedTime;
 
+    private String[] authorizedInternalScopes;
+
     private Properties properties = new Properties();
 
     public OAuthAuthzReqMessageContext(OAuth2AuthorizeReqDTO authorizationReqDTO) {
@@ -158,5 +160,13 @@ public class OAuthAuthzReqMessageContext {
     public void setCodeIssuedTime(long codeIssuedTime) {
 
         this.codeIssuedTime = codeIssuedTime;
+    }
+
+    public String[] getAuthorizedInternalScopes() {
+        return authorizedInternalScopes;
+    }
+
+    public void setAuthorizedInternalScopes(String[] authorizedInternalScopes) {
+        this.authorizedInternalScopes = authorizedInternalScopes;
     }
 }

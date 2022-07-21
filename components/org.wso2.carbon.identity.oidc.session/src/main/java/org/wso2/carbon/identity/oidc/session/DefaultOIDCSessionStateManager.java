@@ -19,8 +19,12 @@
 package org.wso2.carbon.identity.oidc.session;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -29,6 +33,7 @@ import java.security.SecureRandom;
 import java.util.UUID;
 
 import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import static org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil.getOrigin;
@@ -40,6 +45,8 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
 
     private static final String RANDOM_ALG_SHA1 = "SHA1PRNG";
     private static final String DIGEST_ALG_SHA256 = "SHA-256";
+
+    private static final Log log = LogFactory.getLog(OIDCSessionStateManager.class);
 
     /**
      * Generates a session state using the provided client id, client callback url and browser state cookie id.
@@ -79,6 +86,79 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
 
         response.addCookie(cookie);
         return cookie;
+    }
+
+    /**
+     * Adds the browser state cookie with tenant qualified path to the response.
+     *
+     * @param response
+     * @param request
+     * @param loginTenantDomain
+     * @param opbsValue
+     * @return Cookie
+     */
+    @Override
+    public Cookie addOPBrowserStateCookie(HttpServletResponse response, HttpServletRequest request,
+                                          String loginTenantDomain, String opbsValue) {
+
+        ServletCookie cookie;
+        if (IdentityTenantUtil.isTenantedSessionsEnabled() && loginTenantDomain != null) {
+            // Invalidate the old opbs cookies which haven't tenanted paths.
+            removeOPBrowserStateCookiesInRoot(request, response);
+
+            cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
+            cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/");
+        } else {
+            cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
+            cookie.setPath("/");
+        }
+        cookie.setSecure(true);
+        cookie.setSameSite(SameSiteCookie.NONE);
+        response.addCookie(cookie);
+        return cookie;
+    }
+
+    @Override
+    public String generateOPBrowserStateCookieValue(String tenantDomain) {
+
+        if (IdentityTenantUtil.isTenantedSessionsEnabled() && tenantDomain != null) {
+            // Invalidate the old opbs cookies which haven't tenanted paths.
+           return UUID.randomUUID() + OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX;
+        }
+        return UUID.randomUUID().toString();
+    }
+
+    /**
+     * Invalidate the old opbs cookies which haven't tenanted paths.
+     *
+     * @param request
+     * @param response
+     */
+    private static void removeOPBrowserStateCookiesInRoot(HttpServletRequest request, HttpServletResponse response) {
+
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return;
+        }
+
+        for (Cookie cookie : cookies) {
+            if (cookie != null && cookie.getName().equals(OIDCSessionConstants.OPBS_COOKIE_ID)) {
+                if (cookie.getValue().endsWith(OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX)) {
+                    continue;
+                } else {
+                    ServletCookie oldCookie = new ServletCookie(cookie.getName(), cookie.getValue());
+                    oldCookie.setMaxAge(0);
+                    oldCookie.setSecure(true);
+                    oldCookie.setPath("/");
+                    oldCookie.setSameSite(SameSiteCookie.NONE);
+                    response.addCookie(oldCookie);
+
+                    if (log.isDebugEnabled()) {
+                        log.debug("OPBS cookie was found with the root path and Invalidated it.");
+                    }
+                }
+            }
+        }
     }
 
     private static String generateSaltValue() throws NoSuchAlgorithmException {

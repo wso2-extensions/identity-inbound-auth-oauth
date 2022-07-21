@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
@@ -31,8 +32,11 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.identity.central.log.mgt.internal.CentralLogMgtServiceComponentHolder;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
@@ -51,6 +55,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -61,7 +66,8 @@ import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getRequestOb
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
 @PrepareForTest({OAuth2Util.class, IdentityUtil.class, OAuthServerConfiguration.class, OAuthAuthzRequest.class,
-        RequestObjectValidatorImpl.class, IdentityTenantUtil.class})
+        RequestObjectValidatorImpl.class, IdentityTenantUtil.class, LoggerUtils.class, IdentityEventService.class,
+        CentralLogMgtServiceComponentHolder.class})
 @PowerMockIgnore({"javax.crypto.*"})
 public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
 
@@ -73,8 +79,12 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
     private static final String REQUEST_PARAM_VALUE_BUILDER = "request_param_value_builder";
     private static final String REQUEST_URI_PARAM_VALUE_BUILDER = "request_uri_param_value_builder";
 
+    @Mock
+    private CentralLogMgtServiceComponentHolder centralLogMgtServiceComponentHolderMock;
+
     @BeforeTest
     public void setUp() throws Exception {
+
         System.setProperty(CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());
         clientKeyStore = getKeyStoreFromFile("testkeystore.jks", "wso2carbon",
@@ -82,6 +92,8 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
         wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon",
                 System.getProperty(CarbonBaseConstants.CARBON_HOME));
         rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
 
     }
 
@@ -98,12 +110,18 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
                                            boolean isEncrypted,
                                            boolean exceptionNotExpected,
                                            String errorMsg) throws Exception {
+
         OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
         oAuth2Parameters.setTenantDomain("carbon.super");
         oAuth2Parameters.setClientId(TEST_CLIENT_ID_1);
 
         OAuthAuthzRequest oAuthAuthzRequest = mock(OAuthAuthzRequest.class);
+        IdentityEventService eventServiceMock = mock(IdentityEventService.class);
         when(oAuthAuthzRequest.getParam(Constants.REQUEST)).thenReturn(requestObjectString);
+        mockStatic(CentralLogMgtServiceComponentHolder.class);
+        when(CentralLogMgtServiceComponentHolder.getInstance()).thenReturn(centralLogMgtServiceComponentHolderMock);
+        when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
+        PowerMockito.doNothing().when(eventServiceMock).handleEvent(any());
 
         OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
         mockStatic(OAuthServerConfiguration.class);

@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.4.119-SNAPSHOT</version>
+        <version>6.7.179-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -56,10 +56,6 @@
         <dependency>
             <groupId>com.google.gdata.wso2</groupId>
             <artifactId>gdata-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
         </dependency>
         <dependency>
             <groupId>com.thetransactioncompany.wso2</groupId>
@@ -182,6 +178,7 @@
                                         <include>oauth2.war</include>
                                         <include>p2.inf</include>
                                         <include>build.properties</include>
+                                        <include>oauth_response.html</include>
                                         <include>oidc-scope-config.xml</include>
                                         <include>oauth-scope-bindings.xml</include>
                                     </includes>
@@ -214,7 +211,6 @@
                                 <bundleDef>com.google.gdata.wso2:gdata-core</bundleDef>
                                 <bundleDef>com.google.code.gson:gson</bundleDef>
                                 <bundleDef>com.googlecode.json-simple.wso2:json-simple</bundleDef>
-                                <bundleDef>com.google.guava:guava</bundleDef>
                                 <bundleDef>com.thetransactioncompany.wso2:java-property-utils</bundleDef>
                                 <bundleDef>com.thetransactioncompany.wso2:cors-filter</bundleDef>
                                 <bundleDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oauth</bundleDef>
@@ -224,6 +220,7 @@
                                 <bundleDef>net.minidev:json-smart</bundleDef>
                                 <bundleDef>net.minidev:accessors-smart:${net.minidev.accessors-smart.version}</bundleDef>
                                 <bundleDef>org.ow2.asm:asm-all:${org.ow2.asm.asm.version}</bundleDef>
+                                <bundleDef>org.ow2.asm:asm:${org.ow2.asm.version}</bundleDef>
                                 <bundleDef>org.wso2.orbit.com.github.dblock.waffle:waffle-jna</bundleDef>
                                 <bundleDef>org.wso2.orbit.org.opensaml:opensaml</bundleDef>
                                 <bundleDef>org.wso2.orbit.joda-time:joda-time</bundleDef>
@@ -233,6 +230,7 @@
                             <importFeatures>
                                 <importFeatureDef>org.wso2.carbon.core:compatible:${carbon.kernel.feature.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.identity.core:compatible:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.identity.central.log.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.identity.oauth.common:compatible:${project.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.idp.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.security.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
@@ -240,6 +238,7 @@
                                 <importFeatureDef>org.wso2.carbon.identity.application.authentication.framework.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.claim.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.identity.event.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.identity.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.identity.saml.common.util:${saml.common.util.version}</importFeatureDef>
                             </importFeatures>
                         </configuration>

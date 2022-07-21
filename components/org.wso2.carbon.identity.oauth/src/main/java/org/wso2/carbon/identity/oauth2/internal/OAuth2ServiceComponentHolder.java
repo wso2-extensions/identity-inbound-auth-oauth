@@ -20,18 +20,27 @@ package org.wso2.carbon.identity.oauth2.internal;
 
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
+import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
+import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
+import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
+import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
+import org.wso2.carbon.identity.organization.management.role.management.service.RoleManager;
+import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -48,11 +57,19 @@ public class OAuth2ServiceComponentHolder {
     private static List<OAuthClientAuthenticator> authenticationHandlers = new ArrayList<>();
     private static List<ClaimProvider> claimProviders = new ArrayList<>();
     private static boolean idpIdColumnEnabled = false;
+    private static boolean consentedTokenColumnEnabled = false;
     private List<TokenBinder> tokenBinders = new ArrayList<>();
+    private Map<String, ResponseTypeRequestValidator> responseTypeRequestValidators = new HashMap<>();
     private OAuthAdminServiceImpl oauthAdminService;
     private static AuthenticationDataPublisher authenticationDataPublisherProxy;
     private static KeyIDProvider keyIDProvider = null;
     private IdpManager idpManager;
+    private static UserSessionManagementService userSessionManagementService;
+    private static RoleManager roleManager;
+    private static OrganizationUserResidentResolverService organizationUserResidentResolverService;
+    private List<ScopeDTO> oidcScopesClaims = new ArrayList<>();
+    private List<Scope> oauthScopeBinding = new ArrayList<>();
+    private ScopeClaimMappingDAO scopeClaimMappingDAO;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -112,6 +129,16 @@ public class OAuth2ServiceComponentHolder {
     public static void setIDPIdColumnEnabled(boolean idpIdColumnEnabled) {
 
         OAuth2ServiceComponentHolder.idpIdColumnEnabled = idpIdColumnEnabled;
+    }
+
+    public static boolean isConsentedTokenColumnEnabled() {
+
+        return consentedTokenColumnEnabled;
+    }
+
+    public static void setConsentedTokenColumnEnabled(boolean consentedTokenColumnEnabled) {
+
+        OAuth2ServiceComponentHolder.consentedTokenColumnEnabled = consentedTokenColumnEnabled;
     }
 
     public static RegistryService getRegistryService() {
@@ -195,6 +222,21 @@ public class OAuth2ServiceComponentHolder {
         this.tokenBinders.remove(tokenBinder);
     }
 
+    public ResponseTypeRequestValidator getResponseTypeRequestValidator(String responseType) {
+
+        return responseTypeRequestValidators.get(responseType);
+    }
+
+    public void addResponseTypeRequestValidator(ResponseTypeRequestValidator validator) {
+
+        this.responseTypeRequestValidators.put(validator.getResponseType(), validator);
+    }
+
+    public void removeResponseTypeRequestValidator(ResponseTypeRequestValidator validator) {
+
+        this.responseTypeRequestValidators.remove(validator.getResponseType());
+    }
+
     public OAuthAdminServiceImpl getOAuthAdminService() {
 
         return oauthAdminService;
@@ -264,5 +306,77 @@ public class OAuth2ServiceComponentHolder {
     public IdpManager getIdpManager() {
 
         return idpManager;
+    }
+    
+    /**
+    * Set UserSessionManagementService Instance.
+    *
+    * @param userSessionManagementService UserSessionManagementService.
+     */
+    public static void setUserSessionManagementService(UserSessionManagementService userSessionManagementService) {
+
+        OAuth2ServiceComponentHolder.userSessionManagementService = userSessionManagementService;
+    }
+
+    /**
+     * Get UserSessionManagementService Instance.
+     *
+     * @return UserSessionManagementService.
+     */
+    public static UserSessionManagementService getUserSessionManagementService() {
+
+        return userSessionManagementService;
+    }
+
+    public static RoleManager getRoleManager() {
+
+        return roleManager;
+    }
+
+    public static void setRoleManager(RoleManager roleManager) {
+
+        OAuth2ServiceComponentHolder.roleManager = roleManager;
+    }
+
+    public void setOIDCScopesClaims(List<ScopeDTO> oidcScopesClaims) {
+
+        this.oidcScopesClaims = oidcScopesClaims;
+    }
+
+    public List<ScopeDTO> getOIDCScopesClaims() {
+
+        return oidcScopesClaims;
+    }
+
+    public void setOauthScopeBinding(List<Scope> oauthScopeBinding) {
+
+        this.oauthScopeBinding = oauthScopeBinding;
+    }
+
+    public List<Scope> getOauthScopeBinding() {
+
+        return oauthScopeBinding;
+    }
+
+
+    public ScopeClaimMappingDAO getScopeClaimMappingDAO() {
+
+        return scopeClaimMappingDAO;
+    }
+
+    public void setScopeClaimMappingDAO(ScopeClaimMappingDAO scopeClaimMappingDAO) {
+
+        this.scopeClaimMappingDAO = scopeClaimMappingDAO;
+    }
+
+    public static OrganizationUserResidentResolverService getOrganizationUserResidentResolverService() {
+
+        return organizationUserResidentResolverService;
+    }
+
+    public static void setOrganizationUserResidentResolverService(
+            OrganizationUserResidentResolverService organizationUserResidentResolverService) {
+
+        OAuth2ServiceComponentHolder.organizationUserResidentResolverService = organizationUserResidentResolverService;
     }
 }

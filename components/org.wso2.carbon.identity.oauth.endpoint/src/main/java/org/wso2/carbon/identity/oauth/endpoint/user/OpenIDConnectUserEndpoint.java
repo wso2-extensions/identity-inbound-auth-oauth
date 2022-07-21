@@ -26,12 +26,17 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoEndpointConfig;
+import org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJWTResponse;
 import org.wso2.carbon.identity.oauth.user.UserInfoAccessTokenValidator;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth.user.UserInfoRequestValidator;
 import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+
+import java.util.List;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -41,9 +46,13 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_CONTENT_TYPE_JSON;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_CONTENT_TYPE_JWT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_PRAGMA;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE;
@@ -60,10 +69,10 @@ public class OpenIDConnectUserEndpoint {
     @GET
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
-    @Produces("application/json")
     public Response getUserClaims(@Context HttpServletRequest request) throws OAuthSystemException {
 
         String userInfoResponse;
+        String userInfoResponseContentType;
         try {
             // validate the request
             UserInfoRequestValidator requestValidator = UserInfoEndpointConfig.getInstance().
@@ -80,6 +89,7 @@ public class OpenIDConnectUserEndpoint {
             UserInfoResponseBuilder userInfoResponseBuilder =
                     UserInfoEndpointConfig.getInstance().getUserInfoResponseBuilder();
             userInfoResponse = userInfoResponseBuilder.getResponseString(tokenResponse);
+            userInfoResponseContentType = getUserInfoResponseMediaType(userInfoResponseBuilder);
 
         } catch (UserInfoEndpointException e) {
             return handleError(e);
@@ -90,7 +100,7 @@ public class OpenIDConnectUserEndpoint {
 
         ResponseBuilder respBuilder = getResponseBuilderWithCacheControlHeaders();
         if (userInfoResponse != null) {
-            return respBuilder.entity(userInfoResponse).build();
+            return respBuilder.type(userInfoResponseContentType).entity(userInfoResponse).build();
         }
         return respBuilder.build();
     }
@@ -99,9 +109,10 @@ public class OpenIDConnectUserEndpoint {
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
     @Produces("application/json")
-    public Response getUserClaimsPost(@Context HttpServletRequest request) throws OAuthSystemException {
+    public Response getUserClaimsPost(@Context HttpServletRequest request, MultivaluedMap<String, String> paramMap)
+            throws OAuthSystemException {
 
-        return getUserClaims(request);
+        return getUserClaims(new OAuthRequestWrapper(request, (Map<String, List<String>>) paramMap));
     }
 
     private ResponseBuilder getResponseBuilderWithCacheControlHeaders() {
@@ -144,7 +155,10 @@ public class OpenIDConnectUserEndpoint {
         OAuthResponse response = OAuthASResponse.errorResponse(statusCode)
                 .setError(OAuth2ErrorCodes.SERVER_ERROR)
                 .setErrorDescription(ex.getMessage()).buildJSONMessage();
-        return Response.status(response.getResponseStatus()).entity(response.getBody()).build();
+        return Response.status(response.getResponseStatus())
+                .entity(response.getBody())
+                .type(MediaType.APPLICATION_JSON_TYPE)
+                .build();
     }
 
     private Response buildBadRequestErrorResponse(UserInfoEndpointException ex,
@@ -154,7 +168,10 @@ public class OpenIDConnectUserEndpoint {
                 .setError(ex.getErrorCode())
                 .setErrorDescription(ex.getErrorMessage())
                 .buildJSONMessage();
-        return Response.status(res.getResponseStatus()).entity(res.getBody()).build();
+        return Response.status(res.getResponseStatus())
+                .entity(res.getBody())
+                .type(MediaType.APPLICATION_JSON_TYPE)
+                .build();
     }
 
     private Response getErrorResponseWithAuthenticateHeader(UserInfoEndpointException ex,
@@ -167,6 +184,15 @@ public class OpenIDConnectUserEndpoint {
         return Response.status(res.getResponseStatus())
                 .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, "Bearer error=\"" + ex.getErrorCode() + "\"")
                 .entity(res.getBody())
+                .type(MediaType.APPLICATION_JSON_TYPE)
                 .build();
+    }
+
+    private String getUserInfoResponseMediaType(UserInfoResponseBuilder userInfoResponseBuilder) {
+
+        if (userInfoResponseBuilder instanceof UserInfoJWTResponse) {
+            return HTTP_RESP_CONTENT_TYPE_JWT;
+        }
+        return HTTP_RESP_CONTENT_TYPE_JSON;
     }
 }

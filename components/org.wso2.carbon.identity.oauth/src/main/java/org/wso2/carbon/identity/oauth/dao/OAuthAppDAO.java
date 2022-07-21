@@ -27,10 +27,14 @@ import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.Error;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.IdentityOAuthClientException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -41,7 +45,6 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -52,12 +55,14 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
@@ -72,8 +77,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE_NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_VALIDATION;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties
-        .TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUDIENCE;
 
@@ -86,6 +90,8 @@ public class OAuthAppDAO {
     private static final String APP_STATE = "APP_STATE";
     private static final String USERNAME = "USERNAME";
     private static final String LOWER_USERNAME = "LOWER(USERNAME)";
+    private static final String CONSUMER_KEY_CONSTRAINT = "CONSUMER_KEY_CONSTRAINT";
+
     private TokenPersistenceProcessor persistenceProcessor;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
@@ -102,10 +108,11 @@ public class OAuthAppDAO {
 
     public void addOAuthApplication(OAuthAppDO consumerAppDO) throws IdentityOAuthAdminException {
 
-        int spTenantId = IdentityTenantUtil.getTenantId(consumerAppDO.getUser().getTenantDomain());
-        String userStoreDomain = consumerAppDO.getUser().getUserStoreDomain();
-        if (!isDuplicateApplication(consumerAppDO.getUser().getUserName(), spTenantId, userStoreDomain,
-                consumerAppDO)) {
+        AuthenticatedUser appOwner = consumerAppDO.getAppOwner();
+        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        int spTenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+        String userStoreDomain = appOwner.getUserStoreDomain();
+        if (!isDuplicateApplication(appOwner.getUserName(), spTenantId, userStoreDomain, consumerAppDO)) {
             int appId = 0;
             try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
                 try {
@@ -121,7 +128,7 @@ public class OAuthAppDAO {
                             })) {
                         prepStmt.setString(1, processedClientId);
                         prepStmt.setString(2, processedClientSecret);
-                        prepStmt.setString(3, consumerAppDO.getUser().getUserName());
+                        prepStmt.setString(3, appOwner.getUserName());
                         prepStmt.setInt(4, spTenantId);
                         prepStmt.setString(5, userStoreDomain);
                         prepStmt.setString(6, consumerAppDO.getApplicationName());
@@ -157,12 +164,16 @@ public class OAuthAppDAO {
                     IdentityDatabaseUtil.commitTransaction(connection);
                 } catch (SQLException e1) {
                     IdentityDatabaseUtil.rollbackTransaction(connection);
+                    if (isDuplicateClient(e1)) {
+                        String msg = "An application with the same clientId already exists.";
+                        throw new IdentityOAuthClientException(Error.DUPLICATE_OAUTH_CLIENT.getErrorCode(), msg, e1);
+                    }
                     throw handleError(String.format("Error when executing SQL to create OAuth app %s@%s ",
-                            consumerAppDO.getApplicationName(), consumerAppDO.getUser().getTenantDomain()), e1);
+                            consumerAppDO.getApplicationName(), appOwner.getTenantDomain()), e1);
                 }
             } catch (SQLException e) {
                 throw handleError(String.format("Error when executing SQL to create OAuth app %s@%s ",
-                        consumerAppDO.getApplicationName(), consumerAppDO.getUser().getTenantDomain()), e);
+                        consumerAppDO.getApplicationName(), appOwner.getTenantDomain()), e);
             } catch (IdentityOAuth2Exception e) {
                 throw handleError("Error occurred while processing the client id and client secret by " +
                         "TokenPersistenceProcessor", null);
@@ -170,9 +181,16 @@ public class OAuthAppDAO {
                 throw handleError("Error occurred while processing client id", e);
             }
         } else {
-            String message = "Error when adding the application. An application with the same name already exists.";
-            throw handleError(message, null);
+            String msg = "An application with the same name already exists.";
+            throw new IdentityOAuthClientException(Error.DUPLICATE_OAUTH_CLIENT.getErrorCode(), msg);
         }
+    }
+
+    private boolean isDuplicateClient(SQLException e) {
+        // We detect constraint violations in JDBC drivers which don't throw SQLIntegrityConstraintViolationException
+        // by looking at the error message.
+        return e instanceof SQLIntegrityConstraintViolationException ||
+                StringUtils.containsIgnoreCase(e.getMessage(), CONSUMER_KEY_CONSTRAINT);
     }
 
     public String[] addOAuthConsumer(String username, int tenantId, String userDomain) throws
@@ -471,33 +489,48 @@ public class OAuthAppDAO {
 
     private boolean validateUserForOwnerUpdate(OAuthAppDO oAuthAppDO) throws IdentityOAuthAdminException {
 
-        try {
-            String userName = null;
-            String usernameWithDomain = null;
-            if (oAuthAppDO.getAppOwner() != null) {
-                userName = oAuthAppDO.getAppOwner().getUserName();
-                if (StringUtils.isEmpty(userName) || CarbonConstants.REGISTRY_SYSTEM_USERNAME.equals(userName)) {
-                    return false;
-                }
-                String domainName = oAuthAppDO.getAppOwner().getUserStoreDomain();
-                usernameWithDomain = UserCoreUtil.addDomainToName(userName, domainName);
-            }
-
-            UserRealm realm = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUserRealm();
-            if (realm == null || StringUtils.isEmpty(usernameWithDomain)) {
+        String userName = null;
+        String domainName = null;
+        if (oAuthAppDO.getAppOwner() != null) {
+            userName = oAuthAppDO.getAppOwner().getUserName();
+            if (StringUtils.isEmpty(userName) || CarbonConstants.REGISTRY_SYSTEM_USERNAME.equals(userName)) {
                 return false;
             }
-
-            boolean isUserExist = realm.getUserStoreManager().isExistingUser(usernameWithDomain);
-            if (!isUserExist) {
-                throw new IdentityOAuthAdminException("User validation failed for owner update in the application: " +
-                        oAuthAppDO.getApplicationName() + " as user is not existing.");
-            }
-        } catch (UserStoreException e) {
-            throw handleError("User validation failed for owner update in the application: " +
-                    oAuthAppDO.getApplicationName(), e);
+            domainName = oAuthAppDO.getAppOwner().getUserStoreDomain();
         }
-        return true;
+       return isUserExists(userName, domainName);
+    }
+
+    private boolean isUserExists(String userName, String domainName) throws IdentityOAuthAdminException {
+
+        String usernameWithDomain = UserCoreUtil.addDomainToName(userName, domainName);
+        try {
+            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            Optional<User> user = OAuthUtil.getUser(tenantDomain, usernameWithDomain);
+            return user.isPresent();
+        } catch (IdentityApplicationManagementException e) {
+            throw handleError("Error while checking user existence of user: " + usernameWithDomain, e);
+        }
+    }
+
+    /**
+     * Validate existence before oauth application update.
+     *
+     * @param serviceProvider Service Provider.
+     * @return Whether app owner is valid.
+     * @throws IdentityOAuthAdminException When error occurred while validating app owner.
+     */
+    private boolean validateUserForOwnerUpdate(ServiceProvider serviceProvider) throws IdentityOAuthAdminException {
+
+        if (serviceProvider.getOwner() == null) {
+            return false;
+        }
+        String userName = serviceProvider.getOwner().getUserName();
+        if (StringUtils.isEmpty(userName) || CarbonConstants.REGISTRY_SYSTEM_USERNAME.equals(userName)) {
+            return false;
+        }
+        String domainName = serviceProvider.getOwner().getUserStoreDomain();
+        return isUserExists(userName, domainName);
     }
 
     private String getSqlQuery(boolean isUserValidForOwnerUpdate) {
@@ -615,7 +648,7 @@ public class OAuthAppDAO {
                 preparedStatementForPropertyUpdate);
 
         if (TOKEN_BINDING_TYPE_NONE.equalsIgnoreCase(oauthAppDO.getTokenBindingType())) {
-            oauthAppDO.setTokenType(null);
+            oauthAppDO.setTokenBindingType(null);
         }
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, TOKEN_BINDING_TYPE,
                 oauthAppDO.getTokenBindingType(), prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
@@ -675,8 +708,8 @@ public class OAuthAppDAO {
                                                  PreparedStatement preparedStatement,
                                                  String propertyKey,
                                                  String propertyValue) throws SQLException {
-        preparedStatement.setInt(1, tenantId);
-        preparedStatement.setString(2, consumerKey);
+        preparedStatement.setString(1, consumerKey);
+        preparedStatement.setInt(2, tenantId);
         preparedStatement.setString(3, propertyKey);
         preparedStatement.setString(4, propertyValue);
         preparedStatement.addBatch();
@@ -688,8 +721,8 @@ public class OAuthAppDAO {
                                                  String propertyKey,
                                                  String propertyValue) throws SQLException {
         preparedStatement.setString(1, propertyValue);
-        preparedStatement.setInt(2, tenantId);
-        preparedStatement.setString(3, consumerKey);
+        preparedStatement.setString(2, consumerKey);
+        preparedStatement.setInt(3, tenantId);
         preparedStatement.setString(4, propertyKey);
         preparedStatement.addBatch();
     }
@@ -772,6 +805,35 @@ public class OAuthAppDAO {
             }
         } catch (SQLException e) {
             throw new IdentityApplicationManagementException("Error while executing the SQL statement.", e);
+        }
+    }
+
+    /**
+     * Update app name and owner in oauth client if the app owner is valid, Otherwise update only the app name.
+     *
+     * @param serviceProvider Service provider.
+     * @param consumerKey     Consumer key of the Oauth app.
+     * @throws IdentityApplicationManagementException Error while updating Oauth app details.
+     * @throws IdentityOAuthAdminException            Error occurred while validating app owner.
+     */
+    public void updateOAuthConsumerApp(ServiceProvider serviceProvider, String consumerKey)
+            throws IdentityApplicationManagementException, IdentityOAuthAdminException {
+
+        if (validateUserForOwnerUpdate(serviceProvider)) {
+            try (Connection connection = IdentityDatabaseUtil.getDBConnection(true);
+                 PreparedStatement statement = connection.prepareStatement(
+                         SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_CLIENT_WITH_OWNER)) {
+                    statement.setString(1, serviceProvider.getApplicationName());
+                    statement.setString(2, serviceProvider.getOwner().getUserName());
+                    statement.setString(3, serviceProvider.getOwner().getUserStoreDomain());
+                    statement.setString(4, consumerKey);
+                    statement.execute();
+                    IdentityDatabaseUtil.commitTransaction(connection);
+            } catch (SQLException e) {
+                throw new IdentityApplicationManagementException("Error while executing the SQL statement.", e);
+            }
+        } else {
+            updateOAuthConsumerApp(serviceProvider.getApplicationName(), consumerKey);
         }
     }
 
@@ -893,8 +955,8 @@ public class OAuthAppDAO {
         ResultSet rSetAudiences = null;
         try {
             prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_SP_OIDC_PROPERTY);
-            prepStmt.setInt(1, IdentityTenantUtil.getTenantId(tenantDomain));
-            prepStmt.setString(2, consumerKey);
+            prepStmt.setString(1, consumerKey);
+            prepStmt.setInt(2, IdentityTenantUtil.getTenantId(tenantDomain));
             prepStmt.setString(3, OPENID_CONNECT_AUDIENCE);
             rSetAudiences = prepStmt.executeQuery();
             while (rSetAudiences.next()) {
@@ -942,8 +1004,8 @@ public class OAuthAppDAO {
 
         try (PreparedStatement prepStmt =
                      connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_ALL_SP_OIDC_PROPERTIES)) {
-            prepStmt.setInt(1, IdentityTenantUtil.getTenantId(tenantDomain));
-            prepStmt.setString(2, consumerKey);
+            prepStmt.setString(1, consumerKey);
+            prepStmt.setInt(2, IdentityTenantUtil.getTenantId(tenantDomain));
             prepStmt.execute();
         }
     }
@@ -1160,7 +1222,7 @@ public class OAuthAppDAO {
                     RENEW_REFRESH_TOKEN, consumerAppDO.getRenewRefreshTokenEnabled());
 
             if (TOKEN_BINDING_TYPE_NONE.equalsIgnoreCase(consumerAppDO.getTokenBindingType())) {
-                consumerAppDO.setTokenType(null);
+                consumerAppDO.setTokenBindingType(null);
             }
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty, TOKEN_BINDING_TYPE,
                     consumerAppDO.getTokenBindingType());
@@ -1203,8 +1265,8 @@ public class OAuthAppDAO {
         ResultSet spOIDCPropertyResultSet = null;
         try {
             prepStatement = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_ALL_SP_OIDC_PROPERTIES);
-            prepStatement.setInt(1, IdentityTenantUtil.getTenantId(spTenantDomain));
-            prepStatement.setString(2, consumerKey);
+            prepStatement.setString(1, consumerKey);
+            prepStatement.setInt(2, IdentityTenantUtil.getTenantId(spTenantDomain));
 
             spOIDCPropertyResultSet = prepStatement.executeQuery();
             while (spOIDCPropertyResultSet.next()) {
@@ -1293,9 +1355,9 @@ public class OAuthAppDAO {
     }
 
     private void handleRequestForANonExistingConsumerKey(String consumerKey) throws InvalidOAuthClientException {
-        String message = "Cannot find an application associated with the given consumer key : " + consumerKey;
+        String message = "application.not.found";
         if (LOG.isDebugEnabled()) {
-            LOG.debug(message);
+            LOG.debug("Cannot find an application associated with the given consumer key: " + consumerKey);
         }
         throw new InvalidOAuthClientException(message);
     }

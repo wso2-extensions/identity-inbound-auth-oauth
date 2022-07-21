@@ -26,6 +26,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -37,9 +38,12 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener;
 import org.wso2.carbon.identity.oauth.listener.IdentityOauthEventHandler;
 import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
+import org.wso2.carbon.identity.oauth.listener.OAuthTokenSessionMappingEventHandler;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
+import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -84,16 +88,24 @@ public class OAuthServiceComponent {
             oauthServerConfig.populateOAuthTokenIssuerMap();
 
             OAuthAdminServiceImpl oauthAdminService = new OAuthAdminServiceImpl();
-            context.getBundleContext().registerService(OAuthAdminServiceImpl.class.getName(), oauthAdminService, null);
-
             OAuthComponentServiceHolder.getInstance().setOAuthAdminService(oauthAdminService);
             OAuth2ServiceComponentHolder.getInstance().setOAuthAdminService(oauthAdminService);
+            context.getBundleContext().registerService(OAuthEventInterceptor.class,
+                    new OAuthTokenSessionMappingEventHandler(), null);
+            if (log.isDebugEnabled()) {
+                log.debug("OAuthTokenSessionMapping Event Handler is enabled");
+            }
+            context.getBundleContext().registerService(OAuthAdminServiceImpl.class.getName(), oauthAdminService, null);
+            // Note : DO NOT add any activation related code below this point,
+            // to make sure the server doesn't start up if any activation failures occur
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
             }
         } catch (Throwable e) {
-            log.error("Error occurred while activating OAuth Service Component", e);
+            String errMsg = "Error occurred while activating OAuth Service Component";
+            log.error(errMsg, e);
+            throw new RuntimeException(errMsg, e);
         }
     }
 
@@ -276,5 +288,71 @@ public class OAuthServiceComponent {
             log.debug("Removing OAuthApplicationMgtListener: " + oAuthApplicationMgtListener.getClass().getName());
         }
         OAuthComponentServiceHolder.getInstance().removeOAuthApplicationMgtListener(oAuthApplicationMgtListener);
+    }
+
+    @Reference(
+            name = "userSessionManagementService.service",
+            service = UserSessionManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetUserSessionManagementService"
+    )
+    protected void setUserSessionManagementService(UserSessionManagementService userSessionManagementService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the User Session Management Service");
+        }
+        OAuth2ServiceComponentHolder.setUserSessionManagementService(userSessionManagementService);
+    }
+
+    protected void unsetUserSessionManagementService(UserSessionManagementService userSessionManagementService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("UnSetting the User Session Management Service");
+        }
+        OAuth2ServiceComponentHolder.setUserSessionManagementService(null);
+    }
+
+    @Reference(
+            name = "RoleManagementServiceComponent",
+            service = RoleManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRoleManagementService"
+    )
+    private void setRoleManagementService(RoleManagementService roleManagementService) {
+
+        OAuthComponentServiceHolder.getInstance().setRoleManagementService(roleManagementService);
+    }
+
+    private void unsetRoleManagementService(RoleManagementService roleManagementService) {
+
+        OAuthComponentServiceHolder.getInstance().setRoleManagementService(null);
+    }
+
+    @Reference(
+            name = "organization.user.resident.resolver.service",
+            service = OrganizationUserResidentResolverService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationUserResidentResolverService"
+    )
+    protected void setOrganizationUserResidentResolverService(
+            OrganizationUserResidentResolverService organizationUserResidentResolverService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the organization user resident resolver service.");
+        }
+        OAuthComponentServiceHolder.getInstance().setOrganizationUserResidentResolverService(
+                organizationUserResidentResolverService);
+    }
+
+    protected void unsetOrganizationUserResidentResolverService(
+            OrganizationUserResidentResolverService organizationUserResidentResolverService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unset organization user resident resolver service.");
+        }
+        OAuthComponentServiceHolder.getInstance().setOrganizationUserResidentResolverService(null);
     }
 }

@@ -18,7 +18,8 @@
 
 package org.wso2.carbon.identity.oidc.session.cache;
 
-import org.wso2.carbon.identity.application.common.cache.CacheEntry;
+
+import org.wso2.carbon.identity.core.cache.CacheEntry;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;

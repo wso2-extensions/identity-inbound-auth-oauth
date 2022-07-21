@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth.util;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.oauth.cache.CacheKey;
+import org.wso2.carbon.identity.core.cache.CacheKey;
 
 /**
  * User claim cache key.
@@ -57,6 +57,7 @@ public class ClaimCacheKey extends CacheKey {
 
     @Override
     public String toString() {
+
         String result = authenticatedUser != null ? authenticatedUser.toString() : null;
         return "ClaimCacheKey{" +
                 "authenticatedUser='" + result + '\'' +

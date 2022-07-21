@@ -23,7 +23,6 @@ import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 
 import java.util.Random;
 
@@ -32,6 +31,8 @@ public class GenerateKeysTest extends PowerMockTestCase {
     private static final int NUMBER_OF_KEYS_GENERATED = 10;
     private static final int MIN_KEY_LENGTH = 1;
     private static final int MAX_KEY_LENGTH = 10;
+    private static final int DEFAULT_KEY_LENGTH = 6;
+    private static final String DEFAULT_KEY_SET = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
 
     @DataProvider(name = "provideKeyLengths")
     public Object[][] provideKeyLengths() {
@@ -44,11 +45,12 @@ public class GenerateKeysTest extends PowerMockTestCase {
     public void testGetKey(int[] keyLengths) throws Exception {
 
         // First, test zero length scenario.
-        Assert.assertEquals(StringUtils.EMPTY, GenerateKeys.getKey(0));
+        Assert.assertNotEquals(StringUtils.EMPTY, GenerateKeys.getKey(0));
 
         for (int keyLength : keyLengths) {
-            String generatedKey = GenerateKeys.getKey(keyLength);
-            Assert.assertTrue(validateKey(generatedKey, keyLength));
+            int length = Math.max(keyLength, DEFAULT_KEY_LENGTH);
+            String generatedKey = GenerateKeys.getKey(length);
+            Assert.assertTrue(validateKey(generatedKey, length));
         }
     }
 
@@ -58,7 +60,7 @@ public class GenerateKeysTest extends PowerMockTestCase {
             return false;
         }
         for (char eachCharacter : generatedKey.toCharArray()) {
-            if (!StringUtils.contains(Constants.KEY_SET, eachCharacter)) {
+            if (!StringUtils.contains(DEFAULT_KEY_SET, eachCharacter)) {
                 return false;
             }
         }

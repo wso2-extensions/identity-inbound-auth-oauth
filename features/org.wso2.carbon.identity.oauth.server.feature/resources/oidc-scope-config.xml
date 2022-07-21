@@ -1,5 +1,5 @@
 <!--
-~ Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+~ Copyright (c) 2021, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
 ~
 ~ WSO2 Inc. licenses this file to you under the Apache License,
 ~ Version 2.0 (the "License"); you may not use this file except
@@ -16,22 +16,19 @@
 ~ under the License.
 -->
 <Scopes>
-    <Scope id="openid">
-        <Claim>
-            sub,email,email_verified,name,family_name,given_name,middle_name,nickname,preferred_username,upn,groups,profile,picture,website,gender,birthdate,zoneinfo,locale,updated_at,phone_number,phone_number_verified,address,street_address,country,formatted,postal_code,locality,region
-        </Claim>
+    <Scope id="openid" displayName="Open ID" description="Indicate the use of OpenID Connect protocol.">
     </Scope>
-    <Scope id="email">
+    <Scope id="email" displayName="Email" description="View information related to email address of the user.">
         <Claim>email,email_verified</Claim>
     </Scope>
-    <Scope id="profile">
-        <Claim>name,family_name,given_name,middle_name,nickname,preferred_username,profile,picture,website,gender,birthdate,zoneinfo,locale,updated_at
+    <Scope id="profile" displayName="Profile" description="Retrieve profile information of the user.">
+        <Claim>name,family_name,given_name,middle_name,nickname,preferred_username,profile,picture,website,gender,birthdate,zoneinfo,locale,updated_at,username
         </Claim>
     </Scope>
-    <Scope id="phone">
+    <Scope id="phone" displayName="Phone" description="View information related to phone number of the user.">
         <Claim>phone_number,phone_number_verified</Claim>
     </Scope>
-    <Scope id="address">
-        <Claim>address,street_address</Claim>
+    <Scope id="address" displayName="Address" description="View the address of the user.">
+        <Claim>address,street_address,locality,region,postal_code,country</Claim>
     </Scope>
 </Scopes>

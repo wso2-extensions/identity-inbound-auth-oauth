@@ -22,6 +22,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -36,8 +39,13 @@ import org.wso2.carbon.user.api.UserStoreException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 
 /**
  * Utility functions related to OAuth 2 scopes.
@@ -46,6 +54,8 @@ public class Oauth2ScopeUtils {
 
     private static final Log log = LogFactory.getLog(Oauth2ScopeUtils.class);
     public static final String OAUTH_APP_DO_PROPERTY_NAME = "OAuthAppDO";
+    private static final String OAUTH_ENABLE_SYSTEM_LEVEL_INTERNAL_SYSTEM_SCOPE_MANAGEMENT =
+            "OAuth.EnableSystemLevelInternalSystemScopeManagement";
 
     public static IdentityOAuth2ScopeServerException generateServerException(Oauth2ScopeConstants.ErrorMessages
                                                                                 error, String data)
@@ -269,10 +279,69 @@ public class Oauth2ScopeUtils {
                 }
                 appScopeValidators.remove(validator.getValidatorName());
                 if (!isValid) {
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                        Map<String, Object> configs = new HashMap<>();
+                        configs.put("applicationScopeValidator", validator.getValidatorName());
+                        Map<String, Object> params = new HashMap<>();
+                        if (authzReqMessageContext != null) {
+                            params.put("clientId", authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey());
+                            if (ArrayUtils.isNotEmpty(authzReqMessageContext.getAuthorizationReqDTO().getScopes())) {
+                                List<String> scopes =
+                                        Arrays.asList(authzReqMessageContext.getAuthorizationReqDTO().getScopes());
+                                params.put("scopes", scopes);
+                            }
+                        } else {
+                            params.put("clientId", tokenReqMsgContext.getOauth2AccessTokenReqDTO().getClientId());
+                            if (ArrayUtils.isNotEmpty(tokenReqMsgContext.getOauth2AccessTokenReqDTO().getScope())) {
+                                List<String> scopes =
+                                        Arrays.asList(tokenReqMsgContext.getOauth2AccessTokenReqDTO().getScope());
+                                params.put("scopes", scopes);
+                            }
+                        }
+                        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                                OAuthConstants.LogConstants.FAILED,
+                                "Scope validation failed against the configured application scope validator.",
+                                "validate-scope", configs);
+                    }
                     return false;
                 }
             }
         }
         return true;
+    }
+
+    /**
+     * Configuration to maintain backward compatibility to manage the internal system scope - permission
+     * binding per tenant. By default this will be System level.
+     *
+     * @return  The internal scopes maintained at System level or not (maintained at tenant level).
+     */
+    public static boolean isSystemLevelInternalSystemScopeManagementEnabled() {
+
+        String property = IdentityUtil.getProperty(OAUTH_ENABLE_SYSTEM_LEVEL_INTERNAL_SYSTEM_SCOPE_MANAGEMENT);
+        if (StringUtils.isNotEmpty(property)) {
+            return Boolean.parseBoolean(property);
+        }
+        return true;
+    }
+
+    /**
+     * Iterate through the scopes array to filter out the internal scopes.
+     * @param scopes String array of scopes.
+     * @return String array with internal scopes. Return an empty array if there's not any internal scopes in the
+     * given scopes array.
+     */
+    public static String[] getRequestedScopes(String[] scopes) {
+
+        List<String> requestedScopes = new ArrayList<>();
+        if (ArrayUtils.isEmpty(scopes)) {
+            return ArrayUtils.EMPTY_STRING_ARRAY;
+        }
+        for (String scope : scopes) {
+            if (scope.startsWith(INTERNAL_SCOPE_PREFIX) || scope.equalsIgnoreCase(SYSTEM_SCOPE)) {
+                requestedScopes.add(scope);
+            }
+        }
+        return requestedScopes.toArray(new String[0]);
     }
 }

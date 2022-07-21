@@ -22,15 +22,20 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeValidationResult;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -41,7 +46,11 @@ import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForToken;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserId;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTimeToExpire;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validatePKCE;
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.CODE_ID;
@@ -80,7 +89,6 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                     ", authorized user : " + authzCodeBean.getAuthorizedUser() +
                     ", scope : " + OAuth2Util.buildScopeString(authzCodeBean.getScope()));
         }
-
         return true;
     }
 
@@ -115,6 +123,15 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             if (log.isDebugEnabled()) {
                 log.debug("Received callback url in the request : " + callbackUrlFromRequest +
                         " is not matching with persisted callback url " + callbackUrlFromPersistedAuthzCode);
+            }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("callbackUrlInRequest", callbackUrlFromRequest);
+                Map<String, Object> configs = new HashMap<>();
+                configs.put("applicationCallbackUrl", callbackUrlFromPersistedAuthzCode);
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED, "Received callback URL does not match with the persisted.",
+                        "validate-input-parameters", configs);
             }
             throw new IdentityOAuth2Exception("Callback url mismatch");
         }
@@ -257,7 +274,11 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                         .getAccessTokenByTokenId(validationResult.getTokenId());
                 //revoking access token issued for authorization code as per RFC 6749 Section 4.1.2
                 revokeExistingAccessTokens(validationResult.getTokenId(), validationResult.getAuthzCodeDO());
+
                 clearTokenCache(tokenAlias, validationResult.getTokenId());
+                String scope = OAuth2Util.buildScopeString(validationResult.getAuthzCodeDO().getScope());
+                OAuthUtil.clearOAuthCache(tokenReqDTO.getClientId(), validationResult.getAuthzCodeDO().
+                        getAuthorizedUser(), scope);
             }
             return validationResult.getAuthzCodeDO();
         } else {
@@ -268,8 +289,23 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     }
 
     private void revokeExistingAccessTokens(String tokenId, AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception {
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessToken(tokenId, authzCodeDO
-                .getAuthorizedUser().toString());
+
+        String userId = null;
+        try {
+            userId = authzCodeDO.getAuthorizedUser().getUserId();
+        } catch (UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception("User id not found for user: "
+                    + authzCodeDO.getAuthorizedUser().getLoggableUserId(), e);
+        }
+        String accessToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                .getAccessTokenByTokenId(tokenId);
+        // Fetching AccessTokenDO from DB before revoking the token.
+        AccessTokenDO accessTokenDO = null;
+        if (StringUtils.isNotBlank(accessToken)) {
+            accessTokenDO = OAuth2Util.getAccessTokenDOFromTokenIdentifier(accessToken, true);
+        }
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessToken(tokenId, userId);
+        clearAccessTokenOAuthCache(accessTokenDO);
 
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)) {
@@ -281,13 +317,39 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                         "active. So revoking the access tokens issued for the authorization code.");
             }
         }
+        invokePostAccessTokenRevocationListeners(accessTokenDO);
     }
 
-    private String buildCacheKeyForToken(String clientId, AuthzCodeDO authzCodeDO) {
+    /**
+     * Invokes Post Access Token Revocation Listeners
+     * @param accessTokenDO nullable AccessTokenDO
+     */
+    private void invokePostAccessTokenRevocationListeners(AccessTokenDO accessTokenDO) {
+
+        if (accessTokenDO == null) {
+            return;
+        }
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            try {
+                oAuthEventInterceptorProxy.onPostTokenRevocationBySystem(accessTokenDO, new HashMap<>());
+            } catch (IdentityOAuth2Exception e) {
+                log.error("Error occurred when invoking post access token revoke listener. ", e);
+            }
+        }
+    }
+
+    private String buildCacheKeyForToken(String clientId, AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception {
 
         String scope = OAuth2Util.buildScopeString(authzCodeDO.getScope());
-        return buildCacheKeyStringForToken(clientId, scope, authzCodeDO.getAuthorizedUser().toString(),
-                authzCodeDO.getAuthorizedUser().getFederatedIdPName(), authzCodeDO.getTokenBindingReference());
+        try {
+            return buildCacheKeyStringForTokenWithUserId(clientId, scope, authzCodeDO.getAuthorizedUser().getUserId(),
+                    authzCodeDO.getAuthorizedUser().getFederatedIdPName(), authzCodeDO.getTokenBindingReference());
+        } catch (UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception("User id not available for user: "
+                    + authzCodeDO.getAuthorizedUser().getLoggableUserId(), e);
+        }
     }
 
     /**
@@ -301,27 +363,62 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
      */
     private boolean validateAuthzCodeFromRequest(AuthzCodeDO authzCodeBean, String clientId, String authzCode)
             throws IdentityOAuth2Exception {
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("clientId", clientId);
+        params.put("authorizationCode", authzCode);
+
         if (authzCodeBean == null) {
             // If no auth code details available, cannot proceed with Authorization code grant
             if (log.isDebugEnabled()) {
                 log.debug("Invalid token request for client id: " + clientId +
                         "and couldn't find persisted data for authorization code: " + authzCode);
             }
-           throw new IdentityOAuth2Exception("Invalid authorization code received from token request");
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED,
+                        "Invalid authorization code received. Couldn't find persisted data for authorization code.",
+                        "validate-authz-code", null);
+            }
+            throw new IdentityOAuth2Exception("Invalid authorization code received from token request");
         }
 
         if (isInactiveAuthzCode(authzCodeBean)) {
             clearTokenCache(authzCodeBean, clientId);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED, "Inactive authorization code received.",
+                        "validate-authz-code", null);
+            }
             throw new IdentityOAuth2Exception("Inactive authorization code received from token request");
         }
 
         if (isAuthzCodeExpired(authzCodeBean) || isAuthzCodeRevoked(authzCodeBean)) {
+            if (isAuthzCodeExpired(authzCodeBean)) {
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.FAILED, "Expired authorization code received.",
+                            "validate-authz-code", null);
+                }
+            } else if (isAuthzCodeRevoked(authzCodeBean)) {
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.FAILED, "Revoked authorization code received.",
+                            "validate-authz-code", null);
+                }
+            }
             throw new IdentityOAuth2Exception("Expired or Revoked authorization code received from token request");
+        }
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                    OAuthConstants.LogConstants.SUCCESS, "Authorization code validation is successful.",
+                    "validate-authz-code", null);
         }
         return true;
     }
 
-    private void clearTokenCache(AuthzCodeDO authzCodeBean, String clientId) {
+    private void clearTokenCache(AuthzCodeDO authzCodeBean, String clientId) throws IdentityOAuth2Exception {
+
         if (cacheEnabled) {
             String cacheKeyString = buildCacheKeyForToken(clientId, authzCodeBean);
             OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(cacheKeyString));
@@ -473,6 +570,35 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             return OAuth2Util.getAppInformationByClientId(clientId);
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for client: " + clientId);
+        }
+    }
+
+    /**
+     * Method to remove access token cache entries from the OAuthCache
+     *
+     * @param accessTokenDO AccessTokenDO
+     */
+    private void clearAccessTokenOAuthCache(AccessTokenDO accessTokenDO) {
+
+        if (cacheEnabled && accessTokenDO != null) {
+            // remove the access token from the cache.
+            String tokenBindingReference = NONE;
+            if (accessTokenDO.getTokenBinding() != null &&
+                    StringUtils.isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
+                tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
+            }
+
+            OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
+                    OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
+            OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
+                    OAuth2Util.buildScopeString(accessTokenDO.getScope()));
+            OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
+            OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
+
+            if (log.isDebugEnabled()) {
+                log.debug("The access token issued for client " + accessTokenDO.getConsumerKey() +
+                        " was removed from the cache.");
+            }
         }
     }
 }

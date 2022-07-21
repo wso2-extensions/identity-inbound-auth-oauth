@@ -53,7 +53,6 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -234,7 +233,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         User owner = serviceProvider.getOwner();
                         OAuthAppDO oAuthAppDO = marshelOAuthDO(authConfig.getInboundConfiguration(),
                                 serviceProvider.getApplicationName(), owner.getTenantDomain());
-                        oAuthAppDO.setAppOwner(buildAuthenticatedUser(owner));
+                        oAuthAppDO.setAppOwner(new AuthenticatedUser(owner));
 
                         OAuthConsumerAppDTO oAuthConsumerAppDTO = OAuthUtil.buildConsumerAppDTO(oAuthAppDO);
                         OAuthAppDAO dao = new OAuthAppDAO();
@@ -364,7 +363,14 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                             Property[] props = inboundRequestConfig.getProperties();
                             Property property = new Property();
                             property.setName(OAUTH2_CONSUMER_SECRET);
-                            property.setValue(getClientSecret(inboundRequestConfig.getInboundAuthKey()));
+                            String clientSecret = null;
+                            try {
+                                clientSecret = OAuth2Util.getClientSecret(inboundRequestConfig.getInboundAuthKey());
+                            } catch (InvalidOAuthClientException e) {
+                                log.warn("The OAuth application data not exists for " +
+                                        inboundRequestConfig.getInboundAuthKey());
+                            }
+                            property.setValue(clientSecret);
                             props = (Property[]) ArrayUtils.add(props, property);
                             inboundRequestConfig.setProperties(props);
                             continue; // we are interested only on oauth2 config. Only one will be present.
@@ -378,21 +384,15 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             } else {
                 //nothing to do
             }
-        } catch (IdentityOAuthAdminException e) {
+        } catch (IdentityOAuth2Exception e) {
             throw new IdentityApplicationManagementException("Injecting client secret failed.", e);
         }
-
 
         return;
     }
 
-    private String getClientSecret(String inboundAuthKey) throws IdentityOAuthAdminException {
-        OAuthConsumerDAO dao = new OAuthConsumerDAO();
-        return dao.getOAuthConsumerSecret(inboundAuthKey);
-    }
-
     /**
-     * Update the application name if OAuth application presents.
+     * Update the application name and owner if OAuth application presents.
      *
      * @param serviceProvider Service provider
      * @throws IdentityApplicationManagementException
@@ -420,8 +420,11 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         }
 
         OAuthAppDAO dao = new OAuthAppDAO();
-        dao.updateOAuthConsumerApp(serviceProvider.getApplicationName(),
-                authenticationRequestConfigConfig.getInboundAuthKey());
+        try {
+            dao.updateOAuthConsumerApp(serviceProvider, authenticationRequestConfigConfig.getInboundAuthKey());
+        } catch (IdentityOAuthAdminException e) {
+            throw new IdentityApplicationManagementException("Error occurred while updating oauth consumer app.", e);
+        }
     }
 
     private void removeEntriesFromCache(Set<String> consumerKeys) throws IdentityOAuth2Exception {
@@ -725,21 +728,6 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         "server configuration. ", validator));
             }
         });
-    }
-
-    /**
-     * Creates authenticated user obj from user obj.
-     *
-     * @param user user
-     * @return authenticated user
-     */
-    private AuthenticatedUser buildAuthenticatedUser(User user) {
-
-        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-        authenticatedUser.setUserName(user.getUserName());
-        authenticatedUser.setTenantDomain(user.getTenantDomain());
-        authenticatedUser.setUserStoreDomain(user.getUserStoreDomain());
-        return authenticatedUser;
     }
 
     /**

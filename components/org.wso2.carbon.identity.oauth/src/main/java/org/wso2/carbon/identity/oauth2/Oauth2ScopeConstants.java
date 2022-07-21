@@ -29,7 +29,9 @@ public class Oauth2ScopeConstants {
     public static final String SYSTEM_SCOPE = "SYSTEM";
     public static final String SCOPE_TYPE_OAUTH2 = "OAUTH2";
     public static final String SCOPE_TYPE_OIDC = "OIDC";
-
+    public static final String CONSOLE_SCOPE_PREFIX = "console:";
+    public static final String INTERNAL_SCOPE_PREFIX = "internal_";
+    public static final String CORRELATION_ID_MDC = "Correlation-ID";
 
     /**
      * Enums for error messages.
@@ -51,6 +53,8 @@ public class Oauth2ScopeConstants {
         ERROR_CODE_NOT_AUTHORIZED_DELETE_INTERNAL_SCOPE("41010", "User %s is not authorized to delete internal scopes"),
         ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SATIFIED_THE_REGEX("41011", "Invalid scope name. Scope name %s cannot " +
                 "contain special characters ?,#,/,( or )"),
+        ERROR_CODE_INTERNAL_SCOPE_MANAGED_AT_SYSTEM_LEVEL("41012", "The internal scopes are managed at " +
+                "system level"),
         ERROR_CODE_FAILED_TO_REGISTER_SCOPE("51001", "Error occurred while registering scope %s."),
         ERROR_CODE_FAILED_TO_GET_ALL_SCOPES("51002", "Error occurred while retrieving all available scopes."),
         ERROR_CODE_FAILED_TO_GET_SCOPE_BY_NAME("51003", "Error occurred while retrieving scope %s."),
@@ -59,7 +63,23 @@ public class Oauth2ScopeConstants {
         ERROR_CODE_FAILED_TO_GET_ALL_SCOPES_PAGINATION("51006",
                 "Error occurred while retrieving scopes with pagination."),
         ERROR_CODE_UNEXPECTED("51007", "Unexpected error"),
-        ERROR_CODE_FAILED_TO_GET_REQUESTED_SCOPES("51008", "Error occurred while retrieving requested scopes.");
+        ERROR_CODE_FAILED_TO_GET_REQUESTED_SCOPES("51008", "Error occurred while retrieving requested scopes."),
+        ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS_FOR_APP("51009", "Error occurred while retrieving " +
+                "user consent for OAuth scopes for user : %s, application : %s and tenant Id : %d."),
+        ERROR_CODE_FAILED_TO_RETRIEVE_USER_CONSENTS("51010", "Error occurred while retrieving " +
+                "user consents for OAuth scopes for user : %s in tenant with tenant Id : %d."),
+        ERROR_CODE_FAILED_TO_ADD_USER_CONSENT_FOR_APP("51011", "Error occurred while adding " +
+                "user consent for OAuth scopes for user : %s, application : %s and tenant Id : %d."),
+        ERROR_CODE_FAILED_TO_UPDATE_USER_CONSENT_FOR_APP("51012", "Error occurred while updating " +
+                "user consent for OAuth scopes for user : %s, application : %s and tenant Id : %d."),
+        ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT_FOR_APP("51013", "Error occurred while revoking " +
+                "user consent for OAuth scopes for user : %s, application : %s and tenant Id : %d."),
+        ERROR_CODE_FAILED_TO_REVOKE_USER_CONSENT("51014", "Error occurred while revoking " +
+                "user consent for OAuth scopes for user : %s in tenant with tenant Id : %d."),
+        ERROR_CODE_FAILED_TO_CHECK_ALREADY_USER_CONSENTED("51015", "Error occurred while checking " +
+                "whether user : %s is already consented for all scopes for application : %s in tenant with Id : %d."),
+        ERROR_CODE_FAILED_TO_CHECK_EXISTING_CONSENTS_FOR_USER("51016", "Error occurred while checking " +
+                "whether user : %s has an existing consent for app : %s in tenant with id : %d");
 
         private final String code;
         private final String message;
@@ -93,6 +113,7 @@ public class Oauth2ScopeConstants {
         public static final String LIMIT = "limit";
         public static final String OFFSET = "offset";
         public static final String SCOPE_TYPE = "scope_type";
+        public static final String SCOPE_LIST_PLACEHOLDER = "_SCOPE_LIST_";
     }
 
     /**

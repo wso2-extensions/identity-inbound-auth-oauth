@@ -35,7 +35,6 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -45,13 +44,12 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.test.common.testng.utils.MockAuthenticatedUser;
 import org.wso2.carbon.identity.testutil.Whitebox;
 
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
@@ -69,7 +67,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UNASSIGNED_VA
 @WithH2Database(files = { "dbScripts/identity.sql" })
 public class RefreshGrantHandlerTest {
 
-    private static final String TEST_CLIENT_ID = "SDSDSDS23131231";
     private static final String TEST_USER_ID = "testUser";
     private static final String TEST_USER_DOMAIN = "testDomain";
     private RefreshGrantHandler refreshGrantHandler;
@@ -95,16 +92,17 @@ public class RefreshGrantHandlerTest {
     @DataProvider(name = "GetValidateGrantData")
     public Object[][] validateGrantData() {
 
-        return new Object[][] { { "clientId1", TOKEN_STATE_ACTIVE, false }, { "clientId2", TOKEN_STATE_EXPIRED, true },
-                { "clientId2", TOKEN_STATE_ACTIVE, true } };
+        return new Object[][] {
+                { "clientId1" },
+                { "clientId2" },
+                { "clientId2" }
+        };
     }
 
     @Test(dataProvider = "GetValidateGrantData")
-    public void testValidateGrant(String clientId, String tokenState, boolean isUsernameCaseSensitive)
+    public void testValidateGrant(String clientId)
             throws Exception {
 
-        RefreshTokenValidationDataDO validationDataDO = constructValidationDataDO("accessToken1", tokenState,
-                isUsernameCaseSensitive);
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         oAuthAppDAO.removeConsumerApplication(clientId);
 
@@ -115,30 +113,6 @@ public class RefreshGrantHandlerTest {
         oAuthAppDO.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
 
         oAuthAppDAO.addOAuthApplication(oAuthAppDO);
-
-        TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
-        AccessTokenDO[] accessTokenDOS = new AccessTokenDO[2];
-        accessTokenDOS[0] = new AccessTokenDO();
-        accessTokenDOS[0].setTokenId(UUID.randomUUID().toString());
-        accessTokenDOS[0].setConsumerKey(clientId);
-        accessTokenDOS[0].setAuthzUser(authenticatedUser);
-        accessTokenDOS[0].setTokenState(TOKEN_STATE_ACTIVE);
-        accessTokenDOS[0].setRefreshToken("refreshToken1");
-        accessTokenDOS[0].setScope(scopes);
-        accessTokenDOS[0].setIssuedTime(new Timestamp(System.currentTimeMillis()));
-        accessTokenDOS[0].setRefreshTokenIssuedTime(new Timestamp(System.currentTimeMillis()));
-
-        accessTokenDOS[1] = new AccessTokenDO();
-        accessTokenDOS[1].setTokenId(UUID.randomUUID().toString());
-        accessTokenDOS[1].setConsumerKey(clientId);
-        accessTokenDOS[1].setAuthzUser(authenticatedUser);
-        accessTokenDOS[1].setTokenState(tokenState);
-        accessTokenDOS[1].setRefreshToken("refreshToken1");
-        accessTokenDOS[1].setScope(scopes);
-        accessTokenDOS[1].setIssuedTime(new Timestamp(System.currentTimeMillis()));
-        accessTokenDOS[1].setRefreshTokenIssuedTime(new Timestamp(System.currentTimeMillis()));
-        tokenMgtDAO.storeAccessToken("accessToken", clientId, accessTokenDOS[0], (AccessTokenDO) null, "PRIMARY");
-        tokenMgtDAO.storeAccessToken("accessToken", clientId, accessTokenDOS[1], accessTokenDOS[0], "PRIMARY");
 
         refreshGrantHandler = new RefreshGrantHandler();
         refreshGrantHandler.init();
@@ -190,9 +164,8 @@ public class RefreshGrantHandlerTest {
     }
 
     @Test(dataProvider = "GetTokenIssuerData")
-    public void testIssue(Long userAccessTokenExpiryTime, Long validityPeriod, boolean isValidToken, boolean isRenew,
-                          boolean checkUserNameAssertionEnabled, boolean checkAccessTokenPartitioningEnabled,
-                          boolean isUsernameCaseSensitive, String renewRefreshToken, String clientId) throws Exception {
+    public void testIssue(Long userAccessTokenExpiryTime, Long validityPeriod, String renewRefreshToken,
+                          String clientId) throws Exception {
 
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         oAuthAppDAO.removeConsumerApplication(clientId);
@@ -204,21 +177,6 @@ public class RefreshGrantHandlerTest {
         oAuthAppDO.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
         oAuthAppDO.setRenewRefreshTokenEnabled(renewRefreshToken);
         oAuthAppDAO.addOAuthApplication(oAuthAppDO);
-
-        TokenMgtDAO tokenMgtDAO = new TokenMgtDAO();
-        AccessTokenDO accessTokenDO1 = new AccessTokenDO();
-        accessTokenDO1.setTokenId(clientId);
-        accessTokenDO1.setTokenState(TOKEN_STATE_ACTIVE);
-        accessTokenDO1.setRefreshToken("refreshToken1");
-        accessTokenDO1.setAuthzUser(authenticatedUser);
-        accessTokenDO1.setScope(scopes);
-        accessTokenDO1.setIssuedTime(new Timestamp(System.currentTimeMillis()));
-        accessTokenDO1.setRefreshTokenIssuedTime(new Timestamp(System.currentTimeMillis()));
-
-        tokenMgtDAO.storeAccessToken("accessToken", clientId, accessTokenDO1, (AccessTokenDO) null, "PRIMARY");
-
-        RefreshTokenValidationDataDO validationDataDO = constructValidationDataDO("accessToken1", TOKEN_STATE_EXPIRED,
-                isUsernameCaseSensitive);
 
         refreshGrantHandler = new RefreshGrantHandler();
         refreshGrantHandler.init();
@@ -239,7 +197,7 @@ public class RefreshGrantHandlerTest {
         tokenReqMessageContext.setScope(scopes);
 
         OAuth2AccessTokenRespDTO actual = refreshGrantHandler.issue(tokenReqMessageContext);
-        assertTrue(!actual.isError());
+        assertFalse(actual.isError());
         assertNotNull(actual.getRefreshToken());
         if (Objects.equals(renewRefreshToken, "true") || (renewRefreshToken == null)) {
             assertNotEquals("refreshToken1", actual.getRefreshToken());
@@ -269,13 +227,14 @@ public class RefreshGrantHandlerTest {
     @DataProvider(name = "GetTokenIssuerData")
     public Object[][] tokenIssuerData() {
 
-        return new Object[][] { { 0L, UNASSIGNED_VALIDITY_PERIOD, true, true, true, false, false, "true", "clientId1" },
-                { 20L, UNASSIGNED_VALIDITY_PERIOD, true, true, false, true, false, "true", "clientId2" },
-                { 20L, 20L, true, false, true, true, true, "true", "clientId3" },
-                { 0L, UNASSIGNED_VALIDITY_PERIOD, false, false, true, false, false, "true", "clientId4" },
-                { 20L, 20L, true, false, true, true, true, "false", "clientId5" },
-                { 20L, 20L, true, false, true, true, true, null, "clientId6" },
-                { 20L, 20L, true, false, true, true, true, "true", "clientId7" } };
+        return new Object[][] {
+                { 0L, UNASSIGNED_VALIDITY_PERIOD, "true", "clientId1" },
+                { 20L, UNASSIGNED_VALIDITY_PERIOD, "true", "clientId2" },
+                { 20L, 20L, "true", "clientId3" },
+                { 0L, UNASSIGNED_VALIDITY_PERIOD, "true", "clientId4" },
+                { 20L, 20L, "false", "clientId5" },
+                { 20L, 20L, null, "clientId6" },
+                { 20L, 20L, "true", "clientId7" } };
     }
 
     @DataProvider(name = "GetValidateScopeData")
@@ -296,26 +255,5 @@ public class RefreshGrantHandlerTest {
                 { requestedScopes, grantedScopesWithRequestedScope, false, "scope validation should fail." },
                 { requestedScopes, new String[0], false, "scope validation should fail." },
                 { new String[] { "scope_not_granted" }, grantedScopes, false, "scope validation should fail." }, };
-    }
-
-    private RefreshTokenValidationDataDO constructValidationDataDO(String accessToken, String refreshTokenState,
-                                                                   boolean isUsernameCaseSensitive) {
-
-        RefreshTokenValidationDataDO validationDataDO = new RefreshTokenValidationDataDO();
-        validationDataDO.setAccessToken(accessToken);
-        validationDataDO.setRefreshTokenState(refreshTokenState);
-        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-        if (isUsernameCaseSensitive) {
-            authenticatedUser.setUserName("UserName");
-            authenticatedUser.setAuthenticatedSubjectIdentifier("PRIMARY/UserName");
-        } else {
-            authenticatedUser.setUserName("username");
-            authenticatedUser.setAuthenticatedSubjectIdentifier("PRIMARY/username");
-        }
-        authenticatedUser.setFederatedUser(true);
-        validationDataDO.setAuthorizedUser(authenticatedUser);
-        validationDataDO.setIssuedTime(new Timestamp(System.currentTimeMillis()));
-        validationDataDO.setValidityPeriodInMillis(10000);
-        return validationDataDO;
     }
 }

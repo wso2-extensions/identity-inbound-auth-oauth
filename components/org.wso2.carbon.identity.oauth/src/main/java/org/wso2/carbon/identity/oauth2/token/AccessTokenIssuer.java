@@ -26,8 +26,18 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ClaimConfig;
+import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -52,18 +62,25 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
+import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 
@@ -137,6 +154,16 @@ public class AccessTokenIssuer {
         OAuthClientAuthnContext oAuthClientAuthnContext = tokenReqDTO.getoAuthClientAuthnContext();
 
         if (oAuthClientAuthnContext == null) {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", tokenReqDTO.getClientId());
+                if (StringUtils.isNotBlank(tokenReqDTO.getClientSecret())) {
+                    params.put("clientSecret", tokenReqDTO.getClientSecret().replaceAll(".", "*"));
+                }
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED, "OAuth client authentication failed.", "issue-access-token",
+                        null);
+            }
             oAuthClientAuthnContext = new OAuthClientAuthnContext();
             oAuthClientAuthnContext.setAuthenticated(false);
             oAuthClientAuthnContext.setErrorMessage("Client Authentication Failed");
@@ -146,6 +173,15 @@ public class AccessTokenIssuer {
         // Will return an invalid request response if multiple authentication mechanisms are engaged irrespective of
         // whether the grant type is confidential or not.
         if (oAuthClientAuthnContext.isMultipleAuthenticatorsEngaged()) {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", tokenReqDTO.getClientId());
+                params.put("clientAuthenticators", oAuthClientAuthnContext.getExecutedAuthenticators());
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED,
+                        "The client MUST NOT use more than one authentication method per request.",
+                        "issue-access-token", null);
+            }
             tokenRespDTO = handleError(OAuth2ErrorCodes.INVALID_REQUEST, "The client MUST NOT use more than one " +
                     "authentication method in each", tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
@@ -159,6 +195,13 @@ public class AccessTokenIssuer {
             String errorMsg = "Unsupported grant type : " + grantType + ", is used.";
             if (log.isDebugEnabled()) {
                 log.debug(errorMsg);
+            }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", tokenReqDTO.getClientId());
+                params.put("grantType", grantType);
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED, "Unsupported grant type.", "issue-access-token", null);
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNSUPPORTED_GRANT_TYPE,
                     errorMsg, tokenReqDTO);
@@ -175,6 +218,13 @@ public class AccessTokenIssuer {
 
         if (!isAuthenticated && !oAuthClientAuthnContext.isPreviousAuthenticatorEngaged() && authzGrantHandler
                 .isConfidentialClient()) {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", tokenReqDTO.getClientId());
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED, "Unsupported client authentication method.",
+                        "issue-access-token", null);
+            }
             tokenRespDTO = handleError(
                     OAuth2ErrorCodes.INVALID_CLIENT,
                     "Unsupported Client Authentication Method!", tokenReqDTO);
@@ -183,6 +233,14 @@ public class AccessTokenIssuer {
             return tokenRespDTO;
         }
         if (!isAuthenticated) {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", tokenReqDTO.getClientId());
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED,
+                        "Client authentication failed. " + oAuthClientAuthnContext.getErrorMessage(),
+                        "issue-access-token", null);
+            }
             tokenRespDTO = handleError(
                     oAuthClientAuthnContext.getErrorCode(),
                     oAuthClientAuthnContext.getErrorMessage(), tokenReqDTO);
@@ -223,6 +281,8 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while validating client for authorization", e);
             }
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-access-token", null);
             error = e.getMessage();
         }
 
@@ -232,6 +292,14 @@ public class AccessTokenIssuer {
                 log.debug("Client Id: " + tokenReqDTO.getClientId() + " is not authorized to use grant type: " +
                         grantType);
             }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", tokenReqDTO.getClientId());
+                params.put("grantType", grantType);
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED, "Client is not authorized to use the requested grant type.",
+                        "issue-access-token", null);
+            }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT, error, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
@@ -239,13 +307,20 @@ public class AccessTokenIssuer {
         }
         boolean isValidGrant = false;
         error = "Provided Authorization Grant is invalid";
+        String errorCode = OAuthError.TokenResponse.INVALID_GRANT;
         try {
             isValidGrant = authzGrantHandler.validateGrant(tokReqMsgCtx);
         } catch (IdentityOAuth2Exception e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while validating grant", e);
             }
+            if (e.getErrorCode() != null) {
+                errorCode = e.getErrorCode();
+            }
             error = e.getMessage();
+            if (e.getErrorCode() != null) {
+                errorCode = e.getErrorCode();
+            }
         }
 
         if (tokReqMsgCtx.getAuthorizedUser() != null && tokReqMsgCtx.getAuthorizedUser().isFederatedUser()) {
@@ -256,7 +331,7 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid Grant provided by the client Id: " + tokenReqDTO.getClientId());
             }
-            tokenRespDTO = handleError(OAuthError.TokenResponse.INVALID_GRANT, error, tokenReqDTO);
+            tokenRespDTO = handleError(errorCode, error, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
@@ -265,7 +340,7 @@ public class AccessTokenIssuer {
         boolean isAuthorized = authzGrantHandler.authorizeAccessDelegation(tokReqMsgCtx);
         if (!isAuthorized) {
             if (log.isDebugEnabled()) {
-                log.debug("Invalid authorization for client Id = " + tokenReqDTO.getClientId());
+                log.debug("Invalid authorization for client Id : " + tokenReqDTO.getClientId());
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT,
                     "Unauthorized Client!", tokenReqDTO);
@@ -289,22 +364,77 @@ public class AccessTokenIssuer {
             tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
         }
 
-        //Execute Internal SCOPE Validation.
-        JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
-        String[] authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
+        String[] authorizedInternalScopes = new String[0];
+        boolean isManagementApp = getServiceProvider(tokenReqDTO).isManagementApp();
+        if (isManagementApp) {
+            if (log.isDebugEnabled()) {
+                log.debug("Handling the internal scope validation.");
+            }
+            // Execute Internal SCOPE Validation.
+            JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
+            authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
+            // Execute internal console scopes validation.
+            if (IdentityUtil.isSystemRolesEnabled()) {
+                RoleBasedInternalScopeValidator roleBasedInternalScopeValidator = new RoleBasedInternalScopeValidator();
+                String[] roleBasedInternalConsoleScopes = roleBasedInternalScopeValidator.validateScope(tokReqMsgCtx);
+                authorizedInternalScopes = (String[]) ArrayUtils
+                        .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Skipping the internal scope validation as the application is not" +
+                        " configured as Management App");
+            }
+        }
+
         // Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
         // Those scopes should not send to the other scopes validators.
         // Thus remove the scopes from the tokReqMsgCtx. Will be added to the response after executing
         // the other scope validators.
         removeInternalScopes(tokReqMsgCtx);
+
+        // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
+        tokReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
+
+        boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
+        if (isDropUnregisteredScopes) {
+            if (log.isDebugEnabled()) {
+                log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
+            }
+            String[] filteredScopes = OAuth2Util.dropUnregisteredScopes(
+                    tokReqMsgCtx.getScope(),
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain());
+            tokReqMsgCtx.setScope(filteredScopes);
+        }
+
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
         if (isValidScope) {
-            //Add authorized internal scopes to the request for sending in the response.
-            addAuthorizedInternalScopes(tokReqMsgCtx, authorizedInternalScopes);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", tokenReqDTO.getClientId());
+                if (ArrayUtils.isNotEmpty(tokenReqDTO.getScope())) {
+                    params.put("scope", Arrays.asList(tokenReqDTO.getScope()));
+                }
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.SUCCESS, "OAuth scope validation is successful.", "validate-scope",
+                        null);
+            }
+            // Add authorized internal scopes to the request for sending in the response.
+            addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
             addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid scope provided by client Id: " + tokenReqDTO.getClientId());
+            }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", tokenReqDTO.getClientId());
+                if (ArrayUtils.isNotEmpty(tokenReqDTO.getScope())) {
+                    params.put("scope", Arrays.asList(tokenReqDTO.getScope()));
+                }
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED, "Invalid scope provided in the request.", "validate-scope",
+                        null);
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.INVALID_SCOPE, "Invalid Scope!", tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
@@ -318,6 +448,13 @@ public class AccessTokenIssuer {
             // set the token request context to be used by downstream handlers. This is introduced as a fix for
             // IDENTITY-4111.
             OAuth2Util.setTokenRequestContext(tokReqMsgCtx);
+
+            AuthenticatedUser authorizedUser = tokReqMsgCtx.getAuthorizedUser();
+            if (authorizedUser.getAuthenticatedSubjectIdentifier() == null) {
+                authorizedUser.setAuthenticatedSubjectIdentifier(
+                        getSubjectClaim(getServiceProvider(tokReqMsgCtx.getOauth2AccessTokenReqDTO()), authorizedUser));
+            }
+
             tokenRespDTO = authzGrantHandler.issue(tokReqMsgCtx);
             if (tokenRespDTO.isError()) {
                 setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
@@ -348,7 +485,18 @@ public class AccessTokenIssuer {
             log.debug("Access token issued to client Id: " + tokenReqDTO.getClientId() + " username: " +
                     tokReqMsgCtx.getAuthorizedUser() + " and scopes: " + tokenRespDTO.getAuthorizedScopes());
         }
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("clientId", tokenReqDTO.getClientId());
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                    OAuthConstants.LogConstants.SUCCESS, "Access token issued for the application.",
+                    "issue-access-token", null);
+        }
 
+        if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
+            // Should add user attributes to the cache before building the ID token.
+            addUserAttributesAgainstAccessToken(tokenReqDTO, tokenRespDTO);
+        }
         if (tokReqMsgCtx.getScope() != null && OAuth2Util.isOIDCAuthzRequest(tokReqMsgCtx.getScope())) {
             if (log.isDebugEnabled()) {
                 log.debug("Issuing ID token for client: " + tokenReqDTO.getClientId());
@@ -356,21 +504,191 @@ public class AccessTokenIssuer {
             IDTokenBuilder builder = OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenBuilder();
             try {
                 String idToken = builder.buildIDToken(tokReqMsgCtx, tokenRespDTO);
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("clientId", tokenReqDTO.getClientId());
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.SUCCESS, "ID token issued for the application.",
+                            "issue-id-token", null);
+                }
                 tokenRespDTO.setIDToken(idToken);
             } catch (IDTokenValidationFailureException e) {
                 log.error(e.getMessage());
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("clientId", tokenReqDTO.getClientId());
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-id-token", null);
+                }
                 tokenRespDTO = handleError(OAuth2ErrorCodes.SERVER_ERROR, "Server Error", tokenReqDTO);
                 return tokenRespDTO;
             }
         }
 
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
-            addUserAttributesAgainstAccessToken(tokenReqDTO, tokenRespDTO);
             // Cache entry against the authorization code has no value beyond the token request.
             clearCacheEntryAgainstAuthorizationCode(getAuthorizationCode(tokenReqDTO));
         }
 
         return tokenRespDTO;
+    }
+
+    private ServiceProvider getServiceProvider(OAuth2AccessTokenReqDTO tokenReq) throws IdentityOAuth2Exception {
+        ServiceProvider serviceProvider;
+        try {
+            serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().getServiceProviderByClientId(
+                    tokenReq.getClientId(), OAuthConstants.Scope.OAUTH2, tokenReq.getTenantDomain());
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for client id " +
+                    tokenReq.getClientId(), e);
+        }
+        if (serviceProvider == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Could not find an application for client id: " + tokenReq.getClientId()
+                        + ", scope: " + OAuthConstants.Scope.OAUTH2 + ", tenant: " + tokenReq.getTenantDomain());
+            }
+            throw new IdentityOAuth2Exception("Service Provider not found");
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieved service provider: " + serviceProvider.getApplicationName() + " for client: " +
+                    tokenReq.getClientId() + ", scope: " + OAuthConstants.Scope.OAUTH2 + ", tenant: " +
+                    tokenReq.getTenantDomain());
+        }
+
+        return serviceProvider;
+    }
+
+    private String getSubjectClaim(ServiceProvider serviceProvider,
+                                   AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception {
+
+        String userTenantDomain = authenticatedUser.getTenantDomain();
+        String subject;
+        String userStoreDomain = authenticatedUser.getUserStoreDomain();
+        String subjectClaimUri = getSubjectClaimUriInLocalDialect(serviceProvider);
+        if (StringUtils.isNotBlank(subjectClaimUri)) {
+            try {
+                subject = getSubjectClaimFromUserStore(subjectClaimUri, authenticatedUser);
+                if (StringUtils.isBlank(subject)) {
+                    // Set username as the subject claim since we have no other option
+                    subject = getDefaultSubject(serviceProvider, authenticatedUser);
+                    log.warn("Cannot find subject claim: " + subjectClaimUri + " for user:"
+                            + authenticatedUser.getLoggableUserId()
+                            + ". Defaulting to username: " + subject + " as the subject identifier.");
+                }
+                // Get the subject claim in the correct format (ie. tenantDomain or userStoreDomain appended)
+                subject = getFormattedSubjectClaim(serviceProvider, subject, userStoreDomain, userTenantDomain);
+            } catch (IdentityException e) {
+                String error = "Error occurred while getting user claim for user: "
+                        + authenticatedUser.getLoggableUserId() + ", claim" +
+                        ": " +
+                        subjectClaimUri;
+                throw new IdentityOAuth2Exception(error, e);
+            } catch (org.wso2.carbon.user.core.UserStoreException e) {
+                String error = "Error occurred while getting subject claim: " + subjectClaimUri + " for user: "
+                        + authenticatedUser.getLoggableUserId();
+                throw new IdentityOAuth2Exception(error, e);
+            }
+        } else {
+            try {
+                subject = getDefaultSubject(serviceProvider, authenticatedUser);
+                subject = getFormattedSubjectClaim(serviceProvider, subject, userStoreDomain, userTenantDomain);
+            } catch (UserIdNotFoundException e) {
+                throw new IdentityOAuth2Exception("User id not found for user: "
+                        + authenticatedUser.getLoggableUserId(), e);
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("No subject claim defined for service provider: " + serviceProvider.getApplicationName()
+                        + ". Using username as the subject claim.");
+            }
+
+        }
+        return subject;
+    }
+
+    private String getDefaultSubject(ServiceProvider serviceProvider, AuthenticatedUser authenticatedUser)
+            throws UserIdNotFoundException {
+        String subject;
+        boolean useUserIdForDefaultSubject = false;
+        ServiceProviderProperty[] spProperties = serviceProvider.getSpProperties();
+        if (spProperties != null) {
+            for (ServiceProviderProperty prop : spProperties) {
+                if (IdentityApplicationConstants.USE_USER_ID_FOR_DEFAULT_SUBJECT.equals(prop.getName())) {
+                    useUserIdForDefaultSubject = Boolean.parseBoolean(prop.getValue());
+                    break;
+                }
+            }
+        }
+        if (useUserIdForDefaultSubject) {
+            subject = authenticatedUser.getUserId();
+        } else {
+            subject = authenticatedUser.getUserName();
+        }
+        return subject;
+    }
+
+    private String getFormattedSubjectClaim(ServiceProvider serviceProvider, String subjectClaimValue,
+                                            String userStoreDomain, String tenantDomain) {
+
+        boolean appendUserStoreDomainToSubjectClaim = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                .isUseUserstoreDomainInLocalSubjectIdentifier();
+
+        boolean appendTenantDomainToSubjectClaim = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                .isUseTenantDomainInLocalSubjectIdentifier();
+
+        if (appendTenantDomainToSubjectClaim) {
+            subjectClaimValue = UserCoreUtil.addTenantDomainToEntry(subjectClaimValue, tenantDomain);
+        }
+        if (appendUserStoreDomainToSubjectClaim) {
+            subjectClaimValue = IdentityUtil.addDomainToName(subjectClaimValue, userStoreDomain);
+        }
+
+        return subjectClaimValue;
+    }
+
+    private String getSubjectClaimFromUserStore(String subjectClaimUri, AuthenticatedUser authenticatedUser)
+            throws org.wso2.carbon.user.core.UserStoreException, IdentityException {
+
+        AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager) IdentityTenantUtil
+                .getRealm(authenticatedUser.getTenantDomain(), authenticatedUser.toFullQualifiedUsername())
+                .getUserStoreManager();
+
+        return userStoreManager
+                .getUserClaimValueWithID(authenticatedUser.getUserId(), subjectClaimUri, null);
+    }
+
+    private String getSubjectClaimUriInLocalDialect(ServiceProvider serviceProvider) {
+
+        String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig().getSubjectClaimUri();
+        if (log.isDebugEnabled()) {
+            if (isNotBlank(subjectClaimUri)) {
+                log.debug(subjectClaimUri + " is defined as subject claim for service provider: " +
+                        serviceProvider.getApplicationName());
+            } else {
+                log.debug("No subject claim defined for service provider: " + serviceProvider.getApplicationName());
+            }
+        }
+        // Get the local subject claim URI, if subject claim was a SP mapped one
+        return getSubjectClaimUriInLocalDialect(serviceProvider, subjectClaimUri);
+    }
+
+    private String getSubjectClaimUriInLocalDialect(ServiceProvider serviceProvider, String subjectClaimUri) {
+
+        if (isNotBlank(subjectClaimUri)) {
+            ClaimConfig claimConfig = serviceProvider.getClaimConfig();
+            if (claimConfig != null) {
+                boolean isLocalClaimDialect = claimConfig.isLocalClaimDialect();
+                ClaimMapping[] claimMappings = claimConfig.getClaimMappings();
+                if (!isLocalClaimDialect && ArrayUtils.isNotEmpty(claimMappings)) {
+                    for (ClaimMapping claimMapping : claimMappings) {
+                        if (StringUtils.equals(claimMapping.getRemoteClaim().getClaimUri(), subjectClaimUri)) {
+                            return claimMapping.getLocalClaim().getClaimUri();
+                        }
+                    }
+                }
+            }
+        }
+        // This means the original subjectClaimUri passed was the subject claim URI.
+        return subjectClaimUri;
     }
 
     private void addAuthorizedInternalScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
@@ -395,7 +713,8 @@ public class AccessTokenIssuer {
         }
         List<String> scopes = new ArrayList<>();
         for (String scope : tokReqMsgCtx.getScope()) {
-            if (!scope.startsWith("internal_") && !scope.equalsIgnoreCase(SYSTEM_SCOPE)) {
+            if (!scope.startsWith(INTERNAL_SCOPE_PREFIX) && !scope.startsWith(CONSOLE_SCOPE_PREFIX) && !scope
+                    .equalsIgnoreCase(SYSTEM_SCOPE)) {
                 scopes.add(scope);
             }
         }

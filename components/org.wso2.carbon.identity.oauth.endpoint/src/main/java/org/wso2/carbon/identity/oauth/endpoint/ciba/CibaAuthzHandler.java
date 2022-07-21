@@ -44,6 +44,7 @@ import javax.ws.rs.core.Context;
 public class CibaAuthzHandler {
 
     private static final Log log = LogFactory.getLog(CibaAuthzHandler.class);
+    private static final String REQUEST_OBJECT = "request_object";
 
     OAuth2AuthzEndpoint authzEndPoint = new OAuth2AuthzEndpoint();
 
@@ -65,6 +66,8 @@ public class CibaAuthzHandler {
         cibaAuthRequestWrapper.setParameter(Constants.REDIRECT_URI, authCodeResponse.getCallBackUrl());
         cibaAuthRequestWrapper.setParameter(Constants.CLIENT_ID, authCodeResponse.getClientId());
         cibaAuthRequestWrapper.setParameter(CibaConstants.USER_IDENTITY, authCodeResponse.getUserHint());
+        cibaAuthRequestWrapper.setParameter(REQUEST_OBJECT, request.getParameter(CibaConstants.REQUEST));
+        cibaAuthRequestWrapper.setParameter(Constants.LOGIN_HINT, authCodeResponse.getUserHint());
         if (!StringUtils.isBlank(authCodeResponse.getBindingMessage())) {
             cibaAuthRequestWrapper.setParameter(CibaConstants.BINDING_MESSAGE, authCodeResponse.getBindingMessage());
         }
@@ -73,15 +76,9 @@ public class CibaAuthzHandler {
             cibaAuthRequestWrapper.setParameter(CibaConstants.TRANSACTION_CONTEXT,
                     authCodeResponse.getTransactionContext());
         }
-        // Create an instance of response.
-        CibaAuthResponseWrapper commonAuthResponseWrapper = new CibaAuthResponseWrapper(response);
-        if (log.isDebugEnabled()) {
-            log.debug("Building AuthorizeRequest wrapper from CIBA component for the user : " +
-                    authCodeResponse.getUserHint() + " to continue the authentication request made by client with " +
-                    "clientID : " + authCodeResponse.getClientId());
-        }
+
         // Fire authorize request and forget.
-        fireAuthzReq(cibaAuthRequestWrapper, commonAuthResponseWrapper);
+        fireAuthzReq(cibaAuthRequestWrapper, response);
     }
 
     /**
@@ -89,12 +86,31 @@ public class CibaAuthzHandler {
      *
      * @param requestWrapper  Authentication request wrapper.
      * @param responseWrapper AuthenticationResponse wrapper.
+     * @deprecated use {@link #fireAuthzReq(CibaAuthRequestWrapper, HttpServletResponse)} instead.
      */
+    @Deprecated
     public void fireAuthzReq(CibaAuthRequestWrapper requestWrapper, CibaAuthResponseWrapper responseWrapper)
             throws CibaAuthFailureException {
 
         try {
             authzEndPoint.authorize(requestWrapper, responseWrapper);
+        } catch (URISyntaxException | InvalidRequestParentException e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
+                    "Error in making internal authorization call.", e);
+        }
+    }
+
+    /**
+     * Initiate the  authorize request.
+     *
+     * @param requestWrapper  Authentication request wrapper.
+     * @param response Authentication response.
+     */
+    public void fireAuthzReq(CibaAuthRequestWrapper requestWrapper, HttpServletResponse response)
+            throws CibaAuthFailureException {
+
+        try {
+            authzEndPoint.authorize(requestWrapper, response);
         } catch (URISyntaxException | InvalidRequestParentException e) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
                     "Error in making internal authorization call.", e);

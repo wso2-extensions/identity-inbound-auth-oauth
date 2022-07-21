@@ -28,6 +28,8 @@ import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
+import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
+import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.registry.api.RegistryService;
 import org.wso2.carbon.user.core.service.RealmService;
 
@@ -54,6 +56,8 @@ public class OAuthComponentServiceHolder {
     private OAuthAdminServiceImpl oAuthAdminService;
     private List<ScopeValidator> scopeValidators = new ArrayList<>();
     private Map<Integer, OAuthApplicationMgtListener> oAuthApplicationMgtListeners = new TreeMap<>();
+    private RoleManagementService roleManagementService;
+    private OrganizationUserResidentResolverService organizationUserResidentResolverService;
 
 
     /**
@@ -197,5 +201,46 @@ public class OAuthComponentServiceHolder {
 
         this.oAuthApplicationMgtListeners
                 .remove(oAuthApplicationMgtListener.getExecutionOrder(), oAuthApplicationMgtListener);
+    }
+
+    /**
+     * Set RoleManagementService instance.
+     *
+     * @param roleManagementService RoleManagementService instance.
+     */
+    public void setRoleManagementService(RoleManagementService roleManagementService) {
+
+        this.roleManagementService = roleManagementService;
+    }
+
+    /**
+     * Get RoleManagementService instance.
+     *
+     * @return RoleManagementService instance.
+     */
+    public RoleManagementService getRoleManagementService() {
+
+        return roleManagementService;
+    }
+
+    /**
+     * Get OrganizationUserResidentResolverService instance.
+     *
+     * @return OrganizationUserResidentResolverService instance.
+     */
+    public OrganizationUserResidentResolverService getOrganizationUserResidentResolverService() {
+
+        return organizationUserResidentResolverService;
+    }
+
+    /**
+     * Set OrganizationUserResidentResolverService instance.
+     *
+     * @param organizationUserResidentResolverService OrganizationUserResidentResolverService instance.
+     */
+    public void setOrganizationUserResidentResolverService(
+            OrganizationUserResidentResolverService organizationUserResidentResolverService) {
+
+        this.organizationUserResidentResolverService = organizationUserResidentResolverService;
     }
 }

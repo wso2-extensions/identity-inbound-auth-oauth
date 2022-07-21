@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.oauth.dcr.service.DCRManagementService;
 /**
  * OAuth DCR handler class responsible for registration.
  */
+@Deprecated
 public class RegistrationHandler extends AbstractDCRHandler {
 
     private static final Log log = LogFactory.getLog(RegistrationHandler.class);

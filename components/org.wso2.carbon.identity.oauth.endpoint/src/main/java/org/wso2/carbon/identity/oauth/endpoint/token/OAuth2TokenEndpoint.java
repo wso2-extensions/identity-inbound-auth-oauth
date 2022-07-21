@@ -31,6 +31,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -45,6 +46,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthTokenRequest;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -89,6 +91,15 @@ public class OAuth2TokenEndpoint {
         try {
             startSuperTenantFlow();
             paramMap = parseJsonTokenRequest(payload);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                if (MapUtils.isNotEmpty(paramMap)) {
+                    paramMap.forEach(params::put);
+                }
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.SUCCESS, "Successfully received token request.",
+                        "receive-token-request", null);
+            }
         } catch (TokenEndpointBadRequestException e) {
             triggerOnTokenExceptionListeners(e, request, null);
             throw e;
@@ -106,6 +117,15 @@ public class OAuth2TokenEndpoint {
                                      MultivaluedMap<String, String> paramMap)
             throws OAuthSystemException, InvalidRequestParentException {
 
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            Map<String, Object> params = new HashMap<>();
+            if (MapUtils.isNotEmpty(paramMap)) {
+                paramMap.forEach(params::put);
+            }
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                    OAuthConstants.LogConstants.SUCCESS, "Successfully received token request.",
+                    "receive-token-request", null);
+        }
         return issueAccessToken(request, (Map<String, List<String>>) paramMap);
     }
 
@@ -187,12 +207,16 @@ public class OAuth2TokenEndpoint {
 
     private Response buildTokenResponse(OAuth2AccessTokenRespDTO oauth2AccessTokenResp) throws OAuthSystemException {
 
+        if (StringUtils.isBlank(oauth2AccessTokenResp.getTokenType())) {
+            oauth2AccessTokenResp.setTokenType(BEARER);
+        }
+
         OAuthTokenResponseBuilder oAuthRespBuilder = OAuthASResponse
                 .tokenResponse(HttpServletResponse.SC_OK)
                 .setAccessToken(oauth2AccessTokenResp.getAccessToken())
                 .setRefreshToken(oauth2AccessTokenResp.getRefreshToken())
                 .setExpiresIn(Long.toString(oauth2AccessTokenResp.getExpiresIn()))
-                .setTokenType(BEARER);
+                .setTokenType(oauth2AccessTokenResp.getTokenType());
         oAuthRespBuilder.setScope(oauth2AccessTokenResp.getAuthorizedScopes());
 
         if (oauth2AccessTokenResp.getIDToken() != null) {

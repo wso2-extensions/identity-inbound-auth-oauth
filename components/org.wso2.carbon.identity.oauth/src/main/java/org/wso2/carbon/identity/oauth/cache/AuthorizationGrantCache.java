@@ -18,10 +18,13 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationBaseCache;
 import org.wso2.carbon.identity.application.authentication.framework.store.SessionDataStore;
-import org.wso2.carbon.identity.application.common.cache.BaseCache;
+import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -33,7 +36,9 @@ import java.util.concurrent.TimeUnit;
  * Stores authenticated user attributes and OpenID Connect specific attributes during OIDC Authorization request
  * processing. Those values are later required to serve OIDC Token request and build IDToken.
  */
-public class AuthorizationGrantCache extends BaseCache<AuthorizationGrantCacheKey, AuthorizationGrantCacheEntry> {
+public class AuthorizationGrantCache extends
+        AuthenticationBaseCache<AuthorizationGrantCacheKey, AuthorizationGrantCacheEntry> {
+
     private static final String AUTHORIZATION_GRANT_CACHE_NAME = "AuthorizationGrantCache";
 
     private static volatile AuthorizationGrantCache instance;
@@ -107,6 +112,14 @@ public class AuthorizationGrantCache extends BaseCache<AuthorizationGrantCacheKe
     public AuthorizationGrantCacheEntry getValueFromCacheByToken(AuthorizationGrantCacheKey key) {
         AuthorizationGrantCacheEntry cacheEntry = super.getValueFromCache(key);
         if (cacheEntry == null) {
+            if (log.isDebugEnabled()) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("Getting cache entry from session store using access token(hashed): "
+                            + DigestUtils.sha256Hex(key.getUserAttributesId()));
+                } else {
+                    log.debug("Getting cache entry from session store using access token");
+                }
+            }
             cacheEntry = getFromSessionStore(replaceFromTokenId(key.getUserAttributesId()));
         }
         return cacheEntry;
@@ -155,6 +168,14 @@ public class AuthorizationGrantCache extends BaseCache<AuthorizationGrantCacheKe
     public AuthorizationGrantCacheEntry getValueFromCacheByCode(AuthorizationGrantCacheKey key) {
         AuthorizationGrantCacheEntry cacheEntry = super.getValueFromCache(key);
         if (cacheEntry == null) {
+            if (log.isDebugEnabled()) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)) {
+                    log.debug("Getting cache entry from session store using authorization code(hashed): "
+                            + DigestUtils.sha256Hex(key.getUserAttributesId()));
+                } else {
+                    log.debug("Getting cache entry from session store using authorization code");
+                }
+            }
             cacheEntry = getFromSessionStore(replaceFromCodeId(key.getUserAttributesId()));
         }
         return cacheEntry;
@@ -167,8 +188,16 @@ public class AuthorizationGrantCache extends BaseCache<AuthorizationGrantCacheKe
      * @param key Key to clear cache.
      */
     public void clearCacheEntryByCode(AuthorizationGrantCacheKey key) {
-        super.clearCacheEntry(key);
-        clearFromSessionStore(replaceFromCodeId(key.getUserAttributesId()));
+
+        AuthorizationGrantCacheEntry valueFromCacheByCode = super.getValueFromCache(key);
+        String codeId;
+        if (valueFromCacheByCode != null) {
+            codeId = valueFromCacheByCode.getCodeId();
+            super.clearCacheEntry(key);
+        } else {
+            codeId = replaceFromCodeId(key.getUserAttributesId());
+        }
+        clearFromSessionStore(codeId);
     }
 
     /**

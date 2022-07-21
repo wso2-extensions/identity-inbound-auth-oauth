@@ -24,6 +24,7 @@ import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,8 +33,12 @@ import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorC
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
@@ -44,7 +49,9 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * JWT Access token validator
@@ -52,9 +59,11 @@ import java.util.List;
 public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
 
     private static final String ALGO_PREFIX = "RS";
+    private static final String ALGO_PREFIX_PS = "PS";
     private static final Log log = LogFactory.getLog(OAuth2JWTTokenValidator.class);
     private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
     private static final String DOT_SEPARATOR = ".";
+    private static final String TRUE = "true";
 
     @Override
     public boolean validateAccessToken(OAuth2TokenValidationMessageContext validationReqDTO)
@@ -68,6 +77,9 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             SignedJWT signedJWT = getSignedJWT(validationReqDTO);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
             if (claimsSet == null) {
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                        OAuthConstants.LogConstants.FAILED, "Claim values are empty in the provided token.",
+                        "validate-jwt-access-token", null);
                 throw new IdentityOAuth2Exception("Claim values are empty in the given Token.");
             }
 
@@ -78,15 +90,26 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             IdentityProvider identityProvider = getResidentIDPForIssuer(claimsSet.getIssuer());
 
             if (!validateSignature(signedJWT, identityProvider)) {
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                        OAuthConstants.LogConstants.FAILED, "Signature validation failed.", "validate-jwt-access-token",
+                        null);
                 return false;
             }
             if (!checkExpirationTime(claimsSet.getExpirationTime())) {
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                        OAuthConstants.LogConstants.FAILED, "Token is expired.", "validate-jwt-access-token", null);
                 return false;
             }
             checkNotBeforeTime(claimsSet.getNotBeforeTime());
+            setJWTMessageContext(validationReqDTO, claimsSet);
         } catch (JOSEException | ParseException e) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "validate-jwt-access-token", null);
             throw new IdentityOAuth2Exception("Error while validating Token.", e);
         }
+        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                OAuthConstants.LogConstants.SUCCESS, "Token validation is successful.", "validate-jwt-access-token",
+                null);
         return true;
     }
 
@@ -156,11 +179,32 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
     }
 
     private boolean validateSignature(SignedJWT signedJWT, IdentityProvider idp)
-            throws JOSEException, IdentityOAuth2Exception {
+            throws JOSEException, IdentityOAuth2Exception, ParseException {
 
         JWSVerifier verifier = null;
+        X509Certificate x509Certificate = null;
         JWSHeader header = signedJWT.getHeader();
-        X509Certificate x509Certificate = resolveSignerCertificate(header, idp);
+        JWTClaimsSet jwtClaimsSet = signedJWT.getJWTClaimsSet();
+
+        Map<String, String> realm = (HashMap) jwtClaimsSet.getClaim(OAuthConstants.OIDCClaims.REALM);
+
+        // Get certificate from tenant if available in claims.
+        if (MapUtils.isNotEmpty(realm)) {
+            String tenantDomain = null;
+            // Get signed key tenant from JWT token or ID token based on claim key.
+            if (realm.get(OAuthConstants.OIDCClaims.SIGNING_TENANT) != null) {
+                tenantDomain = realm.get(OAuthConstants.OIDCClaims.SIGNING_TENANT);
+            } else if (realm.get(OAuthConstants.OIDCClaims.TENANT) != null) {
+                tenantDomain = realm.get(OAuthConstants.OIDCClaims.TENANT);
+            }
+            if (tenantDomain != null) {
+                int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+                x509Certificate = (X509Certificate) OAuth2Util.getCertificate(tenantDomain, tenantId);
+            }
+        } else {
+            x509Certificate = resolveSignerCertificate(header, idp);
+        }
+
         if (x509Certificate == null) {
             throw new IdentityOAuth2Exception("Unable to locate certificate for Identity Provider: " + idp
                     .getDisplayName());
@@ -174,7 +218,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             if (log.isDebugEnabled()) {
                 log.debug("Signature Algorithm found in the Token Header: " + alg);
             }
-            if (alg.indexOf(ALGO_PREFIX) == 0) {
+            if (alg.indexOf(ALGO_PREFIX) == 0 || alg.indexOf(ALGO_PREFIX_PS) == 0) {
                 // At this point 'x509Certificate' will never be null.
                 PublicKey publicKey = x509Certificate.getPublicKey();
                 if (publicKey instanceof RSAPublicKey) {
@@ -232,6 +276,15 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
                             ", TimeStamp Skew : " + timeStampSkewMillis +
                             ", Current Time : " + currentTimeInMillis + ". Token Rejected and validation terminated.");
                 }
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("notBeforeTime", notBeforeTimeMillis);
+                    params.put("timestampSkew", timeStampSkewMillis);
+                    params.put("currentTime", currentTimeInMillis);
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.FAILED, "Token is used before Not_Before_Time.",
+                            "validate-jwt-access-token", null);
+                }
                 throw new IdentityOAuth2Exception("Token is used before Not_Before_Time.");
             }
             if (log.isDebugEnabled()) {
@@ -252,6 +305,10 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
                 log.debug("Mandatory fields(Issuer, Subject, Expiration time," +
                         " jtl or Audience) are empty in the given Token.");
             }
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED,
+                    "Mandatory fields (iss, sub, exp, jtl, aud) are empty in the provided token.",
+                    "validate-jwt-access-token", null);
             return false;
         }
         return true;
@@ -274,5 +331,14 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
     private boolean isJWT(String tokenIdentifier) {
         // JWT token contains 3 base64 encoded components separated by periods.
         return StringUtils.countMatches(tokenIdentifier, DOT_SEPARATOR) == 2;
+    }
+
+    private void setJWTMessageContext(OAuth2TokenValidationMessageContext validationReqDTO, JWTClaimsSet claimsSet) {
+
+        validationReqDTO.addProperty(OAuth2Util.JWT_ACCESS_TOKEN, TRUE);
+        validationReqDTO.addProperty(OAuth2Util.SUB, claimsSet.getSubject());
+        validationReqDTO.addProperty(OAuth2Util.ISS, claimsSet.getIssuer());
+        validationReqDTO.addProperty(OAuth2Util.AUD, String.join(",", claimsSet.getAudience()));
+        validationReqDTO.addProperty(OAuth2Util.JTI, claimsSet.getJWTID());
     }
 }
