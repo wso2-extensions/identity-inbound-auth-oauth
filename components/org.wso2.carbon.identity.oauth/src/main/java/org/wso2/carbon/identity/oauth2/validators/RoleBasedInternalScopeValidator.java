@@ -218,7 +218,7 @@ public class RoleBasedInternalScopeValidator {
                     = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
 
             String userName = userStoreManager.getUserNameFromUserID(authenticatedUser.getUserId());
-            // if the username is empty try to set it as authenticated username.
+            // If the username is empty try to set it as authenticated username.
             if (StringUtils.isEmpty(userName)) {
                 userName = authenticatedUser.getUserName();
             }

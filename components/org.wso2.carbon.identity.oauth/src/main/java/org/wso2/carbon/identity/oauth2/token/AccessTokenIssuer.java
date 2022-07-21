@@ -327,9 +327,9 @@ public class AccessTokenIssuer {
         AuthenticatedUser authenticatedUser = tokReqMsgCtx.getAuthorizedUser();
         if (authenticatedUser != null && authenticatedUser.isFederatedUser()) {
             String appName = getServiceProvider(tokenReqDTO).getApplicationName();
-            // if federated role based authorization is engaged for the application cannot overwrite the user tenant.
+            // If federated role-based authorization is engaged skip overwriting the user tenant domain.
             if (!IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG).contains(appName)
-                    || tokReqMsgCtx.getAuthorizedUser().getTenantDomain() == null) {
+                    || authenticatedUser.getTenantDomain() == null) {
                 authenticatedUser.setTenantDomain(tenantDomainOfApp);
             }
         }

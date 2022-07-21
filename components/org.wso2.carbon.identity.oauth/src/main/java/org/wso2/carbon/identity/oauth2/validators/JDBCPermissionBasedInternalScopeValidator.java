@@ -193,11 +193,11 @@ public class JDBCPermissionBasedInternalScopeValidator {
              */
             if (authenticatedUser.isFederatedUser()) {
                 /*
-                 * If the role based authorization feature is enabled & particular applications in the listed under the
-                 * required application list then retrieve permissions from the FIdp user roles.
-                 * Since tenant flow is enabled, permission will be fetched from user login(federated) tenant
-                 * not the application tenant.
-                 */
+                If the role-based authorization feature is enabled & particular applications in the listed under the
+                required application list then retrieve permissions from the FIdp user roles.
+                Since tenant flow is enabled, permission will be fetched from user login(federated) tenant
+                not the application tenant.
+                */
                 if (IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG)
                         .contains((OAuth2Util.getServiceProvider(clientId).getApplicationName()))) {
                     allowedUIResourcesForUser =
@@ -344,7 +344,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
     /**
      * Retrieve list of permissions using roles of federated user.
      *
-     * @param authenticatedUser    FederatedAuthenticatedUser
+     * @param authenticatedUser    Federated authenticated user
      * @param authorizationManager AuthorizationManager
      * @return List of permissions
      * @throws UserStoreException      UserStoreException
@@ -354,7 +354,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
             AuthenticatedUser authenticatedUser, AuthorizationManager authorizationManager)
             throws UserStoreException, IdentityOAuth2Exception {
 
-        List<String> allowedUIResourcesListForUser = new ArrayList<>();
+        HashSet<String> allowedUIResourcesListForUser = new HashSet<>();
         List<String> userRolesList = getRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
 
         for (String  role: userRolesList) {
@@ -371,11 +371,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
             }
 
             // Loop through each internal local role and get permissions.
-            for (String allowedUIResource :
-                    authorizationManager.getAllowedUIResourcesForRole(modifiedRole, ROOT)) {
-                if (!allowedUIResourcesListForUser.contains(allowedUIResource)) {
-                    allowedUIResourcesListForUser.add(allowedUIResource);
-                }
+            for (String allowedUIResource : authorizationManager.getAllowedUIResourcesForRole(modifiedRole, ROOT)) {
+                allowedUIResourcesListForUser.add(allowedUIResource);
             }
         }
 
