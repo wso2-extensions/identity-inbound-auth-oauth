@@ -19,8 +19,8 @@ package org.wso2.carbon.identity.oauth2;
 
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.mockito.Mock;
-import org.mockito.internal.util.reflection.Whitebox;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.reflect.Whitebox;
 import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
