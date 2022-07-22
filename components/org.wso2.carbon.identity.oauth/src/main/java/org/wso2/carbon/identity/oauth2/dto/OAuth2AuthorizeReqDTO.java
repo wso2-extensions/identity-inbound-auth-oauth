@@ -56,6 +56,8 @@ public class OAuth2AuthorizeReqDTO {
     // Set the login tenant domain.
     private String loggedInTenantDomain;
     private boolean isRequestObjectFlow;
+    // contains the user scopes, if the user logged in from a child organization,
+    private String[] userOrganizationScopes;
 
     public String getSessionDataKey() {
         return sessionDataKey;
@@ -267,5 +269,15 @@ public class OAuth2AuthorizeReqDTO {
     public void setRequestObjectFlow(boolean isRequestObjectFlow) {
 
         this.isRequestObjectFlow = isRequestObjectFlow;
+    }
+
+    public String[] getUserOrganizationScopes() {
+
+        return userOrganizationScopes;
+    }
+
+    public void setUserOrganizationScopes(String[] userOrganizationScopes) {
+
+        this.userOrganizationScopes = userOrganizationScopes;
     }
 }

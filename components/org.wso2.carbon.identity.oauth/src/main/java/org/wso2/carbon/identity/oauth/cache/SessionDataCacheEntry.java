@@ -39,6 +39,7 @@ public class SessionDataCacheEntry extends CacheEntry {
     private String authenticatedIdPs;
     private String essentialClaims;
     private String sessionContextIdentifier;
+    private String[] userOrganizationScopes;
 
     private String queryString = null;
 
@@ -125,5 +126,15 @@ public class SessionDataCacheEntry extends CacheEntry {
     public void setSessionContextIdentifier(String sessionContextIdentifier) {
 
         this.sessionContextIdentifier = sessionContextIdentifier;
+    }
+
+    public String[] getUserOrganizationScopes() {
+
+        return userOrganizationScopes;
+    }
+
+    public void setUserOrganizationScopes(String[] userOrganizationScopes) {
+
+        this.userOrganizationScopes = userOrganizationScopes;
     }
 }

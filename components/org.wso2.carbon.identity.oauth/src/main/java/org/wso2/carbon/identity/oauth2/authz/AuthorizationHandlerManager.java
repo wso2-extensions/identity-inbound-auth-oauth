@@ -199,6 +199,13 @@ public class AuthorizationHandlerManager {
             authzReqMsgCtx.getAuthorizationReqDTO().setScopes(filteredScopes);
         }
 
+        // If the user is federated and organization scopes are available, scopes are already validated at the child org
+        if (authzReqDTO.getUser().isFederatedUser() && ArrayUtils.isNotEmpty(authzReqDTO.getUserOrganizationScopes())) {
+            String[] userOrgScopes = authzReqDTO.getUserOrganizationScopes();
+            addAllowedScopes(authzReqMsgCtx, userOrgScopes);
+            return authorizeRespDTO;
+        }
+
         boolean valid = validateScope(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler);
         if (valid) {
             // Add authorized internal scopes to the request for sending in the response.

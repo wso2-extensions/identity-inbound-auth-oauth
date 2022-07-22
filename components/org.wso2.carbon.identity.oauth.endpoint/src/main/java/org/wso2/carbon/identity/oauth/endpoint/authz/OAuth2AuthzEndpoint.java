@@ -154,6 +154,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
+import static java.util.Objects.nonNull;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.MANDATORY_CLAIMS;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.REQUESTED_CLAIMS;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.USER_CLAIMS_CONSENT_ONLY;
@@ -992,6 +993,15 @@ public class OAuth2AuthzEndpoint {
         oAuthMessage.getSessionDataCacheEntry().setAuthenticatedIdPs(authnResult.getAuthenticatedIdPs());
         oAuthMessage.getSessionDataCacheEntry().setSessionContextIdentifier((String)
                 authnResult.getProperty(FrameworkConstants.AnalyticsAttributes.SESSION_ID));
+        Map<String, String> orgUserproperties =
+                (Map<String, String>) authnResult.getProperty(FrameworkConstants.ORGANIZATION_USER_PROPERTIES);
+        if (nonNull(orgUserproperties)) {
+            String scopes = orgUserproperties.get(OAuthConstants.OAuth20Params.SCOPE);
+            if (StringUtils.isNotBlank(scopes)) {
+                String[] userOrgScopes = scopes.split("\\s+");
+                oAuthMessage.getSessionDataCacheEntry().setUserOrganizationScopes(userOrgScopes);
+            }
+        }
     }
 
     private void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) {
@@ -2327,7 +2337,7 @@ public class OAuth2AuthzEndpoint {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
-        boolean hasUserApproved = isUserAlreadyApproved(oauth2Params, authenticatedUser);
+        boolean hasUserApproved = isUserAlreadyApproved(oauth2Params, authenticatedUser, oAuthMessage);
 
         if (hasPromptContainsConsent(oauth2Params)) {
             // Remove any existing consents.
@@ -2940,8 +2950,16 @@ public class OAuth2AuthzEndpoint {
         return StringUtils.isNotEmpty(oauth2Params.getIDTokenHint());
     }
 
-    private boolean isUserAlreadyApproved(OAuth2Parameters oauth2Params, AuthenticatedUser user)
+    private boolean isUserAlreadyApproved(OAuth2Parameters oauth2Params, AuthenticatedUser user,
+                                          OAuthMessage oAuthMessage)
             throws OAuthSystemException {
+
+        if (user.isFederatedUser() && nonNull(oAuthMessage.getSessionDataCacheEntry().getUserOrganizationScopes())) {
+            String[] userOrgScopes = oAuthMessage.getSessionDataCacheEntry().getUserOrganizationScopes();
+            List<String> consentRequiredScopes = new ArrayList<>(oauth2Params.getScopes());
+            consentRequiredScopes.removeAll(Arrays.asList(userOrgScopes));
+            return consentRequiredScopes.isEmpty();
+        }
 
         try {
             return EndpointUtil.isUserAlreadyConsentedForOAuthScopes(user, oauth2Params);
@@ -3048,6 +3066,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setRequestObjectFlow(oauth2Params.isRequestObjectFlow());
         authzReqDTO.setIdpSessionIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
         authzReqDTO.setLoggedInTenantDomain(oauth2Params.getLoginTenantDomain());
+        authzReqDTO.setUserOrganizationScopes(sessionDataCacheEntry.getUserOrganizationScopes());
 
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {
