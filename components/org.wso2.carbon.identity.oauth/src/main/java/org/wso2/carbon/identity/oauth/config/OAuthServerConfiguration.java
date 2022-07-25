@@ -508,24 +508,6 @@ public class OAuthServerConfiguration {
         }
     }
 
-    /**
-     * Parse FAPI configuration.
-     *
-     * @param oauthConfigElem oauthConfigElem.
-     */
-    private void parseFapiConfiguration(OMElement oauthConfigElem) {
-
-        OMElement fapiElem = oauthConfigElem.getFirstChildWithName(
-                getQNameWithIdentityNS(ConfigElements.FAPI));
-        if (fapiElem != null) {
-            OMElement cibaElement = fapiElem.getFirstChildWithName(getQNameWithIdentityNS(
-                    ConfigElements.ENABLE_FAPI_CIBA_PROFILE));
-            if (cibaElement != null) {
-                isFapiCiba = Boolean.parseBoolean(cibaElement.getText().trim());
-            }
-        }
-    }
-
     private void parseTokenIntrospectionConfig(OMElement oauthElem) {
 
         OMElement introspectionElem = oauthElem.getFirstChildWithName(getQNameWithIdentityNS(
@@ -2998,16 +2980,22 @@ public class OAuthServerConfiguration {
                                 (ConfigElements.OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN)).getText().trim());
             }
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
-                    .ENABLE_FAPI_CIBA_PROFILE)) != null) {
-                isFapiCiba =
-                        Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
-                                (ConfigElements.ENABLE_FAPI_CIBA_PROFILE)).getText().trim());
-            }
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
-                    .ENABLE_FAPI_SECURITY_PROFILE)) != null) {
-                isFapiSecurity =
-                        Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
-                                (ConfigElements.ENABLE_FAPI_SECURITY_PROFILE)).getText().trim());
+                    .FAPI)) != null) {
+                OMElement fapiElem = openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                        .FAPI));
+                if (fapiElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                        .ENABLE_FAPI_CIBA_PROFILE)) != null) {
+                    isFapiCiba =
+                            Boolean.parseBoolean(fapiElem.getFirstChildWithName(getQNameWithIdentityNS
+                                    (ConfigElements.ENABLE_FAPI_CIBA_PROFILE)).getText().trim());
+
+                }
+                if (fapiElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                        .ENABLE_FAPI_SECURITY_PROFILE)) != null) {
+                    isFapiSecurity =
+                            Boolean.parseBoolean(fapiElem.getFirstChildWithName(getQNameWithIdentityNS
+                                    (ConfigElements.ENABLE_FAPI_SECURITY_PROFILE)).getText().trim());
+                }
             }
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
                     .REQUEST_OBJECT_ENABLED)) != null) {
@@ -3211,19 +3199,6 @@ public class OAuthServerConfiguration {
         return scopeValidationConfigValue;
     }
 
-    /**
-     * This method returns if FAPI: CIBA profile is enabled in identity.xml.
-     */
-    public boolean isFapiCiba() {
-        return isFapiCiba;
-    }
-
-    /**
-     * This method returns if FAPI: Security profile is enabled for FAPI in identity.xml.
-     */
-    public boolean isFapiSecurity() {
-        return isFapiSecurity;
-    }
 
     /**
      * Parses the AllowCrossTenantTokenIntrospection configuration.
