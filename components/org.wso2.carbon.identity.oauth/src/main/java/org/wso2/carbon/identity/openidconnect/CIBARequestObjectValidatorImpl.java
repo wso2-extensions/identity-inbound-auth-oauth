@@ -20,6 +20,8 @@ package org.wso2.carbon.identity.openidconnect;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.RequestObjectValidatorUtil;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
@@ -56,7 +58,17 @@ public class CIBARequestObjectValidatorImpl implements RequestObjectValidator {
     public boolean validateRequestObject(RequestObject requestObject, OAuth2Parameters oAuth2Parameters)
             throws RequestObjectException {
 
+        if (OAuthServerConfiguration.getInstance().isFapiCiba()) {
+            long expiryTime = requestObject.getClaimsSet().getExpirationTime().getTime();
+            long nbfTime = requestObject.getClaimsSet().getNotBeforeTime().getTime();
+            long requestValidityPeriod = expiryTime - nbfTime;
+            if (requestValidityPeriod > 3600000) {
+                throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "Request object invalid: Difference between validity period and nbf greater than 1 hour");
+            }
+        }
         return true;
+
     }
 
 }
