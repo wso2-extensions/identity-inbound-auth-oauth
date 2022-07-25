@@ -197,16 +197,14 @@ public class CibaAuthRequestValidator {
                     }
                     throw new CibaAuthFailureException(ErrorCodes.INVALID_BINDING_MESSAGE,
                             "Invalid value for (binding_message).");
-                } else {
-                    // Validate binding message contain only plain text
-                    Pattern specialCharactersPattern = Pattern.compile("[^a-z0-9 ]", Pattern.CASE_INSENSITIVE);
-                    Matcher specialCharactersPatternMatcher = specialCharactersPattern.matcher(bindingMessage);
-                    boolean isSpecialCharactersAvailable = specialCharactersPatternMatcher.find();
-                    if (isSpecialCharactersAvailable) {
-                        throw new CibaAuthFailureException(ErrorCodes.INVALID_BINDING_MESSAGE,
-                                "Invalid characters present in (binding_message).");
-                    }
                 }
+                // Validate binding message contains only plain text
+                boolean isSpecialCharactersAvailable = bindingMessage.chars().allMatch(Character::isLetterOrDigit);
+                if (isSpecialCharactersAvailable) {
+                    throw new CibaAuthFailureException(ErrorCodes.INVALID_BINDING_MESSAGE,
+                            "Invalid characters present in (binding_message).");
+                }
+
             }
         } catch (ParseException e) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error in validating request parameters.",
