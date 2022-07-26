@@ -21,12 +21,13 @@ package org.wso2.carbon.identity.oauth.endpoint.jwks;
 import java.security.cert.Certificate;
 
 /**
- * Certificate Chain and Certificate Information
+ * Contains Certificate Chain and Alias of a Certificate
  */
-public class CertificateChainInfo {
+public class CertificateInfo {
 
     private Certificate certificate;
     private Certificate[] certificateChain;
+    private String certificateAlias;
 
     public Certificate getCertificate() {
 
@@ -46,5 +47,15 @@ public class CertificateChainInfo {
     public void setCertificateChain(Certificate[] certificateChain) {
 
         this.certificateChain = certificateChain;
+    }
+
+    public String getCertificateAlias() {
+
+        return certificateAlias;
+    }
+
+    public void setCertificateAlias(String certificateAlias) {
+
+        this.certificateAlias = certificateAlias;
     }
 }
