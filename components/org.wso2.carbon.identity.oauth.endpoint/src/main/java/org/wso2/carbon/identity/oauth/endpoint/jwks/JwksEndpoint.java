@@ -125,7 +125,7 @@ public class JwksEndpoint {
                 String alias = certInfo.getCertificateAlias();
                 X509Certificate cert = (X509Certificate) certInfo.getCertificate();
                 Certificate[] certChain = certInfo.getCertificateChain();
-                List<Base64> certList = generateEncodedCertList(certChain, alias);
+                List<Base64> encodedCertList = generateEncodedCertList(certChain, alias);
                 RSAKey.Builder jwk = new RSAKey.Builder((RSAPublicKey) cert.getPublicKey());
                 jwk.keyID(OAuth2Util.getKID(cert, algorithm, getTenantDomain()));
                 jwk.algorithm(algorithm);

@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oauth.endpoint.jwks;
 import java.security.cert.Certificate;
 
 /**
- * Contains Certificate Chain and Alias of a Certificate
+ * Contains Certificate information
  */
 public class CertificateInfo {
 
