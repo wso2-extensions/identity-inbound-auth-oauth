@@ -1806,14 +1806,6 @@ public class OAuth2AuthzEndpoint {
                 } else if (containsNone) {
                     oAuthMessage.setForceAuthenticate(false);
                     oAuthMessage.setPassiveAuthentication(true);
-                } else if ((OAuthConstants.Prompt.SELECT_ACCOUNT).equals(prompt)) {
-                    /*
-                     * IS does not currently support multiple logged-in sessions.
-                     * Therefore, gracefully handling prompt=select_account by mimicking the behaviour of prompt=none
-                     * https://github.com/wso2/product-is/issues/6372#issuecomment-1188695300
-                     */
-                    oAuthMessage.setForceAuthenticate(false);
-                    oAuthMessage.setPassiveAuthentication(true);
                 } else if ((OAuthConstants.Prompt.CONSENT).equals(prompt)) {
                     oAuthMessage.setForceAuthenticate(false);
                     oAuthMessage.setPassiveAuthentication(false);
@@ -2369,16 +2361,10 @@ public class OAuth2AuthzEndpoint {
             return promptUserForConsent(sessionDataKeyFromLogin, oauth2Params, authenticatedUser, true, oAuthMessage);
         } else if (isPromptNone(oauth2Params)) {
             return handlePromptNone(oAuthMessage, sessionState, oauth2Params, authenticatedUser, hasUserApproved);
-        } else if (isPromptLogin(oauth2Params) || isPromptParamsNotPresent(oauth2Params)) {
+        } else if (isPromptLogin(oauth2Params) || isPromptParamsNotPresent(oauth2Params)
+                || isPromptSelectAccount(oauth2Params)) {
             return handleConsent(oAuthMessage, sessionDataKeyFromLogin, sessionState, oauth2Params, authenticatedUser,
                     hasUserApproved);
-        } else if (isPromptSelectAccount(oauth2Params)) {
-            /*
-             * IS does not currently support multiple logged-in sessions.
-             * Therefore, gracefully handling prompt=select_account by mimicking the behaviour of prompt=none
-             * https://github.com/wso2/product-is/issues/6372#issuecomment-1188695300
-             */
-            return handlePromptNone(oAuthMessage, sessionState, oauth2Params, authenticatedUser, hasUserApproved);
         } else {
             return StringUtils.EMPTY;
         }
@@ -2471,11 +2457,11 @@ public class OAuth2AuthzEndpoint {
                 params.put("prompt", oauth2Params.getPrompt());
                 LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                         OAuthConstants.LogConstants.FAILED,
-                        "Request with 'prompt=" + oauth2Params.getPrompt() + "' but user session does not exist",
+                        "Request with 'prompt=none' but user session does not exist",
                         "validate-user-session", null);
             }
             throw OAuthProblemException.error(OAuth2ErrorCodes.LOGIN_REQUIRED,
-                    "Request with 'prompt=" + oauth2Params.getPrompt() + "' but user session does not exist");
+                    "Request with 'prompt=none' but user session does not exist");
         }
 
         if (isIdTokenHintExists(oauth2Params)) {
