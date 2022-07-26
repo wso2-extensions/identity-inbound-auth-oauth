@@ -4259,8 +4259,11 @@ public class OAuth2Util {
             String tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
             if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                 // This means the tenant domain sent in the request and app's tenant domain do not match.
-                throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in " +
-                        "tenantDomain: " + tenantDomainFromContext);
+                if (log.isDebugEnabled()) {
+                    log.debug("A valid client with the given client_id cannot be found in " +
+                            "tenantDomain: " + tenantDomainFromContext);
+                }
+                throw new InvalidOAuthClientException("no.valid.client.in.tenant");
             }
         }
     }
