@@ -28,6 +28,7 @@ import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
@@ -69,7 +70,6 @@ import java.util.stream.Collectors;
 
 import static java.util.Objects.nonNull;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.ATTRIBUTE_SEPARATOR;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.FIDP_ROLE_BASED_AUTHZ_APP_CONFIG;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getRolesFromFederatedUserAttributes;
 
@@ -86,6 +86,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
     private static final String ROOT = "/";
     private static final String ADMIN_PERMISSION_ROOT = "/permission/admin";
     private static final String EVERYONE_PERMISSION = "everyone_permission";
+    private static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
 
     /**
      * Execute Internal scope Validation.

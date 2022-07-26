@@ -216,7 +216,6 @@ public class OAuth2Util {
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
     public static final String OPENID_SCOPE = "openid";
-    public static final String ATTRIBUTE_SEPARATOR = "/";
     /*
      * Maintain a separate parameter "OPENID_CONNECT_AUDIENCE_IDENTITY_CONFIG" to get the audience from the identity.xml
      * when user didn't add any audience in the UI while creating service provider.
@@ -4493,7 +4492,8 @@ public class OAuth2Util {
                 .findFirst();
 
         if (roleClaimMapping.isPresent()) {
-            return Arrays.asList(userAttributes.get(roleClaimMapping.get()).split(Pattern.quote(ATTRIBUTE_SEPARATOR)));
+            return Arrays.asList(userAttributes.get(roleClaimMapping.get())
+                    .split(Pattern.quote(FrameworkUtils.getMultiAttributeSeparator())));
         }
 
         return Collections.emptyList();
