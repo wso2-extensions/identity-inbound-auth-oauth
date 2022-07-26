@@ -48,8 +48,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_TOKEN_EP_URL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.OAUTH2_CIBA_ENDPOINT;
