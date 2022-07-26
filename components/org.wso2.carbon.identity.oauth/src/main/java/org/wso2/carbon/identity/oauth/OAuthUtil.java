@@ -550,82 +550,94 @@ public final class OAuthUtil {
             LOG.error("Error occurred while retrieving apps authorized by User ID : " + authenticatedUser, e);
             throw new UserStoreException(e);
         }
+        boolean isErrorOnRevokingTokens = false;
         for (String clientId : clientIds) {
-            Set<AccessTokenDO> accessTokenDOs;
             try {
-                // retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this user
-                accessTokenDOs = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                        .getAccessTokens(clientId, authenticatedUser, userStoreDomain, true);
-            } catch (IdentityOAuth2Exception e) {
-                String errorMsg = "Error occurred while retrieving access tokens issued for " +
-                        "Client ID : " + clientId + ", User ID : " + authenticatedUser;
-                LOG.error(errorMsg, e);
-                throw new UserStoreException(e);
-            }
-
-            if (LOG.isDebugEnabled() && CollectionUtils.isNotEmpty(accessTokenDOs)) {
-                LOG.debug("ACTIVE or EXPIRED access tokens found for the client: " + clientId + " for the user: "
-                        + username);
-            }
-            boolean isTokenPreservingAtPasswordUpdateEnabled =
-                    Boolean.parseBoolean(IdentityUtil.getProperty(PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE));
-            String currentTokenBindingReference = "";
-            if (isTokenPreservingAtPasswordUpdateEnabled) {
-                if (IdentityUtil.threadLocalProperties.get().get(CURRENT_SESSION_IDENTIFIER) != null) {
-                    currentTokenBindingReference =
-                            (String) IdentityUtil.threadLocalProperties.get().get(CURRENT_SESSION_IDENTIFIER);
-                }
-            }
-
-            Set<String> scopes = new HashSet<>();
-            List<AccessTokenDO> accessTokens = new ArrayList<>();
-            boolean tokenBindingEnabled = false;
-            for (AccessTokenDO accessTokenDO : accessTokenDOs) {
-                // Clear cache
-                String tokenBindingReference = NONE;
-                if (accessTokenDO.getTokenBinding() != null && StringUtils
-                        .isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
-                    tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
-                    tokenBindingEnabled = true;
-                    // Skip current token from being revoked.
-                    if (StringUtils.equals(accessTokenDO.getTokenBinding().getBindingValue(),
-                            currentTokenBindingReference)) {
-                        continue;
-                    }
-                }
-                OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
-                        OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
-                OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
-                        OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
-                OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
-                        OAuth2Util.buildScopeString(accessTokenDO.getScope()));
-                OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
-                OAuthUtil.clearOAuthCache(accessTokenDO);
-                // Get unique scopes list
-                scopes.add(OAuth2Util.buildScopeString(accessTokenDO.getScope()));
-                accessTokens.add(accessTokenDO);
-            }
-
-            if (!tokenBindingEnabled && OAuth2Util.isHashDisabled()) {
-                return revokeLatestTokensWithScopes(scopes, clientId, authenticatedUser);
-            } else {
-                // If the hashed token is enabled, there can be multiple active tokens with a user with same scope.
-                // Also, if token binding is enabled, there can be multiple active tokens for the same user, scope
-                // and client combination.
-                // So need to revoke all the tokens.
+                Set<AccessTokenDO> accessTokenDOs;
                 try {
-                    return revokeTokens(accessTokens);
+                    // retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this user
+                    accessTokenDOs = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                            .getAccessTokens(clientId, authenticatedUser, userStoreDomain, true);
                 } catch (IdentityOAuth2Exception e) {
-                    String errorMsg = "Error occurred while revoking Access Token";
+                    String errorMsg = "Error occurred while retrieving access tokens issued for " +
+                            "Client ID : " + clientId + ", User ID : " + authenticatedUser;
                     LOG.error(errorMsg, e);
                     throw new UserStoreException(e);
                 }
+
+                if (LOG.isDebugEnabled() && CollectionUtils.isNotEmpty(accessTokenDOs)) {
+                    LOG.debug("ACTIVE or EXPIRED access tokens found for the client: " + clientId + " for the user: "
+                            + username);
+                }
+                boolean isTokenPreservingAtPasswordUpdateEnabled =
+                        Boolean.parseBoolean(IdentityUtil.getProperty(PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE));
+                String currentTokenBindingReference = "";
+                if (isTokenPreservingAtPasswordUpdateEnabled) {
+                    if (IdentityUtil.threadLocalProperties.get().get(CURRENT_SESSION_IDENTIFIER) != null) {
+                        currentTokenBindingReference =
+                                (String) IdentityUtil.threadLocalProperties.get().get(CURRENT_SESSION_IDENTIFIER);
+                    }
+                }
+
+                Set<String> scopes = new HashSet<>();
+                List<AccessTokenDO> accessTokens = new ArrayList<>();
+                boolean tokenBindingEnabled = false;
+                for (AccessTokenDO accessTokenDO : accessTokenDOs) {
+                    // Clear cache
+                    String tokenBindingReference = NONE;
+                    if (accessTokenDO.getTokenBinding() != null && StringUtils
+                            .isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
+                        tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
+                        tokenBindingEnabled = true;
+                        // Skip current token from being revoked.
+                        if (StringUtils.equals(accessTokenDO.getTokenBinding().getBindingValue(),
+                                currentTokenBindingReference)) {
+                            continue;
+                        }
+                    }
+                    OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
+                            OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
+                    OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
+                            OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
+                    OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
+                            OAuth2Util.buildScopeString(accessTokenDO.getScope()));
+                    OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
+                    OAuthUtil.clearOAuthCache(accessTokenDO);
+                    // Get unique scopes list
+                    scopes.add(OAuth2Util.buildScopeString(accessTokenDO.getScope()));
+                    accessTokens.add(accessTokenDO);
+                }
+
+                if (!tokenBindingEnabled && OAuth2Util.isHashDisabled()) {
+                    revokeLatestTokensWithScopes(scopes, clientId, authenticatedUser);
+                } else {
+                    // If the hashed token is enabled, there can be multiple active tokens with a user with same scope.
+                    // Also, if token binding is enabled, there can be multiple active tokens for the same user, scope
+                    // and client combination.
+                    // So need to revoke all the tokens.
+                    try {
+                        revokeTokens(accessTokens);
+                    } catch (IdentityOAuth2Exception e) {
+                        String errorMsg = "Error occurred while revoking Access Token";
+                        LOG.error(errorMsg, e);
+                        throw new UserStoreException(e);
+                    }
+                }
+            } catch (UserStoreException e) {
+                // Set a flag to throw an exception after revoking all the possible access tokens.
+                // The error details are logged at the same place they are throwing.
+                isErrorOnRevokingTokens = true;
             }
+        }
+
+        // Throw exception if there was any error found in revoking tokens.
+        if (isErrorOnRevokingTokens) {
+            throw new UserStoreException("Error occurred while revoking Access Tokens of the user " + username);
         }
         return true;
     }
 
-    private static boolean revokeTokens(List<AccessTokenDO> accessTokens) throws IdentityOAuth2Exception {
+    private static void revokeTokens(List<AccessTokenDO> accessTokens) throws IdentityOAuth2Exception {
 
         if (!accessTokens.isEmpty()) {
             // Revoking token from database.
@@ -636,10 +648,9 @@ public final class OAuthUtil {
                 OAuthUtil.invokePostRevocationBySystemListeners(accessToken, Collections.emptyMap());
             }
         }
-        return true;
     }
 
-    private static boolean revokeLatestTokensWithScopes(Set<String> scopes, String clientId,
+    private static void revokeLatestTokensWithScopes(Set<String> scopes, String clientId,
                                                         AuthenticatedUser authenticatedUser) throws
             UserStoreException {
 
@@ -669,7 +680,6 @@ public final class OAuthUtil {
                 }
             }
         }
-        return true;
     }
 
     /**
