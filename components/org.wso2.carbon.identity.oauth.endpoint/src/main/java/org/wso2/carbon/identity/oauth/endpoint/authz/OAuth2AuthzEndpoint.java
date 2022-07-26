@@ -2457,11 +2457,10 @@ public class OAuth2AuthzEndpoint {
                 params.put("prompt", oauth2Params.getPrompt());
                 LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                         OAuthConstants.LogConstants.FAILED,
-                        "Request with 'prompt=none' but user session does not exist",
-                        "validate-user-session", null);
+                        "Request with 'prompt=none' but user session does not exist", "validate-user-session", null);
             }
             throw OAuthProblemException.error(OAuth2ErrorCodes.LOGIN_REQUIRED,
-                    "Request with 'prompt=none' but user session does not exist");
+                    "Request with \'prompt=none\' but user session does not exist");
         }
 
         if (isIdTokenHintExists(oauth2Params)) {
