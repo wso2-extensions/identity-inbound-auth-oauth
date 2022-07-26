@@ -29,14 +29,15 @@ public class CertificateInfo {
     private Certificate[] certificateChain;
     private String certificateAlias;
 
+    public CertificateInfo(Certificate certificate, String certificateAlias) {
+
+        this.certificate = certificate;
+        this.certificateAlias = certificateAlias;
+    }
+
     public Certificate getCertificate() {
 
         return certificate;
-    }
-
-    public void setCertificate(Certificate certificate) {
-
-        this.certificate = certificate;
     }
 
     public Certificate[] getCertificateChain() {
@@ -52,10 +53,5 @@ public class CertificateInfo {
     public String getCertificateAlias() {
 
         return certificateAlias;
-    }
-
-    public void setCertificateAlias(String certificateAlias) {
-
-        this.certificateAlias = certificateAlias;
     }
 }

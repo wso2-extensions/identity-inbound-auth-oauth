@@ -97,10 +97,8 @@ public class JwksEndpoint {
             while (enumeration.hasMoreElements()) {
                 String alias = (String) enumeration.nextElement();
                 if (keystore.isKeyEntry(alias)) {
-                    CertificateInfo certificateInfo = new CertificateInfo();
-                    certificateInfo.setCertificate(keystore.getCertificate(alias));
+                    CertificateInfo certificateInfo = new CertificateInfo(keystore.getCertificate(alias), alias);
                     certificateInfo.setCertificateChain(keystore.getCertificateChain(alias));
-                    certificateInfo.setCertificateAlias(alias);
                     certificateInfoList.add(certificateInfo);
                 }
             }
@@ -111,7 +109,7 @@ public class JwksEndpoint {
         }
     }
 
-    private String buildResponse(List<CertificateInfo> certInfos)
+    private String buildResponse(List<CertificateInfo> certInfoList)
             throws IdentityOAuth2Exception, ParseException, CertificateEncodingException {
 
         JSONArray jwksArray = new JSONArray();
@@ -122,7 +120,7 @@ public class JwksEndpoint {
         // If we read different algorithms from identity.xml then put them in a list.
         List<JWSAlgorithm> diffAlgorithms = findDifferentAlgorithms(accessTokenSignAlgorithm, config);
         // Create JWKS for different algorithms using new KeyID creation method.
-        for (CertificateInfo certInfo : certInfos) {
+        for (CertificateInfo certInfo : certInfoList) {
             for (JWSAlgorithm algorithm : diffAlgorithms) {
                 String alias = certInfo.getCertificateAlias();
                 X509Certificate cert = (X509Certificate) certInfo.getCertificate();
