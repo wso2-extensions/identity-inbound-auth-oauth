@@ -248,6 +248,7 @@ public class OAuthAdminServiceImpl {
 
                 validateCallbackURI(application);
                 app.setCallbackUrl(application.getCallbackUrl());
+                app.setCallbackUrls(application.getCallBackUrls());
 
                 app.setState(APP_STATE_ACTIVE);
                 if (StringUtils.isEmpty(application.getOauthConsumerKey())) {
@@ -413,7 +414,8 @@ public class OAuthAdminServiceImpl {
         boolean isCallbackUriRequired = application.getGrantTypes().contains(AUTHORIZATION_CODE) ||
                 application.getGrantTypes().contains(IMPLICIT);
 
-        if (isCallbackUriRequired && StringUtils.isEmpty(application.getCallbackUrl())) {
+        if (isCallbackUriRequired && (StringUtils.isEmpty(application.getCallbackUrl())
+                && application.getCallBackUrls().isEmpty())) {
             throw handleClientError(INVALID_REQUEST, "Callback URI is mandatory for Code or Implicit grant types");
         }
     }
@@ -481,6 +483,7 @@ public class OAuthAdminServiceImpl {
 
         validateCallbackURI(consumerAppDTO);
         oauthappdo.setCallbackUrl(consumerAppDTO.getCallbackUrl());
+        oauthappdo.setCallbackUrls(consumerAppDTO.getCallBackUrls());
 
         oauthappdo.setApplicationName(consumerAppDTO.getApplicationName());
         oauthappdo.setPkceMandatory(consumerAppDTO.getPkceMandatory());

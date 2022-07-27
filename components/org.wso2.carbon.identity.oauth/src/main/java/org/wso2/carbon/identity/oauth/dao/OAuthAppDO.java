@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.dao;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 
 import java.io.Serializable;
+import java.util.List;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -43,6 +44,7 @@ public class OAuthAppDO implements Serializable {
     private String oauthConsumerSecret;
     private String applicationName;
     private String callbackUrl;
+    private List<String> callbackUrls;
     private String oauthVersion;
     private String grantTypes;
     @XmlElementWrapper(name = "scopeValidators")
@@ -129,6 +131,16 @@ public class OAuthAppDO implements Serializable {
 
     public void setCallbackUrl(String callbackUrl) {
         this.callbackUrl = callbackUrl;
+    }
+
+    public List<String> getCallbackUrls() {
+
+        return callbackUrls;
+    }
+
+    public void setCallbackUrls(List<String> callbackUrls) {
+
+        this.callbackUrls = callbackUrls;
     }
 
     public String getOauthVersion() {

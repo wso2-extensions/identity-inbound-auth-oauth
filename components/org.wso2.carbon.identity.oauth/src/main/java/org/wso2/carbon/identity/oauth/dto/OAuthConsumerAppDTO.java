@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth.dto;
 
+import java.util.List;
+
 /**
  * OAuth consumer app dto.
  */
@@ -27,6 +29,7 @@ public class OAuthConsumerAppDTO {
     private String oauthConsumerSecret;
     private String applicationName;
     private String callbackUrl;
+    private List<String> callBackUrls;
     private String oauthVersion;
     private String username;
     private String grantTypes = "";
@@ -91,6 +94,16 @@ public class OAuthConsumerAppDTO {
 
     public void setCallbackUrl(String callbackUrl) {
         this.callbackUrl = callbackUrl;
+    }
+
+    public List<String> getCallBackUrls() {
+
+        return callBackUrls;
+    }
+
+    public void setCallBackUrls(List<String> callBackUrls) {
+
+        this.callBackUrls = callBackUrls;
     }
 
     public String getOauthConsumerKey() {
