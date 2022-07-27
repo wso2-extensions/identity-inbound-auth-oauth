@@ -3201,7 +3201,8 @@ public class OAuthServerConfiguration {
 
 
     /**
-     * Parses the AllowCrossTenantTokenIntrospection configuration.
+     * Parses the AllowCrossTenantTokenIntrospection configuration that used to allow or block token introspection
+     * from other tenants
      *
      * @param oauthConfigElem oauthConfigElem.
      */
@@ -3211,14 +3212,14 @@ public class OAuthServerConfiguration {
                 ConfigElements.ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION));
         if (allowCrossTenantIntrospectionElem != null) {
             allowCrossTenantIntrospection = Boolean.parseBoolean(allowCrossTenantIntrospectionElem.getText());
-        } else {
-            /* If config is null, the property must be set to the default value which is true to
-        ensure backward compatibility. */
-            allowCrossTenantIntrospection = true;
         }
     }
 
-    public boolean isCrossTenantTokenInspectionAllowed() {
+    /**
+     * This method returns the value of the property AllowCrossTenantTokenIntrospection  for the OAuth configuration
+     * in identity.xml.
+     */
+    public boolean isCrossTenantTokenIntrospectionAllowed() {
 
         return allowCrossTenantIntrospection;
     }

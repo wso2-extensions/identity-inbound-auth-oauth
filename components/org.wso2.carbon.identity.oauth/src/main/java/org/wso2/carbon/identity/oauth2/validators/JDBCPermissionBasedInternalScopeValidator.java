@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.organization.management.service.exception.Organi
 import org.wso2.carbon.user.api.AuthorizationManager;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
@@ -59,6 +60,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -361,14 +363,31 @@ public class JDBCPermissionBasedInternalScopeValidator {
         return (String[]) ArrayUtils.add(allowedUIResourcesForUser, EVERYONE_PERMISSION);
     }
 
-    private String[] retrieveUserOrganizationPermission(AuthenticatedUser authenticatedUser, String organizationId)
-            throws UserIdNotFoundException {
+    private String[] retrieveUserOrganizationPermission(AuthenticatedUser authenticatedUser, String organizationId) {
+
         //Add permission based on user's organization roles.
         String[] allowedUIResourcesForUser = null;
         if (StringUtils.isNotBlank(organizationId)) {
             try {
-                List<String> organizationPermissions = OAuth2ServiceComponentHolder.getRoleManager()
-                        .getUserOrganizationPermissions(authenticatedUser.getUserId(), organizationId);
+                List<String> organizationPermissions = new ArrayList<>();
+                String authenticatedUserId = null;
+                try {
+                    authenticatedUserId = authenticatedUser.getUserId();
+                } catch (UserIdNotFoundException e) {
+                    // Resolve authenticated resident user.
+                    Optional<User> resolvedUser =
+                            OAuth2ServiceComponentHolder.getOrganizationUserResidentResolverService()
+                                    .resolveUserFromResidentOrganization(
+                                            authenticatedUser.getUserName(), null, organizationId);
+                    if (resolvedUser.isPresent()) {
+                        authenticatedUserId = resolvedUser.get().getUserID();
+                        authenticatedUser.setUserId(authenticatedUserId);
+                    }
+                }
+                if (StringUtils.isNotBlank(authenticatedUserId)) {
+                    organizationPermissions = OAuth2ServiceComponentHolder.getRoleManager()
+                            .getUserOrganizationPermissions(authenticatedUserId, organizationId);
+                }
                 allowedUIResourcesForUser = organizationPermissions.toArray(new String[0]);
             } catch (OrganizationManagementException e) {
                 log.error("Error while retrieving the organization permissions of the user.");

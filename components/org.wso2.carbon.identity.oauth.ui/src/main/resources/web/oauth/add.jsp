@@ -169,11 +169,12 @@
                         CARBON.showWarningDialog('<fmt:message key="application.is.required"/>');
                         return false;
                     }
+                    <%  if (allowedGrants.contains("refresh_token")) { %>
                     if (!$(jQuery("#grant_refresh_token"))[0].checked) {
                         document.getElementById("renewRefreshTokenPerApp").checked = true;
                         document.getElementById("renewRefreshTokenPerApp").value = 'notAssigned';
                     }
-
+                    <%  } %>
                     var version2Checked = document.getElementById("oauthVersion20").checked;
                     if (version2Checked) {
                         if (!$(jQuery("#grant_authorization_code"))[0].checked && !$(jQuery("#grant_implicit"))[0].checked) {
