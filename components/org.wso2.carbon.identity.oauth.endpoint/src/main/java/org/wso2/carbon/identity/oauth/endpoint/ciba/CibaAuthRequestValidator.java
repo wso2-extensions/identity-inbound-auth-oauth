@@ -197,8 +197,8 @@ public class CibaAuthRequestValidator {
                             "Invalid value for (binding_message).");
                 }
                 // Validate binding message contains only plain text
-                boolean isSpecialCharactersAvailable = bindingMessage.chars().allMatch(Character::isLetterOrDigit);
-                if (isSpecialCharactersAvailable) {
+                boolean isNoSpecialCharactersAvailable = bindingMessage.chars().allMatch(Character::isLetterOrDigit);
+                if (!isNoSpecialCharactersAvailable) {
                     throw new CibaAuthFailureException(ErrorCodes.INVALID_BINDING_MESSAGE,
                             "Invalid characters present in (binding_message).");
                 }

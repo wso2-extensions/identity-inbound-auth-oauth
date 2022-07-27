@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 public class CIBARequestObjectValidatorImpl implements RequestObjectValidator {
 
     private static final Log log = LogFactory.getLog(CIBARequestObjectValidatorImpl.class);
+    public static final long REQUEST_VALIDITY_PERIOD = 3600000;
 
     @Override
     public boolean isSigned(RequestObject requestObject) {
@@ -62,7 +63,7 @@ public class CIBARequestObjectValidatorImpl implements RequestObjectValidator {
             long expiryTime = requestObject.getClaimsSet().getExpirationTime().getTime();
             long nbfTime = requestObject.getClaimsSet().getNotBeforeTime().getTime();
             long requestValidityPeriod = expiryTime - nbfTime;
-            if (requestValidityPeriod > 3600000) {
+            if (requestValidityPeriod > REQUEST_VALIDITY_PERIOD) {
                 throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST,
                         "Request object invalid: Difference between validity period and nbf greater than 1 hour");
             }
