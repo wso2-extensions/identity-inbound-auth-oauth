@@ -178,7 +178,7 @@
                                                 }
                                             %>
                                             <input type="button" class="button"
-                                                   onclick="javascript:location.href='<%=Encode.forHtmlAttribute(forwardUrl)%>'"
+                                                   onclick="javascript:location.href='<%=Encode.forJavaScript(forwardUrl)%>'"
                                                    value="<fmt:message key='deny'/>"/>
                                         </td>
                                     </tr>
