@@ -20,6 +20,8 @@
 <%@ page import="java.net.URLDecoder" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon" %>
+<%@ page import="org.wso2.carbon.identity.application.authentication.endpoint.util.AuthenticationEndpointUtil" %>
+
 
 <%
     String cssLocation = request.getParameter("css");
@@ -173,7 +175,8 @@
                                                    onclick="validate();"/>
                                             <%
                                                 String forwardUrl = "../../carbon/admin/index.jsp";
-                                                if (forwardPage != null) {
+                                                if (forwardPage != null
+                                                    && AuthenticationEndpointUtil.isValidURL(forwardPage)) {
                                                     forwardUrl = forwardPage;
                                                 }
                                             %>
