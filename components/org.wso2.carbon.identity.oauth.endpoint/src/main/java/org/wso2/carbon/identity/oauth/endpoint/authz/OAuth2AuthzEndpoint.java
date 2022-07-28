@@ -2363,6 +2363,11 @@ public class OAuth2AuthzEndpoint {
             return handlePromptNone(oAuthMessage, sessionState, oauth2Params, authenticatedUser, hasUserApproved);
         } else if (isPromptLogin(oauth2Params) || isPromptParamsNotPresent(oauth2Params)
                 || isPromptSelectAccount(oauth2Params)) {
+            /*
+             * IS does not currently support multiple logged-in sessions.
+             * Therefore, gracefully handling prompt=select_account by mimicking the behaviour of a request that does
+             * not have a prompt param.
+             */
             return handleConsent(oAuthMessage, sessionDataKeyFromLogin, sessionState, oauth2Params, authenticatedUser,
                     hasUserApproved);
         } else {
