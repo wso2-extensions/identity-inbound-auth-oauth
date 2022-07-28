@@ -1370,13 +1370,15 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         assertNotNull(response, "Authorization response is null");
         assertEquals(response.getStatus(), HttpServletResponse.SC_FOUND, "Unexpected HTTP response status");
 
-        if (errorCode != null) {
-            MultivaluedMap<String, Object> responseMetadata = response.getMetadata();
-            assertNotNull(responseMetadata, "Response metadata is null");
+        MultivaluedMap<String, Object> responseMetadata = response.getMetadata();
+        assertNotNull(responseMetadata, "Response metadata is null");
 
-            assertTrue(CollectionUtils.isNotEmpty(responseMetadata.get(HTTPConstants.HEADER_LOCATION)),
-                    "Location header not found in the response");
-            String location = String.valueOf(responseMetadata.get(HTTPConstants.HEADER_LOCATION).get(0));
+        assertTrue(CollectionUtils.isNotEmpty(responseMetadata.get(HTTPConstants.HEADER_LOCATION)),
+                "Location header not found in the response");
+        String location = String.valueOf(responseMetadata.get(HTTPConstants.HEADER_LOCATION).get(0));
+        assertFalse(location.isEmpty(), "Redirect URL is empty");
+
+        if (errorCode != null) {
             assertTrue(location.contains(errorCode), "Expected error code not found in URL");
         }
 
