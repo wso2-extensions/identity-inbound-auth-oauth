@@ -326,7 +326,7 @@ public class AccessTokenIssuer {
 
         AuthenticatedUser authenticatedUser = tokReqMsgCtx.getAuthorizedUser();
         if (authenticatedUser != null && authenticatedUser.isFederatedUser()) {
-            String appName = getServiceProvider(tokenReqDTO).getApplicationName();
+            String appName = OAuth2Util.getServiceProviderName(tokReqMsgCtx);
             // If federated role-based authorization is engaged skip overwriting the user tenant domain.
             if (!IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG).contains(appName)
                     || authenticatedUser.getTenantDomain() == null) {
