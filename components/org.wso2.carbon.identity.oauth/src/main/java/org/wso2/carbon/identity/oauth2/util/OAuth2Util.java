@@ -309,6 +309,7 @@ public class OAuth2Util {
      */
     public static final String FIDP_ROLE_BASED_AUTHZ_APP_CONFIG = "FIdPRoleBasedAuthzApplications.AppName";
 
+    private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private static final Log log = LogFactory.getLog(OAuth2Util.class);
     private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private static final String INTERNAL_LOGIN_SCOPE = "internal_login";
@@ -4497,5 +4498,55 @@ public class OAuth2Util {
         }
 
         return Collections.emptyList();
+    }
+
+    /**
+     * Get the service provider name for provided context.
+     *
+     * @param requestMsgCtx Token request message context.
+     * @return Relevant service provider name.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception
+     */
+    public static String getServiceProviderName(OAuthTokenReqMessageContext requestMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        String spTenantDomain = requestMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
+        if (StringUtils.isBlank(spTenantDomain)) {
+            spTenantDomain = org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+        String clientId = requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
+        return getServiceProviderName(clientId, spTenantDomain);
+    }
+
+    /**
+     * Get the service provider name for provided context
+     *
+     * @param oauthAuthzMsgCtx OAuth authorization request message context.
+     * @return Relevant service provider name.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static String getServiceProviderName(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        String spTenantDomain = oauthAuthzMsgCtx.getAuthorizationReqDTO().getTenantDomain();
+        if (StringUtils.isBlank(spTenantDomain)) {
+            spTenantDomain = org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+        String clientId = oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey();
+        return getServiceProviderName(clientId, spTenantDomain);
+    }
+
+    private static String getServiceProviderName(String clientId, String tenantDomain) throws IdentityOAuth2Exception {
+
+        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
+        try {
+            // Get service provider name.
+            String spName = applicationMgtService
+                    .getServiceProviderNameByClientId(clientId, INBOUND_AUTH2_TYPE, tenantDomain);
+            return spName;
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while obtaining the service provider name for client_id: " +
+                    clientId + " of tenantDomain: " + tenantDomain, e);
+        }
     }
 }

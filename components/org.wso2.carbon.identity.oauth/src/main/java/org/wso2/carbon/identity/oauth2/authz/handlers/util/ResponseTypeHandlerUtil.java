@@ -256,7 +256,7 @@ public class ResponseTypeHandlerUtil {
 
         AuthenticatedUser authenticatedUser = authorizationReqDTO.getUser();
         if (authenticatedUser != null && authenticatedUser.isFederatedUser()) {
-            String appName = OAuth2Util.getServiceProvider(authorizationReqDTO.getConsumerKey()).getApplicationName();
+            String appName = OAuth2Util.getServiceProviderName(oauthAuthzMsgCtx);
             // If federated role-based authorization is engaged skip overwriting the user tenant domain.
             if (!IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG).contains(appName)
                     || authenticatedUser.getTenantDomain() == null) {
