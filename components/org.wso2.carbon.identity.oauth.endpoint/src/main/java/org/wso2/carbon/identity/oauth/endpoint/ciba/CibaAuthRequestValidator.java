@@ -445,14 +445,21 @@ public class CibaAuthRequestValidator {
         }
 
         // Validation for aud-audience to meet mandated value.
-        if (!expectedAudience.contains(aud.get(0))) {
+        boolean isValidAudiencePresent = false;
+        for (String audience : aud) {
+            if (expectedAudience.contains(audience)) {
+                isValidAudiencePresent = true;
+                break;
+            }
+        }
+        if (!isValidAudiencePresent) {
             // The audience value does not suit mandated value.
             if (log.isDebugEnabled()) {
-                log.debug("Invalid CIBA Authentication Request made by client with clientID: " + clientId +
-                        ". Expected audience: " + expectedAudience + ".");
+                log.debug("Invalid audience for CIBA Authentication Request made by client with clientID: " +
+                        clientId);
             }
             throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-                    "Parameter (aud) does not meet the expected value: " + expectedAudience + ".");
+                    "Parameter (aud) does not meet the expected value.");
         }
     }
 
