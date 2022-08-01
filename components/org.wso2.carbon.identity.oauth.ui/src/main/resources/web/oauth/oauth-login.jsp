@@ -174,8 +174,7 @@
                                                    onclick="validate();"/>
                                             <%
                                                 String forwardUrl = "../../carbon/admin/index.jsp";
-                                                if (forwardPage != null
-                                                    && OAuthUIUtil.isValidURL(forwardPage)) {
+                                                if (forwardPage != null && OAuthUIUtil.isValidURL(forwardPage)) {
                                                     forwardUrl = forwardPage;
                                                 }
                                             %>
