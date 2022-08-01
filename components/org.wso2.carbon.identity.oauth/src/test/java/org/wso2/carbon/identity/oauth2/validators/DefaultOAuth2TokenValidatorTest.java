@@ -18,12 +18,17 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -31,22 +36,47 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 
+import java.io.File;
+import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Set;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 @WithCarbonHome
-public class DefaultOAuth2TokenValidatorTest {
+@PrepareForTest({IdentityUtil.class, IdentityTenantUtil.class})
+public class DefaultOAuth2TokenValidatorTest extends PowerMockTestCase {
 
     public static final String CONSUMER_KEY = "consumer-key";
     private DefaultOAuth2TokenValidator defaultOAuth2TokenValidator;
     private OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO;
     private OAuth2TokenValidationResponseDTO oAuth2TokenValidationResponseDTO;
     private OAuth2TokenValidationMessageContext oAuth2TokenValidationMessageContext;
-
+    private static final String oAuth2TokenEPUrl
+            = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
+            "/oauth2/token";
     @BeforeMethod
     public void setUp() throws Exception {
+        System.setProperty(
+                CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
+        );
+
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getIdentityConfigDirPath())
+                .thenReturn(System.getProperty("user.dir")
+                        + File.separator + "src"
+                        + File.separator + "test"
+                        + File.separator + "resources"
+                        + File.separator + "conf");
+        when(IdentityUtil.fillURLPlaceholders(oAuth2TokenEPUrl)).thenReturn(oAuth2TokenEPUrl);
+
         defaultOAuth2TokenValidator = new DefaultOAuth2TokenValidator();
         oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
         OAuth2TokenValidationRequestDTO.TokenValidationContextParam tokenValidationContextParam =
