@@ -132,7 +132,6 @@ import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
-import org.wso2.carbon.user.api.ClaimManager;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -164,6 +163,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -174,6 +174,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -792,7 +793,7 @@ public class OAuth2Util {
 
     public static boolean checkPasswordResetEnforcementEnabled() {
 
-        return OAuthServerConfiguration.getInstance().isPasswordResetEnforcementEnabled();
+        return OAuthServerConfiguration.getInstance().isExpiredPasswordResetEnforcementForPasswordGrantEnabled();
     }
 
     public static boolean checkUserNameAssertionEnabled() {
@@ -4406,13 +4407,14 @@ public class OAuth2Util {
     /**
      * Checks if the password had expired.
      *
-     * @param tenantDomain        The tenant domain of the user trying to authenticate
-     * @param tenantAwareUsername The tenant aware username of the user trying to authenticate
-     * @return True if the password had expired
-     * @throws IdentityOAuth2Exception if the authentication failed for the user trying to login
+     * @param tenantDomain        The tenant domain of the user trying to authenticate.
+     * @param tenantAwareUsername The tenant aware username of the user trying to authenticate.
+     * @return True if the password had expired.
+     * @throws IdentityOAuth2Exception if the authentication failed for the user trying to login.
      */
-    public static boolean hadPasswordExpired(String tenantDomain, String tenantAwareUsername)
+    public static boolean isUserPasswordExpired(String tenantDomain, String tenantAwareUsername)
             throws IdentityOAuth2Exception {
+
         org.wso2.carbon.user.api.UserStoreManager userStoreManager;
         UserRealm userRealm;
         try {
@@ -4425,25 +4427,20 @@ public class OAuth2Util {
         }
 
         String passwordLastChangedTime;
-        String claimURI = PasswordPolicyConstants.LAST_CREDENTIAL_UPDATE_TIMESTAMP_CLAIM;
+        String lastCredentialUpdateClaimURI = PasswordPolicyConstants.LAST_CREDENTIAL_UPDATE_TIMESTAMP_CLAIM;
+        String createdClaimURI = PasswordPolicyConstants.CREATED_CLAIM;
         try {
-            passwordLastChangedTime = getLastPasswordUpdateTime(userStoreManager, claimURI, tenantAwareUsername);
-            if (passwordLastChangedTime == null) {
-                ClaimManager claimManager = userRealm.getClaimManager();
-                claimURI = PasswordPolicyConstants.LAST_CREDENTIAL_UPDATE_TIMESTAMP_CLAIM_NON_IDENTITY;
-                if (claimManager.getClaim(claimURI) != null) {
-                    passwordLastChangedTime =
-                            getLastPasswordUpdateTime(userStoreManager, claimURI, tenantAwareUsername);
-                }
-            }
-        } catch (UserStoreException e) {
-            throw new IdentityOAuth2Exception("Error occurred while loading user claim - " + claimURI, e);
+            // trying to first get a value for the 'lastPasswordUpdateTime' claim and if that fails the fallback is
+            // the 'created' claim
+            passwordLastChangedTime = getClaimValue(userStoreManager,lastCredentialUpdateClaimURI, tenantAwareUsername)
+                    .orElse(convertCreatedDateToEpochString(
+                            getClaimValue(userStoreManager, createdClaimURI, tenantAwareUsername).get()));
+        } catch (UserStoreException | ParseException e) {
+            throw new IdentityOAuth2Exception("Error occurred while loading user claim", e);
         }
 
-        long passwordChangedTime = 0;
-        if (passwordLastChangedTime != null) {
-            passwordChangedTime = Long.parseLong(passwordLastChangedTime);
-        }
+        long passwordChangedTime;
+        passwordChangedTime = Long.parseLong(passwordLastChangedTime);
 
         int daysDifference = 0;
         long currentTimeMillis = System.currentTimeMillis();
@@ -4456,30 +4453,36 @@ public class OAuth2Util {
         int passwordExpiryInDays = PasswordPolicyConstants.PASSWORD_EXPIRY_IN_DAYS_DEFAULT_VALUE;
 
         // Getting the configured number of days before password expiry in days
-        String passwordExpiryInDaysConfiguredValue = PasswordPolicyUtils
-                .getResidentIdpProperty(tenantDomain, PasswordPolicyConstants.PASSWORD_EXPIRY_IN_DAYS_FROM_CONFIG);
+        String passwordExpiryInDaysConfiguredValue = PasswordPolicyUtils.getResidentIdpProperty(tenantDomain,
+                PasswordPolicyConstants.PASSWORD_EXPIRY_IN_DAYS_FROM_CONFIG)
+                .orElseGet(() -> PasswordPolicyUtils.getIdentityEventProperty(
+                        PasswordPolicyConstants.PASSWORD_EXPIRY_IN_DAYS_FROM_CONFIG));
 
-        if (StringUtils.isEmpty(passwordExpiryInDaysConfiguredValue)) {
-            passwordExpiryInDaysConfiguredValue = PasswordPolicyUtils.getIdentityEventProperty(
-                    PasswordPolicyConstants.PASSWORD_EXPIRY_IN_DAYS_FROM_CONFIG);
-        }
-
-        if (passwordExpiryInDaysConfiguredValue != null) {
+        if (StringUtils.isNotBlank(passwordExpiryInDaysConfiguredValue)) {
             passwordExpiryInDays = Integer.parseInt(passwordExpiryInDaysConfiguredValue);
         }
 
-        return (daysDifference > passwordExpiryInDays || passwordLastChangedTime == null);
+        return daysDifference > passwordExpiryInDays;
     }
 
-    private static String getLastPasswordUpdateTime(org.wso2.carbon.user.api.UserStoreManager userStoreManager, String claimURI,
-                                                    String tenantAwareUsername) throws UserStoreException {
+    private static Optional<String> getClaimValue(org.wso2.carbon.user.api.UserStoreManager userStoreManager,
+                                                  String claimURI,
+                                                  String tenantAwareUsername) throws UserStoreException {
 
         String[] claimURIs = new String[]{claimURI};
         Map<String, String> claimValueMap =
                 userStoreManager.getUserClaimValues(tenantAwareUsername, claimURIs, null);
-        if (claimValueMap != null && claimValueMap.get(claimURI) != null) {
-            return claimValueMap.get(claimURI);
+        if (claimValueMap != null && !claimValueMap.isEmpty()) {
+            return Optional.of(claimValueMap.get(claimURI));
         }
-        return null;
+        return Optional.empty();
+    }
+
+    private static String convertCreatedDateToEpochString(String createdDate) throws ParseException {
+
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(PasswordPolicyConstants.CREATED_CLAIM_DATE_FORMAT);
+        simpleDateFormat.setTimeZone(TimeZone.getTimeZone(PasswordPolicyConstants.CREATED_CLAIM_TIMEZONE));
+
+        return String.valueOf(simpleDateFormat.parse(createdDate).getTime());
     }
 }

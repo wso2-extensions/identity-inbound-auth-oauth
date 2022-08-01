@@ -31,6 +31,11 @@ import org.wso2.carbon.identity.oauth2.PasswordPolicyConstants;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
+import java.util.Optional;
+
+/**
+ * Helper functions for Password Grant Password Expiry enforcement
+ */
 public class PasswordPolicyUtils {
     private static final Log log = LogFactory.getLog(PasswordPolicyUtils.class);
 
@@ -38,10 +43,10 @@ public class PasswordPolicyUtils {
     }
 
     /**
-     * Get the identity property specified in identity-event.properties
+     * Get the identity property specified in identity-event.properties.
      *
-     * @param propertyName The name of the property which should be fetched
-     * @return The required property
+     * @param propertyName The name of the property which should be fetched.
+     * @return The required property.
      */
     public static String getIdentityEventProperty(String propertyName) {
 
@@ -66,28 +71,29 @@ public class PasswordPolicyUtils {
     /**
      * Retrieve the password expiry property from resident IdP.
      *
-     * @param tenantDomain tenant domain which user belongs to
-     * @param propertyName name of the property to be retrieved
-     * @return the value of the requested property
-     * @throws IdentityOAuth2Exception if retrieving property from resident idp fails
+     * @param tenantDomain tenant domain which user belongs to.
+     * @param propertyName name of the property to be retrieved.
+     * @return the value of the requested property.
+     * @throws IdentityOAuth2Exception if retrieving property from resident idp fails.
      */
-    public static String getResidentIdpProperty(String tenantDomain, String propertyName)
+    public static Optional<String> getResidentIdpProperty(String tenantDomain, String propertyName)
             throws IdentityOAuth2Exception {
 
         IdentityProvider residentIdP;
         try {
             residentIdP = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
+
+            if (residentIdP == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Resident IdP is not found for tenant: " + tenantDomain);
+                }
+                return Optional.empty();
+            }
         } catch (IdentityProviderManagementException e) {
             throw new IdentityOAuth2Exception("Error occurred while retrieving the resident IdP for tenant: " +
                     tenantDomain, e);
         }
 
-        if (residentIdP == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Resident IdP is not found for tenant: " + tenantDomain);
-            }
-            return null;
-        }
         IdentityProviderProperty property = IdentityApplicationManagementUtil
                 .getProperty(residentIdP.getIdpProperties(), propertyName);
 
@@ -95,6 +101,6 @@ public class PasswordPolicyUtils {
         if (property != null) {
             propertyValue = property.getValue();
         }
-        return propertyValue;
+        return Optional.ofNullable(propertyValue);
     }
 }

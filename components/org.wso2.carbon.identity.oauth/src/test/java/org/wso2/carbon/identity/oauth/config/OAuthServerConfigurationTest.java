@@ -434,7 +434,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
     public void testPasswordResetEnforcementEnabled() {
 
         Assert.assertFalse(OAuthServerConfiguration.getInstance()
-                .isPasswordResetEnforcementEnabled());
+                .isExpiredPasswordResetEnforcementForPasswordGrantEnabled());
     }
 
     private String fillURLPlaceholdersForTest(String url) {

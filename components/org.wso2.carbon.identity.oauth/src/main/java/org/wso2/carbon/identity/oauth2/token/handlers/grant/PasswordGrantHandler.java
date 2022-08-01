@@ -199,11 +199,9 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
 
             String tenantAwareUserName = MultitenantUtils.getTenantAwareUsername(username);
             String userTenantDomain = MultitenantUtils.getTenantDomain(username);
-
-            if (OAuth2Util.checkPasswordResetEnforcementEnabled()) {
-                if (OAuth2Util.hadPasswordExpired(userTenantDomain, tenantAwareUserName)){
-                    throw new IdentityOAuth2Exception("Password expired for user with username: " + tenantAwareUserName);
-                }
+            AbstractUserStoreManager userStoreManager = getUserStoreManager(userTenantDomain);
+            if (!userStoreManager.isExistingUser(tenantAwareUserName)) {
+                throw new IdentityOAuth2Exception("User doesn't exist");
             }
 
             ResolvedUserResult resolvedUserResult =
@@ -216,7 +214,6 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 tokenReq.setResourceOwnerUsername(tenantAwareUserName + "@" + userTenantDomain);
             }
 
-            AbstractUserStoreManager userStoreManager = getUserStoreManager(userTenantDomain);
             AuthenticationResult authenticationResult;
             if (userId != null) {
                 authenticationResult = userStoreManager.authenticateWithID(userId, tokenReq.getResourceOwnerPassword());
@@ -231,6 +228,11 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                     && authenticationResult.getAuthenticatedUser().isPresent();
             if (log.isDebugEnabled()) {
                 log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: " + authenticated);
+            }
+            if (OAuth2Util.checkPasswordResetEnforcementEnabled()) {
+                if (OAuth2Util.isUserPasswordExpired(userTenantDomain, tenantAwareUserName)){
+                    throw new IdentityOAuth2Exception("Password has expired");
+                }
             }
 
             if (authenticated) {
