@@ -67,6 +67,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.FIDP_ROLE_BASED_AUTHZ_APP_CONFIG;
 
 /**
  * ResponseTypeHandlerUtil contains all the common methods in tokenResponseTypeHandler and IDTokenResponseTypeHandler.
@@ -253,9 +254,15 @@ public class ResponseTypeHandlerUtil {
         // set code issued time.this is needed by downstream handlers.
         oauthAuthzMsgCtx.setCodeIssuedTime(timestamp.getTime());
 
-        if (authorizationReqDTO.getUser() != null && authorizationReqDTO.getUser().isFederatedUser()) {
-            //if a federated user, treat the tenant domain as similar to application domain.
-            authorizationReqDTO.getUser().setTenantDomain(authorizationReqDTO.getTenantDomain());
+        AuthenticatedUser authenticatedUser = authorizationReqDTO.getUser();
+        if (authenticatedUser != null && authenticatedUser.isFederatedUser()) {
+            String appName = OAuth2Util.getServiceProviderName(oauthAuthzMsgCtx);
+            // If federated role-based authorization is engaged skip overwriting the user tenant domain.
+            if (!IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG).contains(appName)
+                    || authenticatedUser.getTenantDomain() == null) {
+                // If a federated user, treat the tenant domain as similar to the application domain.
+                authenticatedUser.setTenantDomain(authorizationReqDTO.getTenantDomain());
+            }
         }
 
         try {

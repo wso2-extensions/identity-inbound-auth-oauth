@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.validators;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
@@ -29,6 +30,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.role.management.service.models.Role;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.Tenant;
@@ -43,6 +45,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -50,6 +53,8 @@ import static java.util.Objects.nonNull;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.FIDP_ROLE_BASED_AUTHZ_APP_CONFIG;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getRolesFromFederatedUserAttributes;
 
 /**
  * The role based internal console scopes validation implementation. This will validate the configured console scopes
@@ -76,7 +81,27 @@ public class RoleBasedInternalScopeValidator {
 
         // Get the roles of the authenticated user.
         AuthenticatedUser authenticatedUser = tokReqMsgCtx.getAuthorizedUser();
-        List<String> roles = getRolesOfTheUser(authenticatedUser);
+        List<String> roles;
+
+        // Find whether federated role based authorization is engaged or not.
+        boolean isfederatedRoleBasedAuthzEnabled = false;
+        if (authenticatedUser.isFederatedUser()) {
+            Optional<String> optionalClientId = Optional.ofNullable(tokReqMsgCtx)
+                    .map(tokenReqDTO -> tokenReqDTO.getOauth2AccessTokenReqDTO())
+                    .map(clientId -> clientId.getClientId());
+            if (optionalClientId.isPresent()) {
+                String appName = OAuth2Util.getServiceProviderName(tokReqMsgCtx);
+                isfederatedRoleBasedAuthzEnabled = IdentityUtil
+                        .getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG)
+                        .contains(appName);
+            }
+        }
+
+        if (isfederatedRoleBasedAuthzEnabled) {
+            roles = getRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
+        } else {
+            roles = getRolesOfTheUser(authenticatedUser);
+        }
         List<String> rolesWithoutInternalDomain = removeInternalDomain(roles);
 
         // Get the configured system roles list with the scopes.
@@ -122,7 +147,27 @@ public class RoleBasedInternalScopeValidator {
 
         // Get the roles of the authenticated user.
         AuthenticatedUser authenticatedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
-        List<String> roles = getRolesOfTheUser(authenticatedUser);
+        List<String> roles;
+
+        // Find whether federated role based authorization is engaged or not.
+        boolean isfederatedRoleBasedAuthzEnabled = false;
+        if (authenticatedUser.isFederatedUser()) {
+            Optional<String> optionalClientId = Optional.ofNullable(authzReqMessageContext)
+                    .map(authzReqMC -> authzReqMC.getAuthorizationReqDTO())
+                    .map(consumerKey -> consumerKey.getConsumerKey());
+            if (optionalClientId.isPresent()) {
+                String appName = OAuth2Util.getServiceProviderName(authzReqMessageContext);
+                isfederatedRoleBasedAuthzEnabled = IdentityUtil
+                        .getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG)
+                        .contains(appName);
+            }
+        }
+
+        if (isfederatedRoleBasedAuthzEnabled) {
+            roles = getRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
+        } else {
+            roles = getRolesOfTheUser(authenticatedUser);
+        }
         List<String> rolesWithoutInternalDomain = removeInternalDomain(roles);
 
         // Get the configured system roles list with the scopes.
@@ -173,9 +218,16 @@ public class RoleBasedInternalScopeValidator {
                     = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
 
             String userName = userStoreManager.getUserNameFromUserID(authenticatedUser.getUserId());
+            // If the username is empty try to set it as authenticated username.
+            if (StringUtils.isEmpty(userName)) {
+                userName = authenticatedUser.getUserName();
+            }
+            // Remove domain name from username.
+            if (StringUtils.isNotEmpty(userName)) {
+                userName = UserCoreUtil.removeDomainFromName(userName);
+            }
 
-            return userStoreManager.getHybridRoleListOfUser(UserCoreUtil.removeDomainFromName(userName),
-                    authenticatedUser.getUserStoreDomain());
+            return userStoreManager.getHybridRoleListOfUser(userName, authenticatedUser.getUserStoreDomain());
 
         } catch (UserStoreException e) {
             String error =
