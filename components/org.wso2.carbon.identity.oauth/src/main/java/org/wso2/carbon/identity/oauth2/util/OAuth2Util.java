@@ -4272,17 +4272,14 @@ public class OAuth2Util {
 
     private static Optional<String> getContextTenantDomainFromTokenReqDTO(OAuth2AccessTokenReqDTO tokenReqDTO) {
 
-        if (tokenReqDTO == null || tokenReqDTO.getRequestParameters() == null) {
+        if (tokenReqDTO == null || tokenReqDTO.getCustomParameters() == null) {
             return Optional.empty();
         }
 
-        RequestParameter[] parameters = tokenReqDTO.getRequestParameters();
-        for (RequestParameter parameter : parameters) {
-            if (OAuthConstants.TENANT_DOMAIN_FROM_CONTEXT.equals(parameter.getKey())) {
-                if (parameter.getValue() != null && parameter.getValue().length > 0) {
-                    return Optional.of(parameter.getValue()[0]);
-                }
-            }
+       String tenantDomainFromContext =
+               tokenReqDTO.getCustomParameters().get(OAuthConstants.TENANT_DOMAIN_FROM_CONTEXT);
+        if (StringUtils.isNotBlank(tenantDomainFromContext)) {
+            return Optional.of(tenantDomainFromContext);
         }
         return Optional.empty();
     }
