@@ -62,6 +62,7 @@ import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -256,10 +257,15 @@ public class ResponseTypeHandlerUtil {
 
         AuthenticatedUser authenticatedUser = authorizationReqDTO.getUser();
         if (authenticatedUser != null && authenticatedUser.isFederatedUser()) {
-            String appName = OAuth2Util.getServiceProviderName(oauthAuthzMsgCtx);
+            boolean skipTenantDomainOverWriting = false;
+            List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
+            if (federatedRoleBasedAuthzApps.size() > 0) {
+                String appName = OAuth2Util.getServiceProviderName(oauthAuthzMsgCtx);
+                skipTenantDomainOverWriting = federatedRoleBasedAuthzApps.contains(appName)
+                        || authenticatedUser.getTenantDomain() == null;
+            }
             // If federated role-based authorization is engaged skip overwriting the user tenant domain.
-            if (!IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG).contains(appName)
-                    || authenticatedUser.getTenantDomain() == null) {
+            if (!skipTenantDomainOverWriting) {
                 // If a federated user, treat the tenant domain as similar to the application domain.
                 authenticatedUser.setTenantDomain(authorizationReqDTO.getTenantDomain());
             }
