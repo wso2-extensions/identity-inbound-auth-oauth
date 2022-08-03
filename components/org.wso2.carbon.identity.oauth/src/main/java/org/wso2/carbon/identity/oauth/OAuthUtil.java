@@ -68,6 +68,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_TOKEN_IDENTIFIER;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.Config.PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 
@@ -572,10 +573,15 @@ public final class OAuthUtil {
                 boolean isTokenPreservingAtPasswordUpdateEnabled =
                         Boolean.parseBoolean(IdentityUtil.getProperty(PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE));
                 String currentTokenBindingReference = "";
+                String currentTokenReference = "";
                 if (isTokenPreservingAtPasswordUpdateEnabled) {
                     if (IdentityUtil.threadLocalProperties.get().get(CURRENT_SESSION_IDENTIFIER) != null) {
-                        currentTokenBindingReference =
-                                (String) IdentityUtil.threadLocalProperties.get().get(CURRENT_SESSION_IDENTIFIER);
+                        currentTokenBindingReference = (String) IdentityUtil.threadLocalProperties.get()
+                                .get(CURRENT_SESSION_IDENTIFIER);
+                    }
+                    if (IdentityUtil.threadLocalProperties.get().get(CURRENT_TOKEN_IDENTIFIER) != null) {
+                        currentTokenReference = (String) IdentityUtil.threadLocalProperties.get()
+                                .get(CURRENT_TOKEN_IDENTIFIER);
                     }
                 }
 
@@ -594,6 +600,11 @@ public final class OAuthUtil {
                                 currentTokenBindingReference)) {
                             continue;
                         }
+                    }
+                    // Skip current token from being revoked. When the token is generated using password grant.
+                    if (isTokenPreservingAtPasswordUpdateEnabled && StringUtils.equals(accessTokenDO.getTokenId(),
+                            currentTokenReference)) {
+                        continue;
                     }
                     OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                             OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
