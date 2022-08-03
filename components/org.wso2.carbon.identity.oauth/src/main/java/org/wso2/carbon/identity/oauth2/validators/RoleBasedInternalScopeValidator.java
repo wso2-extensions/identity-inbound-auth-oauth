@@ -45,7 +45,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -85,16 +84,10 @@ public class RoleBasedInternalScopeValidator {
 
         // Find whether federated role based authorization is engaged or not.
         boolean isfederatedRoleBasedAuthzEnabled = false;
-        if (authenticatedUser.isFederatedUser()) {
-            Optional<String> optionalClientId = Optional.ofNullable(tokReqMsgCtx)
-                    .map(tokenReqDTO -> tokenReqDTO.getOauth2AccessTokenReqDTO())
-                    .map(clientId -> clientId.getClientId());
-            if (optionalClientId.isPresent()) {
-                String appName = OAuth2Util.getServiceProviderName(tokReqMsgCtx);
-                isfederatedRoleBasedAuthzEnabled = IdentityUtil
-                        .getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG)
-                        .contains(appName);
-            }
+        List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
+        if (authenticatedUser.isFederatedUser() && federatedRoleBasedAuthzApps.size() > 0) {
+            String appName = OAuth2Util.getServiceProviderName(tokReqMsgCtx);
+            isfederatedRoleBasedAuthzEnabled = federatedRoleBasedAuthzApps.contains(appName);
         }
 
         if (isfederatedRoleBasedAuthzEnabled) {
@@ -151,16 +144,10 @@ public class RoleBasedInternalScopeValidator {
 
         // Find whether federated role based authorization is engaged or not.
         boolean isfederatedRoleBasedAuthzEnabled = false;
-        if (authenticatedUser.isFederatedUser()) {
-            Optional<String> optionalClientId = Optional.ofNullable(authzReqMessageContext)
-                    .map(authzReqMC -> authzReqMC.getAuthorizationReqDTO())
-                    .map(consumerKey -> consumerKey.getConsumerKey());
-            if (optionalClientId.isPresent()) {
-                String appName = OAuth2Util.getServiceProviderName(authzReqMessageContext);
-                isfederatedRoleBasedAuthzEnabled = IdentityUtil
-                        .getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG)
-                        .contains(appName);
-            }
+        List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
+        if (authenticatedUser.isFederatedUser() && federatedRoleBasedAuthzApps.size() > 0) {
+            String appName = OAuth2Util.getServiceProviderName(authzReqMessageContext);
+            isfederatedRoleBasedAuthzEnabled = federatedRoleBasedAuthzApps.contains(appName);
         }
 
         if (isfederatedRoleBasedAuthzEnabled) {

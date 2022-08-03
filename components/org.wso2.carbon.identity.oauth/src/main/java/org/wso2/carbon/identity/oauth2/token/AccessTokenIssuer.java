@@ -326,10 +326,15 @@ public class AccessTokenIssuer {
 
         AuthenticatedUser authenticatedUser = tokReqMsgCtx.getAuthorizedUser();
         if (authenticatedUser != null && authenticatedUser.isFederatedUser()) {
-            String appName = OAuth2Util.getServiceProviderName(tokReqMsgCtx);
+            boolean skipTenantDomainOverWriting = false;
+            List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
+            if (federatedRoleBasedAuthzApps.size() > 0) {
+                String appName = OAuth2Util.getServiceProviderName(tokReqMsgCtx);
+                skipTenantDomainOverWriting = federatedRoleBasedAuthzApps.contains(appName)
+                        || authenticatedUser.getTenantDomain() == null;
+            }
             // If federated role-based authorization is engaged skip overwriting the user tenant domain.
-            if (!IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG).contains(appName)
-                    || authenticatedUser.getTenantDomain() == null) {
+            if (!skipTenantDomainOverWriting) {
                 authenticatedUser.setTenantDomain(tenantDomainOfApp);
             }
         }
