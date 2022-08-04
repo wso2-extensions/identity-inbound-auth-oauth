@@ -83,14 +83,16 @@ public class RoleBasedInternalScopeValidator {
         List<String> roles;
 
         // Find whether federated role based authorization is engaged or not.
-        boolean isfederatedRoleBasedAuthzEnabled = false;
-        List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
-        if (authenticatedUser.isFederatedUser() && federatedRoleBasedAuthzApps.size() > 0) {
-            String appName = OAuth2Util.getServiceProviderName(tokReqMsgCtx);
-            isfederatedRoleBasedAuthzEnabled = federatedRoleBasedAuthzApps.contains(appName);
+        boolean isFederatedRoleBasedAuthzEnabled = false;
+        if (authenticatedUser.isFederatedUser()) {
+            List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
+            if (federatedRoleBasedAuthzApps.size() > 0) {
+                String appName = OAuth2Util.getServiceProviderName(tokReqMsgCtx);
+                isFederatedRoleBasedAuthzEnabled = federatedRoleBasedAuthzApps.contains(appName);
+            }
         }
 
-        if (isfederatedRoleBasedAuthzEnabled) {
+        if (isFederatedRoleBasedAuthzEnabled) {
             roles = getRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
         } else {
             roles = getRolesOfTheUser(authenticatedUser);
@@ -143,14 +145,16 @@ public class RoleBasedInternalScopeValidator {
         List<String> roles;
 
         // Find whether federated role based authorization is engaged or not.
-        boolean isfederatedRoleBasedAuthzEnabled = false;
-        List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
-        if (authenticatedUser.isFederatedUser() && federatedRoleBasedAuthzApps.size() > 0) {
-            String appName = OAuth2Util.getServiceProviderName(authzReqMessageContext);
-            isfederatedRoleBasedAuthzEnabled = federatedRoleBasedAuthzApps.contains(appName);
+        boolean isFederatedRoleBasedAuthzEnabled = false;
+        if (authenticatedUser.isFederatedUser()) {
+            List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
+            if (federatedRoleBasedAuthzApps.size() > 0) {
+                String appName = OAuth2Util.getServiceProviderName(authzReqMessageContext);
+                isFederatedRoleBasedAuthzEnabled = federatedRoleBasedAuthzApps.contains(appName);
+            }
         }
 
-        if (isfederatedRoleBasedAuthzEnabled) {
+        if (isFederatedRoleBasedAuthzEnabled) {
             roles = getRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
         } else {
             roles = getRolesOfTheUser(authenticatedUser);

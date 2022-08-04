@@ -259,10 +259,9 @@ public class ResponseTypeHandlerUtil {
         if (authenticatedUser != null && authenticatedUser.isFederatedUser()) {
             boolean skipTenantDomainOverWriting = false;
             List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
-            if (federatedRoleBasedAuthzApps.size() > 0) {
+            if (federatedRoleBasedAuthzApps.size() > 0 && authenticatedUser.getTenantDomain() != null) {
                 String appName = OAuth2Util.getServiceProviderName(oauthAuthzMsgCtx);
-                skipTenantDomainOverWriting = federatedRoleBasedAuthzApps.contains(appName)
-                        || authenticatedUser.getTenantDomain() == null;
+                skipTenantDomainOverWriting = federatedRoleBasedAuthzApps.contains(appName);
             }
             // If federated role-based authorization is engaged skip overwriting the user tenant domain.
             if (!skipTenantDomainOverWriting) {

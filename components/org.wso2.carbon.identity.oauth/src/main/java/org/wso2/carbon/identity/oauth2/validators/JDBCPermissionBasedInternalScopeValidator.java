@@ -38,6 +38,8 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeBindingCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeBindingCacheKey;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
@@ -179,8 +181,21 @@ public class JDBCPermissionBasedInternalScopeValidator {
                 return new ArrayList<>();
             }
             boolean isSystemScope = ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE);
-            int tenantId = IdentityTenantUtil.getTenantId(authenticatedUser.getTenantDomain());
-            startTenantFlow(authenticatedUser.getTenantDomain(), tenantId);
+            String tenantDomain = authenticatedUser.getTenantDomain();
+            boolean isFederatedRoleBasedAuthzEnabled = false;
+            if (authenticatedUser.isFederatedUser()) {
+                List<String> federatedRoleBasedAuthzApps =
+                        IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
+                if (federatedRoleBasedAuthzApps.size() > 0) {
+                    OAuthAppDO app = OAuth2Util.getAppInformationByClientId(clientId);
+                    if (federatedRoleBasedAuthzApps.contains(app.getApplicationName())) {
+                        isFederatedRoleBasedAuthzEnabled = true;
+                        tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(app);
+                    }
+                }
+            }
+            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+            startTenantFlow(tenantDomain, tenantId);
             AuthorizationManager authorizationManager = OAuthComponentServiceHolder.getInstance().getRealmService()
                     .getTenantUserRealm(tenantId).getAuthorizationManager();
             String[] allowedResourcesForUser;
@@ -196,11 +211,9 @@ public class JDBCPermissionBasedInternalScopeValidator {
                 /*
                 If the role-based authorization feature is enabled & particular applications in the listed under the
                 required application list then retrieve permissions from the FIdp user roles.
-                Since tenant flow is enabled, permission will be fetched from user login(federated) tenant
-                not the application tenant.
+                Permission will be fetched for mapped roles in the application tenant.
                 */
-                if (IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG)
-                        .contains((OAuth2Util.getServiceProvider(clientId).getApplicationName()))) {
+                if (isFederatedRoleBasedAuthzEnabled) {
                     allowedResourcesForUser =
                             getAllowedPermissionsUsingRoleForNonAssociatedFederatedUsers(authenticatedUser,
                                     authorizationManager);
@@ -272,6 +285,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
             log.error("Error while retrieving oAuth2 scopes.", e);
         } catch (UserIdNotFoundException e) {
             log.error("User id not available for user: " + authenticatedUser.getLoggableUserId(), e);
+        } catch (InvalidOAuthClientException e) {
+            log.error("Error while retrieving the Application Information for client id: " + clientId, e);
         } finally {
             endTenantFlow();
         }
@@ -355,32 +370,28 @@ public class JDBCPermissionBasedInternalScopeValidator {
             AuthenticatedUser authenticatedUser, AuthorizationManager authorizationManager)
             throws UserStoreException, IdentityOAuth2Exception {
 
-        Set<String> allowedUIResourcesListForUser = new HashSet<>();
+        Set<String> allowedResourcesListForUser = new HashSet<>();
         List<String> userRolesList = getRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
 
         for (String  role: userRolesList) {
             String modifiedRole = role;
 
-            // Add internal prefix before normal roles.
-            if (!modifiedRole.contains(CarbonConstants.DOMAIN_SEPARATOR)) {
-                modifiedRole = UserCoreConstants.INTERNAL_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + modifiedRole;
-            }
-
             // Continue if it is not internal role.
-            if (!modifiedRole.startsWith(UserCoreConstants.INTERNAL_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR)) {
+            if (!modifiedRole.toLowerCase().startsWith(UserCoreConstants.INTERNAL_DOMAIN.toLowerCase()
+                    + CarbonConstants.DOMAIN_SEPARATOR)) {
                 continue;
             }
 
             // Loop through each internal local role and get permissions.
             for (String allowedUIResource : authorizationManager.getAllowedUIResourcesForRole(modifiedRole, ROOT)) {
-                allowedUIResourcesListForUser.add(allowedUIResource);
+                allowedResourcesListForUser.add(allowedUIResource);
             }
         }
 
         // Add everyone permission to allowed permission.
-        allowedUIResourcesListForUser.add(EVERYONE_PERMISSION);
+        allowedResourcesListForUser.add(EVERYONE_PERMISSION);
 
-        return allowedUIResourcesListForUser.toArray(new String[0]);
+        return allowedResourcesListForUser.toArray(new String[0]);
     }
 
     /**
