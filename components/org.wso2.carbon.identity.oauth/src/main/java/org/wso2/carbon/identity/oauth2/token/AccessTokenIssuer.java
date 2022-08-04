@@ -82,6 +82,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppState
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.FIDP_ROLE_BASED_AUTHZ_APP_CONFIG;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 
 /**
@@ -323,8 +324,19 @@ public class AccessTokenIssuer {
             }
         }
 
-        if (tokReqMsgCtx.getAuthorizedUser() != null && tokReqMsgCtx.getAuthorizedUser().isFederatedUser()) {
-            tokReqMsgCtx.getAuthorizedUser().setTenantDomain(tenantDomainOfApp);
+        AuthenticatedUser authenticatedUser = tokReqMsgCtx.getAuthorizedUser();
+        if (authenticatedUser != null && authenticatedUser.isFederatedUser()) {
+            boolean skipTenantDomainOverWriting = false;
+            List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
+            if (federatedRoleBasedAuthzApps.size() > 0) {
+                String appName = OAuth2Util.getServiceProviderName(tokReqMsgCtx);
+                skipTenantDomainOverWriting = federatedRoleBasedAuthzApps.contains(appName)
+                        || authenticatedUser.getTenantDomain() == null;
+            }
+            // If federated role-based authorization is engaged skip overwriting the user tenant domain.
+            if (!skipTenantDomainOverWriting) {
+                authenticatedUser.setTenantDomain(tenantDomainOfApp);
+            }
         }
 
         if (!isValidGrant) {

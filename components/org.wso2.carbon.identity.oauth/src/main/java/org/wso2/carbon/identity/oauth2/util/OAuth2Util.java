@@ -70,6 +70,7 @@ import org.wso2.carbon.identity.application.authentication.framework.store.UserS
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -222,6 +223,7 @@ public class OAuth2Util {
     private static final String OPENID_CONNECT_AUDIENCES = "Audiences";
     private static final String DOT_SEPARATER = ".";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
+    private static final String FEDERATED_ROLE_CLAIM_URI = "roles";
 
     public static final String DEFAULT_TOKEN_TYPE = "Default";
 
@@ -301,6 +303,12 @@ public class OAuth2Util {
      */
     public static final String APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS = "applicationAccessTokenExpireTime";
 
+    /**
+     * FIdp Role Based authentication application config.
+     */
+    public static final String FIDP_ROLE_BASED_AUTHZ_APP_CONFIG = "FIdPRoleBasedAuthzApplications.AppName";
+
+    private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private static final Log log = LogFactory.getLog(OAuth2Util.class);
     private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private static final String INTERNAL_LOGIN_SCOPE = "internal_login";
@@ -4423,5 +4431,77 @@ public class OAuth2Util {
             }
         }
         return IdentityTenantUtil.getTenantDomainFromContext();
+    }
+
+    /**
+     * Get user role list from federated user attributes.
+     * Used in OIDC flow.
+     *
+     * @param userAttributes User attribute
+     * @return user role-list
+     */
+    public static List<String> getRolesFromFederatedUserAttributes(Map<ClaimMapping, String> userAttributes) {
+
+        Optional<ClaimMapping> roleClaimMapping = Optional.ofNullable(userAttributes).get().entrySet().stream()
+                .map(entry -> entry.getKey())
+                .filter(claim -> StringUtils.equals(FEDERATED_ROLE_CLAIM_URI, claim.getRemoteClaim().getClaimUri()))
+                .findFirst();
+
+        if (roleClaimMapping.isPresent()) {
+            return Arrays.asList(userAttributes.get(roleClaimMapping.get())
+                    .split(Pattern.quote(FrameworkUtils.getMultiAttributeSeparator())));
+        }
+
+        return Collections.emptyList();
+    }
+
+    /**
+     * Get the service provider name for provided context.
+     *
+     * @param requestMsgCtx Token request message context.
+     * @return Relevant service provider name.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception
+     */
+    public static String getServiceProviderName(OAuthTokenReqMessageContext requestMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        String spTenantDomain = requestMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
+        if (StringUtils.isBlank(spTenantDomain)) {
+            spTenantDomain = org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+        String clientId = requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
+        return getServiceProviderName(clientId, spTenantDomain);
+    }
+
+    /**
+     * Get the service provider name for provided context
+     *
+     * @param oauthAuthzMsgCtx OAuth authorization request message context.
+     * @return Relevant service provider name.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static String getServiceProviderName(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        String spTenantDomain = oauthAuthzMsgCtx.getAuthorizationReqDTO().getTenantDomain();
+        if (StringUtils.isBlank(spTenantDomain)) {
+            spTenantDomain = org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+        String clientId = oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey();
+        return getServiceProviderName(clientId, spTenantDomain);
+    }
+
+    private static String getServiceProviderName(String clientId, String tenantDomain) throws IdentityOAuth2Exception {
+
+        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
+        try {
+            // Get service provider name.
+            String spName = applicationMgtService
+                    .getServiceProviderNameByClientId(clientId, INBOUND_AUTH2_TYPE, tenantDomain);
+            return spName;
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while obtaining the service provider name for client_id: " +
+                    clientId + " of tenantDomain: " + tenantDomain, e);
+        }
     }
 }
