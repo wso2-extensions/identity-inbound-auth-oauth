@@ -53,7 +53,7 @@ public class OAuth2AccessTokenReqDTO {
     private HttpServletRequestWrapper httpServletRequestWrapper;
     private List<String> authenticationMethodReferences = new ArrayList<>();
     private OAuthClientAuthnContext oAuthClientAuthnContext;
-    private Map<String, String> customParameters;
+    private Map<String, String> parameters;
 
     public String getClientId() {
         return clientId;
@@ -217,13 +217,13 @@ public class OAuth2AccessTokenReqDTO {
         this.httpServletRequestWrapper = httpServletRequestWrapper;
     }
 
-    public Map<String, String> getCustomParameters() {
+    public Map<String, String> getParameters() {
 
-        return customParameters;
+        return parameters;
     }
 
-    public void setCustomParameters(Map<String, String> customParameters) {
+    public void setParameters(Map<String, String> parameters) {
 
-        this.customParameters = customParameters;
+        this.parameters = parameters;
     }
 }

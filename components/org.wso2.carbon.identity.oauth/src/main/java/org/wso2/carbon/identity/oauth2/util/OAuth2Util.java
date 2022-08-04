@@ -119,7 +119,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
-import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -4254,8 +4253,7 @@ public class OAuth2Util {
 
             Optional<String> contextTenantDomainFromTokenReqDTO = getContextTenantDomainFromTokenReqDTO(tokenReqDTO);
             String tenantDomainFromContext;
-            if (contextTenantDomainFromTokenReqDTO.isPresent() &&
-                    StringUtils.isNotBlank(contextTenantDomainFromTokenReqDTO.get())) {
+            if (contextTenantDomainFromTokenReqDTO.isPresent()) {
                 tenantDomainFromContext = contextTenantDomainFromTokenReqDTO.get();
 
                 // In tenant qualified URL mode we would always have the tenant domain in the context.
@@ -4272,12 +4270,12 @@ public class OAuth2Util {
 
     private static Optional<String> getContextTenantDomainFromTokenReqDTO(OAuth2AccessTokenReqDTO tokenReqDTO) {
 
-        if (tokenReqDTO == null || tokenReqDTO.getCustomParameters() == null) {
+        if (tokenReqDTO == null || tokenReqDTO.getParameters() == null) {
             return Optional.empty();
         }
 
        String tenantDomainFromContext =
-               tokenReqDTO.getCustomParameters().get(OAuthConstants.TENANT_DOMAIN_FROM_CONTEXT);
+               tokenReqDTO.getParameters().get(OAuthConstants.TENANT_DOMAIN_FROM_CONTEXT);
         if (StringUtils.isNotBlank(tenantDomainFromContext)) {
             return Optional.of(tenantDomainFromContext);
         }
