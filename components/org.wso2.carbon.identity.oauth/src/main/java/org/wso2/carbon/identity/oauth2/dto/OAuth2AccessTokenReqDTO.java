@@ -54,7 +54,7 @@ public class OAuth2AccessTokenReqDTO {
     private List<String> authenticationMethodReferences = new ArrayList<>();
     private OAuthClientAuthnContext oAuthClientAuthnContext;
 
-    // The following field (parameters) can be used to pass additional data through the context.
+    // This field can be used to pass additional data through the context.
     private Map<String, String> parameters;
 
     public String getClientId() {
