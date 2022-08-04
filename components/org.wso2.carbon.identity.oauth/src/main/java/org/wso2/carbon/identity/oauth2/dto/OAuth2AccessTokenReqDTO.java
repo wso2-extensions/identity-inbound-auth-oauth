@@ -53,6 +53,9 @@ public class OAuth2AccessTokenReqDTO {
     private HttpServletRequestWrapper httpServletRequestWrapper;
     private List<String> authenticationMethodReferences = new ArrayList<>();
     private OAuthClientAuthnContext oAuthClientAuthnContext;
+
+    // The following field (parameters) will be used to hold the "tenant-domain-from-context" value
+    // for PAT creation requests.
     private Map<String, String> parameters;
 
     public String getClientId() {
