@@ -19,14 +19,21 @@
 package org.wso2.carbon.identity.oauth2.authz.handlers;
 
 import org.mockito.Mockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -34,11 +41,21 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.dao.util.DAOUtils;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.test.common.testng.utils.MockAuthenticatedUser;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+
+import java.io.File;
+import java.nio.file.Paths;
+import java.sql.Connection;
+
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 /**
  * Unit test covering TokenResponseTypeHandler class
@@ -46,15 +63,41 @@ import org.wso2.carbon.identity.test.common.testng.utils.MockAuthenticatedUser;
 @WithCarbonHome
 @WithRealmService(injectToSingletons = OAuthComponentServiceHolder.class)
 @WithH2Database(files = { "dbScripts/token.sql" })
-public class TokenResponseTypeHandlerTest {
+@PrepareForTest({IdentityUtil.class, IdentityTenantUtil.class, IdentityDatabaseUtil.class})
+public class TokenResponseTypeHandlerTest extends PowerMockTestCase {
 
     private static final String TEST_CLIENT_ID_1 = "SDSDSDS23131231";
     private static final String TEST_CLIENT_ID_2 = "SDSDSDS23131232";
     private static final String TEST_USER_ID = "testUser";
+    private static final String DB_NAME = "SCOPE_DB";
     private AuthenticatedUser authenticatedUser = new MockAuthenticatedUser(TEST_USER_ID);
 
-    @BeforeTest
+    private Connection connection;
+    @BeforeClass
+    public void initTest() throws Exception {
+
+        //Initializing the database.
+        DAOUtils.initializeDataSource(DB_NAME, DAOUtils.getFilePath("identity.sql"));
+
+    }
+    @BeforeMethod
     public void setUp() throws Exception {
+        System.setProperty(
+                CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
+        );
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getIdentityConfigDirPath())
+                .thenReturn(System.getProperty("user.dir")
+                        + File.separator + "src"
+                        + File.separator + "test"
+                        + File.separator + "resources"
+                        + File.separator + "conf");
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+
+
         OAuthEventInterceptor interceptor = Mockito.mock(OAuthEventInterceptor.class);
         OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(interceptor);
     }
@@ -73,6 +116,10 @@ public class TokenResponseTypeHandlerTest {
 
     @Test(dataProvider = "CommonDataProvider")
     public void testIssue(boolean isIDPIdColumnEnabled, String clientId) throws Exception {
+        connection = DAOUtils.getConnection(DB_NAME);
+        mockStatic(IdentityDatabaseUtil.class);
+        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+        when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
 
         OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         AccessTokenResponseTypeHandler tokenResponseTypeHandler = new AccessTokenResponseTypeHandler();

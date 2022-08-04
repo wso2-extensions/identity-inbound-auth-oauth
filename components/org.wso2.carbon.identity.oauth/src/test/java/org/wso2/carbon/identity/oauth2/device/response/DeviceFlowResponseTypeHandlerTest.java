@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.device.response;
 
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -30,6 +31,7 @@ import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -42,18 +44,22 @@ import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.utils.CarbonUtils;
 
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.SQLException;
 
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
+import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 
 @PrepareForTest({OAuth2Util.class, DeviceFlowPersistenceFactory.class, IdentityDatabaseUtil.class, IdentityUtil.class,
-        ServiceURLBuilder.class, ServiceURL.class})
+        ServiceURLBuilder.class, ServiceURL.class, CarbonUtils.class, IdentityConfigParser.class})
 @PowerMockIgnore({"javax.crypto.*"})
 @WithCarbonHome
 @WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
@@ -63,7 +69,8 @@ public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
     private OAuthAppDO oAuthAppDO = new OAuthAppDO();
     private static final String DB_NAME = "SCOPE_DB";
     private static final String TEST_URL = "testURL";
-
+    @Mock
+    IdentityConfigParser mockConfigParser;
     @BeforeMethod
     public void setUp() throws Exception {
 
@@ -81,6 +88,13 @@ public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
             URLBuilderException {
 
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
+            String carbonHome = Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString();
+            spy(CarbonUtils.class);
+            doReturn(carbonHome).when(CarbonUtils.class, "getCarbonHome");
+
+            mockStatic(IdentityConfigParser.class);
+            when(IdentityConfigParser.getInstance()).thenReturn(mockConfigParser);
+
             mockStatic(OAuth2Util.class);
             when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
             when(OAuth2Util.getDeviceFlowCompletionPageURI(anyString(), anyString())).thenCallRealMethod();
@@ -109,6 +123,8 @@ public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
             DeviceFlowResponseTypeHandler deviceFlowResponseTypeHandler = new DeviceFlowResponseTypeHandler();
             OAuth2AuthorizeRespDTO res = deviceFlowResponseTypeHandler.issue(oAuthAuthzReqMessageContext);
             assertEquals(res.getCallbackURI(), Constants.DEVICE_SUCCESS_ENDPOINT_PATH + "?app_name=testApp");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 }

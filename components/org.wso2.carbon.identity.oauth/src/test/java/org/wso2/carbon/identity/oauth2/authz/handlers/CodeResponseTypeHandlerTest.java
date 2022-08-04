@@ -18,15 +18,25 @@
 
 package org.wso2.carbon.identity.oauth2.authz.handlers;
 
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
+import org.wso2.carbon.identity.core.util.IdentityConfigParser;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -36,6 +46,19 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.utils.CarbonUtils;
+
+import java.nio.file.Paths;
+import java.sql.Connection;
+
+import javax.sql.DataSource;
+
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.powermock.api.mockito.PowerMockito.doReturn;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.spy;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 /**
  * Test class covering CodeResponseTypeHandler
@@ -47,7 +70,9 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
         tenantDomain = TestConstants.TENANT_DOMAIN,
         initUserStoreManager = true,
         injectToSingletons = {OAuthComponentServiceHolder.class})
-public class CodeResponseTypeHandlerTest {
+@PrepareForTest({PrivilegedCarbonContext.class, CarbonUtils.class, IdentityTenantUtil.class,
+        IdentityUtil.class, IdentityConfigParser.class, JDBCPersistenceManager.class})
+public class CodeResponseTypeHandlerTest extends PowerMockTestCase {
 
     private static final String TEST_CONSUMER_KEY =  "testconsumenrkey";
     private static final String TEST_CALLBACK_URL = "https://localhost:8000/callback";
@@ -55,9 +80,13 @@ public class CodeResponseTypeHandlerTest {
     OAuthAuthzReqMessageContext authAuthzReqMessageContext;
     OAuth2AuthorizeReqDTO authorizationReqDTO;
 
+    @Mock
+    IdentityConfigParser mockConfigParser;
+
+    Connection con = null;
+
     @BeforeMethod
     public void setUp() throws Exception {
-
         authorizationReqDTO = new OAuth2AuthorizeReqDTO();
         authorizationReqDTO.setCallbackUrl(TEST_CALLBACK_URL);
         authorizationReqDTO.setConsumerKey(TEST_CONSUMER_KEY);
@@ -92,6 +121,18 @@ public class CodeResponseTypeHandlerTest {
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
     public void testIssue(boolean isIDPIdColumnEnabled) throws Exception {
 
+        String carbonHome = Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString();
+        spy(CarbonUtils.class);
+        doReturn(carbonHome).when(CarbonUtils.class, "getCarbonHome");
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        mockStatic(IdentityConfigParser.class);
+        when(IdentityConfigParser.getInstance()).thenReturn(mockConfigParser);
+
         OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setGrantTypes("implicit");
@@ -107,6 +148,14 @@ public class CodeResponseTypeHandlerTest {
 
         AppInfoCache appInfoCache = AppInfoCache.getInstance();
         appInfoCache.addToCache(TEST_CONSUMER_KEY, oAuthAppDO);
+
+        mockStatic(JDBCPersistenceManager.class);
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        JDBCPersistenceManager jdbcPersistenceManager = Mockito.mock(JDBCPersistenceManager.class);
+        Mockito.when(dataSource.getConnection()).thenReturn(con);
+        Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
+        Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
+
 
         CodeResponseTypeHandler codeResponseTypeHandler = new CodeResponseTypeHandler();
         codeResponseTypeHandler.init();

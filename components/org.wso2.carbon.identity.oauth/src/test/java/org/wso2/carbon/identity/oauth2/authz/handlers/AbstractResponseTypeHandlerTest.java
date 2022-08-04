@@ -19,18 +19,31 @@
 package org.wso2.carbon.identity.oauth2.authz.handlers;
 
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
+
+import java.io.File;
+import java.nio.file.Paths;
+
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 /**
  * Unit test cases covering AbstractResponseTypeHandler
@@ -40,12 +53,30 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
  */
 @WithCarbonHome
 @WithRealmService
-public class AbstractResponseTypeHandlerTest {
+@PrepareForTest({IdentityUtil.class, IdentityTenantUtil.class})
+public class AbstractResponseTypeHandlerTest extends PowerMockTestCase {
 
     private AbstractResponseTypeHandler abstractResponseTypeHandler;
-
+    private static final String oAuth2TokenEPUrl
+            = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
+            "/oauth2/token";
     @BeforeMethod
     public void setUp() throws Exception {
+        System.setProperty(
+                CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
+        );
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getIdentityConfigDirPath())
+                .thenReturn(System.getProperty("user.dir")
+                        + File.separator + "src"
+                        + File.separator + "test"
+                        + File.separator + "resources"
+                        + File.separator + "conf");
+        when(IdentityUtil.fillURLPlaceholders(oAuth2TokenEPUrl)).thenReturn(oAuth2TokenEPUrl);
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
         abstractResponseTypeHandler = new AbstractResponseTypeHandler() {
 
             @Override

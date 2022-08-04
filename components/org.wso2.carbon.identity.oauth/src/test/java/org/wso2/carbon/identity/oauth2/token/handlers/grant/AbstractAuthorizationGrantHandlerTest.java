@@ -18,17 +18,27 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.base.ServerConfiguration;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
+import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthCallbackHandlerMetaData;
@@ -46,7 +56,9 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
+import org.wso2.carbon.utils.CarbonUtils;
 
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -54,7 +66,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
+import static org.powermock.api.mockito.PowerMockito.doReturn;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.spy;
+import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
@@ -65,7 +85,9 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.T
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
                 files = { "dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql" })
 @WithRealmService(injectToSingletons = { OAuthComponentServiceHolder.class })
-public class AbstractAuthorizationGrantHandlerTest {
+@PrepareForTest({IdentityUtil.class, IdentityConfigParser.class, IdentityTenantUtil.class,
+        JDBCPersistenceManager.class, OAuthCache.class, CarbonUtils.class})
+public class AbstractAuthorizationGrantHandlerTest extends PowerMockTestCase {
 
     private AbstractAuthorizationGrantHandler handler;
 
@@ -84,8 +106,18 @@ public class AbstractAuthorizationGrantHandlerTest {
     private static final String PASSWORD_GRANT = "password";
     private OAuthAppDO oAuthAppDO;
 
+    private static final String oAuth2TokenEPUrl
+            = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
+            "/oauth2/token";
+    @Mock
+    ServerConfiguration serverConfiguration;
+    @Mock
+    private OAuthCache oAuthCacheMock;
+
+
     @BeforeMethod
-    public void setUp() throws IdentityOAuthAdminException, IdentityOAuth2Exception {
+    public void setUp() throws Exception {
+
         authenticatedUser = new AuthenticatedUser() {
 
         };
@@ -94,10 +126,30 @@ public class AbstractAuthorizationGrantHandlerTest {
         authenticatedUser.setTenantDomain("Homeless");
         authenticatedUser.setUserStoreDomain("Street");
         authenticatedUser.setUserId("4b4414e1-916b-4475-aaee-6b0751c29ff6");
-
         clientId = UUID.randomUUID().toString();
         tokenId = clientId;
         appId = clientId;
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.fillURLPlaceholders(oAuth2TokenEPUrl)).thenReturn(oAuth2TokenEPUrl);
+        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString(), anyInt())).thenReturn(true);
+
+        IdentityConfigParser mockConfigParser = mock(IdentityConfigParser.class);
+        mockStatic(IdentityConfigParser.class);
+        when(IdentityConfigParser.getInstance()).thenReturn(mockConfigParser);
+
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+        mockStatic(OAuthCache.class);
+        when(OAuthCache.getInstance()).thenReturn(oAuthCacheMock);
+
+
+        String carbonHome = Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString();
+        spy(CarbonUtils.class);
+        doReturn(carbonHome).when(CarbonUtils.class, "getCarbonHome");
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
 
         oauthIssuer = new OauthTokenIssuerImpl();
         handler = new MockAuthzGrantHandler();
@@ -110,6 +162,11 @@ public class AbstractAuthorizationGrantHandlerTest {
         oAuthAppDO.setUser(authenticatedUser);
         oAuthAppDO.setCallbackUrl("http://i.have.nowhere.to.go");
         oAuthAppDO.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
+
+
+        mockStatic(JDBCPersistenceManager.class);
+        JDBCPersistenceManager jdbcPersistenceManager = Mockito.mock(JDBCPersistenceManager.class);
+        Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
 
         oAuthAppDAO.addOAuthApplication(oAuthAppDO);
 

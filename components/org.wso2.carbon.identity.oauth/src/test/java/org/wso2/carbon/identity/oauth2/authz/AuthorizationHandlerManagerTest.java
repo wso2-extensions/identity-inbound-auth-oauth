@@ -16,9 +16,13 @@
 package org.wso2.carbon.identity.oauth2.authz;
 
 import org.apache.oltu.oauth2.common.error.OAuthError;
+import org.mockito.Mock;
+import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
-import org.testng.annotations.BeforeClass;
+import org.testng.IObjectFactory;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -26,30 +30,59 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.util.IdentityConfigParser;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
+import org.wso2.carbon.utils.CarbonUtils;
+
+import java.nio.file.Paths;
 
 import static org.mockito.Matchers.anyString;
+import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
 
 @WithCarbonHome
 @WithH2Database(files = {"dbScripts/h2_with_application_and_token.sql"})
 @WithRealmService(tenantId = TestConstants.TENANT_ID, tenantDomain = TestConstants.TENANT_DOMAIN,
         initUserStoreManager = true, injectToSingletons = {OAuthComponentServiceHolder.class})
+@PrepareForTest({IdentityUtil.class, IdentityConfigParser.class, CarbonUtils.class})
 public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
 
     private ApplicationManagementService applicationManagementService;
     private AuthorizationHandlerManager authorizationHandlerManager;
     private OAuth2AuthorizeReqDTO authzReqDTO = new OAuth2AuthorizeReqDTO();
     private ServiceProvider serviceProvider;
+    private static final String oAuth2TokenEPUrl
+            = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
+            "/oauth2/token";
+    @Mock
+    IdentityConfigParser mockConfigParser;
 
-    @BeforeClass
+    @ObjectFactory
+    public IObjectFactory getObjectFactory() {
+        return new org.powermock.modules.testng.PowerMockObjectFactory();
+    }
+
+    @BeforeMethod
     public void setUp() throws Exception {
+
+        String carbonHome = Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString();
+        spy(CarbonUtils.class);
+        doReturn(carbonHome).when(CarbonUtils.class, "getCarbonHome");
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.fillURLPlaceholders(oAuth2TokenEPUrl)).thenReturn(oAuth2TokenEPUrl);
+
+        mockStatic(IdentityConfigParser.class);
+        when(IdentityConfigParser.getInstance()).thenReturn(mockConfigParser);
 
         applicationManagementService = mock(ApplicationManagementService.class);
         OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
