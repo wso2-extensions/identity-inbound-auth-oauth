@@ -21,6 +21,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.event.IdentityEventConstants.EventName;
 import org.wso2.carbon.identity.event.IdentityEventConstants.EventProperty;
 import org.wso2.carbon.identity.event.IdentityEventException;
@@ -65,7 +66,13 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
                     log.debug("OPBS cookie with value " + opbsCookieId + " found. " +
                             "Initiating session termination.");
                 }
-                String tenantDomain = OAuth2Util.resolveTenantDomain(getHttpRequestFromEvent(event));
+                HttpServletRequest request = getHttpRequestFromEvent(event);
+                String tenantDomain;
+                if (request != null) {
+                    tenantDomain = OAuth2Util.resolveTenantDomain(request);
+                } else {
+                    tenantDomain = getTenantDomainFromContext(event);
+                }
                 LogoutRequestSender.getInstance().sendLogoutRequests(opbsCookieId, tenantDomain);
                 OIDCSessionManagementUtil.getSessionManager().removeOIDCSessionState(opbsCookieId, tenantDomain);
             } else {
@@ -147,6 +154,26 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
         }
         if (log.isDebugEnabled()) {
             log.debug("Since the session context is not found in the event, Could not get the opbs cookie value");
+        }
+        return null;
+    }
+
+    /**
+     * Get the tenant domain from the session context.
+     *
+     * @param event Event.
+     * @return Tenant domain.
+     */
+    private String getTenantDomainFromContext(Event event) {
+
+        if (event.getEventProperties().get(EventProperty.SESSION_CONTEXT) != null) {
+            SessionContext sessionContext =
+                    (SessionContext) event.getEventProperties().get(EventProperty.SESSION_CONTEXT);
+            return (String) sessionContext.getProperty(FrameworkUtils.TENANT_DOMAIN);
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Since the session context is not found in the event, Could not get the tenant domain from " +
+                    "session context.");
         }
         return null;
     }
