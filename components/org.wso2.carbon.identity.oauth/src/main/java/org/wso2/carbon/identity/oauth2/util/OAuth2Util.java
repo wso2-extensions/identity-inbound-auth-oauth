@@ -112,6 +112,7 @@ import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
@@ -4266,6 +4267,50 @@ public class OAuth2Util {
                 throw new InvalidOAuthClientException("no.valid.client.in.tenant");
             }
         }
+    }
+
+    /**
+     * Validates whether the tenant domain set in context matches with the app's tenant domain in tenant qualified
+     * URL mode.
+     *
+     * @param tenantDomainOfApp Tenant domain of the app.
+     * @param tokenReqDTO       Access token request DTO object that contains request parameters.
+     * @throws InvalidOAuthClientException
+     */
+    public static void validateRequestTenantDomain(String tenantDomainOfApp, OAuth2AccessTokenReqDTO tokenReqDTO)
+            throws InvalidOAuthClientException {
+
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+
+            Optional<String> contextTenantDomainFromTokenReqDTO = getContextTenantDomainFromTokenReqDTO(tokenReqDTO);
+            String tenantDomainFromContext;
+            if (contextTenantDomainFromTokenReqDTO.isPresent()) {
+                tenantDomainFromContext = contextTenantDomainFromTokenReqDTO.get();
+
+                // In tenant qualified URL mode we would always have the tenant domain in the context.
+                if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
+                    // This means the tenant domain sent in the request and app's tenant domain do not match.
+                    throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in "
+                            + "tenantDomain: " + tenantDomainFromContext);
+                }
+            } else {
+                validateRequestTenantDomain(tenantDomainOfApp);
+            }
+        }
+    }
+
+    private static Optional<String> getContextTenantDomainFromTokenReqDTO(OAuth2AccessTokenReqDTO tokenReqDTO) {
+
+        if (tokenReqDTO == null || tokenReqDTO.getParameters() == null) {
+            return Optional.empty();
+        }
+
+       String tenantDomainFromContext =
+               tokenReqDTO.getParameters().get(OAuthConstants.TENANT_DOMAIN_FROM_CONTEXT);
+        if (StringUtils.isNotBlank(tenantDomainFromContext)) {
+            return Optional.of(tenantDomainFromContext);
+        }
+        return Optional.empty();
     }
 
     private static void startTenantFlow(String tenantDomain) {
