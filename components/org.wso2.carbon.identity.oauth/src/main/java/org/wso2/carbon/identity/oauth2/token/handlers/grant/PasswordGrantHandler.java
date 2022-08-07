@@ -49,6 +49,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.PasswordPolicyUtils;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -230,7 +231,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: " + authenticated);
             }
             if (OAuth2Util.checkPasswordResetEnforcementEnabled()) {
-                if (OAuth2Util.isUserPasswordExpired(userTenantDomain, tenantAwareUserName)){
+                if (PasswordPolicyUtils.isUserPasswordExpired(userTenantDomain, tenantAwareUserName)){
                     throw new IdentityOAuth2Exception("Password has expired");
                 }
             }
