@@ -561,9 +561,9 @@ public class TokenValidationHandler {
         // Add requested allowed scopes to the message context.
         addAllowedScopes(messageContext, requestedAllowedScopes.toArray(new String[0]));
 
-        // Add requested allowed scopes to introResp and to the accessTokenDO.
+        // Add requested allowed scopes and validated scopes to introResp.
         if (accessTokenDO != null) {
-            addAllowedScopes(introResp, accessTokenDO, requestedAllowedScopes.toArray(new String[0]));
+            addScopesToIntrospectionResponse(introResp, accessTokenDO, requestedAllowedScopes.toArray(new String[0]));
         }
 
         // All set. mark the token active.
@@ -761,12 +761,11 @@ public class TokenValidationHandler {
         oAuth2TokenValidationMessageContext.getResponseDTO().setScope(scopesToReturn);
     }
 
-    private void addAllowedScopes(OAuth2IntrospectionResponseDTO introResp, AccessTokenDO accessTokenDO,
-                                  String[] allowedScopes) {
+    private void addScopesToIntrospectionResponse(OAuth2IntrospectionResponseDTO introResp, AccessTokenDO accessTokenDO,
+                                                  String[] requestedAllowedScopes) {
 
-        String[] scopes = accessTokenDO.getScope();
-        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, allowedScopes);
-        accessTokenDO.setScope(scopesToReturn);
+        String[] validatedScopes = accessTokenDO.getScope();
+        String[] scopesToReturn = (String[]) ArrayUtils.addAll(validatedScopes, requestedAllowedScopes);
         introResp.setScope(OAuth2Util.buildScopeString((scopesToReturn)));
     }
 }
