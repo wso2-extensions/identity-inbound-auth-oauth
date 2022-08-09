@@ -409,7 +409,7 @@ public class TokenValidationHandler {
             throws IdentityOAuth2Exception {
 
         OAuth2IntrospectionResponseDTO introResp = new OAuth2IntrospectionResponseDTO();
-        AccessTokenDO accessTokenDO;
+        AccessTokenDO accessTokenDO = null;
         List<String> requestedAllowedScopes = new ArrayList<>();
 
         if (messageContext.getProperty(OAuth2Util.REMOTE_ACCESS_TOKEN) != null
@@ -558,7 +558,14 @@ public class TokenValidationHandler {
             return buildIntrospectionErrorResponse("Scope validation failed");
         }
 
+        // Add requested allowed scopes to the message context.
         addAllowedScopes(messageContext, requestedAllowedScopes.toArray(new String[0]));
+
+        // Add requested allowed scopes and validated scopes to introResp.
+        if (accessTokenDO != null) {
+            addScopesToIntrospectionResponse(introResp, accessTokenDO, requestedAllowedScopes.toArray(new String[0]));
+        }
+
         // All set. mark the token active.
         introResp.setActive(true);
         return introResp;
@@ -752,5 +759,13 @@ public class TokenValidationHandler {
         String[] scopes = oAuth2TokenValidationMessageContext.getResponseDTO().getScope();
         String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, allowedScopes);
         oAuth2TokenValidationMessageContext.getResponseDTO().setScope(scopesToReturn);
+    }
+
+    private void addScopesToIntrospectionResponse(OAuth2IntrospectionResponseDTO introResp, AccessTokenDO accessTokenDO,
+                                                  String[] requestedAllowedScopes) {
+
+        String[] validatedScopes = accessTokenDO.getScope();
+        String[] scopesToReturn = (String[]) ArrayUtils.addAll(validatedScopes, requestedAllowedScopes);
+        introResp.setScope(OAuth2Util.buildScopeString((scopesToReturn)));
     }
 }
