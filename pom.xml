@@ -240,11 +240,13 @@
                 <groupId>org.wso2.carbon.identity.organization.management.core</groupId>
                 <artifactId>org.wso2.carbon.identity.organization.management.service</artifactId>
                 <version>${carbon.identity.organization.management.core.version}</version>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.organization.management</groupId>
                 <artifactId>org.wso2.carbon.identity.organization.management.role.management.service</artifactId>
                 <version>${carbon.identity.organization.management.version}</version>
+                <scope>provided</scope>
             </dependency>
 
             <!--SAML Common Util dependency-->
