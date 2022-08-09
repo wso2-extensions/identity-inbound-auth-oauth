@@ -237,15 +237,9 @@
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.wso2.carbon.identity.organization.management</groupId>
+                <groupId>org.wso2.carbon.identity.organization.management.core</groupId>
                 <artifactId>org.wso2.carbon.identity.organization.management.service</artifactId>
-                <version>${carbon.identity.organization.management.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.wso2.carbon.identity.organization.management</groupId>
-                        <artifactId>org.wso2.carbon.identity.organization.management.authz.service</artifactId>
-                    </exclusion>
-                </exclusions>
+                <version>${carbon.identity.organization.management.core.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.organization.management</groupId>
@@ -830,9 +824,14 @@
         <carbon.identity.framework.imp.pkg.version.range>[5.17.5, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
-        <carbon.identity.organization.management.version>1.0.54</carbon.identity.organization.management.version>
+        <carbon.identity.organization.management.version>1.1.5</carbon.identity.organization.management.version>
         <carbon.identity.organization.management.version.range>[1.0.46, 2.0.0)
         </carbon.identity.organization.management.version.range>
+
+        <carbon.identity.organization.management.core.version>1.0.0
+        </carbon.identity.organization.management.core.version>
+        <carbon.identity.organization.management.core.version.range>[1.0.0, 2.0.0)
+        </carbon.identity.organization.management.core.version.range>
 
         <!--Carbon component version-->
         <carbon.base.imp.pkg.version.range>[1.0.0, 2.0.0)</carbon.base.imp.pkg.version.range>
