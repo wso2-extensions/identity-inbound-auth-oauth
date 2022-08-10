@@ -263,7 +263,13 @@ public class OAuth2AuthzEndpoint {
         try {
             // Start tenant domain flow if the tenant configuration is not enabled.
             if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
-                String tenantDomain = EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
+                String tenantDomain = null;
+                if (StringUtils.isNotEmpty(oAuthMessage.getClientId())) {
+                    tenantDomain = EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
+                } else if (oAuthMessage.getSessionDataCacheEntry() != null) {
+                    OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
+                    tenantDomain = oauth2Params.getTenantDomain();
+                }
                 FrameworkUtils.startTenantFlow(tenantDomain);
             }
 
