@@ -240,13 +240,11 @@
                 <groupId>org.wso2.carbon.identity.organization.management.core</groupId>
                 <artifactId>org.wso2.carbon.identity.organization.management.service</artifactId>
                 <version>${carbon.identity.organization.management.core.version}</version>
-                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.organization.management</groupId>
                 <artifactId>org.wso2.carbon.identity.organization.management.role.management.service</artifactId>
                 <version>${carbon.identity.organization.management.version}</version>
-                <scope>provided</scope>
             </dependency>
 
             <!--SAML Common Util dependency-->
@@ -822,12 +820,13 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.23.9</carbon.identity.framework.version>
+        <carbon.identity.framework.version>5.23.34</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.17.5, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
-        <carbon.identity.organization.management.version>1.1.5</carbon.identity.organization.management.version>
-        <carbon.identity.organization.management.version.range>[1.0.46, 2.0.0)
+        <carbon.identity.organization.management.version>1.1.14
+        </carbon.identity.organization.management.version>
+        <carbon.identity.organization.management.version.range>[1.1.14, 2.0.0)
         </carbon.identity.organization.management.version.range>
 
         <carbon.identity.organization.management.core.version>1.0.0
