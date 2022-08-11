@@ -565,6 +565,7 @@
                 <artifactId>powermock-module-testng</artifactId>
                 <version>${powermock.version}</version>
                 <scope>test</scope>
+
             </dependency>
             <dependency>
                 <groupId>org.powermock</groupId>
@@ -576,6 +577,18 @@
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-core</artifactId>
                 <version>${mockito.version}</version>
+                <scope>test</scope>
+
+            </dependency>
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy</artifactId>
+                <version>1.9.10</version>
+            </dependency>
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy-agent</artifactId>
+                <version>1.9.10</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -673,6 +686,8 @@
                 <artifactId>org.wso2.carbon.identity.central.log.mgt</artifactId>
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
+
+
         </dependencies>
     </dependencyManagement>
 
@@ -845,7 +860,7 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.20.337</carbon.identity.framework.version>
+        <carbon.identity.framework.version>5.23.18</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.17.5, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
@@ -944,7 +959,7 @@
 
         <!--Test Dependencies-->
         <junit.version>4.13.1</junit.version>
-        <testng.version>7.1.0</testng.version>
+        <testng.version>6.9.10</testng.version>
         <jacoco.version>0.8.7</jacoco.version>
         <mockito.version>2.28.2</mockito.version>
         <powermock.version>2.0.9</powermock.version>
@@ -952,7 +967,7 @@
         <javaee.web.api.version>7.0</javaee.web.api.version>
         <h2database.version>2.1.210</h2database.version>
         <commons-codec.test.version>1.4</commons-codec.test.version>
-        <org.wso2.carbon.identity.testutil.version>5.12.49</org.wso2.carbon.identity.testutil.version>
+        <org.wso2.carbon.identity.testutil.version>5.23.18</org.wso2.carbon.identity.testutil.version>
         <!--SAML component version for test-->
         <carbon.identity.sso.saml.version>5.7.0</carbon.identity.sso.saml.version>
         <spring-context.version>5.1.1.RELEASE</spring-context.version>

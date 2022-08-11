@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.discovery;
 
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeMethod;
@@ -36,6 +37,7 @@ import static org.wso2.carbon.identity.discovery.DiscoveryUtil.OIDC_USE_ENTITY_I
  * Unit tests.
  */
 @PrepareForTest({ IdentityUtil.class })
+@PowerMockIgnore({"org.mockito.*"})
 public class DiscoveryUtilTest {
 
     @ObjectFactory

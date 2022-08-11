@@ -61,6 +61,7 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
     private static final String SCOPE_NAME = "dummyScopeName";
     private static final String SCOPE_DESCRIPTION = "dummyScopeDescription";
 
+
     @DataProvider(name = "indexAndCountProvider")
     public static Object[][] indexAndCountProvider() {
 

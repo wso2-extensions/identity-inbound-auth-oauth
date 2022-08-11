@@ -18,16 +18,26 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
+import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.IObjectFactory;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
+import java.nio.file.Paths;
+
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 
+@PrepareForTest({IdentityTenantUtil.class})
 public class SessionDataCacheTest extends PowerMockTestCase {
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
@@ -36,6 +46,18 @@ public class SessionDataCacheTest extends PowerMockTestCase {
 
     private String sessionDataId = "835434_263277_7722";
 
+    @BeforeMethod
+    public void setup() {
+        System.setProperty(
+                CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
+        );
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+
+    }
+
     @Test
     public void testGetInstance() throws Exception {
         assertNotNull(SessionDataCache.getInstance(), "Message not equal");
@@ -43,7 +65,6 @@ public class SessionDataCacheTest extends PowerMockTestCase {
 
     @Test
     public void testAddToCache() throws Exception {
-        System.setProperty("carbon.home", "");
         SessionDataCacheKey key = mock(SessionDataCacheKey.class);
         SessionDataCacheEntry entry = mock(SessionDataCacheEntry.class);
         when(key.getSessionDataId()).thenReturn(sessionDataId);
@@ -53,7 +74,6 @@ public class SessionDataCacheTest extends PowerMockTestCase {
 
     @Test
     public void testGetValueFromCache() throws Exception {
-        System.setProperty("carbon.home", "");
         SessionDataCacheKey key = mock(SessionDataCacheKey.class);
         when(key.getSessionDataId()).thenReturn(sessionDataId);
         assertNull(SessionDataCache.getInstance().getValueFromCache(key));
@@ -61,7 +81,6 @@ public class SessionDataCacheTest extends PowerMockTestCase {
 
     @Test
     public void testClearCacheEntry() throws Exception {
-        System.setProperty("carbon.home", "");
         SessionDataCacheKey key = mock(SessionDataCacheKey.class);
         when(key.getSessionDataId()).thenReturn(sessionDataId);
         SessionDataCache.getInstance().clearCacheEntry(key);

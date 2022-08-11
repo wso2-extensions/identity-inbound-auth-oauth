@@ -315,6 +315,11 @@
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.central.log.mgt</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.application.authentication.framework</artifactId>
+            <version>5.23.18</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -439,7 +444,6 @@
                         --add-opens java.base/java.util.regex=ALL-UNNAMED
                         --add-opens java.base/jdk.internal.util=ALL-UNNAMED
                         --add-exports java.base/jdk.internal.loader=ALL-UNNAMED
-                        --add-exports java.xml/jdk.xml.internal=ALL-UNNAMED
                         --add-opens java.xml/jdk.xml.internal=ALL-UNNAMED
                         --add-opens java.base/sun.nio.fs=ALL-UNNAMED
                         --add-opens java.base/sun.nio.cs=ALL-UNNAMED

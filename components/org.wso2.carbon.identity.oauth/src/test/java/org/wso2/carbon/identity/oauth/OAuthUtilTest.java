@@ -19,36 +19,15 @@
 package org.wso2.carbon.identity.oauth;
 
 import org.apache.commons.lang.StringUtils;
-import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.wso2.carbon.base.CarbonBaseConstants;
-import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.base.ServerConfiguration;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
-import org.wso2.carbon.user.core.UserCoreConstants;
-import org.wso2.carbon.utils.CarbonUtils;
 
-import java.nio.file.Paths;
-
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.doReturn;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.spy;
-import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
@@ -60,21 +39,7 @@ import static org.wso2.carbon.identity.oauth2.TestConstants.LOCAL_IDP;
  */
 @WithCarbonHome
 @WithRealmService
-@PrepareForTest({IdentityUtil.class, PrivilegedCarbonContext.class, CarbonUtils.class, IdentityTenantUtil.class,
-        OAuthCache.class})
-@PowerMockIgnore({"javax.crypto.*"})
-public class OAuthUtilTest extends PowerMockTestCase {
-    @Mock
-    ServerConfiguration serverConfiguration;
-
-
-    @BeforeTest
-    public void setUp() {
-        System.setProperty(
-                CarbonBaseConstants.CARBON_HOME,
-                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
-        );
-    }
+public class OAuthUtilTest {
     @DataProvider(name = "testGetAuthenticatedUser")
     public Object[][] fullQualifiedUserName() {
         return new Object[][] { { "JDBC/siripala@is.com", "siripala" }, { "JDBC/siripala", "siripala" },
@@ -97,10 +62,6 @@ public class OAuthUtilTest extends PowerMockTestCase {
         String cacheKey = "some-cache-key";
         OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(cacheKey);
 
-        String carbonHome = Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString();
-        spy(CarbonUtils.class);
-        doReturn(carbonHome).when(CarbonUtils.class, "getCarbonHome");
-        doReturn(serverConfiguration).when(CarbonUtils.class, "getServerConfiguration");
 
         OAuthCache oAuthCache = getOAuthCache(oAuthCacheKey);
         assertNotNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should give the cached value before cleaning it.");
@@ -157,8 +118,6 @@ public class OAuthUtilTest extends PowerMockTestCase {
         String authorizedUser = "authorized-user";
         String scope = "scope";
         String cacheKey = consumerKey + ":" + authorizedUser + ":" + scope + ":" + LOCAL_IDP;
-
-
         OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(cacheKey);
         OAuthCache oAuthCache = getOAuthCache(oAuthCacheKey);
 
@@ -193,9 +152,6 @@ public class OAuthUtilTest extends PowerMockTestCase {
 
     @Test(dataProvider = "testGetAuthenticatedUser")
     public void testGetAuthenticatedUser(String fullQualifiedName, String username) throws Exception {
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
-        when(IdentityUtil.getPrimaryDomainName()).thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
         assertEquals(OAuthUtil.getAuthenticatedUser(fullQualifiedName).getUserName(), username,
                 "Should set the " + "cleared username from fullyQualifiedName.");
     }
@@ -206,9 +162,6 @@ public class OAuthUtilTest extends PowerMockTestCase {
     }
 
     private OAuthCache getOAuthCache(OAuthCacheKey oAuthCacheKey) {
-
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
 
         // Add some value to OAuthCache.

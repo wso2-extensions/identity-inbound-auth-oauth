@@ -23,6 +23,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeClass;
@@ -45,6 +46,7 @@ import static org.testng.Assert.assertEquals;
 /**
  * Unit test covering OIDCDiscoveryServiceComponent class.
  */
+@PowerMockIgnore({"org.mockito.*"})
 public class OIDCDiscoveryServiceComponentTest {
 
     @Mock
