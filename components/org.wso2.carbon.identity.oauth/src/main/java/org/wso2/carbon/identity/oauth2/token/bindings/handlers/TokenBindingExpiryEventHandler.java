@@ -284,7 +284,14 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                     && accessTokenDO.getAuthzUser() != null) {
                 AuthenticatedUser authenticatedUser = new AuthenticatedUser(accessTokenDO.getAuthzUser());
                 try {
-                    if (authenticatedUser.isFederatedUser()
+                    boolean isFederatedRoleBasedAuthzEnabled = false;
+                    if (authenticatedUser.isFederatedUser()) {
+                        isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(consumerKey);
+                    }
+
+                    if (isFederatedRoleBasedAuthzEnabled
+                            && StringUtils.equalsIgnoreCase(
+                                    user.getFederatedIdPName(), authenticatedUser.getFederatedIdPName())
                             && StringUtils.equalsIgnoreCase(user.getUserName(), authenticatedUser.getUserName())) {
                         revokeFederatedTokens(consumerKey, user, accessTokenDO, tokenBindingReference);
                     } else if (StringUtils.equalsIgnoreCase(userId, authenticatedUser.getUserId())) {

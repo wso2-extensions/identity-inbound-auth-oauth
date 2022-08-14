@@ -52,7 +52,6 @@ import static java.util.Objects.nonNull;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.FIDP_ROLE_BASED_AUTHZ_APP_CONFIG;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getRolesFromFederatedUserAttributes;
 
 /**
@@ -85,11 +84,7 @@ public class RoleBasedInternalScopeValidator {
         // Find whether federated role based authorization is engaged or not.
         boolean isFederatedRoleBasedAuthzEnabled = false;
         if (authenticatedUser.isFederatedUser()) {
-            List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
-            if (federatedRoleBasedAuthzApps.size() > 0) {
-                String appName = OAuth2Util.getServiceProviderName(tokReqMsgCtx);
-                isFederatedRoleBasedAuthzEnabled = federatedRoleBasedAuthzApps.contains(appName);
-            }
+            isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(tokReqMsgCtx);
         }
 
         if (isFederatedRoleBasedAuthzEnabled) {
@@ -147,11 +142,7 @@ public class RoleBasedInternalScopeValidator {
         // Find whether federated role based authorization is engaged or not.
         boolean isFederatedRoleBasedAuthzEnabled = false;
         if (authenticatedUser.isFederatedUser()) {
-            List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
-            if (federatedRoleBasedAuthzApps.size() > 0) {
-                String appName = OAuth2Util.getServiceProviderName(authzReqMessageContext);
-                isFederatedRoleBasedAuthzEnabled = federatedRoleBasedAuthzApps.contains(appName);
-            }
+            isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(authzReqMessageContext);
         }
 
         if (isFederatedRoleBasedAuthzEnabled) {

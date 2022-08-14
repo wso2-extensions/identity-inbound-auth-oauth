@@ -62,13 +62,11 @@ import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.FIDP_ROLE_BASED_AUTHZ_APP_CONFIG;
 
 /**
  * ResponseTypeHandlerUtil contains all the common methods in tokenResponseTypeHandler and IDTokenResponseTypeHandler.
@@ -258,10 +256,8 @@ public class ResponseTypeHandlerUtil {
         AuthenticatedUser authenticatedUser = authorizationReqDTO.getUser();
         if (authenticatedUser != null && authenticatedUser.isFederatedUser()) {
             boolean skipTenantDomainOverWriting = false;
-            List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
-            if (federatedRoleBasedAuthzApps.size() > 0 && authenticatedUser.getTenantDomain() != null) {
-                String appName = OAuth2Util.getServiceProviderName(oauthAuthzMsgCtx);
-                skipTenantDomainOverWriting = federatedRoleBasedAuthzApps.contains(appName);
+            if (authenticatedUser.getTenantDomain() != null) {
+                skipTenantDomainOverWriting = OAuth2Util.isFederatedRoleBasedAuthzEnabled(oauthAuthzMsgCtx);
             }
             // If federated role-based authorization is engaged skip overwriting the user tenant domain.
             if (!skipTenantDomainOverWriting) {

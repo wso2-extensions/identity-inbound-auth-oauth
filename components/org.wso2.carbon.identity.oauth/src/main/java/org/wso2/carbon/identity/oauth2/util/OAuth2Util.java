@@ -224,7 +224,7 @@ public class OAuth2Util {
     private static final String OPENID_CONNECT_AUDIENCES = "Audiences";
     private static final String DOT_SEPARATER = ".";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
-    private static final String FEDERATED_ROLE_CLAIM_URI = "roles";
+    private static final String OIDC_ROLE_CLAIM_URI = "roles";
 
     public static final String DEFAULT_TOKEN_TYPE = "Default";
 
@@ -4480,16 +4480,15 @@ public class OAuth2Util {
 
     /**
      * Get user role list from federated user attributes.
-     * Used in OIDC flow.
      *
-     * @param userAttributes User attribute
-     * @return user role-list
+     * @param userAttributes User attribute.
+     * @return User role-list.
      */
     public static List<String> getRolesFromFederatedUserAttributes(Map<ClaimMapping, String> userAttributes) {
 
         Optional<ClaimMapping> roleClaimMapping = Optional.ofNullable(userAttributes).get().entrySet().stream()
                 .map(entry -> entry.getKey())
-                .filter(claim -> StringUtils.equals(FEDERATED_ROLE_CLAIM_URI, claim.getRemoteClaim().getClaimUri()))
+                .filter(claim -> StringUtils.equals(OIDC_ROLE_CLAIM_URI, claim.getRemoteClaim().getClaimUri()))
                 .findFirst();
 
         if (roleClaimMapping.isPresent()) {
@@ -4501,52 +4500,61 @@ public class OAuth2Util {
     }
 
     /**
-     * Get the service provider name for provided context.
+     * Check federated role based authorization enabled or not.
      *
      * @param requestMsgCtx Token request message context.
-     * @return Relevant service provider name.
-     * @throws IdentityOAuth2Exception IdentityOAuth2Exception
+     * @return Role based authz flow enabled or not.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
      */
-    public static String getServiceProviderName(OAuthTokenReqMessageContext requestMsgCtx)
+    public static boolean isFederatedRoleBasedAuthzEnabled(OAuthTokenReqMessageContext requestMsgCtx)
             throws IdentityOAuth2Exception {
 
-        String spTenantDomain = requestMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
-        if (StringUtils.isBlank(spTenantDomain)) {
-            spTenantDomain = org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-        }
         String clientId = requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
-        return getServiceProviderName(clientId, spTenantDomain);
+        return isFederatedRoleBasedAuthzEnabled(clientId);
     }
 
     /**
-     * Get the service provider name for provided context
+     * Check federated role based authorization enabled or not.
      *
      * @param oauthAuthzMsgCtx OAuth authorization request message context.
-     * @return Relevant service provider name.
+     * @return Role based authz flow enabled or not.
      * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
      */
-    public static String getServiceProviderName(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
+    public static boolean isFederatedRoleBasedAuthzEnabled(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
             throws IdentityOAuth2Exception {
 
-        String spTenantDomain = oauthAuthzMsgCtx.getAuthorizationReqDTO().getTenantDomain();
-        if (StringUtils.isBlank(spTenantDomain)) {
-            spTenantDomain = org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-        }
         String clientId = oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey();
-        return getServiceProviderName(clientId, spTenantDomain);
+        return isFederatedRoleBasedAuthzEnabled(clientId);
     }
 
-    private static String getServiceProviderName(String clientId, String tenantDomain) throws IdentityOAuth2Exception {
+    /**
+     * Check federated role based authorization enabled or not.
+     *
+     * @param clientId Application's client ID.
+     * @return Role based authz flow enabled or not.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static boolean isFederatedRoleBasedAuthzEnabled(String clientId) throws IdentityOAuth2Exception {
 
-        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
-        try {
-            // Get service provider name.
-            String spName = applicationMgtService
-                    .getServiceProviderNameByClientId(clientId, INBOUND_AUTH2_TYPE, tenantDomain);
-            return spName;
-        } catch (IdentityApplicationManagementException e) {
-            throw new IdentityOAuth2Exception("Error while obtaining the service provider name for client_id: " +
-                    clientId + " of tenantDomain: " + tenantDomain, e);
+        List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
+        boolean isFederatedRoleBasedAuthzEnabled = false;
+        if (!federatedRoleBasedAuthzApps.isEmpty()) {
+            OAuthAppDO app = null;
+            try {
+                app = getAppInformationByClientId(clientId);
+            } catch (InvalidOAuthClientException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Error while retrieving the Application Information for client id: "
+                            + clientId, e);
+                }
+                throw new IdentityOAuth2Exception(e.getMessage(), e);
+            }
+            String appTenantDomain = getTenantDomainOfOauthApp(app);
+            if (StringUtils.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME, appTenantDomain)
+                    && federatedRoleBasedAuthzApps.contains(app.getApplicationName())) {
+                isFederatedRoleBasedAuthzEnabled = true;
+            }
         }
+        return isFederatedRoleBasedAuthzEnabled;
     }
 }

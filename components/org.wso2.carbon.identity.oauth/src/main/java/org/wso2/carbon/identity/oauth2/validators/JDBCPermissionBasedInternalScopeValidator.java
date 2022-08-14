@@ -35,7 +35,6 @@ import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.RoleMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeBindingCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeBindingCacheKey;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -72,7 +71,6 @@ import java.util.stream.Collectors;
 
 import static java.util.Objects.nonNull;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.FIDP_ROLE_BASED_AUTHZ_APP_CONFIG;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getRolesFromFederatedUserAttributes;
 
 /**
@@ -184,14 +182,10 @@ public class JDBCPermissionBasedInternalScopeValidator {
             String tenantDomain = authenticatedUser.getTenantDomain();
             boolean isFederatedRoleBasedAuthzEnabled = false;
             if (authenticatedUser.isFederatedUser()) {
-                List<String> federatedRoleBasedAuthzApps =
-                        IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
-                if (federatedRoleBasedAuthzApps.size() > 0) {
+                isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(clientId);
+                if (isFederatedRoleBasedAuthzEnabled) {
                     OAuthAppDO app = OAuth2Util.getAppInformationByClientId(clientId);
-                    if (federatedRoleBasedAuthzApps.contains(app.getApplicationName())) {
-                        isFederatedRoleBasedAuthzEnabled = true;
-                        tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(app);
-                    }
+                    tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(app);
                 }
             }
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
