@@ -280,26 +280,38 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         if (log.isDebugEnabled() && CollectionUtils.isEmpty(boundTokens)) {
             log.debug("No bound tokens found for the the provided binding reference: " + tokenBindingReference);
         }
+
+        int roleBasedAuthzApplicationCount = 0;
+        if (user.isFederatedUser()) {
+            for (AccessTokenDO accessTokenDO : boundTokens) {
+                String consumerKey = accessTokenDO.getConsumerKey();
+                if (OAuth2Util.isFederatedRoleBasedAuthzEnabled(consumerKey)) {
+                    roleBasedAuthzApplicationCount++;
+                }
+            }
+        }
         int boundedTokens = boundTokens.size();
         for (AccessTokenDO accessTokenDO : boundTokens) {
             String consumerKey = accessTokenDO.getConsumerKey();
             if (OAuth2Util.getAppInformationByClientId(consumerKey).isTokenRevocationWithIDPSessionTerminationEnabled()
                     && accessTokenDO.getAuthzUser() != null) {
                 AuthenticatedUser authenticatedUser = new AuthenticatedUser(accessTokenDO.getAuthzUser());
+                boolean isFederatedRoleBasedAuthzEnabled = false;
                 try {
-                    boolean isFederatedRoleBasedAuthzEnabled = false;
-
-                    if (isFederatedRoleBasedAuthzEnabled
-                            && StringUtils.equalsIgnoreCase(
-                                    user.getFederatedIdPName(), authenticatedUser.getFederatedIdPName())
-                            && StringUtils.equalsIgnoreCase(user.getUserName(), authenticatedUser.getUserName())) {
+                    if (authenticatedUser.isFederatedUser()) {
                         isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(consumerKey);
-                        if (boundedTokens == 1) {
-                            context.setProperty("IsPrivilegedUserTokenRevoked", true);
-                        }
                     }
+
                     if (isFederatedRoleBasedAuthzEnabled) {
-                        revokeFederatedTokens(consumerKey, user, accessTokenDO, tokenBindingReference);
+                        if (StringUtils.equalsIgnoreCase(
+                                user.getFederatedIdPName(), authenticatedUser.getFederatedIdPName())
+                                && StringUtils.equalsIgnoreCase(user.getUserName(), authenticatedUser.getUserName())) {
+                            if ((boundedTokens < (roleBasedAuthzApplicationCount * 2))) {
+                                context.setProperty("IsPrivilegedUserTokenRevoked", true);
+                            }
+                            revokeFederatedTokens(consumerKey, user, accessTokenDO, tokenBindingReference);
+                        }
+
                     } else if (StringUtils.equalsIgnoreCase(userId, authenticatedUser.getUserId())) {
                         revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
                     }
