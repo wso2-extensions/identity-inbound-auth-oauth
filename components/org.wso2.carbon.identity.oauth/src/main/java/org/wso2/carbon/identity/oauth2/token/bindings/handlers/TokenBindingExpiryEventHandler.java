@@ -98,7 +98,8 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                 }
 
                 if (bindingType != null) {
-                    revokeTokensForBindingType(request, context.getLastAuthenticatedUser(), consumerKey, bindingType);
+                    revokeTokensForBindingType(request, context.getLastAuthenticatedUser(), consumerKey, bindingType,
+                            context);
                 }
 
                 if (!OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(bindingType)) {
@@ -178,16 +179,29 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
     }
 
     private void revokeTokensForBindingType(HttpServletRequest request, AuthenticatedUser user, String consumerKey,
-                                            String bindingType) throws IdentityOAuth2Exception,
-            InvalidOAuthClientException, OAuthSystemException {
+                                            String bindingType, AuthenticationContext context)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException, OAuthSystemException {
 
-        revokeTokensOfBindingRef(user, getBindingRefFromType(request, consumerKey, bindingType));
+        try {
+            revokeTokensOfBindingRef(user, getBindingRefFromType(request, consumerKey, bindingType), context);
+        } catch (OAuthSystemException e) {
+            boolean throwError = true;
+            if (user.isFederatedUser()
+                    && OAuth2Util.isFederatedRoleBasedAuthzEnabled(consumerKey)
+                    && StringUtils.equals("Failed to retrieve token binding value.", e.getMessage())) {
+                context.setProperty("IsPrivilegedUserTokenRevoked", true);
+                throwError = false;
+            }
+            if (throwError) {
+                throw new OAuthSystemException(e);
+            }
+        }
     }
 
     private void revokeTokensForCommonAuthCookie(HttpServletRequest request, AuthenticatedUser user) throws
             IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        revokeTokensOfBindingRef(user, getBindingRefFromCommonAuthCookie(request));
+        revokeTokensOfBindingRef(user, getBindingRefFromCommonAuthCookie(request), null);
     }
 
     /**
@@ -257,7 +271,8 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
      * @throws IdentityOAuth2Exception     if an exception occurs while revoking tokens
      * @throws InvalidOAuthClientException if an exception occurs while revoking tokens
      */
-    private void revokeTokensOfBindingRef(AuthenticatedUser user, String tokenBindingReference) throws
+    private void revokeTokensOfBindingRef(AuthenticatedUser user, String tokenBindingReference,
+                                          AuthenticationContext context) throws
             IdentityOAuth2Exception, InvalidOAuthClientException {
 
         if (StringUtils.isBlank(tokenBindingReference) || user == null) {
@@ -278,6 +293,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         if (log.isDebugEnabled() && CollectionUtils.isEmpty(boundTokens)) {
             log.debug("No bound tokens found for the the provided binding reference: " + tokenBindingReference);
         }
+        int boundedTokens = boundTokens.size();
         for (AccessTokenDO accessTokenDO : boundTokens) {
             String consumerKey = accessTokenDO.getConsumerKey();
             if (OAuth2Util.getAppInformationByClientId(consumerKey).isTokenRevocationWithIDPSessionTerminationEnabled()
@@ -285,14 +301,20 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                 AuthenticatedUser authenticatedUser = new AuthenticatedUser(accessTokenDO.getAuthzUser());
                 try {
                     boolean isFederatedRoleBasedAuthzEnabled = false;
-                    if (authenticatedUser.isFederatedUser()) {
-                        isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(consumerKey);
-                    }
+//                    if (authenticatedUser.isFederatedUser()) {
+//                        isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(consumerKey);
+//                    }
 
                     if (isFederatedRoleBasedAuthzEnabled
                             && StringUtils.equalsIgnoreCase(
                                     user.getFederatedIdPName(), authenticatedUser.getFederatedIdPName())
                             && StringUtils.equalsIgnoreCase(user.getUserName(), authenticatedUser.getUserName())) {
+                        isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(consumerKey);
+                        if (boundedTokens == 1) {
+                            context.setProperty("IsPrivilegedUserTokenRevoked", true);
+                        }
+                    }
+                    if (isFederatedRoleBasedAuthzEnabled) {
                         revokeFederatedTokens(consumerKey, user, accessTokenDO, tokenBindingReference);
                     } else if (StringUtils.equalsIgnoreCase(userId, authenticatedUser.getUserId())) {
                         revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
