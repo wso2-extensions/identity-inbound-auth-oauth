@@ -182,20 +182,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                                             String bindingType, AuthenticationContext context)
             throws IdentityOAuth2Exception, InvalidOAuthClientException, OAuthSystemException {
 
-        try {
-            revokeTokensOfBindingRef(user, getBindingRefFromType(request, consumerKey, bindingType), context);
-        } catch (OAuthSystemException e) {
-            boolean throwError = true;
-            if (user.isFederatedUser()
-                    && OAuth2Util.isFederatedRoleBasedAuthzEnabled(consumerKey)
-                    && StringUtils.equals("Failed to retrieve token binding value.", e.getMessage())) {
-                context.setProperty("IsPrivilegedUserTokenRevoked", true);
-                throwError = false;
-            }
-            if (throwError) {
-                throw new OAuthSystemException(e);
-            }
-        }
+        revokeTokensOfBindingRef(user, getBindingRefFromType(request, consumerKey, bindingType), context);
     }
 
     private void revokeTokensForCommonAuthCookie(HttpServletRequest request, AuthenticatedUser user) throws
@@ -301,9 +288,6 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                 AuthenticatedUser authenticatedUser = new AuthenticatedUser(accessTokenDO.getAuthzUser());
                 try {
                     boolean isFederatedRoleBasedAuthzEnabled = false;
-//                    if (authenticatedUser.isFederatedUser()) {
-//                        isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(consumerKey);
-//                    }
 
                     if (isFederatedRoleBasedAuthzEnabled
                             && StringUtils.equalsIgnoreCase(
