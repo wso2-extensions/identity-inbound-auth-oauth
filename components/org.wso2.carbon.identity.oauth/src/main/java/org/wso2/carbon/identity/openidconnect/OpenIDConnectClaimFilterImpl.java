@@ -531,8 +531,11 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
 
         if (returnClaims.containsKey(GROUPS) && returnClaims.get(GROUPS) instanceof String
                 && returnClaims.get(GROUPS) != null) {
-            List<String> groups = Arrays.asList(returnClaims.get(GROUPS).toString());
-            returnClaims.put(GROUPS, groups);
+            String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
+            List<String> groups = Arrays.asList(returnClaims.get(GROUPS).toString().split(multiAttributeSeparator));
+            if (groups.size() == 1) {
+                returnClaims.put(GROUPS, groups);
+            }
         }
     }
 
