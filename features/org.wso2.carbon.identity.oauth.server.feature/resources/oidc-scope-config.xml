@@ -31,4 +31,7 @@
     <Scope id="address" displayName="Address" description="View the address of the user.">
         <Claim>address,street_address,locality,region,postal_code,country</Claim>
     </Scope>
+    <Scope id="groups" displayName="Groups" description="View information related to groups of the user.">
+        <Claim>groups</Claim>
+    </Scope>
 </Scopes>
