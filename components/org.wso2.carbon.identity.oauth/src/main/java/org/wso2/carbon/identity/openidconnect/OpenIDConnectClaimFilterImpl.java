@@ -533,6 +533,8 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
                 && returnClaims.get(GROUPS) != null) {
             String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
             List<String> groups = Arrays.asList(returnClaims.get(GROUPS).toString().split(multiAttributeSeparator));
+            // To format the groups claim to always return as an array, we should pass single group as an array here.
+            // Multiple groups are handled by attribute separator.
             if (groups.size() == 1) {
                 returnClaims.put(GROUPS, groups);
             }
