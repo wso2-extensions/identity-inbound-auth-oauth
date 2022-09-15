@@ -61,7 +61,6 @@ import java.util.stream.Collectors;
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.EMAIL_VERIFIED;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.GROUPS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.PHONE_NUMBER_VERIFIED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ROLES;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.UPDATED_AT;
@@ -141,7 +140,6 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         handleUpdateAtClaim(claimsToBeReturned);
         handlePhoneNumberVerifiedClaim(claimsToBeReturned);
         handleEmailVerifiedClaim(claimsToBeReturned);
-        handleGroupsClaim(claimsToBeReturned);
 
         return claimsToBeReturned;
     }
@@ -524,20 +522,6 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
                 }
             }
             returnClaims.put(ROLES, StringUtils.join(roles, multiAttributeSeparator));
-        }
-    }
-
-    private void handleGroupsClaim(Map<String, Object> returnClaims) {
-
-        if (returnClaims.containsKey(GROUPS) && returnClaims.get(GROUPS) instanceof String
-                && returnClaims.get(GROUPS) != null) {
-            String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
-            List<String> groups = Arrays.asList(returnClaims.get(GROUPS).toString().split(multiAttributeSeparator));
-            // To format the groups claim to always return as an array, we should pass single group as an array here.
-            // Multiple groups are handled by attribute separator.
-            if (groups.size() == 1) {
-                returnClaims.put(GROUPS, groups);
-            }
         }
     }
 
