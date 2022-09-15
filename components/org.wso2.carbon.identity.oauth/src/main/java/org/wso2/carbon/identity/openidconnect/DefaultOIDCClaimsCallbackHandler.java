@@ -380,8 +380,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                     }
                     userClaimsInOIDCDialect = retrieveClaimsForLocalUser(authzReqMessageContext);
                 } else {
-                    userClaimsInOIDCDialect = getOIDCClaimMapFromUserAttributes(
-                            authzReqMessageContext.getAuthorizationReqDTO().getUser().getUserAttributes());
+                    userClaimsInOIDCDialect = getOIDCClaimMapFromUserAttributes(userAttributes);
                 }
             } else {
                 if (log.isDebugEnabled()) {
