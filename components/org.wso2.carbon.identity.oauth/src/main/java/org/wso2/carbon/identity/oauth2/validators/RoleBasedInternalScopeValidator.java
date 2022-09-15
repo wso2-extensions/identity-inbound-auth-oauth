@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.role.management.service.models.Role;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementServerException;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -187,7 +188,8 @@ public class RoleBasedInternalScopeValidator {
 
             //Retrieve organization roles, if the tenant has organization id associated.
             Tenant tenant = realmService.getTenantManager().getTenant(tenantId);
-            if (nonNull(tenant) && isNotBlank(tenant.getAssociatedOrganizationUUID())) {
+            if (nonNull(tenant) && isNotBlank(tenant.getAssociatedOrganizationUUID()) &&
+                    !isFistLevelOrg(tenant.getAssociatedOrganizationUUID())) {
                 String organizationId = tenant.getAssociatedOrganizationUUID();
                 List<String> roles = getUserOrganizationRoles(authenticatedUser, organizationId);
                 //if no organization roles are returned, then retrieve the hybrid roles.
@@ -219,6 +221,18 @@ public class RoleBasedInternalScopeValidator {
             throw new IdentityOAuth2Exception("User id not available for user: "
                     + authenticatedUser.getLoggableUserId(), e);
         }
+    }
+
+    private boolean isFistLevelOrg(String organizationId) {
+
+        try {
+            return OAuth2ServiceComponentHolder.getOrganizationManagementService()
+                    .isImmediateChildOfSuperOrganization(organizationId);
+        } catch (OrganizationManagementServerException e) {
+            log.error(
+                    "Error while checking whether the given organization is an immediate child of the super organization.");
+        }
+        return false;
     }
 
     private List<String> getUserOrganizationRoles(AuthenticatedUser user, String organizationId) {

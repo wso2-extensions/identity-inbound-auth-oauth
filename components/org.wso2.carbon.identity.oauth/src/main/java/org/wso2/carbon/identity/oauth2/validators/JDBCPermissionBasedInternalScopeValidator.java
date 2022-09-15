@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementServerException;
 import org.wso2.carbon.user.api.AuthorizationManager;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -228,7 +229,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
                         OAuthComponentServiceHolder.getInstance().getRealmService().getTenantManager()
                                 .getTenant(tenantId);
                 if (nonNull(tenant) && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID()) &&
-                        (isFistLevelOrg(tenant.getAssociatedOrganizationUUID()))) {
+                        !isFistLevelOrg(tenant.getAssociatedOrganizationUUID())) {
                     allowedResourcesForUser = retrieveUserOrganizationPermission(authenticatedUser,
                             tenant.getAssociatedOrganizationUUID());
                 } else {
@@ -288,8 +289,15 @@ public class JDBCPermissionBasedInternalScopeValidator {
         return userAllowedScopes;
     }
 
-    private boolean isFistLevelOrg(String organizationUUID) {
+    private boolean isFistLevelOrg(String organizationId) {
 
+        try {
+            return OAuth2ServiceComponentHolder.getOrganizationManagementService()
+                    .isImmediateChildOfSuperOrganization(organizationId);
+        } catch (OrganizationManagementServerException e) {
+            log.error(
+                    "Error while checking whether the given organization is an immediate child of the super organization.");
+        }
         return false;
     }
 
