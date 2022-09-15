@@ -227,7 +227,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
                 Tenant tenant =
                         OAuthComponentServiceHolder.getInstance().getRealmService().getTenantManager()
                                 .getTenant(tenantId);
-                if (nonNull(tenant) && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID())) {
+                if (nonNull(tenant) && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID()) &&
+                        (isFistLevelOrg(tenant.getAssociatedOrganizationUUID()))) {
                     allowedResourcesForUser = retrieveUserOrganizationPermission(authenticatedUser,
                             tenant.getAssociatedOrganizationUUID());
                 } else {
@@ -285,6 +286,11 @@ public class JDBCPermissionBasedInternalScopeValidator {
             endTenantFlow();
         }
         return userAllowedScopes;
+    }
+
+    private boolean isFistLevelOrg(String organizationUUID) {
+
+        return false;
     }
 
     private boolean isSPAlwaysSendMappedLocalSubjectId(String clientId) throws IdentityOAuth2Exception {
