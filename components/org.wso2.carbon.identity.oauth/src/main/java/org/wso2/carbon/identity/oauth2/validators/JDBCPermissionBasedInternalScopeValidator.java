@@ -229,7 +229,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
                         OAuthComponentServiceHolder.getInstance().getRealmService().getTenantManager()
                                 .getTenant(tenantId);
                 if (nonNull(tenant) && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID()) &&
-                        !isFistLevelOrg(tenant.getAssociatedOrganizationUUID())) {
+                        OAuth2Util.useOrganizationRolesForValidation(tenant.getAssociatedOrganizationUUID())) {
                     allowedResourcesForUser = retrieveUserOrganizationPermission(authenticatedUser,
                             tenant.getAssociatedOrganizationUUID());
                 } else {
@@ -287,18 +287,6 @@ public class JDBCPermissionBasedInternalScopeValidator {
             endTenantFlow();
         }
         return userAllowedScopes;
-    }
-
-    private boolean isFistLevelOrg(String organizationId) {
-
-        try {
-            return OAuth2ServiceComponentHolder.getOrganizationManagementService()
-                    .isImmediateChildOfSuperOrganization(organizationId);
-        } catch (OrganizationManagementServerException e) {
-            log.error(
-                    "Error while checking whether the given organization is an immediate child of the super organization.");
-        }
-        return false;
     }
 
     private boolean isSPAlwaysSendMappedLocalSubjectId(String clientId) throws IdentityOAuth2Exception {
