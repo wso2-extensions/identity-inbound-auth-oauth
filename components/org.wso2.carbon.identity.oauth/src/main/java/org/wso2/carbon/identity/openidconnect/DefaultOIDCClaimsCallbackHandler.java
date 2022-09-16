@@ -73,6 +73,7 @@ import static org.apache.commons.collections.MapUtils.isNotEmpty;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.GROUPS;
 
 /**
  * Default implementation of {@link CustomClaimsCallbackHandler}. This callback handler populates available user
@@ -796,6 +797,11 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         // Address claim contains multi attribute separator but its not a multi valued attribute.
         if (claimKey.equals(ADDRESS)) {
             return false;
+        }
+        // To format the groups claim to always return as an array, we should consider single group as
+        // multi value attribute.
+        if (claimKey.equals(GROUPS)) {
+            return true;
         }
         return StringUtils.contains(claimValue, ATTRIBUTE_SEPARATOR);
     }
