@@ -643,17 +643,13 @@ public class OAuth2ServiceComponent {
     )
     protected void setOrganizationManagementService(OrganizationManager organizationManagementService) {
 
-        if (log.isDebugEnabled()) {
-            log.debug("Setting the organization management service.");
-        }
+        log.debug("Setting the organization management service.");
         OAuth2ServiceComponentHolder.setOrganizationManagementService(organizationManagementService);
     }
 
     protected void unsetOrganizationManagementService(OrganizationManager organizationManagementService) {
 
-        if (log.isDebugEnabled()) {
-            log.debug("Unset organization management service.");
-        }
+        log.debug("Unset organization management service.");
         OAuth2ServiceComponentHolder.setOrganizationManagementService(null);
     }
 
