@@ -368,10 +368,20 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         if (isEmpty(userAttributes)) {
             if (isLocalUser(authzReqMessageContext)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("User attributes not found in cache. Trying to retrieve attribute for local user: " +
-                            authzReqMessageContext.getAuthorizationReqDTO().getUser());
+                    log.debug("User attributes not found in cache. Trying to retrieve attribute from auth " +
+                            "context for local user: " + authzReqMessageContext.getAuthorizationReqDTO().getUser());
                 }
-                userClaimsInOIDCDialect = retrieveClaimsForLocalUser(authzReqMessageContext);
+                userAttributes = authzReqMessageContext.getAuthorizationReqDTO().getUser()
+                        .getUserAttributes();
+                if (isEmpty(userAttributes)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("User attributes not found in auth context. Trying to retrieve attribute for " +
+                                "local user: " + authzReqMessageContext.getAuthorizationReqDTO().getUser());
+                    }
+                    userClaimsInOIDCDialect = retrieveClaimsForLocalUser(authzReqMessageContext);
+                } else {
+                    userClaimsInOIDCDialect = getOIDCClaimMapFromUserAttributes(userAttributes);
+                }
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("User attributes not found in cache. Trying to retrieve attribute for federated " +
