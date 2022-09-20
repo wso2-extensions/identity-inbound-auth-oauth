@@ -73,6 +73,7 @@ import static org.wso2.carbon.identity.core.util.IdentityUtil.isTokenLoggable;
 public class ClaimUtil {
 
     private static final String SP_DIALECT = "http://wso2.org/oidc/claim";
+    private static final String GROUPS = "groups";
     private static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
     private static final Log log = LogFactory.getLog(ClaimUtil.class);
 
@@ -188,8 +189,9 @@ public class ClaimUtil {
                                         continue;
                                     }
                                 }
-
-                                if (isMultiValuedAttribute(claimValue)) {
+                                // To format the groups claim to always return as an array, we should consider single
+                                // group as multi value attribute.
+                                if (isMultiValuedAttribute(claimValue) || GROUPS.equals(oidcClaimUri)) {
                                     String[] attributeValues = processMultiValuedAttribute(claimValue);
                                     mappedAppClaims.put(oidcClaimUri, attributeValues);
                                 } else {
