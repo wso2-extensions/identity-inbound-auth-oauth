@@ -189,9 +189,7 @@ public class ClaimUtil {
                                         continue;
                                     }
                                 }
-                                // To format the groups claim to always return as an array, we should consider single
-                                // group as multi value attribute.
-                                if (isMultiValuedAttribute(claimValue) || GROUPS.equals(oidcClaimUri)) {
+                                if (isMultiValuedAttribute(oidcClaimUri, claimValue)) {
                                     String[] attributeValues = processMultiValuedAttribute(claimValue);
                                     mappedAppClaims.put(oidcClaimUri, attributeValues);
                                 } else {
@@ -383,6 +381,22 @@ public class ClaimUtil {
      */
     public static boolean isMultiValuedAttribute(String claimValue) {
 
+        return StringUtils.contains(claimValue, ATTRIBUTE_SEPARATOR);
+    }
+
+    /**
+     * Check whether claim value is multivalued attribute or not by using attribute separator.
+     *
+     * @param claimUri String value contains claim uri.
+     * @param claimValue String value contains claims.
+     * @return Whether it is multivalued attribute or not.
+     */
+    public static boolean isMultiValuedAttribute(String claimUri, String claimValue) {
+        // To format the groups claim to always return as an array, we should consider single
+        // group as multi value attribute.
+        if (GROUPS.equals(claimUri)) {
+            return true;
+        }
         return StringUtils.contains(claimValue, ATTRIBUTE_SEPARATOR);
     }
 
