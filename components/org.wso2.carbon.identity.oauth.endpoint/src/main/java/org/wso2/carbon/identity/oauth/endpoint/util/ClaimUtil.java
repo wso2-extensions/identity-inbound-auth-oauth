@@ -385,7 +385,7 @@ public class ClaimUtil {
     }
 
     /**
-     * Check whether claim value is multivalued attribute or not by using claim uri and attribute separator.
+     * Checks whether a user value is multivalued or not.
      *
      * @param claimUri String value contains claim uri.
      * @param claimValue String value contains claims.
