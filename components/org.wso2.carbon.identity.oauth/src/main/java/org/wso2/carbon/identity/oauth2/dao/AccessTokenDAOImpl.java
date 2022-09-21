@@ -1541,7 +1541,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     }
 
     /**
-     * Ths method is to revoke specific tokens
+     * Ths method is to revoke specific tokens.
      *
      * @param tokenId token that needs to be revoked
      * @throws IdentityOAuth2Exception if failed to revoke the access token
@@ -1688,6 +1688,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             ps.setString(3, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             ps.setString(4, authenticatedUser.getUserStoreDomain());
             ps.setString(5, OAuthConstants.Scope.OPENID);
+            ps.setTimestamp(6, new Timestamp(System.currentTimeMillis() + OAuth2Util.timestampSkew),
+                    Calendar.getInstance(TimeZone.getTimeZone(UTC)));
             rs = ps.executeQuery();
 
             Map<String, AccessTokenDO> tokenMap = getAccessTokenDOMapFromResultSet(authenticatedUser, rs);
@@ -1711,30 +1713,15 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
         Map<String, AccessTokenDO> tokenMap = new HashMap<>();
         while (rs.next()) {
-            String accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1));
-            String refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(rs.getString(2));
-            String tokenId = rs.getString(3);
-            Timestamp timeCreated = rs.getTimestamp(4, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
-            long issuedTimeInMillis = timeCreated.getTime();
-            long validityPeriodInMillis = rs.getLong(5);
-            Timestamp refreshTokenTimeCreated = rs.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
-            long refreshTokenValidityPeriodInMillis = rs.getLong(7);
-            String consumerKey = rs.getString(8);
-            String grantType = rs.getString(9);
+            String accessToken = getPersistenceProcessor().
+                    getPreprocessedAccessTokenIdentifier(rs.getString(1));
 
             AccessTokenDO accessTokenDO = new AccessTokenDO();
             accessTokenDO.setAuthzUser(authenticatedUser);
             accessTokenDO.setTenantID(OAuth2Util.getTenantId(authenticatedUser.getTenantDomain()));
             accessTokenDO.setAccessToken(accessToken);
-            accessTokenDO.setRefreshToken(refreshToken);
-            accessTokenDO.setTokenId(tokenId);
+            accessTokenDO.setTokenId(rs.getString(2));
             accessTokenDO.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
-            accessTokenDO.setIssuedTime(timeCreated);
-            accessTokenDO.setValidityPeriodInMillis(validityPeriodInMillis);
-            accessTokenDO.setRefreshTokenIssuedTime(refreshTokenTimeCreated);
-            accessTokenDO.setRefreshTokenValidityPeriodInMillis(refreshTokenValidityPeriodInMillis);
-            accessTokenDO.setConsumerKey(consumerKey);
-            accessTokenDO.setGrantType(grantType);
 
             /*
              * Tokens returned by this method will be used to clear claims cached against the tokens.
@@ -1743,9 +1730,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
              * Tokens issued for openid scope can contain cached claims against them.
              * Tokens that are in ACTIVE state and not expired should be removed from the cache.
              */
-            if (!isAccessTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
-                tokenMap.put(accessToken, accessTokenDO);
-            }
+            tokenMap.put(accessToken, accessTokenDO);
         }
         return tokenMap;
     }
@@ -2500,7 +2485,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     }
 
     /**
-     * Get latest AccessToken list
+     * Get latest AccessToken list.
      *
      * @param consumerKey
      * @param authzUser
@@ -2750,7 +2735,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     }
 
     /**
-     * Retrieves active AccessTokenDOs with token id for a given consumer key
+     * Retrieves active AccessTokenDOs with token id for a given consumer key.
      *
      * @param consumerKey     client id
      * @param userStoreDomain userstore domain

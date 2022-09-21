@@ -203,7 +203,7 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_B
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
 
 /**
- * Utility methods for OAuth 2.0 implementation
+ * Utility methods for OAuth 2.0 implementation.
  */
 public class OAuth2Util {
 
@@ -314,7 +314,7 @@ public class OAuth2Util {
     private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private static final String INTERNAL_LOGIN_SCOPE = "internal_login";
     public static final String JWT = "JWT";
-    private static long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
+    public static long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
     private static ThreadLocal<Integer> clientTenantId = new ThreadLocal<>();
     private static ThreadLocal<OAuthTokenReqMessageContext> tokenRequestContext = new ThreadLocal<>();
     private static ThreadLocal<OAuthAuthzReqMessageContext> authzRequestContext = new ThreadLocal<>();
@@ -483,7 +483,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Authenticate the OAuth Consumer
+     * Authenticate the OAuth Consumer.
      *
      * @param clientId             Consumer Key/Id
      * @param clientSecretProvided Consumer Secret issued during the time of registration
@@ -638,7 +638,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Build the cache key string when storing Authz Code info in cache
+     * Build the cache key string when storing Authz Code info in cache.
      *
      * @param clientId  Client Id representing the client
      * @param authzCode Authorization Code issued to the client
@@ -650,7 +650,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Build the cache key string when storing token info in cache
+     * Build the cache key string when storing token info in cache.
      *
      * @param clientId
      * @param scope
@@ -1530,7 +1530,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Verifies if the PKCE code verifier is upto specification as per RFC 7636
+     * Verifies if the PKCE code verifier is upto specification as per RFC 7636.
      *
      * @param codeVerifier PKCE Code Verifier sent with the token request
      * @return
@@ -1545,7 +1545,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Verifies if the codeChallenge is upto specification as per RFC 7636
+     * Verifies if the codeChallenge is upto specification as per RFC 7636.
      *
      * @param codeChallenge
      * @param codeChallengeMethod
@@ -2050,7 +2050,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Returns oauth token issuer registered in the service provider app
+     * Returns oauth token issuer registered in the service provider app.
      *
      * @param clientId client id of the oauth app
      * @return oauth token issuer
@@ -2099,7 +2099,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Get Oauth application information
+     * Get Oauth application information.
      *
      * @param clientId
      * @return Oauth app information
@@ -2122,7 +2122,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Get the tenant domain of an oauth application
+     * Get the tenant domain of an oauth application.
      *
      * @param oAuthAppDO
      * @return
@@ -2172,7 +2172,7 @@ public class OAuth2Util {
 
     /**
      * This method map signature algorithm define in identity.xml to nimbus
-     * signature algorithm
+     * signature algorithm.
      *
      * @param signatureAlgorithm name of the signature algorithm
      * @return mapped JWSAlgorithm name
@@ -2231,7 +2231,7 @@ public class OAuth2Util {
 
     /**
      * This method map signature algorithm define in identity.xml to nimbus
-     * signature algorithm
+     * signature algorithm.
      *
      * @param signatureAlgorithm name of the signature algorithm
      * @return mapped JWSAlgorithm
@@ -2319,7 +2319,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Validate Id token signature
+     * Validate Id token signature.
      *
      * @param idToken Id token
      * @return validation state
@@ -2370,7 +2370,7 @@ public class OAuth2Util {
     }
 
     /**
-     * This method maps signature algorithm define in identity.xml to digest algorithms to generate the at_hash
+     * This method maps signature algorithm define in identity.xml to digest algorithms to generate the at_hash.
      *
      * @param signatureAlgorithm
      * @return the mapped digest algorithm
@@ -2544,7 +2544,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Encrypt jwt using service provider's configured X509 certificate
+     * Encrypt jwt using service provider's configured X509 certificate.
      *
      * @param signedJwt           contains signed JWT body
      * @param encryptionAlgorithm JWT signing algorithm
@@ -2574,7 +2574,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Encrypt jwt using publickey fetched from jwks
+     * Encrypt jwt using publickey fetched from jwks.
      *
      * @param signedJwt           contains signed JWT body
      * @param encryptionAlgorithm JWT signing algorithm
@@ -2600,7 +2600,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Get kid value from the jwk
+     * Get kid value from the jwk.
      *
      * @param encryptionJwk Encryption jwk
      * @return
@@ -2676,7 +2676,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Get public certificate from JWK
+     * Get public certificate from JWK.
      *
      * @param jwk
      * @return
@@ -2802,7 +2802,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Generic Signing function
+     * Generic Signing function.
      *
      * @param jwtClaimsSet       contains JWT body
      * @param signatureAlgorithm JWT signing algorithm
@@ -2829,7 +2829,7 @@ public class OAuth2Util {
     }
 
     /**
-     * sign JWT token from RSA algorithm
+     * sign JWT token from RSA algorithm.
      *
      * @param jwtClaimsSet       contains JWT body
      * @param signatureAlgorithm JWT signing algorithm
@@ -3221,7 +3221,7 @@ public class OAuth2Util {
     }
 
     /**
-     * This method returns essential:true claims list from the request parameter of OIDC authorization request
+     * This method returns essential:true claims list from the request parameter of OIDC authorization request.
      *
      * @param claimRequestor                  claimrequestor is either id_token or  userinfo
      * @param requestedClaimsFromRequestParam claims defined in the value of the request parameter
@@ -3491,7 +3491,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Get the supported oauth grant types
+     * Get the supported oauth grant types.
      *
      * @return list of grant types
      */
@@ -3507,7 +3507,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Get the supported client authentication methods
+     * Get the supported client authentication methods.
      *
      * @return list of client authentication methods
      */
@@ -3550,7 +3550,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Get the supported request object signing algorithms
+     * Get the supported request object signing algorithms.
      *
      * @return list of algorithms
      */
@@ -3567,7 +3567,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Check whether the request object parameter is supported
+     * Check whether the request object parameter is supported.
      *
      * @return true if supported
      */
@@ -3577,7 +3577,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Check whether the claims parameter is supported
+     * Check whether the claims parameter is supported.
      *
      * @return true if supported
      */

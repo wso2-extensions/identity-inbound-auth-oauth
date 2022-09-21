@@ -23,7 +23,7 @@ import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SQLPlaceholders.SCOPE_LIST_PLACEHOLDER;
 
 /**
- * Access token related sql queries
+ * Access token related sql queries.
  */
 public class SQLQueries {
 
@@ -541,15 +541,20 @@ public class SQLQueries {
     public static final String GET_ACCESS_TOKEN_BY_AUTHZUSER = "SELECT DISTINCT ACCESS_TOKEN, USER_TYPE " +
             "FROM IDN_OAUTH2_ACCESS_TOKEN WHERE AUTHZ_USER=? AND TENANT_ID=? AND TOKEN_STATE=? AND USER_DOMAIN=?";
 
-    public static final String GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER = "SELECT DISTINCT ACCESS_TOKEN, " +
-            "REFRESH_TOKEN, ACCESS_TOKEN_TABLE.TOKEN_ID, TIME_CREATED, VALIDITY_PERIOD, REFRESH_TOKEN_TIME_CREATED, " +
-            "REFRESH_TOKEN_VALIDITY_PERIOD, CONSUMER_KEY, GRANT_TYPE FROM (SELECT ACCESS_TOKEN, REFRESH_TOKEN, " +
-            "GRANT_TYPE, CONSUMER_KEY_ID, TOKEN_ID, TIME_CREATED, VALIDITY_PERIOD, REFRESH_TOKEN_TIME_CREATED, " +
-            "REFRESH_TOKEN_VALIDITY_PERIOD FROM IDN_OAUTH2_ACCESS_TOKEN WHERE AUTHZ_USER=? AND TENANT_ID=? AND " +
-            "TOKEN_STATE=? AND USER_DOMAIN=?) ACCESS_TOKEN_TABLE JOIN IDN_OAUTH_CONSUMER_APPS ON " +
-            "ID = CONSUMER_KEY_ID " +
-            "LEFT JOIN IDN_OAUTH2_ACCESS_TOKEN_SCOPE " +
-            "ON ACCESS_TOKEN_TABLE.TOKEN_ID = IDN_OAUTH2_ACCESS_TOKEN_SCOPE.TOKEN_ID WHERE TOKEN_SCOPE=?";
+    public static final String GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER = "SELECT DISTINCT " +
+            "   ACCESS_TOKEN, " +
+            "   IDN_OAUTH2_ACCESS_TOKEN.TOKEN_ID " +
+            "FROM " +
+            "   IDN_OAUTH2_ACCESS_TOKEN, IDN_OAUTH2_ACCESS_TOKEN_SCOPE " +
+            "WHERE " +
+            "   IDN_OAUTH2_ACCESS_TOKEN.TOKEN_ID = IDN_OAUTH2_ACCESS_TOKEN_SCOPE.TOKEN_ID " +
+            "   AND AUTHZ_USER = ? " +
+            "   AND IDN_OAUTH2_ACCESS_TOKEN.TENANT_ID = ? " +
+            "   AND TOKEN_STATE = ? " +
+            "   AND USER_DOMAIN = ? " +
+            "   AND TOKEN_SCOPE = ? " +
+            "   AND VALIDITY_PERIOD > 0 " +
+            "   AND TIME_CREATED + INTERVAL VALIDITY_PERIOD/1000 SECOND > ?";
 
     public static final String GET_ACCESS_TOKENS_FOR_CONSUMER_KEY = "SELECT ACCESS_TOKEN FROM IDN_OAUTH2_ACCESS_TOKEN" +
             " WHERE CONSUMER_KEY_ID IN (SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY = ? ) AND " +
@@ -1152,7 +1157,7 @@ public class SQLQueries {
             "TENANT_ID=IDN_OAUTH2_ACCESS_TOKEN.TENANT_ID) ORDER BY TIME_CREATED DESC) TOKEN ";
 
     /**
-     * Scope related queries
+     * Scope related queries.
      **/
     public static final String ADD_SCOPE =
             "INSERT INTO IDN_OAUTH2_SCOPE (NAME, DISPLAY_NAME, DESCRIPTION, TENANT_ID, SCOPE_TYPE) VALUES(?,?,?,?,?)";
