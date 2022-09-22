@@ -36,8 +36,10 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationManag
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
@@ -87,7 +89,14 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
                 return false;
             }
 
-            IdentityProvider identityProvider = getResidentIDPForIssuer(claimsSet.getIssuer());
+            // Derive signing tenant domain for identity provider
+            AccessTokenDO accessTokenDO = (AccessTokenDO) validationReqDTO.getProperty(OAuthConstants.ACCESS_TOKEN_DO);
+            String tenantDomain = getSigningTenantDomain(claimsSet, accessTokenDO);
+            if (log.isDebugEnabled()) {
+                log.debug("Resolved tenant domain: " + tenantDomain + " to validate the JWT access token.");
+            }
+
+            IdentityProvider identityProvider = getResidentIDPForIssuer(claimsSet.getIssuer(), tenantDomain);
 
             if (!validateSignature(signedJWT, identityProvider)) {
                 LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
@@ -151,9 +160,9 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         return claimsSet.getSubject();
     }
 
-    private IdentityProvider getResidentIDPForIssuer(String jwtIssuer) throws IdentityOAuth2Exception {
+    private IdentityProvider getResidentIDPForIssuer(String jwtIssuer, String tenantDomain)
+            throws IdentityOAuth2Exception {
 
-        String tenantDomain = getTenantDomain();
         String issuer = StringUtils.EMPTY;
         IdentityProvider residentIdentityProvider;
         try {
@@ -320,6 +329,42 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
         return tenantDomain;
+    }
+
+    private String getSigningTenantDomain(JWTClaimsSet claimsSet, AccessTokenDO accessTokenDO)
+            throws ParseException, IdentityOAuth2Exception {
+
+        Map<String, String> realm = (HashMap) claimsSet.getClaim(OAuthConstants.OIDCClaims.REALM);
+        if (MapUtils.isNotEmpty(realm)) {
+            if (realm.get(OAuthConstants.OIDCClaims.SIGNING_TENANT) != null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Getting signing tenant domain from JWT's 'signing_tenant' claim.");
+                }
+                return realm.get(OAuthConstants.OIDCClaims.SIGNING_TENANT);
+            } else if (realm.get(OAuthConstants.OIDCClaims.TENANT) != null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Getting signing tenant domain from JWT's 'tenant' claim.");
+                }
+                return realm.get(OAuthConstants.OIDCClaims.TENANT);
+            }
+        }
+        boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
+        if (isJWTSignedWithSPKey) {
+            try {
+                if (log.isDebugEnabled()) {
+                    log.debug("Getting signing tenant domain from oauth app.");
+                }
+                return OAuth2Util.getTenantDomainOfOauthApp(accessTokenDO.getConsumerKey());
+            } catch (InvalidOAuthClientException e) {
+                throw new IdentityOAuth2Exception("Error while getting tenant domain from oauth app"
+                        + accessTokenDO.getConsumerKey());
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Getting signing tenant domain from authenticated user.");
+            }
+            return accessTokenDO.getAuthzUser().getTenantDomain();
+        }
     }
 
     /**
