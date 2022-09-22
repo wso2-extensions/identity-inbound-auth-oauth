@@ -541,7 +541,7 @@ public class SQLQueries {
     public static final String GET_ACCESS_TOKEN_BY_AUTHZUSER = "SELECT DISTINCT ACCESS_TOKEN, USER_TYPE " +
             "FROM IDN_OAUTH2_ACCESS_TOKEN WHERE AUTHZ_USER=? AND TENANT_ID=? AND TOKEN_STATE=? AND USER_DOMAIN=?";
 
-    public static final String GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER = "SELECT DISTINCT " +
+    public static final String GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_MYSQL_OR_MARIADB = "SELECT DISTINCT " +
             "   ACCESS_TOKEN, " +
             "   IDN_OAUTH2_ACCESS_TOKEN.TOKEN_ID " +
             "FROM " +
@@ -555,6 +555,76 @@ public class SQLQueries {
             "   AND TOKEN_SCOPE = ? " +
             "   AND VALIDITY_PERIOD > 0 " +
             "   AND TIME_CREATED + INTERVAL VALIDITY_PERIOD/1000 SECOND > ?";
+    public static final String GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_MSSQL = "SELECT DISTINCT " +
+            "   ACCESS_TOKEN, " +
+            "   IDN_OAUTH2_ACCESS_TOKEN.TOKEN_ID " +
+            "FROM " +
+            "   IDN_OAUTH2_ACCESS_TOKEN, IDN_OAUTH2_ACCESS_TOKEN_SCOPE " +
+            "WHERE " +
+            "   IDN_OAUTH2_ACCESS_TOKEN.TOKEN_ID = IDN_OAUTH2_ACCESS_TOKEN_SCOPE.TOKEN_ID " +
+            "   AND AUTHZ_USER = ? " +
+            "   AND IDN_OAUTH2_ACCESS_TOKEN.TENANT_ID = ? " +
+            "   AND TOKEN_STATE = ? " +
+            "   AND USER_DOMAIN = ? " +
+            "   AND TOKEN_SCOPE = ? " +
+            "   AND VALIDITY_PERIOD > 0 " +
+            "   AND DATEADD(SECOND, VALIDITY_PERIOD/1000, TIME_CREATED) > ?";
+    public static final String GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_DB2 = "SELECT DISTINCT " +
+            "   ACCESS_TOKEN, " +
+            "   IDN_OAUTH2_ACCESS_TOKEN.TOKEN_ID " +
+            "FROM " +
+            "   IDN_OAUTH2_ACCESS_TOKEN, IDN_OAUTH2_ACCESS_TOKEN_SCOPE " +
+            "WHERE " +
+            "   IDN_OAUTH2_ACCESS_TOKEN.TOKEN_ID = IDN_OAUTH2_ACCESS_TOKEN_SCOPE.TOKEN_ID " +
+            "   AND AUTHZ_USER = ? " +
+            "   AND IDN_OAUTH2_ACCESS_TOKEN.TENANT_ID = ? " +
+            "   AND TOKEN_STATE = ? " +
+            "   AND USER_DOMAIN = ? " +
+            "   AND TOKEN_SCOPE = ? " +
+            "   AND VALIDITY_PERIOD > 0 " +
+            "   AND ADD_SECONDS(TIME_CREATED, VALIDITY_PERIOD/1000) > ?";
+    public static final String GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_POSTGRES = "SELECT DISTINCT " +
+            "   ACCESS_TOKEN, " +
+            "   IDN_OAUTH2_ACCESS_TOKEN.TOKEN_ID " +
+            "FROM " +
+            "   IDN_OAUTH2_ACCESS_TOKEN, IDN_OAUTH2_ACCESS_TOKEN_SCOPE " +
+            "WHERE " +
+            "   IDN_OAUTH2_ACCESS_TOKEN.TOKEN_ID = IDN_OAUTH2_ACCESS_TOKEN_SCOPE.TOKEN_ID " +
+            "   AND AUTHZ_USER = ? " +
+            "   AND IDN_OAUTH2_ACCESS_TOKEN.TENANT_ID = ? " +
+            "   AND TOKEN_STATE = ? " +
+            "   AND USER_DOMAIN = ? " +
+            "   AND TOKEN_SCOPE = ? " +
+            "   AND VALIDITY_PERIOD > 0 " +
+            "   AND TIME_CREATED + VALIDITY_PERIOD/1000 * INTERVAL '1 SECOND' > ?";
+    public static final String GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_ORACLE = "SELECT DISTINCT " +
+            "   ACCESS_TOKEN, " +
+            "   IDN_OAUTH2_ACCESS_TOKEN.TOKEN_ID " +
+            "FROM " +
+            "   IDN_OAUTH2_ACCESS_TOKEN, IDN_OAUTH2_ACCESS_TOKEN_SCOPE " +
+            "WHERE " +
+            "   IDN_OAUTH2_ACCESS_TOKEN.TOKEN_ID = IDN_OAUTH2_ACCESS_TOKEN_SCOPE.TOKEN_ID " +
+            "   AND AUTHZ_USER = ? " +
+            "   AND IDN_OAUTH2_ACCESS_TOKEN.TENANT_ID = ? " +
+            "   AND TOKEN_STATE = ? " +
+            "   AND USER_DOMAIN = ? " +
+            "   AND TOKEN_SCOPE = ? " +
+            "   AND VALIDITY_PERIOD > 0 " +
+            "   AND TIME_CREATED + numToDSInterval(VALIDITY_PERIOD/1000, 'SECOND') > ?";
+    public static final String GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_H2 = "SELECT DISTINCT " +
+            "   ACCESS_TOKEN, " +
+            "   IDN_OAUTH2_ACCESS_TOKEN.TOKEN_ID " +
+            "FROM " +
+            "   IDN_OAUTH2_ACCESS_TOKEN, IDN_OAUTH2_ACCESS_TOKEN_SCOPE " +
+            "WHERE " +
+            "   IDN_OAUTH2_ACCESS_TOKEN.TOKEN_ID = IDN_OAUTH2_ACCESS_TOKEN_SCOPE.TOKEN_ID " +
+            "   AND AUTHZ_USER = ? " +
+            "   AND IDN_OAUTH2_ACCESS_TOKEN.TENANT_ID = ? " +
+            "   AND TOKEN_STATE = ? " +
+            "   AND USER_DOMAIN = ? " +
+            "   AND TOKEN_SCOPE = ? " +
+            "   AND VALIDITY_PERIOD > 0 " +
+            "   AND TIMESTAMPADD('SECOND', VALIDITY_PERIOD/1000, TIME_CREATED) > ?";
 
     public static final String GET_ACCESS_TOKENS_FOR_CONSUMER_KEY = "SELECT ACCESS_TOKEN FROM IDN_OAUTH2_ACCESS_TOKEN" +
             " WHERE CONSUMER_KEY_ID IN (SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY = ? ) AND " +

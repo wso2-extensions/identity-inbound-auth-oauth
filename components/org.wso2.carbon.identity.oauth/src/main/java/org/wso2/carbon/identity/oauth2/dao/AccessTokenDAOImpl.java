@@ -32,7 +32,6 @@ import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.mgt.util.JdbcUtils;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -46,6 +45,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
+import org.wso2.carbon.identity.oauth2.util.JdbcUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -1673,8 +1673,22 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         ResultSet rs;
         Set<AccessTokenDO> accessTokens;
         try {
-            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(
-                    SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER, authenticatedUser.getUserStoreDomain());
+            String sqlQuery;
+            if (org.wso2.carbon.identity.oauth2.util.JdbcUtils.isMSSqlDB()) {
+                sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_MSSQL;
+            } else if (org.wso2.carbon.identity.oauth2.util.JdbcUtils.isOracleDB()) {
+                sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_ORACLE;
+            } else if (org.wso2.carbon.identity.oauth2.util.JdbcUtils.isPostgreDB()) {
+                sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_POSTGRES;
+            } else if (org.wso2.carbon.identity.oauth2.util.JdbcUtils.isDB2DB()) {
+                sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_DB2;
+            } else if (org.wso2.carbon.identity.oauth2.util.JdbcUtils.isH2DB()) {
+                sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_H2;
+            } else {
+                sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_MYSQL_OR_MARIADB;
+            }
+            sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(sqlQuery, authenticatedUser.getUserStoreDomain());
+
             if (!isUsernameCaseSensitive) {
                 sqlQuery = sqlQuery.replace(AUTHZ_USER, LOWER_AUTHZ_USER);
             }
@@ -1691,12 +1705,11 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             ps.setTimestamp(6, new Timestamp(System.currentTimeMillis() + OAuth2Util.timestampSkew),
                     Calendar.getInstance(TimeZone.getTimeZone(UTC)));
             rs = ps.executeQuery();
-
             Map<String, AccessTokenDO> tokenMap = getAccessTokenDOMapFromResultSet(authenticatedUser, rs);
 
             connection.commit();
             accessTokens = new HashSet<>(tokenMap.values());
-        } catch (SQLException e) {
+        } catch (DataAccessException | SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuth2Exception("Error occurred while revoking access token with username : " +
                     authenticatedUser.getUserName() + " tenant ID : " + OAuth2Util.getTenantId(authenticatedUser
