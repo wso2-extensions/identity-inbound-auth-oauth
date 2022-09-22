@@ -1674,15 +1674,15 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         Set<AccessTokenDO> accessTokens;
         try {
             String sqlQuery;
-            if (org.wso2.carbon.identity.oauth2.util.JdbcUtils.isMSSqlDB()) {
+            if (JdbcUtils.isMSSqlDB()) {
                 sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_MSSQL;
-            } else if (org.wso2.carbon.identity.oauth2.util.JdbcUtils.isOracleDB()) {
+            } else if (JdbcUtils.isOracleDB()) {
                 sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_ORACLE;
-            } else if (org.wso2.carbon.identity.oauth2.util.JdbcUtils.isPostgreDB()) {
+            } else if (JdbcUtils.isPostgreDB()) {
                 sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_POSTGRES;
-            } else if (org.wso2.carbon.identity.oauth2.util.JdbcUtils.isDB2DB()) {
+            } else if (JdbcUtils.isDB2DB()) {
                 sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_DB2;
-            } else if (org.wso2.carbon.identity.oauth2.util.JdbcUtils.isH2DB()) {
+            } else if (JdbcUtils.isH2DB()) {
                 sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_H2;
             } else {
                 sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_MYSQL_OR_MARIADB;
@@ -1728,7 +1728,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         while (rs.next()) {
             String accessToken = getPersistenceProcessor().
                     getPreprocessedAccessTokenIdentifier(rs.getString(1));
-
+                    
             AccessTokenDO accessTokenDO = new AccessTokenDO();
             accessTokenDO.setAuthzUser(authenticatedUser);
             accessTokenDO.setTenantID(OAuth2Util.getTenantId(authenticatedUser.getTenantDomain()));
