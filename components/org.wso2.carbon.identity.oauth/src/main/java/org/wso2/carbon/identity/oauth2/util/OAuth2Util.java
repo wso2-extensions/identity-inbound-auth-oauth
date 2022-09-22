@@ -3749,15 +3749,20 @@ public class OAuth2Util {
                 endTenantFlow();
             }
         } else {
-            IdentityProvider identityProvider = getResidentIdp(tenantDomain);
-            FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
-            // Get OIDC authenticator
-            FederatedAuthenticatorConfig oidcAuthenticatorConfig =
-                    IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
-                            IdentityApplicationConstants.Authenticator.OIDC.NAME);
-            return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
-                    IDP_ENTITY_ID).getValue();
+            return getResidentIdpEntityId(tenantDomain);
         }
+    }
+
+    public static String getResidentIdpEntityId(String tenantDomain) throws IdentityOAuth2Exception {
+
+        IdentityProvider identityProvider = getResidentIdp(tenantDomain);
+        FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
+        // Get OIDC authenticator
+        FederatedAuthenticatorConfig oidcAuthenticatorConfig =
+                IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
+                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
+        return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
+                IDP_ENTITY_ID).getValue();
     }
 
     private static IdentityProvider getResidentIdp(String tenantDomain) throws IdentityOAuth2Exception {
