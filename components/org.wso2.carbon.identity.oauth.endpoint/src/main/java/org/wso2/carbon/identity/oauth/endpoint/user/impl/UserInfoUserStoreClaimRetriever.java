@@ -42,7 +42,8 @@ public class UserInfoUserStoreClaimRetriever implements UserInfoClaimRetriever {
                     continue;
                 }
                 String claimValue = entry.getValue();
-                if (ClaimUtil.isMultiValuedAttribute(claimValue)) {
+                String claimUri = entry.getKey().getRemoteClaim().getClaimUri();
+                if (ClaimUtil.isMultiValuedAttribute(claimUri, claimValue)) {
                     String[] attributeValues = ClaimUtil.processMultiValuedAttribute(claimValue);
                     claims.put(entry.getKey().getRemoteClaim().getClaimUri(), attributeValues);
                 } else {
