@@ -3753,6 +3753,13 @@ public class OAuth2Util {
         }
     }
 
+    /**
+     * Retrieve entity id of the resident identity provider.
+     *
+     * @param tenantDomain tenant domain.
+     * @return idp entity id.
+     * @throws IdentityOAuth2Exception when failed to retrieve the idp entity id.
+     */
     public static String getResidentIdpEntityId(String tenantDomain) throws IdentityOAuth2Exception {
 
         IdentityProvider identityProvider = getResidentIdp(tenantDomain);
