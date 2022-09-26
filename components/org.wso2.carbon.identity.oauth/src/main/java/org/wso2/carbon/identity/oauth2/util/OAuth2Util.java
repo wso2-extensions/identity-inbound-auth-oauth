@@ -4597,8 +4597,9 @@ public class OAuth2Util {
             return true;
         }
         try {
-            return !OAuth2ServiceComponentHolder.getOrganizationManagementService()
-                    .isImmediateChildOfSuperOrganization(organizationId);
+            // Return true if the organization is in depth 1.
+            return OAuth2ServiceComponentHolder.getOrganizationManagementService()
+                    .getOrganizationDepthInHierarchy(organizationId) == 1;
         } catch (OrganizationManagementServerException e) {
             log.error(
                     "Error while checking whether the given organization is an immediate child of the super organization.");
