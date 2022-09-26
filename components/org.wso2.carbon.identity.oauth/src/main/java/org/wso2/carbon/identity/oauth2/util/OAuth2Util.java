@@ -4601,8 +4601,7 @@ public class OAuth2Util {
             return OAuth2ServiceComponentHolder.getOrganizationManagementService()
                     .getOrganizationDepthInHierarchy(organizationId) == 1;
         } catch (OrganizationManagementServerException e) {
-            log.error(
-                    "Error while checking whether the given organization is an immediate child of the super organization.");
+            log.error("Error while checking the depth of the given organization.");
         }
         return true;
     }
