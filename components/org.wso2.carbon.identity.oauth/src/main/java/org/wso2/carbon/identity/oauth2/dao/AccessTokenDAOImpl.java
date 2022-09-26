@@ -1711,12 +1711,24 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
         Map<String, AccessTokenDO> tokenMap = new HashMap<>();
         while (rs.next()) {
-            String accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1));
-            String refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(rs.getString(2));
-            String tokenId = rs.getString(3);
             Timestamp timeCreated = rs.getTimestamp(4, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
             long issuedTimeInMillis = timeCreated.getTime();
             long validityPeriodInMillis = rs.getLong(5);
+
+            /*
+             * Tokens returned by this method will be used to clear claims cached against the tokens.
+             * We will only return tokens that would contain such cached clams in order to improve
+             * performance.
+             * Tokens issued for openid scope can contain cached claims against them.
+             * Tokens that are in ACTIVE state and not expired should be removed from the cache.
+             */
+            if (isAccessTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
+                continue;
+            }
+
+            String accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1));
+            String refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(rs.getString(2));
+            String tokenId = rs.getString(3);
             Timestamp refreshTokenTimeCreated = rs.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
             long refreshTokenValidityPeriodInMillis = rs.getLong(7);
             String consumerKey = rs.getString(8);
@@ -1736,16 +1748,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             accessTokenDO.setConsumerKey(consumerKey);
             accessTokenDO.setGrantType(grantType);
 
-            /*
-             * Tokens returned by this method will be used to clear claims cached against the tokens.
-             * We will only return tokens that would contain such cached clams in order to improve
-             * performance.
-             * Tokens issued for openid scope can contain cached claims against them.
-             * Tokens that are in ACTIVE state and not expired should be removed from the cache.
-             */
-            if (!isAccessTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
-                tokenMap.put(accessToken, accessTokenDO);
-            }
+            tokenMap.put(accessToken, accessTokenDO);
         }
         return tokenMap;
     }

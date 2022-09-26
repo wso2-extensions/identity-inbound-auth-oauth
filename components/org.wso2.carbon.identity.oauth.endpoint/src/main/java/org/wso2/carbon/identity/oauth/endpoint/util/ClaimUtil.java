@@ -73,6 +73,7 @@ import static org.wso2.carbon.identity.core.util.IdentityUtil.isTokenLoggable;
 public class ClaimUtil {
 
     private static final String SP_DIALECT = "http://wso2.org/oidc/claim";
+    private static final String GROUPS = "groups";
     private static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
     private static final Log log = LogFactory.getLog(ClaimUtil.class);
 
@@ -188,8 +189,7 @@ public class ClaimUtil {
                                         continue;
                                     }
                                 }
-
-                                if (isMultiValuedAttribute(claimValue)) {
+                                if (isMultiValuedAttribute(oidcClaimUri, claimValue)) {
                                     String[] attributeValues = processMultiValuedAttribute(claimValue);
                                     mappedAppClaims.put(oidcClaimUri, attributeValues);
                                 } else {
@@ -381,6 +381,22 @@ public class ClaimUtil {
      */
     public static boolean isMultiValuedAttribute(String claimValue) {
 
+        return StringUtils.contains(claimValue, ATTRIBUTE_SEPARATOR);
+    }
+
+    /**
+     * Checks whether a user value is multivalued or not.
+     *
+     * @param claimUri String value contains claim uri.
+     * @param claimValue String value contains claims.
+     * @return Whether it is multivalued attribute or not.
+     */
+    public static boolean isMultiValuedAttribute(String claimUri, String claimValue) {
+        // To format the groups claim to always return as an array, we should consider single
+        // group as multi value attribute.
+        if (GROUPS.equals(claimUri)) {
+            return true;
+        }
         return StringUtils.contains(claimValue, ATTRIBUTE_SEPARATOR);
     }
 
