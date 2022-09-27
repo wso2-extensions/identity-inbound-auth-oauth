@@ -4599,7 +4599,7 @@ public class OAuth2Util {
         try {
             // Return false if the organization is in depth 1.
             return OAuth2ServiceComponentHolder.getOrganizationManagementService()
-                    .getOrganizationDepthInHierarchy(organizationId) == 1;
+                    .getOrganizationDepthInHierarchy(organizationId) != 1;
         } catch (OrganizationManagementServerException e) {
             log.error("Error while checking the depth of the given organization.");
         }
