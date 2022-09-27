@@ -4597,7 +4597,7 @@ public class OAuth2Util {
             return true;
         }
         try {
-            // Return true if the organization is in depth 1.
+            // Return false if the organization is in depth 1.
             return OAuth2ServiceComponentHolder.getOrganizationManagementService()
                     .getOrganizationDepthInHierarchy(organizationId) == 1;
         } catch (OrganizationManagementServerException e) {
