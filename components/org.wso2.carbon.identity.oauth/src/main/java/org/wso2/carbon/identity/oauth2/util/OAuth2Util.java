@@ -129,7 +129,6 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
-import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementServerException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
@@ -356,9 +355,6 @@ public class OAuth2Util {
 
     public static final String ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE = "Invalid Access Token. Access token is " +
             "not ACTIVE.";
-
-    public static final String IS_CARBON_ROLE_VALIDATION_ENABLED_FOR_LEVEL_ONE_ORGS =
-            "OrganizationManagement.LevelOneOrganizationConfigs.EnableCarbonRoleBasedValidation";
 
     private OAuth2Util() {
 
@@ -4572,37 +4568,5 @@ public class OAuth2Util {
             }
         }
         return isFederatedRoleBasedAuthzEnabled;
-    }
-
-    /**
-     * Is carbon role based validation enabled for first level organizations in the deployment.
-     *
-     * @return True if carbon role based validation enabled for first level organizations.
-     */
-    public static boolean isCarbonRoleValidationEnabledForLevelOneOrgs() {
-
-        return Boolean.parseBoolean(IdentityUtil.getProperty(IS_CARBON_ROLE_VALIDATION_ENABLED_FOR_LEVEL_ONE_ORGS));
-    }
-
-    /**
-     * Return whether organization role based validation is used.
-     *
-     * @param organizationId Organization id.
-     * @return False if the organization is a first level organization in the deployment and
-     * IS_CARBON_ROLE_VALIDATION_ENABLED_FOR_LEVEL_ONE_ORGS config is enabled. Other true.
-     */
-    public static boolean useOrganizationRolesForValidation(String organizationId) {
-
-        if (!isCarbonRoleValidationEnabledForLevelOneOrgs()) {
-            return true;
-        }
-        try {
-            // Return false if the organization is in depth 1.
-            return OAuth2ServiceComponentHolder.getOrganizationManagementService()
-                    .getOrganizationDepthInHierarchy(organizationId) != 1;
-        } catch (OrganizationManagementServerException e) {
-            log.error("Error while checking the depth of the given organization.");
-        }
-        return true;
     }
 }
