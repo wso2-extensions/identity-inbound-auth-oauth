@@ -2911,10 +2911,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             String tokenId = resultSet.getString("TOKEN_ID");
                             int tenantId = resultSet.getInt("TENANT_ID");
                             String authzUser = resultSet.getString("AUTHZ_USER");
+                            String subjectIdentifier = resultSet.getString("SUBJECT_IDENTIFIER");
                             String userDomain = resultSet.getString("USER_DOMAIN");
                             String authenticatedIDPName = resultSet.getString("NAME");
                             AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser,
                                     userDomain, OAuth2Util.getTenantDomain(tenantId), authenticatedIDPName);
+                            user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
                             Timestamp issuedTime = resultSet
                                     .getTimestamp("TIME_CREATED", Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                             Timestamp refreshTokenIssuedTime =
