@@ -268,7 +268,7 @@ public class OAuthScopeDAOImpl implements OAuthScopeDAO {
 
         List<String> requestedScopeList = Arrays.asList(requestedScopes.split("\\s+"));
 
-        String placeholder = String.join(", ", Collections.nCopies(requestedScopeList.size(), "?"));
+        String placeholder = String.join(",", Collections.nCopies(requestedScopeList.size(), "?"));
         sql = sql.replace(SCOPE_LIST_PLACEHOLDER, placeholder);
 
         Set<Scope> scopes = new HashSet<>();
