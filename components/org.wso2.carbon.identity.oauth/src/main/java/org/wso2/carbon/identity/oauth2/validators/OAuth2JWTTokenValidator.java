@@ -352,11 +352,11 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         if (isJWTSignedWithSPKey) {
             try {
                 if (log.isDebugEnabled()) {
-                    log.debug("Getting signing tenant domain from oauth app.");
+                    log.debug("Getting signing tenant domain from OAuth app.");
                 }
                 return OAuth2Util.getTenantDomainOfOauthApp(accessTokenDO.getConsumerKey());
             } catch (InvalidOAuthClientException e) {
-                throw new IdentityOAuth2Exception("Error while getting tenant domain from oauth app"
+                throw new IdentityOAuth2Exception("Error while getting tenant domain from OAuth app with consumer key: "
                         + accessTokenDO.getConsumerKey());
             }
         } else {
