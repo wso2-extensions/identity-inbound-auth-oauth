@@ -93,6 +93,7 @@ public class Oauth2ScopeConstants {
         public static final String LIMIT = "limit";
         public static final String OFFSET = "offset";
         public static final String SCOPE_TYPE = "scope_type";
+        public static final String SCOPE_LIST_PLACEHOLDER = "_SCOPE_LIST_";
     }
 
     /**
