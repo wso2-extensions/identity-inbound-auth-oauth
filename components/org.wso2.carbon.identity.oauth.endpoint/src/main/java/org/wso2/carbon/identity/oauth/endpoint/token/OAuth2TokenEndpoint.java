@@ -96,7 +96,7 @@ public class OAuth2TokenEndpoint {
                 if (MapUtils.isNotEmpty(paramMap)) {
                     paramMap.forEach(params::put);
                 }
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
                         OAuthConstants.LogConstants.SUCCESS, "Successfully received token request.",
                         "receive-token-request", null);
             }
@@ -122,7 +122,7 @@ public class OAuth2TokenEndpoint {
             if (MapUtils.isNotEmpty(paramMap)) {
                 paramMap.forEach(params::put);
             }
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
                     OAuthConstants.LogConstants.SUCCESS, "Successfully received token request.",
                     "receive-token-request", null);
         }
