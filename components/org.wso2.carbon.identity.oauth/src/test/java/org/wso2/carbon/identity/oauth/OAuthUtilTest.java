@@ -40,6 +40,7 @@ import static org.wso2.carbon.identity.oauth2.TestConstants.LOCAL_IDP;
 @WithCarbonHome
 @WithRealmService
 public class OAuthUtilTest {
+    
     @DataProvider(name = "testGetAuthenticatedUser")
     public Object[][] fullQualifiedUserName() {
         return new Object[][] { { "JDBC/siripala@is.com", "siripala" }, { "JDBC/siripala", "siripala" },
