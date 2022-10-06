@@ -77,7 +77,6 @@ public class OAuthUtilTest {
         String consumerKey = "consumer-key";
         String authorizedUser = "authorized-user";
         String cacheKey = consumerKey + ":" + authorizedUser + ":" + LOCAL_IDP;
-
         OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(cacheKey);
         OAuthCache oAuthCache = getOAuthCache(oAuthCacheKey);
 
