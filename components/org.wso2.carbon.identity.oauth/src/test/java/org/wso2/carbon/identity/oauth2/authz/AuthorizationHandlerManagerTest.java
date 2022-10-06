@@ -108,7 +108,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
         Assert.assertEquals(errorCode, TestConstants.UNAUTHORIZED_CLIENT_ERROR_CODE,
-                "Expected unauthorized_client error code but found : " + errorCode);
+                            "Expected unauthorized_client error code but found : " + errorCode);
     }
 
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
@@ -146,7 +146,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
         Assert.assertEquals(errorCode, TestConstants.UNAUTHORIZED_CLIENT_ERROR_CODE,
-                "Expected unauthorized_client error code but found : " + errorCode);
+                            "Expected unauthorized_client error code but found : " + errorCode);
     }
 
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
@@ -184,7 +184,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
         Assert.assertEquals(errorCode, TestConstants.UNAUTHORIZED_CLIENT_ERROR_CODE,
-                "Expected unauthorized_client error code but found : " + errorCode);
+                            "Expected unauthorized_client error code but found : " + errorCode);
     }
 
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
@@ -221,7 +221,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
         Assert.assertEquals(errorCode, TestConstants.UNAUTHORIZED_CLIENT_ERROR_CODE,
-                "Expected unauthorized_client error code but found : " + errorCode);
+                            "Expected unauthorized_client error code but found : " + errorCode);
     }
 
     @Test
@@ -232,8 +232,8 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
         Assert.assertEquals(errorCode, OAuthError.CodeResponse.UNSUPPORTED_RESPONSE_TYPE,
-                "Expected " + OAuthError.CodeResponse.UNSUPPORTED_RESPONSE_TYPE +
-                        " error code but found : " + errorCode);
+                            "Expected " + OAuthError.CodeResponse.UNSUPPORTED_RESPONSE_TYPE +
+                             " error code but found : " + errorCode);
     }
 
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
@@ -272,8 +272,8 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
         Assert.assertEquals(errorCode, OAuthError.CodeResponse.UNAUTHORIZED_CLIENT,
-                "Expected " + OAuthError.CodeResponse.UNAUTHORIZED_CLIENT + " error code but found : " +
-                        errorCode);
+                            "Expected " + OAuthError.CodeResponse.UNAUTHORIZED_CLIENT + " error code but found : " +
+                            errorCode);
     }
 
     @Test
@@ -292,8 +292,8 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
         Assert.assertEquals(errorCode, OAuthError.CodeResponse.INVALID_SCOPE,
-                "Expected " + OAuthError.CodeResponse.INVALID_SCOPE + " error code but found : " +
-                        errorCode);
+                            "Expected " + OAuthError.CodeResponse.INVALID_SCOPE + " error code but found : " +
+                            errorCode);
     }
 
 }
