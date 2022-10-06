@@ -54,10 +54,7 @@ public class SessionDataCacheTest extends PowerMockTestCase {
         );
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-
-
     }
-
     @Test
     public void testGetInstance() throws Exception {
         assertNotNull(SessionDataCache.getInstance(), "Message not equal");
