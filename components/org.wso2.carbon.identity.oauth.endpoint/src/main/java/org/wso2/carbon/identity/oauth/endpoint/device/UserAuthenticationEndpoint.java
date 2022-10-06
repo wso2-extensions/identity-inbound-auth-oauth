@@ -17,21 +17,18 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.device;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.http.client.utils.URIBuilder;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
-import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
@@ -40,12 +37,11 @@ import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Instant;
+import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -92,19 +88,18 @@ public class UserAuthenticationEndpoint {
                         .addParameter(ERROR, INVALID_CODE_ERROR_KEY).build().getAbsolutePublicURL();
                 return Response.status(HttpServletResponse.SC_FOUND).location(URI.create(error)).build();
             }
-            String clientId = deviceAuthService.getClientId(userCode);
             DeviceFlowDO deviceFlowDODetails =
-                    DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getDetailsForUserCode(userCode);
-            if (StringUtils.isNotBlank(clientId) && deviceFlowDODetails != null &&
-                    !isExpiredUserCode(deviceFlowDODetails)) {
-                setCallbackURI(clientId);
+                    deviceAuthService.getDetailsByUserCode(userCode);
+            if (!isExpiredUserCode(deviceFlowDODetails)) {
+                String clientId = deviceFlowDODetails.getConsumerKey();
                 deviceAuthService.setAuthenticationStatus(userCode);
                 CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request);
                 commonAuthRequestWrapper.setParameter(Constants.CLIENT_ID, clientId);
                 commonAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, Constants.RESPONSE_TYPE_DEVICE);
                 commonAuthRequestWrapper.setParameter(Constants.REDIRECTION_URI, deviceFlowDO.getCallbackUri());
-                if (getScope(userCode) != null) {
-                    String scope = String.join(Constants.SEPARATED_WITH_SPACE, getScope(userCode));
+                List<String> scopes = deviceFlowDODetails.getScopes();
+                if (CollectionUtils.isNotEmpty(scopes)) {
+                    String scope = String.join(Constants.SEPARATED_WITH_SPACE, scopes);
                     commonAuthRequestWrapper.setParameter(Constants.SCOPE, scope);
                 }
                 commonAuthRequestWrapper.setParameter(Constants.NONCE, userCode);
@@ -137,16 +132,6 @@ public class UserAuthenticationEndpoint {
                 EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
     }
 
-    private Response handleIOException(IOException e) throws OAuthSystemException {
-
-        log.error("Error occurred while sending redirect response.", e);
-        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
-                setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error")
-                .buildJSONMessage();
-        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
-                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
-    }
-
     private Response handleURLBuilderException(URLBuilderException e) throws OAuthSystemException {
 
         log.error("Error occurred while sending request to authentication framework.", e);
@@ -167,65 +152,11 @@ public class UserAuthenticationEndpoint {
                 EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
     }
 
-    /**
-     * Get the scopes from the database.
-     *
-     * @param userCode User code that has delivered to the device.
-     * @return Scopes
-     * @throws IdentityOAuth2Exception
-     */
-    private String[] getScope(String userCode) throws IdentityOAuth2Exception {
-
-        return deviceAuthService.getScope(userCode);
-    }
-
-    /**
-     * This method is used to generate the redirection URI.
-     *
-     * @param appName Service provider name.
-     * @return Redirection URI
-     */
-    private String getRedirectionURI(String appName) throws URISyntaxException, URLBuilderException {
-
-        try {
-            String pageURI = ServiceURLBuilder.create().addPath(Constants.DEVICE_SUCCESS_ENDPOINT_PATH)
-                    .build().getAbsolutePublicURL();
-            URIBuilder uriBuilder = new URIBuilder(pageURI);
-            uriBuilder.addParameter(Constants.APP_NAME, appName);
-            return uriBuilder.build().toString();
-        } catch (URLBuilderException e) {
-            log.error("Error occurred when getting the redirection URI.", e);
-            throw new URLBuilderException("Error occurred while sending request to authentication framework.", e);
-        }
-    }
-
-    /**
-     * This method is used to set the callback uri. If there is no value it will set a default value.
-     *
-     * @param clientId Consumer key of the application.
-     * @throws IdentityOAuth2Exception
-     */
-    private void setCallbackURI(String clientId) throws IdentityOAuth2Exception {
-
-        try {
-            OAuthAppDO oAuthAppDO;
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-            String redirectURI = oAuthAppDO.getCallbackUrl();
-            if (StringUtils.isBlank(redirectURI)) {
-                String appName = oAuthAppDO.getApplicationName();
-                redirectURI = getRedirectionURI(appName);
-                deviceAuthService.setCallbackUri(clientId, redirectURI);
-                AppInfoCache.getInstance().clearCacheEntry(clientId);
-            }
-            deviceFlowDO.setCallbackUri(redirectURI);
-        } catch (InvalidOAuthClientException | URISyntaxException | URLBuilderException | IdentityOAuth2Exception e) {
-            String errorMsg = String.format("Error when getting app details for client id : %s", clientId);
-            throw new IdentityOAuth2Exception(errorMsg, e);
-        }
-    }
-
     private boolean isExpiredUserCode(DeviceFlowDO deviceFlowDO) throws IdentityOAuth2Exception {
 
+        if (deviceFlowDO == null) {
+            return true;
+        }
         // If status changed from PENDING (!PENDING) , then that user_code CANNOT be reused.
         if (!StringUtils.equals(deviceFlowDO.getStatus(), Constants.PENDING)) {
             return true;

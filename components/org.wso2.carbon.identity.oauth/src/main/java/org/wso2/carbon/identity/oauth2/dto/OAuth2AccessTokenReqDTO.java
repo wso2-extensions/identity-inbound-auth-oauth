@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequestWrapper;
 
@@ -52,6 +53,9 @@ public class OAuth2AccessTokenReqDTO {
     private HttpServletRequestWrapper httpServletRequestWrapper;
     private List<String> authenticationMethodReferences = new ArrayList<>();
     private OAuthClientAuthnContext oAuthClientAuthnContext;
+
+    // This field can be used to pass additional data through the context.
+    private Map<String, String> parameters;
 
     public String getClientId() {
         return clientId;
@@ -213,5 +217,15 @@ public class OAuth2AccessTokenReqDTO {
     public void setHttpServletRequestWrapper(HttpServletRequestWrapper httpServletRequestWrapper) {
 
         this.httpServletRequestWrapper = httpServletRequestWrapper;
+    }
+
+    public Map<String, String> getParameters() {
+
+        return parameters;
+    }
+
+    public void setParameters(Map<String, String> parameters) {
+
+        this.parameters = parameters;
     }
 }

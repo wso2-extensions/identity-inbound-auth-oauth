@@ -352,9 +352,36 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(oldAccessToken.getAccessToken());
             OAuthCache.getInstance().clearCacheEntry(accessTokenCacheKey,
                     oldAccessToken.getAuthorizedUser().getTenantDomain());
+            AccessTokenDO tokenToCache = AccessTokenDO.clone(accessTokenBean);
+            OauthTokenIssuer oauthTokenIssuer;
+            try {
+                oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(
+                        tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+            } catch (InvalidOAuthClientException e) {
+                throw new IdentityOAuth2Exception(
+                        "Error while retrieving oauth issuer for the app with clientId: " +
+                        tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(), e);
+            }
+            if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
+                try {
+                    String persistedTokenIdentifier =
+                            oauthTokenIssuer.getAccessTokenHash(accessTokenBean.getAccessToken());
+                    tokenToCache.setAccessToken(persistedTokenIdentifier);
+                } catch (OAuthSystemException e) {
+                    if (log.isDebugEnabled()) {
+                        if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                            log.debug("Token issuer: " + oauthTokenIssuer.getClass() + " was tried and" +
+                                    " failed to parse the received token " + tokenToCache.getAccessToken(), e);
+                        } else {
+                            log.debug("Token issuer: " + oauthTokenIssuer.getClass() + " was tried and" +
+                                    " failed to parse the received token.", e);
+                        }
+                    }
+                }
+            }
 
             // Add new access token to the OAuthCache
-            OAuthCache.getInstance().addToCache(oauthCacheKey, accessTokenBean);
+            OAuthCache.getInstance().addToCache(oauthCacheKey, tokenToCache);
 
             // Add new access token to the AccessTokenCache
             OAuth2Util.addTokenDOtoCache(accessTokenBean);
@@ -543,14 +570,24 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         accessTokenDO.setIssuedTime(timestamp);
         accessTokenDO.setTokenBinding(tokReqMsgCtx.getTokenBinding());
 
-         /* This code block is to handle the scenarios where the consented token value is not available
-         in the db. Generally based on the grant type, we are setting whether this token will be sent
-         to a consent requested grant. */
         if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
             String previousGrantType = validationBean.getGrantType();
-            if (!StringUtils.equals(OAuthConstants.GrantTypes.REFRESH_TOKEN, previousGrantType) &&
-                    OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(previousGrantType)) {
-                accessTokenDO.setIsConsentedToken(true);
+            // Check if the previous grant type is consent refresh token type or not.
+            if (!StringUtils.equals(OAuthConstants.GrantTypes.REFRESH_TOKEN, previousGrantType)) {
+                // If the previous grant type is not a refresh token, then check if it's a consent token or not.
+                if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(previousGrantType)) {
+                    accessTokenDO.setIsConsentedToken(true);
+                }
+            } else {
+                /* When previousGrantType == refresh_token, we need to check whether the original grant type
+                 is consented or not. */
+                AccessTokenDO accessTokenDOFromTokenIdentifier = OAuth2Util.getAccessTokenDOFromTokenIdentifier(
+                        validationBean.getAccessToken(), false);
+                accessTokenDO.setIsConsentedToken(accessTokenDOFromTokenIdentifier.isConsentedToken());
+            }
+
+            if (accessTokenDO.isConsentedToken()) {
+                tokReqMsgCtx.setConsentedToken(true);
             }
         }
 

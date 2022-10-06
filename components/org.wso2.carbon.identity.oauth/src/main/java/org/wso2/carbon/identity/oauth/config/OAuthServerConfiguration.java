@@ -176,6 +176,8 @@ public class OAuthServerConfiguration {
     private List<String> supportedTokenTypes = new ArrayList<>();
     private Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
     private String[] supportedClaims = null;
+    private boolean isFapiCiba = false;
+    private boolean isFapiSecurity = false;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
     private String saml2TokenCallbackHandlerName = null;
     private String saml2BearerTokenUserType;
@@ -501,7 +503,7 @@ public class OAuthServerConfiguration {
             OMElement filteredClaimsElem = introspectionClaimsElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.FILTERED_CLAIMS));
             if (filteredClaimsElem != null) {
-                Iterator claimIterator =   filteredClaimsElem.getChildrenWithName(getQNameWithIdentityNS(
+                Iterator claimIterator = filteredClaimsElem.getChildrenWithName(getQNameWithIdentityNS(
                         ConfigElements.FILTERED_CLAIM));
                 while (claimIterator.hasNext()) {
                     OMElement claimElement = (OMElement) claimIterator.next();
@@ -541,6 +543,13 @@ public class OAuthServerConfiguration {
         if (dropUnregisteredScopesElement != null) {
             dropUnregisteredScopes = Boolean.parseBoolean(dropUnregisteredScopesElement.getText());
         }
+    }
+
+    /**
+     * This method returns if FAPI is enabled for CIBA in identity.xml.
+     */
+    public boolean isFapiCiba() {
+        return isFapiCiba;
     }
 
     public Set<OAuthCallbackHandlerMetaData> getCallbackHandlerMetaData() {
@@ -2998,6 +3007,24 @@ public class OAuthServerConfiguration {
                                 (ConfigElements.OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN)).getText().trim());
             }
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                    .FAPI)) != null) {
+                OMElement fapiElem = openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                        .FAPI));
+                if (fapiElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                        .ENABLE_FAPI_CIBA_PROFILE)) != null) {
+                    isFapiCiba =
+                            Boolean.parseBoolean(fapiElem.getFirstChildWithName(getQNameWithIdentityNS
+                                    (ConfigElements.ENABLE_FAPI_CIBA_PROFILE)).getText().trim());
+
+                }
+                if (fapiElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                        .ENABLE_FAPI_SECURITY_PROFILE)) != null) {
+                    isFapiSecurity =
+                            Boolean.parseBoolean(fapiElem.getFirstChildWithName(getQNameWithIdentityNS
+                                    (ConfigElements.ENABLE_FAPI_SECURITY_PROFILE)).getText().trim());
+                }
+            }
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
                     .REQUEST_OBJECT_ENABLED)) != null) {
                 if (Boolean.FALSE.toString().equals(openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
                         (ConfigElements.REQUEST_OBJECT_ENABLED)).getText().trim())) {
@@ -3199,8 +3226,10 @@ public class OAuthServerConfiguration {
         return scopeValidationConfigValue;
     }
 
+
     /**
-     * Parses the AllowCrossTenantTokenIntrospection configuration.
+     * Parses the AllowCrossTenantTokenIntrospection configuration that used to allow or block token introspection
+     * from other tenants
      *
      * @param oauthConfigElem oauthConfigElem.
      */
@@ -3210,14 +3239,14 @@ public class OAuthServerConfiguration {
                 ConfigElements.ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION));
         if (allowCrossTenantIntrospectionElem != null) {
             allowCrossTenantIntrospection = Boolean.parseBoolean(allowCrossTenantIntrospectionElem.getText());
-        } else {
-            /* If config is null, the property must be set to the default value which is true to
-        ensure backward compatibility. */
-            allowCrossTenantIntrospection = true;
         }
     }
 
-    public boolean isCrossTenantTokenInspectionAllowed() {
+    /**
+     * This method returns the value of the property AllowCrossTenantTokenIntrospection  for the OAuth configuration
+     * in identity.xml.
+     */
+    public boolean isCrossTenantTokenIntrospectionAllowed() {
 
         return allowCrossTenantIntrospection;
     }
@@ -3237,6 +3266,13 @@ public class OAuthServerConfiguration {
     public boolean isOAuthResponseJspPageAvailable() {
 
         return isOAuthResponseJspPageAvailable;
+    }
+
+    /**
+     * This method returns if FAPI: Security profile is enabled for FAPI in identity.xml.
+     */
+    public boolean isFapiSecurity() {
+        return isFapiSecurity;
     }
 
     /**
@@ -3313,6 +3349,8 @@ public class OAuthServerConfiguration {
         // Property to decide whether to add userstore domain to id_token.
         private static final String OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN = "AddUserstoreDomainToIdToken";
         private static final String REQUEST_OBJECT_ENABLED = "RequestObjectEnabled";
+        private static final String ENABLE_FAPI_CIBA_PROFILE = "EnableCibaProfile";
+        private static final String ENABLE_FAPI_SECURITY_PROFILE = "EnableSecurityProfile";
         public static final String SEND_ONLY_LOCALLY_MAPPED_ROLES_OF_IDP = "FederatedRoleManagement"
                 + ".ReturnOnlyMappedLocalRoles";
         public static final String OPENID_CONNECT_ADD_UN_MAPPED_USER_ATTRIBUTES = "AddUnmappedUserAttributes";
@@ -3465,6 +3503,9 @@ public class OAuthServerConfiguration {
 
         // Allow Cross Tenant Introspection Config.
         private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
+
+        // FAPI Configurations
+        private static final String FAPI = "FAPI";
     }
 
 }

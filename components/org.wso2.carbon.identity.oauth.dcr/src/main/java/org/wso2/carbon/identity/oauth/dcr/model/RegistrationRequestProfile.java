@@ -24,6 +24,7 @@ import java.util.List;
 /**
  * DTO class to be used when registering an OAuth application.
  */
+@Deprecated
 public class RegistrationRequestProfile implements Serializable {
 
     private static final long serialVersionUID = 3265926426619907129L;

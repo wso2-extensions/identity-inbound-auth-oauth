@@ -72,7 +72,11 @@ public interface DeviceFlowDAO {
      * @param userCode Code that is used to correlate user and device.
      * @return client_id
      * @throws IdentityOAuth2Exception Error while getting client id for user code.
+     *
+     * @deprecated because the client id of the user is included in {{{@link #getDetailsForUserCode(String)}}}.
+     * Deprecated for removal.
      */
+    @Deprecated
     String getClientIdByUserCode(String userCode) throws IdentityOAuth2Exception;
 
     /**
@@ -131,7 +135,11 @@ public interface DeviceFlowDAO {
      * @param clientId Consumer key of the application.
      * @return Exist or not.
      * @throws IdentityOAuth2Exception Error while checking client id exist.
+     *
+     * @deprecated because device flow DAO layer should not validate the client information.
+     * Deprecated for removal.
      */
+    @Deprecated
     boolean checkClientIdExist(String clientId) throws IdentityOAuth2Exception;
 
     /**
@@ -140,7 +148,11 @@ public interface DeviceFlowDAO {
      * @param userCode Code that is used to correlate user and device.
      * @return status
      * @throws IdentityOAuth2Exception Error while getting status for user code.
+     *
+     * @deprecated because the scopes of the user is included in {{{@link #getDetailsForUserCode(String)}}}.
+     * Deprecated for removal.
      */
+    @Deprecated
     String getStatusForUserCode(String userCode) throws IdentityOAuth2Exception;
 
     /**
@@ -178,7 +190,11 @@ public interface DeviceFlowDAO {
      * @param clientId    Consumer key of service provide.
      * @param callBackUri Callback uri of the service provider.
      * @throws IdentityOAuth2Exception Error while Setting callback uri.
+     *
+     * @deprecated because device flow DAO layer should not update application detail.
+     * Deprecated for removal.
      */
+    @Deprecated
     void setCallbackURI(String clientId, String callBackUri) throws IdentityOAuth2Exception;
 
     /**
@@ -187,7 +203,11 @@ public interface DeviceFlowDAO {
      * @param userCode Code that is used to correlate user and device.
      * @return Array of scopes.
      * @throws IdentityOAuth2Exception Error while getting scopes for user code.
+     *
+     * @deprecated because the scopes of the user is included in {{@link #getDetailsForUserCode(String)}}.
+     * Deprecated for removal.
      */
+    @Deprecated
     String[] getScopesForUserCode(String userCode) throws IdentityOAuth2Exception;
 
     /**
@@ -196,7 +216,12 @@ public interface DeviceFlowDAO {
      * @param deviceCode Code that is used to identify the device.
      * @return Array of scopes.
      * @throws IdentityOAuth2Exception Error while getting scopes for device code.
+     *
+     * @deprecated because the scopes of the device code is included in
+     * {{@link #getAuthenticationDetails(String, String)}}.
+     * Deprecated for removal.
      */
+    @Deprecated
     String[] getScopesForDeviceCode(String deviceCode) throws IdentityOAuth2Exception;
 
     /**

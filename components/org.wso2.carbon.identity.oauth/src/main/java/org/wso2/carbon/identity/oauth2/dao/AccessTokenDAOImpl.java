@@ -26,7 +26,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -35,7 +34,6 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.util.JdbcUtils;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -85,10 +83,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     private static final String OAUTH_TOKEN_PERSISTENCE_RETRY_COUNT = "OAuth.TokenPersistence.RetryCount";
     private static final int DEFAULT_TOKEN_PERSIST_RETRY_COUNT = 5;
     private static final String IDN_OAUTH2_ACCESS_TOKEN = "IDN_OAUTH2_ACCESS_TOKEN";
+    private static final String CONSENTED_TOKEN_COLUMN_NAME = "CONSENTED_TOKEN";
     private boolean isTokenCleanupFeatureEnabled = OAuthServerConfiguration.getInstance().isTokenCleanupEnabled();
-    private boolean isTenantQualifiedUrlsEnabled = IdentityTenantUtil.isTenantQualifiedUrlsEnabled();
-    private boolean isCrossTenantTokenInspectionAllowed
-            = OAuthServerConfiguration.getInstance().isCrossTenantTokenInspectionAllowed();
     private static final String DEFAULT_TOKEN_TO_SESSION_MAPPING = "DEFAULT";
 
     private static final Log log = LogFactory.getLog(AccessTokenDAOImpl.class);
@@ -960,46 +956,34 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     (accessTokenIdentifier));
         }
 
-        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         AccessTokenDO dataDO = null;
         Connection connection = IdentityDatabaseUtil.getDBConnection(false);
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
-
         try {
             String sql;
-
+            boolean isConsentedColumnDataFetched = false;
             if (includeExpired) {
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
-                            && tenantDomain != null) {
-                        sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_TENANT_ACCESS_TOKEN_IDP_NAME;
-                    } else {
                         sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN_IDP_NAME;
-                    }
                 } else {
-                    if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
-                            && tenantDomain != null) {
-                        sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_TENANT_ACCESS_TOKEN;
-                    } else {
                         sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN;
-                    }
                 }
             } else {
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
-                            && tenantDomain != null) {
-                        sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN_IDP_NAME;
-                    } else {
-                        sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME;
-                    }
+                        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                            sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME_WITH_CONSENTED_TOKEN;
+                            isConsentedColumnDataFetched = true;
+                        } else {
+                            sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME;
+                        }
                 } else {
-                    if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
-                            && tenantDomain != null) {
-                        sql = SQLQueries.RETRIEVE_ACTIVE_TENANT_ACCESS_TOKEN;
-                    } else {
-                        sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN;
-                    }
+                        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                            sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_WITH_CONSENTED_TOKEN;
+                            isConsentedColumnDataFetched = true;
+                        } else {
+                            sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN;
+                        }
                 }
             }
 
@@ -1009,10 +993,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt.setString(1,
                     getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(accessTokenIdentifier));
-            if ((isTenantQualifiedUrlsEnabled && !isCrossTenantTokenInspectionAllowed)
-                    && tenantDomain != null) {
-                prepStmt.setInt(2, IdentityTenantUtil.getTenantId(tenantDomain));
-            }
             resultSet = prepStmt.executeQuery();
 
             int iterateId = 0;
@@ -1024,7 +1004,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String consumerKey = getPersistenceProcessor().getPreprocessedClientId(resultSet.getString(1));
                     String authorizedUser = resultSet.getString(2);
                     int tenantId = resultSet.getInt(3);
-                    tenantDomain = OAuth2Util.getTenantDomain(tenantId);
+                    String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
                     String userDomain = resultSet.getString(4);
                     String[] scope = OAuth2Util.buildScopeArray(resultSet.getString(5));
                     Timestamp issuedTime = resultSet.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
@@ -1041,6 +1021,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String tokenBindingReference = resultSet.getString(15);
                     if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                         authenticatedIDP = resultSet.getString(16);
+                    }
+
+                    boolean isConsentedToken = false;
+                    if (isConsentedColumnDataFetched) {
+                        int consentedTokenColumnIndex = resultSet.findColumn(CONSENTED_TOKEN_COLUMN_NAME);
+                        isConsentedToken = resultSet.getBoolean(consentedTokenColumnIndex);
                     }
 
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authorizedUser,
@@ -1063,6 +1049,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     dataDO.setTokenId(tokenId);
                     dataDO.setGrantType(grantType);
                     dataDO.setTenantID(tenantId);
+                    dataDO.setIsConsentedToken(isConsentedToken);
 
                     if (StringUtils.isNotBlank(tokenBindingReference) && !NONE.equals(tokenBindingReference)) {
                         setTokenBindingToAccessTokenDO(dataDO, connection, tokenId);
@@ -1684,12 +1671,24 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
         Map<String, AccessTokenDO> tokenMap = new HashMap<>();
         while (rs.next()) {
-            String accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1));
-            String refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(rs.getString(2));
-            String tokenId = rs.getString(3);
             Timestamp timeCreated = rs.getTimestamp(4, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
             long issuedTimeInMillis = timeCreated.getTime();
             long validityPeriodInMillis = rs.getLong(5);
+
+            /*
+             * Tokens returned by this method will be used to clear claims cached against the tokens.
+             * We will only return tokens that would contain such cached clams in order to improve
+             * performance.
+             * Tokens issued for openid scope can contain cached claims against them.
+             * Tokens that are in ACTIVE state and not expired should be removed from the cache.
+             */
+            if (isAccessTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
+                continue;
+            }
+
+            String accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1));
+            String refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(rs.getString(2));
+            String tokenId = rs.getString(3);
             Timestamp refreshTokenTimeCreated = rs.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
             long refreshTokenValidityPeriodInMillis = rs.getLong(7);
             String consumerKey = rs.getString(8);
@@ -1709,16 +1708,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             accessTokenDO.setConsumerKey(consumerKey);
             accessTokenDO.setGrantType(grantType);
 
-            /*
-             * Tokens returned by this method will be used to clear claims cached against the tokens.
-             * We will only return tokens that would contain such cached clams in order to improve
-             * performance.
-             * Tokens issued for openid scope can contain cached claims against them.
-             * Tokens that are in ACTIVE state and not expired should be removed from the cache.
-             */
-            if (!isAccessTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
-                tokenMap.put(accessToken, accessTokenDO);
-            }
+            tokenMap.put(accessToken, accessTokenDO);
         }
         return tokenMap;
     }
@@ -2884,10 +2874,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             String tokenId = resultSet.getString("TOKEN_ID");
                             int tenantId = resultSet.getInt("TENANT_ID");
                             String authzUser = resultSet.getString("AUTHZ_USER");
+                            String subjectIdentifier = resultSet.getString("SUBJECT_IDENTIFIER");
                             String userDomain = resultSet.getString("USER_DOMAIN");
                             String authenticatedIDPName = resultSet.getString("NAME");
                             AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser,
                                     userDomain, OAuth2Util.getTenantDomain(tenantId), authenticatedIDPName);
+                            user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
                             Timestamp issuedTime = resultSet
                                     .getTimestamp("TIME_CREATED", Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                             Timestamp refreshTokenIssuedTime =

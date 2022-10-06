@@ -159,6 +159,7 @@ import static org.wso2.carbon.identity.application.authentication.endpoint.util.
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.USER_CLAIMS_CONSENT_ONLY;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TENANT_DOMAIN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
@@ -1525,11 +1526,13 @@ public class OAuth2AuthzEndpoint {
 
         OAuth2ClientValidationResponseDTO validationResponse = validateClient(oAuthMessage);
 
+
         if (!validationResponse.isValidClient()) {
             EndpointUtil.triggerOnRequestValidationFailure(oAuthMessage, validationResponse);
             return getErrorPageURL(oAuthMessage.getRequest(), validationResponse.getErrorCode(), OAuth2ErrorCodes
                     .OAuth2SubErrorCodes.INVALID_CLIENT, validationResponse.getErrorMsg(), null);
         } else {
+            populateValidationResponseWithAppDetail(oAuthMessage, validationResponse);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 Map<String, Object> logParams = new HashMap<>();
                 logParams.put("clientId", oAuthMessage.getClientId());
@@ -1578,6 +1581,21 @@ public class OAuth2AuthzEndpoint {
                     oAuthMessage.getRequest().getParameterMap(), oAuthMessage.getRequest());
         } catch (IdentityOAuth2Exception e) {
             return handleException(e);
+        }
+    }
+
+    private void populateValidationResponseWithAppDetail(OAuthMessage oAuthMessage,
+                                                         OAuth2ClientValidationResponseDTO validationResponse)
+            throws OAuthSystemException {
+
+        String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
+        try {
+            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+            validationResponse.setApplicationName(appDO.getApplicationName());
+            validationResponse.setPkceMandatory(appDO.isPkceMandatory());
+            validationResponse.setPkceSupportPlain(appDO.isPkceSupportPlain());
+        } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
+            throw new OAuthSystemException("Error while retrieving app information for client_id : " + clientId, e);
         }
     }
 
@@ -2251,8 +2269,7 @@ public class OAuth2AuthzEndpoint {
 
     private OAuth2ClientValidationResponseDTO validateClient(OAuthMessage oAuthMessage) {
 
-        String redirectUri = oAuthMessage.getRequest().getParameter(REDIRECT_URI);
-        return getOAuth2Service().validateClientInfo(oAuthMessage.getClientId(), redirectUri);
+        return getOAuth2Service().validateClientInfo(oAuthMessage.getRequest());
     }
 
     /**
@@ -2344,7 +2361,13 @@ public class OAuth2AuthzEndpoint {
             return promptUserForConsent(sessionDataKeyFromLogin, oauth2Params, authenticatedUser, true, oAuthMessage);
         } else if (isPromptNone(oauth2Params)) {
             return handlePromptNone(oAuthMessage, sessionState, oauth2Params, authenticatedUser, hasUserApproved);
-        } else if (isPromptLogin(oauth2Params) || isPromptParamsNotPresent(oauth2Params)) {
+        } else if (isPromptLogin(oauth2Params) || isPromptParamsNotPresent(oauth2Params)
+                || isPromptSelectAccount(oauth2Params)) {
+            /*
+             * IS does not currently support multiple logged-in sessions.
+             * Therefore, gracefully handling prompt=select_account by mimicking the behaviour of a request that does
+             * not have a prompt param.
+             */
             return handleConsent(oAuthMessage, sessionDataKeyFromLogin, sessionState, oauth2Params, authenticatedUser,
                     hasUserApproved);
         } else {
@@ -3293,7 +3316,7 @@ public class OAuth2AuthzEndpoint {
             }
         }
 
-        if (sessionStateObj.isAddSessionState()) {
+        if (sessionStateObj.isAddSessionState() && StringUtils.isNotEmpty(oAuth2Parameters.getRedirectURI())) {
             String sessionStateParam = OIDCSessionManagementUtil.getSessionStateParam(oAuth2Parameters.getClientId(),
                     oAuth2Parameters.getRedirectURI(),
                     opBrowserStateCookie == null ?
@@ -3620,5 +3643,10 @@ public class OAuth2AuthzEndpoint {
             log.error("Error occurred while forwarding the request to oauth_response.jsp page.", exception);
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    private boolean isPromptSelectAccount(OAuth2Parameters oauth2Params) {
+
+        return (OAuthConstants.Prompt.SELECT_ACCOUNT).equals(oauth2Params.getPrompt());
     }
 }

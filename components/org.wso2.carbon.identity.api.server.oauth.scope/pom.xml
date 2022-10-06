@@ -5,12 +5,12 @@
     <parent>
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
-        <version>6.7.166-SNAPSHOT</version>
+        <version>6.10.6-SNAPSHOT</version>
         <relativePath>../..</relativePath>
     </parent>
 
     <artifactId>org.wso2.carbon.identity.api.server.oauth.scope</artifactId>
-    <version>6.7.166-SNAPSHOT</version>
+    <version>6.10.6-SNAPSHOT</version>
 
     <name>WSO2 Carbon - Identity OAuth 2.0 Scope Rest APIs</name>
     <description>Rest APIs for OAuth 2.0 Scope Handling</description>
@@ -193,6 +193,7 @@
                     </suiteXmlFiles>
                     <classpathDependencyExcludes>
                         <classpathDependencyExclude>org.ops4j.pax.logging</classpathDependencyExclude>
+                        <classpathDependencyExclude>org.wso2.org.ops4j.pax.logging</classpathDependencyExclude>
                     </classpathDependencyExcludes>
                 </configuration>
             </plugin>
