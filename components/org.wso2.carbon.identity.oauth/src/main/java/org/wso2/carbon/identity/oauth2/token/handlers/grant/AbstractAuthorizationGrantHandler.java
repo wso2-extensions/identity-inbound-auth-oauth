@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -284,6 +285,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 }
             }
         }
+
+        String[] requestedOIDCScopes = null;
+        try {
+            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(tokReqMsgCtx.getScope());
+        } catch (IdentityOAuthAdminException e) {
+            log.error("Unable to retrieve OIDC Scopes." + e.getMessage());
+        }
+
         // Deriving the list of global level scope validation implementations.
         // These are global/server level scope validators which are engaged after the app level scope validation.
         List<ScopeValidator> globalScopeValidators = OAuthComponentServiceHolder.getInstance().getScopeValidators();
@@ -296,6 +305,15 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 log.debug("Scope Validation was" + isGlobalValidScope + "at the global level by : "
                         + validator.getName());
             }
+        }
+
+        if (requestedOIDCScopes != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Adding OIDC scopes back to filtered scopes after engaging global scope validators");
+            }
+            String[] filteredScopes = tokReqMsgCtx.getScope();
+            String[] scopesToReturn = (String[]) ArrayUtils.addAll(filteredScopes, requestedOIDCScopes);
+            tokReqMsgCtx.setScope(scopesToReturn);
         }
 
         return isValid && scopeValidationCallback.isValidScope();

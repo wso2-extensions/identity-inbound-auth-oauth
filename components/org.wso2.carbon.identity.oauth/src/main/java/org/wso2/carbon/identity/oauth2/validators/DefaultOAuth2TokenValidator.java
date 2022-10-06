@@ -22,6 +22,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -114,6 +115,15 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
                     app.getApplicationName(), OAuth2Util.getTenantDomainOfOauthApp(app)));
         }
 
+        String[] requestedOIDCScopes = null;
+        try {
+            requestedOIDCScopes =
+                    OAuth2Util.getRequestedOIDCScopes(messageContext.getResponseDTO().getScope());
+
+        } catch (IdentityOAuthAdminException e) {
+            log.error("Unable to retrieve OIDC Scopes." + e.getMessage());
+        }
+
         // Deriving the global level scope validator implementations.
         // These are global/server level scope validators which are engaged after the app level scope validation.
         List<ScopeValidator> globalScopeValidators = OAuthComponentServiceHolder.getInstance().getScopeValidators();
@@ -126,6 +136,15 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
                 log.debug("Scope Validation was" + isGlobalValidScope + "at the global level by : "
                         + validator.getName());
             }
+        }
+
+        if (requestedOIDCScopes != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Adding OIDC scopes back to filtered scopes after engaging global scope validators");
+            }
+            String[] filteredScopes = messageContext.getResponseDTO().getScope();
+            String[] scopesToReturn = (String[]) ArrayUtils.addAll(filteredScopes, requestedOIDCScopes);
+            messageContext.getResponseDTO().setScope(scopesToReturn);
         }
 
         return true;

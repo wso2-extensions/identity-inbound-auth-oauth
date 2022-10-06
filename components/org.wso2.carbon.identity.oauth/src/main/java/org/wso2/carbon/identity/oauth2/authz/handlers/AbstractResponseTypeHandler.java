@@ -18,12 +18,14 @@
 
 package org.wso2.carbon.identity.oauth2.authz.handlers;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallback;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallbackManager;
@@ -119,6 +121,20 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
                         + validator.getName());
             }
         }
+
+        try {
+            String[] filteredScopes = oauthAuthzMsgCtx.getApprovedScope();
+            String[] requestedOIDCScopes =
+                    OAuth2Util.getRequestedOIDCScopes(oauthAuthzMsgCtx.getAuthorizationReqDTO().getScopes());
+            if (log.isDebugEnabled()) {
+                log.debug("Adding OIDC scopes back to filtered scopes after engaging global scope validators");
+            }
+            String[] scopesToReturn = (String[]) ArrayUtils.addAll(filteredScopes, requestedOIDCScopes);
+            oauthAuthzMsgCtx.setApprovedScope(scopesToReturn);
+        } catch (IdentityOAuthAdminException e) {
+            log.error("Unable to retrieve OIDC Scopes." + e.getMessage());
+        }
+
         return scopeValidationCallback.isValidScope();
     }
 

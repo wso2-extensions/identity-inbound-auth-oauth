@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthCallbackHandlerMetaData;
@@ -90,6 +91,7 @@ public class AbstractAuthorizationGrantHandlerTest {
 
         };
         OAuthComponentServiceHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
+        OAuth2ServiceComponentHolder.getInstance().setOAuthAdminService(new OAuthAdminServiceImpl());
         authenticatedUser.setUserName("randomUser");
         authenticatedUser.setTenantDomain("Homeless");
         authenticatedUser.setUserStoreDomain("Street");
