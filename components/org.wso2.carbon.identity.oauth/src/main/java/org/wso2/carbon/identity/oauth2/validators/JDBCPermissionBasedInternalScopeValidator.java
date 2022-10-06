@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.Utils;
 import org.wso2.carbon.user.api.AuthorizationManager;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -227,7 +228,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
                 Tenant tenant =
                         OAuthComponentServiceHolder.getInstance().getRealmService().getTenantManager()
                                 .getTenant(tenantId);
-                if (nonNull(tenant) && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID())) {
+                if (nonNull(tenant) && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID()) &&
+                        Utils.useOrganizationRolesForValidation(tenant.getAssociatedOrganizationUUID())) {
                     allowedResourcesForUser = retrieveUserOrganizationPermission(authenticatedUser,
                             tenant.getAssociatedOrganizationUUID());
                 } else {
