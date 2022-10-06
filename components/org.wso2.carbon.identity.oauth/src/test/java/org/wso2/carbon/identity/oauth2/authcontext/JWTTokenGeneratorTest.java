@@ -18,7 +18,7 @@ package org.wso2.carbon.identity.oauth2.authcontext;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTParser;
-import org.mockito.internal.util.reflection.Whitebox;
+import org.powermock.reflect.Whitebox;
 import org.testng.Assert;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
@@ -131,7 +131,6 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
 
     @Test(dependsOnMethods = "testInit")
     public void testGenerateToken() throws Exception {
-        Whitebox.setInternalState(jwtTokenGenerator, "ttl", 15L);
         addSampleOauth2Application();
         ClaimCache claimsLocalCache = ClaimCache.getInstance();
         Whitebox.setInternalState(jwtTokenGenerator, "claimsLocalCache", claimsLocalCache);
@@ -168,7 +167,7 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
     @Test(dependsOnMethods = "testGenerateToken")
     public void testInitEmptyClaimsRetriever() throws Exception {
         jwtTokenGenerator = new JWTTokenGenerator(includeClaims, enableSigning);
-        Whitebox.setInternalState(OAuthServerConfiguration.getInstance(), "claimsRetrieverImplClass", null);
+        Whitebox.setInternalState(OAuthServerConfiguration.getInstance(), "claimsRetrieverImplClass", (Object) null);
         jwtTokenGenerator.init();
         ClaimsRetriever claimsRetriever =
                 (ClaimsRetriever) Whitebox.getInternalState(jwtTokenGenerator, "claimsRetriever");
@@ -196,7 +195,7 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
     @Test(dependsOnMethods = "testGenerateToken")
     public void testInitEmptySignatureAlg() throws Exception {
         jwtTokenGenerator = new JWTTokenGenerator(includeClaims, enableSigning);
-        Whitebox.setInternalState(OAuthServerConfiguration.getInstance(), "signatureAlgorithm", null);
+        Whitebox.setInternalState(OAuthServerConfiguration.getInstance(), "signatureAlgorithm", ( Object) null);
         jwtTokenGenerator.init();
         JWSAlgorithm signatureAlgorithm =
                 (JWSAlgorithm) Whitebox.getInternalState(jwtTokenGenerator, "signatureAlgorithm");

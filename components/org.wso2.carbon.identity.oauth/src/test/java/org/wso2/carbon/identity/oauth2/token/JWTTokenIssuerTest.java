@@ -568,7 +568,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         doAnswer(new Answer<JWTClaimsSet>() {
             @Override
             public JWTClaimsSet answer(InvocationOnMock invocationOnMock) throws Throwable {
-                JWTClaimsSet.Builder claimsSetBuilder = invocationOnMock.getArgumentAt(0, JWTClaimsSet.Builder.class);
+                JWTClaimsSet.Builder claimsSetBuilder = invocationOnMock.getArgument(0);
                 claimsSetBuilder.claim("TOKEN_CONTEXT_CLAIM", true);
                 return claimsSetBuilder.build();
             }
@@ -580,7 +580,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         doAnswer(new Answer<JWTClaimsSet>() {
             @Override
             public JWTClaimsSet answer(InvocationOnMock invocationOnMock) throws Throwable {
-                JWTClaimsSet.Builder claimsSetBuilder = invocationOnMock.getArgumentAt(0, JWTClaimsSet.Builder.class);
+                JWTClaimsSet.Builder claimsSetBuilder = invocationOnMock.getArgument(0);
                 claimsSetBuilder.claim("AUTHZ_CONTEXT_CLAIM", true);
                 return claimsSetBuilder.build();
             }

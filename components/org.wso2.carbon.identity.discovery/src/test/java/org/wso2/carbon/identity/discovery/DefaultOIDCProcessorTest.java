@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.discovery;
 
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeClass;
@@ -42,6 +43,7 @@ import static org.testng.Assert.assertNotNull;
 /**
  * Unit test covering DefaultOIDCProcessor class.
  */
+@PowerMockIgnore({"org.mockito.*"})
 public class DefaultOIDCProcessorTest {
 
     @Mock

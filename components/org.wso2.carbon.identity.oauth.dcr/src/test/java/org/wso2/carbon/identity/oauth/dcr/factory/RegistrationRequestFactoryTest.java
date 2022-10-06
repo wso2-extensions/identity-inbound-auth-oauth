@@ -328,7 +328,10 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
             if (isThrowException) {
-                when(mockedUserStoreManager.isExistingUser(anyString())).thenThrow(UserStoreException.class);
+                when(mockedUserStoreManager.isExistingUser(anyString())).
+                        thenAnswer (i -> {
+                            throw new UserStoreException("null");
+                        });
             } else {
                 when(mockedUserStoreManager.isExistingUser("dummyParam")).thenReturn(false);
             }

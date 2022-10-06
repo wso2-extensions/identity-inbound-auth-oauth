@@ -286,7 +286,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         mockStatic(FrameworkUtils.class);
         when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString())).thenReturn("sample");
         when(FrameworkUtils.getRedirectURLWithFilteredParams(anyString(), anyMap()))
-                .then(i -> i.getArgumentAt(0, String.class));
+                .then(i -> i.getArgument(0));
         mockStatic(OAuth2Util.class);
         spy(EndpointUtil.class);
         doReturn("sampleId").when(EndpointUtil.class, "getAppIdFromClientId", anyString());

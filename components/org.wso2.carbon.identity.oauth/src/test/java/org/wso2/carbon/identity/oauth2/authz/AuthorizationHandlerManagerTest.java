@@ -233,7 +233,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
         Assert.assertEquals(errorCode, OAuthError.CodeResponse.UNSUPPORTED_RESPONSE_TYPE,
                             "Expected " + OAuthError.CodeResponse.UNSUPPORTED_RESPONSE_TYPE +
-                            " error code but found : " + errorCode);
+                             " error code but found : " + errorCode);
     }
 
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
