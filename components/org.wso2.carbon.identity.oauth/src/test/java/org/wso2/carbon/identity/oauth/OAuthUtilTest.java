@@ -61,9 +61,8 @@ public class OAuthUtilTest {
 
         String cacheKey = "some-cache-key";
         OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(cacheKey);
-
-
         OAuthCache oAuthCache = getOAuthCache(oAuthCacheKey);
+
         assertNotNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should give the cached value before cleaning it.");
         OAuthUtil.clearOAuthCache(cacheKey);
         assertNull(oAuthCache.getValueFromCache(oAuthCacheKey), "Should clear the cached value against the cache key.");
