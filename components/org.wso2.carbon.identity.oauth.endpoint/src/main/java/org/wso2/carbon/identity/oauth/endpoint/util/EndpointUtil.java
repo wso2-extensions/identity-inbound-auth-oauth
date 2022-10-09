@@ -103,6 +103,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -153,6 +154,9 @@ public class EndpointUtil {
     private static IdpManager idpManager;
     private static final String ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL = "OAuth.AllowAdditionalParamsFromErrorUrl";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
+    private static final Set<String> LOGGABLE_PARAMS = Collections.unmodifiableSet(
+            new HashSet<>(Arrays.asList("grant_type", "redirect_uri", "client_id", "username", "scope", "audience")));
+
 
     public static void setIdpManager(IdpManager idpManager) {
 
@@ -1558,4 +1562,27 @@ public class EndpointUtil {
                 .getValue();
     }
 
+    /**
+     * Returns a map of parameters that are sanitized for logging purposes.
+     *
+     * @param paramMap Map of parameters to be sanitized.
+     * @return Sanitized map of parameters.
+     */
+    public static Map<String, Object> getParamsForLogging(Map<String, List<String>> paramMap) {
+
+        Map<String, Object> params = new HashMap<>();
+        for (Map.Entry<String, List<String>> entry : paramMap.entrySet()) {
+            if (isSensitiveParam(entry.getKey())) {
+                params.put(entry.getKey(), "********");
+            } else {
+                params.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return params;
+    }
+
+    private static boolean isSensitiveParam(String key) {
+
+        return !LOGGABLE_PARAMS.contains(key);
+    }
 }
