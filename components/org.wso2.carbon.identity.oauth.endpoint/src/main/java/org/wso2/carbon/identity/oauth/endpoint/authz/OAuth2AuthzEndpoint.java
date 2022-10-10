@@ -1024,17 +1024,22 @@ public class OAuth2AuthzEndpoint {
         return RESPONSE_MODE_FORM_POST.equals(oauth2Params.getResponseMode()) && isJSON(redirectURL);
     }
 
+    private Map<String, Object> getParamsForLogging(Map<String, String[]> paramMap) {
+
+        Map<String, List<String>> params = new HashMap<>();
+        for (Map.Entry<String, String[]> entry : paramMap.entrySet()) {
+            params.put(entry.getKey(), Arrays.asList(entry.getValue()));
+        }
+        return EndpointUtil.getParamsForLogging(params);
+    }
+
     private Response handleInitialAuthorizationRequest(OAuthMessage oAuthMessage) throws OAuthSystemException,
             OAuthProblemException, URISyntaxException, InvalidRequestParentException {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             Map<String, Object> params = new HashMap<>();
             if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
-                oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
-                    if (ArrayUtils.isNotEmpty(value)) {
-                        params.put(key, Arrays.asList(value));
-                    }
-                });
+                params = getParamsForLogging(oAuthMessage.getRequest().getParameterMap());
             }
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                     OAuthConstants.LogConstants.SUCCESS, "Successfully received OAuth2 Authorize request.",

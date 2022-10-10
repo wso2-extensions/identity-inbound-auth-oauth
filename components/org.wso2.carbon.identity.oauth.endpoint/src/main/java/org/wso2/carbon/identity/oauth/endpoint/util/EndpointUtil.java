@@ -155,7 +155,8 @@ public class EndpointUtil {
     private static final String ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL = "OAuth.AllowAdditionalParamsFromErrorUrl";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
     private static final Set<String> LOGGABLE_PARAMS = Collections.unmodifiableSet(
-            new HashSet<>(Arrays.asList("grant_type", "redirect_uri", "client_id", "username", "scope", "audience")));
+            new HashSet<>(Arrays.asList("grant_type", "redirect_uri", "client_id", "username", "scope", "audience",
+                    "response_type", "state", "nonce")));
 
 
     public static void setIdpManager(IdpManager idpManager) {
