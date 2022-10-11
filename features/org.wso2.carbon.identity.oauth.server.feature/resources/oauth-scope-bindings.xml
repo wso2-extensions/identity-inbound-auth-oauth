@@ -741,26 +741,6 @@
       <Permission>/permission/admin/manage/identity/challenge/view</Permission>
    </Permissions>
 </Scope>
-<Scope name="internal_sts_mgt_create" displayName="Create STS Configs">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/stsmgt/create</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_sts_mgt_delete" displayName="Delete STS Configs">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/stsmgt/delete</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_sts_mgt_view" displayName="View STS Configs">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/stsmgt/view</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_sts_mgt_update" displayName="Update STS Configs">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/stsmgt/update</Permission>
-   </Permissions>
-</Scope>
 <Scope name="internal_template_mgt_view" displayName="View Template Management">
     <Permissions>
       <Permission>/permission/admin/manage/identity/template/mgt/view</Permission>
