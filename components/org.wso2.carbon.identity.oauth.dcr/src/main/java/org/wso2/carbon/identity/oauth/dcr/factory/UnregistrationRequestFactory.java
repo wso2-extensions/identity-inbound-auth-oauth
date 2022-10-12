@@ -37,6 +37,8 @@ import javax.ws.rs.core.HttpHeaders;
 
 /**
  * UnRegistration Request Factory.
+ * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
+ * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
 @Deprecated
 public class UnregistrationRequestFactory extends HttpIdentityRequestFactory {

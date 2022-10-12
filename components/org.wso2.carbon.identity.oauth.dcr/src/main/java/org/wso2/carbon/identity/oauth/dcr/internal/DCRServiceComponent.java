@@ -40,6 +40,8 @@ import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
 
 /**
  * OAuth DCRM service component.
+ * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
+ * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
 @Component(
         name = "identity.oauth.dcr",
