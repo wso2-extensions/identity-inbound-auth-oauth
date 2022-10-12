@@ -70,6 +70,7 @@ import org.wso2.carbon.identity.application.authentication.framework.store.UserS
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -112,6 +113,7 @@ import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
@@ -222,6 +224,7 @@ public class OAuth2Util {
     private static final String OPENID_CONNECT_AUDIENCES = "Audiences";
     private static final String DOT_SEPARATER = ".";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
+    private static final String OIDC_ROLE_CLAIM_URI = "roles";
 
     public static final String DEFAULT_TOKEN_TYPE = "Default";
 
@@ -301,6 +304,12 @@ public class OAuth2Util {
      */
     public static final String APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS = "applicationAccessTokenExpireTime";
 
+    /**
+     * FIdp Role Based authentication application config.
+     */
+    public static final String FIDP_ROLE_BASED_AUTHZ_APP_CONFIG = "FIdPRoleBasedAuthzApplications.AppName";
+
+    private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private static final Log log = LogFactory.getLog(OAuth2Util.class);
     private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private static final String INTERNAL_LOGIN_SCOPE = "internal_login";
@@ -3740,15 +3749,27 @@ public class OAuth2Util {
                 endTenantFlow();
             }
         } else {
-            IdentityProvider identityProvider = getResidentIdp(tenantDomain);
-            FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
-            // Get OIDC authenticator
-            FederatedAuthenticatorConfig oidcAuthenticatorConfig =
-                    IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
-                            IdentityApplicationConstants.Authenticator.OIDC.NAME);
-            return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
-                    IDP_ENTITY_ID).getValue();
+            return getResidentIdpEntityId(tenantDomain);
         }
+    }
+
+    /**
+     * Retrieve entity id of the resident identity provider.
+     *
+     * @param tenantDomain tenant domain.
+     * @return idp entity id.
+     * @throws IdentityOAuth2Exception when failed to retrieve the idp entity id.
+     */
+    public static String getResidentIdpEntityId(String tenantDomain) throws IdentityOAuth2Exception {
+
+        IdentityProvider identityProvider = getResidentIdp(tenantDomain);
+        FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
+        // Get OIDC authenticator
+        FederatedAuthenticatorConfig oidcAuthenticatorConfig =
+                IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
+                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
+        return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
+                IDP_ENTITY_ID).getValue();
     }
 
     private static IdentityProvider getResidentIdp(String tenantDomain) throws IdentityOAuth2Exception {
@@ -4259,10 +4280,57 @@ public class OAuth2Util {
             String tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
             if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                 // This means the tenant domain sent in the request and app's tenant domain do not match.
-                throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in " +
-                        "tenantDomain: " + tenantDomainFromContext);
+                if (log.isDebugEnabled()) {
+                    log.debug("A valid client with the given client_id cannot be found in " +
+                            "tenantDomain: " + tenantDomainFromContext);
+                }
+                throw new InvalidOAuthClientException("no.valid.client.in.tenant");
             }
         }
+    }
+
+    /**
+     * Validates whether the tenant domain set in context matches with the app's tenant domain in tenant qualified
+     * URL mode.
+     *
+     * @param tenantDomainOfApp Tenant domain of the app.
+     * @param tokenReqDTO       Access token request DTO object that contains request parameters.
+     * @throws InvalidOAuthClientException
+     */
+    public static void validateRequestTenantDomain(String tenantDomainOfApp, OAuth2AccessTokenReqDTO tokenReqDTO)
+            throws InvalidOAuthClientException {
+
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+
+            Optional<String> contextTenantDomainFromTokenReqDTO = getContextTenantDomainFromTokenReqDTO(tokenReqDTO);
+            String tenantDomainFromContext;
+            if (contextTenantDomainFromTokenReqDTO.isPresent()) {
+                tenantDomainFromContext = contextTenantDomainFromTokenReqDTO.get();
+
+                // In tenant qualified URL mode we would always have the tenant domain in the context.
+                if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
+                    // This means the tenant domain sent in the request and app's tenant domain do not match.
+                    throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in "
+                            + "tenantDomain: " + tenantDomainFromContext);
+                }
+            } else {
+                validateRequestTenantDomain(tenantDomainOfApp);
+            }
+        }
+    }
+
+    private static Optional<String> getContextTenantDomainFromTokenReqDTO(OAuth2AccessTokenReqDTO tokenReqDTO) {
+
+        if (tokenReqDTO == null || tokenReqDTO.getParameters() == null) {
+            return Optional.empty();
+        }
+
+       String tenantDomainFromContext =
+               tokenReqDTO.getParameters().get(OAuthConstants.TENANT_DOMAIN_FROM_CONTEXT);
+        if (StringUtils.isNotBlank(tenantDomainFromContext)) {
+            return Optional.of(tenantDomainFromContext);
+        }
+        return Optional.empty();
     }
 
     private static void startTenantFlow(String tenantDomain) {
@@ -4420,5 +4488,85 @@ public class OAuth2Util {
             }
         }
         return IdentityTenantUtil.getTenantDomainFromContext();
+    }
+
+    /**
+     * Get user role list from federated user attributes.
+     *
+     * @param userAttributes User attribute.
+     * @return User role-list.
+     */
+    public static List<String> getRolesFromFederatedUserAttributes(Map<ClaimMapping, String> userAttributes) {
+
+        Optional<ClaimMapping> roleClaimMapping = Optional.ofNullable(userAttributes).get().entrySet().stream()
+                .map(entry -> entry.getKey())
+                .filter(claim -> StringUtils.equals(OIDC_ROLE_CLAIM_URI, claim.getRemoteClaim().getClaimUri()))
+                .findFirst();
+
+        if (roleClaimMapping.isPresent()) {
+            return Arrays.asList(userAttributes.get(roleClaimMapping.get())
+                    .split(Pattern.quote(FrameworkUtils.getMultiAttributeSeparator())));
+        }
+
+        return Collections.emptyList();
+    }
+
+    /**
+     * Check federated role based authorization enabled or not.
+     *
+     * @param requestMsgCtx Token request message context.
+     * @return Role based authz flow enabled or not.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static boolean isFederatedRoleBasedAuthzEnabled(OAuthTokenReqMessageContext requestMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        String clientId = requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
+        return isFederatedRoleBasedAuthzEnabled(clientId);
+    }
+
+    /**
+     * Check federated role based authorization enabled or not.
+     *
+     * @param oauthAuthzMsgCtx OAuth authorization request message context.
+     * @return Role based authz flow enabled or not.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static boolean isFederatedRoleBasedAuthzEnabled(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        String clientId = oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey();
+        return isFederatedRoleBasedAuthzEnabled(clientId);
+    }
+
+    /**
+     * Check federated role based authorization enabled or not.
+     *
+     * @param clientId Application's client ID.
+     * @return Role based authz flow enabled or not.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static boolean isFederatedRoleBasedAuthzEnabled(String clientId) throws IdentityOAuth2Exception {
+
+        List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
+        boolean isFederatedRoleBasedAuthzEnabled = false;
+        if (!federatedRoleBasedAuthzApps.isEmpty()) {
+            OAuthAppDO app = null;
+            try {
+                app = getAppInformationByClientId(clientId);
+            } catch (InvalidOAuthClientException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Error while retrieving the Application Information for client id: "
+                            + clientId, e);
+                }
+                throw new IdentityOAuth2Exception(e.getMessage(), e);
+            }
+            String appTenantDomain = getTenantDomainOfOauthApp(app);
+            if (StringUtils.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME, appTenantDomain)
+                    && federatedRoleBasedAuthzApps.contains(app.getApplicationName())) {
+                isFederatedRoleBasedAuthzEnabled = true;
+            }
+        }
+        return isFederatedRoleBasedAuthzEnabled;
     }
 }

@@ -198,8 +198,7 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             }
             validationResponseDTO.setValidClient(false);
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT);
-            validationResponseDTO
-             .setErrorMsg("The authenticated client is not authorized to use this authorization grant type");
+            validationResponseDTO.setErrorMsg("not.authorized.to.use.requested.grant.type");
             return validationResponseDTO;
         }
 

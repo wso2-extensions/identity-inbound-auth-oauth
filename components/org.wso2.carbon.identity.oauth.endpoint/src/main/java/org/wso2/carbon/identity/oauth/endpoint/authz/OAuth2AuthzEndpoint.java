@@ -263,7 +263,13 @@ public class OAuth2AuthzEndpoint {
         try {
             // Start tenant domain flow if the tenant configuration is not enabled.
             if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
-                String tenantDomain = EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
+                String tenantDomain = null;
+                if (StringUtils.isNotEmpty(oAuthMessage.getClientId())) {
+                    tenantDomain = EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
+                } else if (oAuthMessage.getSessionDataCacheEntry() != null) {
+                    OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
+                    tenantDomain = oauth2Params.getTenantDomain();
+                }
                 FrameworkUtils.startTenantFlow(tenantDomain);
             }
 
@@ -2361,7 +2367,13 @@ public class OAuth2AuthzEndpoint {
             return promptUserForConsent(sessionDataKeyFromLogin, oauth2Params, authenticatedUser, true, oAuthMessage);
         } else if (isPromptNone(oauth2Params)) {
             return handlePromptNone(oAuthMessage, sessionState, oauth2Params, authenticatedUser, hasUserApproved);
-        } else if (isPromptLogin(oauth2Params) || isPromptParamsNotPresent(oauth2Params)) {
+        } else if (isPromptLogin(oauth2Params) || isPromptParamsNotPresent(oauth2Params)
+                || isPromptSelectAccount(oauth2Params)) {
+            /*
+             * IS does not currently support multiple logged-in sessions.
+             * Therefore, gracefully handling prompt=select_account by mimicking the behaviour of a request that does
+             * not have a prompt param.
+             */
             return handleConsent(oAuthMessage, sessionDataKeyFromLogin, sessionState, oauth2Params, authenticatedUser,
                     hasUserApproved);
         } else {
@@ -3637,5 +3649,10 @@ public class OAuth2AuthzEndpoint {
             log.error("Error occurred while forwarding the request to oauth_response.jsp page.", exception);
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    private boolean isPromptSelectAccount(OAuth2Parameters oauth2Params) {
+
+        return (OAuthConstants.Prompt.SELECT_ACCOUNT).equals(oauth2Params.getPrompt());
     }
 }

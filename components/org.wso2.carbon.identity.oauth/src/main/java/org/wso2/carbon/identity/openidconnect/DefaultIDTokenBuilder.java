@@ -156,7 +156,10 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                     }
                 }
             }
-            idpSessionKey = getIdpSessionKey(accessToken);
+            if (!OAuthConstants.GrantTypes.PASSWORD.equalsIgnoreCase(
+                    tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getGrantType())) {
+                idpSessionKey = getIdpSessionKey(accessToken);
+            }
         }
 
         if (log.isDebugEnabled()) {
