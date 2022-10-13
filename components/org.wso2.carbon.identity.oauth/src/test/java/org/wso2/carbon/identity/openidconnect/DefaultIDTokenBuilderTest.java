@@ -74,8 +74,9 @@ import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.idp.mgt.internal.IdpMgtServiceComponentHolder;
 import org.wso2.carbon.user.core.service.RealmService;
 
-import java.io.FileInputStream;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
@@ -320,9 +321,9 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         Assert.assertEquals(claims.getClaim("isk"), "idp");
         Assert.assertEquals(claims.getClaim("nonce"), "nonce");
         Assert.assertNotNull(claims.getClaim("nbf"));
-        Long expirationTime = ((Date) claims.getClaim("exp")).getTime();
+        long expirationTime = ((Date) claims.getClaim("exp")).getTime();
         Assert.assertTrue(expirationTime < (new Date()).getTime());
-        Long issueTime = ((Date) claims.getClaim("iat")).getTime();
+        long issueTime = ((Date) claims.getClaim("iat")).getTime();
         Assert.assertTrue(issueTime <= (new Date()).getTime());
     }
 
@@ -346,9 +347,9 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
         Assert.assertEquals(claims.getSubject(),  "user1");
         Assert.assertEquals(claims.getClaim("isk"), "wso2.is.com");
-        Long expirationTime = ((Date) claims.getClaim("exp")).getTime();
+        long expirationTime = ((Date) claims.getClaim("exp")).getTime();
         Assert.assertTrue(expirationTime < (new Date()).getTime());
-        Long issueTime = ((Date) claims.getClaim("iat")).getTime();
+        long issueTime = ((Date) claims.getClaim("iat")).getTime();
         Assert.assertTrue(issueTime <= (new Date()).getTime());
     }
 
@@ -368,20 +369,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
 
         try {
-            String idToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
-            EncryptedJWT encryptedJWT = decryptToken(idToken);
-            JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
-            Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
-            Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
-            Assert.assertEquals(claims.getSubject(),  "user1@carbon.super");
-            Assert.assertEquals(claims.getClaim("acr"),  "acr");
-            Assert.assertEquals(claims.getClaim("isk"), "idp");
-            Assert.assertEquals(claims.getClaim("nonce"), "nonce");
-            Assert.assertNotNull(claims.getClaim("nbf"));
-            Long expirationTime = ((Date) claims.getClaim("exp")).getTime();
-            Assert.assertTrue(expirationTime < (new Date()).getTime());
-            Long issueTime = ((Date) claims.getClaim("iat")).getTime();
-            Assert.assertTrue(issueTime <= (new Date()).getTime());
+            defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
         } catch (Exception e) {
             Assert.assertEquals(e.getMessage(),
                     "Provided encryption algorithm: " + algorithm + " is not supported");
@@ -391,14 +379,12 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
     @Test
     public void testClientIDNotFoundException() throws Exception {
 
-        String invalidClientId = "3f8b04332794d8dabfba9390aa423614";
         mockRealmService();
-        messageContext = getTokenReqMessageContextForUser(getDefaultAuthenticatedLocalUser(), invalidClientId);
+        String invalidClientId = "3f8b04332794d8dabfba9390aa423614";
+        OAuthTokenReqMessageContext messageContext =
+                getTokenReqMessageContextForUser(getDefaultAuthenticatedLocalUser(), invalidClientId);
         try {
-            String authoIDToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
-            JWTClaimsSet claims = SignedJWT.parse(authoIDToken).getJWTClaimsSet();
-            Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
-            Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
+            defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
         } catch (IdentityOAuth2Exception e) {
             Assert.assertEquals(e.getMessage(),
                     "Error occurred while getting app information for client_id: " +
@@ -416,15 +402,10 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO = new OAuth2AuthorizeRespDTO();
         oAuth2AuthorizeRespDTO.setAccessToken("2sa9a678f890877856y66e75f605d456");
         try {
-            String idToken = defaultIDTokenBuilder
-                    .buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
-            JWTClaimsSet claims = SignedJWT.parse(idToken).getJWTClaimsSet();
-            Assert.assertEquals(claims.getAudience().get(0), invalidClientId);
-            Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
+            defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
         } catch (IdentityOAuth2Exception e) {
             Assert.assertEquals(e.getMessage(),
-                    "Error occurred while getting app information for client_id: " +
-                            invalidClientId);
+                    "Error occurred while getting app information for client_id: " + invalidClientId);
         }
     }
 
@@ -449,7 +430,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
 
     private EncryptedJWT decryptToken (String  token) throws Exception {
 
-        InputStream file = new FileInputStream("src/test/resources/keyStore/encryption/appKeystore.jks");
+        InputStream file = Files.newInputStream(Paths.get("src/test/resources/keyStore/encryption/appKeystore.jks"));
         KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
         keystore.load(file, "wso2carbon".toCharArray());
         String alias = "wso2carbon";
@@ -510,8 +491,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         authzTokenReqDTO.setNonce("nonce");
         authzTokenReqDTO.setSelectedAcr("acr");
         authzTokenReqDTO.setResponseType("token");
-        OAuthAuthzReqMessageContext authzMessageContext = new OAuthAuthzReqMessageContext(authzTokenReqDTO);
-        return authzMessageContext;
+        return new OAuthAuthzReqMessageContext(authzTokenReqDTO);
     }
 
     private void mockRealmService() throws Exception {
