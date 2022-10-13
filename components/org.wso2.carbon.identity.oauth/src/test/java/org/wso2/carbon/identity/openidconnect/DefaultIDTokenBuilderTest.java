@@ -259,6 +259,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
                 clientId);
         Assert.assertEquals(claims.getIssuer(),
                 "https://localhost:9443/oauth2/token");
+        Assert.assertNotNull(claims.getJWTID());
         Assert.assertEquals(claims.getSubject(), "user1");
         Assert.assertEquals(claims.getClaim("isk"), "idp");
         Assert.assertEquals(claims.getClaim("email"), "email");
@@ -282,8 +283,8 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         mockRealmService();
         String idToken = defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
         JWTClaimsSet claims = SignedJWT.parse(idToken).getJWTClaimsSet();
-        Assert.assertEquals(claims.getAudience().get(0),
-                clientId);
+        Assert.assertNotNull(claims.getJWTID());
+        Assert.assertEquals(claims.getAudience().get(0), clientId);
         Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
         Assert.assertEquals(claims.getSubject(), "user1");
         Assert.assertEquals(claims.getClaim("isk"), "wso2.is.com");
@@ -311,6 +312,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         String idToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
         EncryptedJWT encryptedJWT = decryptToken(idToken);
         JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
+        Assert.assertNotNull(claims.getJWTID());
         Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
         Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
         Assert.assertEquals(claims.getSubject(), "user1");
@@ -339,6 +341,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         String idToken = defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
         EncryptedJWT encryptedJWT = decryptToken(idToken);
         JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
+        Assert.assertNotNull(claims.getJWTID());
         Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
         Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
         Assert.assertEquals(claims.getSubject(),  "user1");
