@@ -3202,7 +3202,7 @@ public class OAuthServerConfiguration {
 
     /**
      * Parses the AllowCrossTenantTokenIntrospection configuration that used to allow or block token introspection
-     * from other tenants
+     * from other tenants.
      *
      * @param oauthConfigElem oauthConfigElem.
      */
