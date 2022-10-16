@@ -67,6 +67,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
@@ -535,7 +536,11 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         }
 
         List<String> requestedClaimUris = getRequestedClaimUris(requestClaimMappings);
-        Map<String, String> userClaims = getUserClaimsInLocalDialect(fullQualifiedUsername, realm, requestedClaimUris);
+        List<String> runtimeClaimsRemovedRequestedClaimUris =
+                requestedClaimUris.stream().filter(claim -> !claim.startsWith("http://wso2.org/claims/runtime/"))
+                        .collect(Collectors.toList());
+        Map<String, String> userClaims =
+                getUserClaimsInLocalDialect(fullQualifiedUsername, realm, runtimeClaimsRemovedRequestedClaimUris);
 
         if (isEmpty(userClaims)) {
             // User claims can be empty if user does not exist in user stores. Probably a federated user.
