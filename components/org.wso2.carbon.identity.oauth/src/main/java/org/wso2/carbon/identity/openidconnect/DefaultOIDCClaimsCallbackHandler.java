@@ -535,6 +535,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         }
 
         List<String> requestedClaimUris = getRequestedClaimUris(requestClaimMappings);
+        // Improve runtime claim value storage in cache through https://github.com/wso2/product-is/issues/15056
         requestedClaimUris.removeIf(claim -> claim.startsWith("http://wso2.org/claims/runtime/"));
         Map<String, String> userClaims =
                 getUserClaimsInLocalDialect(fullQualifiedUsername, realm, requestedClaimUris);
