@@ -98,6 +98,7 @@ import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabled;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkConsentedTokenColumnAvailable;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkLegacyAudiencesEnabled;
 
 /**
  * OAuth 2 OSGi service component.
@@ -282,15 +283,18 @@ public class OAuth2ServiceComponent {
             throw new RuntimeException(errMsg, e);
         }
         if (checkAudienceEnabled()) {
-            if (log.isDebugEnabled()) {
-                log.debug("OAuth - OIDC audiences enabled.");
-            }
+            log.debug("OAuth Audiences enabled.");
             OAuth2ServiceComponentHolder.setAudienceEnabled(true);
         } else {
-            if (log.isDebugEnabled()) {
-                log.debug("OAuth - OIDC audiences disabled.");
-            }
+            log.debug("OAuth Legacy audiences disabled.");
             OAuth2ServiceComponentHolder.setAudienceEnabled(false);
+        }
+        if (checkLegacyAudiencesEnabled()) {
+            log.debug("OAuth Legacy audiences enabled.");
+            OAuth2ServiceComponentHolder.setLegacyAudienceEnabled(true);
+        } else {
+            log.debug("OAuth Legacy audiences disabled.");
+            OAuth2ServiceComponentHolder.setLegacyAudienceEnabled(false);
         }
         if (checkIDPIdColumnAvailable()) {
             if (log.isDebugEnabled()) {

@@ -58,6 +58,7 @@ public class OAuth2ServiceComponentHolder {
     private static List<ClaimProvider> claimProviders = new ArrayList<>();
     private static boolean idpIdColumnEnabled = false;
     private static boolean consentedTokenColumnEnabled = false;
+    private static boolean legacyAudienceEnabled = false;
     private List<TokenBinder> tokenBinders = new ArrayList<>();
     private Map<String, ResponseTypeRequestValidator> responseTypeRequestValidators = new HashMap<>();
     private OAuthAdminServiceImpl oauthAdminService;
@@ -111,14 +112,35 @@ public class OAuth2ServiceComponentHolder {
         OAuth2ServiceComponentHolder.pkceEnabled = pkceEnabled;
     }
 
+     /**
+     * @deprecated this method must be removed in upcoming iterationw
+     */
+    @Deprecated
     public static boolean isAudienceEnabled() {
-
-        return audienceEnabled;
+        if (legacyAudienceEnabled) {
+            return audienceEnabled;
+        } else {
+            return true;
+        }
     }
 
+    /**
+     * @deprecated config should be removed in next iterations
+     */
+    @Deprecated
     public static void setAudienceEnabled(boolean audienceEnabled) {
 
         OAuth2ServiceComponentHolder.audienceEnabled = audienceEnabled;
+    }
+
+    public static boolean isLegacyAudienceEnabled() {
+
+        return legacyAudienceEnabled;
+    }
+
+    public static void setLegacyAudienceEnabled(boolean legacyAudienceEnabled) {
+
+        OAuth2ServiceComponentHolder.legacyAudienceEnabled = legacyAudienceEnabled;
     }
 
     public static boolean isIDPIdColumnEnabled() {

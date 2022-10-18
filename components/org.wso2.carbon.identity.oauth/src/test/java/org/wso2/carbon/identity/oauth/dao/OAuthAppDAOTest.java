@@ -604,7 +604,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
             final String backChannelLogoutUrl = "https://dummy.com/logout";
             // Add OIDC properties.
-            defaultOAuthAppDO.setAudiences(new String[] {"DUMMY"});
+            defaultOAuthAppDO.setIdTokenAudiences(new String[] {"DUMMY"});
+            defaultOAuthAppDO.setAccessTokenAudiences(new String[] {"DUMMY"});
             defaultOAuthAppDO.setIdTokenEncryptionEnabled(true);
             defaultOAuthAppDO.setRequestObjectSignatureValidationEnabled(true);
             defaultOAuthAppDO.setBackChannelLogoutUrl(backChannelLogoutUrl);
