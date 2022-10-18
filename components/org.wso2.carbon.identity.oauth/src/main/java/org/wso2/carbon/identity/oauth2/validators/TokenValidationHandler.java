@@ -267,6 +267,15 @@ public class TokenValidationHandler {
             }
         }
 
+        // Adding the AccessTokenDO as a context property for further use
+        AccessTokenDO accessTokenDO;
+        try {
+            accessTokenDO = OAuth2Util.findAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
+        } catch (IllegalArgumentException e) {
+            return buildIntrospectionErrorResponse(e.getMessage());
+        }
+        messageContext.addProperty(OAuthConstants.ACCESS_TOKEN_DO, accessTokenDO);
+
         // Catch the latest exception and throw it if there aren't any active tokens.
         Exception exception = null;
         for (OAuth2TokenValidator tokenValidator : applicableValidators) {
