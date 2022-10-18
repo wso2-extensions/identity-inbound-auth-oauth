@@ -3216,7 +3216,7 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * This method returns the value of the property AllowCrossTenantTokenIntrospection  for the OAuth configuration
+     * This method returns the value of the property AllowCrossTenantTokenIntrospection for the OAuth configuration
      * in identity.xml.
      */
     public boolean isCrossTenantTokenIntrospectionAllowed() {
