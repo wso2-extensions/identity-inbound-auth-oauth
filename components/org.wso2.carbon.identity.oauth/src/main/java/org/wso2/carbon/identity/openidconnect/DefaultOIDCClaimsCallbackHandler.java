@@ -535,7 +535,10 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         }
 
         List<String> requestedClaimUris = getRequestedClaimUris(requestClaimMappings);
-        Map<String, String> userClaims = getUserClaimsInLocalDialect(fullQualifiedUsername, realm, requestedClaimUris);
+        // Improve runtime claim value storage in cache through https://github.com/wso2/product-is/issues/15056
+        requestedClaimUris.removeIf(claim -> claim.startsWith("http://wso2.org/claims/runtime/"));
+        Map<String, String> userClaims =
+                getUserClaimsInLocalDialect(fullQualifiedUsername, realm, requestedClaimUris);
 
         if (isEmpty(userClaims)) {
             // User claims can be empty if user does not exist in user stores. Probably a federated user.
