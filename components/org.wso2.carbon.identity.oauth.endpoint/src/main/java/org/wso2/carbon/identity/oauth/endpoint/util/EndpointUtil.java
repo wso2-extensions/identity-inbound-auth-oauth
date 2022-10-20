@@ -1006,18 +1006,26 @@ public class EndpointUtil {
         }
     }
 
+    /**
+     * Validate consent required scopes by global scope validators .
+     *
+     * @param user                      Authenticated user.
+     * @param params                    OAuth2 parameters.
+     * @throws OAuthSystemException
+     */
     private static void validateConsentRequiredScopes(AuthenticatedUser user, OAuth2Parameters params)
             throws OAuthSystemException {
         List<ScopeValidator> globalScopeValidators = OAuthUtil.getScopeValidators();
         for (ScopeValidator validator : globalScopeValidators) {
             if (log.isDebugEnabled()) {
-                log.debug("Engaging global scope validator in token issuer flow : " + validator.getName());
+                log.debug("Engaging global scope validator for consent required scopes using : "
+                        + validator.getName());
             }
             List<String> validatedScopes = null;
             try {
                 validatedScopes = validator.getValidatedScopes(user, params);
             } catch (IdentityOAuth2Exception e) {
-                throw new OAuthSystemException("Error occurred while validate user consents OAuth scopes.");
+                throw new OAuthSystemException("Error occurred while validate consent required scopes.");
             }
             params.setConsentRequiredScopes(new HashSet<>(validatedScopes));
 

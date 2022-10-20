@@ -67,7 +67,7 @@ public interface ScopeValidator {
             throws IdentityOAuth2Exception;
 
     /**
-     * Get the friendly name of the implemented scope validator.
+     * Validate consent required scopes.
      *
      * @return Name of the scope validator.
      */
