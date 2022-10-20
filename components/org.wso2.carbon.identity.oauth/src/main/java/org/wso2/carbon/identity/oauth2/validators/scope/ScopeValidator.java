@@ -18,10 +18,15 @@
 
 package org.wso2.carbon.identity.oauth2.validators.scope;
 
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This is a global level interface for scope validation. This needs to be engaged after application level validators.
@@ -66,6 +71,11 @@ public interface ScopeValidator {
      *
      * @return Name of the scope validator.
      */
+    default List<String> getValidatedScopes(AuthenticatedUser user, OAuth2Parameters params)
+            throws IdentityOAuth2Exception {
+        return new ArrayList<>(params.getScopes());
+    }
+
     String getName();
 }
 

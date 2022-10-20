@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.api.Tenant;
@@ -787,5 +788,9 @@ public final class OAuthUtil {
             username = IdentityUtil.addDomainToName(user.getUserName(), user.getUserStoreDomain());
         }
         return username;
+    }
+
+    public static List<ScopeValidator> getScopeValidators() {
+        return OAuthComponentServiceHolder.getInstance().getScopeValidators();
     }
 }

@@ -59,6 +59,7 @@ import org.wso2.carbon.identity.discovery.builders.DefaultOIDCProviderRequestBui
 import org.wso2.carbon.identity.discovery.builders.OIDCProviderRequestBuilder;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
@@ -90,6 +91,7 @@ import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
+import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
@@ -772,6 +774,7 @@ public class EndpointUtil {
                     user = entry.getLoggedInUser();
                 }
                 setConsentRequiredScopesToOAuthParams(user, params);
+                validateConsentRequiredScopes(user, params);
                 Set<String> consentRequiredScopesSet = params.getConsentRequiredScopes();
                 String consentRequiredScopes = StringUtils.EMPTY;
                 if (CollectionUtils.isNotEmpty(consentRequiredScopesSet)) {
@@ -1001,6 +1004,25 @@ public class EndpointUtil {
         } catch (IdentityOAuth2ScopeException e) {
             throw new OAuthSystemException("Error occurred while retrieving user consents OAuth scopes.");
         }
+    }
+
+    private static void validateConsentRequiredScopes(AuthenticatedUser user, OAuth2Parameters params)
+            throws OAuthSystemException {
+        List<ScopeValidator> globalScopeValidators = OAuthUtil.getScopeValidators();
+        for (ScopeValidator validator : globalScopeValidators) {
+            if (log.isDebugEnabled()) {
+                log.debug("Engaging global scope validator in token issuer flow : " + validator.getName());
+            }
+            List<String> validatedScopes = null;
+            try {
+                validatedScopes = validator.getValidatedScopes(user, params);
+            } catch (IdentityOAuth2Exception e) {
+                throw new OAuthSystemException("Error occurred while validate user consents OAuth scopes.");
+            }
+            params.setConsentRequiredScopes(new HashSet<>(validatedScopes));
+
+        }
+
     }
 
     private static String getUserIdOfAuthenticatedUser(AuthenticatedUser user) throws OAuthSystemException {
