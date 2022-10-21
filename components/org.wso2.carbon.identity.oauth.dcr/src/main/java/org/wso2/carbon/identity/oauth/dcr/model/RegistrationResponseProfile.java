@@ -23,7 +23,10 @@ import java.util.List;
 
 /**
  * This class represents an OAuth application populated with necessary data.
+ * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
+ * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
+@Deprecated
 public class RegistrationResponseProfile implements Serializable {
 
     private static final long serialVersionUID = 6624914480171036967L;

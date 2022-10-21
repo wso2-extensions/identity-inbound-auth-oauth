@@ -59,6 +59,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AUTH_TIME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AZP;
@@ -156,7 +157,10 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                     }
                 }
             }
-            idpSessionKey = getIdpSessionKey(accessToken);
+            if (!OAuthConstants.GrantTypes.PASSWORD.equalsIgnoreCase(
+                    tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getGrantType())) {
+                idpSessionKey = getIdpSessionKey(accessToken);
+            }
         }
 
         if (log.isDebugEnabled()) {
@@ -167,6 +171,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         List<String> audience = OAuth2Util.getOIDCAudience(clientId, oAuthAppDO);
 
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
         jwtClaimsSetBuilder.issuer(idTokenIssuer);
         jwtClaimsSetBuilder.audience(audience);
         jwtClaimsSetBuilder.claim(AZP, clientId);
@@ -193,6 +198,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         tokenReqMsgCtxt.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
         tokenReqMsgCtxt.addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(tokenReqMsgCtxt));
+        if (tokenRespDTO.getIsConsentedToken()) {
+            tokenReqMsgCtxt.setConsentedToken(tokenRespDTO.getIsConsentedToken());
+        }
         jwtClaimsSetBuilder.subject(subjectClaim);
         JWTClaimsSet jwtClaimsSet = handleOIDCCustomClaims(tokenReqMsgCtxt, jwtClaimsSetBuilder);
 
@@ -249,6 +257,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
 
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
         jwtClaimsSetBuilder.issuer(issuer);
 
         // Set the audience

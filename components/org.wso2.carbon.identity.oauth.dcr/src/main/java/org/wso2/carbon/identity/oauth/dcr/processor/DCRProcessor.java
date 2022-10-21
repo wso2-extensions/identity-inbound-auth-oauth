@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityRequest;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityResponse;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.context.DCRMessageContext;
 import org.wso2.carbon.identity.oauth.dcr.exception.RegistrationException;
@@ -41,7 +42,10 @@ import java.util.regex.Matcher;
 
 /**
  * OAuth DCR Processor class.
+ * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
+ * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
+@Deprecated
 public class DCRProcessor extends IdentityProcessor {
 
     private static final Log log = LogFactory.getLog(DCRProcessor.class);
@@ -51,6 +55,21 @@ public class DCRProcessor extends IdentityProcessor {
 
         if (log.isDebugEnabled()) {
             log.debug("Request processing started by DCRProcessor.");
+        }
+
+        boolean isIdentityRegisterEnabled =
+                IdentityUtil.isLegacyFeatureEnabled(DCRConstants.DCR_ID, DCRConstants.DCR_VERSION);
+
+        if (!isIdentityRegisterEnabled) {
+            if (log.isDebugEnabled()) {
+                log.debug("Identity Register endpoint was deprecated. To enable the DCR API endpoint add the " +
+                        "following config to deployment.toml file. \n" +
+                        "[[legacy_feature]] \n" +
+                        "id = identity/register \n" +
+                        "enable = true");
+            }
+            String errorMessage = "/identity/register API was deprecated.";
+            throw IdentityException.error(RegistrationException.class, ErrorCodes.FORBIDDEN.toString(), errorMessage);
         }
         DCRMessageContext dcrMessageContext = new DCRMessageContext(identityRequest);
         IdentityResponse.IdentityResponseBuilder identityResponseBuilder = null;

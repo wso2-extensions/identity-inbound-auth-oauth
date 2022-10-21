@@ -18,16 +18,23 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
+import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 
-public class UserInfoUserStoreClaimRetrieverTest {
+@PrepareForTest({FrameworkUtils.class})
+public class UserInfoUserStoreClaimRetrieverTest extends PowerMockIdentityBaseTest {
 
     @DataProvider
     public Object[][] getUserAttributes() {
@@ -47,7 +54,33 @@ public class UserInfoUserStoreClaimRetrieverTest {
     @Test(dataProvider = "getUserAttributes")
     public void testUserInfoUserStoreClaimRetriever(HashMap<ClaimMapping, String> claims) {
 
+        mockStatic(FrameworkUtils.class);
+        when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(",");
+
         UserInfoUserStoreClaimRetriever claimsRetriever = new UserInfoUserStoreClaimRetriever();
         assertNotNull(claimsRetriever.getClaimsMap(claims));
+    }
+
+    @DataProvider
+    public Object[][] getUserAttributesWithGroupsClaim() {
+
+        ClaimMapping map1 = ClaimMapping.build("groups", "groups", "defaultValue1", true);
+        Map<ClaimMapping, Object> claims1 = new HashMap<ClaimMapping, Object>();
+        claims1.put(map1, "group1");
+        return new Object[][] {
+                {claims1}
+        };
+    }
+
+    @Test(dataProvider = "getUserAttributesWithGroupsClaim")
+    public void testGroupsClaimUserInfoUserStoreClaimRetriever(HashMap<ClaimMapping, String> claims) {
+
+        mockStatic(FrameworkUtils.class);
+        when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(",");
+
+        UserInfoUserStoreClaimRetriever claimsRetriever = new UserInfoUserStoreClaimRetriever();
+        Map<String, Object> retrievedClaims = claimsRetriever.getClaimsMap(claims);
+        assertNotNull(retrievedClaims);
+        assertTrue(retrievedClaims.get("groups") instanceof String[]);
     }
 }

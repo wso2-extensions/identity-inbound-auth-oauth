@@ -22,7 +22,10 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
 
 /**
  * DCR Request data for un register an OAuth application.
+ * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
+ * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
+@Deprecated
 public class UnregistrationRequest extends IdentityRequest {
 
     private static final long serialVersionUID = -5760272509104069285L;

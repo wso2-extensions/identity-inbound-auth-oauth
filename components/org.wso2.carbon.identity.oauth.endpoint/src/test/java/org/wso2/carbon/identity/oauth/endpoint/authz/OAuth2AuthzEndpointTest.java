@@ -80,6 +80,7 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
@@ -130,6 +131,10 @@ import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -148,6 +153,7 @@ import static org.mockito.Matchers.anySet;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.doAnswer;
+import static org.powermock.api.mockito.PowerMockito.doCallRealMethod;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
@@ -243,6 +249,12 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
     ClaimMetadataHandler claimMetadataHandler;
+
+    @Mock
+    ServletContext servletContext;
+
+    @Mock
+    RequestDispatcher requestDispatcher;
 
     @Mock
     private CentralLogMgtServiceComponentHolder centralLogMgtServiceComponentHolderMock;
@@ -363,66 +375,74 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         return new Object[][]{
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{"val1", "val2"},
                         SESSION_DATA_KEY_CONSENT_VALUE, "true", "scope1", SESSION_DATA_KEY_VALUE, null,
-                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, null},
+                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, null, false},
 
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE},
                         SESSION_DATA_KEY_CONSENT_VALUE, "true", "scope1", SESSION_DATA_KEY_VALUE, null,
-                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null},
+                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null, false},
 
-                {null, new String[]{""}, null, "true", "scope1", null, null, HttpServletResponse.SC_FOUND, null, null},
+                {null, new String[]{""}, null, "true", "scope1", null, null, HttpServletResponse.SC_FOUND, null, null,
+                        false},
 
                 {null, new String[]{""}, null, "false", "scope1", null, null, HttpServletResponse.SC_FOUND,
-                        OAuth2ErrorCodes.INVALID_REQUEST, null},
+                        OAuth2ErrorCodes.INVALID_REQUEST, null, false},
 
                 {null, new String[]{"invalidId"}, null, "false", "scope1", null, null, HttpServletResponse.SC_FOUND,
-                        OAuth2ErrorCodes.INVALID_CLIENT, null},
+                        OAuth2ErrorCodes.INVALID_CLIENT, null, false},
 
                 {null, new String[]{INACTIVE_CLIENT_ID_VALUE}, null, "false", "scope1", null, null,
-                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_CLIENT, null},
+                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_CLIENT, null, false},
 
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, "invalidConsentCacheKey",
                         "true", "scope1", SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_FOUND,
-                        OAuth2ErrorCodes.INVALID_REQUEST, null},
+                        OAuth2ErrorCodes.INVALID_REQUEST, null, false},
 
                 {null, new String[]{CLIENT_ID_VALUE}, SESSION_DATA_KEY_CONSENT_VALUE, "false", "scope1",
                         SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST,
-                        null},
+                        null, false},
 
                 {null, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
-                      null, new IOException(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR, null, null},
+                      null, new IOException(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR, null, null, false},
 
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
-                        null, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null},
+                        null, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null, false},
 
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
                         null, OAuthProblemException.error("error"), HttpServletResponse.SC_FOUND,
-                        OAuth2ErrorCodes.INVALID_REQUEST, null},
+                        OAuth2ErrorCodes.INVALID_REQUEST, null, false},
 
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
-                        null, new IOException(), HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null},
+                        null, new IOException(), HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null,
+                        false},
 
                 {null, new String[]{CLIENT_ID_VALUE}, null, "false", null, null, null, HttpServletResponse.SC_FOUND,
-                        OAuth2ErrorCodes.INVALID_REQUEST, null},
+                        OAuth2ErrorCodes.INVALID_REQUEST, null, false},
 
                 {AuthenticatorFlowStatus.INCOMPLETE, new String[]{CLIENT_ID_VALUE}, null, "false",
                         OAuthConstants.Scope.OPENID, null, null, HttpServletResponse.SC_FOUND,
-                        OAuth2ErrorCodes.INVALID_REQUEST, null},
+                        OAuth2ErrorCodes.INVALID_REQUEST, null, false},
 
                 {AuthenticatorFlowStatus.INCOMPLETE, null, null, "false", OAuthConstants.Scope.OPENID, null, null,
-                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null},
+                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null, false},
 
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
                         null, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST,
-                        RESPONSE_MODE_FORM_POST}
+                        RESPONSE_MODE_FORM_POST, true},
+
+                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
+                        null, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST,
+                        RESPONSE_MODE_FORM_POST, false}
         };
     }
 
     @Test(dataProvider = "provideParams", groups = "testWithConnection")
     public void testAuthorize(Object flowStatusObject, String[] clientId, String sessionDataKayConsent,
                               String toCommonAuth, String scope, String sessionDataKey, Exception e, int expectedStatus,
-                              String expectedError, String responseMode) throws Exception {
+                              String expectedError, String responseMode, boolean isOAuthResponseJspPageAvailable)
+            throws Exception {
 
         AuthenticatorFlowStatus flowStatus = (AuthenticatorFlowStatus) flowStatusObject;
+        mockOAuthServerConfiguration();
 
         Map<String, String[]> requestParams = new HashMap<>();
         Map<String, Object> requestAttributes = new HashMap<>();
@@ -435,6 +455,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         requestParams.put(OAuthConstants.OAuth20Params.SCOPE, new String[]{scope});
         if (StringUtils.equals(responseMode, RESPONSE_MODE_FORM_POST)) {
             requestParams.put(RESPONSE_MODE, new String[]{RESPONSE_MODE_FORM_POST});
+            when(oAuthServerConfiguration.isOAuthResponseJspPageAvailable())
+                    .thenReturn(isOAuthResponseJspPageAvailable);
         }
 
         requestAttributes.put(FrameworkConstants.RequestParams.FLOW_STATUS, flowStatus);
@@ -464,6 +486,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
         PowerMockito.doNothing().when(eventServiceMock).handleEvent(any());
 
+        when(httpServletRequest.getServletContext()).thenReturn(servletContext);
+        when(servletContext.getContext(anyString())).thenReturn(servletContext);
+        when(servletContext.getRequestDispatcher(anyString())).thenReturn(requestDispatcher);
+        doNothing().when(requestDispatcher).forward(any(ServletRequest.class), any(ServletResponse.class));
+
         mockStatic(SessionDataCache.class);
         when(SessionDataCache.getInstance()).thenReturn(sessionDataCache);
         SessionDataCacheKey loginDataCacheKey = new SessionDataCacheKey(SESSION_DATA_KEY_VALUE);
@@ -473,16 +500,15 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(loginCacheEntry.getoAuth2Parameters()).thenReturn(setOAuth2Parameters(
                 new HashSet<>(Collections.singletonList(OAuthConstants.Scope.OPENID)), APP_NAME, null, null));
 
-        mockOAuthServerConfiguration();
-
         mockEndpointUtil(false);
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
+        doCallRealMethod().when(oAuth2Service).validateInputParameters(httpServletRequest);
         if (ArrayUtils.isNotEmpty(clientId) && (clientId[0].equalsIgnoreCase("invalidId") || clientId[0]
                 .equalsIgnoreCase(INACTIVE_CLIENT_ID_VALUE) || StringUtils.isEmpty(clientId[0]))) {
-            when(oAuth2Service.validateClientInfo(clientId[0], APP_REDIRECT_URL)).thenCallRealMethod();
+            when(oAuth2Service.validateClientInfo(httpServletRequest)).thenCallRealMethod();
 
         } else {
-            when(oAuth2Service.validateClientInfo(anyString(), anyString()))
+            when(oAuth2Service.validateClientInfo(httpServletRequest))
                     .thenReturn(oAuth2ClientValidationResponseDTO);
             when(oAuth2ClientValidationResponseDTO.isValidClient()).thenReturn(true);
         }
@@ -534,9 +560,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             }
         } else {
             if (expectedError != null) {
-                // Check if the error response is of form post mode
-                assertTrue(response.getEntity().toString()
-                        .contains("<form method=\"post\" action=\"" + APP_REDIRECT_URL + "\">"));
+                if (isOAuthResponseJspPageAvailable) {
+                    assertEquals(response.getStatus(), 200);
+                } else {
+                    // Check if the error response is of form post mode
+                    assertTrue(response.getEntity().toString()
+                            .contains("<form method=\"post\" action=\"" + APP_REDIRECT_URL + "\">"));
+                }
             }
         }
 
@@ -1030,6 +1060,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             checkErrorCode = false;
         }
 
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.validatePKCECodeChallenge(anyString(), anyString())).thenCallRealMethod();
+        when(OAuth2Util.validatePKCECodeVerifier(anyString())).thenCallRealMethod();
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
 
@@ -1040,10 +1073,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_REQUEST);
             validationResponseDTO.setErrorMsg("client is invalid");
         }
-        validationResponseDTO.setPkceMandatory(supportPlainPkce);
-        validationResponseDTO.setPkceSupportPlain(supportPlainPkce);
-        when(oAuth2Service.validateClientInfo(anyString(), anyString())).thenReturn(validationResponseDTO);
-
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO.setPkceMandatory(supportPlainPkce);
+        oAuthAppDO.setPkceSupportPlain(supportPlainPkce);
+        when(OAuth2Util.getAppInformationByClientId(any())).thenReturn(oAuthAppDO);
+        when(oAuth2Service.validateClientInfo(any())).thenReturn(validationResponseDTO);
         if (StringUtils.equals(expectedLocation, LOGIN_PAGE_URL) ||
                 StringUtils.equals(expectedLocation, ERROR_PAGE_URL)) {
             CommonAuthenticationHandler handler = mock(CommonAuthenticationHandler.class);
@@ -1336,13 +1370,15 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         assertNotNull(response, "Authorization response is null");
         assertEquals(response.getStatus(), HttpServletResponse.SC_FOUND, "Unexpected HTTP response status");
 
-        if (errorCode != null) {
-            MultivaluedMap<String, Object> responseMetadata = response.getMetadata();
-            assertNotNull(responseMetadata, "Response metadata is null");
+        MultivaluedMap<String, Object> responseMetadata = response.getMetadata();
+        assertNotNull(responseMetadata, "Response metadata is null");
 
-            assertTrue(CollectionUtils.isNotEmpty(responseMetadata.get(HTTPConstants.HEADER_LOCATION)),
-                    "Location header not found in the response");
-            String location = String.valueOf(responseMetadata.get(HTTPConstants.HEADER_LOCATION).get(0));
+        assertTrue(CollectionUtils.isNotEmpty(responseMetadata.get(HTTPConstants.HEADER_LOCATION)),
+                "Location header not found in the response");
+        String location = String.valueOf(responseMetadata.get(HTTPConstants.HEADER_LOCATION).get(0));
+        assertFalse(location.isEmpty(), "Redirect URL is empty");
+
+        if (errorCode != null) {
             assertTrue(location.contains(errorCode), "Expected error code not found in URL");
         }
 
@@ -1537,6 +1573,12 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         value = (String) createFormPage.invoke(authzEndpointObject, APP_REDIRECT_URL_JSON, APP_REDIRECT_URL,
                 StringUtils.EMPTY, "sessionDataValue");
         assertNotNull(value, "Form post page is null");
+
+        Method createErrorFormPage = authzEndpointObject.getClass().getDeclaredMethod("createErrorFormPage",
+                String.class, OAuthProblemException.class);
+        createErrorFormPage.setAccessible(true);
+        value = (String) createErrorFormPage.invoke(authzEndpointObject, APP_REDIRECT_URL, oAuthProblemException);
+        assertNotNull(value, "Form post error page is null");
     }
 
     @DataProvider(name = "provideSendRequestToFrameworkData")
@@ -1814,7 +1856,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         OAuth2ClientValidationResponseDTO validationResponseDTO = new OAuth2ClientValidationResponseDTO();
         validationResponseDTO.setValidClient(true);
         validationResponseDTO.setCallbackURL(APP_REDIRECT_URL);
-        when(oAuth2Service.validateClientInfo(anyString(), anyString())).thenReturn(validationResponseDTO);
+        when(oAuth2Service.validateClientInfo(any())).thenReturn(validationResponseDTO);
 
         Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> responseTypeValidators = new Hashtable<>();
         responseTypeValidators.put(ResponseType.CODE.toString(), CodeValidator.class);
@@ -1874,6 +1916,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
+        doCallRealMethod().when(oAuth2Service).validateInputParameters(httpServletRequest);
 
         Response response;
         try {

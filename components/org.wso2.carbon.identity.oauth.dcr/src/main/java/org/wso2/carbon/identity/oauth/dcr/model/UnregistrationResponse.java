@@ -22,7 +22,10 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
 
 /**
  * DCR Response data returned after un registering an OAuth application.
+ * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
+ * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
+@Deprecated
 public class UnregistrationResponse extends IdentityResponse {
 
     private static final long serialVersionUID = -4059676691166142155L;

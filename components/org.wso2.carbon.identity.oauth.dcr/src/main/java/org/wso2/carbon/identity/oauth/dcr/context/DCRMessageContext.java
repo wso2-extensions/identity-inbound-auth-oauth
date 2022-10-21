@@ -25,7 +25,10 @@ import java.util.Map;
 
 /**
  * Context class related to DCR Message.
+ * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
+ * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
+@Deprecated
 public class DCRMessageContext extends MessageContext {
 
     private static final long serialVersionUID = -737090105446050708L;

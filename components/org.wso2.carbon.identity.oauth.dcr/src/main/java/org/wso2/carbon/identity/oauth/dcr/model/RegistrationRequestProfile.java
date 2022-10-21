@@ -23,7 +23,10 @@ import java.util.List;
 
 /**
  * DTO class to be used when registering an OAuth application.
+ * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
+ * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
+@Deprecated
 public class RegistrationRequestProfile implements Serializable {
 
     private static final long serialVersionUID = 3265926426619907129L;

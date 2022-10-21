@@ -24,7 +24,10 @@ import org.wso2.carbon.identity.oauth.dcr.context.DCRMessageContext;
 
 /**
  * Abstract class of OAuth DCR Handler.
+ * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
+ * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
+@Deprecated
 public abstract class AbstractDCRHandler extends AbstractIdentityHandler {
 
     public abstract IdentityResponse.IdentityResponseBuilder handle(DCRMessageContext dcrMessageContext)

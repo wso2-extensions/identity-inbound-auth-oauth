@@ -55,7 +55,10 @@ import static org.wso2.carbon.identity.oauth.dcr.factory.HttpRegistrationRespons
 
 /**
  * RegistrationRequestFactory build the request for DCR Registry Request.
+ * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
+ * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
+@Deprecated
 public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
 
     private static final Log log = LogFactory.getLog(RegistrationRequestFactory.class);

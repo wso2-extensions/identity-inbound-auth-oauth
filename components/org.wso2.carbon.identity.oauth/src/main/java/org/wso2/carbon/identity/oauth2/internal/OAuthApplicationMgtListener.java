@@ -263,7 +263,9 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                     }
                 }
             }
-        } catch (IdentityOAuthAdminException | InvalidOAuthClientException | IdentityOAuth2Exception e) {
+        } catch (IdentityOAuthClientException | InvalidOAuthClientException e) {
+            throw handleException(e.getMessage(), e);
+        } catch (IdentityOAuthAdminException | IdentityOAuth2Exception e) {
             String message = "Error occurred when importing OAuth inbound.";
             throw handleException(message, e);
         }

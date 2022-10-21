@@ -22,7 +22,10 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.F
 
 /**
  * Custom exception to be thrown inside DynamicClientRegistration related functionality.
+ * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
+ * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
+@Deprecated
 public class DCRException extends FrameworkException {
 
     private static final long serialVersionUID = -3151279311929070297L;

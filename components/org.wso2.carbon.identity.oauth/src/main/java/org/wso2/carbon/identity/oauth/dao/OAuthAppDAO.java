@@ -28,6 +28,7 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -44,7 +45,6 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -62,6 +62,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
@@ -108,7 +109,8 @@ public class OAuthAppDAO {
     public void addOAuthApplication(OAuthAppDO consumerAppDO) throws IdentityOAuthAdminException {
 
         AuthenticatedUser appOwner = consumerAppDO.getAppOwner();
-        int spTenantId = IdentityTenantUtil.getTenantId(appOwner.getTenantDomain());
+        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        int spTenantId = IdentityTenantUtil.getTenantId(tenantDomain);
         String userStoreDomain = appOwner.getUserStoreDomain();
         if (!isDuplicateApplication(appOwner.getUserName(), spTenantId, userStoreDomain, consumerAppDO)) {
             int appId = 0;
@@ -503,12 +505,10 @@ public class OAuthAppDAO {
 
         String usernameWithDomain = UserCoreUtil.addDomainToName(userName, domainName);
         try {
-            UserRealm realm = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUserRealm();
-            if (realm == null || StringUtils.isEmpty(usernameWithDomain)) {
-                return false;
-            }
-            return realm.getUserStoreManager().isExistingUser(usernameWithDomain);
-        } catch (UserStoreException e) {
+            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            Optional<User> user = OAuthUtil.getUser(tenantDomain, usernameWithDomain);
+            return user.isPresent();
+        } catch (IdentityApplicationManagementException e) {
             throw handleError("Error while checking user existence of user: " + usernameWithDomain, e);
         }
     }
@@ -1357,7 +1357,7 @@ public class OAuthAppDAO {
     private void handleRequestForANonExistingConsumerKey(String consumerKey) throws InvalidOAuthClientException {
         String message = "application.not.found";
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Cannot find an application associated with the given consumer key.");
+            LOG.debug("Cannot find an application associated with the given consumer key: " + consumerKey);
         }
         throw new InvalidOAuthClientException(message);
     }

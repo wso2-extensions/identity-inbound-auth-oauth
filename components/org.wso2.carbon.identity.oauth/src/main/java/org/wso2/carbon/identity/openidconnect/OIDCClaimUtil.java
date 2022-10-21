@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -221,7 +222,35 @@ public class OIDCClaimUtil {
         }
     }
 
-    private static boolean isConsentBasedClaimFilteringApplicable(String grantType) {
+    public static Map<String, Object> filterUserClaimsBasedOnConsent(Map<String, Object> userClaims,
+                                                                     AuthenticatedUser authenticatedUser,
+                                                                     String clientId,
+                                                                     String spTenantDomain,
+                                                                     String grantType,
+                                                                     ServiceProvider serviceProvider,
+                                                                     boolean isConsentedToken) {
+
+        if (!OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+            return filterUserClaimsBasedOnConsent(userClaims, authenticatedUser, clientId, spTenantDomain, grantType,
+                    serviceProvider);
+        } else {
+            if (isConsentedToken && !FrameworkUtils.isConsentPageSkippedForSP(serviceProvider)) {
+                return OpenIDConnectServiceComponentHolder.getInstance()
+                        .getHighestPriorityOpenIDConnectClaimFilter()
+                        .getClaimsFilteredByUserConsent(userClaims, authenticatedUser, clientId, spTenantDomain);
+            } else {
+                if (log.isDebugEnabled()) {
+                    String msg = "Filtering user claims based on consent skipped for grant type. Returning " +
+                            "original user claims for user:%s, for clientId:%s of tenantDomain:%s";
+                    log.debug(String.format(msg, authenticatedUser.toFullQualifiedUsername(),
+                            clientId, spTenantDomain));
+                }
+                return userClaims;
+            }
+        }
+    }
+
+    public static boolean isConsentBasedClaimFilteringApplicable(String grantType) {
 
         return isOIDCConsentPageNotSkipped() && isUserConsentRequiredForClaims(grantType);
     }

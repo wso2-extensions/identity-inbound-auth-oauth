@@ -37,7 +37,10 @@ import javax.ws.rs.core.MediaType;
 
 /**
  * Http Registration Response Factory.
+ * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
+ * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
+@Deprecated
 public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory {
 
     public static final String INVALID_REDIRECT_URI = "invalid_redirect_uri";

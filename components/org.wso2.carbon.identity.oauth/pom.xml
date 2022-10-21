@@ -23,7 +23,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.7.157-SNAPSHOT</version>
+        <version>6.10.12-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -223,6 +223,14 @@
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.claim.metadata.mgt</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.organization.management.core</groupId>
+            <artifactId>org.wso2.carbon.identity.organization.management.service</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.organization.management</groupId>
+            <artifactId>org.wso2.carbon.identity.organization.management.role.management.service</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.felix</groupId>
@@ -379,6 +387,10 @@
                             org.wso2.carbon.identity.oauth.common.token.bindings.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                             org.wso2.carbon.identity.oauth.common.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                             org.wso2.carbon.identity.saml.common.util.*; version="${saml.common.util.version.range}",
+                            org.wso2.carbon.identity.organization.management.service; version="${carbon.identity.organization.management.core.version.range}",
+                            org.wso2.carbon.identity.organization.management.service.exception; version="${carbon.identity.organization.management.core.version.range}",
+                            org.wso2.carbon.identity.organization.management.role.management.service; version="${carbon.identity.organization.management.version.range}",
+                            org.wso2.carbon.identity.organization.management.role.management.service.models; version="${carbon.identity.organization.management.version.range}",
 
                             org.wso2.carbon.base; version="${carbon.base.imp.pkg.version.range}",
                             org.wso2.carbon.registry.api;version="${carbon.kernel.registry.imp.pkg.version.range}",
@@ -423,6 +435,7 @@
                     <reuseForks>true</reuseForks>
                     <classpathDependencyExcludes>
                         <classpathDependencyExclude>org.ops4j.pax.logging</classpathDependencyExclude>
+                        <classpathDependencyExclude>org.wso2.org.ops4j.pax.logging</classpathDependencyExclude>
                     </classpathDependencyExcludes>
                 </configuration>
             </plugin>

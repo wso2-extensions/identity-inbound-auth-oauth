@@ -27,7 +27,10 @@ import javax.servlet.http.HttpServletResponse;
 
 /**
  * DCR Request data for Register an OAuth application.
+ * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
+ * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
+@Deprecated
 public class RegistrationRequest extends IdentityRequest {
 
     private static final long serialVersionUID = -6698974259780031092L;

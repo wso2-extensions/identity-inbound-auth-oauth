@@ -173,6 +173,9 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
         claims = getClaims();
         AuthenticatedUser user = getDefaultAuthenticatedLocalUser();
         when(ssoConsentService.isSSOConsentManagementEnabled(any())).thenReturn(true);
+        OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = new OIDCScopeClaimCacheEntry();
+        oidcScopeClaimCacheEntry.setScopeClaimMapping(getScopeDTOList());
+        OIDCScopeClaimCache.getInstance().addScopeClaimMap(-1234, oidcScopeClaimCacheEntry);
         Map<String, Object> claimFilter = openIDConnectClaimFilter
                 .getClaimsFilteredByUserConsent(claims, user, CLIENT_ID, SP_TENANT_DOMAIN);
         Assert.assertEquals(((ScopeDTO) claimFilter.get("testUserClaimURI")).getName(), "email");

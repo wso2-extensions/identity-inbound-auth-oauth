@@ -82,6 +82,8 @@ import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
+import org.wso2.carbon.user.core.UniqueIDUserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -1315,6 +1317,10 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         userStoreManager = realmService.getTenantUserRealm(IdentityTenantUtil.getTenantId(authenticatedUser
                 .getTenantDomain())).getUserStoreManager();
+        if (userStoreManager instanceof AbstractUserStoreManager &&
+                ((AbstractUserStoreManager) userStoreManager).isUniqueUserIdEnabled()) {
+            authenticatedUser.setUserId(authenticatedUser.getAuthenticatedSubjectIdentifier());
+        }
 
         if (log.isDebugEnabled()) {
             log.debug("Checking whether the user exists in local user store");
@@ -1332,6 +1338,11 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
     private boolean userDoesNotExist(UserStoreManager userStoreManager, AuthenticatedUser authenticatedUser)
             throws UserStoreException {
 
+        if (userStoreManager instanceof AbstractUserStoreManager &&
+                ((AbstractUserStoreManager) userStoreManager).isUniqueUserIdEnabled()) {
+            return !((UniqueIDUserStoreManager) userStoreManager).isExistingUserWithID
+                    (authenticatedUser.getAuthenticatedSubjectIdentifier());
+        }
         return !userStoreManager.isExistingUser(authenticatedUser.getUsernameAsSubjectIdentifier(true, false));
     }
 

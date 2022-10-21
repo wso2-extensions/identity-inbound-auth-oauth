@@ -28,7 +28,10 @@ import java.util.List;
 /**
  * This is the DataHolder class of DynamicClientRegistration bundle. This holds a reference to the
  * ApplicationManagementService.
+ * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
+ * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
+@Deprecated
 public class DCRDataHolder {
 
     private static DCRDataHolder thisInstance = new DCRDataHolder();
