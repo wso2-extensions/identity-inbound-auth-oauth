@@ -69,13 +69,18 @@ public interface ScopeValidator {
     /**
      * Validate consent required scopes.
      *
-     * @return Name of the scope validator.
+     * @return validated scopes.
      */
     default List<String> getValidatedScopes(AuthenticatedUser user, OAuth2Parameters params)
             throws IdentityOAuth2Exception {
         return new ArrayList<>(params.getScopes());
     }
 
+    /**
+     * Get the friendly name of the implemented scope validator.
+     *
+     * @return Name of the scope validator.
+     */
     String getName();
 }
 

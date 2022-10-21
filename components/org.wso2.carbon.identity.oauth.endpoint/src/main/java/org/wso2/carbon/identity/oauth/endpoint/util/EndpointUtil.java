@@ -1015,6 +1015,7 @@ public class EndpointUtil {
      */
     private static void validateConsentRequiredScopes(AuthenticatedUser user, OAuth2Parameters params)
             throws OAuthSystemException {
+
         List<ScopeValidator> globalScopeValidators = OAuthUtil.getScopeValidators();
         for (ScopeValidator validator : globalScopeValidators) {
             if (log.isDebugEnabled()) {
