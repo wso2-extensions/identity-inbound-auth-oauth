@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuthenticator;
@@ -55,6 +56,7 @@ import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthent
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
+import org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
@@ -69,6 +71,8 @@ import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
+import org.wso2.carbon.identity.organization.management.role.management.service.RoleManager;
+import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
@@ -92,7 +96,9 @@ import javax.xml.stream.XMLStreamReader;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabled;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkConsentedTokenColumnAvailable;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkLegacyAudiencesEnabled;
 
 /**
  * OAuth 2 OSGi service component.
@@ -192,6 +198,9 @@ public class OAuth2ServiceComponent {
                 bundleContext.registerService(TokenBinderInfo.class.getName(), deviceFlowTokenBinder, null);
             }
 
+            bundleContext.registerService(ResponseTypeRequestValidator.class.getName(),
+                    new DeviceFlowResponseTypeRequestValidator(), null);
+
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
             }
@@ -274,15 +283,18 @@ public class OAuth2ServiceComponent {
             throw new RuntimeException(errMsg, e);
         }
         if (checkAudienceEnabled()) {
-            if (log.isDebugEnabled()) {
-                log.debug("OAuth - OIDC audiences enabled.");
-            }
+            log.debug("OAuth Audiences enabled.");
             OAuth2ServiceComponentHolder.setAudienceEnabled(true);
         } else {
-            if (log.isDebugEnabled()) {
-                log.debug("OAuth - OIDC audiences disabled.");
-            }
+            log.debug("OAuth Legacy audiences disabled.");
             OAuth2ServiceComponentHolder.setAudienceEnabled(false);
+        }
+        if (checkLegacyAudiencesEnabled()) {
+            log.debug("OAuth Legacy audiences enabled.");
+            OAuth2ServiceComponentHolder.setLegacyAudienceEnabled(true);
+        } else {
+            log.debug("OAuth Legacy audiences disabled.");
+            OAuth2ServiceComponentHolder.setLegacyAudienceEnabled(false);
         }
         if (checkIDPIdColumnAvailable()) {
             if (log.isDebugEnabled()) {
@@ -296,6 +308,18 @@ public class OAuth2ServiceComponent {
                         "Setting isIDPIdColumnEnabled to false.");
             }
             OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(false);
+        }
+
+        boolean isConsentedTokenColumnAvailable = checkConsentedTokenColumnAvailable();
+        OAuth2ServiceComponentHolder.setConsentedTokenColumnEnabled(isConsentedTokenColumnAvailable);
+        if (log.isDebugEnabled()) {
+            if (isConsentedTokenColumnAvailable) {
+                log.debug("CONSENTED_TOKEN column is available in IDN_OAUTH2_ACCESS_TOKEN table. Hence setting " +
+                        "consentedColumnAvailable to true.");
+            } else {
+                log.debug("CONSENTED_TOKEN column is not available in IDN_OAUTH2_ACCESS_TOKEN table. Hence " +
+                        "setting consentedColumnAvailable to false.");
+            }
         }
     }
 
@@ -420,6 +444,27 @@ public class OAuth2ServiceComponent {
         }
     }
 
+    @Reference(name = "response.type.request.validator",
+            service = ResponseTypeRequestValidator.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetResponseTypeRequestValidator")
+    protected void setResponseTypeRequestValidator(ResponseTypeRequestValidator validator) {
+
+        OAuth2ServiceComponentHolder.getInstance().addResponseTypeRequestValidator(validator);
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the response type request validator for: " + validator.getResponseType());
+        }
+    }
+
+    protected void unsetResponseTypeRequestValidator(ResponseTypeRequestValidator validator) {
+
+        OAuth2ServiceComponentHolder.getInstance().removeResponseTypeRequestValidator(validator);
+        if (log.isDebugEnabled()) {
+            log.debug("Un-setting the response type request validator for: " + validator.getResponseType());
+        }
+    }
+
     @Reference(
             name = "framework.authentication.data.publisher",
             service = AuthenticationDataPublisher.class,
@@ -541,6 +586,55 @@ public class OAuth2ServiceComponent {
         if (log.isDebugEnabled()) {
             log.debug("Scope Claim DAO implementation got removed: " + scopeClaimMappingDAO.getClass().getName());
         }
+    }
+
+    @Reference(
+            name = "carbon.organization.management.role.management.component",
+            service = RoleManager.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationRoleManager"
+    )
+    protected void setOrganizationRoleManager(RoleManager roleManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting organization role management service");
+        }
+        OAuth2ServiceComponentHolder.setRoleManager(roleManager);
+    }
+
+    protected void unsetOrganizationRoleManager(RoleManager roleManager) {
+
+        OAuth2ServiceComponentHolder.setRoleManager(null);
+        if (log.isDebugEnabled()) {
+            log.debug("Unset organization role management service.");
+        }
+    }
+
+    @Reference(
+            name = "organization.user.resident.resolver.service",
+            service = OrganizationUserResidentResolverService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationUserResidentResolverService"
+    )
+    protected void setOrganizationUserResidentResolverService(
+            OrganizationUserResidentResolverService organizationUserResidentResolverService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the organization user resident resolver service.");
+        }
+        OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(
+                organizationUserResidentResolverService);
+    }
+
+    protected void unsetOrganizationUserResidentResolverService(
+            OrganizationUserResidentResolverService organizationUserResidentResolverService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unset organization user resident resolver service.");
+        }
+        OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(null);
     }
 
     private static void loadScopeConfigFile() {

@@ -28,6 +28,7 @@ import java.util.List;
 /**
  * OAuth DCRM handler manager.
  */
+@Deprecated
 public class HandlerManager {
 
     private static volatile HandlerManager instance = new HandlerManager();

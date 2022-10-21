@@ -125,6 +125,10 @@ public final class OAuthConstants {
     //Constants used for OAuth/OpenID Connect Configuration UI
     public static final String CALLBACK_URL_REGEXP_PREFIX = "regexp=";
 
+
+    public static final String LOOPBACK_IP_REGEX = "(.*127\\.0\\.0\\.1.*|.*\\[::1].*)";
+    public static final String LOOPBACK_IP_PORT_REGEX = "(?<=127\\.0\\.0\\.1|\\[::1])(:[0-9]{1,5})";
+
     public static final String AUTHORIZATION_CODE_STORE_TABLE = "IDN_OAUTH2_AUTHORIZATION_CODE";
 
     //Constants used for OAuth Secret Revoke and Regeneration
@@ -155,6 +159,9 @@ public final class OAuthConstants {
 
     //JWT claim for authorized user type
     public static final String AUTHORIZED_USER_TYPE = "aut";
+
+    // Context tenant domain passed with request parameters.
+    public static final String TENANT_DOMAIN_FROM_CONTEXT = "tenant_domain_from_context";
 
     private OAuthConstants() {
 

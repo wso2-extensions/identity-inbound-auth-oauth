@@ -164,7 +164,13 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                     currentTimeInMillis));
         }
 
-        List<String> audience = OAuth2Util.getOIDCAudience(clientId, oAuthAppDO);
+        List<String> audience = new ArrayList<>();
+
+        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+            audience = OAuth2Util.getOIDCAudience(clientId, oAuthAppDO);
+        } else {
+            audience = OAuth2Util.getOIDCIdTokenAudience(clientId, oAuthAppDO);
+        }
 
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         jwtClaimsSetBuilder.issuer(idTokenIssuer);
@@ -193,6 +199,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         tokenReqMsgCtxt.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
         tokenReqMsgCtxt.addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(tokenReqMsgCtxt));
+        if (tokenRespDTO.getIsConsentedToken()) {
+            tokenReqMsgCtxt.setConsentedToken(tokenRespDTO.getIsConsentedToken());
+        }
         jwtClaimsSetBuilder.subject(subjectClaim);
         JWTClaimsSet jwtClaimsSet = handleOIDCCustomClaims(tokenReqMsgCtxt, jwtClaimsSetBuilder);
 
@@ -252,7 +261,13 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         jwtClaimsSetBuilder.issuer(issuer);
 
         // Set the audience
-        List<String> audience = OAuth2Util.getOIDCAudience(clientId, oAuthAppDO);
+        List<String> audience = new ArrayList<>();
+
+        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+            audience = OAuth2Util.getOIDCAudience(clientId, oAuthAppDO);
+        } else {
+            audience = OAuth2Util.getOIDCIdTokenAudience(clientId, oAuthAppDO);
+        }
         jwtClaimsSetBuilder.audience(audience);
 
         jwtClaimsSetBuilder.claim(AZP, clientId);

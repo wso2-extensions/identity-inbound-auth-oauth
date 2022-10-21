@@ -409,7 +409,7 @@ public class TokenValidationHandler {
             throws IdentityOAuth2Exception {
 
         OAuth2IntrospectionResponseDTO introResp = new OAuth2IntrospectionResponseDTO();
-        AccessTokenDO accessTokenDO;
+        AccessTokenDO accessTokenDO = null;
         List<String> requestedAllowedScopes = new ArrayList<>();
 
         if (messageContext.getProperty(OAuth2Util.REMOTE_ACCESS_TOKEN) != null
@@ -474,8 +474,18 @@ public class TokenValidationHandler {
             if (accessTokenDO.getValidityPeriodInMillis() < 0) {
                 introResp.setExp(Long.MAX_VALUE);
             } else {
-                introResp.setExp(
-                        (accessTokenDO.getValidityPeriodInMillis() + accessTokenDO.getIssuedTime().getTime()) / 1000);
+                if (accessTokenDO.getValidityPeriodInMillis() + accessTokenDO.getIssuedTime().getTime() < 0) {
+                    // When the access token have a long validity period (eg: 9223372036854775000), the calculated
+                    // expiry time will be a negative value. The reason is that, max value of long data type of Java is
+                    // "9223372036854775807". So, when the addition of the validity period and the issued time exceeds
+                    // this max value, it will result in a negative value. In those instances, we set the expiry time as
+                    // the max value of long data type.
+                    introResp.setExp(Long.MAX_VALUE);
+                } else {
+                    introResp.setExp(
+                            (accessTokenDO.getValidityPeriodInMillis() + accessTokenDO.getIssuedTime().getTime()) /
+                                    1000);
+                }
             }
 
             // should be in seconds
@@ -548,7 +558,14 @@ public class TokenValidationHandler {
             return buildIntrospectionErrorResponse("Scope validation failed");
         }
 
+        // Add requested allowed scopes to the message context.
         addAllowedScopes(messageContext, requestedAllowedScopes.toArray(new String[0]));
+
+        // Add requested allowed scopes and validated scopes to introResp.
+        if (accessTokenDO != null) {
+            addScopesToIntrospectionResponse(introResp, accessTokenDO, requestedAllowedScopes.toArray(new String[0]));
+        }
+
         // All set. mark the token active.
         introResp.setActive(true);
         return introResp;
@@ -742,5 +759,13 @@ public class TokenValidationHandler {
         String[] scopes = oAuth2TokenValidationMessageContext.getResponseDTO().getScope();
         String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, allowedScopes);
         oAuth2TokenValidationMessageContext.getResponseDTO().setScope(scopesToReturn);
+    }
+
+    private void addScopesToIntrospectionResponse(OAuth2IntrospectionResponseDTO introResp, AccessTokenDO accessTokenDO,
+                                                  String[] requestedAllowedScopes) {
+
+        String[] validatedScopes = accessTokenDO.getScope();
+        String[] scopesToReturn = (String[]) ArrayUtils.addAll(validatedScopes, requestedAllowedScopes);
+        introResp.setScope(OAuth2Util.buildScopeString((scopesToReturn)));
     }
 }

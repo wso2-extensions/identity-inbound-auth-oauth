@@ -302,7 +302,18 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         // Fetching AccessTokenDO from DB before revoking the token.
         AccessTokenDO accessTokenDO = null;
         if (StringUtils.isNotBlank(accessToken)) {
-            accessTokenDO = OAuth2Util.getAccessTokenDOFromTokenIdentifier(accessToken, true);
+            try {
+                accessTokenDO = OAuth2Util.getAccessTokenDOFromTokenIdentifier(accessToken, true);
+            } catch (IllegalArgumentException e) {
+                if (StringUtils.equals(OAuth2Util.ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE, e.getMessage())) {
+                    if (log.isDebugEnabled()) {
+                        log.debug(String.format("Invalid token id: %s was found while revoking the access token",
+                                tokenId));
+                    }
+                } else {
+                    throw e;
+                }
+            }
         }
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessToken(tokenId, userId);
         clearAccessTokenOAuthCache(accessTokenDO);

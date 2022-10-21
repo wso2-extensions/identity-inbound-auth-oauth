@@ -89,23 +89,20 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
     private String retrieveTokenBindingValueFromRequest(HttpServletRequest request) throws OAuthSystemException {
 
         Cookie[] cookies = request.getCookies();
-        if (ArrayUtils.isEmpty(cookies)) {
-            throw new OAuthSystemException("Failed to retrieve token binding value.");
-        }
-
-        Optional<Cookie> commonAuthCookieOptional = Arrays.stream(cookies)
-                .filter(t -> COMMONAUTH_COOKIE.equals(t.getName())).findAny();
         String commonAuthCookieValueFromRequestAttribute = (String) request.getAttribute(COMMONAUTH_COOKIE);
+        if (ArrayUtils.isNotEmpty(cookies)) {
+            Optional<Cookie> commonAuthCookieOptional = Arrays.stream(cookies)
+                    .filter(t -> COMMONAUTH_COOKIE.equals(t.getName())).findAny();
 
-        if ((!commonAuthCookieOptional.isPresent() || StringUtils.isBlank(commonAuthCookieOptional.get().getValue()))
-                && StringUtils.isEmpty(commonAuthCookieValueFromRequestAttribute)) {
-            throw new OAuthSystemException("Failed to retrieve token binding value.");
+            if (commonAuthCookieOptional.isPresent() &&
+                    StringUtils.isNotBlank(commonAuthCookieOptional.get().getValue())) {
+                return DigestUtils.sha256Hex(commonAuthCookieOptional.get().getValue());
+            }
         }
-
-        // Get the session context key value form common auth cookie value.
-        return commonAuthCookieOptional
-                .map(cookie -> DigestUtils.sha256Hex(cookie.getValue()))
-                .orElseGet(() -> DigestUtils.sha256Hex(commonAuthCookieValueFromRequestAttribute));
+        if (StringUtils.isNotEmpty(commonAuthCookieValueFromRequestAttribute)) {
+            return DigestUtils.sha256Hex(commonAuthCookieValueFromRequestAttribute);
+        }
+        throw new OAuthSystemException("Failed to retrieve token binding value.");
     }
 
     @Override

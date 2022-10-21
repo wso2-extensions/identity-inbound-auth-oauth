@@ -138,8 +138,7 @@ public class AccessTokenIssuer {
      * @throws IdentityException
      * @throws InvalidOAuthClientException
      */
-    public OAuth2AccessTokenRespDTO issue(OAuth2AccessTokenReqDTO tokenReqDTO)
-            throws IdentityException {
+    public OAuth2AccessTokenRespDTO issue(OAuth2AccessTokenReqDTO tokenReqDTO) throws IdentityException {
 
         String grantType = tokenReqDTO.getGrantType();
         OAuth2AccessTokenRespDTO tokenRespDTO = null;
@@ -256,7 +255,7 @@ public class AccessTokenIssuer {
         // Indirectly we can say that the tenantDomain of the SP is the tenantDomain of the user who created SP.
         // This is done to avoid having to send the tenantDomain as a query param to the token endpoint
         String tenantDomainOfApp = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-        validateRequestTenantDomain(tenantDomainOfApp);
+        validateRequestTenantDomain(tenantDomainOfApp, tokenReqDTO);
 
         tokenReqDTO.setTenantDomain(tenantDomainOfApp);
 
@@ -323,8 +322,16 @@ public class AccessTokenIssuer {
             }
         }
 
-        if (tokReqMsgCtx.getAuthorizedUser() != null && tokReqMsgCtx.getAuthorizedUser().isFederatedUser()) {
-            tokReqMsgCtx.getAuthorizedUser().setTenantDomain(tenantDomainOfApp);
+        AuthenticatedUser authenticatedUser = tokReqMsgCtx.getAuthorizedUser();
+        if (authenticatedUser != null && authenticatedUser.isFederatedUser()) {
+            boolean skipTenantDomainOverWriting = false;
+            if (authenticatedUser.getTenantDomain() != null) {
+                skipTenantDomainOverWriting = OAuth2Util.isFederatedRoleBasedAuthzEnabled(tokReqMsgCtx);
+            }
+            // If federated role-based authorization is engaged skip overwriting the user tenant domain.
+            if (!skipTenantDomainOverWriting) {
+                authenticatedUser.setTenantDomain(tenantDomainOfApp);
+            }
         }
 
         if (!isValidGrant) {

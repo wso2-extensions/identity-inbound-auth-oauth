@@ -48,6 +48,7 @@ import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -55,6 +56,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
+import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -380,6 +382,19 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             throws IdentityOAuth2Exception {
 
         tokReqMsgCtx.addProperty(EXISTING_TOKEN_ISSUED, true);
+        String requestGrantType = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType();
+        /* When issuing the existing access token, that access token may be originated from a different grant
+        type. The origin grant type can be a consent required one. If the existing token is issued previously
+        for a consent not required grant and the current grant requires consent, we update the existing token as
+        a consented token. */
+        boolean isConsentRequiredGrant = OIDCClaimUtil.
+                isConsentBasedClaimFilteringApplicable(requestGrantType);
+        if (isConsentRequiredGrant && !existingTokenBean.isConsentedToken()) {
+            existingTokenBean.setIsConsentedToken(true);
+            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().updateTokenIsConsented(
+                    existingTokenBean.getTokenId(), true);
+        }
+
         setDetailsToMessageContext(tokReqMsgCtx, existingTokenBean);
         return createResponseWithTokenBean(existingTokenBean, expireTime, scope);
     }
@@ -448,6 +463,18 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         newTokenBean.setTenantID(OAuth2Util.getTenantId(tenantDomain));
         newTokenBean.setTokenId(UUID.randomUUID().toString());
         newTokenBean.setGrantType(tokenReq.getGrantType());
+        /* If the existing token is available, the consented token flag will be extracted from that. Otherwise,
+        from the current grant. */
+        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+            if (existingTokenBean != null) {
+                newTokenBean.setIsConsentedToken(existingTokenBean.isConsentedToken());
+            } else {
+                if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(tokenReq.getGrantType())) {
+                    newTokenBean.setIsConsentedToken(true);
+                }
+            }
+            tokReqMsgCtx.setConsentedToken(newTokenBean.isConsentedToken());
+        }
         newTokenBean.setTokenType(getTokenType());
         newTokenBean.setIssuedTime(timestamp);
         newTokenBean.setAccessToken(getNewAccessToken(tokReqMsgCtx, oauthTokenIssuer));
@@ -687,6 +714,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             tokenRespDTO.setExpiresInMillis(Long.MAX_VALUE);
         }
         tokenRespDTO.setAuthorizedScopes(scope);
+        tokenRespDTO.setIsConsentedToken(existingAccessTokenDO.isConsentedToken());
         return tokenRespDTO;
     }
 

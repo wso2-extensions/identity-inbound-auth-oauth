@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -51,8 +52,11 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
@@ -61,6 +65,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
@@ -174,9 +179,14 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         String token = getAccessToken(requestMsgCtx);
         String authorizationCode = getAuthorizationCode(requestMsgCtx);
         String grantType = requestMsgCtx.getOauth2AccessTokenReqDTO().getGrantType();
+        // Get the flag which has the record whether the token is a consented one or not.
+        boolean isConsentedToken = false;
+        if (requestMsgCtx.isConsentedToken()) {
+            isConsentedToken = requestMsgCtx.isConsentedToken();
+        }
 
-        return filterOIDCClaims(token, authorizationCode, grantType, userClaimsInOIDCDialect, user, approvedScopes,
-                clientId, spTenantDomain);
+        return filterOIDCClaims(token, authorizationCode, grantType, userClaimsInOIDCDialect, user,
+                approvedScopes, clientId, spTenantDomain, isConsentedToken);
     }
 
 
@@ -187,7 +197,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                                                  AuthenticatedUser authenticatedUser,
                                                  String[] approvedScopes,
                                                  String clientId,
-                                                 String spTenantDomain) throws OAuthSystemException {
+                                                 String spTenantDomain,
+                                                 boolean isConsentedToken) throws OAuthSystemException {
         Map<String, Object> filteredUserClaimsByOIDCScopes =
                 filterClaimsByScope(userClaimsInOIDCDialect, approvedScopes, clientId, spTenantDomain);
 
@@ -215,7 +226,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
         // Restrict the claims based on user consent given
         return getUserConsentedClaims(filteredUserClaimsByOIDCScopes, authenticatedUser, grantType, clientId,
-                spTenantDomain);
+                spTenantDomain, isConsentedToken);
     }
 
     private boolean isPreserverClaimUrisInAssertion(OAuthTokenReqMessageContext requestMsgCtx) {
@@ -242,7 +253,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                                                        AuthenticatedUser authenticatedUser,
                                                        String grantType,
                                                        String clientId,
-                                                       String spTenantDomain) throws OAuthSystemException {
+                                                       String spTenantDomain,
+                                                       boolean isConsentedToken) throws OAuthSystemException {
 
         ServiceProvider serviceProvider;
         try {
@@ -254,7 +266,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         }
 
         return OIDCClaimUtil.filterUserClaimsBasedOnConsent(userClaims, authenticatedUser, clientId,
-                spTenantDomain, grantType, serviceProvider);
+                spTenantDomain, grantType, serviceProvider, isConsentedToken);
     }
 
     private Map<ClaimMapping, String> getCachedUserAttributes(OAuthTokenReqMessageContext requestMsgCtx) {
@@ -308,13 +320,15 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
     private Map<String, Object> retrieveClaimsForLocalUser(OAuthTokenReqMessageContext requestMsgCtx)
             throws IdentityOAuth2Exception {
+
         try {
             String spTenantDomain = getServiceProviderTenantDomain(requestMsgCtx);
             String clientId = requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
             AuthenticatedUser authenticatedUser = requestMsgCtx.getAuthorizedUser();
 
             return getUserClaimsInOIDCDialect(spTenantDomain, clientId, authenticatedUser);
-        } catch (UserStoreException | IdentityApplicationManagementException | IdentityException e) {
+        } catch (UserStoreException | IdentityApplicationManagementException | IdentityException |
+                 OrganizationManagementException e) {
             if (FrameworkUtils.isContinueOnClaimHandlingErrorAllowed()) {
                 log.error("Error occurred while getting claims for user: " + requestMsgCtx.getAuthorizedUser() +
                         " from userstore.", e);
@@ -411,20 +425,22 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         String[] approvedScopes = authzReqMessageContext.getApprovedScope();
         String accessToken = getAccessToken(authzReqMessageContext);
         String grantType = OAuthConstants.GrantTypes.IMPLICIT;
-
+        boolean isConsentedGrant = OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(grantType);
         return filterOIDCClaims(accessToken, StringUtils.EMPTY, grantType, userClaimsInOIDCDialect, user,
-                approvedScopes, clientId, spTenantDomain);
+                approvedScopes, clientId, spTenantDomain, isConsentedGrant);
     }
 
     private Map<String, Object> retrieveClaimsForLocalUser(OAuthAuthzReqMessageContext authzReqMessageContext)
             throws IdentityOAuth2Exception {
+
         try {
             String spTenantDomain = getServiceProviderTenantDomain(authzReqMessageContext);
             String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
             AuthenticatedUser authenticatedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
 
             return getUserClaimsInOIDCDialect(spTenantDomain, clientId, authenticatedUser);
-        } catch (UserStoreException | IdentityApplicationManagementException | IdentityException e) {
+        } catch (UserStoreException | IdentityApplicationManagementException | IdentityException |
+                 OrganizationManagementException e) {
             if (FrameworkUtils.isContinueOnClaimHandlingErrorAllowed()) {
                 log.error("Error occurred while getting claims for user " +
                         authzReqMessageContext.getAuthorizationReqDTO().getUser(), e);
@@ -456,7 +472,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     private Map<String, Object> getUserClaimsInOIDCDialect(String spTenantDomain,
                                                            String clientId,
                                                            AuthenticatedUser authenticatedUser)
-            throws IdentityApplicationManagementException, IdentityException, UserStoreException {
+            throws IdentityApplicationManagementException, IdentityException, UserStoreException,
+            OrganizationManagementException {
 
         Map<String, Object> userClaimsMappedToOIDCDialect = new HashMap<>();
         ServiceProvider serviceProvider = getServiceProvider(spTenantDomain, clientId);
@@ -475,9 +492,30 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             }
             return userClaimsMappedToOIDCDialect;
         }
-
-        String userTenantDomain = authenticatedUser.getTenantDomain();
-        String fullQualifiedUsername = authenticatedUser.toFullQualifiedUsername();
+        String userTenantDomain;
+        String fullQualifiedUsername;
+        if (StringUtils.isNotBlank(authenticatedUser.getUserId())) {
+            String userId = authenticatedUser.getUserId();
+            userTenantDomain = authenticatedUser.getTenantDomain();
+            int tenantId = IdentityTenantUtil.getTenantId(userTenantDomain);
+            Tenant tenant =
+                    OAuthComponentServiceHolder.getInstance().getRealmService().getTenantManager().getTenant(tenantId);
+            if (tenant != null && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID())) {
+                Optional<User> user = OAuth2ServiceComponentHolder.getOrganizationUserResidentResolverService()
+                        .resolveUserFromResidentOrganization(null, userId, tenant.getAssociatedOrganizationUUID());
+                if (!user.isPresent()) {
+                    return userClaimsMappedToOIDCDialect;
+                }
+                userTenantDomain = user.get().getTenantDomain();
+                fullQualifiedUsername = user.get().getFullQualifiedUsername();
+            } else {
+                userTenantDomain = authenticatedUser.getTenantDomain();
+                fullQualifiedUsername = authenticatedUser.toFullQualifiedUsername();
+            }
+        } else {
+            userTenantDomain = authenticatedUser.getTenantDomain();
+            fullQualifiedUsername = authenticatedUser.toFullQualifiedUsername();
+        }
         UserRealm realm = IdentityTenantUtil.getRealm(userTenantDomain, fullQualifiedUsername);
         if (realm == null) {
             log.warn("Invalid tenant domain: " + userTenantDomain + " provided. Cannot get claims for user: "

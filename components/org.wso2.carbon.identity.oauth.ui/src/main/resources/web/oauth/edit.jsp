@@ -19,6 +19,7 @@
 <%@ page import="org.apache.commons.lang.StringUtils" %>
 <%@ page import="org.owasp.encoder.Encode" %>
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
+<%@ page import="org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder" %>
 <%@ page import="org.wso2.carbon.identity.oauth.common.OAuthConstants" %>
 <%@ page import="org.wso2.carbon.identity.oauth.stub.dto.OAuthConsumerAppDTO" %>
 <%@ page import="org.wso2.carbon.identity.oauth.stub.dto.TokenBindingMetaDataDTO" %>
@@ -65,6 +66,10 @@
     String action = null;
     String grants = null;
     String[] audiences = null;
+    String[] idTokenAudiences = null;
+    String[] accessTokenAudiences = null;
+    String accessTokenAudienceTableStyle = "display:none";
+    String idTokenAudienceTableStyle = "display:none";
     String audienceTableStyle = "display:none";
     List<String> allowedScopeValidators = new ArrayList<String>();
     List<String> scopeValidators = new ArrayList<String>();
@@ -95,7 +100,7 @@
         supportedIdTokenEncryptionMethods =
                 client.getSupportedIDTokenAlgorithms().getSupportedIdTokenEncryptionMethods();
         supportedTokenBindingsMetaData = client.getSupportedTokenBindingsMetaData();
-        
+
         if (consumerkey != null) {
             app = client.getOAuthApplicationData(consumerkey);
         } else {
@@ -178,7 +183,13 @@
                 } else {
                     grants = "";
                 }
-                audiences = app.getAudiences();
+
+                if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                    audiences = app.getAudiences();
+                } else {
+                    idTokenAudiences = app.getIdTokenAudiences();
+                    accessTokenAudiences = app.getAccessTokenAudiences();
+                }
                 String[] val = app.getScopeValidators();
                 if (val != null) {
                     scopeValidators = Arrays.asList(val);
@@ -231,6 +242,8 @@
             <script type="text/javascript">
 
                 var audienceArr = [];
+                var idTokenAudienceArr = [];
+                var accessTokenAudienceArr = [];
 
                 function onClickUpdate() {
                     var versionValue = document.getElementsByName("oauthVersion")[0].value;
@@ -282,10 +295,12 @@
                     var versionValue = document.getElementsByName("oauthVersion")[0].value;
 
                     if (versionValue === '<%= OAuthConstants.OAuthVersions.VERSION_2%>') {
+                        <%  if (allowedGrants.contains("refresh_token")) { %>
                         if (!$(jQuery("#grant_refresh_token"))[0].checked) {
                             document.getElementById("renewRefreshTokenPerApp").checked = true;
                             document.getElementById("renewRefreshTokenPerApp").value = 'notAssigned';
                         }
+                        <%  } %>
 
                         if (!$(jQuery("#grant_authorization_code"))[0].checked && !$(jQuery("#grant_implicit"))[0].checked) {
                             document.getElementsByName("callback")[0].value = '';
@@ -357,9 +372,22 @@
                         $(jQuery('#idTokenPlain').hide());
                         $(jQuery('#logout_mechanism_row').hide());
                         $(jQuery('#logout_url_row').hide());
-                        $(jQuery("#audience-enable").hide());
-                        $(jQuery("#audience-add").hide());
-                        $(jQuery("#audience-table").show());
+
+                        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                            $(jQuery("#audience-enable").hide());
+                            $(jQuery("#audience-add").hide());
+                            $(jQuery("#audience-table").hide());
+
+                        } else {
+                            $(jQuery("#id_token_audience_enable").hide());
+                            $(jQuery("#id_token_audience_add").hide());
+                            $(jQuery("#id_token_audience_table").hide());
+                            $(jQuery("#access_token_audience_enable").hide());
+                            $(jQuery("#access_token_audience_add").hide());
+                            $(jQuery("#access_token_audience_table").hide());
+
+                        }
+
                         $(jQuery("#validate_request_object_signature").hide());
                         $(jQuery("#encrypt_id_token").hide());
                         $(jQuery('#encryption_method_row')).hide();
@@ -380,9 +408,21 @@
                         $(jQuery('#applicationAccessTokenPlain').show());
                         $(jQuery('#refreshTokenPlain').show());
                         $(jQuery('#idTokenPlain').show());
-                        $(jQuery("#audience-enable").show());
-                        $(jQuery("#audience-add").show());
-                        $(jQuery("#audience-table").show());
+
+                        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                            $(jQuery("#audience-enable").show());
+                            $(jQuery("#audience-add").show());
+                            $(jQuery("#audience-table").show());
+
+                        } else {
+                            $(jQuery("#id_token_audience_enable").show());
+                            $(jQuery("#id_token_audience_add").show());
+                            $(jQuery("#id_token_audience_table").show());
+                            $(jQuery("#access_token_audience_enable").show());
+                            $(jQuery("#access_token_audience_add").show());
+                            $(jQuery("#access_token_audience_table").show());
+
+                        }
                         $(jQuery("#validate_request_object_signature").show());
                         $(jQuery("#encrypt_id_token").show());
                         $(jQuery('#encryption_method_row')).show();
@@ -465,10 +505,19 @@
                     document.editAppform.addAudience.disabled = (!chkbx.checked);
                 }
 
+                function toggleIdTokenAudienceRestriction(chkbx) {
+                    document.editAppform.id_token_audience.disabled = !chkbx.checked;
+                    document.editAppform.addIdTokenAudience.disabled = (!chkbx.checked);
+                }
+
+                function toggleAccessTokenAudienceRestriction(chkbx) {
+                    document.editAppform.access_token_audience.disabled = !chkbx.checked;
+                    document.editAppform.addAccessTokenAudience.disabled = (!chkbx.checked);
+                }
+
                 function toggleOidcLogout(chkbx) {
                     document.editAppform.logoutUrl.disabled = !chkbx.checked;
                 }
-
 
                 function addAudienceFunc() {
                     var audience = $.trim(document.getElementById('audience').value);
@@ -476,7 +525,6 @@
                         document.getElementById("audience").value = "";
                         return false;
                     }
-
                     if ($.inArray(audience, audienceArr) !== -1) {
                         CARBON.showWarningDialog('<fmt:message key="duplicate.audience.value"/>');
                         document.getElementById("audience").value = "";
@@ -484,6 +532,41 @@
                     }
                     audienceArr.push(audience);
                     var propertyCount = document.getElementById("audiencePropertyCounter");
+                    var i = propertyCount.value;
+                    var currentCount = parseInt(i);
+                    currentCount = currentCount + 1;
+                    propertyCount.value = currentCount;
+                    document.getElementById('audienceTableId').style.display = '';
+                    var audienceTableTBody = document.getElementById('audienceTableTbody');
+                    var audienceRow = document.createElement('tr');
+                    audienceRow.setAttribute('id', 'audienceRow' + i);
+                    var audience = document.getElementById('audience').value;
+                    var audiencePropertyTD = document.createElement('td');
+                    audiencePropertyTD.setAttribute('style', 'padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;');
+                    audiencePropertyTD.innerHTML = "" + audience + "<input type='hidden' name='audiencePropertyName' id='audiencePropertyName" + i + "'  value='" + audience + "'/> ";
+                    var audienceRemoveTD = document.createElement('td');
+                    audienceRemoveTD.innerHTML = "<a href='#' class='icon-link' style='background-image: url(../admin/images/delete.gif)' onclick='removeAudience(" + i + ");return false;'>" + "Delete" + "</a>";
+                    audienceRow.appendChild(audiencePropertyTD);
+                    audienceRow.appendChild(audienceRemoveTD);
+                    audienceTableTBody.appendChild(audienceRow);
+                    document.getElementById("audience").value = "";
+                    return true;
+                }
+
+                function addIdTokenAudienceFunc() {
+                    var idTokenAudience = $.trim(document.getElementById('id_token_audience').value);
+                    if (idTokenAudience === "") {
+                        document.getElementById("id_token_audience").value = "";
+                        return false;
+                    }
+
+                    if ($.inArray(idTokenAudience, idTokenAudienceArr) !== -1) {
+                        CARBON.showWarningDialog('<fmt:message key="duplicate.audience.value"/>');
+                        document.getElementById("id_token_audience").value = "";
+                        return false;
+                    }
+                    idTokenAudienceArr.push(idTokenAudience);
+                    var propertyCount = document.getElementById("idTokenAudiencePropertyCounter");
 
                     var i = propertyCount.value;
                     var currentCount = parseInt(i);
@@ -491,25 +574,68 @@
                     currentCount = currentCount + 1;
                     propertyCount.value = currentCount;
 
-                    document.getElementById('audienceTableId').style.display = '';
-                    var audienceTableTBody = document.getElementById('audienceTableTbody');
+                    document.getElementById('idTokenAudienceTableId').style.display = '';
+                    var idTokenAudienceTableTBody = document.getElementById('idTokenAudienceTableTbody');
 
                     var audienceRow = document.createElement('tr');
-                    audienceRow.setAttribute('id', 'audienceRow' + i);
+                    audienceRow.setAttribute('id', 'idTokenAudienceRow' + i);
 
-                    var audience = document.getElementById('audience').value;
+                    var idTokenAudience = document.getElementById('id_token_audience').value;
                     var audiencePropertyTD = document.createElement('td');
                     audiencePropertyTD.setAttribute('style', 'padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;');
-                    audiencePropertyTD.innerHTML = "" + audience + "<input type='hidden' name='audiencePropertyName' id='audiencePropertyName" + i + "'  value='" + audience + "'/> ";
+                    audiencePropertyTD.innerHTML = "" + idTokenAudience + "<input type='hidden' name='idTokenAudiencePropertyName' id='idTokenAudiencePropertyName" + i + "'  value='" + idTokenAudience + "'/> ";
 
                     var audienceRemoveTD = document.createElement('td');
-                    audienceRemoveTD.innerHTML = "<a href='#' class='icon-link' style='background-image: url(../admin/images/delete.gif)' onclick='removeAudience(" + i + ");return false;'>" + "Delete" + "</a>";
+                    audienceRemoveTD.innerHTML = "<a href='#' class='icon-link' style='background-image: url(../admin/images/delete.gif)' onclick='removeIdTokenAudience(" + i + ");return false;'>" + "Delete" + "</a>";
 
                     audienceRow.appendChild(audiencePropertyTD);
                     audienceRow.appendChild(audienceRemoveTD);
 
-                    audienceTableTBody.appendChild(audienceRow);
-                    document.getElementById("audience").value = "";
+                    idTokenAudienceTableTBody.appendChild(audienceRow);
+                    document.getElementById("id_token_audience").value = "";
+                    return true;
+                }
+
+                function addAccessTokenAudienceFunc() {
+                    var accessTokenAudience = $.trim(document.getElementById('access_token_audience').value);
+                    if (accessTokenAudience === "") {
+                        document.getElementById("access_token_audience").value = "";
+                        return false;
+                    }
+
+                    if ($.inArray(accessTokenAudience, accessTokenAudienceArr) !== -1) {
+                        CARBON.showWarningDialog('<fmt:message key="duplicate.audience.value"/>');
+                        document.getElementById("access_token_audience").value = "";
+                        return false;
+                    }
+                    accessTokenAudienceArr.push(accessTokenAudience);
+                    var propertyCount = document.getElementById("accessTokenAudiencePropertyCounter");
+
+                    var i = propertyCount.value;
+                    var currentCount = parseInt(i);
+
+                    currentCount = currentCount + 1;
+                    propertyCount.value = currentCount;
+
+                    document.getElementById('accessTokenAudienceTableId').style.display = '';
+                    var accessTokenAudienceTableTBody = document.getElementById('accessTokenAudienceTableTbody');
+
+                    var audienceRow = document.createElement('tr');
+                    audienceRow.setAttribute('id', 'accessTokenAudienceRow' + i);
+
+                    var accessTokenAudience = document.getElementById('access_token_audience').value;
+                    var audiencePropertyTD = document.createElement('td');
+                    audiencePropertyTD.setAttribute('style', 'padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;');
+                    audiencePropertyTD.innerHTML = "" + accessTokenAudience + "<input type='hidden' name='accessTokenAudiencePropertyName' id='accessTokenAudiencePropertyName" + i + "'  value='" + accessTokenAudience + "'/> ";
+
+                    var audienceRemoveTD = document.createElement('td');
+                    audienceRemoveTD.innerHTML = "<a href='#' class='icon-link' style='background-image: url(../admin/images/delete.gif)' onclick='removeAccessTokenAudience(" + i + ");return false;'>" + "Delete" + "</a>";
+
+                    audienceRow.appendChild(audiencePropertyTD);
+                    audienceRow.appendChild(audienceRemoveTD);
+
+                    accessTokenAudienceTableTBody.appendChild(audienceRow);
+                    document.getElementById("access_token_audience").value = "";
                     return true;
                 }
 
@@ -521,6 +647,34 @@
                             parentTBody.removeChild(propRow);
                             if (!isContainRaw(parentTBody)) {
                                 var propertyTable = document.getElementById("audienceTableId");
+                                propertyTable.style.display = "none";
+                            }
+                        }
+                    }
+                }
+
+                function removeIdTokenAudience(i) {
+                    var propRow = document.getElementById("idTokenAudienceRow" + i);
+                    if (propRow !== undefined && propRow !== null) {
+                        var parentTBody = propRow.parentNode;
+                        if (parentTBody !== undefined && parentTBody !== null) {
+                            parentTBody.removeChild(propRow);
+                            if (!isContainRaw(parentTBody)) {
+                                var propertyTable = document.getElementById("idTokenAudienceTableId");
+                                propertyTable.style.display = "none";
+                            }
+                        }
+                    }
+                }
+
+                function removeAccessTokenAudience(i) {
+                    var propRow = document.getElementById("accessTokenAudienceRow" + i);
+                    if (propRow !== undefined && propRow !== null) {
+                        var parentTBody = propRow.parentNode;
+                        if (parentTBody !== undefined && parentTBody !== null) {
+                            parentTBody.removeChild(propRow);
+                            if (!isContainRaw(parentTBody)) {
+                                var propertyTable = document.getElementById("accessTokenAudienceTableId");
                                 propertyTable.style.display = "none";
                             }
                         }
@@ -744,6 +898,9 @@
                                     </td>
                                     <td><input class="text-box-big" id="callback" name="callback"
                                                type="text" value="<%=Encode.forHtmlAttribute(app.getCallbackUrl())%>"/>
+                                        <div class="sectionHelp">
+                                            <fmt:message key='callback.url.hint'/>
+                                        </div>
                                     </td>
                                 </tr>
                                 <tr id="pkce_enable">
@@ -896,7 +1053,9 @@
                                         <fmt:message key='seconds'/>
                                     </td>
                                 </tr>
-                                <!-- EnableAudienceRestriction -->
+                                <%
+                                    if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                                %>
                                 <%
                                     audienceTableStyle = app.getAudiences() != null ? "" :
                                             "display:none";
@@ -959,7 +1118,7 @@
                                             <%
                                                 int j = 0;
                                                 if (app.getAudiences() != null) {
-                                            
+
                                             %>
                                             <%
                                                 for (String audience : audiences) {
@@ -997,8 +1156,216 @@
                                         </table>
                                     </td>
                                 </tr>
-                                
-                                
+                                <%
+                                    } else {
+                                %>
+                                    <!-- EnableAudienceRestriction -->
+                                    <%
+                                        idTokenAudienceTableStyle = app.getIdTokenAudiences() != null ? "" :
+                                                "display:none";
+                                        if (OAuthUIUtil.isAudienceNotEmpty(app.getIdTokenAudiences())) {
+                                    %>
+                                    <tr id="id_token_audience_enable">
+                                        <td colspan="2">
+                                            <label title="Enable ID Token Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
+                                                <input type="checkbox" name="enableIdTokenAudienceRestriction"
+                                                       id="enableIdTokenAudienceRestriction" value="true" checked="checked"
+                                                       onclick="toggleIdTokenAudienceRestriction(this);"/>
+                                                <fmt:message key="enable.id.token.audience.restriction"/>
+                                            </label>
+                                    </tr>
+                                    <tr id="id_token_audience_add">
+                                        <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                                            <fmt:message key="sp.id.token.audience"/>
+                                        </td>
+                                        <td>
+                                            <input type="text" id="id_token_audience" name="id_token_audience"
+                                                   class="text-box-big"/>
+                                            <input id="addIdTokenAudience" name="addIdTokenAudience"
+                                                   type="button"
+                                                   value="<fmt:message key="oauth.add.id.token.audience"/>"
+                                                   onclick="return addIdTokenAudienceFunc()"/>
+                                        </td>
+                                    </tr>
+                                    <% } else {%>
+
+                                    <tr id="id_token_audience_enable">
+                                        <td colspan="2">
+                                            <label title="Enable ID Token Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
+                                                <input type="checkbox" name="enableIdTokenAudienceRestriction"
+                                                       id="enableIdTokenAudienceRestriction" value="true"
+                                                       onclick="toggleIdTokenAudienceRestriction(this);"/>
+                                                <fmt:message key="enable.id.token.audience.restriction"/>
+                                            </label>
+                                        </td>
+                                    </tr>
+                                    <tr id="id_token_audience_add">
+                                        <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                                            <fmt:message key="sp.id.token.audience"/>
+                                        </td>
+                                        <td>
+                                            <input type="text" id="id_token_audience" name="id_token_audience"
+                                                   class="text-box-big" disabled="disabled"/>
+                                            <input id="addIdTokenAudience" name="addIdTokenAudience"
+                                                   type="button"
+                                                   disabled="disabled" value="<fmt:message key="oauth.add.id.token.audience"/>"
+                                                   onclick="return addIdTokenAudienceFunc()"/>
+                                        </td>
+                                    </tr>
+                                    <%} %>
+                                    <tr id="id_token_audience_table">
+                                        <td></td>
+                                        <td>
+                                            <table id="idTokenAudienceTableId"
+                                                   style="width: 40%; <%=idTokenAudienceTableStyle%>"
+                                                   class="styledInner">
+                                                <tbody id="idTokenAudienceTableTbody">
+                                                <%
+                                                    int j = 0;
+                                                    if (app.getIdTokenAudiences() != null) {
+
+                                                %>
+                                                <%
+                                                    for (String idTokenAudience : idTokenAudiences) {
+                                                        if (idTokenAudience != null &&
+                                                                !"null".equals(idTokenAudience)) {
+                                                %>
+                                                <tr id="idTokenAudienceRow<%=j%>">
+                                                    <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                                                        <input type="hidden"
+                                                               name="idTokenAudiencePropertyName"
+                                                               id="idTokenAudiencePropertyName<%=j%>"
+                                                               value="<%=Encode.forHtmlAttribute(idTokenAudience)%>"/>
+                                                        <%=Encode.forHtml(idTokenAudience)%>
+                                                    </td>
+                                                    <td>
+                                                        <a onclick="removeIdTokenAudience('<%=j%>');return false;"
+                                                           href="#" class="icon-link"
+                                                           style="background-image: url(../admin/images/delete.gif)">Delete
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                <%
+                                                            j++;
+                                                        }
+                                                    }
+                                                %>
+                                                <%
+                                                    }
+                                                %>
+                                                <input type="hidden"
+                                                       name="idTokenAudiencePropertyCounter"
+                                                       id="idTokenAudiencePropertyCounter"
+                                                       value="<%=j%>"/>
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+
+                                    <%
+                                        accessTokenAudienceTableStyle = app.getAccessTokenAudiences() != null ? "" :
+                                                "display:none";
+                                        if (OAuthUIUtil.isAudienceNotEmpty(app.getAccessTokenAudiences())) {
+                                    %>
+                                    <tr id="access_token_audience_enable">
+                                        <td colspan="2">
+                                            <label title="Enable Access Token Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
+                                                <input type="checkbox" name="enableAccessTokenAudienceRestriction"
+                                                       id="enableAccessTokenAudienceRestriction" value="true" checked="checked"
+                                                       onclick="toggleAccessTokenAudienceRestriction(this);"/>
+                                                <fmt:message key="enable.access.token.audience.restriction"/>
+                                            </label>
+                                    </tr>
+                                    <tr id="access_token_audience_add">
+                                        <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                                            <fmt:message key="sp.access.token.audience"/>
+                                        </td>
+                                        <td>
+                                            <input type="text" id="access_token_audience" name="access_token_audience"
+                                                   class="text-box-big"/>
+                                            <input id="addAccessTokenAudience" name="addAccessTokenAudience"
+                                                   type="button"
+                                                   value="<fmt:message key="oauth.add.access.token.audience"/>"
+                                                   onclick="return addAccessTokenAudienceFunc()"/>
+                                        </td>
+                                    </tr>
+                                    <% } else {%>
+
+                                    <tr id="access_token_audience_enable">
+                                        <td colspan="2">
+                                            <label title="Enable Access Token Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
+                                                <input type="checkbox" name="enableAccessTokenAudienceRestriction"
+                                                       id="enableAccessTokenAudienceRestriction" value="true"
+                                                       onclick="toggleAccessTokenAudienceRestriction(this);"/>
+                                                <fmt:message key="enable.access.token.audience.restriction"/>
+                                            </label>
+                                        </td>
+                                    </tr>
+                                    <tr id="access_token_audience_add">
+                                        <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                                            <fmt:message key="sp.access.token.audience"/>
+                                        </td>
+                                        <td>
+                                            <input type="text" id="access_token_audience" name="access_token_audience"
+                                                   class="text-box-big" disabled="disabled"/>
+                                            <input id="addAccessTokenAudience" name="addAccessTokenAudience"
+                                                   type="button"
+                                                   disabled="disabled" value="<fmt:message key="oauth.add.access.token.audience"/>"
+                                                   onclick="return addAccessTokenAudienceFunc()"/>
+                                        </td>
+                                    </tr>
+                                    <%} %>
+                                    <tr id="access_token_audience_table">
+                                        <td></td>
+                                        <td>
+                                            <table id="accessTokenAudienceTableId"
+                                                   style="width: 40%; <%=accessTokenAudienceTableStyle%>"
+                                                   class="styledInner">
+                                                <tbody id="accessTokenAudienceTableTbody">
+                                                <%
+                                                    int k = 0;
+                                                    if (app.getAccessTokenAudiences() != null) {
+
+                                                %>
+                                                <%
+                                                    for (String accessTokenAudience : accessTokenAudiences) {
+                                                        if (accessTokenAudience != null &&
+                                                                !"null".equals(accessTokenAudience)) {
+                                                %>
+                                                <tr id="accessTokenAudienceRow<%=k%>">
+                                                    <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                                                        <input type="hidden"
+                                                               name="accessTokenAudiencePropertyName"
+                                                               id="accessTokenAudiencePropertyName<%=k%>"
+                                                               value="<%=Encode.forHtmlAttribute(accessTokenAudience)%>"/>
+                                                        <%=Encode.forHtml(accessTokenAudience)%>
+                                                    </td>
+                                                    <td>
+                                                        <a onclick="removeAccessTokenAudience('<%=k%>');return false;"
+                                                           href="#" class="icon-link"
+                                                           style="background-image: url(../admin/images/delete.gif)">Delete
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                <%
+                                                            k++;
+                                                        }
+                                                    }
+                                                %>
+                                                <%
+                                                    }
+                                                %>
+                                                <input type="hidden"
+                                                       name="accessTokenAudiencePropertyCounter"
+                                                       id="accessTokenAudiencePropertyCounter"
+                                                       value="<%=k%>"/>
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                <%
+                                    }
+                                %>
                                 <!-- OIDC related properties -->
                                 <tr id="validate_request_object_signature">
                                     <td colspan="2">
