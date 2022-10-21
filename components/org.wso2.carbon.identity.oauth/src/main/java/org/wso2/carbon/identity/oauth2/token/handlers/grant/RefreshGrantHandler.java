@@ -50,7 +50,6 @@ import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 
 import java.sql.Timestamp;
 import java.util.Arrays;
@@ -305,7 +304,6 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             tokenResp.setExpiresInMillis(Long.MAX_VALUE);
         }
         tokenResp.setAuthorizedScopes(scope);
-        tokenResp.setIsConsentedToken(accessTokenBean.isConsentedToken());
         return tokenResp;
     }
 
@@ -352,36 +350,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(oldAccessToken.getAccessToken());
             OAuthCache.getInstance().clearCacheEntry(accessTokenCacheKey,
                     oldAccessToken.getAuthorizedUser().getTenantDomain());
-            AccessTokenDO tokenToCache = AccessTokenDO.clone(accessTokenBean);
-            OauthTokenIssuer oauthTokenIssuer;
-            try {
-                oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(
-                        tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
-            } catch (InvalidOAuthClientException e) {
-                throw new IdentityOAuth2Exception(
-                        "Error while retrieving oauth issuer for the app with clientId: " +
-                        tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(), e);
-            }
-            if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
-                try {
-                    String persistedTokenIdentifier =
-                            oauthTokenIssuer.getAccessTokenHash(accessTokenBean.getAccessToken());
-                    tokenToCache.setAccessToken(persistedTokenIdentifier);
-                } catch (OAuthSystemException e) {
-                    if (log.isDebugEnabled()) {
-                        if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                            log.debug("Token issuer: " + oauthTokenIssuer.getClass() + " was tried and" +
-                                    " failed to parse the received token " + tokenToCache.getAccessToken(), e);
-                        } else {
-                            log.debug("Token issuer: " + oauthTokenIssuer.getClass() + " was tried and" +
-                                    " failed to parse the received token.", e);
-                        }
-                    }
-                }
-            }
 
             // Add new access token to the OAuthCache
-            OAuthCache.getInstance().addToCache(oauthCacheKey, tokenToCache);
+            OAuthCache.getInstance().addToCache(oauthCacheKey, accessTokenBean);
 
             // Add new access token to the AccessTokenCache
             OAuth2Util.addTokenDOtoCache(accessTokenBean);
@@ -569,27 +540,6 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         accessTokenDO.setGrantType(tokenReq.getGrantType());
         accessTokenDO.setIssuedTime(timestamp);
         accessTokenDO.setTokenBinding(tokReqMsgCtx.getTokenBinding());
-
-        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-            String previousGrantType = validationBean.getGrantType();
-            // Check if the previous grant type is consent refresh token type or not.
-            if (!StringUtils.equals(OAuthConstants.GrantTypes.REFRESH_TOKEN, previousGrantType)) {
-                // If the previous grant type is not a refresh token, then check if it's a consent token or not.
-                if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(previousGrantType)) {
-                    accessTokenDO.setIsConsentedToken(true);
-                }
-            } else {
-                /* When previousGrantType == refresh_token, we need to check whether the original grant type
-                 is consented or not. */
-                AccessTokenDO accessTokenDOFromTokenIdentifier = OAuth2Util.getAccessTokenDOFromTokenIdentifier(
-                        validationBean.getAccessToken(), false);
-                accessTokenDO.setIsConsentedToken(accessTokenDOFromTokenIdentifier.isConsentedToken());
-            }
-
-            if (accessTokenDO.isConsentedToken()) {
-                tokReqMsgCtx.setConsentedToken(true);
-            }
-        }
 
         // sets accessToken, refreshToken and validity data
         setTokenData(accessTokenDO, tokReqMsgCtx, validationBean, tokenReq, timestamp);

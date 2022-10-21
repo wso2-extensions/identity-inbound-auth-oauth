@@ -963,7 +963,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(USER_NAME);
-        authenticatedUser.setUserId(StringUtils.EMPTY);
         authenticatedUser.setUserStoreDomain(USER_STORE_DOMAIN);
         authenticatedUser.setTenantDomain(TENANT_DOMAIN);
         authenticatedUser.setFederatedUser(false);
@@ -974,7 +973,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(USER_NAME);
-        authenticatedUser.setUserId(StringUtils.EMPTY);
         authenticatedUser.setFederatedUser(true);
         return authenticatedUser;
     }

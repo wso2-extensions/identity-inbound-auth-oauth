@@ -24,12 +24,8 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.xml.security.utils.Base64;
-import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.context.CarbonContext;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -45,15 +41,11 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
-import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
-import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
@@ -62,14 +54,12 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_TOKEN_IDENTIFIER;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.Config.PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 
@@ -442,15 +432,7 @@ public final class OAuthUtil {
         dto.setApplicationAccessTokenExpiryTime(appDO.getApplicationAccessTokenExpiryTime());
         dto.setRefreshTokenExpiryTime(appDO.getRefreshTokenExpiryTime());
         dto.setIdTokenExpiryTime(appDO.getIdTokenExpiryTime());
-
-        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-            dto.setAudiences(appDO.getAudiences());
-
-        } else {
-            dto.setIdTokenAudiences(appDO.getIdTokenAudiences());
-            dto.setAccessTokenAudiences(appDO.getAccessTokenAudiences());
-
-        }
+        dto.setAudiences(appDO.getAudiences());
         dto.setRequestObjectSignatureValidationEnabled(appDO.isRequestObjectSignatureValidationEnabled());
         dto.setIdTokenEncryptionEnabled(appDO.isIdTokenEncryptionEnabled());
         dto.setIdTokenEncryptionAlgorithm(appDO.getIdTokenEncryptionAlgorithm());
@@ -560,104 +542,82 @@ public final class OAuthUtil {
             LOG.error("Error occurred while retrieving apps authorized by User ID : " + authenticatedUser, e);
             throw new UserStoreException(e);
         }
-        boolean isErrorOnRevokingTokens = false;
         for (String clientId : clientIds) {
+            Set<AccessTokenDO> accessTokenDOs;
             try {
-                Set<AccessTokenDO> accessTokenDOs;
+                // retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this user
+                accessTokenDOs = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                        .getAccessTokens(clientId, authenticatedUser, userStoreDomain, true);
+            } catch (IdentityOAuth2Exception e) {
+                String errorMsg = "Error occurred while retrieving access tokens issued for " +
+                        "Client ID : " + clientId + ", User ID : " + authenticatedUser;
+                LOG.error(errorMsg, e);
+                throw new UserStoreException(e);
+            }
+
+            if (LOG.isDebugEnabled() && CollectionUtils.isNotEmpty(accessTokenDOs)) {
+                LOG.debug("ACTIVE or EXPIRED access tokens found for the client: " + clientId + " for the user: "
+                        + username);
+            }
+            boolean isTokenPreservingAtPasswordUpdateEnabled =
+                    Boolean.parseBoolean(IdentityUtil.getProperty(PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE));
+            String currentTokenBindingReference = "";
+            if (isTokenPreservingAtPasswordUpdateEnabled) {
+                if (IdentityUtil.threadLocalProperties.get().get(CURRENT_SESSION_IDENTIFIER) != null) {
+                    currentTokenBindingReference =
+                            (String) IdentityUtil.threadLocalProperties.get().get(CURRENT_SESSION_IDENTIFIER);
+                }
+            }
+
+            Set<String> scopes = new HashSet<>();
+            List<AccessTokenDO> accessTokens = new ArrayList<>();
+            boolean tokenBindingEnabled = false;
+            for (AccessTokenDO accessTokenDO : accessTokenDOs) {
+                // Clear cache
+                String tokenBindingReference = NONE;
+                if (accessTokenDO.getTokenBinding() != null && StringUtils
+                        .isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
+                    tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
+                    tokenBindingEnabled = true;
+                    // Skip current token from being revoked.
+                    if (StringUtils.equals(accessTokenDO.getTokenBinding().getBindingValue(),
+                            currentTokenBindingReference)) {
+                        continue;
+                    }
+                }
+                OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
+                OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
+                OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()));
+                OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
+                OAuthUtil.clearOAuthCache(accessTokenDO);
+                // Get unique scopes list
+                scopes.add(OAuth2Util.buildScopeString(accessTokenDO.getScope()));
+                accessTokens.add(accessTokenDO);
+            }
+
+            if (!tokenBindingEnabled && OAuth2Util.isHashDisabled()) {
+                return revokeLatestTokensWithScopes(scopes, clientId, authenticatedUser);
+            } else {
+                // If the hashed token is enabled, there can be multiple active tokens with a user with same scope.
+                // Also, if token binding is enabled, there can be multiple active tokens for the same user, scope
+                // and client combination.
+                // So need to revoke all the tokens.
                 try {
-                    // retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this user
-                    accessTokenDOs = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                            .getAccessTokens(clientId, authenticatedUser, userStoreDomain, true);
+                    return revokeTokens(accessTokens);
                 } catch (IdentityOAuth2Exception e) {
-                    String errorMsg = "Error occurred while retrieving access tokens issued for " +
-                            "Client ID : " + clientId + ", User ID : " + authenticatedUser;
+                    String errorMsg = "Error occurred while revoking Access Token";
                     LOG.error(errorMsg, e);
                     throw new UserStoreException(e);
                 }
-
-                if (LOG.isDebugEnabled() && CollectionUtils.isNotEmpty(accessTokenDOs)) {
-                    LOG.debug("ACTIVE or EXPIRED access tokens found for the client: " + clientId + " for the user: "
-                            + username);
-                }
-                boolean isTokenPreservingAtPasswordUpdateEnabled =
-                        Boolean.parseBoolean(IdentityUtil.getProperty(PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE));
-                String currentTokenBindingReference = "";
-                String currentTokenReference = "";
-                if (isTokenPreservingAtPasswordUpdateEnabled) {
-                    if (IdentityUtil.threadLocalProperties.get().get(CURRENT_SESSION_IDENTIFIER) != null) {
-                        currentTokenBindingReference = (String) IdentityUtil.threadLocalProperties.get()
-                                .get(CURRENT_SESSION_IDENTIFIER);
-                    }
-                    if (IdentityUtil.threadLocalProperties.get().get(CURRENT_TOKEN_IDENTIFIER) != null) {
-                        currentTokenReference = (String) IdentityUtil.threadLocalProperties.get()
-                                .get(CURRENT_TOKEN_IDENTIFIER);
-                    }
-                }
-
-                Set<String> scopes = new HashSet<>();
-                List<AccessTokenDO> accessTokens = new ArrayList<>();
-                boolean tokenBindingEnabled = false;
-                for (AccessTokenDO accessTokenDO : accessTokenDOs) {
-                    // Clear cache
-                    String tokenBindingReference = NONE;
-                    if (accessTokenDO.getTokenBinding() != null && StringUtils
-                            .isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
-                        tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
-                        tokenBindingEnabled = true;
-                        // Skip current token from being revoked.
-                        if (StringUtils.equals(accessTokenDO.getTokenBinding().getBindingValue(),
-                                currentTokenBindingReference)) {
-                            continue;
-                        }
-                    }
-                    // Skip current token from being revoked. When the token is generated using password grant.
-                    if (isTokenPreservingAtPasswordUpdateEnabled && StringUtils.equals(accessTokenDO.getTokenId(),
-                            currentTokenReference)) {
-                        continue;
-                    }
-                    OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
-                            OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
-                    OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
-                            OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
-                    OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
-                            OAuth2Util.buildScopeString(accessTokenDO.getScope()));
-                    OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
-                    OAuthUtil.clearOAuthCache(accessTokenDO);
-                    // Get unique scopes list
-                    scopes.add(OAuth2Util.buildScopeString(accessTokenDO.getScope()));
-                    accessTokens.add(accessTokenDO);
-                }
-
-                if (!tokenBindingEnabled && OAuth2Util.isHashDisabled()) {
-                    revokeLatestTokensWithScopes(scopes, clientId, authenticatedUser);
-                } else {
-                    // If the hashed token is enabled, there can be multiple active tokens with a user with same scope.
-                    // Also, if token binding is enabled, there can be multiple active tokens for the same user, scope
-                    // and client combination.
-                    // So need to revoke all the tokens.
-                    try {
-                        revokeTokens(accessTokens);
-                    } catch (IdentityOAuth2Exception e) {
-                        String errorMsg = "Error occurred while revoking Access Token";
-                        LOG.error(errorMsg, e);
-                        throw new UserStoreException(e);
-                    }
-                }
-            } catch (UserStoreException e) {
-                // Set a flag to throw an exception after revoking all the possible access tokens.
-                // The error details are logged at the same place they are throwing.
-                isErrorOnRevokingTokens = true;
             }
-        }
-
-        // Throw exception if there was any error found in revoking tokens.
-        if (isErrorOnRevokingTokens) {
-            throw new UserStoreException("Error occurred while revoking Access Tokens of the user " + username);
         }
         return true;
     }
 
-    private static void revokeTokens(List<AccessTokenDO> accessTokens) throws IdentityOAuth2Exception {
+    private static boolean revokeTokens(List<AccessTokenDO> accessTokens) throws IdentityOAuth2Exception {
 
         if (!accessTokens.isEmpty()) {
             // Revoking token from database.
@@ -668,9 +628,10 @@ public final class OAuthUtil {
                 OAuthUtil.invokePostRevocationBySystemListeners(accessToken, Collections.emptyMap());
             }
         }
+        return true;
     }
 
-    private static void revokeLatestTokensWithScopes(Set<String> scopes, String clientId,
+    private static boolean revokeLatestTokensWithScopes(Set<String> scopes, String clientId,
                                                         AuthenticatedUser authenticatedUser) throws
             UserStoreException {
 
@@ -700,101 +661,6 @@ public final class OAuthUtil {
                 }
             }
         }
-    }
-
-    /**
-     * Resolve user.
-     *
-     * @param tenantDomain The tenant domain which user is trying to access.
-     * @param username     The username of resolving user.
-     * @return User object.
-     * @throws IdentityApplicationManagementException Error when user cannot be resolved.
-     */
-    public static Optional<User> getUser(String tenantDomain, String username)
-            throws IdentityApplicationManagementException {
-
-        User user = null;
-        try {
-            int tenantID = IdentityTenantUtil.getTenantId(tenantDomain);
-            String userId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUserId();
-
-            if (tenantID == MultitenantConstants.SUPER_TENANT_ID) {
-                user = getUserFromTenant(username, userId, tenantID);
-            } else {
-                Tenant tenant = OAuthComponentServiceHolder.getInstance().getRealmService()
-                        .getTenantManager().getTenant(tenantID);
-                String accessedOrganizationId = tenant.getAssociatedOrganizationUUID();
-                if (accessedOrganizationId == null) {
-                    user = getUserFromTenant(username, userId, tenantID);
-                } else {
-                    Optional<org.wso2.carbon.user.core.common.User> resolvedUser =
-                            OAuthComponentServiceHolder.getInstance()
-                                    .getOrganizationUserResidentResolverService()
-                                    .resolveUserFromResidentOrganization(username, userId, accessedOrganizationId);
-                    if (resolvedUser.isPresent()) {
-                        user = getApplicationUser(resolvedUser.get());
-                    }
-                }
-            }
-        } catch (org.wso2.carbon.user.api.UserStoreException | OrganizationManagementException e) {
-            throw new IdentityApplicationManagementException("Error resolving user.", e);
-        }
-        return Optional.ofNullable(user);
-    }
-
-    /**
-     * Get user from tenant by username or user id.
-     *
-     * @param username The username.
-     * @param userId   The user id.
-     * @param tenantId The tenant id where user resides.
-     * @return User object from tenant userStoreManager.
-     * @throws IdentityApplicationManagementException Error when user cannot be resolved.
-     */
-    private static User getUserFromTenant(String username, String userId, int tenantId)
-            throws IdentityApplicationManagementException {
-
-        User user = null;
-        try {
-            AbstractUserStoreManager userStoreManager =
-                    (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance()
-                            .getRealmService().getTenantUserRealm(tenantId).getUserStoreManager();
-            if (username != null && userStoreManager.isExistingUser(username)) {
-                user = getApplicationUser(userStoreManager.getUser(null, username));
-            } else if (userId != null && userStoreManager.isExistingUserWithID(userId)) {
-                user = getApplicationUser(userStoreManager.getUser(userId, null));
-            }
-        } catch (org.wso2.carbon.user.api.UserStoreException e) {
-            throw new IdentityApplicationManagementException("Error finding user in tenant.", e);
-        }
-        return user;
-    }
-
-    private static User getApplicationUser(org.wso2.carbon.user.core.common.User coreUser) {
-
-        User user = new User();
-        user.setUserName(coreUser.getUsername());
-        user.setUserStoreDomain(coreUser.getUserStoreDomain());
-        user.setTenantDomain(coreUser.getTenantDomain());
-        return user;
-    }
-
-    /**
-     * Get user's username.
-     *
-     * @param tenantDomain The tenant domain which user is trying to access.
-     * @return username  The username.
-     * @throws IdentityApplicationManagementException Error when user cannot be resolved.
-     */
-    public static String getUsername(String tenantDomain) throws IdentityApplicationManagementException {
-
-        String username = CarbonContext.getThreadLocalCarbonContext().getUsername();
-        if (StringUtils.isBlank(username)) {
-            Optional<User> maybeUser = getUser(tenantDomain, null);
-            User user = maybeUser
-                    .orElseThrow(() -> new IdentityApplicationManagementException("Error resolving user."));
-            username = IdentityUtil.addDomainToName(user.getUserName(), user.getUserStoreDomain());
-        }
-        return username;
+        return true;
     }
 }

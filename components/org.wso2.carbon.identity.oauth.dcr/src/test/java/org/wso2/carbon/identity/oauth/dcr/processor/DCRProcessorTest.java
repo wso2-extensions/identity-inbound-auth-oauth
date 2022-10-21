@@ -28,14 +28,12 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityRequest;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityResponse;
 import org.wso2.carbon.identity.base.IdentityException;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.dcr.DCRException;
 import org.wso2.carbon.identity.oauth.dcr.context.DCRMessageContext;
 import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationRequest;
-import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dcr.util.HandlerManager;
 
@@ -52,7 +50,7 @@ import static org.testng.Assert.fail;
 /**
  * Unit test covering DCRProcessor
  */
-@PrepareForTest({HandlerManager.class, DCRProcessor.class, IdentityUtil.class})
+@PrepareForTest({HandlerManager.class, DCRProcessor.class})
 public class DCRProcessorTest extends PowerMockTestCase {
 
     private DCRProcessor dcrProcessor;
@@ -85,15 +83,12 @@ public class DCRProcessorTest extends PowerMockTestCase {
     }
 
     @Test(dataProvider = "instanceTypeprovider")
-    public void testProcessWithIdentityRegisterEnabled(String request, Object identityRequest) throws Exception {
+    public void testProcess(String request, Object identityRequest) throws Exception {
 
         mockHandlerManager = mock(HandlerManager.class);
 
         mockStatic(HandlerManager.class);
         when(HandlerManager.getInstance()).thenReturn(mockHandlerManager);
-
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.isLegacyFeatureEnabled(DCRConstants.DCR_ID, DCRConstants.DCR_VERSION)).thenReturn(true);
 
         DCRMessageContext dcrMessageContext = mock(DCRMessageContext.class);
         whenNew(DCRMessageContext.class).withArguments(identityRequest).thenReturn(dcrMessageContext);
@@ -115,43 +110,6 @@ public class DCRProcessorTest extends PowerMockTestCase {
         }
     }
 
-    @Test(dataProvider = "instanceTypeprovider")
-    public void testProcessWithIdentityRegisterDisabled(String request, Object identityRequest) throws Exception {
-
-        mockHandlerManager = mock(HandlerManager.class);
-
-        mockStatic(HandlerManager.class);
-        when(HandlerManager.getInstance()).thenReturn(mockHandlerManager);
-
-        DCRMessageContext dcrMessageContext = mock(DCRMessageContext.class);
-        whenNew(DCRMessageContext.class).withArguments(identityRequest).thenReturn(dcrMessageContext);
-
-        String errorMessage = "/identity/register API was deprecated.";
-
-        if (request.equals("RegistrationRequest")) {
-            try {
-                RegistrationHandler registrationHandler = mock(RegistrationHandler.class);
-                when(mockHandlerManager.getRegistrationHandler(dcrMessageContext)).thenReturn(registrationHandler);
-
-                when(registrationHandler.handle(dcrMessageContext)).thenReturn(new IdentityResponse.
-                        IdentityResponseBuilder());
-            } catch (Exception ex) {
-                assertEquals(ex.getMessage(), errorMessage);
-            }
-        } else if (request.equals("UnregistrationRequest")) {
-            try {
-                UnRegistrationHandler unRegistrationHandler = mock(UnRegistrationHandler.class);
-                when(mockHandlerManager.getUnRegistrationHandler(dcrMessageContext)).thenReturn(unRegistrationHandler);
-
-                when(unRegistrationHandler.handle(dcrMessageContext)).thenReturn(new IdentityResponse.
-                        IdentityResponseBuilder());
-                assertNotNull(dcrProcessor.process((UnregistrationRequest) identityRequest));
-            } catch (Exception ex) {
-                assertEquals(ex.getMessage(), errorMessage);
-            }
-        }
-    }
-
     @DataProvider(name = "instanceType&ErrorcodeProvider")
     public Object[][] getInstanceErrorcode() throws FrameworkClientException {
 
@@ -166,16 +124,12 @@ public class DCRProcessorTest extends PowerMockTestCase {
     }
 
     @Test(dataProvider = "instanceType&ErrorcodeProvider")
-    public void testProcessWithExceptionWithIdentityRegisterEnabled(String request, Object identityRequest,
-                                                                    String errorCode) throws Exception {
+    public void testProcessWithException(String request, Object identityRequest, String errorCode) throws Exception {
 
         mockHandlerManager = mock(HandlerManager.class);
 
         mockStatic(HandlerManager.class);
         when(HandlerManager.getInstance()).thenReturn(mockHandlerManager);
-
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.isLegacyFeatureEnabled(DCRConstants.DCR_ID, DCRConstants.DCR_VERSION)).thenReturn(true);
 
         DCRMessageContext dcrMessageContext = mock(DCRMessageContext.class);
         whenNew(DCRMessageContext.class).withArguments(identityRequest).thenReturn(dcrMessageContext);

@@ -31,7 +31,6 @@ import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 /**
  * Device response type handler.
@@ -57,10 +56,7 @@ public class DeviceFlowResponseTypeHandler extends AbstractResponseTypeHandler {
         String userCode = authzReqDTO.getNonce();
         DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setAuthzUserAndStatus(userCode,
                 Constants.AUTHORIZED, authenticatedUser);
-        OAuthAppDO oAuthAppDO = (OAuthAppDO) oauthAuthzMsgCtx.getProperty("OAuthAppDO");
-        String redirectionURI = OAuth2Util.getDeviceFlowCompletionPageURI(oAuthAppDO.getApplicationName(),
-                oauthAuthzMsgCtx.getAuthorizationReqDTO().getTenantDomain());
-        respDTO.setCallbackURI(redirectionURI);
+        respDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
         return respDTO;
     }
 

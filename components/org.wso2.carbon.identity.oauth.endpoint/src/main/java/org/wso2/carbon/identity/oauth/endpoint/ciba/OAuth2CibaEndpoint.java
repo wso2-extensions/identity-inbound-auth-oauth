@@ -85,10 +85,6 @@ public class OAuth2CibaEndpoint {
         OAuthClientAuthnContext oAuthClientAuthnContext =  getClientAuthnContext(request);
 
         if (!oAuthClientAuthnContext.isAuthenticated()) {
-            if (oAuthClientAuthnContext.getErrorCode() != null) {
-                return getErrorResponse(new CibaAuthFailureException(oAuthClientAuthnContext.getErrorCode(),
-                        oAuthClientAuthnContext.getErrorMessage()));
-            }
             return getErrorResponse(new CibaAuthFailureException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT,
                     "Client authentication required"));
         }

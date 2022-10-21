@@ -22,16 +22,12 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.core.ServiceURLBuilder;
-import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.stub.dto.OAuthConsumerAppDTO;
 
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -140,50 +136,5 @@ public class OAuthUIUtil {
     public static String getTokenTypeId(String type) {
 
         return TOKEN_TYPE_PREFIX + type.replaceAll(" ", "_");
-    }
-
-    /**
-     * This method is to validate a URL. This method validate both absolute & relative URLs.
-     *
-     * @param urlString URL String.
-     * @return true if valid URL, false otherwise.
-     */
-    public static boolean isValidURL(String urlString) {
-
-        if (StringUtils.isBlank(urlString)) {
-            String errorMsg = "Invalid URL.";
-            if (log.isDebugEnabled()) {
-                log.debug(errorMsg);
-            }
-            return false;
-        }
-
-        try {
-            if (isURLRelative(urlString)) {
-                // Build Absolute URL using the relative url path.
-                urlString = buildAbsoluteURL(urlString);
-            }
-            /*
-              Validate URL string using the  java.net.URL class.
-              Create a URL object from the URL string representation. Throw MalformedURLException if not a valid URL.
-             */
-            new URL(urlString);
-        } catch (MalformedURLException | URISyntaxException |  URLBuilderException e) {
-            if (log.isDebugEnabled()) {
-                log.debug(e.getMessage(), e);
-            }
-            return false;
-        }
-        return true;
-    }
-
-    private static boolean isURLRelative(String uriString) throws URISyntaxException {
-
-        return !new URI(uriString).isAbsolute();
-    }
-
-    private static String buildAbsoluteURL(String contextPath) throws URLBuilderException {
-
-        return ServiceURLBuilder.create().addPath(contextPath).build().getAbsolutePublicURL();
     }
 }

@@ -35,7 +35,6 @@ import static org.wso2.carbon.identity.oauth.dcr.util.DCRConstants.APP_NAME_VALI
 /**
  * Util class used for OAuth DCRM.
  */
-@Deprecated
 public class DCRMUtils {
 
     private static final Log log = LogFactory.getLog(DCRMUtils.class);

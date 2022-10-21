@@ -46,7 +46,6 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
@@ -155,10 +154,7 @@ public class OpenIDConnectUserEndpoint {
         OAuthResponse response = OAuthASResponse.errorResponse(statusCode)
                 .setError(OAuth2ErrorCodes.SERVER_ERROR)
                 .setErrorDescription(ex.getMessage()).buildJSONMessage();
-        return Response.status(response.getResponseStatus())
-                .entity(response.getBody())
-                .type(MediaType.APPLICATION_JSON_TYPE)
-                .build();
+        return Response.status(response.getResponseStatus()).entity(response.getBody()).build();
     }
 
     private Response buildBadRequestErrorResponse(UserInfoEndpointException ex,
@@ -168,10 +164,7 @@ public class OpenIDConnectUserEndpoint {
                 .setError(ex.getErrorCode())
                 .setErrorDescription(ex.getErrorMessage())
                 .buildJSONMessage();
-        return Response.status(res.getResponseStatus())
-                .entity(res.getBody())
-                .type(MediaType.APPLICATION_JSON_TYPE)
-                .build();
+        return Response.status(res.getResponseStatus()).entity(res.getBody()).build();
     }
 
     private Response getErrorResponseWithAuthenticateHeader(UserInfoEndpointException ex,
@@ -184,7 +177,6 @@ public class OpenIDConnectUserEndpoint {
         return Response.status(res.getResponseStatus())
                 .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, "Bearer error=\"" + ex.getErrorCode() + "\"")
                 .entity(res.getBody())
-                .type(MediaType.APPLICATION_JSON_TYPE)
                 .build();
     }
 

@@ -59,10 +59,7 @@ import org.wso2.carbon.utils.CarbonUtils;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
-import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -129,7 +126,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
     private static final Date date = new Date();
     private static DeviceFlowDO deviceFlowDOAsNotExpired = new DeviceFlowDO();
     private static DeviceFlowDO deviceFlowDOAsExpired = new DeviceFlowDO();
-    private static final List<String> scopes = new ArrayList<>(Collections.singleton("openid"));
+    private static final String[] scopes = {"openid"};
     private static final String TEST_DEVICE_CODE = "testDeviceCode";
 
     @BeforeTest
@@ -138,12 +135,10 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
         deviceFlowDOAsNotExpired.setStatus(PENDING);
         deviceFlowDOAsNotExpired.setExpiryTime(new Timestamp(date.getTime() + 400000000));
         deviceFlowDOAsNotExpired.setDeviceCode(TEST_DEVICE_CODE);
-        deviceFlowDOAsNotExpired.setScopes(scopes);
 
         deviceFlowDOAsExpired.setStatus(PENDING);
         deviceFlowDOAsExpired.setExpiryTime(new Timestamp(date.getTime() - 400000000));
         deviceFlowDOAsExpired.setDeviceCode(TEST_DEVICE_CODE);
-        deviceFlowDOAsExpired.setScopes(scopes);
 
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
@@ -186,6 +181,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
         when(deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
         when(deviceFlowDAO.getClientIdByUserCode(anyString())).thenReturn(clientId);
         when(deviceFlowDAO.getDetailsForUserCode(anyString())).thenReturn(deviceFlowDOAsNotExpired);
+        when(deviceFlowDAO.getScopesForUserCode(anyString())).thenReturn(scopes);
         when(httpServletRequest.getParameter(anyString())).thenReturn(userCode);
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
@@ -209,7 +205,11 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
         userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
         WhiteboxImpl.setInternalState(userAuthenticationEndpoint, OAuth2AuthzEndpoint.class, oAuth2AuthzEndpoint);
         response1 = userAuthenticationEndpoint.deviceAuthorize(httpServletRequest, httpServletResponse);
-        Assert.assertNotNull(response1);
+        if (expectedValue == HttpServletResponse.SC_ACCEPTED) {
+            Assert.assertNotNull(response1);
+        } else {
+            Assert.assertNotNull(response1.getMetadata().get("Location").get(0).toString());
+        }
     }
 
     /**
@@ -265,6 +265,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
         when(deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
         when(deviceFlowDAO.getClientIdByUserCode(anyString())).thenReturn(clientId);
         when(deviceFlowDAO.getDetailsForUserCode(anyString())).thenReturn(deviceFlowDOAsNotExpired);
+        when(deviceFlowDAO.getScopesForUserCode(anyString())).thenReturn(scopes);
         when(httpServletRequest.getParameter(anyString())).thenReturn(userCode);
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
@@ -328,6 +329,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
         when(deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
         when(deviceFlowDAO.getClientIdByUserCode(anyString())).thenReturn(clientId);
         when(deviceFlowDAO.getDetailsForUserCode(anyString())).thenReturn(deviceFlowDOAsExpired);
+        when(deviceFlowDAO.getScopesForUserCode(anyString())).thenReturn(scopes);
         when(httpServletRequest.getParameter(anyString())).thenReturn(userCode);
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);

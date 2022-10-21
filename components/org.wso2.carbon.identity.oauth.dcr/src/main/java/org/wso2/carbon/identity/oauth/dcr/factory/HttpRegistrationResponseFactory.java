@@ -38,7 +38,6 @@ import javax.ws.rs.core.MediaType;
 /**
  * Http Registration Response Factory.
  */
-@Deprecated
 public class HttpRegistrationResponseFactory extends HttpIdentityResponseFactory {
 
     public static final String INVALID_REDIRECT_URI = "invalid_redirect_uri";

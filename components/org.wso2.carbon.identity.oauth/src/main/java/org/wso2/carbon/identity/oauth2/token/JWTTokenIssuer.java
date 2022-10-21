@@ -45,7 +45,6 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
@@ -115,7 +114,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         try {
-            return this.buildJWTAccessToken(oAuthTokenReqMessageContext);
+            return this.buildJWTToken(oAuthTokenReqMessageContext);
         } catch (IdentityOAuth2Exception e) {
             throw new OAuthSystemException(e);
         }
@@ -130,7 +129,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         try {
-            return this.buildJWTAccessToken(oAuthAuthzReqMessageContext);
+            return this.buildJWTToken(oAuthAuthzReqMessageContext);
         } catch (IdentityOAuth2Exception e) {
             throw new OAuthSystemException(e);
         }
@@ -168,8 +167,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     protected String buildJWTToken(OAuthTokenReqMessageContext request) throws IdentityOAuth2Exception {
 
         // Set claims to jwt token.
-        JWTClaimsSet jwtClaimsSet = createJWTClaimSet(null, request,
-                request.getOauth2AccessTokenReqDTO().getClientId(), false);
+        JWTClaimsSet jwtClaimsSet = createJWTClaimSet(null, request, request.getOauth2AccessTokenReqDTO()
+                .getClientId());
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
 
         if (request.getScope() != null && Arrays.asList((request.getScope())).contains(AUDIENCE)) {
@@ -193,59 +192,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     protected String buildJWTToken(OAuthAuthzReqMessageContext request) throws IdentityOAuth2Exception {
 
         // Set claims to jwt token.
-        JWTClaimsSet jwtClaimsSet = createJWTClaimSet(request, null,
-                request.getAuthorizationReqDTO().getConsumerKey(), false);
-        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
-
-        if (request.getApprovedScope() != null && Arrays.asList((request.getApprovedScope())).contains(AUDIENCE)) {
-            jwtClaimsSetBuilder.audience(Arrays.asList(request.getApprovedScope()));
-        }
-        jwtClaimsSet = jwtClaimsSetBuilder.build();
-
-        if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
-            return new PlainJWT(jwtClaimsSet).serialize();
-        }
-
-        return signJWT(jwtClaimsSet, null, request);
-    }
-
-    /**
-     * Build a signed jwt token for the access token from OauthToken request message context.
-     *
-     * @param request Token request message context.
-     * @return Signed jwt string.
-     * @throws IdentityOAuth2Exception
-     */
-    protected String buildJWTAccessToken(OAuthTokenReqMessageContext request) throws IdentityOAuth2Exception {
-
-        // Set claims to jwt token.
-        JWTClaimsSet jwtClaimsSet = createJWTClaimSet(null, request,
-                request.getOauth2AccessTokenReqDTO().getClientId(), true);
-        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
-
-        if (request.getScope() != null && Arrays.asList((request.getScope())).contains(AUDIENCE)) {
-            jwtClaimsSetBuilder.audience(Arrays.asList(request.getScope()));
-        }
-        jwtClaimsSet = jwtClaimsSetBuilder.build();
-        if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
-            return new PlainJWT(jwtClaimsSet).serialize();
-        }
-
-        return signJWT(jwtClaimsSet, request, null);
-    }
-
-    /**
-     * Build a signed jwt token for the access token from authorization request message context.
-     *
-     * @param request Oauth authorization message context.
-     * @return Signed jwt string.
-     * @throws IdentityOAuth2Exception
-     */
-    protected String buildJWTAccessToken(OAuthAuthzReqMessageContext request) throws IdentityOAuth2Exception {
-
-        // Set claims to jwt token.
-        JWTClaimsSet jwtClaimsSet = createJWTClaimSet(request, null,
-                request.getAuthorizationReqDTO().getConsumerKey(), true);
+        JWTClaimsSet jwtClaimsSet = createJWTClaimSet(request, null, request.getAuthorizationReqDTO()
+                .getConsumerKey());
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
 
         if (request.getApprovedScope() != null && Arrays.asList((request.getApprovedScope())).contains(AUDIENCE)) {
@@ -468,7 +416,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      */
     protected JWTClaimsSet createJWTClaimSet(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
                                              OAuthTokenReqMessageContext tokenReqMessageContext,
-                                             String consumerKey, boolean isAccessToken) throws IdentityOAuth2Exception {
+                                             String consumerKey) throws IdentityOAuth2Exception {
 
         // loading the stored application data
         OAuthAppDO oAuthAppDO;
@@ -519,17 +467,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens. But we are keeping this in JWT
         // as well.
-
-        List<String> audience;
-        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-            audience = OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO);
-        } else {
-            if (isAccessToken) {
-                audience = OAuth2Util.getOIDCAccessTokenAudience(issuer, oAuthAppDO);
-            } else {
-                audience = OAuth2Util.getOIDCIdTokenAudience(consumerKey, oAuthAppDO);
-            }
-        }
+        List<String> audience = OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO);
         jwtClaimsSetBuilder.audience(audience);
         JWTClaimsSet jwtClaimsSet;
 

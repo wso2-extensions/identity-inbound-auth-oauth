@@ -56,7 +56,6 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.http.client.utils.URIBuilder;
 import org.apache.oltu.oauth2.common.exception.OAuthRuntimeException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.json.JSONException;
@@ -70,7 +69,6 @@ import org.wso2.carbon.identity.application.authentication.framework.store.UserS
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
-import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -113,7 +111,6 @@ import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
-import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
@@ -200,7 +197,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoi
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_CONSENT_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_WEB_FINGER_EP_URL;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
-import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
 
 /**
  * Utility methods for OAuth 2.0 implementation
@@ -213,11 +209,8 @@ public class OAuth2Util {
     public static final String OAUTH2_VALIDATION_MESSAGE_CONTEXT = "OAuth2TokenValidationMessageContext";
     public static final String CONFIG_ELEM_OAUTH = "OAuth";
     public static final String OPENID_CONNECT = "OpenIDConnect";
-    public static final String OAUTH_LEGACY_AUDIENCES_ENABLED = "EnableLegacyAudiences";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
-    public static final String OPENID_CONNECT_ID_TOKEN_AUDIENCE = "idTokenAudience";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
-    public static final String OPENID_CONNECT_ACCESS_TOKEN_AUDIENCE = "accessTokenAudience";
     public static final String OPENID_SCOPE = "openid";
     /*
      * Maintain a separate parameter "OPENID_CONNECT_AUDIENCE_IDENTITY_CONFIG" to get the audience from the identity.xml
@@ -227,7 +220,6 @@ public class OAuth2Util {
     private static final String OPENID_CONNECT_AUDIENCES = "Audiences";
     private static final String DOT_SEPARATER = ".";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
-    private static final String OIDC_ROLE_CLAIM_URI = "roles";
 
     public static final String DEFAULT_TOKEN_TYPE = "Default";
 
@@ -307,12 +299,6 @@ public class OAuth2Util {
      */
     public static final String APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS = "applicationAccessTokenExpireTime";
 
-    /**
-     * FIdp Role Based authentication application config.
-     */
-    public static final String FIDP_ROLE_BASED_AUTHZ_APP_CONFIG = "FIdPRoleBasedAuthzApplications.AppName";
-
-    private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private static final Log log = LogFactory.getLog(OAuth2Util.class);
     private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private static final String INTERNAL_LOGIN_SCOPE = "internal_login";
@@ -713,7 +699,7 @@ public class OAuth2Util {
      */
     @Deprecated
     public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser,
-                                                     String authenticatedIDP, String tokenBindingReference) {
+            String authenticatedIDP, String tokenBindingReference) {
 
         AuthenticatedUser authenticatedUser = OAuth2Util.getUserFromUserName(authorizedUser);
         try {
@@ -736,7 +722,7 @@ public class OAuth2Util {
      * @return Cache key string combining the input parameters.
      */
     public static String buildCacheKeyStringForTokenWithUserId(String clientId, String scope, String authorizedUserId,
-                                                               String authenticatedIDP, String tokenBindingReference) {
+                                                     String authenticatedIDP, String tokenBindingReference) {
 
         String oauthCacheKey =
                 clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
@@ -1438,32 +1424,6 @@ public class OAuth2Util {
     }
 
     /**
-     * This method is used to generate the device flow authentication completed page URI.
-     *
-     * @param appName       Service provider name.
-     * @param tenantDomain  Tenant domain.
-     * @return Redirection URI
-     */
-    public static String getDeviceFlowCompletionPageURI(String appName, String tenantDomain)
-            throws IdentityOAuth2Exception {
-
-        try {
-            String pageURI = ServiceURLBuilder.create().addPath(DEVICE_SUCCESS_ENDPOINT_PATH)
-                    .build().getAbsolutePublicURL();
-            URIBuilder uriBuilder = new URIBuilder(pageURI);
-            uriBuilder.addParameter(org.wso2.carbon.identity.oauth2.device.constants.Constants.APP_NAME, appName);
-            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && isNotSuperTenant(tenantDomain)) {
-                // Append tenant domain to path when the tenant-qualified url mode is disabled.
-                uriBuilder.addParameter(FrameworkUtils.TENANT_DOMAIN, tenantDomain);
-            }
-            return uriBuilder.build().toString();
-        } catch (URISyntaxException | URLBuilderException e) {
-            throw new IdentityOAuth2Exception("Error occurred when getting the device flow  authentication completed" +
-                    " page URI.", e);
-        }
-    }
-
-    /**
      * Builds a URL with a given context in both the tenant-qualified url supported mode and the legacy mode.
      * Returns the absolute URL build from the default context in the tenant-qualified url supported mode. Gives
      * precedence to the file configurations in the legacy mode and returns the absolute url build from file
@@ -1980,59 +1940,25 @@ public class OAuth2Util {
      * @param oAuthAppDO
      * @return
      */
-    /**
-     * @deprecated use {@link #getOIDCIdTokenAudience(String, OAuthAppDO)} instead.
-     */
-    @Deprecated
     public static List<String> getOIDCAudience(String clientId, OAuthAppDO oAuthAppDO) {
-        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-            List<String> oidcAudiences = getDefinedCustomOIDCAudiences(oAuthAppDO);
-            // Need to add client_id as an audience value according to the spec.
-            if (!oidcAudiences.contains(clientId)) {
-                oidcAudiences.add(0, clientId);
-            } else {
-                Collections.swap(oidcAudiences, oidcAudiences.indexOf(clientId), 0);
-            }
-            return oidcAudiences;
-        } else {
-            return getOIDCIdTokenAudience(clientId, oAuthAppDO);
-        }
-    }
 
-    public static List<String> getOIDCIdTokenAudience(String clientId, OAuthAppDO oAuthAppDO) {
-
-        List<String> oidcIdTokenAudiences = getDefinedCustomOIDCIdTokenAudiences(oAuthAppDO);
+        List<String> oidcAudiences = getDefinedCustomOIDCAudiences(oAuthAppDO);
         // Need to add client_id as an audience value according to the spec.
-        if (!oidcIdTokenAudiences.contains(clientId)) {
-            oidcIdTokenAudiences.add(0, clientId);
+        if (!oidcAudiences.contains(clientId)) {
+            oidcAudiences.add(0, clientId);
         } else {
-            Collections.swap(oidcIdTokenAudiences, oidcIdTokenAudiences.indexOf(clientId), 0);
+            Collections.swap(oidcAudiences, oidcAudiences.indexOf(clientId), 0);
         }
-        return oidcIdTokenAudiences;
-    }
-
-    public static List<String> getOIDCAccessTokenAudience(String issuer, OAuthAppDO oAuthAppDO) {
-
-        List<String> oidcAccessTokenAudiences = getDefinedCustomOIDCAccessTokenAudiences(oAuthAppDO);
-        // The issuer is added as the default audience of the Access Token because the issuer processes the token upon
-        // introspection, thus making it a viable audience.
-        if (!oidcAccessTokenAudiences.contains(issuer)) {
-            oidcAccessTokenAudiences.add(0, issuer);
-        } else {
-            Collections.swap(oidcAccessTokenAudiences, oidcAccessTokenAudiences.indexOf(issuer), 0);
-        }
-        return oidcAccessTokenAudiences;
+        return oidcAudiences;
     }
 
     private static List<String> getDefinedCustomOIDCAudiences(OAuthAppDO oAuthAppDO) {
 
-        List<String> audiences = getAudienceListFromOAuthAppDO(oAuthAppDO);
+        List<String> audiences = new ArrayList<>();
 
-        if (!OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-            return audiences;
-        }
         // Priority should be given to service provider specific audiences over globally configured ones.
         if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
+            audiences = getAudienceListFromOAuthAppDO(oAuthAppDO);
             if (CollectionUtils.isNotEmpty(audiences)) {
                 if (log.isDebugEnabled()) {
                     log.debug("OIDC Audiences " + audiences + " had been retrieved for the client_id: " +
@@ -2042,61 +1968,10 @@ public class OAuth2Util {
             }
         }
 
-        audiences = getServerwideAudiences(audiences);
-        return audiences;
-    }
-
-    private static List<String> getDefinedCustomOIDCIdTokenAudiences(OAuthAppDO oAuthAppDO) {
-
-        List<String> idTokenAudiences = getIdTokenAudienceListFromOAuthAppDO(oAuthAppDO);
-
-        if (!OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-            return idTokenAudiences;
-        }
-        // Priority should be given to service provider specific audiences over globally configured ones.
-        if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
-            if (CollectionUtils.isNotEmpty(idTokenAudiences)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("OIDC ID Token Audiences " + idTokenAudiences +
-                            " had been retrieved for the client_id: " + oAuthAppDO.getOauthConsumerKey());
-                }
-                return idTokenAudiences;
-            }
-        }
-
-        idTokenAudiences = getServerwideAudiences(idTokenAudiences);
-        return idTokenAudiences;
-    }
-
-    private static List<String> getDefinedCustomOIDCAccessTokenAudiences(OAuthAppDO oAuthAppDO) {
-
-        List<String> accessTokenAudiences = getAccessTokenAudienceListFromOAuthAppDO(oAuthAppDO);
-
-        if (!OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-            return accessTokenAudiences;
-        }
-        // Priority should be given to service provider specific audiences over globally configured ones.
-        if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
-            if (CollectionUtils.isNotEmpty(accessTokenAudiences)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("OIDC Access Token Audiences " + accessTokenAudiences +
-                            " had been retrieved for the client_id: " + oAuthAppDO.getOauthConsumerKey());
-                }
-                return accessTokenAudiences;
-            }
-        }
-
-        accessTokenAudiences = getServerwideAudiences(accessTokenAudiences);
-        return accessTokenAudiences;
-
-    }
-
-    private static List<String> getServerwideAudiences(List<String> audiences) {
         IdentityConfigParser configParser = IdentityConfigParser.getInstance();
         OMElement oauthElem = configParser.getConfigElement(CONFIG_ELEM_OAUTH);
         if (oauthElem == null) {
-            log.warn("Error in OAuth Configuration: <OAuth> configuration element " +
-                    "is not available in identity.xml.");
+            log.warn("Error in OAuth Configuration: <OAuth> configuration element is not available in identity.xml.");
             return audiences;
         }
 
@@ -2134,24 +2009,6 @@ public class OAuth2Util {
             return new ArrayList<>();
         } else {
             return new ArrayList<>(Arrays.asList(oAuthAppDO.getAudiences()));
-        }
-    }
-
-    private static List<String> getIdTokenAudienceListFromOAuthAppDO(OAuthAppDO oAuthAppDO) {
-
-        if (oAuthAppDO.getIdTokenAudiences() == null) {
-            return new ArrayList<>();
-        } else {
-            return new ArrayList<>(Arrays.asList(oAuthAppDO.getIdTokenAudiences()));
-        }
-    }
-
-    private static List<String> getAccessTokenAudienceListFromOAuthAppDO(OAuthAppDO oAuthAppDO) {
-
-        if (oAuthAppDO.getAccessTokenAudiences() == null) {
-            return new ArrayList<>();
-        } else {
-            return new ArrayList<>(Arrays.asList(oAuthAppDO.getAccessTokenAudiences()));
         }
     }
 
@@ -2373,64 +2230,13 @@ public class OAuth2Util {
             throw new IdentityOAuth2Exception("Unsupported Signature Algorithm in identity.xml");
         }
     }
-    /**
-     * Check if Default Serverwide Audiences are enabled by reading configuration file at server startup.
-     *
-     * @return
-     */
-    public static boolean checkLegacyAudiencesEnabled() {
-
-        return checkConfigLegacyAudienceStatus(OAUTH_LEGACY_AUDIENCES_ENABLED);
-    }
-
 
     /**
      * Check if audiences are enabled by reading configuration file at server startup.
      *
      * @return
      */
-    /**
-     * @deprecated this must be removed in future iterations. Should default to true.
-     */
-    @Deprecated
     public static boolean checkAudienceEnabled() {
-        if (checkLegacyAudiencesEnabled()) {
-            return checkConfigAudienceStatus(ENABLE_OPENID_CONNECT_AUDIENCES);
-        } else {
-            return true;
-        }
-    }
-
-    private static boolean checkConfigLegacyAudienceStatus(String configLegacyAudienceEnabledValue) {
-        boolean isLegacyAudienceEnabled = false;
-        IdentityConfigParser configParser = IdentityConfigParser.getInstance();
-        OMElement oauthElem = configParser.getConfigElement(CONFIG_ELEM_OAUTH);
-
-        if (oauthElem == null) {
-            log.warn("Error in OAuth Configuration. OAuth element is not available.");
-            return isLegacyAudienceEnabled;
-        }
-        OMElement configOpenIDConnect = oauthElem
-                .getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, OPENID_CONNECT));
-
-        if (configOpenIDConnect == null) {
-            log.warn("Error in OAuth Configuration. OpenID element is not available.");
-            return isLegacyAudienceEnabled;
-        }
-        OMElement configLegacyAudiencesEnabled = configOpenIDConnect
-                .getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE,
-                        configLegacyAudienceEnabledValue));
-
-        if (configLegacyAudiencesEnabled != null) {
-            String configLegacyAudienceValue = configLegacyAudiencesEnabled.getText();
-            if (StringUtils.isNotBlank(configLegacyAudienceValue)) {
-                isLegacyAudienceEnabled = Boolean.parseBoolean(configLegacyAudienceValue);
-            }
-        }
-        return isLegacyAudienceEnabled;
-    }
-
-    private static boolean checkConfigAudienceStatus(String configAudienceEnableValue) {
 
         boolean isAudienceEnabled = false;
         IdentityConfigParser configParser = IdentityConfigParser.getInstance();
@@ -2448,7 +2254,7 @@ public class OAuth2Util {
             return isAudienceEnabled;
         }
         OMElement configAudience = configOpenIDConnect.getFirstChildWithName(
-                new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, configAudienceEnableValue));
+                new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, ENABLE_OPENID_CONNECT_AUDIENCES));
 
         if (configAudience != null) {
             String configAudienceValue = configAudience.getText();
@@ -2458,6 +2264,7 @@ public class OAuth2Util {
         }
         return isAudienceEnabled;
     }
+
     /**
      * Generate the unique user domain value in the format of "FEDERATED:idp_name".
      *
@@ -2636,7 +2443,7 @@ public class OAuth2Util {
         if (StringUtils.isBlank(jwksUri)) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Jwks uri is not configured for the service provider associated with " +
-                        "client_id: %s. Checking for x509 certificate", clientId));
+                                "client_id: %s. Checking for x509 certificate", clientId));
             }
             publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
             thumbPrint = getThumbPrint(publicCert);
@@ -2722,7 +2529,7 @@ public class OAuth2Util {
         Key publicKey = publicCert.getPublicKey();
         if (publicKey == null) {
             throw new IdentityOAuth2Exception("Error while retrieving public key from X509 cert of oauth app with "
-                    + "client_id: " + clientId + " of tenantDomain: " + spTenantDomain);
+                   + "client_id: " + clientId + " of tenantDomain: " + spTenantDomain);
         }
         String kid = getThumbPrint(publicCert);
         return encryptWithPublicKey(publicKey, signedJwt, encryptionAlgorithm, encryptionMethod,
@@ -3621,7 +3428,7 @@ public class OAuth2Util {
      * @param
      */
     public static void triggerOnIntrospectionExceptionListeners(OAuth2TokenValidationRequestDTO introspectionRequest,
-                                                                OAuth2IntrospectionResponseDTO introspectionResponse) {
+            OAuth2IntrospectionResponseDTO introspectionResponse) {
 
         Map<String, Object> params = new HashMap<>();
         params.put("error", introspectionResponse.getError());
@@ -3889,10 +3696,10 @@ public class OAuth2Util {
     public static String getIssuerLocation(String tenantDomain) throws IdentityOAuth2Exception {
 
         /*
-         * IMPORTANT:
-         * This method should only honor the given tenant.
-         * Do not add any auto tenant resolving logic.
-         */
+        * IMPORTANT:
+        * This method should only honor the given tenant.
+        * Do not add any auto tenant resolving logic.
+        */
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
             try {
                 startTenantFlow(tenantDomain);
@@ -4235,16 +4042,6 @@ public class OAuth2Util {
     }
 
     /**
-     * Check whether the CONSENTED_TOKEN column is available in IDN_OAUTH2_ACCESS_TOKEN table.
-     *
-     * @return True if the column is available.
-     */
-    public static boolean checkConsentedTokenColumnAvailable() {
-
-        return FrameworkUtils.isTableColumnExists("IDN_OAUTH2_ACCESS_TOKEN", "CONSENTED_TOKEN");
-    }
-
-    /**
      * This can be used to load the oauth scope permissions bindings in oauth-scope-bindings.xml file.
      */
     public static void initiateOAuthScopePermissionsBindings(int tenantId) {
@@ -4424,57 +4221,10 @@ public class OAuth2Util {
             String tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
             if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                 // This means the tenant domain sent in the request and app's tenant domain do not match.
-                if (log.isDebugEnabled()) {
-                    log.debug("A valid client with the given client_id cannot be found in " +
-                            "tenantDomain: " + tenantDomainFromContext);
-                }
-                throw new InvalidOAuthClientException("no.valid.client.in.tenant");
+                throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in " +
+                        "tenantDomain: " + tenantDomainFromContext);
             }
         }
-    }
-
-    /**
-     * Validates whether the tenant domain set in context matches with the app's tenant domain in tenant qualified
-     * URL mode.
-     *
-     * @param tenantDomainOfApp Tenant domain of the app.
-     * @param tokenReqDTO       Access token request DTO object that contains request parameters.
-     * @throws InvalidOAuthClientException
-     */
-    public static void validateRequestTenantDomain(String tenantDomainOfApp, OAuth2AccessTokenReqDTO tokenReqDTO)
-            throws InvalidOAuthClientException {
-
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-
-            Optional<String> contextTenantDomainFromTokenReqDTO = getContextTenantDomainFromTokenReqDTO(tokenReqDTO);
-            String tenantDomainFromContext;
-            if (contextTenantDomainFromTokenReqDTO.isPresent()) {
-                tenantDomainFromContext = contextTenantDomainFromTokenReqDTO.get();
-
-                // In tenant qualified URL mode we would always have the tenant domain in the context.
-                if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
-                    // This means the tenant domain sent in the request and app's tenant domain do not match.
-                    throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in "
-                            + "tenantDomain: " + tenantDomainFromContext);
-                }
-            } else {
-                validateRequestTenantDomain(tenantDomainOfApp);
-            }
-        }
-    }
-
-    private static Optional<String> getContextTenantDomainFromTokenReqDTO(OAuth2AccessTokenReqDTO tokenReqDTO) {
-
-        if (tokenReqDTO == null || tokenReqDTO.getParameters() == null) {
-            return Optional.empty();
-        }
-
-        String tenantDomainFromContext =
-                tokenReqDTO.getParameters().get(OAuthConstants.TENANT_DOMAIN_FROM_CONTEXT);
-        if (StringUtils.isNotBlank(tenantDomainFromContext)) {
-            return Optional.of(tenantDomainFromContext);
-        }
-        return Optional.empty();
     }
 
     private static void startTenantFlow(String tenantDomain) {
@@ -4632,85 +4382,5 @@ public class OAuth2Util {
             }
         }
         return IdentityTenantUtil.getTenantDomainFromContext();
-    }
-
-    /**
-     * Get user role list from federated user attributes.
-     *
-     * @param userAttributes User attribute.
-     * @return User role-list.
-     */
-    public static List<String> getRolesFromFederatedUserAttributes(Map<ClaimMapping, String> userAttributes) {
-
-        Optional<ClaimMapping> roleClaimMapping = Optional.ofNullable(userAttributes).get().entrySet().stream()
-                .map(entry -> entry.getKey())
-                .filter(claim -> StringUtils.equals(OIDC_ROLE_CLAIM_URI, claim.getRemoteClaim().getClaimUri()))
-                .findFirst();
-
-        if (roleClaimMapping.isPresent()) {
-            return Arrays.asList(userAttributes.get(roleClaimMapping.get())
-                    .split(Pattern.quote(FrameworkUtils.getMultiAttributeSeparator())));
-        }
-
-        return Collections.emptyList();
-    }
-
-    /**
-     * Check federated role based authorization enabled or not.
-     *
-     * @param requestMsgCtx Token request message context.
-     * @return Role based authz flow enabled or not.
-     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
-     */
-    public static boolean isFederatedRoleBasedAuthzEnabled(OAuthTokenReqMessageContext requestMsgCtx)
-            throws IdentityOAuth2Exception {
-
-        String clientId = requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
-        return isFederatedRoleBasedAuthzEnabled(clientId);
-    }
-
-    /**
-     * Check federated role based authorization enabled or not.
-     *
-     * @param oauthAuthzMsgCtx OAuth authorization request message context.
-     * @return Role based authz flow enabled or not.
-     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
-     */
-    public static boolean isFederatedRoleBasedAuthzEnabled(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
-            throws IdentityOAuth2Exception {
-
-        String clientId = oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey();
-        return isFederatedRoleBasedAuthzEnabled(clientId);
-    }
-
-    /**
-     * Check federated role based authorization enabled or not.
-     *
-     * @param clientId Application's client ID.
-     * @return Role based authz flow enabled or not.
-     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
-     */
-    public static boolean isFederatedRoleBasedAuthzEnabled(String clientId) throws IdentityOAuth2Exception {
-
-        List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
-        boolean isFederatedRoleBasedAuthzEnabled = false;
-        if (!federatedRoleBasedAuthzApps.isEmpty()) {
-            OAuthAppDO app = null;
-            try {
-                app = getAppInformationByClientId(clientId);
-            } catch (InvalidOAuthClientException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Error while retrieving the Application Information for client id: "
-                            + clientId, e);
-                }
-                throw new IdentityOAuth2Exception(e.getMessage(), e);
-            }
-            String appTenantDomain = getTenantDomainOfOauthApp(app);
-            if (StringUtils.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME, appTenantDomain)
-                    && federatedRoleBasedAuthzApps.contains(app.getApplicationName())) {
-                isFederatedRoleBasedAuthzEnabled = true;
-            }
-        }
-        return isFederatedRoleBasedAuthzEnabled;
     }
 }

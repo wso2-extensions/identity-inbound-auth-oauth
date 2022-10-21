@@ -27,7 +27,6 @@ import org.wso2.carbon.identity.oauth.dcr.service.DCRManagementService;
 /**
  * OAuth DCR handler class responsible for un registration.
  */
-@Deprecated
 public class UnRegistrationHandler extends AbstractDCRHandler {
 
     @Override

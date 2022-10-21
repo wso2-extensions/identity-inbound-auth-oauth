@@ -30,7 +30,6 @@ import javax.servlet.http.HttpServletResponse;
 /**
  * Http UnRegistration Response Factory.
  */
-@Deprecated
 public class HttpUnregistrationResponseFactory extends HttpIdentityResponseFactory {
 
     @Override

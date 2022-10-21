@@ -54,8 +54,8 @@ public abstract class OAuth2ScopeValidator {
      * no scopes are requested, otherwise false
      * @throws IdentityOAuth2Exception
      */
-    public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx)
-            throws IdentityOAuth2Exception, UserStoreException {
+    public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) throws
+            IdentityOAuth2Exception, UserStoreException {
         return true;
     }
 

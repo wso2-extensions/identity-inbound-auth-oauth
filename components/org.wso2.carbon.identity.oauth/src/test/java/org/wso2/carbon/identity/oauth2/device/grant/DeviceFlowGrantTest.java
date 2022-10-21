@@ -61,9 +61,7 @@ public class DeviceFlowGrantTest extends PowerMockTestCase {
     @Test
     public void testIsValidPollTime() throws Exception {
 
-        Assert.assertFalse(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,
-                "isWithinValidPollInterval", newTime, deviceFlowDO1));
-        Assert.assertTrue(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,
-                "isWithinValidPollInterval", newTime, deviceFlowDO2));
+        Assert.assertFalse(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class, "isValidPollTime", newTime, deviceFlowDO1));
+        Assert.assertTrue(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class, "isValidPollTime", newTime, deviceFlowDO2));
     }
 }

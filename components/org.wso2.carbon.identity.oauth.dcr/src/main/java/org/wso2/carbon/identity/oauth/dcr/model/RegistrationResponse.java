@@ -24,7 +24,6 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
 /**
  * DCR Response data returned after Registering an OAuth application.
  */
-@Deprecated
 public class RegistrationResponse extends IdentityResponse {
 
     private static final long serialVersionUID = -8410341453019535800L;

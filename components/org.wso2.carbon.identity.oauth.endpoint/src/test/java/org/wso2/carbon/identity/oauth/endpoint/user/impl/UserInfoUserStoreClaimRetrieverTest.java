@@ -18,22 +18,16 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertNotNull;
 
-@PrepareForTest({FrameworkUtils.class})
-public class UserInfoUserStoreClaimRetrieverTest extends PowerMockIdentityBaseTest {
+public class UserInfoUserStoreClaimRetrieverTest {
 
     @DataProvider
     public Object[][] getUserAttributes() {
@@ -52,9 +46,6 @@ public class UserInfoUserStoreClaimRetrieverTest extends PowerMockIdentityBaseTe
 
     @Test(dataProvider = "getUserAttributes")
     public void testUserInfoUserStoreClaimRetriever(HashMap<ClaimMapping, String> claims) {
-
-        mockStatic(FrameworkUtils.class);
-        when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(",");
 
         UserInfoUserStoreClaimRetriever claimsRetriever = new UserInfoUserStoreClaimRetriever();
         assertNotNull(claimsRetriever.getClaimsMap(claims));

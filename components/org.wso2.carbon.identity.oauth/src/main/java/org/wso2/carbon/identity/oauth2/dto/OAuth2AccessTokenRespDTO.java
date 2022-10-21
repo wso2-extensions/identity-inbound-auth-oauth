@@ -42,7 +42,6 @@ public class OAuth2AccessTokenRespDTO {
     String authorizedScopes;
     private String idToken;
     private Map<String, String> parameters;
-    private boolean isConsentedToken;
 
     public ResponseHeader[] getResponseHeaders() {
         if (responseHeaders == null) {
@@ -195,15 +194,5 @@ public class OAuth2AccessTokenRespDTO {
             parameters = new HashMap<>();
         }
         return parameters;
-    }
-
-    public boolean getIsConsentedToken() {
-
-        return isConsentedToken;
-    }
-
-    public void setIsConsentedToken(boolean isConsentedToken) {
-
-        this.isConsentedToken = isConsentedToken;
     }
 }

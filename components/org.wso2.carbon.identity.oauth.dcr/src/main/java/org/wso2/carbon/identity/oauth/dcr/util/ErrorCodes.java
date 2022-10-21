@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth.dcr.util;
 /**
  * Error codes used during OAuth DCRM.
  */
-@Deprecated
 public enum ErrorCodes {
     META_DATA_VALIDATION_FAILED,
     BAD_REQUEST,

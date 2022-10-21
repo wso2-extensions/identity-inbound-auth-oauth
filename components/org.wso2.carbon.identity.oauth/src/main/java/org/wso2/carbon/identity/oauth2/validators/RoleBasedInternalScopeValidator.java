@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.oauth2.validators;
 
 import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
@@ -28,12 +27,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.organization.management.role.management.service.models.Role;
-import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
-import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
@@ -41,18 +35,14 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static java.util.Objects.nonNull;
-import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getRolesFromFederatedUserAttributes;
 
 /**
  * The role based internal console scopes validation implementation. This will validate the configured console scopes
@@ -79,19 +69,7 @@ public class RoleBasedInternalScopeValidator {
 
         // Get the roles of the authenticated user.
         AuthenticatedUser authenticatedUser = tokReqMsgCtx.getAuthorizedUser();
-        List<String> roles;
-
-        // Find whether federated role based authorization is engaged or not.
-        boolean isFederatedRoleBasedAuthzEnabled = false;
-        if (authenticatedUser.isFederatedUser()) {
-            isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(tokReqMsgCtx);
-        }
-
-        if (isFederatedRoleBasedAuthzEnabled) {
-            roles = getRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
-        } else {
-            roles = getRolesOfTheUser(authenticatedUser);
-        }
+        List<String> roles = getRolesOfTheUser(authenticatedUser);
         List<String> rolesWithoutInternalDomain = removeInternalDomain(roles);
 
         // Get the configured system roles list with the scopes.
@@ -137,19 +115,7 @@ public class RoleBasedInternalScopeValidator {
 
         // Get the roles of the authenticated user.
         AuthenticatedUser authenticatedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
-        List<String> roles;
-
-        // Find whether federated role based authorization is engaged or not.
-        boolean isFederatedRoleBasedAuthzEnabled = false;
-        if (authenticatedUser.isFederatedUser()) {
-            isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(authzReqMessageContext);
-        }
-
-        if (isFederatedRoleBasedAuthzEnabled) {
-            roles = getRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
-        } else {
-            roles = getRolesOfTheUser(authenticatedUser);
-        }
+        List<String> roles = getRolesOfTheUser(authenticatedUser);
         List<String> rolesWithoutInternalDomain = removeInternalDomain(roles);
 
         // Get the configured system roles list with the scopes.
@@ -180,36 +146,17 @@ public class RoleBasedInternalScopeValidator {
 
     private List<String> getRolesOfTheUser(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception {
 
-        RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
-
         try {
+            RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
             int tenantId = realmService.getTenantManager().getTenantId(authenticatedUser.getTenantDomain());
-
-            //Retrieve organization roles, if the tenant has organization id associated.
-            Tenant tenant = realmService.getTenantManager().getTenant(tenantId);
-            if (nonNull(tenant) && isNotBlank(tenant.getAssociatedOrganizationUUID())) {
-                String organizationId = tenant.getAssociatedOrganizationUUID();
-                List<String> roles = getUserOrganizationRoles(authenticatedUser, organizationId);
-                //if no organization roles are returned, then retrieve the hybrid roles.
-                if (!roles.isEmpty()) {
-                    return roles;
-                }
-            }
 
             AbstractUserStoreManager userStoreManager
                     = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
 
             String userName = userStoreManager.getUserNameFromUserID(authenticatedUser.getUserId());
-            // If the username is empty try to set it as authenticated username.
-            if (StringUtils.isEmpty(userName)) {
-                userName = authenticatedUser.getUserName();
-            }
-            // Remove domain name from username.
-            if (StringUtils.isNotEmpty(userName)) {
-                userName = UserCoreUtil.removeDomainFromName(userName);
-            }
 
-            return userStoreManager.getHybridRoleListOfUser(userName, authenticatedUser.getUserStoreDomain());
+            return userStoreManager.getHybridRoleListOfUser(UserCoreUtil.removeDomainFromName(userName),
+                    authenticatedUser.getUserStoreDomain());
 
         } catch (UserStoreException e) {
             String error =
@@ -219,22 +166,6 @@ public class RoleBasedInternalScopeValidator {
             throw new IdentityOAuth2Exception("User id not available for user: "
                     + authenticatedUser.getLoggableUserId(), e);
         }
-    }
-
-    private List<String> getUserOrganizationRoles(AuthenticatedUser user, String organizationId) {
-
-        try {
-            List<Role> organizationRoles = OAuth2ServiceComponentHolder.getRoleManager()
-                    .getUserOrganizationRoles(user.getUserId(), organizationId);
-            if (nonNull(organizationRoles) && !organizationRoles.isEmpty()) {
-                return organizationRoles.stream().map(Role::getDisplayName).collect(Collectors.toList());
-            }
-        } catch (UserIdNotFoundException e) {
-            log.error("Error while retrieving user identifier", e);
-        } catch (OrganizationManagementException e) {
-            log.error("Error while retrieving user organization roles", e);
-        }
-        return Collections.emptyList();
     }
 
     private List<String> removeInternalDomain(List<String> roleNames) {

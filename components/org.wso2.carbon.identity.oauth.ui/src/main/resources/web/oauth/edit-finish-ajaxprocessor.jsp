@@ -21,21 +21,11 @@
 <%@ page import="org.owasp.encoder.Encode" %>
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
 <%@ page import="org.wso2.carbon.identity.core.util.IdentityUtil" %>
-<%@ page import="org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder" %>
 <%@ page import="org.wso2.carbon.identity.oauth.common.OAuthConstants" %>
 <%@ page import="org.wso2.carbon.identity.oauth.stub.dto.OAuthConsumerAppDTO" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.client.OAuthAdminClient" %>
 <%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
-<%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.ID_TOKEN_AUDIENCE_ENABLED" %>
-<%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.ID_TOKEN_AUDIENCE_COUNT" %>
-<%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.ID_TOKEN_AUDIENCES_PROPERTY" %>
-<%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.ACCESS_TOKEN_AUDIENCE_ENABLED" %>
-<%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.ACCESS_TOKEN_AUDIENCE_COUNT" %>
-<%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.ACCESS_TOKEN_AUDIENCES_PROPERTY" %>
-<%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.AUDIENCE_ENABLED" %>
-<%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.AUDIENCE_COUNT" %>
-<%@ page import="static org.wso2.carbon.identity.oauth.ui.util.OAuthUIConstants.AUDIENCES_PROPERTY" %>
 
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
@@ -118,7 +108,7 @@
     
     String spName = request.getParameter("application");
     boolean isError = false;
-
+    
     try {
         if (OAuthUIUtil.isValidURI(callback) || callback.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
             String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
@@ -149,7 +139,7 @@
                 }
             }
             grants = buff.toString();
-
+            
             List<String> scopeValidators = new ArrayList<String>();
             String[] allowedValidators = client.getAllowedScopeValidators();
             for (String allowedValidator : allowedValidators) {
@@ -163,42 +153,17 @@
                 app.setGrantTypes(grants);
                 app.setScopeValidators(scopeValidators.toArray(new String[scopeValidators.size()]));
             }
-
-            if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-                if (Boolean.parseBoolean(request.getParameter(AUDIENCE_ENABLED))) {
-                    String audiencesCountParameter = request.getParameter(AUDIENCE_COUNT);
-                    if (IdentityUtil.isNotBlank(audiencesCountParameter)) {
-                        int audiencesCount = Integer.parseInt(audiencesCountParameter);
-                        String[] audiences = request.getParameterValues(AUDIENCES_PROPERTY);
-                        if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
-                            app.setAudiences(audiences);
-                        }
-                    }
-                }
-            } else {
-                if (Boolean.parseBoolean(request.getParameter(ID_TOKEN_AUDIENCE_ENABLED))) {
-                    String idTokenAudiencesCountParameter = request.getParameter(ID_TOKEN_AUDIENCE_COUNT);
-                    if (IdentityUtil.isNotBlank(idTokenAudiencesCountParameter)) {
-                        int idTokenAudiencesCount = Integer.parseInt(idTokenAudiencesCountParameter);
-                        String[] idTokenAudiences = request.getParameterValues(ID_TOKEN_AUDIENCES_PROPERTY);
-                        if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
-                            app.setIdTokenAudiences(idTokenAudiences);
-                        }
-                    }
-                }
-
-                if (Boolean.parseBoolean(request.getParameter(ACCESS_TOKEN_AUDIENCE_ENABLED))) {
-                    String accessTokenAudiencesCountParameter = request.getParameter(ACCESS_TOKEN_AUDIENCE_COUNT);
-                    if (IdentityUtil.isNotBlank(accessTokenAudiencesCountParameter)) {
-                        int accessTokenAudiencesCount = Integer.parseInt(accessTokenAudiencesCountParameter);
-                        String[] accessTokenAudiences = request.getParameterValues(ACCESS_TOKEN_AUDIENCES_PROPERTY);
-                        if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
-                            app.setAccessTokenAudiences(accessTokenAudiences);
-                        }
+            if (Boolean.parseBoolean(request.getParameter("enableAudienceRestriction"))) {
+                String audiencesCountParameter = request.getParameter("audiencePropertyCounter");
+                if (IdentityUtil.isNotBlank(audiencesCountParameter)) {
+                    int audiencesCount = Integer.parseInt(audiencesCountParameter);
+                    String[] audiences = request.getParameterValues("audiencePropertyName");
+                    if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
+                        app.setAudiences(audiences);
                     }
                 }
             }
-
+            
             app.setRequestObjectSignatureValidationEnabled(isRequestObjectSignatureValidated);
             app.setIdTokenEncryptionEnabled(isIdTokenEncrypted);
             if (isIdTokenEncrypted) {
@@ -242,8 +207,8 @@
 <script>
 
     <%
-    boolean applicationComponentFound = CarbonUIUtil.isContextRegistered(config, "/application/");
-    if (applicationComponentFound) {
+    boolean qpplicationComponentFound = CarbonUIUtil.isContextRegistered(config, "/application/");
+    if (qpplicationComponentFound) {
         if (!isError) {
     %>
     location.href = '../application/configure-service-provider.jsp?action=update&display=oauthapp&spName=<%=Encode.forUriComponent(spName)%>&oauthapp=<%=Encode.forUriComponent(consumerkey)%>&isHashDisabled=<%=Encode.forUriComponent(String.valueOf(isHashDisabled))%>';

@@ -45,7 +45,6 @@ import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
         name = "identity.oauth.dcr",
         immediate = true
 )
-@Deprecated
 public class DCRServiceComponent {
 
     private static final Log log = LogFactory.getLog(DCRServiceComponent.class);

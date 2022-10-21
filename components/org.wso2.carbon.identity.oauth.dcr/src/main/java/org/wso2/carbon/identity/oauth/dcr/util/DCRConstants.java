@@ -22,15 +22,12 @@ import java.util.regex.Pattern;
 /**
  * This class holds the constants used by DynamicClientRegistration component.
  */
-@Deprecated
 public final class DCRConstants {
 
     public static final String DCR_OPERATION_CONTEXT = "OPERATION_CONTEXT";
     public static final Pattern DCR_ENDPOINT_URL_PATTERN = Pattern.compile(".+/register/?");
     public static final Pattern DCR_ENDPOINT_REGISTER_URL_PATTERN = Pattern.compile("(.*)/identity/register/?");
     public static final Pattern DCR_ENDPOINT_UNREGISTER_URL_PATTERN = Pattern.compile("(.*)/identity/register/(.+)");
-    public static final String DCR_ID = "identity/register";
-    public static final String DCR_VERSION = "";
     // Regex for validating application name.
     public static final String APP_NAME_VALIDATING_REGEX = "^[a-zA-Z0-9._-]*$";
     public static final String UNSUPPORTED_CHARACTERS_IN_REGISTRY = "[\\\\/:*?\"`,~!@#$&;%^*()+=<{}>'|]";

@@ -100,8 +100,14 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         Map<String, Object> claimsToBeReturned = new HashMap<>();
         Map<String, Object> addressScopeClaims = new HashMap<>();
 
-        Map<String, List<String>> scopeClaimsMap = getOIDCScopeClaimMap(spTenantDomain);
-
+        // Map<"openid", "first_name,last_name,username">
+        Map<String, List<String>> scopeClaimsMap = new HashMap<>();
+        int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
+        //load oidc scopes and mapped claims from the cache or db.
+        List<ScopeDTO> oidcScopesList = getOIDCScopes(tenantId);
+        for (ScopeDTO scope : oidcScopesList) {
+            scopeClaimsMap.put(scope.getName(), Arrays.asList(scope.getClaim()));
+        }
         if (MapUtils.isNotEmpty(scopeClaimsMap)) {
             List<String> addressScopeClaimUris = getAddressScopeClaimUris(scopeClaimsMap);
             // Iterate through scopes requested in the OAuth2/OIDC request to filter claims
@@ -147,10 +153,16 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
     @Override
     public List<String> getClaimsFilteredByOIDCScopes(Set<String> requestedScopes, String spTenantDomain) {
 
+        // Map<"openid", "first_name,last_name,username">
+        Map<String, List<String>> scopeClaimsMap = new HashMap<>();
+        int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
         List<String> filteredClaims = new ArrayList<>();
-        Map<String, List<String>> scopeClaimsMap = getOIDCScopeClaimMap(spTenantDomain);
-
-        if (MapUtils.isNotEmpty(scopeClaimsMap)) {
+        //load oidc scopes and mapped claims from the cache or db.
+        List<ScopeDTO> oidcScopesList = getOIDCScopes(tenantId);
+        if (CollectionUtils.isNotEmpty(oidcScopesList)) {
+            for (ScopeDTO scope : oidcScopesList) {
+                scopeClaimsMap.put(scope.getName(), Arrays.asList(scope.getClaim()));
+            }
             // Iterate through scopes requested in the OAuth2/OIDC request to filter claims
             for (String requestedScope : requestedScopes) {
                 // Check if requested scope is a supported OIDC scope value
@@ -205,7 +217,6 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
 
             List<String> userConsentedClaimUris = getUserConsentedLocalClaimURIs(authenticatedUser, serviceProvider);
             List<String> userConsentClaimUrisInOIDCDialect = getOIDCClaimURIs(userConsentedClaimUris, spTenantDomain);
-            handleConsentOfAddressClaim(spTenantDomain, userClaims, userConsentClaimUrisInOIDCDialect);
 
             return userClaims.keySet().stream()
                     .filter(userConsentClaimUrisInOIDCDialect::contains)
@@ -218,69 +229,6 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         }
 
         return userClaims;
-    }
-
-    /**
-     * Handles filtering the fields of address claim from the user consented claims.
-     * https://openid.net/specs/openid-connect-core-1_0.html#AddressClaim
-     *
-     * @param spTenantDomain Tenant domain of the SP.
-     * @param userClaims User attributes available for the SP.
-     * @param userConsentClaimUrisInOIDCDialect Claim URIs that received user consent, in OIDC dialect.
-     */
-    private void handleConsentOfAddressClaim(String spTenantDomain, Map<String, Object> userClaims,
-                                              List<String> userConsentClaimUrisInOIDCDialect) {
-
-        boolean hasAddressClaims = false;
-        JSONObject consentedAddressClaims = new JSONObject();
-        Map<String, List<String>> scopeClaimsMap = getOIDCScopeClaimMap(spTenantDomain);
-
-        if (userClaims.containsKey(ADDRESS) && MapUtils.isNotEmpty(scopeClaimsMap)) {
-            List<String> addressScopeClaimUris = getAddressScopeClaimUris(scopeClaimsMap);
-            consentedAddressClaims = (JSONObject) userClaims.get(ADDRESS);
-            for (String addressScopeClaimEntry : addressScopeClaimUris) {
-                if (userConsentClaimUrisInOIDCDialect.contains(addressScopeClaimEntry)) {
-                    hasAddressClaims = true;
-                    userConsentClaimUrisInOIDCDialect.remove(addressScopeClaimEntry);
-                    if (log.isDebugEnabled()) {
-                        log.debug("Consent available for sub-claim: " + addressScopeClaimEntry +
-                                " of address claim.");
-                    }
-                } else {
-                    if (consentedAddressClaims.containsKey(addressScopeClaimEntry)) {
-                        consentedAddressClaims.remove(addressScopeClaimEntry);
-                    }
-                }
-            }
-        }
-        if (hasAddressClaims) {
-            userConsentClaimUrisInOIDCDialect.add(ADDRESS);
-            userClaims.put(ADDRESS, consentedAddressClaims);
-            if (log.isDebugEnabled()) {
-                log.debug("Adding sub-claims: " + consentedAddressClaims.keySet() + " to the ID token " +
-                        "under the address claim.");
-            }
-        }
-    }
-
-    /**
-     * Retrieve the OIDC scope claim map for the given SP tenant domain.
-     *
-     * @param spTenantDomain Tenant domain of the SP.
-     * @return OIDC scope claim map for the tenant.
-     */
-    private Map<String, List<String>> getOIDCScopeClaimMap(String spTenantDomain) {
-
-        // Map<"openid", "first_name,last_name,username">
-        Map<String, List<String>> scopeClaimsMap = new HashMap<>();
-        int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
-
-        // Load OIDC scopes and mapped claims from the cache or db.
-        List<ScopeDTO> oidcScopesList = getOIDCScopes(tenantId);
-        for (ScopeDTO scope : oidcScopesList) {
-            scopeClaimsMap.put(scope.getName(), Arrays.asList(scope.getClaim()));
-        }
-        return scopeClaimsMap;
     }
 
     private boolean isConsentManagementServiceDisabled(ServiceProvider serviceProvider) {

@@ -55,7 +55,6 @@ import java.util.List;
 /**
  * OAuth DCR Management class used to manage OAuth application registration.
  */
-@Deprecated
 public class DCRManagementService {
 
     private static final Log log = LogFactory.getLog(DCRManagementService.class);

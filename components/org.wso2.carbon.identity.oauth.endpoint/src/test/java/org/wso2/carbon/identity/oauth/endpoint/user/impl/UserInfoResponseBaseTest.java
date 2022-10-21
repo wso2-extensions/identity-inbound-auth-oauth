@@ -215,9 +215,6 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
 
     protected void prepareClaimUtil(Map<String, Object> claims) throws Exception {
 
-        mockStatic(FrameworkUtils.class);
-        when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(",");
-
         mockStatic(ClaimUtil.class);
         when(ClaimUtil.getUserClaimsUsingTokenResponse(any(OAuth2TokenValidationResponseDTO.class))).thenReturn(claims);
     }

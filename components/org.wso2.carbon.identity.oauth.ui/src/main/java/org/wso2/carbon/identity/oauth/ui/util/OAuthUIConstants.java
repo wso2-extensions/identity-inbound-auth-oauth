@@ -26,16 +26,4 @@ public class OAuthUIConstants {
     public static final String CLAIM_URI = "ClaimURI";
     public static final String SCOPE_NAME = "scopeName";
 
-    public static final String ID_TOKEN_AUDIENCE_ENABLED = "enableIdTokenAudienceRestriction";
-    public static final String ID_TOKEN_AUDIENCE_COUNT = "idTokenAudiencePropertyCounter";
-    public static final String ID_TOKEN_AUDIENCES_PROPERTY = "idTokenAudiencePropertyName";
-
-    public static final String ACCESS_TOKEN_AUDIENCE_ENABLED = "enableAccessTokenAudienceRestriction";
-    public static final String ACCESS_TOKEN_AUDIENCE_COUNT = "accessTokenAudiencePropertyCounter";
-    public static final String ACCESS_TOKEN_AUDIENCES_PROPERTY = "accessTokenAudiencePropertyName";
-
-    public static final String AUDIENCE_ENABLED = "enableAudienceRestriction";
-    public static final String AUDIENCE_COUNT = "audiencePropertyCounter";
-    public static final String AUDIENCES_PROPERTY = "audiencePropertyName";
-
 }

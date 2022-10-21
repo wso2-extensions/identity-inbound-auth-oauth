@@ -49,7 +49,6 @@ import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAOImpl;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAOImpl;
-import org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -76,8 +75,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.servlet.http.HttpServletRequest;
-
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyMap;
@@ -91,14 +88,9 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.AssertJUnit.assertTrue;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
-import static org.wso2.carbon.identity.oauth2.device.constants.Constants.RESPONSE_TYPE_DEVICE;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.REDIRECT_URI;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.RESPONSE_TYPE;
 
 /**
  * This class tests the OAuth2Service class.
@@ -146,9 +138,6 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private OAuthCache oAuthCache;
-
-    @Mock
-    private HttpServletRequest mockHttpServletRequest;
 
     private OAuth2Service oAuth2Service;
     private static final String clientId = "IbWwXLf5MnKSY6x6gnR_7gd7f1wa";
@@ -207,13 +196,12 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
                                        String callbackURI) throws Exception {
 
         OAuthAppDO oAuthAppDO = getOAuthAppDO(clientId, grantType, callbackUrl, tenantDomain);
-        when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
-        when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(callbackURI);
-        when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code");
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
-                validateClientInfo(mockHttpServletRequest);
+                validateClientInfo(clientId, callbackURI);
         assertNotNull(oAuth2ClientValidationResponseDTO);
         assertTrue(oAuth2ClientValidationResponseDTO.isValidClient());
+        assertEquals(oAuth2ClientValidationResponseDTO.getApplicationName(), oAuthAppDO.getApplicationName());
+        assertEquals(oAuth2ClientValidationResponseDTO.isPkceMandatory(), oAuthAppDO.isPkceMandatory());
     }
 
     @Test
@@ -221,98 +209,17 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
         String clientId = UUID.randomUUID().toString();
         getOAuthAppDO(clientId, "dummyGrantType", "dummyCallBackUrl", "carbon.super");
-        when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
-        when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn("dummyCallBackURI");
-        when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code");
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
-                validateClientInfo(mockHttpServletRequest);
+                validateClientInfo(clientId, "dummyCallBackURI");
         assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), OAuth2ErrorCodes.INVALID_CALLBACK);
-    }
-
-    /**
-     * DataProvider: registered callback URI, callback URI, valid
-     */
-    @DataProvider(name = "ValidateCallbackURIDataProvider")
-    public Object[][] validateLoopbackCallbackURIDataProvider() {
-
-        return new Object[][]{
-                // Regular redirect URL registered.
-                {"https://sampleapp.com/callback", "https://sampleapp.com/callback", true},
-                {"https://sampleapp.com/callback", "https://127.0.0.1:8080/callback", false},
-
-                // Loopback redirect URL registered.
-                {"https://127.0.0.1:8080/callback", "https://127.0.0.1:8081/callback", true},
-                {"https://127.0.0.1:8080/anothercallback", "https://127.0.0.1:8080/callback", false},
-                {"https://127.0.0.1:8080/callback", "https://localhost:8080/callback", false},
-                {"https://127.0.0.1:8080/callback", "https://sampleapp.com/callback", false},
-
-                // Simple regex based registered callback URI with loopback URL.
-                {"regexp=(https://((sampleapp.com)|(127.0.0.1:8000))(/callback))",
-                        "https://sampleapp.com/callback", true},
-                {"regexp=(https://((sampleapp.com)|(127.0.0.1:8000))(/callback))",
-                        "https://127.0.0.1:8001/callback", true},
-                {"regexp=(https://((sampleapp.com)|(127.0.0.1:8000))(/callback))",
-                        "https://127.0.0.1:8001/callback", true},
-
-                // Regex with dynamic query values.
-                {"regexp=https://127.0.0.1:8090\\?id=(.*)", "https://127.0.0.1:8080?id=hg7", true},
-                {"regexp=https://127.0.0.1:8090/callbak\\?id=(.*)", "https://127.0.0.1:8080?id=hg7", false},
-
-                // Regex with a range of port numbers.
-                {"regexp=((https://127.0.0.1:)([8][0]{2}[0-7])(/callback))", "https://127.0.0.1:8089/callback", false},
-                {"regexp=((https://127.0.0.1:)([8][0]{2}[0-7])(/callback))", "https://127.0.0.1:8007/callback", false},
-                {"regexp=(((https://127.0.0.1)|((https://sampleapp.com:)([8][0]{2}[0-7])))(/callback))",
-                        "https://127.0.0.1:10000/callback", true},
-                {"regexp=(((https://127.0.0.1)|((https://127.0.0.2:)([8][0]{2}[0-7])))(/callback))",
-                        "https://127.0.0.2:8007/callback", true},
-                {"regexp=((https://127.0.0.2:)([8][0]{2}[0-7])(/callback))", "https://127.0.0.2:8089/callback", false},
-                {"regexp=((https://127.0.0.2:)([8][0]{2}[0-7])(/callback))", "https://127.0.0.2:8007/callback", true},
-        };
-    }
-
-    @Test(dataProvider = "ValidateCallbackURIDataProvider")
-    public void testValidateLoopbackCallbackURI(String registeredCallbackURI, String callbackURI, boolean valid)
-            throws Exception {
-
-        String clientId = UUID.randomUUID().toString();
-        getOAuthAppDO(clientId, "dummyGrantType", registeredCallbackURI, "carbon.super");
-        when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
-        when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(callbackURI);
-        when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code");
-        OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
-                validateClientInfo(mockHttpServletRequest);
-        if (!valid) {
-            assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), OAuth2ErrorCodes.INVALID_CALLBACK);
-        } else {
-            assertNotEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), OAuth2ErrorCodes.INVALID_CALLBACK);
-        }
-    }
-
-    @Test
-    public void testValidateClientInfoWithDeviceResponseType() throws Exception {
-
-        String clientId = UUID.randomUUID().toString();
-        getOAuthAppDO(clientId, "dummyGrantType", null, "carbon.super");
-        OAuth2ServiceComponentHolder.getInstance().addResponseTypeRequestValidator(
-                new DeviceFlowResponseTypeRequestValidator());
-        when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
-        when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(null);
-        when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn(RESPONSE_TYPE_DEVICE);
-        OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
-                validateClientInfo(mockHttpServletRequest);
-        assertNotNull(oAuth2ClientValidationResponseDTO);
-        assertTrue(oAuth2ClientValidationResponseDTO.isValidClient());
     }
 
     @Test
     public void testValidateClientInfoWithEmptyGrantTypes() throws Exception {
 
         getOAuthAppDO(clientId, null, "dummyCallbackUrl", "dummyTenantDomain");
-        when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
-        when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn("dummyCallBackUrl");
-        when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code");
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
-                validateClientInfo(mockHttpServletRequest);;
+                validateClientInfo(clientId, "dummyCallBackUrl");
         assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), OAuth2ErrorCodes.UNAUTHORIZED_CLIENT);
     }
 
@@ -340,11 +247,8 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         when(oAuthAppDAO.getAppInformation(null)).thenReturn(null);
-        when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(null);
-        when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn("dummyCallbackUrI");
-        when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code");
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
-                validateClientInfo(mockHttpServletRequest);
+                validateClientInfo(null, "dummyCallbackUrI");
         assertNotNull(oAuth2ClientValidationResponseDTO);
         assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), "invalid_client");
         assertFalse(oAuth2ClientValidationResponseDTO.isValidClient());
@@ -366,11 +270,8 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
                 "dummyTenantDomain");
         oAuthAppDO.setState(appState);
         AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
-        when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
-        when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn("dummyCallbackUrI");
-        when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code");
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
-                validateClientInfo(mockHttpServletRequest);
+                validateClientInfo(clientId, "dummyCallbackUrI");
         assertNotNull(oAuth2ClientValidationResponseDTO);
         assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), OAuth2ErrorCodes.INVALID_CLIENT);
         assertFalse(oAuth2ClientValidationResponseDTO.isValidClient());
@@ -386,11 +287,8 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
 
-        when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
-        when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(callbackUrI);
-        when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code");
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
-                validateClientInfo(mockHttpServletRequest);
+                validateClientInfo(clientId, callbackUrI);
         assertNotNull(oAuth2ClientValidationResponseDTO);
         assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), OAuth2ErrorCodes.INVALID_CLIENT);
         assertFalse(oAuth2ClientValidationResponseDTO.isValidClient());
@@ -406,11 +304,8 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
 
-        when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
-        when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(callbackUrI);
-        when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code");
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
-                validateClientInfo(mockHttpServletRequest);
+                validateClientInfo(clientId, callbackUrI);
         assertNotNull(oAuth2ClientValidationResponseDTO);
         assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), OAuth2ErrorCodes.SERVER_ERROR);
         assertFalse(oAuth2ClientValidationResponseDTO.isValidClient());

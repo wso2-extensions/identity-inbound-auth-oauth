@@ -18,7 +18,6 @@
 
 <%@ page import="org.owasp.encoder.Encode" %>
 <%@ page import="java.net.URLDecoder" %>
-<%@ page import="org.wso2.carbon.identity.oauth.ui.util.OAuthUIUtil" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon" %>
 
@@ -174,12 +173,12 @@
                                                    onclick="validate();"/>
                                             <%
                                                 String forwardUrl = "../../carbon/admin/index.jsp";
-                                                if (forwardPage != null && OAuthUIUtil.isValidURL(forwardPage)) {
+                                                if (forwardPage != null) {
                                                     forwardUrl = forwardPage;
                                                 }
                                             %>
                                             <input type="button" class="button"
-                                                   onclick="javascript:location.href='<%=Encode.forJavaScript(forwardUrl)%>'"
+                                                   onclick="javascript:location.href='<%=forwardUrl%>'"
                                                    value="<fmt:message key='deny'/>"/>
                                         </td>
                                     </tr>

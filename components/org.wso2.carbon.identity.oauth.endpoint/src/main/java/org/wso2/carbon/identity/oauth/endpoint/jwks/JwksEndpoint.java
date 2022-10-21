@@ -20,13 +20,11 @@ package org.wso2.carbon.identity.oauth.endpoint.jwks;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.util.Base64;
-import com.nimbusds.jose.util.Base64URL;
-import net.minidev.json.JSONArray;
-import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -41,13 +39,13 @@ import org.wso2.carbon.utils.CarbonUtils;
 import java.io.FileInputStream;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateEncodingException;
-import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.jws.WebService;
 import javax.ws.rs.GET;
@@ -77,7 +75,7 @@ public class JwksEndpoint {
 
         try (FileInputStream file = new FileInputStream(keystorePath)) {
             final KeyStore keystore;
-            List<CertificateInfo> certificateInfoList = new ArrayList<>();
+            Map<String, Certificate> certificatesWithAliases = new HashMap<>();
             if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(tenantDomain)) {
                 keystore = KeyStore.getInstance(KeyStore.getDefaultType());
                 String password = CarbonUtils.getServerConfiguration().getFirstProperty(SECURITY_KEY_STORE_PW);
@@ -97,20 +95,19 @@ public class JwksEndpoint {
             while (enumeration.hasMoreElements()) {
                 String alias = (String) enumeration.nextElement();
                 if (keystore.isKeyEntry(alias)) {
-                    CertificateInfo certificateInfo = new CertificateInfo(keystore.getCertificate(alias), alias);
-                    certificateInfo.setCertificateChain(keystore.getCertificateChain(alias));
-                    certificateInfoList.add(certificateInfo);
+                    Certificate cert = keystore.getCertificate(alias);
+                    certificatesWithAliases.put(alias, cert);
                 }
             }
-            return buildResponse(certificateInfoList);
+            return buildResponse(certificatesWithAliases);
         } catch (Exception e) {
             String errorMessage = "Error while generating the keyset for tenant domain: " + tenantDomain;
             return logAndReturnError(errorMessage, e);
         }
     }
 
-    private String buildResponse(List<CertificateInfo> certInfoList)
-            throws IdentityOAuth2Exception, ParseException, CertificateEncodingException {
+    private String buildResponse(Map<String, Certificate> certificates)
+            throws IdentityOAuth2Exception, ParseException {
 
         JSONArray jwksArray = new JSONArray();
         JSONObject jwksJson = new JSONObject();
@@ -120,19 +117,16 @@ public class JwksEndpoint {
         // If we read different algorithms from identity.xml then put them in a list.
         List<JWSAlgorithm> diffAlgorithms = findDifferentAlgorithms(accessTokenSignAlgorithm, config);
         // Create JWKS for different algorithms using new KeyID creation method.
-        for (CertificateInfo certInfo : certInfoList) {
+        for (Map.Entry certificateWithAlias : certificates.entrySet()) {
             for (JWSAlgorithm algorithm : diffAlgorithms) {
-                String alias = certInfo.getCertificateAlias();
-                X509Certificate cert = (X509Certificate) certInfo.getCertificate();
-                Certificate[] certChain = certInfo.getCertificateChain();
-                List<Base64> encodedCertList = generateEncodedCertList(certChain, alias);
-                RSAKey.Builder jwk = new RSAKey.Builder((RSAPublicKey) cert.getPublicKey());
+                Certificate cert = (Certificate) certificateWithAlias.getValue();
+                String alias = (String) certificateWithAlias.getKey();
+                RSAPublicKey publicKey = (RSAPublicKey) cert.getPublicKey();
+                RSAKey.Builder jwk = new RSAKey.Builder(publicKey);
                 jwk.keyID(OAuth2Util.getKID(cert, algorithm, getTenantDomain()));
                 jwk.algorithm(algorithm);
                 jwk.keyUse(KeyUse.parse(KEY_USE));
-                jwk.x509CertChain(encodedCertList);
-                jwk.x509CertSHA256Thumbprint(Base64URL.encode(OAuth2Util.getThumbPrint(cert, alias)));
-                jwksArray.add(jwk.build().toJSONObject());
+                jwksArray.put(jwk.build().toJSONObject());
             }
         }
         jwksJson.put(KEYS, jwksArray);
@@ -194,26 +188,5 @@ public class JwksEndpoint {
 
         String ksName = tenantDomain.trim().replace(".", "-");
         return (ksName + ".jks");
-    }
-
-    /**
-     * This method generates the base64 encoded certificate list from a Certificate array
-     *
-     * @return base64 encoded certificate list
-     */
-    private List<Base64> generateEncodedCertList(Certificate[] certificates, String alias)
-            throws CertificateEncodingException {
-
-        List<Base64> certList = new ArrayList<>();
-        for (Certificate certificate : certificates) {
-            try {
-                certList.add(Base64.encode(certificate.getEncoded()));
-            } catch (CertificateEncodingException exception) {
-                String errorMessage = "Unable to encode the public certificate with alias: " + alias +
-                        " in the tenant domain: " + getTenantDomain();
-                throw new CertificateEncodingException(errorMessage, exception);
-            }
-        }
-        return certList;
     }
 }

@@ -138,7 +138,6 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     private Timestamp refreshTokenIssuedTime;
     private long validityPeriodInMillis;
     private long refreshTokenValidityPeriodInMillis;
-    private String issuer = "dummyIssuer";
 
     @Mock
     private OAuthServerConfiguration oauthServerConfigurationMock;
@@ -1881,8 +1880,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                         "of the user should be in {username}@{tenant-domain} format.");
     }
 
-    @DataProvider(name = "oidcIdTokenAudienceDataProvider")
-    public Object[][] getOIDCIdTokenAudience() {
+    @DataProvider(name = "oidcAudienceDataProvider")
+    public Object[][] getOIDCAudience() {
 
         return new Object[][]{
                 {null, 1},
@@ -1893,28 +1892,15 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         };
     }
 
-    @DataProvider(name = "oidcAccessTokenAudienceDataProvider")
-    public Object[][] getOIDCAccessTokenAudience() {
-
-        return new Object[][]{
-                {null, 1},
-                {new String[0], 1},
-                {new String[]{"custom_audience"}, 2},
-                {new String[]{"custom_audience", issuer}, 2},
-                {new String[]{"custom_audience1", "custom_audience2", issuer}, 3}
-        };
-    }
-
-    @Test(dataProvider = "oidcIdTokenAudienceDataProvider")
-    public void testGetIdTokenAudienceForSpDefinedAudiences(Object oidcAudienceConfiguredInApp,
+    @Test(dataProvider = "oidcAudienceDataProvider")
+    public void testGetAudienceForSpDefinedAudiences(Object oidcAudienceConfiguredInApp,
                                                      int expectedAudiencesInTheList) throws Exception {
 
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
-        String[] configuredIdTokenAudiences = (String[]) oidcAudienceConfiguredInApp;
+        String[] configuredAudiences = (String[]) oidcAudienceConfiguredInApp;
+        oAuthAppDO.setAudiences(configuredAudiences);
 
-        oAuthAppDO.setIdTokenAudiences(configuredIdTokenAudiences);
         OAuth2ServiceComponentHolder.setAudienceEnabled(true);
-        OAuth2ServiceComponentHolder.setLegacyAudienceEnabled(false);
 
         IdentityConfigParser mockConfigParser = mock(IdentityConfigParser.class);
         mockStatic(IdentityConfigParser.class);
@@ -1922,45 +1908,15 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         OMElement mockOAuthConfigElement = mock(OMElement.class);
         when(mockConfigParser.getConfigElement(OAuth2Util.CONFIG_ELEM_OAUTH)).thenReturn(mockOAuthConfigElement);
 
-        List<String> oidcIdTokenAudience = OAuth2Util.getOIDCIdTokenAudience(clientId, oAuthAppDO);
-        assertNotNull(oidcIdTokenAudience);
-        assertEquals(oidcIdTokenAudience.size(), expectedAudiencesInTheList);
+        List<String> oidcAudience = OAuth2Util.getOIDCAudience(clientId, oAuthAppDO);
+        assertNotNull(oidcAudience);
+        assertEquals(oidcAudience.size(), expectedAudiencesInTheList);
         // We except the client_id to be the first value in the audience list.
-        assertEquals(oidcIdTokenAudience.get(0), clientId);
-        if (configuredIdTokenAudiences != null) {
+        assertEquals(oidcAudience.get(0), clientId);
+        if (configuredAudiences != null) {
             // Check whether all configued audience values are available.
-            for (String configuredAudience : configuredIdTokenAudiences) {
-                assertTrue(oidcIdTokenAudience.contains(configuredAudience));
-            }
-        }
-    }
-
-    @Test(dataProvider = "oidcAccessTokenAudienceDataProvider")
-    public void testGetAccessTokenAudienceForSpDefinedAudiences(Object oidcAudienceConfiguredInApp,
-                                                     int expectedAudiencesInTheList) throws Exception {
-
-        OAuthAppDO oAuthAppDO = new OAuthAppDO();
-        String[] configuredAccessTokenAudiences = (String[]) oidcAudienceConfiguredInApp;
-
-        oAuthAppDO.setAccessTokenAudiences(configuredAccessTokenAudiences);
-        OAuth2ServiceComponentHolder.setAudienceEnabled(true);
-        OAuth2ServiceComponentHolder.setLegacyAudienceEnabled(false);
-
-        IdentityConfigParser mockConfigParser = mock(IdentityConfigParser.class);
-        mockStatic(IdentityConfigParser.class);
-        when(IdentityConfigParser.getInstance()).thenReturn(mockConfigParser);
-        OMElement mockOAuthConfigElement = mock(OMElement.class);
-        when(mockConfigParser.getConfigElement(OAuth2Util.CONFIG_ELEM_OAUTH)).thenReturn(mockOAuthConfigElement);
-
-        List<String> oidcAccessTokenAudience = OAuth2Util.getOIDCAccessTokenAudience(issuer, oAuthAppDO);
-        assertNotNull(oidcAccessTokenAudience);
-        assertEquals(oidcAccessTokenAudience.size(), expectedAudiencesInTheList);
-        // We except the client_id to be the first value in the audience list.
-        assertEquals(oidcAccessTokenAudience.get(0), issuer);
-        if (configuredAccessTokenAudiences != null) {
-            // Check whether all configued audience values are available.
-            for (String configuredAudience : configuredAccessTokenAudiences) {
-                assertTrue(oidcAccessTokenAudience.contains(configuredAudience));
+            for (String configuredAudience : configuredAudiences) {
+                assertTrue(oidcAudience.contains(configuredAudience));
             }
         }
     }

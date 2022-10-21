@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.oauth.cache;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationBaseCache;
@@ -244,15 +243,12 @@ public class AuthorizationGrantCache extends
     }
 
     /**
-     * Clears a cache entry from SessionDataStore if the id is not null.
+     * Clears a cache entry from SessionDataStore.
      *
      * @param id to clear cache.
      */
     private void clearFromSessionStore(String id) {
-
-        if (StringUtils.isNotBlank(id)) {
-            SessionDataStore.getInstance().clearSessionData(id, AUTHORIZATION_GRANT_CACHE_NAME);
-        }
+        SessionDataStore.getInstance().clearSessionData(id, AUTHORIZATION_GRANT_CACHE_NAME);
     }
 
     /**

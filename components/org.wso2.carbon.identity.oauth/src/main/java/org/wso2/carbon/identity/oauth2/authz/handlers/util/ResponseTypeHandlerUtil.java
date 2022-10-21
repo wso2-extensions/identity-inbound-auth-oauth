@@ -253,17 +253,9 @@ public class ResponseTypeHandlerUtil {
         // set code issued time.this is needed by downstream handlers.
         oauthAuthzMsgCtx.setCodeIssuedTime(timestamp.getTime());
 
-        AuthenticatedUser authenticatedUser = authorizationReqDTO.getUser();
-        if (authenticatedUser != null && authenticatedUser.isFederatedUser()) {
-            boolean skipTenantDomainOverWriting = false;
-            if (authenticatedUser.getTenantDomain() != null) {
-                skipTenantDomainOverWriting = OAuth2Util.isFederatedRoleBasedAuthzEnabled(oauthAuthzMsgCtx);
-            }
-            // If federated role-based authorization is engaged skip overwriting the user tenant domain.
-            if (!skipTenantDomainOverWriting) {
-                // If a federated user, treat the tenant domain as similar to the application domain.
-                authenticatedUser.setTenantDomain(authorizationReqDTO.getTenantDomain());
-            }
+        if (authorizationReqDTO.getUser() != null && authorizationReqDTO.getUser().isFederatedUser()) {
+            //if a federated user, treat the tenant domain as similar to application domain.
+            authorizationReqDTO.getUser().setTenantDomain(authorizationReqDTO.getTenantDomain());
         }
 
         try {

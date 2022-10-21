@@ -24,7 +24,6 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -37,8 +36,6 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeBindingCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeBindingCacheKey;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
@@ -51,12 +48,8 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
-import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.AuthorizationManager;
-import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.core.UserCoreConstants;
-import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
@@ -64,14 +57,11 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static java.util.Objects.nonNull;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getRolesFromFederatedUserAttributes;
 
 /**
  * The JDBC Scope Validation implementation. This validates the Resource's scope (stored in IDN_OAUTH2_RESOURCE_SCOPE)
@@ -90,7 +80,6 @@ public class JDBCPermissionBasedInternalScopeValidator {
 
     /**
      * Execute Internal scope Validation.
-     *
      * @param tokReqMsgCtx Oauth token request message.
      * @return array of validated scopes.
      */
@@ -120,7 +109,6 @@ public class JDBCPermissionBasedInternalScopeValidator {
 
     /**
      * Execute Internal Scope Validation.
-     *
      * @param authzReqMessageContext OAuth authorization request message.
      * @return array of validated scopes.
      */
@@ -139,10 +127,9 @@ public class JDBCPermissionBasedInternalScopeValidator {
 
     /**
      * Execute Internal Scope Validation.
-     *
-     * @param requestedScopes   Array of scopes that needs to be validated.
+     * @param requestedScopes Array of scopes that needs to be validated.
      * @param authenticatedUser Authenticated user.
-     * @param clientId          ID of the client.
+     * @param clientId ID of the client.
      * @return Array of validated scopes.
      */
     public String[] validateScope(String[] requestedScopes, AuthenticatedUser authenticatedUser, String clientId) {
@@ -171,7 +158,6 @@ public class JDBCPermissionBasedInternalScopeValidator {
 
     private List<Scope> getUserAllowedScopes(AuthenticatedUser authenticatedUser, String[] requestedScopes,
                                              String clientId) {
-
         List<Scope> userAllowedScopes = new ArrayList<>();
 
         try {
@@ -179,20 +165,11 @@ public class JDBCPermissionBasedInternalScopeValidator {
                 return new ArrayList<>();
             }
             boolean isSystemScope = ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE);
-            String tenantDomain = authenticatedUser.getTenantDomain();
-            boolean isFederatedRoleBasedAuthzEnabled = false;
-            if (authenticatedUser.isFederatedUser()) {
-                isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(clientId);
-                if (isFederatedRoleBasedAuthzEnabled) {
-                    OAuthAppDO app = OAuth2Util.getAppInformationByClientId(clientId);
-                    tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(app);
-                }
-            }
-            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-            startTenantFlow(tenantDomain, tenantId);
+            int tenantId = IdentityTenantUtil.getTenantId(authenticatedUser.getTenantDomain());
+            startTenantFlow(authenticatedUser.getTenantDomain(), tenantId);
             AuthorizationManager authorizationManager = OAuthComponentServiceHolder.getInstance().getRealmService()
                     .getTenantUserRealm(tenantId).getAuthorizationManager();
-            String[] allowedResourcesForUser;
+            String[] allowedUIResourcesForUser;
             /*
             Here we handle scope validation for federated user and local user separately.
             For local users - user store is used to get user roles.
@@ -203,43 +180,25 @@ public class JDBCPermissionBasedInternalScopeValidator {
              */
             if (authenticatedUser.isFederatedUser()) {
                 /*
-                If the role-based authorization feature is enabled & particular applications in the listed under the
-                required application list then retrieve permissions from the FIdp user roles.
-                Permission will be fetched for mapped roles in the application tenant.
-                */
-                if (isFederatedRoleBasedAuthzEnabled) {
-                    allowedResourcesForUser =
-                            getAllowedPermissionsUsingRoleForNonAssociatedFederatedUsers(authenticatedUser,
-                                    authorizationManager);
-                } else if (isSPAlwaysSendMappedLocalSubjectId(clientId)) {
-                   /*
-                    There is a flow where 'Assert identity using mapped local subject identifier' flag enabled but the
-                    federated user doesn't have any association in localIDP, to handle this case we check for 'Assert
-                    identity using mapped local subject identifier' flag and get roles from userStore.
-                     */
-                    allowedResourcesForUser = getAllowedResourcesOfUser(authenticatedUser, authorizationManager);
+                There is a flow where 'Assert identity using mapped local subject identifier' flag enabled but the
+                federated user doesn't have any association in localIDP, to handle this case we check for 'Assert
+                identity using mapped local subject identifier' flag and get roles from userStore.
+                 */
+                if (isSPAlwaysSendMappedLocalSubjectId(clientId)) {
+                    allowedUIResourcesForUser = getAllowedUIResourcesOfUser(authenticatedUser, authorizationManager);
                 } else {
                     // Handle not account associated federated users.
-                    allowedResourcesForUser =
-                            getAllowedResourcesForNotAssociatedFederatedUser(authenticatedUser, authorizationManager);
+                    allowedUIResourcesForUser =
+                            getAllowedUIResourcesForNotAssociatedFederatedUser(authenticatedUser, authorizationManager);
                 }
             } else {
-                Tenant tenant =
-                        OAuthComponentServiceHolder.getInstance().getRealmService().getTenantManager()
-                                .getTenant(tenantId);
-                if (nonNull(tenant) && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID())) {
-                    allowedResourcesForUser = retrieveUserOrganizationPermission(authenticatedUser,
-                            tenant.getAssociatedOrganizationUUID());
-                } else {
-                    allowedResourcesForUser = getAllowedResourcesOfUser(authenticatedUser, authorizationManager);
-                }
+                allowedUIResourcesForUser = getAllowedUIResourcesOfUser(authenticatedUser, authorizationManager);
             }
-
             Set<Scope> allScopes = getScopesOfPermissionType(tenantId);
-            if (ArrayUtils.contains(allowedResourcesForUser, ROOT) || ArrayUtils.contains(allowedResourcesForUser,
+            if (ArrayUtils.contains(allowedUIResourcesForUser, ROOT) || ArrayUtils.contains(allowedUIResourcesForUser,
                     PERMISSION_ROOT)) {
                 return new ArrayList<>(allScopes);
-            } else if (ArrayUtils.contains(allowedResourcesForUser, ADMIN_PERMISSION_ROOT)) {
+            } else if (ArrayUtils.contains(allowedUIResourcesForUser, ADMIN_PERMISSION_ROOT)) {
                 return new ArrayList<>(getAdminAllowedScopes(allScopes, requestedScopes));
             }
 
@@ -253,7 +212,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
                     if (PERMISSION_BINDING_TYPE.equalsIgnoreCase(scopeBinding.getBindingType())) {
                         for (String binding : scopeBinding.getBindings()) {
                             boolean isAllowed = false;
-                            for (String allowedScope : allowedResourcesForUser) {
+                            for (String allowedScope : allowedUIResourcesForUser) {
                                 if ((binding + "/").startsWith(allowedScope + "/")) {
                                     isAllowed = true;
                                     break;
@@ -279,8 +238,6 @@ public class JDBCPermissionBasedInternalScopeValidator {
             log.error("Error while retrieving oAuth2 scopes.", e);
         } catch (UserIdNotFoundException e) {
             log.error("User id not available for user: " + authenticatedUser.getLoggableUserId(), e);
-        } catch (InvalidOAuthClientException e) {
-            log.error("Error while retrieving the Application Information for client id: " + clientId, e);
         } finally {
             endTenantFlow();
         }
@@ -304,19 +261,18 @@ public class JDBCPermissionBasedInternalScopeValidator {
     /**
      * Method user to get list of federated users permissions using idp role mapping for not account associated
      * federated users.
-     *
      * @param authenticatedUser    FederatedAuthenticatedUser
      * @param authorizationManager AuthorizationManager
      * @return List of permissions
      * @throws UserStoreException      UserStoreException
      * @throws IdentityOAuth2Exception IdentityOAuth2Exception
      */
-    private String[] getAllowedResourcesForNotAssociatedFederatedUser(AuthenticatedUser authenticatedUser,
-                                                                      AuthorizationManager authorizationManager)
+    private String[] getAllowedUIResourcesForNotAssociatedFederatedUser(AuthenticatedUser authenticatedUser,
+                                                                        AuthorizationManager authorizationManager)
             throws UserStoreException, IdentityOAuth2Exception {
 
         List<String> userRolesList = new ArrayList<>();
-        List<String> allowedResourcesListForUser = new ArrayList<>();
+        List<String> allowedUIResourcesListForUser = new ArrayList<>();
         IdentityProvider identityProvider =
                 OAuth2Util.getIdentityProvider(authenticatedUser.getFederatedIdPName(),
                         authenticatedUser.getTenantDomain());
@@ -340,52 +296,15 @@ public class JDBCPermissionBasedInternalScopeValidator {
         // Loop through each local role and get permissions.
         for (String userRole : userRolesList) {
             for (String allowedUIResource : authorizationManager.getAllowedUIResourcesForRole(userRole, "/")) {
-                if (!allowedResourcesListForUser.contains(allowedUIResource)) {
-                    allowedResourcesListForUser.add(allowedUIResource);
+                if (!allowedUIResourcesListForUser.contains(allowedUIResource)) {
+                    allowedUIResourcesListForUser.add(allowedUIResource);
                 }
             }
         }
         // Add everyone permission to allowed permission.
-        allowedResourcesListForUser.add(EVERYONE_PERMISSION);
+        allowedUIResourcesListForUser.add(EVERYONE_PERMISSION);
 
-        return allowedResourcesListForUser.toArray(new String[0]);
-    }
-
-    /**
-     * Retrieve list of permissions using roles of federated user.
-     *
-     * @param authenticatedUser    Federated authenticated user
-     * @param authorizationManager AuthorizationManager
-     * @return List of permissions
-     * @throws UserStoreException      UserStoreException
-     * @throws IdentityOAuth2Exception IdentityOAuth2Exception
-     */
-    private String[] getAllowedPermissionsUsingRoleForNonAssociatedFederatedUsers(
-            AuthenticatedUser authenticatedUser, AuthorizationManager authorizationManager)
-            throws UserStoreException, IdentityOAuth2Exception {
-
-        Set<String> allowedResourcesListForUser = new HashSet<>();
-        List<String> userRolesList = getRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
-
-        for (String  role: userRolesList) {
-            String modifiedRole = role;
-
-            // Continue if it is not internal role.
-            if (!modifiedRole.toLowerCase().startsWith(UserCoreConstants.INTERNAL_DOMAIN.toLowerCase()
-                    + CarbonConstants.DOMAIN_SEPARATOR)) {
-                continue;
-            }
-
-            // Loop through each internal local role and get permissions.
-            for (String allowedUIResource : authorizationManager.getAllowedUIResourcesForRole(modifiedRole, ROOT)) {
-                allowedResourcesListForUser.add(allowedUIResource);
-            }
-        }
-
-        // Add everyone permission to allowed permission.
-        allowedResourcesListForUser.add(EVERYONE_PERMISSION);
-
-        return allowedResourcesListForUser.toArray(new String[0]);
+        return allowedUIResourcesListForUser.toArray(new String[0]);
     }
 
     /**
@@ -408,8 +327,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
         return null;
     }
 
-    private String[] getAllowedResourcesOfUser(AuthenticatedUser authenticatedUser,
-                                               AuthorizationManager authorizationManager)
+    private String[] getAllowedUIResourcesOfUser(AuthenticatedUser authenticatedUser,
+                                                 AuthorizationManager authorizationManager)
             throws UserStoreException, UserIdNotFoundException {
 
         String username = authenticatedUser.getUserName();
@@ -422,39 +341,6 @@ public class JDBCPermissionBasedInternalScopeValidator {
         }
         String[] allowedUIResourcesForUser =
                 authorizationManager.getAllowedUIResourcesForUser(username, "/");
-        return (String[]) ArrayUtils.add(allowedUIResourcesForUser, EVERYONE_PERMISSION);
-    }
-
-    private String[] retrieveUserOrganizationPermission(AuthenticatedUser authenticatedUser, String organizationId) {
-
-        //Add permission based on user's organization roles.
-        String[] allowedUIResourcesForUser = null;
-        if (StringUtils.isNotBlank(organizationId)) {
-            try {
-                List<String> organizationPermissions = new ArrayList<>();
-                String authenticatedUserId = null;
-                try {
-                    authenticatedUserId = authenticatedUser.getUserId();
-                } catch (UserIdNotFoundException e) {
-                    // Resolve authenticated resident user.
-                    Optional<User> resolvedUser =
-                            OAuth2ServiceComponentHolder.getOrganizationUserResidentResolverService()
-                                    .resolveUserFromResidentOrganization(
-                                            authenticatedUser.getUserName(), null, organizationId);
-                    if (resolvedUser.isPresent()) {
-                        authenticatedUserId = resolvedUser.get().getUserID();
-                        authenticatedUser.setUserId(authenticatedUserId);
-                    }
-                }
-                if (StringUtils.isNotBlank(authenticatedUserId)) {
-                    organizationPermissions = OAuth2ServiceComponentHolder.getRoleManager()
-                            .getUserOrganizationPermissions(authenticatedUserId, organizationId);
-                }
-                allowedUIResourcesForUser = organizationPermissions.toArray(new String[0]);
-            } catch (OrganizationManagementException e) {
-                log.error("Error while retrieving the organization permissions of the user.");
-            }
-        }
         return (String[]) ArrayUtils.add(allowedUIResourcesForUser, EVERYONE_PERMISSION);
     }
 

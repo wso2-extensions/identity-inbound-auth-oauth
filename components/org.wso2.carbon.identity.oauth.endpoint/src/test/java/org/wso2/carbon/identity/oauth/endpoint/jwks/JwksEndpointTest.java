@@ -81,8 +81,6 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
     private static final String CERT_THUMB_PRINT = "generatedCertThrumbPrint";
     private static final String ALG = "RS256";
     private static final String USE = "sig";
-    private static final JSONArray X5C_ARRAY = new JSONArray();
-    private static final String X5T = "ZHVtbXlUaHVtYlByaW50VmFsdWU";
     private JwksEndpoint jwksEndpoint;
     private Object identityUtilObj;
 
@@ -98,31 +96,6 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
         Class<?> clazz = IdentityUtil.class;
         identityUtilObj = clazz.newInstance();
         OAuth2ServiceComponentHolder.setKeyIDProvider(new DefaultKeyIDProviderImpl());
-
-        X5C_ARRAY.put("MIIDdzCCAl+gAwIBAgIEdWyfgTANBgkqhkiG9w0BAQsFADBsMRAwDgYDVQQGEwdVbmtub3duMRAwDgYDVQQIEwdVbmtub3" +
-                "duMRAwDgYDVQQHEwdVbmtub3duMRAwDgYDVQQKEwdVbmtub3duMRAwDgYDVQQLEwdVbmtub3duMRAwDgYDVQQDEwdVbmtub3duMB" +
-                "4XDTE3MTAxNzEwMTIzN1oXDTE4MDExNTEwMTIzN1owbDEQMA4GA1UEBhMHVW5rbm93bjEQMA4GA1UECBMHVW5rbm93bjEQMA4GA1" +
-                "UEBxMHVW5rbm93bjEQMA4GA1UEChMHVW5rbm93bjEQMA4GA1UECxMHVW5rbm93bjEQMA4GA1UEAxMHVW5rbm93bjCCASIwDQYJKo" +
-                "ZIhvcNAQEBBQADggEPADCCAQoCggEBAJo+aKKahtqFCIZ2xoJoqXLZ7fXg47xpcNT/RZEu3Fbn0jnK1CbjhuAlzs/Iy9WmlFCROt" +
-                "4UuZd6x23se9AwKJ/YqDKKUE24ofC5SG+aFWooNfXBN9l0BDNJxrml1KeGSzGoJ7inGW0JFHt3QCu1lOtpmK4hGWBnF3G8wsL0eu" +
-                "1nEyO9GBzTSafcnXGhb09LyY9ABSj5ycM7ZIGO6o/afqGO+onVTkNyufsPfNR3+Bc2rqS290kDPhWrIUenN2QwC9cHjCe0zs5zbR" +
-                "wSWWOQJ1ubr5WIP0BfeuafxdcxUjDMRYHLIRqiWALUWFFV3KkAdnFguggHfdHP7rrfKg6pDokCAwEAAaMhMB8wHQYDVR0OBBYEFN" +
-                "DI9T3betMAjiEAH2NIwB0r2inLMA0GCSqGSIb3DQEBCwUAA4IBAQA3yJEkKywyQ2z4VyEH3aZ4ouEpkk4YgvW2qxwHbono7ZhmEP" +
-                "w4rlR1C7ekRbwxpYpO8OY4scKsRWvb7ogX1MyTefLcpwxSMFqW4hVZbY69txdac8PmeQZOCWxGql0x4SezX0p+zhK+YEG6eLtvPO" +
-                "b1LmDckXNLGawrkUbaKzg0pVYVF+z3M20HcehfHILlfGGYim+qoo7K47guTrrulUnuLVDcJU4gWjX1zb7RzGLKs1s/JBYXGKfCzQ" +
-                "qR6fWiMn1IY5E5kfPa45xh3KndTlYP6jjpjR89Afvipv6Pus0LKk7fWotvDKM5L6j5ui/sowFe2k4/Q0Rfcskm3yf7IOZm");
-        X5C_ARRAY.put("MIIDSTCCAjGgAwIBAgIEAoLQ/TANBgkqhkiG9w0BAQsFADBVMQswCQYDVQQGEwJVUzELMAkGA1UECBMCQ0ExFjAUBgNVBA" +
-                "cTDU1vdW50YWluIFZpZXcxDTALBgNVBAoTBFdTTzIxEjAQBgNVBAMTCWxvY2FsaG9zdDAeFw0xNzA3MTkwNjUyNTFaFw0yNzA3MT" +
-                "cwNjUyNTFaMFUxCzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEWMBQGA1UEBxMNTW91bnRhaW4gVmlldzENMAsGA1UEChMEV1NPMj" +
-                "ESMBAGA1UEAxMJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAluZFdW1ynitztkWLC6xKegbRWxky+5" +
-                "P0p4ShYEOkHs30QI2VCuR6Qo4Bz5rTgLBrky03W1GAVrZxuvKRGj9V9+PmjdGtau4CTXu9pLLcqnruaczoSdvBYA3lS9a7zgFU0+" +
-                "s6kMl2EhB+rk7gXluEep7lIOenzfl2f6IoTKa2fVgVd3YKiSGsyL4tztS70vmmX121qm0sTJdKWP4HxXyqK9neolXI9fYyHOYILV" +
-                "NZ69z/73OOVhkh/mvTmWZLM7GM6sApmyLX6OXUp8z0pkY+vT/9+zRxxQs7GurC4/C1nK3rI/0ySUgGEafO1atNjYmlFN+M3tZX6n" +
-                "EcA6g94IavyQIDAQABoyEwHzAdBgNVHQ4EFgQUtS8kIYxQ8UVvVrZSdgyide9OHxUwDQYJKoZIhvcNAQELBQADggEBABfk5mqsVU" +
-                "rpFCYTZZhOxTRRpGXqoW1G05bOxHxs42Paxw8rAJ06Pty9jqM1CgRPpqvZa2lPQBQqZrHkdDE06q4NG0DqMH8NT+tNkXBe9YTre3" +
-                "EJCSfsvswtLVDZ7GDvTHKojJjQvdVCzRj6XH5Truwefb4BJz9APtnlyJIvjHk1hdozqyOniVZd0QOxLAbcdt946chNdQvCm6aUOp" +
-                "utp8Xogr0KBnEy3U8es2cAfNZaEkPU8Va5bU6Xjny8zGQnXCXxPKp7sMpgO93nPBt/liX1qfyXM7xEotWoxmm6HZx8oWQ8U5aiXj" +
-                "Z5RKDWCCq4ZuXl6wVsUz1iE61suO5yWi8=");
     }
 
     @DataProvider(name = "provideTenantDomain")
@@ -185,7 +158,6 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
         if ("foo.com".equals(tenantDomain)) {
             when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA")).thenReturn(JWSAlgorithm.RS256);
         }
-        when(OAuth2Util.getThumbPrint(any(), anyString())).thenReturn("dummyThumbPrintValue");
         mockStatic(KeyStoreManager.class);
         when(KeyStoreManager.getInstance(anyInt())).thenReturn(keyStoreManager);
         when(keyStoreManager.getKeyStore("foo-com.jks")).thenReturn(getKeyStoreFromFile("foo-com.jks", "foo.com"));
@@ -200,13 +172,10 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
             assertEquals(keyObject.get("alg"), ALG, "Incorrect alg value");
             assertEquals(keyObject.get("use"), USE, "Incorrect use value");
             assertEquals(keyObject.get("kty"), "RSA", "Incorrect kty value");
-            assertEquals(keyObject.get("x5t#S256"), X5T, "Incorrect x5t#S256 value");
             if ("foo.com".equals(tenantDomain)) {
                 assertEquals(objectArray.length(), 2, "Incorrect no of keysets");
-                assertEquals(((JSONArray) keyObject.get("x5c")).get(0), X5C_ARRAY.get(0), "Incorrect x5c value");
             } else {
                 assertEquals(objectArray.length(), 3, "Incorrect no of keysets");
-                assertEquals(((JSONArray) keyObject.get("x5c")).get(0), X5C_ARRAY.get(1), "Incorrect x5c value");
             }
         } catch (JSONException e) {
             if ("invalid.com".equals(tenantDomain)) {

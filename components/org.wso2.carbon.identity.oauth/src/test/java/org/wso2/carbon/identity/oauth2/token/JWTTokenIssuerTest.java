@@ -61,8 +61,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.reset;
 import static org.mockito.MockitoAnnotations.initMocks;
@@ -192,8 +192,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         }).when(jwtTokenIssuer).createJWTClaimSet(
                 any(OAuthAuthzReqMessageContext.class),
                 any(OAuthTokenReqMessageContext.class),
-                anyString(),
-                anyBoolean());
+                anyString());
 
         return jwtTokenIssuer;
     }
@@ -206,8 +205,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(oAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_HMAC);
 
         JWTTokenIssuer jwtTokenIssuer = new JWTTokenIssuer();
-        jwtTokenIssuer.createJWTClaimSet(null, null, null,
-                anyBoolean());
+        jwtTokenIssuer.createJWTClaimSet(null, null, null);
     }
 
     @DataProvider(name = "createJWTClaimSetDataProvider")
@@ -264,7 +262,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
         when(OAuth2Util.getIDTokenIssuer()).thenReturn(ID_TOKEN_ISSUER);
         when(OAuth2Util.getIdTokenIssuer(anyString())).thenReturn(ID_TOKEN_ISSUER);
-        when(OAuth2Util.getOIDCIdTokenAudience(anyString(), any())).thenReturn(Collections.singletonList
+        when(OAuth2Util.getOIDCAudience(anyString(), anyObject())).thenReturn(Collections.singletonList
                 (DUMMY_CLIENT_ID));
 
         when(oAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_HMAC);
@@ -278,8 +276,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         JWTClaimsSet jwtClaimSet = jwtTokenIssuer.createJWTClaimSet(
                 (OAuthAuthzReqMessageContext) authzReqMessageContext,
                 (OAuthTokenReqMessageContext) tokenReqMessageContext,
-                DUMMY_CLIENT_ID,
-                false
+                DUMMY_CLIENT_ID
         );
 
         assertNotNull(jwtClaimSet);
@@ -341,8 +338,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
             JWTClaimsSet jwtClaimSet = jwtTokenIssuer.createJWTClaimSet(
                     (OAuthAuthzReqMessageContext) authzReqMessageContext,
                     (OAuthTokenReqMessageContext) tokenReqMessageContext,
-                    DUMMY_CLIENT_ID,
-                    true
+                    DUMMY_CLIENT_ID
             );
 
             String jwtToken = jwtTokenIssuer.signJWT(jwtClaimSet,

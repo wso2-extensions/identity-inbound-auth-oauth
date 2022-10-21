@@ -18,8 +18,6 @@
 
 package org.wso2.carbon.identity.oauth.dto;
 
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-
 /**
  * OAuth consumer app dto.
  */
@@ -40,8 +38,6 @@ public class OAuthConsumerAppDTO {
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
     private String[] audiences;
-    private String[] idTokenAudiences;
-    private String[] accessTokenAudiences;
     private boolean bypassClientCredentials;
     private String renewRefreshTokenEnabled;
     // OIDC related properties
@@ -172,54 +168,14 @@ public class OAuthConsumerAppDTO {
         return state;
     }
 
-    /**
-     * @deprecated use {@link #getIdTokenAudiences()} instead.
-     */
-    @Deprecated
     public String[] getAudiences() {
-        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-            return audiences;
-        } else {
-            return this.getIdTokenAudiences();
-        }
+        return audiences;
     }
 
-    /**
-     * @deprecated use {@link #setIdTokenAudiences(String[])} instead.
-     */
-    @Deprecated
     public void setAudiences(String[] audiences) {
 
         if (audiences != null) {
-            if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-                this.audiences = audiences;
-            } else {
-                this.setIdTokenAudiences(audiences);
-            }
-        }
-    }
-
-    public String[] getIdTokenAudiences() {
-
-        return idTokenAudiences;
-    }
-
-    public void setIdTokenAudiences(String[] idTokenAudiences) {
-
-        if (idTokenAudiences != null) {
-            this.idTokenAudiences = idTokenAudiences;
-        }
-    }
-
-    public String[] getAccessTokenAudiences() {
-
-        return accessTokenAudiences;
-    }
-
-    public void setAccessTokenAudiences(String[] accessTokenAudiences) {
-
-        if (accessTokenAudiences != null) {
-            this.accessTokenAudiences = accessTokenAudiences;
+            this.audiences = audiences;
         }
     }
 

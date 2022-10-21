@@ -26,7 +26,6 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
-import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -61,6 +60,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
+import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
@@ -70,7 +70,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -113,14 +112,8 @@ public class OAuthAdminServiceImpl {
      */
     public String[] registerOAuthConsumer() throws IdentityOAuthAdminException {
 
-        String loggedInUser;
-        try {
-            loggedInUser =
-                    OAuthUtil.getUsername(CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
-        } catch (IdentityApplicationManagementException e) {
-            String msg = "Error while retrieving the username of the logged user.";
-            throw handleClientError(AUTHENTICATED_USER_NOT_FOUND, msg, e);
-        }
+        String loggedInUser = CarbonContext.getThreadLocalCarbonContext().getUsername();
+
         if (LOG.isDebugEnabled()) {
             LOG.debug("Adding a consumer secret for the logged in user:" + loggedInUser);
         }
@@ -141,17 +134,15 @@ public class OAuthAdminServiceImpl {
      */
     public OAuthConsumerAppDTO[] getAllOAuthApplicationData() throws IdentityOAuthAdminException {
 
-        String userName;
+        String userName = CarbonContext.getThreadLocalCarbonContext().getUsername();
         OAuthConsumerAppDTO[] dtos = new OAuthConsumerAppDTO[0];
-        try {
-            String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-            userName = OAuthUtil.getUsername(tenantDomain);
-        } catch (IdentityApplicationManagementException e) {
+
+        if (userName == null) {
             String msg = "User not logged in to get all registered OAuth Applications.";
             if (LOG.isDebugEnabled()) {
                 LOG.debug(msg);
             }
-            throw handleClientError(AUTHENTICATED_USER_NOT_FOUND, msg, e);
+            throw handleClientError(AUTHENTICATED_USER_NOT_FOUND, msg);
         }
 
         int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
@@ -246,131 +237,107 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application)
             throws IdentityOAuthAdminException {
 
-        String tenantAwareLoggedInUsername = CarbonContext.getThreadLocalCarbonContext().getUsername();
-        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String tenantAwareLoggedInUser = CarbonContext.getThreadLocalCarbonContext().getUsername();
         OAuthAppDO app = new OAuthAppDO();
-        AuthenticatedUser defaultAppOwner = null;
-        try {
-            if (tenantAwareLoggedInUsername != null) {
-                defaultAppOwner = buildAuthenticatedUser(tenantAwareLoggedInUsername, tenantDomain);
-            } else {
-                Optional<User> tenantAwareLoggedInUser = OAuthUtil.getUser(tenantDomain, null);
-                if (tenantAwareLoggedInUser.isPresent()) {
-                    defaultAppOwner = new AuthenticatedUser(tenantAwareLoggedInUser.get());
-                }
-            }
+        if (tenantAwareLoggedInUser != null) {
+            String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
-            if (defaultAppOwner != null) {
-                OAuthAppDAO dao = new OAuthAppDAO();
-                if (application != null) {
-                    app.setApplicationName(application.getApplicationName());
+            OAuthAppDAO dao = new OAuthAppDAO();
+            if (application != null) {
+                app.setApplicationName(application.getApplicationName());
 
-                    validateCallbackURI(application);
-                    app.setCallbackUrl(application.getCallbackUrl());
+                validateCallbackURI(application);
+                app.setCallbackUrl(application.getCallbackUrl());
 
-                    app.setState(APP_STATE_ACTIVE);
-                    if (StringUtils.isEmpty(application.getOauthConsumerKey())) {
-                        app.setOauthConsumerKey(OAuthUtil.getRandomNumber());
+                app.setState(APP_STATE_ACTIVE);
+                if (StringUtils.isEmpty(application.getOauthConsumerKey())) {
+                    app.setOauthConsumerKey(OAuthUtil.getRandomNumber());
+                    app.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
+                } else {
+                    app.setOauthConsumerKey(application.getOauthConsumerKey());
+                    if (StringUtils.isEmpty(application.getOauthConsumerSecret())) {
                         app.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
                     } else {
-                        app.setOauthConsumerKey(application.getOauthConsumerKey());
-                        if (StringUtils.isEmpty(application.getOauthConsumerSecret())) {
-                            app.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
-                        } else {
-                            app.setOauthConsumerSecret(application.getOauthConsumerSecret());
-                        }
+                        app.setOauthConsumerSecret(application.getOauthConsumerSecret());
+                    }
+                }
+
+                AuthenticatedUser defaultAppOwner = buildAuthenticatedUser(tenantAwareLoggedInUser, tenantDomain);
+                AuthenticatedUser appOwner = getAppOwner(application, defaultAppOwner);
+                app.setAppOwner(appOwner);
+
+                if (application.getOAuthVersion() != null) {
+                    app.setOauthVersion(application.getOAuthVersion());
+                } else {   // by default, assume OAuth 2.0, if it is not set.
+                    app.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
+                }
+                if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOauthVersion())) {
+                    validateGrantTypes(application);
+                    app.setGrantTypes(application.getGrantTypes());
+
+                    app.setScopeValidators(filterScopeValidators(application));
+
+                    validateAudiences(application);
+                    app.setAudiences(application.getAudiences());
+                    app.setPkceMandatory(application.getPkceMandatory());
+                    app.setPkceSupportPlain(application.getPkceSupportPlain());
+                    // Validate access token expiry configurations.
+                    validateTokenExpiryConfigurations(application);
+                    app.setUserAccessTokenExpiryTime(application.getUserAccessTokenExpiryTime());
+                    app.setApplicationAccessTokenExpiryTime(application.getApplicationAccessTokenExpiryTime());
+                    app.setRefreshTokenExpiryTime(application.getRefreshTokenExpiryTime());
+                    app.setIdTokenExpiryTime(application.getIdTokenExpiryTime());
+
+                    // Set OIDC Config Properties.
+                    app.setRequestObjectSignatureValidationEnabled(
+                            application.isRequestObjectSignatureValidationEnabled());
+
+                    // Validate IdToken Encryption configurations.
+                    app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
+                    if (application.isIdTokenEncryptionEnabled()) {
+                        app.setIdTokenEncryptionAlgorithm(filterIdTokenEncryptionAlgorithm(application));
+                        app.setIdTokenEncryptionMethod(filterIdTokenEncryptionMethod((application)));
                     }
 
-                    AuthenticatedUser appOwner = getAppOwner(application, defaultAppOwner);
-                    app.setAppOwner(appOwner);
-
-                    if (application.getOAuthVersion() != null) {
-                        app.setOauthVersion(application.getOAuthVersion());
-                    } else {   // by default, assume OAuth 2.0, if it is not set.
-                        app.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
+                    app.setBackChannelLogoutUrl(application.getBackChannelLogoutUrl());
+                    app.setFrontchannelLogoutUrl(application.getFrontchannelLogoutUrl());
+                    if (application.getTokenType() != null) {
+                        app.setTokenType(application.getTokenType());
+                    } else {
+                        app.setTokenType(getDefaultTokenType());
                     }
-                    if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOauthVersion())) {
-                        validateGrantTypes(application);
-                        app.setGrantTypes(application.getGrantTypes());
-
-                        app.setScopeValidators(filterScopeValidators(application));
-
-                        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-                            validateAudiences(application);
-                            app.setAudiences(application.getAudiences());
-
-                        } else {
-                            validateIdTokenAudiences(application);
-                            validateAccessTokenAudiences(application);
-                            app.setIdTokenAudiences(application.getIdTokenAudiences());
-                            app.setAccessTokenAudiences(application.getAccessTokenAudiences());
-
-                        }
-
-                        app.setPkceMandatory(application.getPkceMandatory());
-                        app.setPkceSupportPlain(application.getPkceSupportPlain());
-                        // Validate access token expiry configurations.
-                        validateTokenExpiryConfigurations(application);
-                        app.setUserAccessTokenExpiryTime(application.getUserAccessTokenExpiryTime());
-                        app.setApplicationAccessTokenExpiryTime(application.getApplicationAccessTokenExpiryTime());
-                        app.setRefreshTokenExpiryTime(application.getRefreshTokenExpiryTime());
-                        app.setIdTokenExpiryTime(application.getIdTokenExpiryTime());
-
-                        // Set OIDC Config Properties.
-                        app.setRequestObjectSignatureValidationEnabled(
-                                application.isRequestObjectSignatureValidationEnabled());
-
-                        // Validate IdToken Encryption configurations.
-                        app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
-                        if (application.isIdTokenEncryptionEnabled()) {
-                            app.setIdTokenEncryptionAlgorithm(filterIdTokenEncryptionAlgorithm(application));
-                            app.setIdTokenEncryptionMethod(filterIdTokenEncryptionMethod((application)));
-                        }
-
-                        app.setBackChannelLogoutUrl(application.getBackChannelLogoutUrl());
-                        app.setFrontchannelLogoutUrl(application.getFrontchannelLogoutUrl());
-                        if (application.getTokenType() != null) {
-                            app.setTokenType(application.getTokenType());
-                        } else {
-                            app.setTokenType(getDefaultTokenType());
-                        }
-                        app.setBypassClientCredentials(application.isBypassClientCredentials());
-                        app.setRenewRefreshTokenEnabled(application.getRenewRefreshTokenEnabled());
-                        validateBindingType(application.getTokenBindingType());
-                        app.setTokenBindingType(application.getTokenBindingType());
-                        app.setTokenBindingValidationEnabled(application.isTokenBindingValidationEnabled());
-                        app.setTokenRevocationWithIDPSessionTerminationEnabled(
-                                application.isTokenRevocationWithIDPSessionTerminationEnabled());
-                    }
-                    dao.addOAuthApplication(app);
-                    AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("Oauth Application registration success : " + application.getApplicationName() +
-                                " in " +
-                                "tenant domain: " + tenantDomain);
-                    }
-                } else {
-                    String message = "No application details in the request. Failed to register OAuth App.";
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug(message);
-                    }
-                    throw handleClientError(INVALID_REQUEST, message);
+                    app.setBypassClientCredentials(application.isBypassClientCredentials());
+                    app.setRenewRefreshTokenEnabled(application.getRenewRefreshTokenEnabled());
+                    validateBindingType(application.getTokenBindingType());
+                    app.setTokenBindingType(application.getTokenBindingType());
+                    app.setTokenBindingValidationEnabled(application.isTokenBindingValidationEnabled());
+                    app.setTokenRevocationWithIDPSessionTerminationEnabled(
+                            application.isTokenRevocationWithIDPSessionTerminationEnabled());
+                }
+                dao.addOAuthApplication(app);
+                AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Oauth Application registration success : " + application.getApplicationName() + " in " +
+                            "tenant domain: " + tenantDomain);
                 }
             } else {
+                String message = "No application details in the request. Failed to register OAuth App.";
                 if (LOG.isDebugEnabled()) {
-                    if (application != null) {
-                        LOG.debug("No authenticated user found. Failed to register OAuth App: " +
-                                application.getApplicationName());
-                    } else {
-                        LOG.debug("No authenticated user found. Failed to register OAuth App");
-                    }
+                    LOG.debug(message);
                 }
-                String message = "No authenticated user found. Failed to register OAuth App.";
-                throw handleClientError(AUTHENTICATED_USER_NOT_FOUND, message);
+                throw handleClientError(INVALID_REQUEST, message);
             }
-        } catch (IdentityApplicationManagementException e) {
-            throw handleClientError(AUTHENTICATED_USER_NOT_FOUND,
-                    "Error resolving user. Failed to register OAuth App", e);
+        } else {
+            if (LOG.isDebugEnabled()) {
+                if (application != null) {
+                    LOG.debug("No authenticated user found. Failed to register OAuth App: " +
+                            application.getApplicationName());
+                } else {
+                    LOG.debug("No authenticated user found. Failed to register OAuth App");
+                }
+            }
+            String message = "No authenticated user found. Failed to register OAuth App.";
+            throw handleClientError(AUTHENTICATED_USER_NOT_FOUND, message);
         }
         return OAuthUtil.buildConsumerAppDTO(app);
     }
@@ -384,38 +351,7 @@ public class OAuthAdminServiceImpl {
 
             if (filteredAudienceSize != application.getAudiences().length) {
                 // This means we had duplicates and empty strings.
-                throw handleClientError(INVALID_REQUEST,
-                        "Audience values cannot contain duplicates or empty values.");
-            }
-        }
-    }
-
-    private void validateIdTokenAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
-
-        if (application.getIdTokenAudiences() != null) {
-            // Filter out any duplicates and empty audiences here.
-            long filteredAudienceSize = Arrays.stream(application.getIdTokenAudiences()).filter(StringUtils::isNotBlank)
-                    .distinct().count();
-
-            if (filteredAudienceSize != application.getIdTokenAudiences().length) {
-                // This means we had duplicates and empty strings.
-                throw handleClientError(INVALID_REQUEST,
-                        "Id Token audience values cannot contain duplicates or empty values.");
-            }
-        }
-    }
-
-    private void validateAccessTokenAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
-
-        if (application.getAccessTokenAudiences() != null) {
-            // Filter out any duplicates and empty audiences here.
-            long filteredAudienceSize = Arrays.stream(application.getAccessTokenAudiences())
-                    .filter(StringUtils::isNotBlank).distinct().count();
-
-            if (filteredAudienceSize != application.getAccessTokenAudiences().length) {
-                // This means we had duplicates and empty strings.
-                throw handleClientError(INVALID_REQUEST,
-                        "Access Token Audience values cannot contain duplicates or empty values.");
+                throw handleClientError(INVALID_REQUEST, "Audience values cannot contain duplicates or empty values.");
             }
         }
     }
@@ -506,6 +442,8 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(INVALID_REQUEST, errorMessage);
         }
 
+        String loggedInUserName = CarbonContext.getThreadLocalCarbonContext().getUsername();
+        String tenantAwareLoggedInUserName = MultitenantUtils.getTenantAwareUsername(loggedInUserName);
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
         OAuthAppDAO dao = new OAuthAppDAO();
@@ -559,17 +497,8 @@ public class OAuthAdminServiceImpl {
             validateGrantTypes(consumerAppDTO);
             oauthappdo.setGrantTypes(consumerAppDTO.getGrantTypes());
 
-            if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-                validateAudiences(consumerAppDTO);
-                oauthappdo.setAudiences(consumerAppDTO.getAudiences());
-
-            } else {
-                validateIdTokenAudiences(consumerAppDTO);
-                validateAccessTokenAudiences(consumerAppDTO);
-                oauthappdo.setIdTokenAudiences(consumerAppDTO.getIdTokenAudiences());
-                oauthappdo.setAccessTokenAudiences(consumerAppDTO.getAccessTokenAudiences());
-
-            }
+            validateAudiences(consumerAppDTO);
+            oauthappdo.setAudiences(consumerAppDTO.getAudiences());
             oauthappdo.setScopeValidators(filterScopeValidators(consumerAppDTO));
             oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
                     .isRequestObjectSignatureValidationEnabled());
@@ -1054,21 +983,9 @@ public class OAuthAdminServiceImpl {
 
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String tenantAwareLoggedInUserName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
-        AuthenticatedUser loggedInUser = null;
-        try {
-            if (tenantAwareLoggedInUserName != null) {
-                loggedInUser = buildAuthenticatedUser(tenantAwareLoggedInUserName, tenantDomain);
-            } else {
-                Optional<User> tenantAwareLoggedInUser = OAuthUtil.getUser(tenantDomain, null);
-                if (tenantAwareLoggedInUser.isPresent()) {
-                    loggedInUser = new AuthenticatedUser(tenantAwareLoggedInUser.get());
-                }
-            }
-        } catch (IdentityApplicationManagementException e) {
-            throw handleClientError(AUTHENTICATED_USER_NOT_FOUND, "Error resolving user.", e);
-        }
+        AuthenticatedUser loggedInUser = buildAuthenticatedUser(tenantAwareLoggedInUserName, tenantDomain);
 
-        String username = loggedInUser.getUsernameAsSubjectIdentifier(true, true);
+        String username = UserCoreUtil.addTenantDomainToEntry(tenantAwareLoggedInUserName, tenantDomain);
         String userStoreDomain = null;
         if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
             try {
@@ -1153,20 +1070,9 @@ public class OAuthAdminServiceImpl {
         if (revokeRequestDTO.getApps() != null && revokeRequestDTO.getApps().length > 0) {
             String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
             String tenantAwareLoggedInUserName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
-            AuthenticatedUser user = null;
-            try {
-                if (tenantAwareLoggedInUserName != null) {
-                    user = buildAuthenticatedUser(tenantAwareLoggedInUserName, tenantDomain);
-                } else {
-                    Optional<User> tenantAwareLoggedInUser = OAuthUtil.getUser(tenantDomain, null);
-                    if (tenantAwareLoggedInUser.isPresent()) {
-                        user = new AuthenticatedUser(tenantAwareLoggedInUser.get());
-                    }
-                }
-            } catch (IdentityApplicationManagementException e) {
-                throw handleClientError(AUTHENTICATED_USER_NOT_FOUND, "Error resolving user.", e);
-            }
-            String userName = user.getUsernameAsSubjectIdentifier(true, true);
+            AuthenticatedUser user = buildAuthenticatedUser(tenantAwareLoggedInUserName, tenantDomain);
+
+            String userName = UserCoreUtil.addTenantDomainToEntry(tenantAwareLoggedInUserName, tenantDomain);
             String userStoreDomain = null;
             if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
                 try {
@@ -1325,13 +1231,13 @@ public class OAuthAdminServiceImpl {
 
         OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        String tenantAwareUserName = null;
+        String tenantAwareUserName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+
         try {
-            tenantAwareUserName = OAuthUtil.getUsername(tenantDomain);
             OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
                     .updateApproveAlwaysForAppConsentByResourceOwner(tenantAwareUserName,
                             tenantDomain, appName, state);
-        } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
+        } catch (IdentityOAuth2Exception e) {
             String errorMsg = "Error occurred while revoking OAuth Consent approve always of Application " + appName +
                     " of user " + tenantAwareUserName;
             LOG.error(errorMsg, e);
@@ -1765,19 +1671,19 @@ public class OAuthAdminServiceImpl {
         if (StringUtils.isNotBlank(applicationOwnerInRequest)) {
             String tenantAwareAppOwnerInRequest = MultitenantUtils.getTenantAwareUsername(applicationOwnerInRequest);
             try {
-                // Since the app owner sent in OAuthConsumerAppDTO is a valid one we set the appOwner to be
-                // the one sent in the OAuthConsumerAppDTO.
-                String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-                Optional<User> maybeAppOwner = OAuthUtil.getUser(tenantDomain, tenantAwareAppOwnerInRequest);
-                if (maybeAppOwner.isPresent()) {
-                    appOwner = new AuthenticatedUser(maybeAppOwner.get());
+                if (CarbonContext.getThreadLocalCarbonContext().getUserRealm().
+                        getUserStoreManager().isExistingUser(tenantAwareAppOwnerInRequest)) {
+                    // Since the app owner sent in OAuthConsumerAppDTO is a valid one we set the appOwner to be
+                    // the one sent in the OAuthConsumerAppDTO.
+                    String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                    appOwner = buildAuthenticatedUser(tenantAwareAppOwnerInRequest, tenantDomain);
                 } else {
                     LOG.warn("OAuth application owner user name " + applicationOwnerInRequest +
                             " does not exist in the user store. Using user: " +
                             defaultAppOwner.toFullQualifiedUsername() + " as app owner.");
                 }
-            } catch (IdentityApplicationManagementException e) {
-                throw handleError("Error resolving the user requested as application owner: " +
+            } catch (UserStoreException e) {
+                throw handleError("Error while retrieving the user store manager for user: " +
                         applicationOwnerInRequest, e);
             }
 
