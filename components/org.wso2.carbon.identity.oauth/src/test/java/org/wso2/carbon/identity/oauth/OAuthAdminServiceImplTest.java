@@ -433,7 +433,13 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         app.setRefreshTokenExpiryTime(3000);
 
         app.setState("ACTIVE");
-        app.setAudiences(new String[] { "audience1", "audience2"});
+
+        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+            app.setAudiences(new String[]{"audience1", "audience2"});
+        } else {
+            app.setIdTokenAudiences(new String[]{"audience1", "audience2"});
+            app.setAccessTokenAudiences(new String[]{"audience3", "audience4"});
+        }
         app.setRequestObjectSignatureValidationEnabled(true);
         app.setIdTokenEncryptionEnabled(true);
         app.setIdTokenEncryptionAlgorithm("RSA-11");
@@ -702,16 +708,44 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         };
     }
 
+    /**
+     * @deprecated use {@link #testValidateIdTokenAudiencesWithInvalidAudiences(String[])} instead.
+     */
+    @Deprecated
     @Test(description = "Test validating invalid audiences", dataProvider = "invalidAudienceDataProvider")
     public void testValidateAudiencesWithInvalidAudiences(String[] invalidAudience) {
 
+        this.testValidateIdTokenAudiencesWithInvalidAudiences(invalidAudience);
+
+    }
+
+    @Test(description = "Test validating invalid Id Token audiences", dataProvider = "invalidAudienceDataProvider")
+    public void testValidateIdTokenAudiencesWithInvalidAudiences(String[] invalidAudience) {
+
         OAuthConsumerAppDTO appDTO = new OAuthConsumerAppDTO();
-        appDTO.setAudiences(invalidAudience);
+        appDTO.setIdTokenAudiences(invalidAudience);
 
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
 
         try {
-            invokeMethod(oAuthAdminService, "validateAudiences", appDTO);
+            invokeMethod(oAuthAdminService, "validateIdTokenAudiences", appDTO);
+        } catch (Exception ex) {
+            Assert.assertTrue(ex instanceof IdentityOAuthClientException);
+            Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
+                    Error.INVALID_REQUEST.getErrorCode());
+        }
+    }
+
+    @Test(description = "Test validating invalid Access Token audiences", dataProvider = "invalidAudienceDataProvider")
+    public void testValidateAccessTokenAudiencesWithInvalidAudiences(String[] invalidAudience) {
+
+        OAuthConsumerAppDTO appDTO = new OAuthConsumerAppDTO();
+        appDTO.setAccessTokenAudiences(invalidAudience);
+
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+
+        try {
+            invokeMethod(oAuthAdminService, "validateAccessTokenAudiences", appDTO);
         } catch (Exception ex) {
             Assert.assertTrue(ex instanceof IdentityOAuthClientException);
             Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
@@ -730,14 +764,35 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         };
     }
 
+    /**
+     * @deprecated use {@link #testValidateIdTokenAudiencesWithValidAudiences(String[])} instead.
+     */
+    @Deprecated
     @Test(description = "Test validating invalid audiences", dataProvider = "validAudienceDataProvider")
-    public void testValidateAudiencesWithValidAudiences(String[] validaAudience) throws Exception {
+    public void testValidateAudiencesWithValidAudiences(String[] validAudience) throws Exception {
+
+        this.testValidateIdTokenAudiencesWithInvalidAudiences(validAudience);
+
+    }
+
+    @Test(description = "Test validating invalid Id Token audiences", dataProvider = "validAudienceDataProvider")
+    public void testValidateIdTokenAudiencesWithValidAudiences(String[] validAudience) throws Exception {
 
         OAuthConsumerAppDTO appDTO = new OAuthConsumerAppDTO();
-        appDTO.setAudiences(validaAudience);
+        appDTO.setIdTokenAudiences(validAudience);
 
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
-        invokeMethod(oAuthAdminService, "validateAudiences", appDTO);
+        invokeMethod(oAuthAdminService, "validateIdTokenAudiences", appDTO);
+    }
+
+    @Test(description = "Test validating invalid Access Token audiences", dataProvider = "validAudienceDataProvider")
+    public void testValidateAccessTokenAudiencesWithValidAudiences(String[] validAudience) throws Exception {
+
+        OAuthConsumerAppDTO appDTO = new OAuthConsumerAppDTO();
+        appDTO.setAccessTokenAudiences(validAudience);
+
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+        invokeMethod(oAuthAdminService, "validateAccessTokenAudiences", appDTO);
     }
 
     private void mockUserstore() throws Exception {

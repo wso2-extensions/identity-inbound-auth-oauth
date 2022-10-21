@@ -138,8 +138,7 @@ public class AccessTokenIssuer {
      * @throws IdentityException
      * @throws InvalidOAuthClientException
      */
-    public OAuth2AccessTokenRespDTO issue(OAuth2AccessTokenReqDTO tokenReqDTO)
-            throws IdentityException {
+    public OAuth2AccessTokenRespDTO issue(OAuth2AccessTokenReqDTO tokenReqDTO) throws IdentityException {
 
         String grantType = tokenReqDTO.getGrantType();
         OAuth2AccessTokenRespDTO tokenRespDTO = null;
