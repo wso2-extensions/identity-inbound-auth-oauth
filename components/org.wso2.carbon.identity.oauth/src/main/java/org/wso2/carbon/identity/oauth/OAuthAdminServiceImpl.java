@@ -136,7 +136,7 @@ public class OAuthAdminServiceImpl {
      * Get all registered OAuth applications for the logged in user.
      *
      * @return An array of <code>OAuthConsumerAppDTO</code> objecting containing the application
-     * information of the user
+     * information of the user.
      * @throws IdentityOAuthAdminException Error when reading the data from the persistence store.
      */
     public OAuthConsumerAppDTO[] getAllOAuthApplicationData() throws IdentityOAuthAdminException {
@@ -171,8 +171,8 @@ public class OAuthAdminServiceImpl {
     /**
      * Get OAuth application data by the consumer key.
      *
-     * @param consumerKey Consumer Key
-     * @return <code>OAuthConsumerAppDTO</code> with application information
+     * @param consumerKey Consumer Key.
+     * @return <code>OAuthConsumerAppDTO</code> with application information.
      * @throws IdentityOAuthAdminException Error when reading application information from persistence store.
      */
     public OAuthConsumerAppDTO getOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException {
@@ -201,8 +201,8 @@ public class OAuthAdminServiceImpl {
     /**
      * Get OAuth application data by the application name.
      *
-     * @param appName OAuth application name
-     * @return <code>OAuthConsumerAppDTO</code> with application information
+     * @param appName OAuth application name.
+     * @return <code>OAuthConsumerAppDTO</code> with application information.
      * @throws IdentityOAuthAdminException Error when reading application information from persistence store.
      */
     public OAuthConsumerAppDTO getOAuthApplicationDataByAppName(String appName) throws IdentityOAuthAdminException {
@@ -228,7 +228,7 @@ public class OAuthAdminServiceImpl {
     /**
      * Registers an OAuth consumer application.
      *
-     * @param application <code>OAuthConsumerAppDTO</code> with application information
+     * @param application <code>OAuthConsumerAppDTO</code> with application information.
      * @throws IdentityOAuthAdminException Error when persisting the application information to the persistence store.
      */
     public void registerOAuthApplicationData(OAuthConsumerAppDTO application) throws IdentityOAuthAdminException {
@@ -550,7 +550,7 @@ public class OAuthAdminServiceImpl {
 
     /**
      * @return
-     * @throws IdentityOAuthAdminException
+     * @throws IdentityOAuthAdminException.
      */
     public String getOauthApplicationState(String consumerKey) throws IdentityOAuthAdminException {
 
@@ -560,7 +560,7 @@ public class OAuthAdminServiceImpl {
     /**
      * To insert oidc scopes and claims in the related db tables.
      *
-     * @param scope an oidc scope
+     * @param scope an oidc scope.
      * @throws IdentityOAuthAdminException if an error occurs when inserting scopes or claims.
      * @deprecated use {@link #addScope(ScopeDTO)} instead.
      */
@@ -602,7 +602,7 @@ public class OAuthAdminServiceImpl {
     /**
      * To retrieve all persisted oidc scopes with mapped claims.
      *
-     * @return all persisted scopes and claims
+     * @return all persisted scopes and claims.
      * @throws IdentityOAuthAdminException if an error occurs when loading scopes and claims.
      */
     public ScopeDTO[] getScopes() throws IdentityOAuthAdminException {
@@ -655,7 +655,7 @@ public class OAuthAdminServiceImpl {
     /**
      * To remove persisted scopes and claims.
      *
-     * @param scope oidc scope
+     * @param scope oidc scope.
      * @throws IdentityOAuthAdminException if an error occurs when deleting scopes and claims.
      */
     public void deleteScope(String scope) throws IdentityOAuthAdminException {
@@ -703,7 +703,7 @@ public class OAuthAdminServiceImpl {
     /**
      * To retrieve oidc claims mapped to an oidc scope.
      *
-     * @param scope scope
+     * @param scope scope.
      * @return list of claims which are mapped to the oidc scope.
      * @throws IdentityOAuthAdminException if an error occurs when lading oidc claims.
      */
@@ -730,8 +730,8 @@ public class OAuthAdminServiceImpl {
      * To add new claims for an existing scope.
      *
      * @param scope        scope name
-     * @param addClaims    list of oidc claims to be added
-     * @param deleteClaims list of oidc claims to be deleted
+     * @param addClaims    list of oidc claims to be added.
+     * @param deleteClaims list of oidc claims to be deleted.
      * @throws IdentityOAuthAdminException if an error occurs when adding a new claim for a scope.
      * @deprecated use {@link #updateScope(ScopeDTO)} instead.
      */
@@ -774,8 +774,8 @@ public class OAuthAdminServiceImpl {
     /**
      * To load id of the scope table.
      *
-     * @param scope scope name
-     * @return id of the given scope
+     * @param scope scope name.
+     * @return id of the given scope.
      * @throws IdentityOAuthAdminException if an error occurs when loading scope id.
      */
     public boolean isScopeExist(String scope) throws IdentityOAuthAdminException {
@@ -789,8 +789,8 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * @param consumerKey
-     * @param newState
+     * @param consumerKey.
+     * @param newState.
      * @throws IdentityOAuthAdminException
      */
     public void updateConsumerAppState(String consumerKey, String newState) throws IdentityOAuthAdminException {
@@ -802,7 +802,7 @@ public class OAuthAdminServiceImpl {
 
         try {
             OAuthAppDO oAuthAppDO = getOAuthApp(consumerKey);
-            // change the state
+            // change the state.
             oAuthAppDO.setState(newState);
 
             Properties properties = new Properties();
@@ -931,7 +931,7 @@ public class OAuthAdminServiceImpl {
     /**
      * Removes an OAuth consumer application.
      *
-     * @param consumerKey Consumer Key
+     * @param consumerKey Consumer Key.
      * @throws IdentityOAuthAdminException Error when removing the consumer information from the database.
      */
     public void removeOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException {
@@ -982,8 +982,8 @@ public class OAuthAdminServiceImpl {
     /**
      * Remove all OAuth consumer applications of a tenant.
      *
-     * @param tenantId Id of the tenant
-     * @throws IdentityOAuthAdminException
+     * @param tenantId Id of the tenant.
+     * @throws IdentityOAuthAdminException.
      */
     public void removeAllOAuthApplicationData(int tenantId) throws IdentityOAuthAdminException {
 
@@ -996,9 +996,9 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Get apps that are authorized by the given user
+     * Get apps that are authorized by the given user.
      *
-     * @return OAuth applications authorized by the user that have tokens in ACTIVE or EXPIRED state
+     * @return OAuth applications authorized by the user that have tokens in ACTIVE or EXPIRED state.
      */
     public OAuthConsumerAppDTO[] getAppsAuthorizedByUser() throws IdentityOAuthAdminException {
 
@@ -1091,10 +1091,10 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Revoke authorization for OAuth apps by resource owners
+     * Revoke authorization for OAuth apps by resource owners.
      *
      * @param revokeRequestDTO DTO representing authorized user and apps[]
-     * @return revokeRespDTO DTO representing success or failure message
+     * @return revokeRespDTO DTO representing success or failure message.
      */
     public OAuthRevocationResponseDTO revokeAuthzForAppsByResourceOwner(
             OAuthRevocationRequestDTO revokeRequestDTO) throws IdentityOAuthAdminException {
@@ -1131,7 +1131,7 @@ public class OAuthAdminServiceImpl {
                     if (appDTO.getApplicationName().equals(appName)) {
                         Set<AccessTokenDO> accessTokenDOs;
                         try {
-                            // Retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this
+                            // Retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this.
                             // user
                             accessTokenDOs = OAuthTokenPersistenceFactory.getInstance()
                                     .getAccessTokenDAO().getAccessTokens(
@@ -1143,7 +1143,7 @@ public class OAuthAdminServiceImpl {
                         }
                         AuthenticatedUser authzUser;
                         for (AccessTokenDO accessTokenDO : accessTokenDOs) {
-                            //Clear cache with AccessTokenDO
+                            //Clear cache with AccessTokenDO.
                             authzUser = accessTokenDO.getAuthzUser();
 
                             String tokenBindingReference = NONE;
@@ -1176,7 +1176,7 @@ public class OAuthAdminServiceImpl {
                                 throw handleError(errorMsg, e);
                             }
                             if (scopedToken != null) {
-                                //Revoking token from database
+                                //Revoking token from database.
                                 try {
                                     OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                                             .revokeAccessTokens(new String[]{scopedToken
@@ -1210,7 +1210,7 @@ public class OAuthAdminServiceImpl {
             revokeRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_REQUEST);
             revokeRespDTO.setErrorMsg("Invalid revocation request");
 
-            //passing a single element array with null element to make sure listeners are triggered at least once
+            //passing a single element array with null element to make sure listeners are triggered at least once.
             triggerPostRevokeListeners(revokeRequestDTO, revokeRespDTO, new AccessTokenDO[]{null});
             return revokeRespDTO;
         }
@@ -1222,7 +1222,7 @@ public class OAuthAdminServiceImpl {
      *
      * @param application {@link OAuthAppRevocationRequestDTO}
      * @return revokeRespDTO {@link OAuthAppRevocationRequestDTO}
-     * @throws IdentityOAuthAdminException Error while revoking the issued tokens
+     * @throws IdentityOAuthAdminException Error while revoking the issued tokens.
      */
     public OAuthRevocationResponseDTO revokeIssuedTokensByApplication(OAuthAppRevocationRequestDTO application)
             throws IdentityOAuthAdminException {
@@ -1264,11 +1264,11 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Revoke approve always of the consent for OAuth apps by resource owners
+     * Revoke approve always of the consent for OAuth apps by resource owners.
      *
-     * @param appName name of the app
-     * @param state   state of the approve always
-     * @return revokeRespDTO DTO representing success or failure message
+     * @param appName name of the app.
+     * @param state   state of the approve always.
+     * @return revokeRespDTO DTO representing success or failure message.
      */
     public OAuthRevocationResponseDTO updateApproveAlwaysForAppConsentByResourceOwner(String appName, String state)
             throws IdentityOAuthAdminException {
@@ -1508,7 +1508,7 @@ public class OAuthAdminServiceImpl {
     /**
      * Get the registered oauth token types from OAuth server configuration file.
      *
-     * @return List of supported oauth token types
+     * @return List of supported oauth token types.
      */
     public List<String> getSupportedTokenTypes() {
 
@@ -1526,7 +1526,7 @@ public class OAuthAdminServiceImpl {
     /**
      * Get the renew refresh token property value from identity.xml file.
      *
-     * @return renew refresh token property value
+     * @return renew refresh token property value.
      */
     public boolean isRefreshTokenRenewalEnabled() {
 
@@ -1534,7 +1534,7 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * @return true if PKCE is supported by the database, false if not
+     * @return true if PKCE is supported by the database, false if not.
      */
     public boolean isPKCESupportEnabled() {
 
@@ -1640,8 +1640,8 @@ public class OAuthAdminServiceImpl {
     /**
      * Get the IdToken Encryption Method registered by the user and filter the allowed one.
      *
-     * @param application Application user have registered
-     * @return idTokenEncryptionMethod
+     * @param application Application user have registered.
+     * @return idTokenEncryptionMethod.
      * @throws IdentityOAuthAdminException Identity OAuthAdmin exception.
      */
     private String filterIdTokenEncryptionMethod(OAuthConsumerAppDTO application) throws IdentityOAuthAdminException {
@@ -1659,8 +1659,8 @@ public class OAuthAdminServiceImpl {
     /**
      * Get the IdToken Encryption Algorithm registered by the user and filter the allowed one.
      *
-     * @param application Application user have registered
-     * @return idTokenEncryptionAlgorithm
+     * @param application Application user have registere.
+     * @return idTokenEncryptionAlgorithm.
      * @throws IdentityOAuthAdminException Identity OAuthAdmin exception.
      */
     private String filterIdTokenEncryptionAlgorithm(OAuthConsumerAppDTO application)
@@ -1766,7 +1766,7 @@ public class OAuthAdminServiceImpl {
      * Scope validation before adding the scope.
      *
      * @param scope Scope.
-     * @throws IdentityOAuth2ScopeClientException
+     * @throws IdentityOAuth2ScopeClientException.
      */
     private void addScopePreValidation(ScopeDTO scope) throws IdentityOAuthClientException {
 
@@ -1779,7 +1779,7 @@ public class OAuthAdminServiceImpl {
      * Do the validation before updating the scope.
      *
      * @param updatedScope Updated scope.
-     * @throws IdentityOAuth2ScopeClientException
+     * @throws IdentityOAuth2ScopeClientException.
      */
     private void updateScopePreValidation(ScopeDTO updatedScope) throws IdentityOAuthClientException {
 
@@ -1791,7 +1791,7 @@ public class OAuthAdminServiceImpl {
      * Check whether scope name is provided or not.
      *
      * @param scopeName Scope name.
-     * @throws IdentityOAuth2ScopeClientException
+     * @throws IdentityOAuth2ScopeClientException.
      */
     private void validateScopeName(String scopeName) throws IdentityOAuthClientException {
 
@@ -1817,7 +1817,7 @@ public class OAuthAdminServiceImpl {
      * Check whether scope name contains any white spaces.
      *
      * @param scopeName Scope name.
-     * @throws IdentityOAuth2ScopeClientException
+     * @throws IdentityOAuth2ScopeClientException.
      */
     private void validateWhiteSpaces(String scopeName) throws IdentityOAuthClientException {
 
@@ -1836,7 +1836,7 @@ public class OAuthAdminServiceImpl {
      * Check whether display name is provided or empty.
      *
      * @param displayName Display name.
-     * @throws IdentityOAuth2ScopeClientException
+     * @throws IdentityOAuth2ScopeClientException.
      */
     private void validateDisplayName(String displayName) throws IdentityOAuthClientException {
 
@@ -1852,7 +1852,7 @@ public class OAuthAdminServiceImpl {
      * Check whether scope exist or not, if scope does not exist trow not found error.
      *
      * @param scopeName Scope name.
-     * @throws IdentityOAuth2ScopeException
+     * @throws IdentityOAuth2ScopeException.
      */
     private void validateScopeExistence(String scopeName) throws IdentityOAuthAdminException {
 
