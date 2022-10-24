@@ -259,11 +259,23 @@ public class OAuth2TokenEndpoint {
             return handleServerError();
         } else {
             // Otherwise send back HTTP 400 Status Code
-            OAuthResponse response = OAuthASResponse
+            OAuthResponse.OAuthErrorResponseBuilder oAuthErrorResponseBuilder = OAuthASResponse
                     .errorResponse(HttpServletResponse.SC_BAD_REQUEST)
                     .setError(oauth2AccessTokenResp.getErrorCode())
-                    .setErrorDescription(oauth2AccessTokenResp.getErrorMsg())
-                    .buildJSONMessage();
+                    .setErrorDescription(oauth2AccessTokenResp.getErrorMsg());
+
+            try {
+                if (MapUtils.isNotEmpty(oauth2AccessTokenResp.getErrorParameterMap())) {
+                    for (Map.Entry<String, Object> entry: oauth2AccessTokenResp.getErrorParameterMap().entrySet()) {
+                        oAuthErrorResponseBuilder.setParam(entry.getKey(), entry.getValue().toString());
+                    }
+                }
+            } catch (NoSuchMethodError e) {
+                // The 'OAuth2AccessTokenRespDTO' with API additions to support for custom parameters is not
+                // available. Ignore the error and proceed.
+            }
+
+            OAuthResponse response = oAuthErrorResponseBuilder.buildJSONMessage();
 
             ResponseHeader[] headers = oauth2AccessTokenResp.getResponseHeaders();
             ResponseBuilder respBuilder = Response.status(response.getResponseStatus());

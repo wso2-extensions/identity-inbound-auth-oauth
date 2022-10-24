@@ -320,23 +320,28 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         ResponseHeader[] headers2 = new ResponseHeader[]{null};
         ResponseHeader[] headers3 = new ResponseHeader[0];
 
+        Map<String, String> customErrorsMap = new HashMap<>();
+        customErrorsMap.put("customMessage1", "This is custom message 1");
+        customErrorsMap.put("customMessage2", "This is custom message 2");
+
         // This object provides data to cover all the scenarios with token error response
         return new Object[][]{
-                {OAuth2ErrorCodes.INVALID_CLIENT, null, HttpServletResponse.SC_UNAUTHORIZED,
+                {OAuth2ErrorCodes.INVALID_CLIENT, null, null, HttpServletResponse.SC_UNAUTHORIZED,
                         OAuth2ErrorCodes.INVALID_CLIENT},
-                {OAuth2ErrorCodes.SERVER_ERROR, null, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                {OAuth2ErrorCodes.SERVER_ERROR, null, null, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                         OAuth2ErrorCodes.SERVER_ERROR},
-                {SQL_ERROR, null, HttpServletResponse.SC_BAD_GATEWAY, OAuth2ErrorCodes.SERVER_ERROR},
-                {TOKEN_ERROR, null, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},
-                {TOKEN_ERROR, headers1, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},
-                {TOKEN_ERROR, headers2, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},
-                {TOKEN_ERROR, headers3, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},
+                {SQL_ERROR, null, null, HttpServletResponse.SC_BAD_GATEWAY, OAuth2ErrorCodes.SERVER_ERROR},
+                {TOKEN_ERROR, null, null, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},
+                {TOKEN_ERROR, headers1, null, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},
+                {TOKEN_ERROR, headers2, null, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},
+                {TOKEN_ERROR, headers3, null, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},
+                {TOKEN_ERROR, headers3, customErrorsMap, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR}
         };
     }
 
     @Test(dataProvider = "testTokenErrorResponseDataProvider", groups = "testWithConnection")
-    public void testTokenErrorResponse(String errorCode, Object headerObj, int expectedStatus,
-                                       String expectedErrorCode) throws Exception {
+    public void testTokenErrorResponse(String errorCode, Object headerObj, Map<String, Object> errorMap,
+                                       int expectedStatus, String expectedErrorCode) throws Exception {
 
         ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
 
@@ -364,6 +369,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         when(oAuth2AccessTokenRespDTO.getErrorMsg()).thenReturn("Token Response error");
         when(oAuth2AccessTokenRespDTO.getErrorCode()).thenReturn(errorCode);
         when(oAuth2AccessTokenRespDTO.getResponseHeaders()).thenReturn(responseHeaders);
+        when(oAuth2AccessTokenRespDTO.getErrorParameterMap()).thenReturn(errorMap);
 
         mockOAuthServerConfiguration();
         mockStatic(IdentityDatabaseUtil.class);
@@ -387,6 +393,12 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
         assertNotNull(response.getEntity(), "Response entity is null");
         assertTrue(response.getEntity().toString().contains(expectedErrorCode), "Expected error code not found");
+        if (null != errorMap) {
+            for (Map.Entry<String, Object> entry: errorMap.entrySet()) {
+                assertTrue(response.getEntity().toString().contains
+                        (entry.getKey().concat("\":\"").concat(entry.getValue().toString())));
+            }
+        }
     }
 
     @DataProvider(name = "testGetAccessTokenDataProvider")
