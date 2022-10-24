@@ -43,6 +43,8 @@ public class OAuth2AccessTokenRespDTO {
     private String idToken;
     private Map<String, String> parameters;
 
+    private Map<String, Object> errorParameterMap;
+
     public ResponseHeader[] getResponseHeaders() {
         if (responseHeaders == null) {
             return new ResponseHeader[0];
@@ -186,6 +188,24 @@ public class OAuth2AccessTokenRespDTO {
     public Map<String, String> getParameters() {
 
         return Collections.unmodifiableMap(getParameterMap());
+    }
+
+    /**
+     * Get error parameter map
+     *
+     * @return a map of error parameters
+     */
+    public Map<String, Object> getErrorParameterMap() {
+        return errorParameterMap;
+    }
+
+    /**
+     * Set error parameter map
+     *
+     * @param errorParameterMap
+     */
+    public void setErrorParameterMap(Map<String, Object> errorParameterMap) {
+        this.errorParameterMap = errorParameterMap;
     }
 
     private Map<String, String> getParameterMap() {

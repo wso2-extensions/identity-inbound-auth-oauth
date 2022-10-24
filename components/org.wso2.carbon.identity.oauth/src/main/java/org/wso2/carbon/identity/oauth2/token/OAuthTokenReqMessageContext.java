@@ -23,6 +23,9 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -47,6 +50,8 @@ public class OAuthTokenReqMessageContext {
     private long refreshTokenIssuedTime;
 
     private Properties properties = new Properties();
+
+    private Map<String, Object> errorParameterMap;
 
     private TokenBinding tokenBinding;
 
@@ -149,4 +154,39 @@ public class OAuthTokenReqMessageContext {
 
         this.tokenBinding = tokenBinding;
     }
+
+    /**
+     * Get error parameter map
+     *
+     * @return The map of error parameters
+     */
+    public Map<String, Object> getErrorParameterMap() {
+
+        return Collections.unmodifiableMap(getErrorMap());
+    }
+
+    /**
+     * Add key values to error paramter map
+     * @param key key
+     * @param value value
+     */
+    public void setErrorParameterMap(String key, Object value) {
+
+        getErrorMap().put(key, value);
+    }
+
+    /**
+     * Get error parameter map
+     *
+     * @return the map of error parameter map is returned. A default map will be returned if values are not added to
+     * the error parameter map
+     */
+    private Map<String, Object> getErrorMap() {
+
+        if (errorParameterMap == null) {
+            errorParameterMap = new HashMap<>();
+        }
+        return errorParameterMap;
+    }
+
 }
