@@ -980,17 +980,14 @@ public class OAuthAppDAO {
      * @param consumerKey  client ID
      * @return idTokenAudiences audience values for Id Token
      * @throws IdentityOAuth2Exception
-     */
-    /**
      * @deprecated use {@link #getOIDCIdTokenAudiences(String, String )} |
-     * {@link #getOIDCAccessokenAudiences(String, String )} instead.
+     * {@link #getOIDCAccessTokenAudiences(String, String )} instead.
      */
     @Deprecated
     public List<String> getOIDCAudiences(String tenantDomain, String consumerKey) throws IdentityOAuth2Exception {
 
         if (isOAuthLegacyAudiencesEnabled()) {
-            List<String> audiences = getAudiencesFromDB(tenantDomain, consumerKey, OPENID_CONNECT_AUDIENCE);
-            return audiences;
+            return getAudiencesFromDB(tenantDomain, consumerKey, OPENID_CONNECT_AUDIENCE);
         } else {
             return this.getOIDCIdTokenAudiences(tenantDomain, consumerKey);
         }
@@ -1010,7 +1007,6 @@ public class OAuthAppDAO {
         List<String> idTokenAudiences = getAudiencesFromDB(tenantDomain, consumerKey, OPENID_CONNECT_ID_TOKEN_AUDIENCE);
         return idTokenAudiences;
     }
-
 
     /**
      * Retrieves OIDC Access Token audience values configured for an oauth consumer app.
@@ -1050,7 +1046,7 @@ public class OAuthAppDAO {
                 }
             }
         } catch (SQLException e) {
-            String errorMsg = "Error occurred while retrieving OIDC Access Token audiences for client ID: " +
+            String errorMsg = "Error occurred while retrieving audiences for client ID: " +
                     consumerKey + " and tenant domain: " + tenantDomain;
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception(errorMsg, e);
@@ -1059,6 +1055,7 @@ public class OAuthAppDAO {
         }
         return audiences;
     }
+
     /**
      * Remove Oauth consumer app related properties.
      *

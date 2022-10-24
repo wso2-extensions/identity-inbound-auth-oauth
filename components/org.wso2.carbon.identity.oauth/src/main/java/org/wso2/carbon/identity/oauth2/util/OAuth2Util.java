@@ -1979,8 +1979,6 @@ public class OAuth2Util {
      * @param clientId
      * @param oAuthAppDO
      * @return
-     */
-    /**
      * @deprecated use {@link #getOIDCIdTokenAudience(String, OAuthAppDO)} instead.
      */
     @Deprecated

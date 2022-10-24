@@ -377,7 +377,6 @@
                             $(jQuery("#audience-enable").hide());
                             $(jQuery("#audience-add").hide());
                             $(jQuery("#audience-table").hide());
-
                         } else {
                             $(jQuery("#id_token_audience_enable").hide());
                             $(jQuery("#id_token_audience_add").hide());
@@ -385,7 +384,6 @@
                             $(jQuery("#access_token_audience_enable").hide());
                             $(jQuery("#access_token_audience_add").hide());
                             $(jQuery("#access_token_audience_table").hide());
-
                         }
 
                         $(jQuery("#validate_request_object_signature").hide());
@@ -413,7 +411,6 @@
                             $(jQuery("#audience-enable").show());
                             $(jQuery("#audience-add").show());
                             $(jQuery("#audience-table").show());
-
                         } else {
                             $(jQuery("#id_token_audience_enable").show());
                             $(jQuery("#id_token_audience_add").show());
@@ -421,7 +418,6 @@
                             $(jQuery("#access_token_audience_enable").show());
                             $(jQuery("#access_token_audience_add").show());
                             $(jQuery("#access_token_audience_table").show());
-
                         }
                         $(jQuery("#validate_request_object_signature").show());
                         $(jQuery("#encrypt_id_token").show());
@@ -525,6 +521,7 @@
                         document.getElementById("audience").value = "";
                         return false;
                     }
+
                     if ($.inArray(audience, audienceArr) !== -1) {
                         CARBON.showWarningDialog('<fmt:message key="duplicate.audience.value"/>');
                         document.getElementById("audience").value = "";
@@ -532,22 +529,30 @@
                     }
                     audienceArr.push(audience);
                     var propertyCount = document.getElementById("audiencePropertyCounter");
+
                     var i = propertyCount.value;
                     var currentCount = parseInt(i);
+
                     currentCount = currentCount + 1;
                     propertyCount.value = currentCount;
+
                     document.getElementById('audienceTableId').style.display = '';
                     var audienceTableTBody = document.getElementById('audienceTableTbody');
+
                     var audienceRow = document.createElement('tr');
                     audienceRow.setAttribute('id', 'audienceRow' + i);
+
                     var audience = document.getElementById('audience').value;
                     var audiencePropertyTD = document.createElement('td');
                     audiencePropertyTD.setAttribute('style', 'padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;');
                     audiencePropertyTD.innerHTML = "" + audience + "<input type='hidden' name='audiencePropertyName' id='audiencePropertyName" + i + "'  value='" + audience + "'/> ";
+
                     var audienceRemoveTD = document.createElement('td');
                     audienceRemoveTD.innerHTML = "<a href='#' class='icon-link' style='background-image: url(../admin/images/delete.gif)' onclick='removeAudience(" + i + ");return false;'>" + "Delete" + "</a>";
+
                     audienceRow.appendChild(audiencePropertyTD);
                     audienceRow.appendChild(audienceRemoveTD);
+
                     audienceTableTBody.appendChild(audienceRow);
                     document.getElementById("audience").value = "";
                     return true;

@@ -113,15 +113,12 @@ public class OAuth2ServiceComponentHolder {
     }
 
      /**
-     * @deprecated this method must be removed in upcoming iterationw
+     * @deprecated this method must be removed in upcoming iterations
      */
     @Deprecated
     public static boolean isAudienceEnabled() {
-        if (legacyAudienceEnabled) {
-            return audienceEnabled;
-        } else {
-            return true;
-        }
+
+        return legacyAudienceEnabled ? audienceEnabled : true;
     }
 
     /**

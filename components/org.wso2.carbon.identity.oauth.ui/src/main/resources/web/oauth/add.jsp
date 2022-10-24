@@ -252,7 +252,6 @@
                             $(jQuery("#audience_enable").hide());
                             $(jQuery("#add_audience").hide());
                             $(jQuery("#audience_table").hide());
-
                         } else {
                             $(jQuery("#id_token_audience_enable").hide());
                             $(jQuery("#add_id_token_audience").hide());
@@ -260,7 +259,6 @@
                             $(jQuery("#access_token_audience_enable").hide());
                             $(jQuery("#add_access_token_audience").hide());
                             $(jQuery("#access_token_audience_table").hide());
-
                         }
 
                         $(jQuery("#validate_request_object_signature_row").hide());
@@ -290,7 +288,6 @@
                             $(jQuery("#audience_enable").show());
                             $(jQuery("#add_audience").show());
                             $(jQuery("#audience_table").show());
-
                         } else {
                             $(jQuery("#id_token_audience_enable").show());
                             $(jQuery("#add_id_token_audience").show());
@@ -298,7 +295,6 @@
                             $(jQuery("#access_token_audience_enable").show());
                             $(jQuery("#add_access_token_audience").show());
                             $(jQuery("#access_token_audience_table").show());
-
                         }
 
                         $(jQuery("#validate_request_object_signature_row").show());
@@ -396,6 +392,7 @@
                         document.getElementById("audience").value = "";
                         return false;
                     }
+
                     if ($.inArray(audience, audienceArr) !== -1) {
                         CARBON.showWarningDialog('<fmt:message key="duplicate.audience.value"/>');
                         document.getElementById("audience").value = "";
@@ -403,21 +400,29 @@
                     }
                     audienceArr.push(audience);
                     var propertyCount = document.getElementById("audiencePropertyCounter");
+
                     var i = propertyCount.value;
                     var currentCount = parseInt(i);
+
                     currentCount = currentCount + 1;
                     propertyCount.value = currentCount;
+
                     document.getElementById('audienceTableId').style.display = '';
                     var audienceTableTBody = document.getElementById('audienceTableTbody');
+
                     var audienceRow = document.createElement('tr');
                     audienceRow.setAttribute('id', 'audienceRow' + i);
+
                     var audiencePropertyTD = document.createElement('td');
                     audiencePropertyTD.setAttribute('style', 'color: rgb(119, 119, 119); font-style: italic;');
                     audiencePropertyTD.innerHTML = "" + audience + "<input type='hidden' name='audiencePropertyName' id='audiencePropertyName" + i + "'  value='" + audience + "'/> ";
+
                     var audienceRemoveTD = document.createElement('td');
                     audienceRemoveTD.innerHTML = "<a href='#' class='icon-link' style='background-image: url(../admin/images/delete.gif)' onclick='removeAudience(" + i + ");return false;'>" + "Delete" + "</a>";
+
                     audienceRow.appendChild(audiencePropertyTD);
                     audienceRow.appendChild(audienceRemoveTD);
+
                     audienceTableTBody.appendChild(audienceRow);
                     document.getElementById("audience").value = "";
                     return true;

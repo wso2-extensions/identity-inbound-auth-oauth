@@ -468,6 +468,89 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      */
     protected JWTClaimsSet createJWTClaimSet(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
                                              OAuthTokenReqMessageContext tokenReqMessageContext,
+                                             String consumerKey) throws IdentityOAuth2Exception {
+
+        // loading the stored application data
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
+        }
+
+        String spTenantDomain;
+        long accessTokenLifeTimeInMillis;
+        if (authAuthzReqMessageContext != null) {
+            accessTokenLifeTimeInMillis =
+                    getAccessTokenLifeTimeInMillis(authAuthzReqMessageContext, oAuthAppDO, consumerKey);
+            spTenantDomain = authAuthzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
+        } else {
+            accessTokenLifeTimeInMillis =
+                    getAccessTokenLifeTimeInMillis(tokenReqMessageContext, oAuthAppDO, consumerKey);
+            spTenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
+        }
+
+        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
+        long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
+
+        AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
+        String sub = getSubjectClaim(consumerKey, spTenantDomain, authenticatedUser);
+
+        // Set the default claims.
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        jwtClaimsSetBuilder.issuer(issuer);
+        jwtClaimsSetBuilder.subject(sub);
+        jwtClaimsSetBuilder.claim(AUTHORIZATION_PARTY, consumerKey);
+        jwtClaimsSetBuilder.issueTime(new Date(curTimeInMillis));
+        jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
+        jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis));
+        jwtClaimsSetBuilder.claim(CLIENT_ID, consumerKey);
+
+        String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
+        if (StringUtils.isNotEmpty(scope)) {
+            jwtClaimsSetBuilder.claim(SCOPE, scope);
+        }
+
+        jwtClaimsSetBuilder.claim(OAuthConstants.AUTHORIZED_USER_TYPE,
+                getAuthorizedUserType(authAuthzReqMessageContext, tokenReqMessageContext));
+
+        jwtClaimsSetBuilder.expirationTime(calculateAccessTokenExpiryTime(accessTokenLifeTimeInMillis,
+                curTimeInMillis));
+
+        // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens. But we are keeping this in JWT
+        // as well.
+        List<String> audience = OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO);
+        jwtClaimsSetBuilder.audience(audience);
+        JWTClaimsSet jwtClaimsSet;
+
+        // Handle custom claims
+        if (authAuthzReqMessageContext != null) {
+            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, authAuthzReqMessageContext);
+        } else {
+            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
+        }
+        // Include token binding.
+        jwtClaimsSet = handleTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
+
+        if (tokenReqMessageContext != null && tokenReqMessageContext.getProperty(CNF) != null) {
+            jwtClaimsSet = handleCnf(jwtClaimsSetBuilder, tokenReqMessageContext);
+        }
+
+        return jwtClaimsSet;
+    }
+
+    /**
+     * Create a JWT claim set according to the JWT format.
+     *
+     * @param authAuthzReqMessageContext Oauth authorization request message context.
+     * @param tokenReqMessageContext     Token request message context.
+     * @param consumerKey                Consumer key of the application.
+     * @param isAccessToken              Checks whether the token is an access token to add proper audiences.
+     * @return JWT claim set.
+     * @throws IdentityOAuth2Exception
+     */
+    protected JWTClaimsSet createJWTClaimSet(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
+                                             OAuthTokenReqMessageContext tokenReqMessageContext,
                                              String consumerKey, boolean isAccessToken) throws IdentityOAuth2Exception {
 
         // loading the stored application data

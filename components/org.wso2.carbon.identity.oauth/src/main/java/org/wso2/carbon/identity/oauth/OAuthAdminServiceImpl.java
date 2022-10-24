@@ -298,13 +298,11 @@ public class OAuthAdminServiceImpl {
                         if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
                             validateAudiences(application);
                             app.setAudiences(application.getAudiences());
-
                         } else {
                             validateIdTokenAudiences(application);
                             validateAccessTokenAudiences(application);
                             app.setIdTokenAudiences(application.getIdTokenAudiences());
                             app.setAccessTokenAudiences(application.getAccessTokenAudiences());
-
                         }
 
                         app.setPkceMandatory(application.getPkceMandatory());
@@ -562,13 +560,11 @@ public class OAuthAdminServiceImpl {
             if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
                 validateAudiences(consumerAppDTO);
                 oauthappdo.setAudiences(consumerAppDTO.getAudiences());
-
             } else {
                 validateIdTokenAudiences(consumerAppDTO);
                 validateAccessTokenAudiences(consumerAppDTO);
                 oauthappdo.setIdTokenAudiences(consumerAppDTO.getIdTokenAudiences());
                 oauthappdo.setAccessTokenAudiences(consumerAppDTO.getAccessTokenAudiences());
-
             }
             oauthappdo.setScopeValidators(filterScopeValidators(consumerAppDTO));
             oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO

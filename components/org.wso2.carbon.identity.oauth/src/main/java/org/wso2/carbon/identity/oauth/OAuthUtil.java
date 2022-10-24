@@ -445,11 +445,9 @@ public final class OAuthUtil {
 
         if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
             dto.setAudiences(appDO.getAudiences());
-
         } else {
             dto.setIdTokenAudiences(appDO.getIdTokenAudiences());
             dto.setAccessTokenAudiences(appDO.getAccessTokenAudiences());
-
         }
         dto.setRequestObjectSignatureValidationEnabled(appDO.isRequestObjectSignatureValidationEnabled());
         dto.setIdTokenEncryptionEnabled(appDO.isIdTokenEncryptionEnabled());

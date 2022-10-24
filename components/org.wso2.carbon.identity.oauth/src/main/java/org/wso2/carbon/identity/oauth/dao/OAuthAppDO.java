@@ -219,7 +219,7 @@ public class OAuthAppDO implements Serializable {
     }
 
     /**
-     * @deprecated use {@link #getIdTokenAudiences()} instead.
+     * @deprecated use {@link #getIdTokenAudiences()} | {@link #getAccessTokenAudiences()} instead.
      */
     @Deprecated
     public String[] getAudiences() {
