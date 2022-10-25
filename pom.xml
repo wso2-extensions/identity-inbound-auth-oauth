@@ -527,6 +527,11 @@
                 <version>${spring-web.version}</version>
             </dependency>
             <dependency>
+                <groupId>javax.validation</groupId>
+                <artifactId>validation-api</artifactId>
+                <version>${javax.validation-api}</version>
+            </dependency>
+            <dependency>
                 <groupId>io.swagger</groupId>
                 <artifactId>swagger-jaxrs</artifactId>
                 <version>${swagger-jaxrs.version}</version>
@@ -1011,6 +1016,7 @@
         <com.fasterxml.jackson.version>2.9.7</com.fasterxml.jackson.version>
         <spring-web.version>4.3.29.RELEASE</spring-web.version>
         <swagger-jaxrs.version>1.6.2</swagger-jaxrs.version>
+        <javax.validation-api>2.0.1.Final</javax.validation-api>
         <!-- httpclient dependency Version-->
         <http.client.version>4.5.13.wso2v1</http.client.version>
         <http.core.version>4.4.15.wso2v1</http.core.version>
