@@ -196,16 +196,19 @@ public class OAuth2AccessTokenRespDTO {
      * @return a map of error parameters
      */
     public Map<String, Object> getErrorParameterMap() {
-        return errorParameterMap;
+
+        return Collections.unmodifiableMap(getErrorMap());
     }
 
     /**
-     * Set error parameter map
+     * Add error parameter to custom error parameter map
      *
-     * @param errorParameterMap
+     * @param key custom error key
+     * @param value value of the corresponding key
      */
-    public void setErrorParameterMap(Map<String, Object> errorParameterMap) {
-        this.errorParameterMap = errorParameterMap;
+    public void addErrorParameter(String key, Object value) {
+
+        getErrorMap().put(key, value);
     }
 
     private Map<String, String> getParameterMap() {
@@ -214,5 +217,19 @@ public class OAuth2AccessTokenRespDTO {
             parameters = new HashMap<>();
         }
         return parameters;
+    }
+
+    /**
+     * Get error parameter map
+     *
+     * @return the map of error parameter map is returned. A default map will be returned if values are not added to
+     * the error parameter map
+     */
+    private Map<String, Object> getErrorMap() {
+
+        if (errorParameterMap == null) {
+            errorParameterMap = new HashMap<>();
+        }
+        return errorParameterMap;
     }
 }

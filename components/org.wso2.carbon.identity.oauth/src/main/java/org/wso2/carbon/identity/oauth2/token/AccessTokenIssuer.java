@@ -605,8 +605,9 @@ public class AccessTokenIssuer {
      * @param errorMap
      */
     private void setCustomErrorParameters(OAuth2AccessTokenRespDTO tokenRespDTO, Map<String, Object> errorMap) {
-
-        tokenRespDTO.setErrorParameterMap(errorMap);
+        for (Map.Entry<String, Object> entry: errorMap.entrySet()) {
+            tokenRespDTO.addErrorParameter(entry.getKey(), entry.getValue());
+        }
     }
 
     /**

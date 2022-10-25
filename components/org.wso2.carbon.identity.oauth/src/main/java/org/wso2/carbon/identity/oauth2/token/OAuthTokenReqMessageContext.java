@@ -166,11 +166,11 @@ public class OAuthTokenReqMessageContext {
     }
 
     /**
-     * Add key values to error paramter map
-     * @param key key
-     * @param value value
+     * Add key values to error parameter map
+     * @param key custom error key
+     * @param value value of the corresponding key
      */
-    public void setErrorParameterMap(String key, Object value) {
+    public void addErrorParameter(String key, Object value) {
 
         getErrorMap().put(key, value);
     }
