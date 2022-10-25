@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>6.8.0</version>
+    <version>7.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -36,7 +36,7 @@
         <url>https://github.com/wso2-extensions/identity-inbound-auth-oauth.git</url>
         <developerConnection>scm:git:https://github.com/wso2-extensions/identity-inbound-auth-oauth.git</developerConnection>
         <connection>scm:git:https://github.com/wso2-extensions/identity-inbound-auth-oauth.git</connection>
-        <tag>v6.8.0</tag>
+        <tag>v7.0.0-SNAPSHOT</tag>
     </scm>
 
     <modules>
@@ -826,12 +826,12 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.23.0</carbon.identity.framework.version>
-        <carbon.identity.framework.imp.pkg.version.range>[5.17.5, 6.0.0)
+        <carbon.identity.framework.version>6.0.0-SNAPSHOT</carbon.identity.framework.version>
+        <carbon.identity.framework.imp.pkg.version.range>[6.0.0, 7.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
-        <carbon.identity.organization.management.version>1.0.54</carbon.identity.organization.management.version>
-        <carbon.identity.organization.management.version.range>[1.0.46, 2.0.0)
+        <carbon.identity.organization.management.version>2.0.0-SNAPSHOT</carbon.identity.organization.management.version>
+        <carbon.identity.organization.management.version.range>[2.0.0, 3.0.0)
         </carbon.identity.organization.management.version.range>
 
         <!--Carbon component version-->
