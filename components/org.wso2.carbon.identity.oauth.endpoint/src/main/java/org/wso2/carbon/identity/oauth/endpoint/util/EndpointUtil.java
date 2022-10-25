@@ -774,7 +774,7 @@ public class EndpointUtil {
                     user = entry.getLoggedInUser();
                 }
                 setConsentRequiredScopesToOAuthParams(user, params);
-                validateConsentRequiredScopes(user, params);
+//                validateConsentRequiredScopes(user, params);
                 Set<String> consentRequiredScopesSet = params.getConsentRequiredScopes();
                 String consentRequiredScopes = StringUtils.EMPTY;
                 if (CollectionUtils.isNotEmpty(consentRequiredScopesSet)) {

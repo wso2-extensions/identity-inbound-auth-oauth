@@ -27,7 +27,6 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -96,7 +95,7 @@ public class AuthorizationHandlerManager {
     }
 
     public OAuth2AuthorizeRespDTO handleAuthorization(OAuth2AuthorizeReqDTO authzReqDTO)
-            throws IdentityOAuth2Exception, IdentityOAuthAdminException, InvalidOAuthClientException {
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
         OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(authzReqDTO);
         ResponseTypeHandler authzHandler = getResponseHandler(authzReqDTO);
@@ -119,6 +118,20 @@ public class AuthorizationHandlerManager {
             OAuth2Util.clearAuthzRequestContext();
         }
         return authorizeRespDTO;
+    }
+
+    public OAuthAuthzReqMessageContext validateAuthorizationRequest(OAuth2AuthorizeReqDTO authzReqDTO)
+            throws IdentityOAuth2Exception {
+
+        OAuthAuthzReqMessageContext authzReqMsgCtx = null;
+        try {
+            authzReqMsgCtx = getOAuthAuthzReqMessageContext(authzReqDTO);
+        } catch (InvalidOAuthClientException e) {
+            log.debug("Oh my new Error");
+        }
+        ResponseTypeHandler authzHandler = getResponseHandler(authzReqDTO);
+        OAuth2AuthorizeRespDTO authorizeRespDTO = validateAuthzRequest(authzReqDTO, authzReqMsgCtx, authzHandler);
+        return authzReqMsgCtx;
     }
 
     private ResponseTypeHandler getResponseHandler(OAuth2AuthorizeReqDTO authzReqDTO) {

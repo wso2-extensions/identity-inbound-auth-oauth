@@ -90,6 +90,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
+import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -498,7 +500,8 @@ public class OAuth2AuthzEndpoint {
             handlePostConsent(oAuthMessage);
 
             OIDCSessionState sessionState = new OIDCSessionState();
-            String redirectURL = handleUserConsent(oAuthMessage, consent, sessionState);
+            OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
+            String redirectURL = handleUserConsent(oAuthMessage, consent, sessionState, oauth2Params);
 
             if (isFormPostResponseMode(oAuthMessage, redirectURL)) {
                 return handleFormPostResponseMode(oAuthMessage, sessionState, redirectURL);
@@ -896,6 +899,7 @@ public class OAuth2AuthzEndpoint {
 
         boolean isOIDCRequest = OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes());
         AuthenticatedUser authenticatedUser = authenticationResult.getSubject();
+
         if (authenticatedUser.getUserAttributes() != null) {
             authenticatedUser.setUserAttributes(new ConcurrentHashMap<>(authenticatedUser.getUserAttributes()));
         }
@@ -1169,10 +1173,10 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private String handleUserConsent(OAuthMessage oAuthMessage, String consent, OIDCSessionState sessionState)
+    private String handleUserConsent(OAuthMessage oAuthMessage, String consent, OIDCSessionState sessionState,
+                                     OAuth2Parameters oauth2Params)
             throws OAuthSystemException {
 
-        OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         storeUserConsent(oAuthMessage, consent);
         OAuthResponse oauthResponse;
         String responseType = oauth2Params.getResponseType();
@@ -2333,6 +2337,20 @@ public class OAuth2AuthzEndpoint {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
+
+        HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
+        OAuth2AuthorizeReqDTO authzReqDTO =
+                buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
+        AuthorizationHandlerManager authzHandlerManager =
+                null;
+        try {
+            authzHandlerManager = AuthorizationHandlerManager.getInstance();
+            OAuthAuthzReqMessageContext ctx = authzHandlerManager.validateAuthorizationRequest(authzReqDTO);
+            oauth2Params.setScopes(new HashSet<>(Arrays.asList(ctx.getApprovedScope())));
+        } catch (IdentityOAuth2Exception e) {
+            log.debug("oh my new Error");
+        }
+
         boolean hasUserApproved = isUserAlreadyApproved(oauth2Params, authenticatedUser);
 
         if (hasPromptContainsConsent(oauth2Params)) {
@@ -2400,7 +2418,7 @@ public class OAuth2AuthzEndpoint {
 
         if (isConsentSkipped(serviceProvider)) {
             sessionState.setAddSessionState(true);
-            return handleUserConsent(oAuthMessage, APPROVE, sessionState);
+            return handleUserConsent(oAuthMessage, APPROVE, sessionState, oauth2Params);
         } else if (hasUserApproved) {
             return handleApproveAlwaysWithPromptForNewConsent(oAuthMessage, sessionState, oauth2Params);
         } else {
@@ -2871,7 +2889,7 @@ public class OAuth2AuthzEndpoint {
                         "'prompt' is set to none, and consent is disabled for the OAuth client.",
                         "validate-existing-consent", configs);
             }
-            return handleUserConsent(oAuthMessage, APPROVE, sessionState);
+            return handleUserConsent(oAuthMessage, APPROVE, sessionState, oauth2Params);
         } else if (hasUserApproved) {
             return handleApprovedAlwaysWithoutPromptingForNewConsent(oAuthMessage, sessionState, oauth2Params);
         } else {
@@ -2924,7 +2942,7 @@ public class OAuth2AuthzEndpoint {
                         "'prompt' is set to none, and existing user consent found for the OAuth client.",
                         "validate-existing-consent", null);
             }
-            return handleUserConsent(oAuthMessage, APPROVE, sessionState);
+            return handleUserConsent(oAuthMessage, APPROVE, sessionState, oauth2Params);
         }
     }
 
@@ -2943,7 +2961,7 @@ public class OAuth2AuthzEndpoint {
                     authenticatedUser, preConsent, oAuthMessage);
         } else {
             sessionState.setAddSessionState(true);
-            return handleUserConsent(oAuthMessage, APPROVE, sessionState);
+            return handleUserConsent(oAuthMessage, APPROVE, sessionState, oauth2Params);
         }
     }
 
