@@ -348,6 +348,9 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
                 return realm.get(OAuthConstants.OIDCClaims.TENANT);
             }
         }
+        if (accessTokenDO == null) {
+            return getTenantDomain();
+        }
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
         if (isJWTSignedWithSPKey) {
             try {
