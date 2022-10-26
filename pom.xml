@@ -809,7 +809,7 @@
     <properties>
         <!-- Identity Inbound Auth OAuth Version-->
         <identity.inbound.auth.oauth.exp.pkg.version>${project.version}</identity.inbound.auth.oauth.exp.pkg.version>
-        <identity.inbound.auth.oauth.imp.pkg.version.range>[6.2.0, 7.0.0)</identity.inbound.auth.oauth.imp.pkg.version.range>
+        <identity.inbound.auth.oauth.imp.pkg.version.range>[7.0.0, 8.0.0)</identity.inbound.auth.oauth.imp.pkg.version.range>
 
         <!-- OSGi/Equinox dependency version -->
         <equinox.javax.servlet.version>3.0.0.v201112011016</equinox.javax.servlet.version>
@@ -826,11 +826,11 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>6.0.0-SNAPSHOT</carbon.identity.framework.version>
+        <carbon.identity.framework.version>5.23.0</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[6.0.0, 7.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
-        <carbon.identity.organization.management.version>2.0.0-SNAPSHOT</carbon.identity.organization.management.version>
+        <carbon.identity.organization.management.version>1.0.54</carbon.identity.organization.management.version>
         <carbon.identity.organization.management.version.range>[2.0.0, 3.0.0)
         </carbon.identity.organization.management.version.range>
 
