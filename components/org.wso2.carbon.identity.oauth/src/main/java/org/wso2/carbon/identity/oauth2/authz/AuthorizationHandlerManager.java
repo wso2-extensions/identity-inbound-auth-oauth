@@ -192,12 +192,6 @@ public class AuthorizationHandlerManager {
         List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
         List<String> requestedAllowedScopes = new ArrayList<>();
         String[] requestedScopes = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
-        String[] requestedOIDCScopes = new String[0];
-        try {
-            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(requestedScopes);
-        } catch (IdentityOAuthAdminException e) {
-            log.error("Unable to retrieve OIDC Scopes." + e.getMessage());
-        }
 
         List<String> scopesToBeValidated = new ArrayList<>();
         if (requestedScopes != null) {
@@ -259,7 +253,6 @@ public class AuthorizationHandlerManager {
         if (valid) {
             // Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(authzReqMsgCtx, authzReqMsgCtx.getAuthorizedInternalScopes());
-            addRequestedOIDCScopes(authzReqMsgCtx, requestedOIDCScopes);
             addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         }
         return authorizeRespDTO;
@@ -274,6 +267,7 @@ public class AuthorizationHandlerManager {
         String[] requestedScopes = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
         String[] requestedOIDCScopes = new String[0];
         try {
+            //remove OIDC scopes before validation
             requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(requestedScopes);
             requestedScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(requestedScopes, requestedOIDCScopes);
         } catch (IdentityOAuthAdminException e) {
@@ -341,6 +335,7 @@ public class AuthorizationHandlerManager {
         if (valid) {
             // Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(authzReqMsgCtx, authzReqMsgCtx.getAuthorizedInternalScopes());
+            // Add OIDC scopes back to the request
             addRequestedOIDCScopes(authzReqMsgCtx, requestedOIDCScopes);
             addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         }

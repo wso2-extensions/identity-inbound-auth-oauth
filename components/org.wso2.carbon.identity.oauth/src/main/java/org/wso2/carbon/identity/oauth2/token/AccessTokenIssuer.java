@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -361,6 +362,14 @@ public class AccessTokenIssuer {
         List<String> requestedAllowedScopes = new ArrayList<>();
         String[] requestedScopes = tokReqMsgCtx.getScope();
         List<String> scopesToBeValidated = new ArrayList<>();
+        String[] requestedOIDCScopes = new String[0];
+        try {
+            //remove OIDC scopes before validation
+            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(requestedScopes);
+            requestedScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(requestedScopes, requestedOIDCScopes);
+        } catch (IdentityOAuthAdminException e) {
+            log.error("Unable to retrieve OIDC Scopes." + e.getMessage());
+        }
         if (requestedScopes != null) {
             for (String scope : requestedScopes) {
                 if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
@@ -429,6 +438,8 @@ public class AccessTokenIssuer {
             }
             // Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
+            // Add OIDC scopes back to the request
+            addRequestedOIDCScopes(tokReqMsgCtx, requestedOIDCScopes);
             addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         } else {
             if (log.isDebugEnabled()) {
@@ -707,6 +718,12 @@ public class AccessTokenIssuer {
         tokReqMsgCtx.setScope(scopesToReturn);
     }
 
+    private void addRequestedOIDCScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
+                                             String[] requestedOIDCScopes) {
+        String[] scopes = tokReqMsgCtx.getScope();
+        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, requestedOIDCScopes);
+        tokReqMsgCtx.setScope(scopesToReturn);
+    }
     private void addAllowedScopes(OAuthTokenReqMessageContext tokReqMsgCtx, String[] allowedScopes) {
 
         String[] scopes = tokReqMsgCtx.getScope();
