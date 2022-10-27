@@ -2353,10 +2353,8 @@ public class OAuth2AuthzEndpoint {
             OAuthAuthzReqMessageContext ctx = authzHandlerManager.handleScopeValidation(authzReqDTO);
             addOAuthAuthzReqMessageContextTOSessionDataCacheEntry(oAuthMessage, ctx);
             oauth2Params.setScopes(new HashSet<>(Arrays.asList(ctx.getApprovedScope())));
-        } catch (IdentityOAuth2Exception e) {
-            log.debug("oh my new Error");
-        } catch (InvalidOAuthClientException e) {
-            log.debug("oh my new Error2");
+        } catch (Exception e) {
+            log.error("Error occurred when validating scopes", e);
         }
 
         boolean hasUserApproved = isUserAlreadyApproved(oauth2Params, authenticatedUser);
