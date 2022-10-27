@@ -1004,6 +1004,12 @@ public class OAuth2AuthzEndpoint {
                 authnResult.getProperty(FrameworkConstants.AnalyticsAttributes.SESSION_ID));
     }
 
+    private void addOAuthAuthzReqMessageContextTOSessionDataCacheEntry(OAuthMessage oAuthMessage,
+                                                                       OAuthAuthzReqMessageContext authzReqMsgCtx) {
+
+        oAuthMessage.getSessionDataCacheEntry().setAuthzReqMsgCtx(authzReqMsgCtx);
+    }
+
     private void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) {
 
         Cookie cookie = FrameworkUtils.getAuthCookie(oAuthMessage.getRequest());
@@ -1180,10 +1186,9 @@ public class OAuth2AuthzEndpoint {
         storeUserConsent(oAuthMessage, consent);
         OAuthResponse oauthResponse;
         String responseType = oauth2Params.getResponseType();
-        HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
         // authorizing the request
         OAuth2AuthorizeRespDTO authzRespDTO =
-                authorize(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
+                authorize_2(oAuthMessage.getSessionDataCacheEntry().getAuthzReqMsgCtx());
 
         if (isSuccessfulAuthorization(authzRespDTO)) {
             oauthResponse =
@@ -2341,14 +2346,17 @@ public class OAuth2AuthzEndpoint {
         HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
         OAuth2AuthorizeReqDTO authzReqDTO =
                 buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
-        AuthorizationHandlerManager authzHandlerManager =
-                null;
+
+        AuthorizationHandlerManager authzHandlerManager = null;
         try {
             authzHandlerManager = AuthorizationHandlerManager.getInstance();
-            OAuthAuthzReqMessageContext ctx = authzHandlerManager.validateAuthorizationRequest(authzReqDTO);
+            OAuthAuthzReqMessageContext ctx = authzHandlerManager.handleScopeValidation(authzReqDTO);
+            addOAuthAuthzReqMessageContextTOSessionDataCacheEntry(oAuthMessage, ctx);
             oauth2Params.setScopes(new HashSet<>(Arrays.asList(ctx.getApprovedScope())));
         } catch (IdentityOAuth2Exception e) {
             log.debug("oh my new Error");
+        } catch (InvalidOAuthClientException e) {
+            log.debug("oh my new Error2");
         }
 
         boolean hasUserApproved = isUserAlreadyApproved(oauth2Params, authenticatedUser);
@@ -3055,6 +3063,10 @@ public class OAuth2AuthzEndpoint {
         OAuth2AuthorizeReqDTO authzReqDTO =
                 buildAuthRequest(oauth2Params, sessionDataCacheEntry, httpRequestHeaderHandler);
         return getOAuth2Service().authorize(authzReqDTO);
+    }
+
+    private OAuth2AuthorizeRespDTO authorize_2(OAuthAuthzReqMessageContext authzReqMsgCtx) {
+        return getOAuth2Service().authorize_2(authzReqMsgCtx);
     }
 
     private OAuth2AuthorizeReqDTO buildAuthRequest(OAuth2Parameters oauth2Params, SessionDataCacheEntry
