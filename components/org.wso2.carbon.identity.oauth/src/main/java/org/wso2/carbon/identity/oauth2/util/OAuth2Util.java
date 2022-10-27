@@ -4569,4 +4569,30 @@ public class OAuth2Util {
         }
         return isFederatedRoleBasedAuthzEnabled;
     }
+
+    public static String[] getRequestedOIDCScopes(String[] requestedScopes)
+            throws IdentityOAuthAdminException {
+
+        String[] oidcScopes =
+                OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().getScopeNames();
+        List<String> requestedOIDCScopes = new ArrayList<>();
+        for (String scope : requestedScopes) {
+            if (ArrayUtils.contains(oidcScopes, scope)) {
+                requestedOIDCScopes.add(scope);
+            }
+        }
+        return requestedOIDCScopes.toArray(new String[requestedOIDCScopes.size()]);
+    }
+
+    public static String[] removeOIDCScopesFromRequestedScopes(String[] requestedScopes, String[] requestedOIDCScopes)
+            throws IdentityOAuthAdminException {
+        List<String> removedRequestedScopes = new ArrayList<>();
+        for (String scope : requestedScopes) {
+            if (!ArrayUtils.contains(requestedOIDCScopes, scope)) {
+                removedRequestedScopes.add(scope);
+            }
+        }
+        return removedRequestedScopes.toArray(new String[removedRequestedScopes.size()]);
+    }
+
 }

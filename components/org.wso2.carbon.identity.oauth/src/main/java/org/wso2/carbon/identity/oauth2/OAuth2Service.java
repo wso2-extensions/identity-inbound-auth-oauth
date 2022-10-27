@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
+import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.authz.validators.DefaultResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -111,6 +112,34 @@ public class OAuth2Service extends AbstractAdmin {
             AuthorizationHandlerManager authzHandlerManager =
                     AuthorizationHandlerManager.getInstance();
             return authzHandlerManager.handleAuthorization(oAuth2AuthorizeReqDTO);
+        } catch (Exception e) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "authorize-client", null);
+            log.error("Error occurred when processing the authorization request. Returning an error back to client.",
+                    e);
+            OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
+            authorizeRespDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
+            authorizeRespDTO.setErrorMsg("Error occurred when processing the authorization " +
+                    "request. Returning an error back to client.");
+            authorizeRespDTO.setCallbackURI(oAuth2AuthorizeReqDTO.getCallbackUrl());
+            return authorizeRespDTO;
+        }
+    }
+
+    public OAuth2AuthorizeRespDTO authorize_2(OAuthAuthzReqMessageContext authzReqMsgCtx) {
+        OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO =  authzReqMsgCtx.getAuthorizationReqDTO();
+        if (log.isDebugEnabled()) {
+            log.debug("Authorization Request received for user : " + oAuth2AuthorizeReqDTO.getUser() +
+                    ", Client ID : " + oAuth2AuthorizeReqDTO.getConsumerKey() +
+                    ", Authorization Response Type : " + oAuth2AuthorizeReqDTO.getResponseType() +
+                    ", Requested callback URI : " + oAuth2AuthorizeReqDTO.getCallbackUrl() +
+                    ", Requested Scope : " + OAuth2Util.buildScopeString(
+                    oAuth2AuthorizeReqDTO.getScopes()));
+        }
+        try {
+            AuthorizationHandlerManager authzHandlerManager =
+                    AuthorizationHandlerManager.getInstance();
+            return authzHandlerManager.handleAuthorization_2(authzReqMsgCtx);
         } catch (Exception e) {
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
                     OAuthConstants.LogConstants.FAILED, "System error occurred.", "authorize-client", null);

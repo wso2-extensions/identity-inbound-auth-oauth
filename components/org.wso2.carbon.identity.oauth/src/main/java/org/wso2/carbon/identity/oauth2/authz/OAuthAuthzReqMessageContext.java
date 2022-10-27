@@ -20,12 +20,13 @@ package org.wso2.carbon.identity.oauth2.authz;
 
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 
+import java.io.Serializable;
 import java.util.Properties;
 
 /**
  * OAuth authorization request message context.
  */
-public class OAuthAuthzReqMessageContext {
+public class OAuthAuthzReqMessageContext implements Serializable {
 
     private OAuth2AuthorizeReqDTO authorizationReqDTO;
 
@@ -44,6 +45,15 @@ public class OAuthAuthzReqMessageContext {
     private long refreshTokenIssuedTime;
 
     private long codeIssuedTime;
+    private boolean scopeValidationStatus;
+
+    public boolean isScopeValidated() {
+        return scopeValidationStatus;
+    }
+
+    public void setScopeValidationStatus(boolean scopeValidationStatus) {
+        this.scopeValidationStatus = scopeValidationStatus;
+    }
 
     private String[] authorizedInternalScopes;
 

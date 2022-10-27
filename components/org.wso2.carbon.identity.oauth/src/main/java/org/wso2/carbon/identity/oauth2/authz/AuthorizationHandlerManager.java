@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -120,18 +121,53 @@ public class AuthorizationHandlerManager {
         return authorizeRespDTO;
     }
 
-    public OAuthAuthzReqMessageContext validateAuthorizationRequest(OAuth2AuthorizeReqDTO authzReqDTO)
+    public OAuthAuthzReqMessageContext handleScopeValidation(OAuth2AuthorizeReqDTO authzReqDTO)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(authzReqDTO);
+        ResponseTypeHandler authzHandler = getResponseHandler(authzReqDTO);
+        validateAuthzRequestScopes(authzReqMsgCtx, authzHandler);
+        return authzReqMsgCtx;
+    }
+
+    public OAuth2AuthorizeRespDTO handleAuthorization_2(OAuthAuthzReqMessageContext authzReqMsgCtx)
             throws IdentityOAuth2Exception {
 
-        OAuthAuthzReqMessageContext authzReqMsgCtx = null;
-        try {
-            authzReqMsgCtx = getOAuthAuthzReqMessageContext(authzReqDTO);
-        } catch (InvalidOAuthClientException e) {
-            log.debug("Oh my new Error");
-        }
+        OAuth2AuthorizeReqDTO authzReqDTO =  authzReqMsgCtx.getAuthorizationReqDTO();
         ResponseTypeHandler authzHandler = getResponseHandler(authzReqDTO);
-        OAuth2AuthorizeRespDTO authorizeRespDTO = validateAuthzRequest(authzReqDTO, authzReqMsgCtx, authzHandler);
-        return authzReqMsgCtx;
+
+        OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
+        if (isInvalidResponseType(authzReqDTO, authorizeRespDTO)) {
+            return authorizeRespDTO;
+        }
+        if (isInvalidClient(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler)) {
+            return authorizeRespDTO;
+        }
+        if (isInvalidAccessDelegation(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler)) {
+            return authorizeRespDTO;
+        }
+        if (!authzReqMsgCtx.isScopeValidated()) {
+            handleErrorRequest(authorizeRespDTO, INVALID_SCOPE, "Invalid Scope!");
+            authorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
+        }
+        if (isErrorResponseFound(authorizeRespDTO)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error response received for authorization request by user : " + authzReqDTO.getUser() +
+                        ", client : " + authzReqDTO.getConsumerKey() + ", scope : " +
+                        OAuth2Util.buildScopeString(authzReqDTO.getScopes()));
+            }
+            return authorizeRespDTO;
+        }
+        try {
+            // set the authorization request context to be used by downstream handlers. This is introduced as a fix for
+            // IDENTITY-4111
+            OAuth2Util.setAuthzRequestContext(authzReqMsgCtx);
+            authorizeRespDTO = authzHandler.issue(authzReqMsgCtx);
+        } finally {
+            // clears authorization request context
+            OAuth2Util.clearAuthzRequestContext();
+        }
+        return authorizeRespDTO;
     }
 
     private ResponseTypeHandler getResponseHandler(OAuth2AuthorizeReqDTO authzReqDTO) {
@@ -156,6 +192,13 @@ public class AuthorizationHandlerManager {
         List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
         List<String> requestedAllowedScopes = new ArrayList<>();
         String[] requestedScopes = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
+        String[] requestedOIDCScopes = new String[0];
+        try {
+            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(requestedScopes);
+        } catch (IdentityOAuthAdminException e) {
+            log.error("Unable to retrieve OIDC Scopes." + e.getMessage());
+        }
+
         List<String> scopesToBeValidated = new ArrayList<>();
         if (requestedScopes != null) {
             for (String scope : requestedScopes) {
@@ -216,9 +259,91 @@ public class AuthorizationHandlerManager {
         if (valid) {
             // Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(authzReqMsgCtx, authzReqMsgCtx.getAuthorizedInternalScopes());
+            addRequestedOIDCScopes(authzReqMsgCtx, requestedOIDCScopes);
             addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         }
         return authorizeRespDTO;
+    }
+
+    private void validateAuthzRequestScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
+                                                        ResponseTypeHandler authzHandler)
+            throws IdentityOAuth2Exception {
+
+        List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
+        List<String> requestedAllowedScopes = new ArrayList<>();
+        String[] requestedScopes = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
+        String[] requestedOIDCScopes = new String[0];
+        try {
+            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(requestedScopes);
+            requestedScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(requestedScopes, requestedOIDCScopes);
+        } catch (IdentityOAuthAdminException e) {
+            log.error("Unable to retrieve OIDC Scopes." + e.getMessage());
+        }
+
+        List<String> scopesToBeValidated = new ArrayList<>();
+        if (requestedScopes != null) {
+            for (String scope : requestedScopes) {
+                if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
+                    requestedAllowedScopes.add(scope);
+                } else {
+                    scopesToBeValidated.add(scope);
+                }
+            }
+            authzReqMsgCtx.getAuthorizationReqDTO().setScopes(scopesToBeValidated.toArray(
+                    new String[0]));
+        }
+
+        // Execute Internal SCOPE Validation.
+        String[] authorizedInternalScopes = new String[0];
+        boolean isManagementApp = isManagementApp(authzReqMsgCtx.getAuthorizationReqDTO());
+        if (isManagementApp) {
+            if (log.isDebugEnabled()) {
+                log.debug("Handling the internal scope validation.");
+            }
+            JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
+            authorizedInternalScopes = scopeValidator.validateScope(authzReqMsgCtx);
+            // Execute internal console scopes validation.
+            if (IdentityUtil.isSystemRolesEnabled()) {
+                RoleBasedInternalScopeValidator roleBasedInternalScopeValidator = new RoleBasedInternalScopeValidator();
+                String[] roleBasedInternalConsoleScopes = roleBasedInternalScopeValidator.validateScope(authzReqMsgCtx);
+                authorizedInternalScopes = (String[]) ArrayUtils
+                        .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Skipping the internal scope validation as the application is not" +
+                        " configured as Management App");
+            }
+        }
+
+        // Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
+        // Those scopes should not send to the other scopes validators.
+        // Thus remove the scopes from the authzReqMsgCtx. Will be added to the response after executing
+        // the other scope validators.
+        removeInternalScopes(authzReqMsgCtx);
+
+        // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
+        authzReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
+
+        boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
+        if (isDropUnregisteredScopes) {
+            if (log.isDebugEnabled()) {
+                log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
+            }
+            String[] filteredScopes = OAuth2Util.dropUnregisteredScopes(
+                    authzReqMsgCtx.getAuthorizationReqDTO().getScopes(),
+                    authzReqMsgCtx.getAuthorizationReqDTO().getTenantDomain());
+            authzReqMsgCtx.getAuthorizationReqDTO().setScopes(filteredScopes);
+        }
+
+        boolean valid = validateScopes(authzReqMsgCtx, authzHandler);
+        authzReqMsgCtx.setScopeValidationStatus(valid);
+        if (valid) {
+            // Add authorized internal scopes to the request for sending in the response.
+            addAuthorizedInternalScopes(authzReqMsgCtx, authzReqMsgCtx.getAuthorizedInternalScopes());
+            addRequestedOIDCScopes(authzReqMsgCtx, requestedOIDCScopes);
+            addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
+        }
     }
 
     private boolean isManagementApp(OAuth2AuthorizeReqDTO authzReqDTO) throws IdentityOAuth2Exception {
@@ -239,6 +364,14 @@ public class AuthorizationHandlerManager {
 
         String[] scopes = authzReqMsgCtx.getApprovedScope();
         String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, authorizedInternalScopes);
+        authzReqMsgCtx.setApprovedScope(scopesToReturn);
+    }
+
+    private void addRequestedOIDCScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
+                                             String[] requestedOIDCScopes) {
+
+        String[] scopes = authzReqMsgCtx.getApprovedScope();
+        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, requestedOIDCScopes);
         authzReqMsgCtx.setApprovedScope(scopesToReturn);
     }
 
@@ -281,6 +414,18 @@ public class AuthorizationHandlerManager {
             // If call-back handler set the approved scope - then we respect that. If not we take
             // the approved scope as the provided scope.
             authzReqMsgCtx.setApprovedScope(authzReqMsgCtx.getAuthorizationReqDTO().getScopes());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Approved scope(s) : " + OAuth2Util.buildScopeString(authzReqMsgCtx.getApprovedScope()));
+        }
+        return true;
+    }
+
+    private boolean validateScopes(OAuthAuthzReqMessageContext authzReqMsgCtx, ResponseTypeHandler authzHandler)
+            throws IdentityOAuth2Exception {
+        boolean scopeValidationStatus = authzHandler.validateScope(authzReqMsgCtx);
+        if (!scopeValidationStatus) {
+            return false;
         }
         if (log.isDebugEnabled()) {
             log.debug("Approved scope(s) : " + OAuth2Util.buildScopeString(authzReqMsgCtx.getApprovedScope()));
