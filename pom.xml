@@ -36,7 +36,7 @@
         <url>https://github.com/wso2-extensions/identity-inbound-auth-oauth.git</url>
         <developerConnection>scm:git:https://github.com/wso2-extensions/identity-inbound-auth-oauth.git</developerConnection>
         <connection>scm:git:https://github.com/wso2-extensions/identity-inbound-auth-oauth.git</connection>
-        <tag>v6.8.0</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <modules>
