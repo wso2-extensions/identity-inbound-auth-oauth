@@ -89,6 +89,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
@@ -961,7 +962,16 @@ public class EndpointUtil {
 
         try {
             String consentRequiredScopes = StringUtils.EMPTY;
-            List<String> allowedOAuthScopes = getAllowedOAuthScopes(params);
+            Set<String> allowedScopes = params.getScopes();
+            List<String> allowedOAuthScopes = new ArrayList<>();
+            String[] oidcScopes = oAuthAdminService.getScopeNames();
+            //filter out OIDC scopes
+            List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
+            for (String scope : allowedScopes) {
+                if (!oidcScopeList.contains(scope)) {
+                    allowedOAuthScopes.add(scope);
+                }
+            }
             if (user != null && !isPromptContainsConsent(params)) {
                 String userId = getUserIdOfAuthenticatedUser(user);
                 String appId = getAppIdFromClientId(params.getClientId());
@@ -973,37 +983,26 @@ public class EndpointUtil {
                     }
                 }
             }
-            params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
-            consentRequiredScopes = String.join(" ", allowedOAuthScopes).trim();
-//            if (CollectionUtils.isNotEmpty(allowedOAuthScopes)) {
-//                // Filter out internal scopes to be validated.
-//                String[] requestedScopes = Oauth2ScopeUtils.getRequestedScopes(
-//                        allowedOAuthScopes.toArray(new String[0]));
-//                if (ArrayUtils.isNotEmpty(requestedScopes)) {
-//                    // Remove the filtered internal scopes from the allowedOAuthScopes list.
-//                    allowedOAuthScopes.removeAll(Arrays.asList(requestedScopes));
-//
-//                    JDBCPermissionBasedInternalScopeValidator scopeValidator =
-//                            new JDBCPermissionBasedInternalScopeValidator();
-//                    String[] validatedScope = scopeValidator.validateScope(requestedScopes, user,
-//                    params.getClientId());
-//
-//                    // Filter out requested scopes from the validated scope array.
-//                    for (String scope : requestedScopes) {
-//                        if (ArrayUtils.contains(validatedScope, scope)) {
-//                            allowedOAuthScopes.add(scope);
-//                        }
-//                    }
-//                }
-//                params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
-//                consentRequiredScopes = String.join(" ", allowedOAuthScopes).trim();
-//            }
+            if (CollectionUtils.isNotEmpty(allowedOAuthScopes)) {
+                // Filter out internal scopes to be validated.
+                String[] requestedInternalScopes = Oauth2ScopeUtils.getRequestedInternalScopes(
+                        allowedOAuthScopes.toArray(new String[0]));
+                if (ArrayUtils.isNotEmpty(requestedInternalScopes)) {
+                    // Remove the filtered internal scopes from the allowedOAuthScopes list.
+                    allowedOAuthScopes.removeAll(Arrays.asList(requestedInternalScopes));
+
+                }
+                params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
+                consentRequiredScopes = String.join(" ", allowedOAuthScopes).trim();
+            }
             if (log.isDebugEnabled()) {
                 log.debug("Consent required scopes : " + consentRequiredScopes + " for request from client : " +
                         params.getClientId());
             }
         } catch (IdentityOAuth2ScopeException e) {
             throw new OAuthSystemException("Error occurred while retrieving user consents OAuth scopes.");
+        } catch (IdentityOAuthAdminException e) {
+            throw new OAuthSystemException("Error while retrieving OIDC scopes.", e);
         }
     }
 

@@ -331,7 +331,7 @@ public class Oauth2ScopeUtils {
      * @return String array with internal scopes. Return an empty array if there's not any internal scopes in the
      * given scopes array.
      */
-    public static String[] getRequestedScopes(String[] scopes) {
+    public static String[] getRequestedInternalScopes(String[] scopes) {
 
         List<String> requestedScopes = new ArrayList<>();
         if (ArrayUtils.isEmpty(scopes)) {
