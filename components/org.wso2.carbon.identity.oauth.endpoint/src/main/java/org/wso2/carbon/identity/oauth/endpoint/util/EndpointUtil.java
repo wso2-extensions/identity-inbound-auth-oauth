@@ -980,18 +980,9 @@ public class EndpointUtil {
                     }
                 }
             }
-            if (CollectionUtils.isNotEmpty(allowedOAuthScopes)) {
-                // Filter out internal scopes to be validated.
-                String[] requestedInternalScopes = Oauth2ScopeUtils.getRequestedInternalScopes(
-                        allowedOAuthScopes.toArray(new String[0]));
-                if (ArrayUtils.isNotEmpty(requestedInternalScopes)) {
-                    // Remove the filtered internal scopes from the allowedOAuthScopes list.
-                    allowedOAuthScopes.removeAll(Arrays.asList(requestedInternalScopes));
+            params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
+            consentRequiredScopes = String.join(" ", allowedOAuthScopes).trim();
 
-                }
-                params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
-                consentRequiredScopes = String.join(" ", allowedOAuthScopes).trim();
-            }
             if (log.isDebugEnabled()) {
                 log.debug("Consent required scopes : " + consentRequiredScopes + " for request from client : " +
                         params.getClientId());
