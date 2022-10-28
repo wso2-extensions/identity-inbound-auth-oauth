@@ -773,7 +773,6 @@ public class EndpointUtil {
                     user = entry.getLoggedInUser();
                 }
                 setConsentRequiredScopesToOAuthParams(user, params);
-//                validateConsentRequiredScopes(user, params);
                 Set<String> consentRequiredScopesSet = params.getConsentRequiredScopes();
                 String consentRequiredScopes = StringUtils.EMPTY;
                 if (CollectionUtils.isNotEmpty(consentRequiredScopesSet)) {
@@ -1004,34 +1003,6 @@ public class EndpointUtil {
         } catch (IdentityOAuthAdminException e) {
             throw new OAuthSystemException("Error while retrieving OIDC scopes.", e);
         }
-    }
-
-    /**
-     * Validate consent required scopes by global scope validators .
-     *
-     * @param user                      Authenticated user.
-     * @param params                    OAuth2 parameters.
-     * @throws OAuthSystemException
-     */
-    private static void validateConsentRequiredScopes(AuthenticatedUser user, OAuth2Parameters params)
-            throws OAuthSystemException {
-
-        List<ScopeValidator> globalScopeValidators = OAuthUtil.getScopeValidators();
-        for (ScopeValidator validator : globalScopeValidators) {
-            if (log.isDebugEnabled()) {
-                log.debug("Engaging global scope validator for consent required scopes using : "
-                        + validator.getName());
-            }
-            List<String> validatedScopes = null;
-            try {
-                validatedScopes = validator.getValidatedScopes(user, params);
-            } catch (IdentityOAuth2Exception e) {
-                throw new OAuthSystemException("Error occurred while validate consent required scopes.");
-            }
-            params.setConsentRequiredScopes(new HashSet<>(validatedScopes));
-
-        }
-
     }
 
     private static String getUserIdOfAuthenticatedUser(AuthenticatedUser user) throws OAuthSystemException {
