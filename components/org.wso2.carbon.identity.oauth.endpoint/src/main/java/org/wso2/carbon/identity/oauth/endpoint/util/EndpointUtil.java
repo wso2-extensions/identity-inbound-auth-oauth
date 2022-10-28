@@ -914,6 +914,27 @@ public class EndpointUtil {
         return Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames()));
     }
 
+    private static List<String> dropOIDCScopesFromConsentRequiredScopes(OAuth2Parameters params)
+            throws OAuthSystemException {
+        Set<String> allowedScopes = params.getScopes();
+        List<String> allowedOAuthScopes = new ArrayList<>();
+        if (CollectionUtils.isNotEmpty(allowedScopes)) {
+            try {
+                // Get registered OIDC scopes.
+                String[] oidcScopes = oAuthAdminService.getScopeNames();
+                List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
+                for (String scope : allowedScopes) {
+                    if (!oidcScopeList.contains(scope)) {
+                        allowedOAuthScopes.add(scope);
+                    }
+                }
+            } catch (IdentityOAuthAdminException e) {
+                throw new OAuthSystemException("Error while retrieving OIDC scopes.", e);
+            }
+        }
+        return allowedOAuthScopes;
+    }
+
     private static List<String> getAllowedOAuthScopes(OAuth2Parameters params) throws OAuthSystemException {
 
         Set<String> allowedScopes = params.getScopes();
@@ -958,17 +979,9 @@ public class EndpointUtil {
             throws OAuthSystemException {
 
         try {
-            String consentRequiredScopes = StringUtils.EMPTY;
-            Set<String> allowedScopes = params.getScopes();
-            List<String> allowedOAuthScopes = new ArrayList<>();
-            String[] oidcScopes = oAuthAdminService.getScopeNames();
             //filter out OIDC scopes
-            List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
-            for (String scope : allowedScopes) {
-                if (!oidcScopeList.contains(scope)) {
-                    allowedOAuthScopes.add(scope);
-                }
-            }
+            List<String> consentRequiredScopes = dropOIDCScopesFromConsentRequiredScopes(params);
+
             if (user != null && !isPromptContainsConsent(params)) {
                 String userId = getUserIdOfAuthenticatedUser(user);
                 String appId = getAppIdFromClientId(params.getClientId());
@@ -976,21 +989,19 @@ public class EndpointUtil {
                         userId, appId, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
                 if (existingUserConsent != null) {
                     if (CollectionUtils.isNotEmpty(existingUserConsent.getApprovedScopes())) {
-                        allowedOAuthScopes.removeAll(existingUserConsent.getApprovedScopes());
+                        consentRequiredScopes.removeAll(existingUserConsent.getApprovedScopes());
                     }
                 }
             }
-            params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
-            consentRequiredScopes = String.join(" ", allowedOAuthScopes).trim();
+            params.setConsentRequiredScopes(new HashSet<>(consentRequiredScopes));
+            String consentRequiredScopesValue = String.join(" ", consentRequiredScopes).trim();
 
             if (log.isDebugEnabled()) {
-                log.debug("Consent required scopes : " + consentRequiredScopes + " for request from client : " +
+                log.debug("Consent required scopes : " + consentRequiredScopesValue + " for request from client : " +
                         params.getClientId());
             }
         } catch (IdentityOAuth2ScopeException e) {
             throw new OAuthSystemException("Error occurred while retrieving user consents OAuth scopes.");
-        } catch (IdentityOAuthAdminException e) {
-            throw new OAuthSystemException("Error while retrieving OIDC scopes.", e);
         }
     }
 
