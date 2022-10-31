@@ -80,7 +80,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_ACCESS_TOKEN_AUDIENCE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUDIENCE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_ID_TOKEN_AUDIENCE;
 
 /**
@@ -598,7 +597,9 @@ public class OAuthAppDAO {
                 String[] audiences = oauthAppDO.getAudiences();
                 List<String> oidcAudienceList = getOIDCAudiences(spTenantDomain, oauthAppDO.getOauthConsumerKey());
                 updateAudiences(preprocessedClientId, spTenantId, audiences, prepStatementForPropertyAdd,
-                        prepStatementForPropertyDelete, oidcAudienceList, OPENID_CONNECT_AUDIENCE);
+                        prepStatementForPropertyDelete, oidcAudienceList, OPENID_CONNECT_ID_TOKEN_AUDIENCE);
+                updateAudiences(preprocessedClientId, spTenantId, audiences, prepStatementForPropertyAdd,
+                        prepStatementForPropertyDelete, oidcAudienceList, OPENID_CONNECT_ACCESS_TOKEN_AUDIENCE);
             }
         } else {
             String[] idTokenAudiences = oauthAppDO.getIdTokenAudiences();
@@ -986,11 +987,7 @@ public class OAuthAppDAO {
     @Deprecated
     public List<String> getOIDCAudiences(String tenantDomain, String consumerKey) throws IdentityOAuth2Exception {
 
-        if (isOAuthLegacyAudiencesEnabled()) {
-            return getAudiencesFromDB(tenantDomain, consumerKey, OPENID_CONNECT_AUDIENCE);
-        } else {
-            return this.getOIDCIdTokenAudiences(tenantDomain, consumerKey);
-        }
+        return this.getOIDCIdTokenAudiences(tenantDomain, consumerKey);
     }
 
     /**
@@ -1271,7 +1268,9 @@ public class OAuthAppDAO {
                     String[] audiences = consumerAppDO.getAudiences();
                     for (String audience : audiences) {
                         addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                                OPENID_CONNECT_AUDIENCE, audience);
+                                OPENID_CONNECT_ID_TOKEN_AUDIENCE, audience);
+                        addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                                OPENID_CONNECT_ACCESS_TOKEN_AUDIENCE, audience);
                     }
                 }
             } else {
@@ -1388,8 +1387,8 @@ public class OAuthAppDAO {
         // Handle OIDC audience values
         if (isOAuthLegacyAudiencesEnabled()) {
             if (isOIDCAudienceEnabled() &&
-                    CollectionUtils.isNotEmpty(spOIDCProperties.get(OPENID_CONNECT_AUDIENCE))) {
-                List<String> oidcAudience = new ArrayList<>(spOIDCProperties.get(OPENID_CONNECT_AUDIENCE));
+                    CollectionUtils.isNotEmpty(spOIDCProperties.get(OPENID_CONNECT_ID_TOKEN_AUDIENCE))) {
+                List<String> oidcAudience = new ArrayList<>(spOIDCProperties.get(OPENID_CONNECT_ID_TOKEN_AUDIENCE));
                 oauthApp.setAudiences(oidcAudience.toArray(new String[oidcAudience.size()]));
             }
         } else {
