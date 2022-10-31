@@ -264,15 +264,10 @@ public class OAuth2TokenEndpoint {
                     .setError(oauth2AccessTokenResp.getErrorCode())
                     .setErrorDescription(oauth2AccessTokenResp.getErrorMsg());
 
-            try {
-                if (MapUtils.isNotEmpty(oauth2AccessTokenResp.getErrorParameterMap())) {
-                    for (Map.Entry<String, Object> entry: oauth2AccessTokenResp.getErrorParameterMap().entrySet()) {
-                        oAuthErrorResponseBuilder.setParam(entry.getKey(), entry.getValue().toString());
-                    }
+            if (MapUtils.isNotEmpty(oauth2AccessTokenResp.getErrorParameterMap())) {
+                for (Map.Entry<String, Object> entry: oauth2AccessTokenResp.getErrorParameterMap().entrySet()) {
+                    oAuthErrorResponseBuilder.setParam(entry.getKey(), entry.getValue().toString());
                 }
-            } catch (NoSuchMethodError e) {
-                // The 'OAuth2AccessTokenRespDTO' with API additions to support for custom parameters is not
-                // available. Ignore the error and proceed.
             }
 
             OAuthResponse response = oAuthErrorResponseBuilder.buildJSONMessage();
