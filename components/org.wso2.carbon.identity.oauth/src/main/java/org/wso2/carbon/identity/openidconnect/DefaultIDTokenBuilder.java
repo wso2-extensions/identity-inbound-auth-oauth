@@ -680,6 +680,10 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     private void setAdditionalClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder,
                                        Map<String, Object> additionalIdTokenClaims) {
 
+        if (additionalIdTokenClaims == null) {
+            return;
+        }
+
         for (Map.Entry<String, Object> entry : additionalIdTokenClaims.entrySet()) {
             jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
         }
