@@ -19,10 +19,10 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant.saml;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang3.StringUtils;
 import org.joda.time.DateTime;
 import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
 import org.powermock.reflect.internal.WhiteboxImpl;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -36,7 +36,6 @@ import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.TestConstants;
-import org.wso2.carbon.identity.oauth2.dao.util.DAOUtils;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -145,14 +144,6 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
                     "    </ds:Signature>" +
                     "  </saml:Assertion>";
 
-    public static final String DB_NAME = "jdbc/WSO2CarbonDB";
-    public static final String H2_SCRIPT_NAME = "idp.sql";
-    @BeforeClass
-    public void setupBeforeClass() throws Exception {
-
-        DAOUtils.initializeDataSource(DB_NAME, DAOUtils.getFilePath(H2_SCRIPT_NAME));
-
-    }
     @BeforeMethod
     public void setUp() throws Exception {
         saml1BearerGrantHandler = new SAML1BearerGrantHandler();
@@ -168,19 +159,19 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
     @DataProvider(name = "BuildAssertion")
     public static Object[][] buildAssertion() {
         return new Object[][] {
-//                {StringUtils.EMPTY, false, false},
+                {StringUtils.EMPTY, false, false},
                 {assertion, false, false},
-//                {assertion.replace(ISSUER1, ISSUER2), false, false},
-//                {StringUtils.EMPTY, true, false},
-//                {assertion, true, false},
-//                {assertion.replace(ISSUER1, ISSUER2), true, false},
-//
-//                {StringUtils.EMPTY, false, false},
-//                {assertion.replace(NOT_ON_OR_AFTER1, NOT_ON_OR_AFTER2), false, false},
-//                {(assertion.replace(NOT_ON_OR_AFTER1, NOT_ON_OR_AFTER2)).replace(ISSUER1, ISSUER2), false, false},
-//                {StringUtils.EMPTY, true, false},
-//                {assertion.replace(NOT_ON_OR_AFTER1, NOT_ON_OR_AFTER2), true, false},
-//                {(assertion.replace(NOT_ON_OR_AFTER1, NOT_ON_OR_AFTER2)).replace(ISSUER1, ISSUER2), true, false}
+                {assertion.replace(ISSUER1, ISSUER2), false, false},
+                {StringUtils.EMPTY, true, false},
+                {assertion, true, false},
+                {assertion.replace(ISSUER1, ISSUER2), true, false},
+
+                {StringUtils.EMPTY, false, false},
+                {assertion.replace(NOT_ON_OR_AFTER1, NOT_ON_OR_AFTER2), false, false},
+                {(assertion.replace(NOT_ON_OR_AFTER1, NOT_ON_OR_AFTER2)).replace(ISSUER1, ISSUER2), false, false},
+                {StringUtils.EMPTY, true, false},
+                {assertion.replace(NOT_ON_OR_AFTER1, NOT_ON_OR_AFTER2), true, false},
+                {(assertion.replace(NOT_ON_OR_AFTER1, NOT_ON_OR_AFTER2)).replace(ISSUER1, ISSUER2), true, false}
         };
     }
 
@@ -219,6 +210,7 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         WhiteboxImpl.setInternalState(IdentityUtil.class, "configuration", configuration);
         saml1BearerGrantHandler.profileValidator = new SAMLSignatureProfileValidator();
         assertEquals(saml1BearerGrantHandler.validateGrant(oAuthTokenReqMessageContext), expectedResult);
+        WhiteboxImpl.setInternalState(KeyStoreManager.class, "mtKeyStoreManagers", new ConcurrentHashMap());
         WhiteboxImpl.setInternalState(IdentityUtil.class, "configuration", new HashMap<>());
     }
 

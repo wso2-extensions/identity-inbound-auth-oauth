@@ -18,10 +18,11 @@ package org.wso2.carbon.identity.oauth2.authcontext;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTParser;
+import org.mockito.Mock;
 import org.powermock.reflect.Whitebox;
 import org.testng.Assert;
 import org.testng.annotations.AfterTest;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -33,6 +34,7 @@ import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
@@ -44,9 +46,9 @@ import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2TokenValidator;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
 import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
+import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.core.tenant.TenantManager;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.security.Key;
 import java.security.cert.Certificate;
 import java.sql.Timestamp;
@@ -56,6 +58,8 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.mockito.Mockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
+import static org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils.setFinalStatic;
 
 @WithCarbonHome
 @WithRealmService(tenantId = MultitenantConstants.SUPER_TENANT_ID,
@@ -75,8 +79,12 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
     private JWTTokenGenerator jwtTokenGenerator;
     private boolean includeClaims = true;
     private boolean enableSigning = true;
+    @Mock
+    RealmService realmService;
+    @Mock
+    private TenantManager tenantManager;
 
-    @BeforeTest
+    @BeforeClass
     public void setUp() throws Exception {
 
         AuthenticatedUser user = new AuthenticatedUser();
@@ -137,6 +145,8 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
         Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<>();
         publicCerts.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
                                                       .getCertificate("wso2carbon"));
+        OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
+        when(realmService.getTenantManager()).thenReturn(tenantManager);
         setFinalStatic(OAuth2Util.class.getDeclaredField("publicCerts"), publicCerts);
         Map<Integer, Key> privateKeys = new ConcurrentHashMap<>();
         privateKeys.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
@@ -224,11 +234,4 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
         authAppDAO.getConsumerAppState("sampleConsumerKey");
     }
 
-    private void setFinalStatic(Field field, Object newValue) throws Exception {
-        field.setAccessible(true);
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-        field.set(null, newValue);
-    }
 }

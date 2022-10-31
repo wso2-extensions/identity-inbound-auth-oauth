@@ -96,6 +96,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
@@ -144,8 +145,6 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
     @Mock
     private X509Certificate x509Certificate;
     @Mock
-    private SignatureValidator signatureValidator;
-    @Mock
     private UserStoreManager userStoreManager;
     @Mock
     private UserRealm userRealm;
@@ -183,11 +182,11 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
     @DataProvider (name = "provideValidData")
     public Object[][] provideValidData() {
         return new Object[][] {
-//                {OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX, "LOCAL"},
-                {OAuthConstants.UserType.LOCAL_USER_TYPE, "LOCAL"}
-//                {OAuthConstants.UserType.LEGACY_USER_TYPE, "LOCAL"},
-//                {"unknown", "LOCAL"},
-//                {"unknown", "FED"}
+                {OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX, "LOCAL"},
+                {OAuthConstants.UserType.LOCAL_USER_TYPE, "LOCAL"},
+                {OAuthConstants.UserType.LEGACY_USER_TYPE, "LOCAL"},
+                {"unknown", "LOCAL"},
+                {"unknown", "FED"}
         };
     }
 
@@ -291,10 +290,8 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
             when(UnmarshallUtils.unmarshall(anyString())).thenThrow(e);
         } else if (e instanceof SignatureException) {
             mockStatic(SignatureValidator.class);
-            doThrow(e).when(SignatureValidator.class, "validate", any(Signature.class),
+            doThrow(e).when(SignatureValidator.class, "validate", isNull(),
                             any(X509Credential.class));
-//            SignatureValidator mockSignatureValidator = mock(SignatureValidator.class);
-//            doThrow(e).when(mockSignatureValidator).validate(any(Signature.class),any(X509Credential.class));
         } else if (e instanceof IdentityApplicationManagementException) {
             when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
                     .thenThrow(e);

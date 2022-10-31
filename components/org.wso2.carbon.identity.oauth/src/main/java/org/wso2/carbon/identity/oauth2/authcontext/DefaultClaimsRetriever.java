@@ -94,7 +94,7 @@ public class DefaultClaimsRetriever implements ClaimsRetriever {
             ClaimManager claimManager =
                     OAuthComponentServiceHolder.getInstance().getRealmService().getTenantUserRealm(tenantId)
                             .getClaimManager();
-            ClaimMapping[] claims = claimManager.getAllClaimMappings(DEFAULT_DIALECT_URI);
+            ClaimMapping[] claims = claimManager.getAllClaimMappings(dialectURI);
             return claimToString(claims);
         } catch (UserStoreException e) {
             throw new IdentityOAuth2Exception("Error while reading default claims for user : " + endUserName, e);

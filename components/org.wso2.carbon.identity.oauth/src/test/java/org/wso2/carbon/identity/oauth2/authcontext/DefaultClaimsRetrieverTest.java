@@ -195,6 +195,7 @@ public class DefaultClaimsRetrieverTest extends PowerMockTestCase {
         mockedClaimManager = mock(ClaimManager.class);
         when(mockedUserRealm.getClaimManager()).thenReturn(mockedClaimManager);
         when(mockedClaimManager.getAllClaimMappings(anyString())).thenReturn(this.getSampleClaimMapping());
+        defaultClaimsRetriever.init();
         assertNotNull(defaultClaimsRetriever.getDefaultClaims("admin"));
 
     }
@@ -216,7 +217,7 @@ public class DefaultClaimsRetrieverTest extends PowerMockTestCase {
         when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedUserRealm);
         mockedClaimManager = mock(ClaimManager.class);
         when(mockedUserRealm.getClaimManager()).thenReturn(mockedClaimManager);
-
+        defaultClaimsRetriever.init();
         when(mockedClaimManager.getAllClaimMappings(anyString())).
                 thenThrow(new UserStoreException("UserStoreException"));
         assertNotNull(defaultClaimsRetriever.getDefaultClaims("admin"));
