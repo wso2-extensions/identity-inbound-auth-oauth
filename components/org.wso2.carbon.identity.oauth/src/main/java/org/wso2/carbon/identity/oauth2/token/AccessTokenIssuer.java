@@ -72,9 +72,11 @@ import org.wso2.carbon.utils.CarbonUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
@@ -366,7 +368,6 @@ public class AccessTokenIssuer {
         try {
             //remove OIDC scopes before validation
             requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(requestedScopes);
-            requestedScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(requestedScopes, requestedOIDCScopes);
         } catch (IdentityOAuthAdminException e) {
             log.error("Unable to retrieve OIDC Scopes." + e.getMessage());
         }
@@ -720,9 +721,12 @@ public class AccessTokenIssuer {
 
     private void addRequestedOIDCScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
                                              String[] requestedOIDCScopes) {
-        String[] scopes = tokReqMsgCtx.getScope();
-        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, requestedOIDCScopes);
-        tokReqMsgCtx.setScope(scopesToReturn);
+        Set<String> scopesToReturn = new HashSet<>(Arrays.asList(tokReqMsgCtx.getScope()));
+        for (String scope : requestedOIDCScopes) {
+            scopesToReturn.add(scope);
+        }
+        String[] scopes = scopesToReturn.toArray(new String[scopesToReturn.size()]);
+        tokReqMsgCtx.setScope(scopes);
     }
     private void addAllowedScopes(OAuthTokenReqMessageContext tokReqMsgCtx, String[] allowedScopes) {
 
