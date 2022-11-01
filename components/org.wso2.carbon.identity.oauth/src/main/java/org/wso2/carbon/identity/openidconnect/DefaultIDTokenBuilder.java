@@ -24,6 +24,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -680,19 +681,18 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     private void setAdditionalClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder,
                                        Map<String, Object> additionalIdTokenClaims) {
 
-        if (additionalIdTokenClaims == null) {
-            return;
-        }
-
-        for (Map.Entry<String, Object> entry : additionalIdTokenClaims.entrySet()) {
-            jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
-        }
-        if (log.isDebugEnabled()) {
+        if (MapUtils.isNotEmpty(additionalIdTokenClaims)) {
             for (Map.Entry<String, Object> entry : additionalIdTokenClaims.entrySet()) {
-                log.debug("Additional claim added to JWTClaimSet, key: " + entry.getKey() + ", value: " +
-                        entry.getValue());
+                jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
+            }
+            if (log.isDebugEnabled()) {
+                for (Map.Entry<String, Object> entry : additionalIdTokenClaims.entrySet()) {
+                    log.debug("Additional claim added to JWTClaimSet, key: " + entry.getKey() + ", value: " +
+                            entry.getValue());
+                }
             }
         }
+
     }
 
     /**
