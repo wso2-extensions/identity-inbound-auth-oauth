@@ -47,9 +47,12 @@ import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidato
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.INVALID_SCOPE;
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.UNAUTHORIZED_CLIENT;
@@ -269,7 +272,6 @@ public class AuthorizationHandlerManager {
         try {
             //remove OIDC scopes before validation
             requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(requestedScopes);
-            requestedScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(requestedScopes, requestedOIDCScopes);
         } catch (IdentityOAuthAdminException e) {
             log.error("Unable to retrieve OIDC Scopes." + e.getMessage());
         }
@@ -364,10 +366,12 @@ public class AuthorizationHandlerManager {
 
     private void addRequestedOIDCScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
                                              String[] requestedOIDCScopes) {
-
-        String[] scopes = authzReqMsgCtx.getApprovedScope();
-        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, requestedOIDCScopes);
-        authzReqMsgCtx.setApprovedScope(scopesToReturn);
+        Set<String> scopesToReturn = new HashSet<>(Arrays.asList(authzReqMsgCtx.getApprovedScope()));
+        for (String scope : requestedOIDCScopes) {
+            scopesToReturn.add(scope);
+        }
+        String[] scopes = scopesToReturn.toArray(new String[scopesToReturn.size()]);
+        authzReqMsgCtx.setApprovedScope(scopes);
     }
 
     private void addAllowedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx, String[] allowedScopes) {
