@@ -2343,19 +2343,8 @@ public class OAuth2AuthzEndpoint {
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
 
-        HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
-        OAuth2AuthorizeReqDTO authzReqDTO =
-                buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
-
-        AuthorizationHandlerManager authzHandlerManager = null;
-        try {
-            authzHandlerManager = AuthorizationHandlerManager.getInstance();
-            OAuthAuthzReqMessageContext ctx = authzHandlerManager.handleScopeValidation(authzReqDTO);
-            addOAuthAuthzReqMessageContextTOSessionDataCacheEntry(oAuthMessage, ctx);
-            oauth2Params.setScopes(new HashSet<>(Arrays.asList(ctx.getApprovedScope())));
-        } catch (Exception e) {
-            log.error("Error occurred when validating scopes", e);
-        }
+        // validate scopes before consent page
+        validateScopesBeforeConsent(oAuthMessage, oauth2Params);
 
         boolean hasUserApproved = isUserAlreadyApproved(oauth2Params, authenticatedUser);
 
@@ -2402,6 +2391,28 @@ public class OAuth2AuthzEndpoint {
                     hasUserApproved);
         } else {
             return StringUtils.EMPTY;
+        }
+    }
+
+    /**
+     * Validate scopes before consent page
+     *
+     * @param  oAuthMessage oAuthMessage
+     * @param oauth2Params oauth2Params
+     */
+    private void validateScopesBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params) {
+        HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
+        OAuth2AuthorizeReqDTO authzReqDTO =
+                buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
+
+        AuthorizationHandlerManager authzHandlerManager = null;
+        try {
+            authzHandlerManager = AuthorizationHandlerManager.getInstance();
+            OAuthAuthzReqMessageContext ctx = authzHandlerManager.handleScopeValidation(authzReqDTO);
+            addOAuthAuthzReqMessageContextTOSessionDataCacheEntry(oAuthMessage, ctx);
+            oauth2Params.setScopes(new HashSet<>(Arrays.asList(ctx.getApprovedScope())));
+        } catch (Exception e) {
+            log.error("Error occurred when validating scopes", e);
         }
     }
 
