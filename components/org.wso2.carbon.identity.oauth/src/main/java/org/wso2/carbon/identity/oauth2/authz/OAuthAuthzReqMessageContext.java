@@ -45,15 +45,6 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     private long refreshTokenIssuedTime;
 
     private long codeIssuedTime;
-    private boolean scopeValidationStatus;
-
-    public boolean isScopeValidated() {
-        return scopeValidationStatus;
-    }
-
-    public void setScopeValidationStatus(boolean scopeValidationStatus) {
-        this.scopeValidationStatus = scopeValidationStatus;
-    }
 
     private String[] authorizedInternalScopes;
 
