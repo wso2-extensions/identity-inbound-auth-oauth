@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
+import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
@@ -181,10 +182,11 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
         mockStatic(AuthorizationHandlerManager.class);
         when(AuthorizationHandlerManager.getInstance()).thenReturn(authorizationHandlerManager);
-        when(authorizationHandlerManager.handleAuthorization((OAuth2AuthorizeReqDTO) anyObject())).
+        when(authorizationHandlerManager.handleAuthorization((OAuthAuthzReqMessageContext) anyObject())).
                 thenReturn(mockedOAuth2AuthorizeRespDTO);
         when(oAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn(300L);
-        OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO = oAuth2Service.authorize(oAuth2AuthorizeReqDTO);
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(oAuth2AuthorizeReqDTO);
+        OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO = oAuth2Service.authorize(authzReqMsgCtx);
         assertNotNull(oAuth2AuthorizeRespDTO);
     }
 
@@ -198,7 +200,8 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         when(oAuth2AuthorizeReqDTO.getCallbackUrl()).thenReturn(callbackUrl);
         when(AuthorizationHandlerManager.getInstance()).thenThrow(new IdentityOAuth2Exception
                 ("Error while creating AuthorizationHandlerManager instance"));
-        OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO = oAuth2Service.authorize(oAuth2AuthorizeReqDTO);
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(oAuth2AuthorizeReqDTO);
+        OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO = oAuth2Service.authorize(authzReqMsgCtx);
         assertNotNull(oAuth2AuthorizeRespDTO);
     }
 

@@ -31,7 +31,7 @@
             <class name="org.wso2.carbon.identity.oauth2.authz.handlers.CodeResponseTypeHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.device.grant.DeviceFlowGrantTest"/>
             <class name="org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeHandlerTest"/>
-            <class name="org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManagerTest"/>
+<!--            <class name="org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManagerTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.authz.handlers.AbstractResponseTypeHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.handlers.TokenResponseTypeHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.handlers.NoneResponseTypeHandlerTest"/>
