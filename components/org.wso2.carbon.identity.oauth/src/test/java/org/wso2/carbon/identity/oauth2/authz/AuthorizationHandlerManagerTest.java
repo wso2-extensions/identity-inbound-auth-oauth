@@ -88,7 +88,8 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getAccessToken(), "Access token returned is null");
     }
@@ -103,7 +104,8 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setTenantDomain(TestConstants.TENANT_DOMAIN);
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         authzReqDTO.setUser(user);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         String errorCode = respDTO.getErrorCode();
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
@@ -126,7 +128,8 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getAccessToken(), "ID token returned is null");
     }
@@ -141,7 +144,8 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setTenantDomain(TestConstants.TENANT_DOMAIN);
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         authzReqDTO.setUser(user);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         String errorCode = respDTO.getErrorCode();
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
@@ -164,7 +168,8 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getAccessToken(), "Access token returned is null");
     }
@@ -179,7 +184,8 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setTenantDomain(TestConstants.TENANT_DOMAIN);
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         authzReqDTO.setUser(user);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         String errorCode = respDTO.getErrorCode();
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
@@ -201,7 +207,8 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getAuthorizationCode(), "Code returned is null");
     }
@@ -216,7 +223,8 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setTenantDomain(TestConstants.TENANT_DOMAIN);
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         authzReqDTO.setUser(user);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         String errorCode = respDTO.getErrorCode();
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
@@ -227,7 +235,8 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
     @Test
     public void testHandleInvalidResponseType() throws Exception {
         authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_INVALID);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         String errorCode = respDTO.getErrorCode();
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
@@ -251,7 +260,8 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getAccessToken(), "Access token returned is null");
     }
@@ -267,7 +277,8 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setTenantDomain(TestConstants.TENANT_DOMAIN);
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         authzReqDTO.setUser(user);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         String errorCode = respDTO.getErrorCode();
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
@@ -287,7 +298,8 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setTenantDomain(TestConstants.TENANT_DOMAIN);
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         authzReqDTO.setUser(user);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         String errorCode = respDTO.getErrorCode();
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
