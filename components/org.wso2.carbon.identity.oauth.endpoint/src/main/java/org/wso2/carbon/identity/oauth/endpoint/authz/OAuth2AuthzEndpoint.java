@@ -88,6 +88,7 @@ import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeValidationException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
@@ -1188,7 +1189,7 @@ public class OAuth2AuthzEndpoint {
         String responseType = oauth2Params.getResponseType();
         // authorizing the request
         OAuth2AuthorizeRespDTO authzRespDTO =
-                authorize_2(oAuthMessage.getSessionDataCacheEntry().getAuthzReqMsgCtx());
+                authorize(oAuthMessage.getSessionDataCacheEntry().getAuthzReqMsgCtx());
 
         if (isSuccessfulAuthorization(authzRespDTO)) {
             oauthResponse =
@@ -1286,6 +1287,20 @@ public class OAuth2AuthzEndpoint {
                                               OAuth2AuthorizeRespDTO authzRespDTO) {
 
         sessionState.setAuthenticated(false);
+        String errorMsg;
+        if (authzRespDTO.getErrorMsg() != null) {
+            errorMsg = authzRespDTO.getErrorMsg();
+        } else {
+            errorMsg = "Error occurred while processing the request";
+        }
+        OAuthProblemException oauthProblemException = OAuthProblemException.error(
+                authzRespDTO.getErrorCode(), errorMsg);
+        return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), oauthProblemException, oauth2Params);
+    }
+
+    private String handleFailureBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
+                                              OAuth2AuthorizeRespDTO authzRespDTO) {
+
         String errorMsg;
         if (authzRespDTO.getErrorMsg() != null) {
             errorMsg = authzRespDTO.getErrorMsg();
@@ -2343,8 +2358,24 @@ public class OAuth2AuthzEndpoint {
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
 
-        // validate scopes before consent page
-        validateScopesBeforeConsent(oAuthMessage, oauth2Params);
+        // Here we validate all scopes, response type, client before consent page
+        HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
+        OAuth2AuthorizeReqDTO authzReqDTO =
+                buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
+        try {
+            handleAuthorizationBeforeConsent(oAuthMessage, oauth2Params, authzReqDTO);
+        } catch (IdentityOAuth2ScopeValidationException e) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "Error occurred when processing the authorization"
+                            + " request before consent.", "authorize-client", null);
+            log.error("Error occurred when processing the authorization request before consent. Returning an error "
+                    + "back to client.", e);
+            OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
+            authorizeRespDTO.setErrorCode(e.getErrorCode());
+            authorizeRespDTO.setErrorMsg(e.getMessage());
+            authorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
+            return handleFailureBeforeConsent(oAuthMessage, oauth2Params, authorizeRespDTO);
+        }
 
         boolean hasUserApproved = isUserAlreadyApproved(oauth2Params, authenticatedUser);
 
@@ -2400,20 +2431,20 @@ public class OAuth2AuthzEndpoint {
      * @param  oAuthMessage oAuthMessage
      * @param oauth2Params oauth2Params
      */
-    private void validateScopesBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params) {
-        HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
-        OAuth2AuthorizeReqDTO authzReqDTO =
-                buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
+    private void handleAuthorizationBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
+                                             OAuth2AuthorizeReqDTO authzReqDTO)
+            throws IdentityOAuth2ScopeValidationException {
 
-        AuthorizationHandlerManager authzHandlerManager = null;
         try {
-            authzHandlerManager = AuthorizationHandlerManager.getInstance();
-            OAuthAuthzReqMessageContext ctx = authzHandlerManager.handleScopeValidation(authzReqDTO);
-            addOAuthAuthzReqMessageContextTOSessionDataCacheEntry(oAuthMessage, ctx);
-            oauth2Params.setScopes(new HashSet<>(Arrays.asList(ctx.getApprovedScope())));
-        } catch (Exception e) {
-            log.error("Error occurred when validating scopes", e);
+            AuthorizationHandlerManager authzHandlerManager = AuthorizationHandlerManager.getInstance();
+            OAuthAuthzReqMessageContext authzReqMsgCtx = authzHandlerManager.
+                    handleAuthorizationBeforeConsent(authzReqDTO);
+            addOAuthAuthzReqMessageContextTOSessionDataCacheEntry(oAuthMessage, authzReqMsgCtx);
+            oauth2Params.setScopes(new HashSet<>(Arrays.asList(authzReqMsgCtx.getApprovedScope())));
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            log.error("Error occurred when validating scopes");
         }
+
     }
 
     private OAuth2Parameters getOauth2Params(OAuthMessage oAuthMessage) {
@@ -3062,20 +3093,11 @@ public class OAuth2AuthzEndpoint {
     /**
      * Here we set the authenticated user to the session data
      *
-     * @param oauth2Params
+     * @param authzReqMsgCtx authzReqMsgCtx
      * @return
      */
-    private OAuth2AuthorizeRespDTO authorize(OAuth2Parameters oauth2Params,
-                                             SessionDataCacheEntry sessionDataCacheEntry,
-                                             HttpRequestHeaderHandler httpRequestHeaderHandler) {
-
-        OAuth2AuthorizeReqDTO authzReqDTO =
-                buildAuthRequest(oauth2Params, sessionDataCacheEntry, httpRequestHeaderHandler);
-        return getOAuth2Service().authorize(authzReqDTO);
-    }
-
-    private OAuth2AuthorizeRespDTO authorize_2(OAuthAuthzReqMessageContext authzReqMsgCtx) {
-        return getOAuth2Service().authorize_2(authzReqMsgCtx);
+    private OAuth2AuthorizeRespDTO authorize(OAuthAuthzReqMessageContext authzReqMsgCtx) {
+        return getOAuth2Service().authorize(authzReqMsgCtx);
     }
 
     private OAuth2AuthorizeReqDTO buildAuthRequest(OAuth2Parameters oauth2Params, SessionDataCacheEntry

@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeValidationException;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
@@ -97,61 +98,46 @@ public class AuthorizationHandlerManager {
         }
         return instance;
     }
-
-    public OAuth2AuthorizeRespDTO handleAuthorization(OAuth2AuthorizeReqDTO authzReqDTO)
-            throws IdentityOAuth2Exception, InvalidOAuthClientException {
-
-        OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(authzReqDTO);
-        ResponseTypeHandler authzHandler = getResponseHandler(authzReqDTO);
-        OAuth2AuthorizeRespDTO authorizeRespDTO = validateAuthzRequest(authzReqDTO, authzReqMsgCtx, authzHandler);
-        if (isErrorResponseFound(authorizeRespDTO)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error response received for authorization request by user : " + authzReqDTO.getUser() +
-                        ", client : " + authzReqDTO.getConsumerKey() + ", scope : " +
-                        OAuth2Util.buildScopeString(authzReqDTO.getScopes()));
-            }
-            return authorizeRespDTO;
-        }
-        try {
-            // set the authorization request context to be used by downstream handlers. This is introduced as a fix for
-            // IDENTITY-4111
-            OAuth2Util.setAuthzRequestContext(authzReqMsgCtx);
-            authorizeRespDTO = authzHandler.issue(authzReqMsgCtx);
-        } finally {
-            // clears authorization request context
-            OAuth2Util.clearAuthzRequestContext();
-        }
-        return authorizeRespDTO;
-    }
-
-    public OAuthAuthzReqMessageContext handleScopeValidation(OAuth2AuthorizeReqDTO authzReqDTO)
-            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+    /**
+     * Handle authorization request before consent page.
+     *
+     * @param authzReqDTO authzReqDTO
+     * @return OAuthAuthzReqMessageContext
+     */
+    public OAuthAuthzReqMessageContext handleAuthorizationBeforeConsent(OAuth2AuthorizeReqDTO authzReqDTO)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException, IdentityOAuth2ScopeValidationException {
 
         OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(authzReqDTO);
         ResponseTypeHandler authzHandler = getResponseHandler(authzReqDTO);
-        validateAuthzRequestScopes(authzReqMsgCtx, authzHandler);
+
+        //validate requested scopes
+        validateRequestedScopes(authzReqMsgCtx, authzHandler);
+
+        if (isInvalidResponseType(authzReqDTO)) {
+            throw new IdentityOAuth2ScopeValidationException(UNSUPPORTED_RESPONSE_TYPE, "Invalid Response Type");
+        }
+        if (isInvalidClient(authzReqDTO, authzReqMsgCtx, authzHandler)) {
+            throw new IdentityOAuth2ScopeValidationException(UNAUTHORIZED_CLIENT, "Invalid Client");
+        }
         return authzReqMsgCtx;
     }
 
-    public OAuth2AuthorizeRespDTO handleAuthorization_2(OAuthAuthzReqMessageContext authzReqMsgCtx)
+    /**
+     * Handle authorization request after consent page.
+     *
+     * @param authzReqMsgCtx authzReqMsgCtx
+     * @return OAuth2AuthorizeRespDTO
+     */
+    public OAuth2AuthorizeRespDTO handleAuthorization(OAuthAuthzReqMessageContext authzReqMsgCtx)
             throws IdentityOAuth2Exception {
 
         OAuth2AuthorizeReqDTO authzReqDTO =  authzReqMsgCtx.getAuthorizationReqDTO();
         ResponseTypeHandler authzHandler = getResponseHandler(authzReqDTO);
 
         OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
-        if (isInvalidResponseType(authzReqDTO, authorizeRespDTO)) {
-            return authorizeRespDTO;
-        }
-        if (isInvalidClient(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler)) {
-            return authorizeRespDTO;
-        }
+
         if (isInvalidAccessDelegation(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler)) {
             return authorizeRespDTO;
-        }
-        if (!authzReqMsgCtx.isScopeValidated()) {
-            handleErrorRequest(authorizeRespDTO, INVALID_SCOPE, "Invalid Scope!");
-            authorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
         }
         if (isErrorResponseFound(authorizeRespDTO)) {
             if (log.isDebugEnabled()) {
@@ -177,92 +163,15 @@ public class AuthorizationHandlerManager {
         return responseHandlers.get(authzReqDTO.getResponseType());
     }
 
-    private OAuth2AuthorizeRespDTO validateAuthzRequest(OAuth2AuthorizeReqDTO authzReqDTO,
-                                                        OAuthAuthzReqMessageContext authzReqMsgCtx,
-                                                        ResponseTypeHandler authzHandler)
-            throws IdentityOAuth2Exception {
-        OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
-        if (isInvalidResponseType(authzReqDTO, authorizeRespDTO)) {
-            return authorizeRespDTO;
-        }
-        if (isInvalidClient(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler)) {
-            return authorizeRespDTO;
-        }
-        if (isInvalidAccessDelegation(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler)) {
-            return authorizeRespDTO;
-        }
-
-        List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
-        List<String> requestedAllowedScopes = new ArrayList<>();
-        String[] requestedScopes = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
-
-        List<String> scopesToBeValidated = new ArrayList<>();
-        if (requestedScopes != null) {
-            for (String scope : requestedScopes) {
-                if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
-                    requestedAllowedScopes.add(scope);
-                } else {
-                    scopesToBeValidated.add(scope);
-                }
-            }
-            authzReqMsgCtx.getAuthorizationReqDTO().setScopes(scopesToBeValidated.toArray(
-                    new String[0]));
-        }
-
-        // Execute Internal SCOPE Validation.
-        String[] authorizedInternalScopes = new String[0];
-        boolean isManagementApp = isManagementApp(authzReqDTO);
-        if (isManagementApp) {
-            if (log.isDebugEnabled()) {
-                log.debug("Handling the internal scope validation.");
-            }
-            JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
-            authorizedInternalScopes = scopeValidator.validateScope(authzReqMsgCtx);
-            // Execute internal console scopes validation.
-            if (IdentityUtil.isSystemRolesEnabled()) {
-                RoleBasedInternalScopeValidator roleBasedInternalScopeValidator = new RoleBasedInternalScopeValidator();
-                String[] roleBasedInternalConsoleScopes = roleBasedInternalScopeValidator.validateScope(authzReqMsgCtx);
-                authorizedInternalScopes = (String[]) ArrayUtils
-                        .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
-            }
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Skipping the internal scope validation as the application is not" +
-                        " configured as Management App");
-            }
-        }
-
-        // Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
-        // Those scopes should not send to the other scopes validators.
-        // Thus remove the scopes from the authzReqMsgCtx. Will be added to the response after executing
-        // the other scope validators.
-        removeInternalScopes(authzReqMsgCtx);
-
-        // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
-        authzReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
-
-        boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
-        if (isDropUnregisteredScopes) {
-            if (log.isDebugEnabled()) {
-                log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
-            }
-            String[] filteredScopes = OAuth2Util.dropUnregisteredScopes(
-                    authzReqMsgCtx.getAuthorizationReqDTO().getScopes(),
-                    authzReqMsgCtx.getAuthorizationReqDTO().getTenantDomain());
-            authzReqMsgCtx.getAuthorizationReqDTO().setScopes(filteredScopes);
-        }
-
-        boolean valid = validateScope(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler);
-        if (valid) {
-            // Add authorized internal scopes to the request for sending in the response.
-            addAuthorizedInternalScopes(authzReqMsgCtx, authzReqMsgCtx.getAuthorizedInternalScopes());
-            addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
-        }
-        return authorizeRespDTO;
-    }
-
-    private void validateAuthzRequestScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
-                                            ResponseTypeHandler authzHandler) throws IdentityOAuth2Exception {
+    /**
+     * validated requested scopes.
+     *
+     * @param authzReqMsgCtx authzReqMsgCtx
+     * @param authzHandler ResponseTypeHandler
+     */
+    private void validateRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
+                                            ResponseTypeHandler authzHandler) throws IdentityOAuth2Exception,
+            IdentityOAuth2ScopeValidationException {
 
         // Get OIDC scopes from requested scopes
         String[] requestedOIDCScopes = getOIDCScopesFromRequestedScopes(authzReqMsgCtx);
@@ -299,14 +208,18 @@ public class AuthorizationHandlerManager {
             dropUnregisteredScopeFromRequestedScopes(authzReqMsgCtx);
         }
 
+        //validate scopes using global scope validators
         boolean valid = validateScopes(authzReqMsgCtx, authzHandler);
-        authzReqMsgCtx.setScopeValidationStatus(valid);
+
         if (valid) {
             // Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(authzReqMsgCtx, authzReqMsgCtx.getAuthorizedInternalScopes());
             // Add OIDC scopes back to the request
             addRequestedOIDCScopes(authzReqMsgCtx, requestedOIDCScopes);
+            // Add scopes that filtered from the allowed scopes list.
             addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
+        } else {
+            throw new IdentityOAuth2ScopeValidationException(INVALID_SCOPE, "Invalid Scopes");
         }
     }
 
@@ -451,31 +364,13 @@ public class AuthorizationHandlerManager {
         }
         authzReqMsgCtx.getAuthorizationReqDTO().setScopes(scopes.toArray(new String[0]));
     }
-
-    private boolean validateScope(OAuth2AuthorizeReqDTO authzReqDTO, OAuth2AuthorizeRespDTO authorizeRespDTO,
-                                  OAuthAuthzReqMessageContext authzReqMsgCtx, ResponseTypeHandler authzHandler)
-            throws IdentityOAuth2Exception {
-        boolean scopeValidationStatus = authzHandler.validateScope(authzReqMsgCtx);
-        if (!scopeValidationStatus) {
-            handleErrorRequest(authorizeRespDTO, INVALID_SCOPE, "Invalid Scope!");
-            authorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
-            if (log.isDebugEnabled()) {
-                log.debug("Scope validation failed for user : " + authzReqDTO.getUser() + ", for the scope(s) : "
-                        + OAuth2Util.buildScopeString(authzReqDTO.getScopes()));
-            }
-            return false;
-        } else if (approvedScopeNotSetByTheCallbackHandler(authzReqMsgCtx)) {
-            // We are here because the call-back handler has approved the scope.
-            // If call-back handler set the approved scope - then we respect that. If not we take
-            // the approved scope as the provided scope.
-            authzReqMsgCtx.setApprovedScope(authzReqMsgCtx.getAuthorizationReqDTO().getScopes());
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("Approved scope(s) : " + OAuth2Util.buildScopeString(authzReqMsgCtx.getApprovedScope()));
-        }
-        return true;
-    }
-
+    /**
+     * validate scope using global scope validators.
+     *
+     * @param authzReqMsgCtx authzReqMsgCtx
+     * @param authzHandler responseTypeHandler
+     * @return boolean scopes are validated or no
+     */
     private boolean validateScopes(OAuthAuthzReqMessageContext authzReqMsgCtx, ResponseTypeHandler authzHandler)
             throws IdentityOAuth2Exception {
         boolean scopeValidationStatus = authzHandler.validateScope(authzReqMsgCtx);
@@ -530,14 +425,11 @@ public class AuthorizationHandlerManager {
         return false;
     }
 
-    private boolean isInvalidClient(OAuth2AuthorizeReqDTO authzReqDTO, OAuth2AuthorizeRespDTO authorizeRespDTO,
+    private boolean isInvalidClient(OAuth2AuthorizeReqDTO authzReqDTO,
                                     OAuthAuthzReqMessageContext authzReqMsgCtx, ResponseTypeHandler authzHandler)
             throws IdentityOAuth2Exception {
         boolean isAuthorizedClient = authzHandler.isAuthorizedClient(authzReqMsgCtx);
         if (!isAuthorizedClient) {
-            handleErrorRequest(authorizeRespDTO, UNAUTHORIZED_CLIENT,
-                    "The authenticated client is not authorized to use this authorization grant type");
-            authorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
             if (log.isDebugEnabled()) {
                 log.debug("Client validation failed for user : " + authzReqDTO.getUser() +
                         ", for client : " + authzReqDTO.getConsumerKey());
@@ -568,11 +460,8 @@ public class AuthorizationHandlerManager {
         return authorizeRespDTO.getErrorMsg() != null;
     }
 
-    private boolean isInvalidResponseType(OAuth2AuthorizeReqDTO authzReqDTO, OAuth2AuthorizeRespDTO authorizeRespDTO) {
+    private boolean isInvalidResponseType(OAuth2AuthorizeReqDTO authzReqDTO) {
         if (!responseHandlers.containsKey(authzReqDTO.getResponseType())) {
-            handleErrorRequest(authorizeRespDTO, UNSUPPORTED_RESPONSE_TYPE,
-                    "Unsupported Response Type!");
-            authorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
             if (log.isDebugEnabled()) {
                 log.debug("Unsupported Response Type : " + authzReqDTO.getResponseType() +
                         " provided for user : " + authzReqDTO.getUser() +
