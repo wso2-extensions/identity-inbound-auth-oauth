@@ -31,7 +31,7 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     private OAuth2AuthorizeReqDTO authorizationReqDTO;
 
     private String[] approvedScope;
-
+    private String[] requestedScopes;
     private long validityPeriod;
 
     private long authorizationCodeValidityPeriod;
@@ -82,6 +82,14 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     public void setApprovedScope(String[] approvedScope) {
 
         this.approvedScope = approvedScope;
+    }
+
+    public String[] getRequestedScopes() {
+        return requestedScopes;
+    }
+
+    public void setRequestedScopes(String[] requestedScopes) {
+        this.requestedScopes = requestedScopes;
     }
 
     @Deprecated
