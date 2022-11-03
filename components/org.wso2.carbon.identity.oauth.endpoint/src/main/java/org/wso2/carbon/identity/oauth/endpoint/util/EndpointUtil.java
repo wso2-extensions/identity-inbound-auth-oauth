@@ -1,17 +1,17 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
- * 
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * Copyright (c) 2022, WSO2 LLC. (http://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -913,46 +913,30 @@ public class EndpointUtil {
         return Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames()));
     }
 
-    private static List<String> dropOIDCScopesFromConsentRequiredScopes(OAuth2Parameters params)
+    /**
+     * Drop OIDC scopes from consent required scopes
+     *
+     * @param params  OAuth2 parameters.
+     * @return allowedOAuthScopes consent required scopes
+     * @throws OAuthSystemException
+     */
+    private static List<String> dropOIDCAndUnregisteredScopesFromConsentRequiredScopes(OAuth2Parameters params)
             throws OAuthSystemException {
         Set<String> allowedScopes = params.getScopes();
         List<String> allowedOAuthScopes = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(allowedScopes)) {
             try {
-                // Get registered OIDC scopes.
-                String[] oidcScopes = oAuthAdminService.getScopeNames();
-                List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
-                for (String scope : allowedScopes) {
-                    if (!oidcScopeList.contains(scope)) {
-                        allowedOAuthScopes.add(scope);
-                    }
-                }
-            } catch (IdentityOAuthAdminException e) {
-                throw new OAuthSystemException("Error while retrieving OIDC scopes.", e);
-            }
-        }
-        return allowedOAuthScopes;
-    }
-
-    private static List<String> getAllowedOAuthScopes(OAuth2Parameters params) throws OAuthSystemException {
-
-        Set<String> allowedScopes = params.getScopes();
-        List<String> allowedOAuthScopes = new ArrayList<>();
-        if (CollectionUtils.isNotEmpty(allowedScopes)) {
-            try {
                 startTenantFlow(params.getTenantDomain());
-
-            /* If DropUnregisteredScopes scopes config is enabled
-             then any unregistered scopes(excluding internal scopes
-             and allowed scopes) is be dropped. Therefore they will
-             not be shown in the user consent screen.*/
+                /* If DropUnregisteredScopes scopes config is enabled
+                 then any unregistered scopes(excluding internal scopes
+                 and allowed scopes) is be dropped. Therefore they will
+                 not be shown in the user consent screen.*/
                 if (oauthServerConfiguration.isDropUnregisteredScopes()) {
                     if (log.isDebugEnabled()) {
                         log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
                     }
                     allowedScopes = dropUnregisteredScopes(params);
                 }
-
                 // Get registered OIDC scopes.
                 String[] oidcScopes = oAuthAdminService.getScopeNames();
                 List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
@@ -963,13 +947,7 @@ public class EndpointUtil {
                 }
             } catch (IdentityOAuthAdminException e) {
                 throw new OAuthSystemException("Error while retrieving OIDC scopes.", e);
-            } finally {
-                PrivilegedCarbonContext.endTenantFlow();
             }
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("Allowed OAuth scopes : " + allowedOAuthScopes.stream()
-                    .collect(Collectors.joining(" ")) + " for client : " + params.getClientId());
         }
         return allowedOAuthScopes;
     }
@@ -979,7 +957,7 @@ public class EndpointUtil {
 
         try {
             //filter out OIDC scopes
-            List<String> consentRequiredScopes = dropOIDCScopesFromConsentRequiredScopes(params);
+            List<String> consentRequiredScopes = dropOIDCAndUnregisteredScopesFromConsentRequiredScopes(params);
 
             if (user != null && !isPromptContainsConsent(params)) {
                 String userId = getUserIdOfAuthenticatedUser(user);
