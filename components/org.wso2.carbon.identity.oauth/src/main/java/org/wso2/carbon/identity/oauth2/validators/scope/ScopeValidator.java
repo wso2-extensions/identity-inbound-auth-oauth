@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2020, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2022, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,15 +18,10 @@
 
 package org.wso2.carbon.identity.oauth2.validators.scope;
 
-import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
-import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * This is a global level interface for scope validation. This needs to be engaged after application level validators.
@@ -65,16 +60,6 @@ public interface ScopeValidator {
      */
     boolean validateScope(OAuth2TokenValidationMessageContext tokenValidationMessageContext)
             throws IdentityOAuth2Exception;
-
-    /**
-     * Validate consent required scopes.
-     *
-     * @return validated scopes.
-     */
-    default List<String> getValidatedScopes(AuthenticatedUser user, OAuth2Parameters params)
-            throws IdentityOAuth2Exception {
-        return new ArrayList<>(params.getScopes());
-    }
 
     /**
      * Get the friendly name of the implemented scope validator.
