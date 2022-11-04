@@ -18,7 +18,6 @@
 package org.wso2.carbon.identity.oidc.session.servlet;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -45,7 +44,6 @@ import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({OAuthServerConfiguration.class, IdentityDatabaseUtil.class, IdentityTenantUtil.class,
         OIDCSessionManagementUtil.class})
-@PowerMockIgnore("org.mockito.*")
 @WithCarbonHome
 /**
  * Unit test coverage for OIDCSessionIFrameServlet class

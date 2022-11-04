@@ -19,7 +19,6 @@ package org.wso2.carbon.identity.oidc.session.servlet;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.reflect.Whitebox;
 import org.testng.annotations.AfterTest;
@@ -82,7 +81,6 @@ import static org.testng.Assert.assertTrue;
 /*
   Unit test coverage for OIDCLogoutServlet class.
  */
-@PowerMockIgnore({"org.mockito.*"})
 public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
     @Mock

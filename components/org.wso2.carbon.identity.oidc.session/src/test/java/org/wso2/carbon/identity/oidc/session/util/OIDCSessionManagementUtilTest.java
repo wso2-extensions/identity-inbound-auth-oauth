@@ -18,9 +18,9 @@
 package org.wso2.carbon.identity.oidc.session.util;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockObjectFactory;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeMethod;
@@ -51,8 +51,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 /*
  Unit test coverage for OIDCSessionManagementUtil class
  */
-@PowerMockIgnore("org.mockito.*")
-public class OIDCSessionManagementUtilTest {
+public class OIDCSessionManagementUtilTest extends PowerMockTestCase {
 
     @Mock
     OIDCSessionManagementConfiguration oidcSessionManagementConfiguration;
