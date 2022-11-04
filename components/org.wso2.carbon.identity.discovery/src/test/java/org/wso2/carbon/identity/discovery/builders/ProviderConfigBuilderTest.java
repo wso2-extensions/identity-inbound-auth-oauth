@@ -20,8 +20,8 @@ package org.wso2.carbon.identity.discovery.builders;
 
 import com.nimbusds.jose.JWSAlgorithm;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.ObjectFactory;
@@ -44,7 +44,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.mockito.Matchers.anyString;
-import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
@@ -57,8 +56,7 @@ import static org.testng.Assert.assertNotNull;
 /**
  * Unit test covering ProviderConfigBuilder class.
  */
-@PowerMockIgnore({"org.mockito.*"})
-public class ProviderConfigBuilderTest {
+public class ProviderConfigBuilderTest extends PowerMockTestCase {
 
     private String idTokenSignatureAlgorithm = "SHA256withRSA";
     private ProviderConfigBuilder providerConfigBuilder;
@@ -78,7 +76,6 @@ public class ProviderConfigBuilderTest {
     @BeforeMethod
     public void setUp() throws Exception {
 
-        initMocks(this);
         providerConfigBuilder = new ProviderConfigBuilder();
     }
 
