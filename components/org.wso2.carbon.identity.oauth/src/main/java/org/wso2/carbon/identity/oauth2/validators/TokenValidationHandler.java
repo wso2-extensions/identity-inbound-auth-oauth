@@ -270,7 +270,7 @@ public class TokenValidationHandler {
         // Adding the AccessTokenDO as a context property for further use
         AccessTokenDO accessTokenDO;
         try {
-            accessTokenDO = OAuth2Util.findAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
+            accessTokenDO = OAuth2Util.findAccessToken(oAuth2Token.getIdentifier(), true);
         } catch (IllegalArgumentException e) {
             return buildIntrospectionErrorResponse(e.getMessage());
         }
