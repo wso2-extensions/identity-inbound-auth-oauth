@@ -4584,9 +4584,11 @@ public class OAuth2Util {
         return requestedOIDCScopes.toArray(new String[requestedOIDCScopes.size()]);
     }
 
-    public static String[] removeOIDCScopesFromRequestedScopes(String[] requestedScopes, String[] requestedOIDCScopes)
+    public static String[] removeOIDCScopesFromRequestedScopes(String[] requestedScopes)
             throws IdentityOAuthAdminException {
         List<String> removedRequestedScopes = new ArrayList<>();
+        String[] requestedOIDCScopes = getRequestedOIDCScopes(requestedScopes);
+
         for (String scope : requestedScopes) {
             if (!ArrayUtils.contains(requestedOIDCScopes, scope)) {
                 removedRequestedScopes.add(scope);
