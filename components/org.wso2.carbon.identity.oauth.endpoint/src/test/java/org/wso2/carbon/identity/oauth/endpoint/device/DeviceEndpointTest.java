@@ -30,7 +30,7 @@ import org.mockito.stubbing.Answer;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.reflect.internal.WhiteboxImpl;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
@@ -68,6 +68,7 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
@@ -113,7 +114,7 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
     private static final String CLIENT_ID_VALUE = "ca19a540f544777860e44e75f605d927";
     private static final String TEST_URL = "testURL";
 
-    @BeforeTest
+    @BeforeMethod
     public void setUp() throws Exception {
 
         System.setProperty(CarbonBaseConstants.CARBON_HOME, Paths.get(System.getProperty("user.dir"),
@@ -200,7 +201,7 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
         ServiceURL mockServiceURL = Mockito.mock(ServiceURL.class);
         when(ServiceURLBuilder.create()).thenReturn(mockServiceURLBuilder);
         when(mockServiceURLBuilder.addPath(anyString())).thenReturn(mockServiceURLBuilder);
-        when(mockServiceURLBuilder.addParameter(anyString(), anyString())).thenReturn(mockServiceURLBuilder);
+        when(mockServiceURLBuilder.addParameter(anyString(), isNull())).thenReturn(mockServiceURLBuilder);
         when(mockServiceURLBuilder.build()).thenReturn(mockServiceURL);
         when(mockServiceURL.getAbsolutePublicURL())
                 .thenReturn("http://localhost:9443/authenticationendpoint/device.do");
