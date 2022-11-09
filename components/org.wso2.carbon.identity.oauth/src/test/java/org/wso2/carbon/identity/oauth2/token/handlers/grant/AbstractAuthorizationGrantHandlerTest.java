@@ -65,6 +65,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.T
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
                 files = { "dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql" })
 @WithRealmService(injectToSingletons = { OAuthComponentServiceHolder.class })
+
 public class AbstractAuthorizationGrantHandlerTest {
 
     private AbstractAuthorizationGrantHandler handler;
@@ -85,7 +86,7 @@ public class AbstractAuthorizationGrantHandlerTest {
     private OAuthAppDO oAuthAppDO;
 
     @BeforeMethod
-    public void setUp() throws IdentityOAuthAdminException, IdentityOAuth2Exception {
+    public void setUp() throws IdentityOAuth2Exception, IdentityOAuthAdminException {
         authenticatedUser = new AuthenticatedUser() {
 
         };
@@ -94,7 +95,6 @@ public class AbstractAuthorizationGrantHandlerTest {
         authenticatedUser.setTenantDomain("Homeless");
         authenticatedUser.setUserStoreDomain("Street");
         authenticatedUser.setUserId("4b4414e1-916b-4475-aaee-6b0751c29ff6");
-
         clientId = UUID.randomUUID().toString();
         tokenId = clientId;
         appId = clientId;

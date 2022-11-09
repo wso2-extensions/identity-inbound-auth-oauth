@@ -33,7 +33,7 @@ import org.mockito.stubbing.Answer;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
@@ -76,6 +76,7 @@ import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -93,6 +94,8 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyMap;
@@ -200,7 +203,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     private AuthenticatedUser user;
     private OAuth2ScopeConsentResponse oAuth2ScopeConsentResponse;
 
-    @BeforeTest
+    @BeforeMethod
     public void setUp() {
 
         username = "myUsername";
@@ -286,7 +289,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         mockStatic(FrameworkUtils.class);
         when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString())).thenReturn("sample");
         when(FrameworkUtils.getRedirectURLWithFilteredParams(anyString(), anyMap()))
-                .then(i -> i.getArgumentAt(0, String.class));
+                .then(i -> i.getArgument(0));
         mockStatic(OAuth2Util.class);
         spy(EndpointUtil.class);
         doReturn("sampleId").when(EndpointUtil.class, "getAppIdFromClientId", anyString());
@@ -311,7 +314,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 "endTenantFlow")).withNoArguments();
         when(scopeValidatorSpy, method(JDBCPermissionBasedInternalScopeValidator.class,
                 "getUserAllowedScopes", AuthenticatedUser.class, String[].class, String.class))
-                .withArguments(any(AuthenticatedUser.class), any(), anyString())
+                .withArguments(nullable(AuthenticatedUser.class), any(), anyString())
                 .thenReturn(getScopeList());
         PowerMockito.whenNew(JDBCPermissionBasedInternalScopeValidator.class).withNoArguments()
                 .thenReturn(scopeValidatorSpy);
@@ -493,7 +496,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 thenReturn(mockedOAuthErrorResponseBuilder);
         when(mockedOAuthErrorResponseBuilder.location(anyString())).thenReturn(mockedOAuthErrorResponseBuilder);
         when(mockedOAuthErrorResponseBuilder.setState(anyString())).thenReturn(mockedOAuthErrorResponseBuilder);
-        when(mockedOAuthErrorResponseBuilder.setParam(anyString(), anyString())).
+        when(mockedOAuthErrorResponseBuilder.setParam(anyString(), isNull())).
                 thenReturn(mockedOAuthErrorResponseBuilder);
         if (exeObject != null) {
             OAuthSystemException oAuthSystemException = (OAuthSystemException) exeObject;
@@ -716,9 +719,18 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         Object claimUtilObject = constructor.newInstance(new Object[0]);
         Field logField = claimUtilObject.getClass().getDeclaredField("log");
 
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(logField, logField.getModifiers() & ~Modifier.FINAL);
+        Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
+        getDeclaredFields0.setAccessible(true);
+        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
+        Field modifiers = null;
+        for (Field each : fields) {
+            if ("modifiers".equals(each.getName())) {
+                modifiers = each;
+                break;
+            }
+        }
+        modifiers.setAccessible(true);
+        modifiers.setInt(logField, logField.getModifiers() & ~Modifier.FINAL);
 
         logField.setAccessible(true);
         logField.set(claimUtilObject, mockedLog);

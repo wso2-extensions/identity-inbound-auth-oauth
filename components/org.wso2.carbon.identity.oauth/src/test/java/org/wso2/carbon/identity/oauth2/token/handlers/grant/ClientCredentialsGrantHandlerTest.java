@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -39,6 +40,7 @@ import static org.testng.Assert.assertTrue;
  * Test class for ClientCredentialsGrantHandler test cases.
  */
 @PrepareForTest({OAuthServerConfiguration.class, AbstractAuthorizationGrantHandler.class})
+@WithCarbonHome
 public class ClientCredentialsGrantHandlerTest extends PowerMockIdentityBaseTest {
 
     @Mock

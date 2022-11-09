@@ -25,11 +25,11 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.caching.impl.DataHolder;
 import org.wso2.carbon.caching.impl.TenantCacheManager;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
-import org.wso2.carbon.identity.common.testng.WithRegistry;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeCache;
@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.oauth.cache.OAuthScopeCacheKey;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -52,7 +53,6 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
 
 @WithCarbonHome
-@WithRegistry
 @WithRealmService
 @WithH2Database(files = {"dbScripts/scope.sql", "dbScripts/h2.sql"})
 public class OAuth2ScopeServiceTest extends PowerMockTestCase {
@@ -75,6 +75,11 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
 
         oAuth2ScopeService = new OAuth2ScopeService();
         IdentityUtil.populateProperties();
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
+        carbonContext.setTenantId(MultitenantConstants.SUPER_TENANT_ID);
+
         // Removing the cache manager for tenant to reset the caches added by other tenants.
         ((TenantCacheManager) DataHolder.getInstance().getCachingProvider().getCacheManagerFactory())
                 .removeCacheManagerMap("carbon.super");

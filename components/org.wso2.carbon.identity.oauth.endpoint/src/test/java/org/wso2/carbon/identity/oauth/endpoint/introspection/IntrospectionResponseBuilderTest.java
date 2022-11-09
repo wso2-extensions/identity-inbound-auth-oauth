@@ -22,7 +22,7 @@ import org.json.JSONObject;
 import org.mockito.Mock;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
@@ -54,7 +54,7 @@ public class IntrospectionResponseBuilderTest extends PowerMockIdentityBaseTest 
     OAuthServerConfiguration oAuthServerConfiguration;
     List<String> filteredIntrospectionClaims = new ArrayList<>();
 
-    @BeforeTest
+    @BeforeClass
     public void setUp() {
 
         introspectionResponseBuilder1 = new IntrospectionResponseBuilder();
