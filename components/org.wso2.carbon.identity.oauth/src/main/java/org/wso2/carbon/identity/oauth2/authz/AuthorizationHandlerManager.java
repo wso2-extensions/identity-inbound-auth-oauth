@@ -57,7 +57,6 @@ import java.util.Set;
 
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.INVALID_SCOPE;
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.UNAUTHORIZED_CLIENT;
-import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.UNSUPPORTED_RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
@@ -113,12 +112,6 @@ public class AuthorizationHandlerManager {
         //validate requested scopes
         validateRequestedScopes(authzReqMsgCtx, authzHandler);
 
-        if (isInvalidResponseType(authzReqDTO)) {
-            throw new IdentityOAuth2ScopeValidationException(UNSUPPORTED_RESPONSE_TYPE, "Invalid Response Type");
-        }
-        if (isInvalidClient(authzReqDTO, authzReqMsgCtx, authzHandler)) {
-            throw new IdentityOAuth2ScopeValidationException(UNAUTHORIZED_CLIENT, "Invalid Client");
-        }
         return authzReqMsgCtx;
     }
 

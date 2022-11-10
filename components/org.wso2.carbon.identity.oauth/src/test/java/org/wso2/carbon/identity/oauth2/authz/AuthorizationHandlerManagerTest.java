@@ -89,28 +89,10 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
         OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        authzReqMsgCtx.setApprovedScope(TestConstants.SCOPE_STRING.split(" "));
         OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getAccessToken(), "Access token returned is null");
-    }
-
-    @Test
-    public void testHandleAuthorizationIDTokenTokenResponseTypeUnauthorized() throws Exception {
-        authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_ID_TOKEN_TOKEN);
-        authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID_UNAUTHORIZED_CLIENT);
-        authzReqDTO.setScopes(TestConstants.SCOPE_STRING.split(" "));
-        AuthenticatedUser user = new AuthenticatedUser();
-        user.setUserName(TestConstants.USER_NAME);
-        user.setTenantDomain(TestConstants.TENANT_DOMAIN);
-        user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
-        authzReqDTO.setUser(user);
-        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
-        String errorCode = respDTO.getErrorCode();
-        Assert.assertNotNull(respDTO, "Response is null");
-        Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
-        Assert.assertEquals(errorCode, TestConstants.UNAUTHORIZED_CLIENT_ERROR_CODE,
-                            "Expected unauthorized_client error code but found : " + errorCode);
     }
 
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
@@ -129,28 +111,10 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
         OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        authzReqMsgCtx.setApprovedScope(TestConstants.SCOPE_STRING.split(" "));
         OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getAccessToken(), "ID token returned is null");
-    }
-
-    @Test
-    public void testHandleAuthorizationIDTokenResponseTypeUnauthorized() throws Exception {
-        authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_ID_TOKEN);
-        authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID_UNAUTHORIZED_CLIENT);
-        authzReqDTO.setScopes(TestConstants.SCOPE_STRING.split(" "));
-        AuthenticatedUser user = new AuthenticatedUser();
-        user.setUserName(TestConstants.USER_NAME);
-        user.setTenantDomain(TestConstants.TENANT_DOMAIN);
-        user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
-        authzReqDTO.setUser(user);
-        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
-        String errorCode = respDTO.getErrorCode();
-        Assert.assertNotNull(respDTO, "Response is null");
-        Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
-        Assert.assertEquals(errorCode, TestConstants.UNAUTHORIZED_CLIENT_ERROR_CODE,
-                            "Expected unauthorized_client error code but found : " + errorCode);
     }
 
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
@@ -169,28 +133,10 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
         OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        authzReqMsgCtx.setApprovedScope(TestConstants.SCOPE_STRING.split(" "));
         OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getAccessToken(), "Access token returned is null");
-    }
-
-    @Test
-    public void testHandleAuthorizationTokenResponseTypeUnauthorized() throws Exception {
-        authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_TOKEN);
-        authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID_UNAUTHORIZED_CLIENT);
-        authzReqDTO.setScopes(TestConstants.SCOPE_STRING.split(" "));
-        AuthenticatedUser user = new AuthenticatedUser();
-        user.setUserName(TestConstants.USER_NAME);
-        user.setTenantDomain(TestConstants.TENANT_DOMAIN);
-        user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
-        authzReqDTO.setUser(user);
-        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
-        String errorCode = respDTO.getErrorCode();
-        Assert.assertNotNull(respDTO, "Response is null");
-        Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
-        Assert.assertEquals(errorCode, TestConstants.UNAUTHORIZED_CLIENT_ERROR_CODE,
-                            "Expected unauthorized_client error code but found : " + errorCode);
     }
 
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
@@ -208,41 +154,10 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
         OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        authzReqMsgCtx.setApprovedScope(TestConstants.SCOPE_STRING.split(" "));
         OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getAuthorizationCode(), "Code returned is null");
-    }
-
-    @Test
-    public void testHandleAuthorizationCodeResponseTypeUnauthorized() throws Exception {
-        authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_CODE);
-        authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID_UNAUTHORIZED_CLIENT);
-        authzReqDTO.setScopes(TestConstants.SCOPE_STRING.split(" "));
-        AuthenticatedUser user = new AuthenticatedUser();
-        user.setUserName(TestConstants.USER_NAME);
-        user.setTenantDomain(TestConstants.TENANT_DOMAIN);
-        user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
-        authzReqDTO.setUser(user);
-        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
-        String errorCode = respDTO.getErrorCode();
-        Assert.assertNotNull(respDTO, "Response is null");
-        Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
-        Assert.assertEquals(errorCode, TestConstants.UNAUTHORIZED_CLIENT_ERROR_CODE,
-                            "Expected unauthorized_client error code but found : " + errorCode);
-    }
-
-    @Test
-    public void testHandleInvalidResponseType() throws Exception {
-        authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_INVALID);
-        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
-        String errorCode = respDTO.getErrorCode();
-        Assert.assertNotNull(respDTO, "Response is null");
-        Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
-        Assert.assertEquals(errorCode, OAuthError.CodeResponse.UNSUPPORTED_RESPONSE_TYPE,
-                            "Expected " + OAuthError.CodeResponse.UNSUPPORTED_RESPONSE_TYPE +
-                            " error code but found : " + errorCode);
     }
 
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
@@ -261,6 +176,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
         OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        authzReqMsgCtx.setApprovedScope(new String[0]);
         OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getAccessToken(), "Access token returned is null");
@@ -284,27 +200,6 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
         Assert.assertEquals(errorCode, OAuthError.CodeResponse.UNAUTHORIZED_CLIENT,
                             "Expected " + OAuthError.CodeResponse.UNAUTHORIZED_CLIENT + " error code but found : " +
-                            errorCode);
-    }
-
-    @Test
-    public void testHandleAuthorizationTokenResponseUnauthorizedScope() throws Exception {
-        authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
-        authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_TOKEN);
-        authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID);
-        authzReqDTO.setScopes(TestConstants.SCOPE_UNAUTHORIZED_SCOPE.split(" "));
-        AuthenticatedUser user = new AuthenticatedUser();
-        user.setUserName(TestConstants.USER_NAME);
-        user.setTenantDomain(TestConstants.TENANT_DOMAIN);
-        user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
-        authzReqDTO.setUser(user);
-        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
-        String errorCode = respDTO.getErrorCode();
-        Assert.assertNotNull(respDTO, "Response is null");
-        Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
-        Assert.assertEquals(errorCode, OAuthError.CodeResponse.INVALID_SCOPE,
-                            "Expected " + OAuthError.CodeResponse.INVALID_SCOPE + " error code but found : " +
                             errorCode);
     }
 

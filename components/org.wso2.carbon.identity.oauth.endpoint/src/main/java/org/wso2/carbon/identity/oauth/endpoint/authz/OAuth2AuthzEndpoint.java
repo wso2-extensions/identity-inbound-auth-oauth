@@ -2433,16 +2433,20 @@ public class OAuth2AuthzEndpoint {
      */
     private void handleAuthorizationBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
                                              OAuth2AuthorizeReqDTO authzReqDTO)
-            throws IdentityOAuth2ScopeValidationException {
+            throws IdentityOAuth2ScopeValidationException, OAuthSystemException {
 
         try {
             AuthorizationHandlerManager authzHandlerManager = AuthorizationHandlerManager.getInstance();
             OAuthAuthzReqMessageContext authzReqMsgCtx = authzHandlerManager.
                     handleAuthorizationBeforeConsent(authzReqDTO);
             addOAuthAuthzReqMessageContextTOSessionDataCacheEntry(oAuthMessage, authzReqMsgCtx);
-            oauth2Params.setScopes(new HashSet<>(Arrays.asList(authzReqMsgCtx.getApprovedScope())));
+            if (authzReqMsgCtx.getApprovedScope().length < 1) {
+                oauth2Params.setScopes(new HashSet<>(Arrays.asList(new String[]{})));
+            } else {
+                oauth2Params.setScopes(new HashSet<>(Arrays.asList(authzReqMsgCtx.getApprovedScope())));
+            }
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            log.error("Error occurred when validating scopes");
+            throw new OAuthSystemException("Error occurred when validating scopes");
         }
 
     }
