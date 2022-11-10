@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
  *
- * WSO2 LLC. licenses this file to you under the Apache License,
+ * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -92,6 +92,45 @@ public class OAuth2Service extends AbstractAdmin {
      * Process the authorization request and issue an authorization code or access token depending
      * on the Response Type available in the request.
      *
+     * @param oAuth2AuthorizeReqDTO <code>OAuth2AuthorizeReqDTO</code> containing information about the authorization
+     *                              request.
+     * @return <code>OAuth2AuthorizeRespDTO</code> instance containing the access token/authorization code
+     * or an error code.
+     */
+    @Deprecated
+    public OAuth2AuthorizeRespDTO authorize(OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Authorization Request received for user : " + oAuth2AuthorizeReqDTO.getUser() +
+                    ", Client ID : " + oAuth2AuthorizeReqDTO.getConsumerKey() +
+                    ", Authorization Response Type : " + oAuth2AuthorizeReqDTO.getResponseType() +
+                    ", Requested callback URI : " + oAuth2AuthorizeReqDTO.getCallbackUrl() +
+                    ", Requested Scope : " + OAuth2Util.buildScopeString(
+                    oAuth2AuthorizeReqDTO.getScopes()));
+        }
+
+        try {
+            AuthorizationHandlerManager authzHandlerManager =
+                    AuthorizationHandlerManager.getInstance();
+            return authzHandlerManager.handleAuthorization(oAuth2AuthorizeReqDTO);
+        } catch (Exception e) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "authorize-client", null);
+            log.error("Error occurred when processing the authorization request. Returning an error back to client.",
+                    e);
+            OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
+            authorizeRespDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
+            authorizeRespDTO.setErrorMsg("Error occurred when processing the authorization " +
+                    "request. Returning an error back to client.");
+            authorizeRespDTO.setCallbackURI(oAuth2AuthorizeReqDTO.getCallbackUrl());
+            return authorizeRespDTO;
+        }
+    }
+
+    /**
+     * Process the authorization request and issue an authorization code or access token depending
+     * on the Response Type available in the request.
+     *
      * @param authzReqMsgCtx authzReqMsgCtx.
      * @return <code>OAuth2AuthorizeRespDTO</code> instance containing the access token/authorization code
      * or an error code.
@@ -109,7 +148,7 @@ public class OAuth2Service extends AbstractAdmin {
         try {
             AuthorizationHandlerManager authzHandlerManager =
                     AuthorizationHandlerManager.getInstance();
-            return authzHandlerManager.handleAuthorization(authzReqMsgCtx);
+            return authzHandlerManager.handleAuthorizationAfterConsent(authzReqMsgCtx);
         } catch (Exception e) {
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
                     OAuthConstants.LogConstants.FAILED, "System error occurred.", "authorize-client", null);

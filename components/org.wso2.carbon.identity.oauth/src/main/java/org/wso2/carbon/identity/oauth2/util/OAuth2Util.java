@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
- * WSO2 LLC. licenses this file to you under the Apache License,
+ * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -168,6 +168,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -4572,28 +4573,37 @@ public class OAuth2Util {
 
     public static String[] getRequestedOIDCScopes(String[] requestedScopes)
             throws IdentityOAuthAdminException {
-
+        if (requestedScopes == null) {
+            throw new IdentityOAuthAdminException("Error occurred during getting OIDC scopes");
+        }
         String[] oidcScopes =
                 OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().getScopeNames();
-        List<String> requestedOIDCScopes = new ArrayList<>();
-        for (String scope : requestedScopes) {
-            if (ArrayUtils.contains(oidcScopes, scope)) {
-                requestedOIDCScopes.add(scope);
-            }
+        if (requestedScopes == null) {
+            throw new IdentityOAuthAdminException("Error occurred during getting OIDC scopes");
         }
+        Set<String> oidcScopeSet = new HashSet<>(Arrays.asList(oidcScopes));
+        List<String> requestedOIDCScopes = Arrays.stream(requestedScopes).distinct()
+                .filter(s->oidcScopeSet.contains(s)).collect(Collectors.toList());
+
         return requestedOIDCScopes.toArray(new String[requestedOIDCScopes.size()]);
     }
 
     public static String[] removeOIDCScopesFromRequestedScopes(String[] requestedScopes)
             throws IdentityOAuthAdminException {
-        List<String> removedRequestedScopes = new ArrayList<>();
-        String[] requestedOIDCScopes = getRequestedOIDCScopes(requestedScopes);
 
-        for (String scope : requestedScopes) {
-            if (!ArrayUtils.contains(requestedOIDCScopes, scope)) {
-                removedRequestedScopes.add(scope);
-            }
+        if (requestedScopes == null) {
+            throw new IdentityOAuthAdminException("Error occurred during getting OIDC scopes");
         }
+        String[] oidcScopes =
+                OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().getScopeNames();
+        if (requestedScopes == null) {
+            throw new IdentityOAuthAdminException("Error occurred during getting OIDC scopes");
+        }
+        Set<String> oidcScopeSet = new HashSet<>(Arrays.asList(oidcScopes));
+
+        List<String> removedRequestedScopes = Arrays.stream(requestedScopes).distinct()
+                .filter(s->!oidcScopeSet.contains(s)).collect(Collectors.toList());
+
         return removedRequestedScopes.toArray(new String[removedRequestedScopes.size()]);
     }
 

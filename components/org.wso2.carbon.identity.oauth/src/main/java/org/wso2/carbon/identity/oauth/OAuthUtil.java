@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
- * WSO2 LLC. licenses this file to you under the Apache License,
+ * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -47,7 +47,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.api.Tenant;
@@ -788,14 +787,5 @@ public final class OAuthUtil {
             username = IdentityUtil.addDomainToName(user.getUserName(), user.getUserStoreDomain());
         }
         return username;
-    }
-    /**
-     * Deriving the global level scope validator implementations.
-     * These are global/server level scope validators which are engaged after the app level scope validation.
-     *
-     * @return scope validators.
-     */
-    public static List<ScopeValidator> getScopeValidators() {
-        return OAuthComponentServiceHolder.getInstance().getScopeValidators();
     }
 }

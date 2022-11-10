@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
  *
- * WSO2 LLC. licenses this file to you under the Apache License,
+ * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -1003,12 +1003,6 @@ public class OAuth2AuthzEndpoint {
         oAuthMessage.getSessionDataCacheEntry().setAuthenticatedIdPs(authnResult.getAuthenticatedIdPs());
         oAuthMessage.getSessionDataCacheEntry().setSessionContextIdentifier((String)
                 authnResult.getProperty(FrameworkConstants.AnalyticsAttributes.SESSION_ID));
-    }
-
-    private void addOAuthAuthzReqMessageContextTOSessionDataCacheEntry(OAuthMessage oAuthMessage,
-                                                                       OAuthAuthzReqMessageContext authzReqMsgCtx) {
-
-        oAuthMessage.getSessionDataCacheEntry().setAuthzReqMsgCtx(authzReqMsgCtx);
     }
 
     private void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) {
@@ -2433,16 +2427,21 @@ public class OAuth2AuthzEndpoint {
      */
     private void handleAuthorizationBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
                                              OAuth2AuthorizeReqDTO authzReqDTO)
-            throws IdentityOAuth2ScopeValidationException {
+            throws IdentityOAuth2ScopeValidationException, OAuthSystemException {
 
         try {
             AuthorizationHandlerManager authzHandlerManager = AuthorizationHandlerManager.getInstance();
             OAuthAuthzReqMessageContext authzReqMsgCtx = authzHandlerManager.
                     handleAuthorizationBeforeConsent(authzReqDTO);
-            addOAuthAuthzReqMessageContextTOSessionDataCacheEntry(oAuthMessage, authzReqMsgCtx);
-            oauth2Params.setScopes(new HashSet<>(Arrays.asList(authzReqMsgCtx.getApprovedScope())));
+            //add OAuthAuthzReqMessageContext to SessionDataCacheEntry
+            oAuthMessage.getSessionDataCacheEntry().setAuthzReqMsgCtx(authzReqMsgCtx);
+            if (authzReqMsgCtx.getApprovedScope() == null) {
+                oauth2Params.setScopes(new HashSet<>(Arrays.asList(new String[]{})));
+            } else {
+                oauth2Params.setScopes(new HashSet<>(Arrays.asList(authzReqMsgCtx.getApprovedScope())));
+            }
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            log.error("Error occurred when validating scopes");
+            throw new OAuthSystemException("Error occurred when validating scopes");
         }
 
     }
