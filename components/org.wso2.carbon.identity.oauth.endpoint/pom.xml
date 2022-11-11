@@ -227,7 +227,7 @@
             </plugin>
             <plugin>
                 <artifactId>maven-war-plugin</artifactId>
-                <version>2.2</version>
+                <version>3.3.1</version>
                 <configuration>
                     <webResources>
                         <resource>
@@ -246,6 +246,7 @@
                     <argLine>
                         --add-opens java.base/java.util=ALL-UNNAMED
                         --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.security=ALL-UNNAMED
                         --add-opens java.base/java.util.regex=ALL-UNNAMED
                         --add-opens java.base/sun.nio.fs=ALL-UNNAMED
                         --add-opens java.base/sun.nio.cs=ALL-UNNAMED

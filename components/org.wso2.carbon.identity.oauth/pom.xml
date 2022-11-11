@@ -455,6 +455,8 @@
                         --add-opens java.base/sun.security.util=ALL-UNNAMED
                         --add-opens java.base/sun.security.jca=ALL-UNNAMED
                         --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                        --add-opens java.base/java.util.concurrent=ALL-UNNAMED
+                        --add-opens java.base/sun.reflect.misc=ALL-UNNAMED
                     </argLine>
                     <suiteXmlFiles>
                         <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
