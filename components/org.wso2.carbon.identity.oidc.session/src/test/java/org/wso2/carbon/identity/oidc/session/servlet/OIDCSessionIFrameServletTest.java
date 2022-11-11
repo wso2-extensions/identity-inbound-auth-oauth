@@ -81,6 +81,7 @@ public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
 
     @BeforeClass
     public void setupBeforeClass() throws Exception {
+
         initiateInMemoryH2();
         createOAuthApp(CLIENT_ID_VALUE, SECRET, USERNAME, APP_NAME, "ACTIVE", CALLBACK_URL);
         createOAuthApp(CLIENT_ID_WITH_NO_CALLBACK_URL, SECRET__WITH_NO_CALLBACK_URL, USERNAME, APP_NAME, "ACTIVE",
@@ -92,6 +93,7 @@ public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
     }
     @BeforeMethod
     public void setUp() throws Exception {
+
         oidcSessionIFrameServlet = new OIDCSessionIFrameServlet();
     }
 

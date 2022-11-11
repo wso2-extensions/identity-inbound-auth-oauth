@@ -92,18 +92,6 @@ public class CodeResponseTypeHandlerTest extends PowerMockTestCase {
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
     public void testIssue(boolean isIDPIdColumnEnabled) throws Exception {
 
-//        String carbonHome = Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString();
-//        spy(CarbonUtils.class);
-//        doReturn(carbonHome).when(CarbonUtils.class, "getCarbonHome");
-//        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
-//
-//        mockStatic(IdentityTenantUtil.class);
-//        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
-//        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-//
-//        mockStatic(IdentityConfigParser.class);
-//        when(IdentityConfigParser.getInstance()).thenReturn(mockConfigParser);
-
         OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setGrantTypes("implicit");
@@ -120,13 +108,6 @@ public class CodeResponseTypeHandlerTest extends PowerMockTestCase {
         AppInfoCache appInfoCache = AppInfoCache.getInstance();
         appInfoCache.addToCache(TEST_CONSUMER_KEY, oAuthAppDO);
 
-//        mockStatic(JDBCPersistenceManager.class);
-//        DataSource dataSource = Mockito.mock(DataSource.class);
-//        JDBCPersistenceManager jdbcPersistenceManager = Mockito.mock(JDBCPersistenceManager.class);
-//        Mockito.when(dataSource.getConnection()).thenReturn(con);
-//        Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
-//        Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
-//
         CodeResponseTypeHandler codeResponseTypeHandler = new CodeResponseTypeHandler();
         codeResponseTypeHandler.init();
         OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO =

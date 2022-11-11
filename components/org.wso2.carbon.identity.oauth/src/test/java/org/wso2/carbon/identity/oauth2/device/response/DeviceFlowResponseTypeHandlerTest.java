@@ -66,8 +66,7 @@ public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
     private OAuthAppDO oAuthAppDO = new OAuthAppDO();
     private static final String DB_NAME = "SCOPE_DB";
     private static final String TEST_URL = "testURL";
-//    @Mock
-//    IdentityConfigParser mockConfigParser;
+
     @BeforeMethod
     public void setUp() throws Exception {
 
@@ -86,12 +85,6 @@ public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
             URLBuilderException {
 
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
-//            String carbonHome = Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString();
-//            spy(CarbonUtils.class);
-//            doReturn(carbonHome).when(CarbonUtils.class, "getCarbonHome");
-//
-//            mockStatic(IdentityConfigParser.class);
-//            when(IdentityConfigParser.getInstance()).thenReturn(mockConfigParser);
             mockStatic(OAuth2Util.class);
             when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
             when(OAuth2Util.getDeviceFlowCompletionPageURI(anyString(), anyString())).thenCallRealMethod();
