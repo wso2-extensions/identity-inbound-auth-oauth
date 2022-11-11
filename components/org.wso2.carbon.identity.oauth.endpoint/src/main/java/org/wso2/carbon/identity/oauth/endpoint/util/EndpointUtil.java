@@ -947,7 +947,13 @@ public class EndpointUtil {
                 }
             } catch (IdentityOAuthAdminException e) {
                 throw new OAuthSystemException("Error while retrieving OIDC scopes.", e);
+            } finally {
+                PrivilegedCarbonContext.endTenantFlow();
             }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Allowed OAuth scopes : " + allowedOAuthScopes.stream()
+                    .collect(Collectors.joining(" ")) + " for client : " + params.getClientId());
         }
         return allowedOAuthScopes;
     }

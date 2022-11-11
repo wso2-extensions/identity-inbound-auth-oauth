@@ -108,10 +108,8 @@ public class AuthorizationHandlerManager {
 
         OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(authzReqDTO);
         ResponseTypeHandler authzHandler = getResponseHandler(authzReqDTO);
-
         //validate requested scopes
         validateRequestedScopes(authzReqMsgCtx, authzHandler);
-
         return authzReqMsgCtx;
     }
 
@@ -128,7 +126,9 @@ public class AuthorizationHandlerManager {
         ResponseTypeHandler authzHandler = getResponseHandler(authzReqDTO);
 
         OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
-
+        if (isInvalidClient(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler)) {
+            return authorizeRespDTO;
+        }
         if (isInvalidAccessDelegation(authzReqDTO, authorizeRespDTO, authzReqMsgCtx, authzHandler)) {
             return authorizeRespDTO;
         }
@@ -236,7 +236,7 @@ public class AuthorizationHandlerManager {
      * get scopes that specified in the allowed scopes list.
      *
      * @param authzReqMsgCtx authzReqMsgCtx
-     * @return - requestedOIDCScopes
+     * @return - requestedOIDCScopes scopes list
      */
     private List<String> getAllowedScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx) {
         List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
@@ -255,8 +255,8 @@ public class AuthorizationHandlerManager {
     /**
      * get authorized internal scopes.
      *
-     * @param authzReqMsgCtx authzReqMsgCtx scopes list
-     * @return - authorizedInternalScopes
+     * @param authzReqMsgCtx authzReqMsgCtx
+     * @return - authorizedInternalScopes scopes list
      */
     private String[] getAuthorizedInternalScopes(OAuthAuthzReqMessageContext authzReqMsgCtx)
             throws IdentityOAuth2Exception {
@@ -275,7 +275,7 @@ public class AuthorizationHandlerManager {
     /**
      * remove internal scopes from requested scopes.
      *
-     * @param authzReqMsgCtx authzReqMsgCtx scopes list
+     * @param authzReqMsgCtx authzReqMsgCtx
      */
     private void removeInternalScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx) {
 
@@ -295,7 +295,7 @@ public class AuthorizationHandlerManager {
     /**
      * drop unregistered from requested scopes.
      *
-     * @param authzReqMsgCtx authzReqMsgCtx scopes list
+     * @param authzReqMsgCtx authzReqMsgCtx
      */
     private void dropUnregisteredScopeFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx)
             throws IdentityOAuth2Exception {
@@ -418,11 +418,14 @@ public class AuthorizationHandlerManager {
         return false;
     }
 
-    private boolean isInvalidClient(OAuth2AuthorizeReqDTO authzReqDTO,
+    private boolean isInvalidClient(OAuth2AuthorizeReqDTO authzReqDTO, OAuth2AuthorizeRespDTO authorizeRespDTO,
                                     OAuthAuthzReqMessageContext authzReqMsgCtx, ResponseTypeHandler authzHandler)
             throws IdentityOAuth2Exception {
         boolean isAuthorizedClient = authzHandler.isAuthorizedClient(authzReqMsgCtx);
         if (!isAuthorizedClient) {
+            handleErrorRequest(authorizeRespDTO, UNAUTHORIZED_CLIENT,
+                    "The authenticated client is not authorized to use this authorization grant type");
+            authorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
             if (log.isDebugEnabled()) {
                 log.debug("Client validation failed for user : " + authzReqDTO.getUser() +
                         ", for client : " + authzReqDTO.getConsumerKey());
