@@ -271,10 +271,12 @@ public class TokenValidationHandler {
         AccessTokenDO accessTokenDO;
         try {
             accessTokenDO = OAuth2Util.findAccessToken(oAuth2Token.getIdentifier(), true);
+            if (accessTokenDO != null) {
+                messageContext.addProperty(OAuthConstants.ACCESS_TOKEN_DO, accessTokenDO);
+            }
         } catch (IllegalArgumentException e) {
             return buildIntrospectionErrorResponse(e.getMessage());
         }
-        messageContext.addProperty(OAuthConstants.ACCESS_TOKEN_DO, accessTokenDO);
 
         // Catch the latest exception and throw it if there aren't any active tokens.
         Exception exception = null;
