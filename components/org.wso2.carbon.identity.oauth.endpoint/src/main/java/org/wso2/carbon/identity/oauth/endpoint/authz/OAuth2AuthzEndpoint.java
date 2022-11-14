@@ -2440,7 +2440,7 @@ public class OAuth2AuthzEndpoint {
             OAuthAuthzReqMessageContext authzReqMsgCtx = authzHandlerManager.
                     handleAuthorizationBeforeConsent(authzReqDTO);
             addOAuthAuthzReqMessageContextTOSessionDataCacheEntry(oAuthMessage, authzReqMsgCtx);
-            if (authzReqMsgCtx.getApprovedScope().length < 1) {
+            if (authzReqMsgCtx.getApprovedScope() == null) {
                 oauth2Params.setScopes(new HashSet<>(Arrays.asList(new String[]{})));
             } else {
                 oauth2Params.setScopes(new HashSet<>(Arrays.asList(authzReqMsgCtx.getApprovedScope())));
