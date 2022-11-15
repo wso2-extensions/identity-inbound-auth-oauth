@@ -26,8 +26,6 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -90,11 +88,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
-        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
-        authzReqMsgCtx.setApprovedScope(TestConstants.SCOPE_STRING.split(" "));
-        OAuthAppDO oAuthAppDO = new OAuthAppDAO().getAppInformation(authzReqDTO.getConsumerKey());
-        authzReqMsgCtx.addProperty(authorizationHandlerManager.OAUTH_APP_PROPERTY, oAuthAppDO);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getAccessToken(), "Access token returned is null");
     }
@@ -114,11 +108,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
-        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
-        authzReqMsgCtx.setApprovedScope(TestConstants.SCOPE_STRING.split(" "));
-        OAuthAppDO oAuthAppDO = new OAuthAppDAO().getAppInformation(authzReqDTO.getConsumerKey());
-        authzReqMsgCtx.addProperty(authorizationHandlerManager.OAUTH_APP_PROPERTY, oAuthAppDO);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getAccessToken(), "ID token returned is null");
     }
@@ -138,11 +128,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
-        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
-        authzReqMsgCtx.setApprovedScope(TestConstants.SCOPE_STRING.split(" "));
-        OAuthAppDO oAuthAppDO = new OAuthAppDAO().getAppInformation(authzReqDTO.getConsumerKey());
-        authzReqMsgCtx.addProperty(authorizationHandlerManager.OAUTH_APP_PROPERTY, oAuthAppDO);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getAccessToken(), "Access token returned is null");
     }
@@ -161,11 +147,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
-        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
-        authzReqMsgCtx.setApprovedScope(TestConstants.SCOPE_STRING.split(" "));
-        OAuthAppDO oAuthAppDO = new OAuthAppDAO().getAppInformation(authzReqDTO.getConsumerKey());
-        authzReqMsgCtx.addProperty(authorizationHandlerManager.OAUTH_APP_PROPERTY, oAuthAppDO);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getAuthorizationCode(), "Code returned is null");
     }
@@ -185,11 +167,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
-        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
-        authzReqMsgCtx.setApprovedScope(new String[0]);
-        OAuthAppDO oAuthAppDO = new OAuthAppDAO().getAppInformation(authzReqDTO.getConsumerKey());
-        authzReqMsgCtx.addProperty(authorizationHandlerManager.OAUTH_APP_PROPERTY, oAuthAppDO);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getAccessToken(), "Access token returned is null");
     }
@@ -205,10 +183,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setTenantDomain(TestConstants.TENANT_DOMAIN);
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         authzReqDTO.setUser(user);
-        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
-        OAuthAppDO oAuthAppDO = new OAuthAppDAO().getAppInformation(authzReqDTO.getConsumerKey());
-        authzReqMsgCtx.addProperty(authorizationHandlerManager.OAUTH_APP_PROPERTY, oAuthAppDO);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqMsgCtx);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
         String errorCode = respDTO.getErrorCode();
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
