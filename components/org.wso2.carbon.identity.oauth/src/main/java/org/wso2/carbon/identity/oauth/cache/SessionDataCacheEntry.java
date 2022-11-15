@@ -47,6 +47,7 @@ public class SessionDataCacheEntry extends CacheEntry {
     private ConcurrentMap<String, String[]> paramMap = new ConcurrentHashMap<String, String[]>();
 
     private Map<String, Serializable> endpointParams = new HashMap<>();
+
     public OAuthAuthzReqMessageContext getAuthzReqMsgCtx() {
         return authzReqMsgCtx;
     }

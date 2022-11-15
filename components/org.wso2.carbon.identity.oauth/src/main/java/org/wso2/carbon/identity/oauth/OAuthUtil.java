@@ -789,13 +789,4 @@ public final class OAuthUtil {
         }
         return username;
     }
-    /**
-     * Deriving the global level scope validator implementations.
-     * These are global/server level scope validators which are engaged after the app level scope validation.
-     *
-     * @return scope validators.
-     */
-    public static List<ScopeValidator> getScopeValidators() {
-        return OAuthComponentServiceHolder.getInstance().getScopeValidators();
-    }
 }
