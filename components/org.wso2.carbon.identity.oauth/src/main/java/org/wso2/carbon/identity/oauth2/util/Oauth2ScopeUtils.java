@@ -1,19 +1,17 @@
 /*
- * Copyright (c) 2022, WSO2 LLC. (http://www.wso2.com).
+ *  Copyright (c) 2017, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
  *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 
 package org.wso2.carbon.identity.oauth2.util;
@@ -333,7 +331,8 @@ public class Oauth2ScopeUtils {
      * @return String array with internal scopes. Return an empty array if there's not any internal scopes in the
      * given scopes array.
      */
-    public static String[] getRequestedInternalScopes(String[] scopes) {
+    @Deprecated
+    public static String[] getRequestedScopes(String[] scopes) {
 
         List<String> requestedScopes = new ArrayList<>();
         if (ArrayUtils.isEmpty(scopes)) {
@@ -345,5 +344,16 @@ public class Oauth2ScopeUtils {
             }
         }
         return requestedScopes.toArray(new String[0]);
+    }
+
+    /**
+     * Iterate through the scopes array to filter out the internal scopes.
+     * @param scopes String array of scopes.
+     * @return String array with internal scopes. Return an empty array if there's not any internal scopes in the
+     * given scopes array.
+     */
+    public static String[] getRequestedInternalScopes(String[] scopes) {
+
+        return getRequestedScopes(scopes);
     }
 }
