@@ -32,6 +32,8 @@ import javax.servlet.http.Cookie;
  * OAuth 2 authorization request bean.
  */
 public class OAuth2AuthorizeReqDTO implements Serializable {
+
+    private static final long serialVersionUID = -4708580494325317575L;
     private String consumerKey;
     private String[] scopes;
     private String responseType;
