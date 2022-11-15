@@ -331,7 +331,6 @@ public class Oauth2ScopeUtils {
      * @return String array with internal scopes. Return an empty array if there's not any internal scopes in the
      * given scopes array.
      */
-    @Deprecated
     public static String[] getRequestedScopes(String[] scopes) {
 
         List<String> requestedScopes = new ArrayList<>();
@@ -344,16 +343,5 @@ public class Oauth2ScopeUtils {
             }
         }
         return requestedScopes.toArray(new String[0]);
-    }
-
-    /**
-     * Iterate through the scopes array to filter out the internal scopes.
-     * @param scopes String array of scopes.
-     * @return String array with internal scopes. Return an empty array if there's not any internal scopes in the
-     * given scopes array.
-     */
-    public static String[] getRequestedInternalScopes(String[] scopes) {
-
-        return getRequestedScopes(scopes);
     }
 }

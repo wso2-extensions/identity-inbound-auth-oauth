@@ -98,7 +98,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
     public String[] validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         // filter internal scopes
-        String[] requestedScopes = Oauth2ScopeUtils.getRequestedInternalScopes(tokReqMsgCtx.getScope());
+        String[] requestedScopes = Oauth2ScopeUtils.getRequestedScopes(tokReqMsgCtx.getScope());
         //If the token is not requested for specific scopes, return true
         if (ArrayUtils.isEmpty(requestedScopes)) {
             return requestedScopes;
@@ -128,8 +128,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
     public String[] validateScope(OAuthAuthzReqMessageContext authzReqMessageContext) {
 
         // Remove openid scope from the list if available
-        String[] requestedScopes = Oauth2ScopeUtils.getRequestedInternalScopes(authzReqMessageContext
-                .getAuthorizationReqDTO().getScopes());
+        String[] requestedScopes = Oauth2ScopeUtils.getRequestedScopes(authzReqMessageContext.getAuthorizationReqDTO
+                ().getScopes());
         //If the token is not requested for specific scopes, return true
         if (ArrayUtils.isEmpty(requestedScopes)) {
             return requestedScopes;

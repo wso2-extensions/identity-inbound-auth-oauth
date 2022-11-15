@@ -335,12 +335,13 @@ public class AuthorizationHandlerManager {
      * @param authzReqMsgCtx authzReqMsgCtx
      * @return - requestedOIDCScopes
      */
-    private String[] getOIDCScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx) {
+    private String[] getOIDCScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx)
+            throws IdentityOAuth2Exception {
         String[] requestedOIDCScopes = new String[0];
         try {
-            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(authzReqMsgCtx.getRequestedScopes());
+            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(authzReqMsgCtx.getRequestedScope());
         } catch (IdentityOAuthAdminException e) {
-            log.error("Unable to retrieve OIDC Scopes." + e.getMessage());
+            throw new IdentityOAuth2Exception("Unable to retrieve OIDC Scopes.");
         }
         return requestedOIDCScopes;
     }
@@ -353,7 +354,7 @@ public class AuthorizationHandlerManager {
      */
     private List<String> getAllowedScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx) {
         List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
-        String[] requestedScopes = authzReqMsgCtx.getRequestedScopes();
+        String[] requestedScopes = authzReqMsgCtx.getRequestedScope();
         List<String> requestedAllowedScopes = new ArrayList<>();
         if (requestedScopes != null) {
             for (String scope : requestedScopes) {
@@ -396,13 +397,13 @@ public class AuthorizationHandlerManager {
             return;
         }
         List<String> scopes = new ArrayList<>();
-        for (String scope : authzReqMsgCtx.getRequestedScopes()) {
+        for (String scope : authzReqMsgCtx.getRequestedScope()) {
             if (!scope.startsWith(INTERNAL_SCOPE_PREFIX) && !scope.startsWith(CONSOLE_SCOPE_PREFIX) && !scope
                     .equalsIgnoreCase(SYSTEM_SCOPE)) {
                 scopes.add(scope);
             }
         }
-        authzReqMsgCtx.setRequestedScopes(scopes.toArray(new String[0]));
+        authzReqMsgCtx.setRequestedScope(scopes.toArray(new String[0]));
     }
 
     /**
@@ -413,9 +414,9 @@ public class AuthorizationHandlerManager {
     private void dropUnregisteredScopeFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx)
             throws IdentityOAuth2Exception {
         String[] filteredScopes = OAuth2Util.dropUnregisteredScopes(
-                authzReqMsgCtx.getRequestedScopes(),
+                authzReqMsgCtx.getRequestedScope(),
                 authzReqMsgCtx.getAuthorizationReqDTO().getTenantDomain());
-        authzReqMsgCtx.setRequestedScopes(filteredScopes);
+        authzReqMsgCtx.setRequestedScope(filteredScopes);
     }
 
     private boolean isManagementApp(OAuth2AuthorizeReqDTO authzReqDTO) throws IdentityOAuth2Exception {
@@ -584,7 +585,7 @@ public class AuthorizationHandlerManager {
                 .setTenantDomain(OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO));
 
         // load requested scopes
-        authorizeRequestMessageContext.setRequestedScopes(authzReqDTO.getScopes());
+        authorizeRequestMessageContext.setRequestedScope(authzReqDTO.getScopes());
 
         return authorizeRequestMessageContext;
     }

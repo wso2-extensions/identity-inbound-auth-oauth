@@ -369,7 +369,7 @@ public class AccessTokenIssuer {
             //remove OIDC scopes before validation
             requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(requestedScopes);
         } catch (IdentityOAuthAdminException e) {
-            log.error("Unable to retrieve OIDC Scopes." + e.getMessage());
+            throw new IdentityException("Unable to retrieve OIDC Scopes.");
         }
         if (requestedScopes != null) {
             for (String scope : requestedScopes) {
