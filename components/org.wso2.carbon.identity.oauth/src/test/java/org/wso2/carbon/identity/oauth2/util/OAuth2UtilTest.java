@@ -52,7 +52,6 @@ import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
-import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -131,8 +130,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
     private String[] scopeArrayUnSorted = new String[]{"scope2", "scope3", "scope1"};
     private String[] scopeArray = new String[]{"openid", "scope1", "scope2"};
-
-    private String[] oidcScopes = new String[]{"address", "phone", "openid", "profile", "groups","email"};
+    private String[] oidcScopes = new String[]{"address", "phone", "openid", "profile", "groups", "email"};
     private String scopeString = "scope1 scope2 scope3";
     private String clientId = "dummyClientId";
     private String clientSecret = "dummyClientSecret";
@@ -2283,14 +2281,14 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     public static Object[][] requestedOIDCScopeDataProvider() {
 
         return new Object[][]{
-                {new String[]{"openid","create"}, new String[]{"openid"}},
-                {new String[]{"openid","openid","create"}, new String[]{"openid"}},
+                {new String[]{"openid", "create"}, new String[]{"openid"}},
+                {new String[]{"openid", "openid", "create"}, new String[]{"openid"}},
                 {null, new String[0]}
         };
     }
 
     @Test(dataProvider = "requestedOIDCScopeData")
-    public void testGetRequestedOIDCScopes(Object scopes, Object expected) throws Exception{
+    public void testGetRequestedOIDCScopes(Object scopes, Object expected) throws Exception {
         String[] requestedScopes = (String[]) scopes;
         String[] expectedScopes = (String[]) expected;
         mockStatic(OAuth2ServiceComponentHolder.class);
@@ -2305,21 +2303,21 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         } catch (IdentityOAuthAdminException e) {
             return;
         }
-        assertEquals(requestedOIDCScopes,expectedScopes);
+        assertEquals(requestedOIDCScopes, expectedScopes);
     }
 
     @DataProvider(name = "removeOIDCScopesData")
     public static Object[][] removeOIDCScopesDataProvider() {
 
         return new Object[][]{
-                {new String[]{"openid","create"}, new String[]{"create"}},
-                {new String[]{"openid","openid","create"}, new String[]{"create"}},
+                {new String[]{"openid", "create"}, new String[]{"create"}},
+                {new String[]{"openid", "openid", "create"}, new String[]{"create"}},
                 {null, new String[0]}
         };
     }
 
     @Test(dataProvider = "removeOIDCScopesData")
-    public void testRemoveOIDCScopesFromRequestedScopes(Object scopes, Object expected) throws Exception{
+    public void testRemoveOIDCScopesFromRequestedScopes(Object scopes, Object expected) throws Exception {
         String[] requestedScopes = (String[]) scopes;
         String[] expectedScopes = (String[]) expected;
         mockStatic(OAuth2ServiceComponentHolder.class);
@@ -2334,6 +2332,6 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         } catch (IdentityOAuthAdminException e) {
             return;
         }
-        assertEquals(requestedOIDCScopes,expectedScopes);
+        assertEquals(requestedOIDCScopes, expectedScopes);
     }
 }
