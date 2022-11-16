@@ -197,9 +197,9 @@ public class JwksEndpoint {
     }
 
     /**
-     * This method generates the base64 encoded certificate list from a Certificate array
+     * This method generates the base64 encoded certificate list from a Certificate array.
      *
-     * @return base64 encoded certificate list
+     * @return base64 encoded certificate list.
      */
     private List<Base64> generateEncodedCertList(Certificate[] certificates, String alias)
             throws CertificateEncodingException {

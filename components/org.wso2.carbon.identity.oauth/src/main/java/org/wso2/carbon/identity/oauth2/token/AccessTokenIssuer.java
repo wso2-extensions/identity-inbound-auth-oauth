@@ -323,8 +323,16 @@ public class AccessTokenIssuer {
             }
         }
 
-        if (tokReqMsgCtx.getAuthorizedUser() != null && tokReqMsgCtx.getAuthorizedUser().isFederatedUser()) {
-            tokReqMsgCtx.getAuthorizedUser().setTenantDomain(tenantDomainOfApp);
+        AuthenticatedUser authenticatedUser = tokReqMsgCtx.getAuthorizedUser();
+        if (authenticatedUser != null && authenticatedUser.isFederatedUser()) {
+            boolean skipTenantDomainOverWriting = false;
+            if (authenticatedUser.getTenantDomain() != null) {
+                skipTenantDomainOverWriting = OAuth2Util.isFederatedRoleBasedAuthzEnabled(tokReqMsgCtx);
+            }
+            // If federated role-based authorization is engaged skip overwriting the user tenant domain.
+            if (!skipTenantDomainOverWriting) {
+                authenticatedUser.setTenantDomain(tenantDomainOfApp);
+            }
         }
 
         if (!isValidGrant) {

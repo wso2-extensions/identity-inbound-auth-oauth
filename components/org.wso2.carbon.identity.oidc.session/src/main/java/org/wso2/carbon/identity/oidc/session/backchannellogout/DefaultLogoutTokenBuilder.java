@@ -31,6 +31,8 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -57,7 +59,9 @@ import java.util.UUID;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_TOKEN_EP_URL;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getResidentIdpEntityId;
 
 /**
  * This is the logout token generator for the OpenID Connect back-channel logout Implementation. This
@@ -326,6 +330,23 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     private String getIssuer(String tenantDomain) throws IdentityOAuth2Exception {
 
         return getIdTokenIssuer(tenantDomain);
+    }
+
+    private String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
+
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            try {
+                // Set the correct tenant domain before creating the path.
+                return ServiceURLBuilder.create().setTenant(tenantDomain).addPath(OAUTH2_TOKEN_EP_URL).build().
+                        getAbsolutePublicURL();
+            } catch (URLBuilderException e) {
+                String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the"
+                        + " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
+                throw new IdentityOAuth2Exception(errorMsg, e);
+            }
+        } else {
+            return getResidentIdpEntityId(tenantDomain);
+        }
     }
 
     /**

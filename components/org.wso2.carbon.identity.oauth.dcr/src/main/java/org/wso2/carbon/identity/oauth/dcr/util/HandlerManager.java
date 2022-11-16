@@ -27,6 +27,8 @@ import java.util.List;
 
 /**
  * OAuth DCRM handler manager.
+ * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
+ * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
 @Deprecated
 public class HandlerManager {
