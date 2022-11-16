@@ -168,6 +168,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -4572,28 +4573,37 @@ public class OAuth2Util {
 
     public static String[] getRequestedOIDCScopes(String[] requestedScopes)
             throws IdentityOAuthAdminException {
-
+        if (requestedScopes == null) {
+            throw new IdentityOAuthAdminException("Error occurred during getting OIDC scopes");
+        }
         String[] oidcScopes =
                 OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().getScopeNames();
-        List<String> requestedOIDCScopes = new ArrayList<>();
-        for (String scope : requestedScopes) {
-            if (ArrayUtils.contains(oidcScopes, scope)) {
-                requestedOIDCScopes.add(scope);
-            }
+        if (requestedScopes == null) {
+            throw new IdentityOAuthAdminException("Error occurred during getting OIDC scopes");
         }
+        Set<String> oidcScopeSet = new HashSet<>(Arrays.asList(oidcScopes));
+        List<String> requestedOIDCScopes = Arrays.stream(requestedScopes).distinct()
+                .filter(s->oidcScopeSet.contains(s)).collect(Collectors.toList());
+
         return requestedOIDCScopes.toArray(new String[requestedOIDCScopes.size()]);
     }
 
     public static String[] removeOIDCScopesFromRequestedScopes(String[] requestedScopes)
             throws IdentityOAuthAdminException {
-        List<String> removedRequestedScopes = new ArrayList<>();
-        String[] requestedOIDCScopes = getRequestedOIDCScopes(requestedScopes);
 
-        for (String scope : requestedScopes) {
-            if (!ArrayUtils.contains(requestedOIDCScopes, scope)) {
-                removedRequestedScopes.add(scope);
-            }
+        if (requestedScopes == null) {
+            throw new IdentityOAuthAdminException("Error occurred during getting OIDC scopes");
         }
+        String[] oidcScopes =
+                OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().getScopeNames();
+        if (requestedScopes == null) {
+            throw new IdentityOAuthAdminException("Error occurred during getting OIDC scopes");
+        }
+        Set<String> oidcScopeSet = new HashSet<>(Arrays.asList(oidcScopes));
+
+        List<String> removedRequestedScopes = Arrays.stream(requestedScopes).distinct()
+                .filter(s->!oidcScopeSet.contains(s)).collect(Collectors.toList());
+
         return removedRequestedScopes.toArray(new String[removedRequestedScopes.size()]);
     }
 

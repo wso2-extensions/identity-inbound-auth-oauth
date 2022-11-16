@@ -1005,12 +1005,6 @@ public class OAuth2AuthzEndpoint {
                 authnResult.getProperty(FrameworkConstants.AnalyticsAttributes.SESSION_ID));
     }
 
-    private void addOAuthAuthzReqMessageContextTOSessionDataCacheEntry(OAuthMessage oAuthMessage,
-                                                                       OAuthAuthzReqMessageContext authzReqMsgCtx) {
-
-        oAuthMessage.getSessionDataCacheEntry().setAuthzReqMsgCtx(authzReqMsgCtx);
-    }
-
     private void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) {
 
         Cookie cookie = FrameworkUtils.getAuthCookie(oAuthMessage.getRequest());
@@ -1180,7 +1174,6 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    @Deprecated
     private String handleUserConsent(OAuthMessage oAuthMessage, String consent, OIDCSessionState sessionState)
             throws OAuthSystemException {
 
@@ -2477,7 +2470,8 @@ public class OAuth2AuthzEndpoint {
             AuthorizationHandlerManager authzHandlerManager = AuthorizationHandlerManager.getInstance();
             OAuthAuthzReqMessageContext authzReqMsgCtx = authzHandlerManager.
                     handleAuthorizationBeforeConsent(authzReqDTO);
-            addOAuthAuthzReqMessageContextTOSessionDataCacheEntry(oAuthMessage, authzReqMsgCtx);
+            //add OAuthAuthzReqMessageContext to SessionDataCacheEntry
+            oAuthMessage.getSessionDataCacheEntry().setAuthzReqMsgCtx(authzReqMsgCtx);
             if (authzReqMsgCtx.getApprovedScope() == null) {
                 oauth2Params.setScopes(new HashSet<>(Arrays.asList(new String[]{})));
             } else {

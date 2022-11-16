@@ -36,7 +36,7 @@ public class SessionDataCacheEntry extends CacheEntry {
     private static final long serialVersionUID = -4123547630178387354L;
     private AuthenticatedUser loggedInUser;
     private OAuth2Parameters oAuth2Parameters;
-    public OAuthAuthzReqMessageContext authzReqMsgCtx;
+    private OAuthAuthzReqMessageContext authzReqMsgCtx;
     private long authTime;
     private String authenticatedIdPs;
     private String essentialClaims;
@@ -51,6 +51,7 @@ public class SessionDataCacheEntry extends CacheEntry {
     public OAuthAuthzReqMessageContext getAuthzReqMsgCtx() {
         return authzReqMsgCtx;
     }
+
     public void setAuthzReqMsgCtx(OAuthAuthzReqMessageContext authzReqMsgCtx) {
         this.authzReqMsgCtx = authzReqMsgCtx;
     }

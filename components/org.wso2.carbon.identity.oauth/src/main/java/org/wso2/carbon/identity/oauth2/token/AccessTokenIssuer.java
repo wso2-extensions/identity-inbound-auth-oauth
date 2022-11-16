@@ -721,6 +721,9 @@ public class AccessTokenIssuer {
 
     private void addRequestedOIDCScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
                                              String[] requestedOIDCScopes) {
+        if (tokReqMsgCtx.getScope() == null) {
+            tokReqMsgCtx.setScope(new String[0]);
+        }
         Set<String> scopesToReturn = new HashSet<>(Arrays.asList(tokReqMsgCtx.getScope()));
         for (String scope : requestedOIDCScopes) {
             scopesToReturn.add(scope);

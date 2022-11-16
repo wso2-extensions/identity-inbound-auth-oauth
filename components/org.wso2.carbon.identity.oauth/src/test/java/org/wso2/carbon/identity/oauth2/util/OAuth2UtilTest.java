@@ -51,6 +51,9 @@ import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.OAuthAdminService;
+import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -121,12 +124,15 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
         OAuth2Util.class, OAuthComponentServiceHolder.class, AppInfoCache.class, IdentityConfigParser.class,
         PrivilegedCarbonContext.class, IdentityTenantUtil.class, CarbonUtils.class,
         IdentityCoreServiceComponent.class, NetworkUtils.class, IdentityApplicationManagementUtil.class,
-        IdentityProviderManager.class, FederatedAuthenticatorConfig.class, FrameworkUtils.class, LoggerUtils.class})
+        IdentityProviderManager.class, FederatedAuthenticatorConfig.class, FrameworkUtils.class, LoggerUtils.class,
+        OAuth2ServiceComponentHolder.class, OAuthAdminServiceImpl.class})
 public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
     private String[] scopeArrayUnSorted = new String[]{"scope2", "scope3", "scope1"};
     private String[] scopeArray = new String[]{"openid", "scope1", "scope2"};
+
+    private String[] oidcScopes = new String[]{"address", "phone", "openid", "profile", "groups","email"};
     private String scopeString = "scope1 scope2 scope3";
     private String clientId = "dummyClientId";
     private String clientSecret = "dummyClientSecret";
@@ -195,6 +201,12 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private AccessTokenDAO accessTokenDAO;
+
+    @Mock
+    OAuth2ServiceComponentHolder oAuth2ServiceComponentHolder;
+
+    @Mock
+    OAuthAdminServiceImpl oAuthAdminService;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -2265,5 +2277,63 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
             return;
         }
         fail("Expected IdentityOAuth2Exception was not thrown by getServiceProvider method");
+    }
+
+    @DataProvider(name = "requestedOIDCScopeData")
+    public static Object[][] requestedOIDCScopeDataProvider() {
+
+        return new Object[][]{
+                {new String[]{"openid","create"}, new String[]{"openid"}},
+                {new String[]{"openid","openid","create"}, new String[]{"openid"}},
+                {null, new String[0]}
+        };
+    }
+
+    @Test(dataProvider = "requestedOIDCScopeData")
+    public void testGetRequestedOIDCScopes(Object scopes, Object expected) throws Exception{
+        String[] requestedScopes = (String[]) scopes;
+        String[] expectedScopes = (String[]) expected;
+        mockStatic(OAuth2ServiceComponentHolder.class);
+        mockStatic(OAuthAdminServiceImpl.class);
+        when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(oAuth2ServiceComponentHolder);
+        when(OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService()).thenReturn(oAuthAdminService);
+        when(oAuthAdminService.getScopeNames()).
+                thenReturn(oidcScopes);
+        String[] requestedOIDCScopes = null;
+        try {
+            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(requestedScopes);
+        } catch (IdentityOAuthAdminException e) {
+            return;
+        }
+        assertEquals(requestedOIDCScopes,expectedScopes);
+    }
+
+    @DataProvider(name = "removeOIDCScopesData")
+    public static Object[][] removeOIDCScopesDataProvider() {
+
+        return new Object[][]{
+                {new String[]{"openid","create"}, new String[]{"create"}},
+                {new String[]{"openid","openid","create"}, new String[]{"create"}},
+                {null, new String[0]}
+        };
+    }
+
+    @Test(dataProvider = "removeOIDCScopesData")
+    public void testRemoveOIDCScopesFromRequestedScopes(Object scopes, Object expected) throws Exception{
+        String[] requestedScopes = (String[]) scopes;
+        String[] expectedScopes = (String[]) expected;
+        mockStatic(OAuth2ServiceComponentHolder.class);
+        mockStatic(OAuthAdminServiceImpl.class);
+        when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(oAuth2ServiceComponentHolder);
+        when(OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService()).thenReturn(oAuthAdminService);
+        when(oAuthAdminService.getScopeNames()).
+                thenReturn(oidcScopes);
+        String[] requestedOIDCScopes = null;
+        try {
+            requestedOIDCScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(requestedScopes);
+        } catch (IdentityOAuthAdminException e) {
+            return;
+        }
+        assertEquals(requestedOIDCScopes,expectedScopes);
     }
 }
