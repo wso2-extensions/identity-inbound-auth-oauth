@@ -1174,43 +1174,6 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private String handleUserConsent(OAuthMessage oAuthMessage, String consent, OIDCSessionState sessionState)
-            throws OAuthSystemException {
-
-        OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
-        storeUserConsent(oAuthMessage, consent);
-        OAuthResponse oauthResponse;
-        String responseType = oauth2Params.getResponseType();
-        HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
-        // authorizing the request
-        OAuth2AuthorizeRespDTO authzRespDTO =
-                authorize(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
-
-        if (isSuccessfulAuthorization(authzRespDTO)) {
-            oauthResponse =
-                    handleSuccessAuthorization(oAuthMessage, sessionState, oauth2Params, responseType, authzRespDTO);
-        } else if (isFailureAuthorizationWithErorrCode(authzRespDTO)) {
-            // Authorization failure due to various reasons
-            return handleFailureAuthorization(oAuthMessage, sessionState, oauth2Params, authzRespDTO);
-        } else {
-            // Authorization failure due to various reasons
-            return handleServerErrorAuthorization(oAuthMessage, sessionState, oauth2Params);
-        }
-
-        //When response_mode equals to form_post, body parameter is passed back.
-        if (isFormPostModeAndResponseBodyExists(oauth2Params, oauthResponse)) {
-            return oauthResponse.getBody();
-        } else {
-            // When responseType contains "id_token", the resulting token is passed back as a URI fragment
-            // as per the specification: http://openid.net/specs/openid-connect-core-1_0.html#HybridCallback
-            if (hasIDTokenInResponseType(responseType)) {
-                return buildOIDCResponseWithURIFragment(oauthResponse, authzRespDTO);
-            } else {
-                return appendAuthenticatedIDPs(oAuthMessage.getSessionDataCacheEntry(), oauthResponse.getLocationUri());
-            }
-        }
-    }
-
     private String handleUserConsent(OAuthMessage oAuthMessage, String consent, OIDCSessionState sessionState,
                                      OAuth2Parameters oauth2Params)
             throws OAuthSystemException {
@@ -3124,22 +3087,6 @@ public class OAuth2AuthzEndpoint {
 
         String userConsentURL = getUserConsentURL(sessionDataKey, oauth2Params, authenticatedUser, oAuthMessage);
         return FrameworkUtils.appendQueryParamsStringToUrl(userConsentURL, additionalQueryParams);
-    }
-
-    /**
-     * Here we set the authenticated user to the session data
-     *
-     * @param oauth2Params
-     * @return
-     */
-    @Deprecated
-    private OAuth2AuthorizeRespDTO authorize(OAuth2Parameters oauth2Params,
-                                             SessionDataCacheEntry sessionDataCacheEntry,
-                                             HttpRequestHeaderHandler httpRequestHeaderHandler) {
-
-        OAuth2AuthorizeReqDTO authzReqDTO =
-                buildAuthRequest(oauth2Params, sessionDataCacheEntry, httpRequestHeaderHandler);
-        return getOAuth2Service().authorize(authzReqDTO);
     }
 
     /**
