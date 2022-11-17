@@ -16,11 +16,11 @@
 
 package org.wso2.carbon.identity.oauth2;
 
+/**
+ * Runtime constants for Password Grant Password Expiry enforcement
+ */
 public class PasswordPolicyConstants {
 
-    /**
-     * Password Expiry constants
-     */
         public static final String STATE = "state";
         public static final String LAST_CREDENTIAL_UPDATE_TIMESTAMP_CLAIM =
                 "http://wso2.org/claims/identity/lastPasswordUpdateTime";

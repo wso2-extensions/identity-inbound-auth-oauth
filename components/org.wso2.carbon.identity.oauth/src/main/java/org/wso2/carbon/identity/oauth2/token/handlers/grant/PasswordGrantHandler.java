@@ -231,7 +231,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: " + authenticated);
             }
             if (OAuth2Util.checkPasswordResetEnforcementEnabled()) {
-                if (PasswordPolicyUtils.isUserPasswordExpired(userTenantDomain, tenantAwareUserName)){
+                if (PasswordPolicyUtils.isUserPasswordExpired(userTenantDomain, tenantAwareUserName)) {
                     throw new IdentityOAuth2Exception("Password has expired");
                 }
             }

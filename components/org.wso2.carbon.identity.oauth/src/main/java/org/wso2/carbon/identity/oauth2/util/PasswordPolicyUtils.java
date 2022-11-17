@@ -141,7 +141,7 @@ public class PasswordPolicyUtils {
         try {
             // trying to first get a value for the 'lastPasswordUpdateTime' claim and if that fails the fallback is
             // the 'created' claim
-            passwordLastChangedTime = getClaimValue(userStoreManager,lastCredentialUpdateClaimURI, tenantAwareUsername)
+            passwordLastChangedTime = getClaimValue(userStoreManager, lastCredentialUpdateClaimURI, tenantAwareUsername)
                     .orElse(convertCreatedDateToEpochString(
                             getClaimValue(userStoreManager, createdClaimURI, tenantAwareUsername).get()));
         } catch (UserStoreException | ParseException e) {
