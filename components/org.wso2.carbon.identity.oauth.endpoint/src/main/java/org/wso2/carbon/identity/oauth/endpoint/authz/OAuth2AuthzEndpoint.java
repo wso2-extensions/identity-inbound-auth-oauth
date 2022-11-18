@@ -610,7 +610,9 @@ public class OAuth2AuthzEndpoint {
                     params.put("clientId", clientId);
                     params.put("prompt", oauth2Params.getPrompt());
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.SUCCESS, null, "hand-over-to-consent-service", null);
+                            OAuthConstants.LogConstants.SUCCESS, "Prompt for consent is enabled. Overriding the " +
+                                    "existing consent and handing over to consent service.", "hand-over-to-consent" +
+                                    "-service", null);
                 }
                 getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
                         loggedInUser, value, true);
@@ -620,7 +622,8 @@ public class OAuth2AuthzEndpoint {
                     params.put("clientId", clientId);
                     params.put("prompt", oauth2Params.getPrompt());
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.SUCCESS, null, "hand-over-to-consent-service", null);
+                            OAuthConstants.LogConstants.SUCCESS, "Prompt for consent is not enabled. " +
+                                    "Handing over to consent service.", "hand-over-to-consent-service", null);
                 }
                 getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
                         loggedInUser, value, false);
