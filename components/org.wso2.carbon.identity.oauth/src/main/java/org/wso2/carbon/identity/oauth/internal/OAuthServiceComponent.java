@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.oauth.listener.OAuthTokenSessionMappingEventHand
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.registry.core.service.RegistryService;
@@ -229,6 +230,28 @@ public class OAuthServiceComponent {
             log.debug("Un-setting oauth event interceptor proxy :" + oAuthEventInterceptor.getClass().getName());
         }
         OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(null);
+    }
+
+    @Reference(
+            name = "org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler",
+            service = AccessTokenResponseHandler.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAccessTokenResponseHandler"
+    )
+    protected void setAccessTokenResponseHandler(AccessTokenResponseHandler accessTokenResponseHandler) {
+        if (log.isDebugEnabled()) {
+            log.info("Access token response handler impl added: " + accessTokenResponseHandler.getClass().getName());
+        }
+        OAuthComponentServiceHolder.getInstance().addAccessTokenResponseHandler(accessTokenResponseHandler);
+    }
+
+    protected void unsetAccessTokenResponseHandler(AccessTokenResponseHandler accessTokenResponseHandler) {
+        if (log.isDebugEnabled()) {
+            log.info("Access access token response handler removed: " +
+                    accessTokenResponseHandler.getClass().getName());
+        }
+        OAuthComponentServiceHolder.getInstance().removeAccessTokenResponseHandler(accessTokenResponseHandler);
     }
 
     protected void unsetIdentityCoreInitializedEventService(IdentityCoreInitializedEvent identityCoreInitializedEvent) {

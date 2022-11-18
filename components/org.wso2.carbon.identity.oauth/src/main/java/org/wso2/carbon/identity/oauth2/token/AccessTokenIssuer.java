@@ -60,6 +60,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
+import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
@@ -532,6 +533,20 @@ public class AccessTokenIssuer {
                 }
                 tokenRespDTO = handleError(OAuth2ErrorCodes.SERVER_ERROR, "Server Error", tokenReqDTO);
                 return tokenRespDTO;
+            }
+        }
+
+        List<AccessTokenResponseHandler> tokenResponseHandlers = OAuthComponentServiceHolder.getInstance().
+                getAccessTokenResponseHandlers();
+        //engaging token response handlers
+        for (AccessTokenResponseHandler tokenResponseHandler : tokenResponseHandlers) {
+            Map<String, String> additionalTokenResponseAttributes =
+                    tokenResponseHandler.getAdditionalTokenResponseAttributes(tokReqMsgCtx);
+            if (additionalTokenResponseAttributes != null) {
+                for (String attribute : additionalTokenResponseAttributes.keySet()) {
+                    String attributeVal = additionalTokenResponseAttributes.get(attribute);
+                    tokenRespDTO.addParameter(attribute, attributeVal);
+                }
             }
         }
 

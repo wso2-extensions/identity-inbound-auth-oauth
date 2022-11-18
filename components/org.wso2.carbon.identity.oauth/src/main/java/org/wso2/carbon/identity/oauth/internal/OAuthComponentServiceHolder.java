@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
@@ -58,6 +59,7 @@ public class OAuthComponentServiceHolder {
     private Map<Integer, OAuthApplicationMgtListener> oAuthApplicationMgtListeners = new TreeMap<>();
     private RoleManagementService roleManagementService;
     private OrganizationUserResidentResolverService organizationUserResidentResolverService;
+    private List<AccessTokenResponseHandler> accessTokenResponseHandlers = new ArrayList<>();
 
 
     /**
@@ -242,5 +244,32 @@ public class OAuthComponentServiceHolder {
             OrganizationUserResidentResolverService organizationUserResidentResolverService) {
 
         this.organizationUserResidentResolverService = organizationUserResidentResolverService;
+    }
+
+    /**
+     * Register access token response handlers for modifying token response attributes.
+     *
+     * @param accessTokenResponseHandler {@link AccessTokenResponseHandler} instance
+     */
+    public void addAccessTokenResponseHandler(AccessTokenResponseHandler accessTokenResponseHandler) {
+        accessTokenResponseHandlers.add(accessTokenResponseHandler);
+    }
+
+    /**
+     * Removes access token response handlers registered.
+     *
+     * @param accessTokenResponseHandler {@link AccessTokenResponseHandler} instance
+     */
+    public void removeAccessTokenResponseHandler(AccessTokenResponseHandler accessTokenResponseHandler) {
+        accessTokenResponseHandlers.remove(accessTokenResponseHandler);
+    }
+
+    /**
+     * Returns all the access token response handlers registered.
+     *
+     * @return List of {@link AccessTokenResponseHandler}
+     */
+    public List<AccessTokenResponseHandler> getAccessTokenResponseHandlers() {
+        return accessTokenResponseHandlers;
     }
 }
