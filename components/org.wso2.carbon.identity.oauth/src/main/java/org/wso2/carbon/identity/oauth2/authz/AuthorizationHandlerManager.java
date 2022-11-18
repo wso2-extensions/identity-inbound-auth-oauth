@@ -279,8 +279,17 @@ public class AuthorizationHandlerManager {
                                             ResponseTypeHandler authzHandler) throws IdentityOAuth2Exception,
             IdentityOAuth2ScopeValidationException {
 
-        // Get OIDC scopes from requested scopes
-        String[] requestedOIDCScopes = getOIDCScopesFromRequestedScopes(authzReqMsgCtx);
+        // Get OIDC scopes from requested scopes and drop from requested scopes
+        String[] requestedOIDCScopes = null;
+        try {
+            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(authzReqMsgCtx.getRequestedScope());
+            String[] oidcRemovedScopes  = OAuth2Util.removeOIDCScopesFromRequestedScopes(authzReqMsgCtx
+                    .getRequestedScope());
+            authzReqMsgCtx.setRequestedScope(oidcRemovedScopes);
+
+        } catch (IdentityOAuthAdminException e) {
+            throw new IdentityOAuth2Exception(e.getMessage());
+        }
 
         // Get scopes that specified in the allowed scopes list.
         List<String> requestedAllowedScopes = getAllowedScopesFromRequestedScopes(authzReqMsgCtx);
@@ -327,23 +336,6 @@ public class AuthorizationHandlerManager {
         } else {
             throw new IdentityOAuth2ScopeValidationException(INVALID_SCOPE, "Invalid Scopes");
         }
-    }
-
-    /**
-     * get OIDC scopes from requested scopes.
-     *
-     * @param authzReqMsgCtx authzReqMsgCtx
-     * @return - requestedOIDCScopes
-     */
-    private String[] getOIDCScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx)
-            throws IdentityOAuth2Exception {
-        String[] requestedOIDCScopes = new String[0];
-        try {
-            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(authzReqMsgCtx.getRequestedScope());
-        } catch (IdentityOAuthAdminException e) {
-            throw new IdentityOAuth2Exception("Unable to retrieve OIDC Scopes.");
-        }
-        return requestedOIDCScopes;
     }
 
     /**
