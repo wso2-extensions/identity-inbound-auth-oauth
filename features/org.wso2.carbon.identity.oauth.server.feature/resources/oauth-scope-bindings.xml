@@ -481,76 +481,6 @@
       <Permission>/permission/admin/manage/identity/identitymgt/delete</Permission>
    </Permissions>
 </Scope>
-<Scope name="internal_workflow_association_view" displayName="View Workflow Associations">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/workflow/association/view</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_workflow_association_delete" displayName="Delete Workflow Associations">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/workflow/association/delete</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_workflow_association_create" displayName="Create Workflow Associations">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/workflow/association/create</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_workflow_association_update" displayName="Update Workflow Associations">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/workflow/association/update</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_workflow_def_create" displayName="Create Workflow Definition">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/workflow/definition/create</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_workflow_def_delete" displayName="Delete Workflow Definition">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/workflow/definition/delete</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_workflow_def_view" displayName="View Workflow Definition">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/workflow/definition/view</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_workflow_def_update" displayName="Update Workflow Definition">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/workflow/definition/update</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_workflow_profile_view" displayName="View Workflow Profile">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/workflow/profile/view</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_workflow_profile_create" displayName="Create Workflow Profile">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/workflow/profile/create</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_workflow_profile_delete" displayName="Delete Workflow Profile">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/workflow/profile/delete</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_workflow_profile_update" displayName="Update Workflow Profile">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/workflow/profile/update</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_workflow_monitor_view" displayName="View Workflow">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/workflow/monitor/view</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_workflow_monitor_delete" displayName="Delete Workflow">
-    <Permissions>
-      <Permission>/permission/admin/manage/identity/workflow/monitor/delete</Permission>
-   </Permissions>
-</Scope>
 <Scope name="internal_email_mgt_update" displayName="Update Email Configs">
     <Permissions>
       <Permission>/permission/admin/manage/identity/emailmgt/update</Permission>
@@ -859,26 +789,6 @@
 <Scope name="internal_topic_add" displayName="Add Topic">
     <Permissions>
       <Permission>/permission/admin/manage/topic/addTopic</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_humantask_packages" displayName="Package Human Tasks">
-    <Permissions>
-      <Permission>/permission/admin/manage/humantask/packages</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_humantask_view" displayName="View Human Tasks">
-    <Permissions>
-      <Permission>/permission/admin/manage/humantask/viewtasks</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_humantask_add" displayName="Add Human Tasks">
-    <Permissions>
-      <Permission>/permission/admin/manage/humantask/add</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_humantask_task" displayName="Manage Human Tasks">
-    <Permissions>
-      <Permission>/permission/admin/manage/humantask/task</Permission>
    </Permissions>
 </Scope>
 <Scope name="internal_cors_origins_view" displayName="View CORS Origins">
