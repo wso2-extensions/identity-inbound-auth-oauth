@@ -240,6 +240,7 @@ public class OAuthServiceComponent {
             unbind = "unsetAccessTokenResponseHandler"
     )
     protected void setAccessTokenResponseHandler(AccessTokenResponseHandler accessTokenResponseHandler) {
+
         if (log.isDebugEnabled()) {
             log.info("Access token response handler impl added: " + accessTokenResponseHandler.getClass().getName());
         }
@@ -247,6 +248,7 @@ public class OAuthServiceComponent {
     }
 
     protected void unsetAccessTokenResponseHandler(AccessTokenResponseHandler accessTokenResponseHandler) {
+
         if (log.isDebugEnabled()) {
             log.info("Access access token response handler removed: " +
                     accessTokenResponseHandler.getClass().getName());

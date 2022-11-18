@@ -538,14 +538,13 @@ public class AccessTokenIssuer {
 
         List<AccessTokenResponseHandler> tokenResponseHandlers = OAuthComponentServiceHolder.getInstance().
                 getAccessTokenResponseHandlers();
-        //engaging token response handlers
+        // Engaging token response handlers.
         for (AccessTokenResponseHandler tokenResponseHandler : tokenResponseHandlers) {
             Map<String, String> additionalTokenResponseAttributes =
                     tokenResponseHandler.getAdditionalTokenResponseAttributes(tokReqMsgCtx);
             if (additionalTokenResponseAttributes != null) {
-                for (String attribute : additionalTokenResponseAttributes.keySet()) {
-                    String attributeVal = additionalTokenResponseAttributes.get(attribute);
-                    tokenRespDTO.addParameter(attribute, attributeVal);
+                for (Map.Entry<String, String> attribute : additionalTokenResponseAttributes.entrySet()) {
+                    tokenRespDTO.addParameter(attribute.getKey(), attribute.getValue());
                 }
             }
         }

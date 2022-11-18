@@ -249,27 +249,30 @@ public class OAuthComponentServiceHolder {
     /**
      * Register access token response handlers for modifying token response attributes.
      *
-     * @param accessTokenResponseHandler {@link AccessTokenResponseHandler} instance
+     * @param accessTokenResponseHandler {@link AccessTokenResponseHandler} instance.
      */
     public void addAccessTokenResponseHandler(AccessTokenResponseHandler accessTokenResponseHandler) {
+
         accessTokenResponseHandlers.add(accessTokenResponseHandler);
     }
 
     /**
      * Removes access token response handlers registered.
      *
-     * @param accessTokenResponseHandler {@link AccessTokenResponseHandler} instance
+     * @param accessTokenResponseHandler {@link AccessTokenResponseHandler} instance.
      */
     public void removeAccessTokenResponseHandler(AccessTokenResponseHandler accessTokenResponseHandler) {
+
         accessTokenResponseHandlers.remove(accessTokenResponseHandler);
     }
 
     /**
      * Returns all the access token response handlers registered.
      *
-     * @return List of {@link AccessTokenResponseHandler}
+     * @return List of {@link AccessTokenResponseHandler}.
      */
     public List<AccessTokenResponseHandler> getAccessTokenResponseHandlers() {
+
         return accessTokenResponseHandlers;
     }
 }
