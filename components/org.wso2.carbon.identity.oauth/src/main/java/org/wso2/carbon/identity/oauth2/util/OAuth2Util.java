@@ -4574,17 +4574,16 @@ public class OAuth2Util {
     public static String[] getRequestedOIDCScopes(String[] requestedScopes)
             throws IdentityOAuthAdminException {
         if (requestedScopes == null) {
-            throw new IdentityOAuthAdminException("Error occurred during getting OIDC scopes");
+            throw new IdentityOAuthAdminException("Requested scopes are null");
         }
         String[] oidcScopes =
                 OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().getScopeNames();
-        if (requestedScopes == null) {
+        if (oidcScopes == null) {
             throw new IdentityOAuthAdminException("Error occurred during getting OIDC scopes");
         }
         Set<String> oidcScopeSet = new HashSet<>(Arrays.asList(oidcScopes));
         List<String> requestedOIDCScopes = Arrays.stream(requestedScopes).distinct()
                 .filter(s->oidcScopeSet.contains(s)).collect(Collectors.toList());
-
         return requestedOIDCScopes.toArray(new String[requestedOIDCScopes.size()]);
     }
 
