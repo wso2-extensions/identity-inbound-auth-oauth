@@ -622,7 +622,7 @@ public class OAuth2AuthzEndpoint {
                     params.put("clientId", clientId);
                     params.put("prompt", oauth2Params.getPrompt());
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.SUCCESS, "prompt for consent is not enabled. " +
+                            OAuthConstants.LogConstants.SUCCESS, "Prompt for consent is not enabled. " +
                                     "Handing over to consent service.", "hand-over-to-consent-service", null);
                 }
                 getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
