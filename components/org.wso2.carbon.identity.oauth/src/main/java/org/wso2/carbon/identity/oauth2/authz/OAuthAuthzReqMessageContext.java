@@ -31,6 +31,8 @@ public class OAuthAuthzReqMessageContext {
 
     private String[] approvedScope;
 
+    private String[] requestedScope;
+
     private long validityPeriod;
 
     private long authorizationCodeValidityPeriod;
@@ -72,6 +74,14 @@ public class OAuthAuthzReqMessageContext {
     public void setApprovedScope(String[] approvedScope) {
 
         this.approvedScope = approvedScope;
+    }
+
+    public String[] getRequestedScope() {
+        return requestedScope;
+    }
+
+    public void setRequestedScope(String[] requestedScopes) {
+        this.requestedScope = requestedScopes;
     }
 
     @Deprecated
