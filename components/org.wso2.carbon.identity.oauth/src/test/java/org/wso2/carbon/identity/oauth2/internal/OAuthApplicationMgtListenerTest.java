@@ -258,7 +258,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
             ServiceProvider serviceProvider =
                     createServiceProvider(1, hasAuthConfig, hasRequestConfig, authType, propName);
             boolean result =
-                    oAuthApplicationMgtListener.doPostUpdateApplication(serviceProvider, tenantDomain, userName);
+                    oAuthApplicationMgtListener.doPostUpdateApplication(serviceProvider, tenantDomain, userName, true);
             assertTrue(result, "Post-update application failed.");
         }
     }

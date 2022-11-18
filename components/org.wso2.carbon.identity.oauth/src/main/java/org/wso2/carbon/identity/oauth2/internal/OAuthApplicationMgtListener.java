@@ -126,13 +126,16 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         return true;
     }
 
-    public boolean doPostUpdateApplication(ServiceProvider serviceProvider, String tenantDomain, String userName)
+    public boolean doPostUpdateApplication(ServiceProvider serviceProvider, String tenantDomain,
+                                           String userName, boolean isClaimConfigChanged)
             throws IdentityApplicationManagementException {
 
         revokeAccessTokensWhenSaaSDisabled(serviceProvider, tenantDomain);
         addClientSecret(serviceProvider);
         updateAuthApplication(serviceProvider);
-        removeEntriesFromCache(serviceProvider, tenantDomain);
+        if (isClaimConfigChanged) {
+            removeEntriesFromCache(serviceProvider, tenantDomain);
+        }
         return true;
     }
 
