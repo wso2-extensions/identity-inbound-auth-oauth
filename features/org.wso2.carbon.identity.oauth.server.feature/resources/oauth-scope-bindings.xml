@@ -41,11 +41,6 @@
       <Permission>/permission/admin/monitor/metrics</Permission>
    </Permissions>
 </Scope>
-<Scope name="internal_monitor_bpel" displayName="Monitor BPEL">
-    <Permissions>
-      <Permission>/permission/admin/monitor/bpel</Permission>
-   </Permissions>
-</Scope>
 <Scope name="internal_monitor_attachment" displayName="Monitor Attachments">
     <Permissions>
       <Permission>/permission/admin/monitor/attachment</Permission>
@@ -99,26 +94,6 @@
 <Scope name="internal_search_resouces" displayName="Basic Search">
     <Permissions>
       <Permission>/permission/admin/manage/search/resources</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_bpel_instances" displayName="Manage BPEL Process Instances">
-    <Permissions>
-      <Permission>/permission/admin/manage/bpel/instance</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_bpel_proceses" displayName="Manage BPEL Processes">
-    <Permissions>
-      <Permission>/permission/admin/manage/bpel/processes</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_bpel_packages" displayName="Manage BPEL Packages">
-    <Permissions>
-      <Permission>/permission/admin/manage/bpel/packages</Permission>
-   </Permissions>
-</Scope>
-<Scope name="internal_add_bpel" displayName="Add BPEL">
-    <Permissions>
-      <Permission>/permission/admin/manage/bpel/add</Permission>
    </Permissions>
 </Scope>
 <Scope name="internal_resouces_browse" displayName="Browse Resouces">
