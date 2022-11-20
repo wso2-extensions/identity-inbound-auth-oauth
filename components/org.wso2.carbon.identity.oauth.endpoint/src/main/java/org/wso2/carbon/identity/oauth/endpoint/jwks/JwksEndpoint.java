@@ -67,6 +67,7 @@ public class JwksEndpoint {
     private static final String SECURITY_KEY_STORE_PW = "Security.KeyStore.Password";
     private static final String KEYS = "keys";
     private static final String ADD_PREVIOUS_KID_TO_JWKS = "JWTValidatorConfigs.JWKSEndpoint.AddPreviousKIDToJWKS";
+
     @GET
     @Path(value = "/jwks")
     @Produces(MediaType.APPLICATION_JSON)
