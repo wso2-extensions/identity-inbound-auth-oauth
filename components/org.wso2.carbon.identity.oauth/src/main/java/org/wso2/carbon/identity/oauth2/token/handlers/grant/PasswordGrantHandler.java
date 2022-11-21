@@ -81,6 +81,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
     private static final String PASSWORD_GRANT_AUTHENTICATOR_NAME = "BASIC";
     private static final String PUBLISH_PASSWORD_GRANT_LOGIN = "OAuth.PublishPasswordGrantLogin";
     private static final String REMOTE_IP_ADDRESS = "remote-ip-address";
+    private static final String ERROR_INVALID_CREDENTIALS = "17002";
 
     @Override
     public boolean issueRefreshToken() throws IdentityOAuth2Exception {
@@ -232,7 +233,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             }
             if (OAuth2Util.checkPasswordResetEnforcementEnabled()) {
                 if (PasswordPolicyUtils.isUserPasswordExpired(userTenantDomain, tenantAwareUserName)) {
-                    throw new IdentityOAuth2Exception("Password has expired");
+                    throw new IdentityOAuth2Exception(ERROR_INVALID_CREDENTIALS, "Password has expired");
                 }
             }
 
