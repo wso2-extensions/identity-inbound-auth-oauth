@@ -145,6 +145,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         revokeAccessTokensWhenSaaSDisabled(serviceProvider, tenantDomain);
         addClientSecret(serviceProvider);
         updateAuthApplication(serviceProvider);
+
         if (threadLocalForClaimConfigUpdates.get()) {
             removeEntriesFromCache(serviceProvider, tenantDomain);
         }
