@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth2.internal;
 
+import com.google.gson.Gson;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -27,6 +28,7 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementServerException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementValidationException;
+import org.wso2.carbon.identity.application.common.model.ClaimConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
 import org.wso2.carbon.identity.application.common.model.Property;
@@ -86,6 +88,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     private static final String OAUTH = "oauth";
     private static final String SAAS_PROPERTY = "saasProperty";
     private static final Log log = LogFactory.getLog(OAuthApplicationMgtListener.class);
+    private ThreadLocal<Boolean> threadLocalForClaimConfigUpdates = ThreadLocal.withInitial(()->true);
 
     @Override
     public int getDefaultOrderId() {
@@ -100,6 +103,16 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         handleOAuthAppAssociationRemoval(serviceProvider);
         storeSaaSPropertyValue(serviceProvider);
         removeClientSecret(serviceProvider);
+
+        ServiceProvider storedSP = OAuth2ServiceComponentHolder.getApplicationMgtService()
+                .getServiceProvider(serviceProvider.getApplicationID());
+        ClaimConfig updatedClaimConfig = serviceProvider.getClaimConfig();
+        updatedClaimConfig.setSpClaimDialects(new String[0]);
+        String updatedClaimConfigString = new Gson().toJson(updatedClaimConfig);
+        String storedClaimConfigString = new Gson().toJson(storedSP.getClaimConfig());
+        if (updatedClaimConfigString.equals(storedClaimConfigString)) {
+            threadLocalForClaimConfigUpdates.set(false);
+        }
         return true;
     }
 
@@ -132,7 +145,10 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         revokeAccessTokensWhenSaaSDisabled(serviceProvider, tenantDomain);
         addClientSecret(serviceProvider);
         updateAuthApplication(serviceProvider);
-        removeEntriesFromCache(serviceProvider, tenantDomain);
+        if (threadLocalForClaimConfigUpdates.get()) {
+            removeEntriesFromCache(serviceProvider, tenantDomain);
+        }
+        threadLocalForClaimConfigUpdates.remove();
         return true;
     }
 
