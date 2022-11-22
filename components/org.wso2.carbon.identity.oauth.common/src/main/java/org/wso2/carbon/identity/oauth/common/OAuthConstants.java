@@ -519,5 +519,7 @@ public final class OAuthConstants {
         public static final String OAUTH_INBOUND_SERVICE = "oauth-inbound-service";
         public static final String FAILED = "FAILED";
         public static final String SUCCESS = "SUCCESS";
+        public static final String CLIENT_ID = "client id";
+        public static final String TENANT_DOMAIN = "tenant domain";
     }
 }
