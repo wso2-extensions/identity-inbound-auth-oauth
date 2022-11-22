@@ -66,7 +66,7 @@ public class JwksEndpoint {
     private static final String SECURITY_KEY_STORE_LOCATION = "Security.KeyStore.Location";
     private static final String SECURITY_KEY_STORE_PW = "Security.KeyStore.Password";
     private static final String KEYS = "keys";
-    private static final String ADD_PREVIOUS_KID_TO_JWKS = "JWTValidatorConfigs.JWKSEndpoint.AddPreviousKIDToJWKS";
+    private static final String ADD_PREVIOUS_VERSION_KID = "JWTValidatorConfigs.JWKSEndpoint.AddPreviousVersionKID";
 
     @GET
     @Path(value = "/jwks")
@@ -124,7 +124,7 @@ public class JwksEndpoint {
         getJWKArray(certInfoList, diffAlgorithms, jwksArray, OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM);
 
         // Add SHA-1 KeyID to the KeySet if the config is enabled.
-        if (Boolean.parseBoolean(IdentityUtil.getProperty(ADD_PREVIOUS_KID_TO_JWKS))) {
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(ADD_PREVIOUS_VERSION_KID))) {
             getJWKArray(certInfoList, diffAlgorithms, jwksArray,
                     OAuthConstants.SignatureAlgorithms.PREVIOUS_KID_HASHING_ALGORITHM);
 
