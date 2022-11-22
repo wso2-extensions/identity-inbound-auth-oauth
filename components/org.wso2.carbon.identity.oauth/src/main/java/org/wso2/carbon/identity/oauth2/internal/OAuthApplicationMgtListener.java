@@ -28,7 +28,6 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementServerException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementValidationException;
-import org.wso2.carbon.identity.application.common.model.ClaimConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
 import org.wso2.carbon.identity.application.common.model.Property;
@@ -106,9 +105,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
         ServiceProvider storedSP = OAuth2ServiceComponentHolder.getApplicationMgtService()
                 .getServiceProvider(serviceProvider.getApplicationID());
-        ClaimConfig updatedClaimConfig = serviceProvider.getClaimConfig();
-        updatedClaimConfig.setSpClaimDialects(new String[0]);
-        String updatedClaimConfigString = new Gson().toJson(updatedClaimConfig);
+        String updatedClaimConfigString = new Gson().toJson(serviceProvider.getClaimConfig());
         String storedClaimConfigString = new Gson().toJson(storedSP.getClaimConfig());
         if (updatedClaimConfigString.equals(storedClaimConfigString)) {
             threadLocalForClaimConfigUpdates.set(false);
