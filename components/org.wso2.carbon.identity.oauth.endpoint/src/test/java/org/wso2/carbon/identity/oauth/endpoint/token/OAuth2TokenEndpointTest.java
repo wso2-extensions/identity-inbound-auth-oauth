@@ -396,14 +396,20 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         contentType.setKey(OAuth.HeaderType.CONTENT_TYPE);
         contentType.setValue(OAuth.ContentType.URL_ENCODED);
 
-        ResponseHeader[] headers = new ResponseHeader[]{contentType};
+        ResponseHeader[] headers1 = new ResponseHeader[]{contentType};
+        ResponseHeader[] headers2 = new ResponseHeader[0];
 
-        Map<String, String> customErrorsMap = new HashMap<>();
-        customErrorsMap.put("customMessage1", "This is custom message 1");
-        customErrorsMap.put("customMessage2", "This is custom message 2");
+        Map<String, String> customErrorsMap1 = new HashMap<>();
+        customErrorsMap1.put("customMessage1", "This is custom message 1");
+        customErrorsMap1.put("customMessage2", "This is custom message 2");
+
+        Map<String, String> customErrorsMap2 = new HashMap<>();
 
         return new Object[][]{
-                {TOKEN_ERROR, headers, customErrorsMap, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR}
+                {TOKEN_ERROR, headers1, customErrorsMap1, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},
+                {TOKEN_ERROR, headers2, customErrorsMap1, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},
+                {TOKEN_ERROR, headers1, customErrorsMap2, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},
+                {TOKEN_ERROR, headers2, customErrorsMap2, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR}
         };
     }
 
@@ -462,6 +468,13 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
         assertNotNull(response.getEntity(), "Response entity is null");
         assertTrue(response.getEntity().toString().contains(expectedErrorCode), "Expected error code not found");
+        if (responseHeaders.length > 0) {
+            MultivaluedMap<String, Object> responseMetadata = response.getMetadata();
+            assertTrue(responseMetadata.size() > 0);
+            for (ResponseHeader header: responseHeaders) {
+                assertTrue(responseMetadata.get(header.getKey()).contains(header.getValue()));
+            }
+        }
         for (Map.Entry<String, Object> entry: errorMap.entrySet()) {
             assertTrue(response.getEntity().toString().contains
                     (entry.getKey().concat("\":\"").concat(entry.getValue().toString())));
