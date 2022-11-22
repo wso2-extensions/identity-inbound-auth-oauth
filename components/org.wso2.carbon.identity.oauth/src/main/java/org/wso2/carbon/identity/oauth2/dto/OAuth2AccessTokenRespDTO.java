@@ -44,6 +44,8 @@ public class OAuth2AccessTokenRespDTO {
     private Map<String, String> parameters;
     private boolean isConsentedToken;
 
+    private Map<String, Object> errorParameterMap;
+
     public ResponseHeader[] getResponseHeaders() {
         if (responseHeaders == null) {
             return new ResponseHeader[0];
@@ -189,6 +191,27 @@ public class OAuth2AccessTokenRespDTO {
         return Collections.unmodifiableMap(getParameterMap());
     }
 
+    /**
+     * Get error parameter map
+     *
+     * @return a map of error parameters
+     */
+    public Map<String, Object> getErrorParameterMap() {
+
+        return Collections.unmodifiableMap(getErrorMap());
+    }
+
+    /**
+     * Add error parameter to custom error parameter map
+     *
+     * @param key custom error key
+     * @param value value of the corresponding key
+     */
+    public void addErrorParameter(String key, Object value) {
+
+        getErrorMap().put(key, value);
+    }
+
     private Map<String, String> getParameterMap() {
 
         if (parameters == null) {
@@ -205,5 +228,19 @@ public class OAuth2AccessTokenRespDTO {
     public void setIsConsentedToken(boolean isConsentedToken) {
 
         this.isConsentedToken = isConsentedToken;
+    }
+
+    /**
+     * Get error parameter map
+     *
+     * @return the map of error parameter map is returned. A default map will be returned if values are not added to
+     * the error parameter map
+     */
+    private Map<String, Object> getErrorMap() {
+
+        if (errorParameterMap == null) {
+            errorParameterMap = new HashMap<>();
+        }
+        return errorParameterMap;
     }
 }

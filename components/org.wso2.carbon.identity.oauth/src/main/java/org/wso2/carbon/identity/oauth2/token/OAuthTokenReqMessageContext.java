@@ -23,6 +23,9 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -49,6 +52,7 @@ public class OAuthTokenReqMessageContext {
     private Properties properties = new Properties();
 
     private String[] authorizedInternalScopes;
+    private Map<String, Object> errorParameterMap;
 
     private TokenBinding tokenBinding;
 
@@ -171,4 +175,39 @@ public class OAuthTokenReqMessageContext {
 
         isConsentedToken = consentedToken;
     }
+
+    /**
+     * Get error parameter map
+     *
+     * @return The map of error parameters
+     */
+    public Map<String, Object> getErrorParameterMap() {
+
+        return Collections.unmodifiableMap(getErrorMap());
+    }
+
+    /**
+     * Add key values to error parameter map
+     * @param key custom error key
+     * @param value value of the corresponding key
+     */
+    public void addErrorParameter(String key, Object value) {
+
+        getErrorMap().put(key, value);
+    }
+
+    /**
+     * Get error parameter map
+     *
+     * @return the map of error parameter map is returned. A default map will be returned if values are not added to
+     * the error parameter map
+     */
+    private Map<String, Object> getErrorMap() {
+
+        if (errorParameterMap == null) {
+            errorParameterMap = new HashMap<>();
+        }
+        return errorParameterMap;
+    }
+
 }

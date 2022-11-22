@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -184,7 +185,7 @@ public class AccessTokenIssuer {
             }
             tokenRespDTO = handleError(OAuth2ErrorCodes.INVALID_REQUEST, "The client MUST NOT use more than one " +
                     "authentication method in each", tokenReqDTO);
-            setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
+            setResponse(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
         }
@@ -205,7 +206,7 @@ public class AccessTokenIssuer {
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNSUPPORTED_GRANT_TYPE,
                     errorMsg, tokenReqDTO);
-            setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
+            setResponse(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
         }
@@ -228,7 +229,7 @@ public class AccessTokenIssuer {
             tokenRespDTO = handleError(
                     OAuth2ErrorCodes.INVALID_CLIENT,
                     "Unsupported Client Authentication Method!", tokenReqDTO);
-            setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
+            setResponse(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
         }
@@ -244,7 +245,7 @@ public class AccessTokenIssuer {
             tokenRespDTO = handleError(
                     oAuthClientAuthnContext.getErrorCode(),
                     oAuthClientAuthnContext.getErrorMessage(), tokenReqDTO);
-            setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
+            setResponse(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
         }
@@ -301,7 +302,7 @@ public class AccessTokenIssuer {
                         "issue-access-token", null);
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT, error, tokenReqDTO);
-            setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
+            setResponse(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
         }
@@ -332,7 +333,7 @@ public class AccessTokenIssuer {
                 log.debug("Invalid Grant provided by the client Id: " + tokenReqDTO.getClientId());
             }
             tokenRespDTO = handleError(errorCode, error, tokenReqDTO);
-            setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
+            setResponse(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
         }
@@ -344,7 +345,7 @@ public class AccessTokenIssuer {
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT,
                     "Unauthorized Client!", tokenReqDTO);
-            setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
+            setResponse(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
         }
@@ -437,7 +438,7 @@ public class AccessTokenIssuer {
                         null);
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.INVALID_SCOPE, "Invalid Scope!", tokenReqDTO);
-            setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
+            setResponse(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
         }
@@ -457,7 +458,7 @@ public class AccessTokenIssuer {
 
             tokenRespDTO = authzGrantHandler.issue(tokReqMsgCtx);
             if (tokenRespDTO.isError()) {
-                setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
+                setResponse(tokReqMsgCtx, tokenRespDTO);
                 return tokenRespDTO;
             }
         } finally {
@@ -478,7 +479,7 @@ public class AccessTokenIssuer {
             tokenRespDTO.setAuthorizedScopes(scopeString.toString().trim());
         }
 
-        setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
+        setResponse(tokReqMsgCtx, tokenRespDTO);
 
         //Do not change this log format as these logs use by external applications
         if (log.isDebugEnabled()) {
@@ -905,15 +906,41 @@ public class AccessTokenIssuer {
     /**
      * Set headers in OAuth2AccessTokenRespDTO
      *
+     * @param tokenRespDTO
+     * @param headers
+     */
+    private void setResponseHeaders(OAuth2AccessTokenRespDTO tokenRespDTO, ResponseHeader[] headers) {
+
+        tokenRespDTO.setResponseHeaders(headers);
+    }
+
+    /**
+     * Set custom error parameters in OAuth2AccessTokenRespDTO
+     * @param tokenRespDTO
+     * @param errorMap
+     */
+    private void setCustomErrorParameters(OAuth2AccessTokenRespDTO tokenRespDTO, Map<String, Object> errorMap) {
+
+        for (Map.Entry<String, Object> entry: errorMap.entrySet()) {
+            tokenRespDTO.addErrorParameter(entry.getKey(), entry.getValue());
+        }
+    }
+
+    /**
+     * Set custom response parameters and headers
      * @param tokReqMsgCtx
      * @param tokenRespDTO
      */
-    private void setResponseHeaders(OAuthTokenReqMessageContext tokReqMsgCtx,
-                                    OAuth2AccessTokenRespDTO tokenRespDTO) {
+    private void setResponse(OAuthTokenReqMessageContext tokReqMsgCtx, OAuth2AccessTokenRespDTO tokenRespDTO) {
 
         if (tokReqMsgCtx.getProperty(OAuthConstants.RESPONSE_HEADERS_PROPERTY) != null) {
-            tokenRespDTO.setResponseHeaders(
-                    (ResponseHeader[]) tokReqMsgCtx.getProperty(OAuthConstants.RESPONSE_HEADERS_PROPERTY));
+            ResponseHeader[] headers =
+                    (ResponseHeader[]) tokReqMsgCtx.getProperty(OAuthConstants.RESPONSE_HEADERS_PROPERTY);
+            setResponseHeaders(tokenRespDTO, headers);
+        }
+
+        if (MapUtils.isNotEmpty(tokReqMsgCtx.getErrorParameterMap())) {
+            setCustomErrorParameters(tokenRespDTO, tokReqMsgCtx.getErrorParameterMap());
         }
     }
 
