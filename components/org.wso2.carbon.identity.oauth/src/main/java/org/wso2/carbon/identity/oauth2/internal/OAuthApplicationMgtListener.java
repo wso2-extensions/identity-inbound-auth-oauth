@@ -103,11 +103,11 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         storeSaaSPropertyValue(serviceProvider);
         removeClientSecret(serviceProvider);
 
-        ServiceProvider storedSP = OAuth2ServiceComponentHolder.getApplicationMgtService()
+        ServiceProvider existingSP = OAuth2ServiceComponentHolder.getApplicationMgtService()
                 .getServiceProvider(serviceProvider.getApplicationID());
-        String updatedClaimConfigString = new Gson().toJson(serviceProvider.getClaimConfig());
-        String storedClaimConfigString = new Gson().toJson(storedSP.getClaimConfig());
-        if (updatedClaimConfigString.equals(storedClaimConfigString)) {
+        String newClaimConfigString = new Gson().toJson(serviceProvider.getClaimConfig());
+        String existingClaimConfigString = new Gson().toJson(existingSP.getClaimConfig());
+        if (StringUtils.equals(newClaimConfigString, existingClaimConfigString)) {
             threadLocalForClaimConfigUpdates.set(false);
         }
         return true;
