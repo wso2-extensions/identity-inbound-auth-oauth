@@ -725,10 +725,8 @@ public class AccessTokenIssuer {
             tokReqMsgCtx.setScope(new String[0]);
         }
         Set<String> scopesToReturn = new HashSet<>(Arrays.asList(tokReqMsgCtx.getScope()));
-        for (String scope : requestedOIDCScopes) {
-            scopesToReturn.add(scope);
-        }
-        String[] scopes = scopesToReturn.toArray(new String[scopesToReturn.size()]);
+        scopesToReturn.addAll(Arrays.asList(requestedOIDCScopes));
+        String[] scopes = scopesToReturn.toArray(new String[0]);
         tokReqMsgCtx.setScope(scopes);
     }
     private void addAllowedScopes(OAuthTokenReqMessageContext tokReqMsgCtx, String[] allowedScopes) {
