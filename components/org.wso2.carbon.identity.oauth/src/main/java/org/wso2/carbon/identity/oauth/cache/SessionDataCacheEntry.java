@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class SessionDataCacheEntry extends CacheEntry {
 
-    private static final long serialVersionUID = -4123547630178387354L;
+    private static final long serialVersionUID = -7182270780665398094L;
     private AuthenticatedUser loggedInUser;
     private OAuth2Parameters oAuth2Parameters;
     private OAuthAuthzReqMessageContext authzReqMsgCtx;

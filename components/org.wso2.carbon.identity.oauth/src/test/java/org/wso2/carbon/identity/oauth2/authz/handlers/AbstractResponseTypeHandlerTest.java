@@ -110,7 +110,7 @@ public class AbstractResponseTypeHandlerTest {
 
         OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext =
                 new OAuthAuthzReqMessageContext(authorizationReqDTO);
-        oAuthAuthzReqMessageContext.setRequestedScope(new String[]{"scope1", "scope2"});
+        oAuthAuthzReqMessageContext.setRequestedScopes(new String[]{"scope1", "scope2"});
         oAuthAuthzReqMessageContext.addProperty("OAuthAppDO", oAuthAppDO);
         return oAuthAuthzReqMessageContext;
     }

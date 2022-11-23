@@ -98,6 +98,9 @@ public class OAuth2Service extends AbstractAdmin {
      * or an error code.
      */
     @Deprecated
+    /**
+     * @deprecated Avoid using this, use {@link #authorize(OAuthAuthzReqMessageContext) authorize} method instead.
+     */
     public OAuth2AuthorizeRespDTO authorize(OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO) {
 
         if (log.isDebugEnabled()) {
@@ -142,16 +145,18 @@ public class OAuth2Service extends AbstractAdmin {
                     ", Client ID : " + oAuth2AuthorizeReqDTO.getConsumerKey() +
                     ", Authorization Response Type : " + oAuth2AuthorizeReqDTO.getResponseType() +
                     ", Requested callback URI : " + oAuth2AuthorizeReqDTO.getCallbackUrl() +
-                    ", Requested Scope : " + OAuth2Util.buildScopeString(
+                    ", Requested Scopes : " + OAuth2Util.buildScopeString(authzReqMsgCtx.getApprovedScope()) +
+                    ", Approved Scopes : " + OAuth2Util.buildScopeString(
                     oAuth2AuthorizeReqDTO.getScopes()));
         }
         try {
             AuthorizationHandlerManager authzHandlerManager =
                     AuthorizationHandlerManager.getInstance();
-            return authzHandlerManager.handleAuthorizationAfterConsent(authzReqMsgCtx);
+            return authzHandlerManager.handleAuthorization(authzReqMsgCtx);
         } catch (Exception e) {
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "authorize-client", null);
+                    OAuthConstants.LogConstants.FAILED, "Error occurred when processing the authorization request.",
+                    "authorize-client", null);
             log.error("Error occurred when processing the authorization request. Returning an error back to client.",
                     e);
             OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();

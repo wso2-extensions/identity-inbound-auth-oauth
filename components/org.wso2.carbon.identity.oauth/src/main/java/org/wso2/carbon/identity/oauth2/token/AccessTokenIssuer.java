@@ -366,10 +366,16 @@ public class AccessTokenIssuer {
         List<String> scopesToBeValidated = new ArrayList<>();
         String[] requestedOIDCScopes = new String[0];
         try {
-            //remove OIDC scopes before validation
+            // Get OIDC scopes from requested scopes. At end of the scope validation OIDC scopes will add to the
+            // approved scope list.
             requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(requestedScopes);
+            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(tokReqMsgCtx.getScope());
+            // OIDC scopes are not validated in the scope validation process. Hence, Removing OIDC scopes from the
+            // requested scopes by the app.
+            String[] oidcRemovedScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(tokReqMsgCtx.getScope());
+            tokReqMsgCtx.setScope(oidcRemovedScopes);
         } catch (IdentityOAuthAdminException e) {
-            throw new IdentityException("Unable to retrieve OIDC Scopes.");
+            throw new IdentityException("Error occurred while validating scopes.", e);
         }
         if (requestedScopes != null) {
             for (String scope : requestedScopes) {
@@ -725,17 +731,17 @@ public class AccessTokenIssuer {
             tokReqMsgCtx.setScope(new String[0]);
         }
         Set<String> scopesToReturn = new HashSet<>(Arrays.asList(tokReqMsgCtx.getScope()));
-        for (String scope : requestedOIDCScopes) {
-            scopesToReturn.add(scope);
-        }
-        String[] scopes = scopesToReturn.toArray(new String[scopesToReturn.size()]);
+        scopesToReturn.addAll(Arrays.asList(requestedOIDCScopes));
+        String[] scopes = scopesToReturn.toArray(new String[0]);
         tokReqMsgCtx.setScope(scopes);
+
     }
     private void addAllowedScopes(OAuthTokenReqMessageContext tokReqMsgCtx, String[] allowedScopes) {
 
         String[] scopes = tokReqMsgCtx.getScope();
         String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, allowedScopes);
         tokReqMsgCtx.setScope(scopesToReturn);
+
     }
 
     private void removeInternalScopes(OAuthTokenReqMessageContext tokReqMsgCtx) {

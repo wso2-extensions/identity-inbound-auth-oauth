@@ -88,7 +88,7 @@ import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeValidationException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2UnauthorizedScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
@@ -1279,7 +1279,6 @@ public class OAuth2AuthzEndpoint {
     private String handleFailureAuthorization(OAuthMessage oAuthMessage, OIDCSessionState sessionState,
                                               OAuth2Parameters oauth2Params,
                                               OAuth2AuthorizeRespDTO authzRespDTO) {
-
         sessionState.setAuthenticated(false);
         String errorMsg;
         if (authzRespDTO.getErrorMsg() != null) {
@@ -1295,12 +1294,8 @@ public class OAuth2AuthzEndpoint {
     private String handleFailureBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
                                               OAuth2AuthorizeRespDTO authzRespDTO) {
 
-        String errorMsg;
-        if (authzRespDTO.getErrorMsg() != null) {
-            errorMsg = authzRespDTO.getErrorMsg();
-        } else {
-            errorMsg = "Error occurred while processing the request";
-        }
+        String errorMsg = authzRespDTO.getErrorMsg() != null ? authzRespDTO.getErrorMsg()
+                : "Error occurred while processing authorization request.";
         OAuthProblemException oauthProblemException = OAuthProblemException.error(
                 authzRespDTO.getErrorCode(), errorMsg);
         return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), oauthProblemException, oauth2Params);
@@ -2352,18 +2347,19 @@ public class OAuth2AuthzEndpoint {
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
 
-        // Here we validate all scopes, response type, client before consent page
+        //Here we validate all scopes before user consent to prevent invalidate scopes prompt for consent in the
+        // consent page.
         HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
         OAuth2AuthorizeReqDTO authzReqDTO =
                 buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
         try {
-            handleAuthorizationBeforeConsent(oAuthMessage, oauth2Params, authzReqDTO);
-        } catch (IdentityOAuth2ScopeValidationException e) {
+            validateScopesBeforeConsent(oAuthMessage, oauth2Params, authzReqDTO);
+        } catch (IdentityOAuth2UnauthorizedScopeException e) {
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "Error occurred when processing the authorization"
-                            + " request before consent.", "authorize-client", null);
-            log.error("Error occurred when processing the authorization request before consent. Returning an error "
-                    + "back to client.", e);
+                    OAuthConstants.LogConstants.FAILED, "Error occurred when processing the authorization " +
+                            "request from tenant: " + oauth2Params.getTenantDomain() + " application: " +
+                            oauth2Params.getClientId() + "before consent.",
+                    "authorize-client", null);
             OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
             authorizeRespDTO.setErrorCode(e.getErrorCode());
             authorizeRespDTO.setErrorMsg(e.getMessage());
@@ -2425,23 +2421,24 @@ public class OAuth2AuthzEndpoint {
      * @param  oAuthMessage oAuthMessage
      * @param oauth2Params oauth2Params
      */
-    private void handleAuthorizationBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
+    private void validateScopesBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
                                              OAuth2AuthorizeReqDTO authzReqDTO)
-            throws IdentityOAuth2ScopeValidationException, OAuthSystemException {
+            throws IdentityOAuth2UnauthorizedScopeException, OAuthSystemException {
 
         try {
             AuthorizationHandlerManager authzHandlerManager = AuthorizationHandlerManager.getInstance();
             OAuthAuthzReqMessageContext authzReqMsgCtx = authzHandlerManager.
-                    handleAuthorizationBeforeConsent(authzReqDTO);
-            //add OAuthAuthzReqMessageContext to SessionDataCacheEntry
+                    validateScopesBeforeConsent(authzReqDTO);
+            // Add OAuthAuthzReqMessageContext to SessionDataCacheEntry, because we may lose validated scopes if IS
+            // crashes while getting consent.
             oAuthMessage.getSessionDataCacheEntry().setAuthzReqMsgCtx(authzReqMsgCtx);
-            if (authzReqMsgCtx.getApprovedScope() == null) {
-                oauth2Params.setScopes(new HashSet<>(Arrays.asList(new String[]{})));
+            if (ArrayUtils.isEmpty(authzReqMsgCtx.getApprovedScope())) {
+                oauth2Params.setScopes(new HashSet<>(Collections.emptyList()));
             } else {
                 oauth2Params.setScopes(new HashSet<>(Arrays.asList(authzReqMsgCtx.getApprovedScope())));
             }
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new OAuthSystemException("Error occurred when validating scopes");
+            throw new OAuthSystemException("Error occurred while validating scopes before consent.", e);
         }
 
     }

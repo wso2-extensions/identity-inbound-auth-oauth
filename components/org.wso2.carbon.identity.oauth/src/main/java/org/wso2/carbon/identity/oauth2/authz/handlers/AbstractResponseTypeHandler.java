@@ -96,7 +96,7 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
         OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
         OAuthCallback scopeValidationCallback = new OAuthCallback(authorizationReqDTO.getUser(),
                 authorizationReqDTO.getConsumerKey(), OAuthCallback.OAuthCallbackType.SCOPE_VALIDATION_AUTHZ);
-        scopeValidationCallback.setRequestedScope(oauthAuthzMsgCtx.getRequestedScope());
+        scopeValidationCallback.setRequestedScope(oauthAuthzMsgCtx.getAuthorizationReqDTO().getScopes());
         scopeValidationCallback.setResponseType(authorizationReqDTO.getResponseType());
 
         callbackManager.handleCallback(scopeValidationCallback);
