@@ -2316,22 +2316,4 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         };
     }
 
-    @Test(dataProvider = "removeOIDCScopesData")
-    public void testRemoveOIDCScopesFromRequestedScopes(Object scopes, Object expected) throws Exception {
-        String[] requestedScopes = (String[]) scopes;
-        String[] expectedScopes = (String[]) expected;
-        mockStatic(OAuth2ServiceComponentHolder.class);
-        mockStatic(OAuthAdminServiceImpl.class);
-        when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(oAuth2ServiceComponentHolder);
-        when(OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService()).thenReturn(oAuthAdminService);
-        when(oAuthAdminService.getScopeNames()).
-                thenReturn(oidcScopes);
-        String[] requestedOIDCScopes = null;
-        try {
-            requestedOIDCScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(requestedScopes);
-        } catch (IdentityOAuthAdminException e) {
-            return;
-        }
-        assertEquals(requestedOIDCScopes, expectedScopes);
-    }
 }

@@ -4595,7 +4595,7 @@ public class OAuth2Util {
         }
         String[] oidcScopes =
                 OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().getScopeNames();
-        if (requestedScopes == null) {
+        if (oidcScopes == null) {
             throw new IdentityOAuthAdminException("Error occurred during getting OIDC scopes");
         }
         Set<String> oidcScopeSet = new HashSet<>(Arrays.asList(oidcScopes));
