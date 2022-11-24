@@ -126,13 +126,16 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
      */
     private void revokeAccessTokensMappedForSessions(Event event) throws IdentityOAuth2Exception {
 
-        String sessionContextIdentifier = getSessionIdentifier(event);
         Map<String, Object> eventProperties = event.getEventProperties();
+        Map<String, Object> paramMap = (Map<String, Object>) eventProperties.get(IdentityEventConstants
+                .EventProperty.PARAMS);
+        String sessionContextIdentifier = getSessionIdentifier(paramMap);
+        AuthenticatedUser authenticatedUser = getAuthenticatedUser(paramMap);
         if (StringUtils.isNotBlank(sessionContextIdentifier)) {
             SessionContext sessionContext = (SessionContext) eventProperties.get(IdentityEventConstants
                     .EventProperty.SESSION_CONTEXT);
             if (sessionContext != null) {
-                revokeTokensMappedToSession(sessionContextIdentifier);
+                revokeTokensMappedToSession(sessionContextIdentifier, authenticatedUser);
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Session context for session context identifier: " + sessionContextIdentifier +
@@ -145,14 +148,11 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
     /**
      * Get session context identifier from the event.
      *
-     * @param event Event.
+     * @param paramMap Event parameters.
      * @return Session context identifier.
      */
-    private String getSessionIdentifier(Event event) {
+    private String getSessionIdentifier(Map<String, Object> paramMap) {
 
-        Map<String, Object> eventProperties = event.getEventProperties();
-        Map<String, Object> paramMap = (Map<String, Object>) eventProperties.get(IdentityEventConstants
-                .EventProperty.PARAMS);
         String sessionContextIdentifier = null;
         for (Map.Entry<String, Object> entry : paramMap.entrySet()) {
             if (StringUtils.equals(entry.getKey(), FrameworkConstants.AnalyticsAttributes.SESSION_ID)) {
@@ -164,6 +164,27 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
             }
         }
         return sessionContextIdentifier;
+    }
+
+    /**
+     * Get authenticated user from the event.
+     *
+     * @param paramMap Event parameters.
+     * @return AuthenticatedUser.
+     */
+    private AuthenticatedUser getAuthenticatedUser(Map<String, Object> paramMap) {
+
+        AuthenticatedUser authenticatedUser = null;
+        for (Map.Entry<String, Object> entry : paramMap.entrySet()) {
+            if (StringUtils.equals(entry.getKey(), FrameworkConstants.AnalyticsAttributes.USER)) {
+                authenticatedUser = (AuthenticatedUser) entry.getValue();
+                if (log.isDebugEnabled()) {
+                    log.debug("Found authenticated user : " + authenticatedUser + " from the event.");
+                }
+                break;
+            }
+        }
+        return authenticatedUser;
     }
 
     @Override
@@ -310,9 +331,10 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
      * Get the access tokens mapped for the session identifier and revoke those tokens.
      *
      * @param sessionId Session context identifier.
+     * @param user Authenticated user.
      * @throws IdentityOAuth2Exception
      */
-    private void revokeTokensMappedToSession(String sessionId) throws IdentityOAuth2Exception {
+    private void revokeTokensMappedToSession(String sessionId, AuthenticatedUser user) throws IdentityOAuth2Exception {
 
         Set<String> tokenIds =
                 OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
@@ -353,7 +375,21 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                 if (accessTokenDO.getTokenBinding() != null) {
                     tokenBindingRef = accessTokenDO.getTokenBinding().getBindingReference();
                 }
-                revokeTokens(accessTokenDO.getConsumerKey(), accessTokenDO, tokenBindingRef);
+
+                boolean isFederatedRoleBasedAuthzEnabled = false;
+                AuthenticatedUser authenticatedUser = new AuthenticatedUser(accessTokenDO.getAuthzUser());
+
+                String consumerKey = accessTokenDO.getConsumerKey();
+                if (authenticatedUser.isFederatedUser()) {
+                    isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(consumerKey);
+                }
+
+                if (isFederatedRoleBasedAuthzEnabled
+                        && StringUtils.equalsIgnoreCase(user.getUserName(), authenticatedUser.getUserName())) {
+                    revokeFederatedTokens(consumerKey, user, accessTokenDO, tokenBindingRef);
+                } else {
+                    revokeTokens(consumerKey, accessTokenDO, tokenBindingRef);
+                }
             }
         }
     }
