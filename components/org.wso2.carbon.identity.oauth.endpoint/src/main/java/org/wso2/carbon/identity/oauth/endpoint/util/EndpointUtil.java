@@ -33,6 +33,7 @@ import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.owasp.encoder.Encode;
+import org.slf4j.MDC;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
@@ -371,6 +372,7 @@ public class EndpointUtil {
     public static String getErrorPageURL(String errorCode, String errorMessage, String appName) {
 
         String errorPageUrl = OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl();
+        String correlationId = MDC.get(OAuthConstants.CORRELATION_ID_MDC);
         try {
 
             if (isNotBlank(errorCode)) {
@@ -381,6 +383,11 @@ public class EndpointUtil {
             if (isNotBlank(errorMessage)) {
                 errorPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(errorPageUrl,
                         OAuthConstants.OAUTH_ERROR_MESSAGE + "=" + URLEncoder.encode(errorMessage, UTF_8));
+            }
+
+            if (isNotBlank(correlationId)) {
+                errorPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(errorPageUrl,
+                        OAuthConstants.OAUTH_CORRELATION_ID + "=" + URLEncoder.encode(correlationId, UTF_8));
             }
 
         } catch (UnsupportedEncodingException e) {

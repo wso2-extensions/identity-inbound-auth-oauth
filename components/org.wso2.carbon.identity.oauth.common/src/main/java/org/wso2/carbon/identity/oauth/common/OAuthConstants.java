@@ -30,6 +30,7 @@ public final class OAuthConstants {
     public static final String AMR = "amr";
     public static final String ACR = "acr";
     public static final String AT_HASH = "at_hash";
+    public static final String CORRELATION_ID_MDC = "Correlation-ID";
 
     //OAuth2 request headers.
     public static final String HTTP_REQ_HEADER_AUTHZ = "Authorization";
@@ -66,6 +67,7 @@ public final class OAuthConstants {
     // Constants to be used by error pages
     public static final String OAUTH_ERROR_CODE = "oauthErrorCode";
     public static final String OAUTH_ERROR_MESSAGE = "oauthErrorMsg";
+    public static final String OAUTH_CORRELATION_ID = "correlationId";
 
     // Authentication Error Response according to specifications
     public static final String OAUTH_ERROR = "error";
