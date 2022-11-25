@@ -67,7 +67,6 @@ public final class OAuthConstants {
     // Constants to be used by error pages
     public static final String OAUTH_ERROR_CODE = "oauthErrorCode";
     public static final String OAUTH_ERROR_MESSAGE = "oauthErrorMsg";
-    public static final String OAUTH_CORRELATION_ID = "correlationId";
 
     // Authentication Error Response according to specifications
     public static final String OAUTH_ERROR = "error";

@@ -387,7 +387,7 @@ public class EndpointUtil {
 
             if (isNotBlank(correlationId)) {
                 errorPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(errorPageUrl,
-                        OAuthConstants.OAUTH_CORRELATION_ID + "=" + URLEncoder.encode(correlationId, UTF_8));
+                        FrameworkConstants.CORRELATION_ID + "=" + URLEncoder.encode(correlationId, UTF_8));
             }
 
         } catch (UnsupportedEncodingException e) {
