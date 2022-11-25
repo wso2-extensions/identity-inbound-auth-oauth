@@ -3382,21 +3382,6 @@ public class OAuth2AuthzEndpoint {
     }
 
     /**
-     * Associates the authentication method references done while logged into the session (if any) to the OAuth cache.
-     * The SessionDataCacheEntry then will be used when getting "AuthenticationMethodReferences". Please see
-     * <a href="https://tools.ietf.org/html/draft-ietf-oauth-amr-values-02" >draft-ietf-oauth-amr-values-02</a>.
-     *
-     * @param resultFromLogin The session context.
-     * @param cookie The cookie string which contains the commonAuthId value.
-     */
-    private void associateAuthenticationHistory(SessionDataCacheEntry resultFromLogin, Cookie cookie) {
-
-        if (cookie != null) {
-            associateAuthenticationHistory(resultFromLogin, cookie.getValue());
-        }
-    }
-
-    /**
      *  Associates the authentication method references done while logged into the session (if any) to the OAuth cache.
      *  The SessionDataCacheEntry then will be used when getting "AuthenticationMethodReferences". Please see
      *  <a href="https://tools.ietf.org/html/draft-ietf-oauth-amr-values-02" >draft-ietf-oauth-amr-values-02</a>.
@@ -3419,21 +3404,6 @@ public class OAuth2AuthzEndpoint {
     }
 
     /**
-     * Returns the SessionContext associated with the cookie, if there is a one.
-     *
-     * @param cookie String value of the cookie of commonAuthId.
-     * @param loginTenantDomain Login tenant domain.
-     * @return the associate SessionContext or null.
-     */
-    private SessionContext getSessionContext(Cookie cookie, String loginTenantDomain) {
-
-        if (cookie != null) {
-            return getSessionContext(cookie.getValue(), loginTenantDomain);
-        }
-        return null;
-    }
-
-    /**
      * Returns the SessionContext associated with the cookie value, if there is a one.
      * @param cookieValue String value of the cookie of commonAuthId.
      * @param loginTenantDomain Login tenant domain.
@@ -3446,22 +3416,6 @@ public class OAuth2AuthzEndpoint {
             return FrameworkUtils.getSessionContextFromCache(sessionContextKey, loginTenantDomain);
         }
         return null;
-    }
-
-    /**
-     * Gets the last authenticated value from the commonAuthId cookie.
-     *
-     * @param cookie CommonAuthId cookie.
-     * @param loginTenantDomain Login tenant domain.
-     * @return the last authenticated timestamp.
-     */
-    private long getAuthenticatedTimeFromCommonAuthCookie(Cookie cookie, String loginTenantDomain) {
-
-        long authTime = 0;
-        if (cookie != null) {
-            authTime = getAuthenticatedTimeFromCommonAuthCookieValue(cookie.getValue(), loginTenantDomain);
-        }
-        return authTime;
     }
 
     /**
