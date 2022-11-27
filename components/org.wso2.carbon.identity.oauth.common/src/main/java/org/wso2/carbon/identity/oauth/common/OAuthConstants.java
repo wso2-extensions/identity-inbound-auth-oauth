@@ -30,6 +30,7 @@ public final class OAuthConstants {
     public static final String AMR = "amr";
     public static final String ACR = "acr";
     public static final String AT_HASH = "at_hash";
+    public static final String CORRELATION_ID_MDC = "Correlation-ID";
 
     //OAuth2 request headers.
     public static final String HTTP_REQ_HEADER_AUTHZ = "Authorization";
