@@ -24,6 +24,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -59,6 +60,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AUTH_TIME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AZP;
@@ -156,7 +158,10 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                     }
                 }
             }
-            idpSessionKey = getIdpSessionKey(accessToken);
+            if (!OAuthConstants.GrantTypes.PASSWORD.equalsIgnoreCase(
+                    tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getGrantType())) {
+                idpSessionKey = getIdpSessionKey(accessToken);
+            }
         }
 
         if (log.isDebugEnabled()) {
@@ -167,6 +172,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         List<String> audience = OAuth2Util.getOIDCAudience(clientId, oAuthAppDO);
 
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
         jwtClaimsSetBuilder.issuer(idTokenIssuer);
         jwtClaimsSetBuilder.audience(audience);
         jwtClaimsSetBuilder.claim(AZP, clientId);
@@ -252,6 +258,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
 
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
         jwtClaimsSetBuilder.issuer(issuer);
 
         // Set the audience
@@ -674,15 +681,18 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     private void setAdditionalClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder,
                                        Map<String, Object> additionalIdTokenClaims) {
 
-        for (Map.Entry<String, Object> entry : additionalIdTokenClaims.entrySet()) {
-            jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
-        }
-        if (log.isDebugEnabled()) {
+        if (MapUtils.isNotEmpty(additionalIdTokenClaims)) {
             for (Map.Entry<String, Object> entry : additionalIdTokenClaims.entrySet()) {
-                log.debug("Additional claim added to JWTClaimSet, key: " + entry.getKey() + ", value: " +
-                        entry.getValue());
+                jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
+            }
+            if (log.isDebugEnabled()) {
+                for (Map.Entry<String, Object> entry : additionalIdTokenClaims.entrySet()) {
+                    log.debug("Additional claim added to JWTClaimSet, key: " + entry.getKey() + ", value: " +
+                            entry.getValue());
+                }
             }
         }
+
     }
 
     /**

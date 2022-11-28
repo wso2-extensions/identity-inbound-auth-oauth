@@ -21,6 +21,8 @@ import java.util.regex.Pattern;
 
 /**
  * This class holds the constants used by DynamicClientRegistration component.
+ * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
+ * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
 @Deprecated
 public final class DCRConstants {

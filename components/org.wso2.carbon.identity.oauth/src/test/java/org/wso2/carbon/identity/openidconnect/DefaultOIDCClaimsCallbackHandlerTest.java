@@ -174,6 +174,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
             "http://wso2.org/claims/division2";
 
     private static final String LOCAL_ADDRESS_CLAIM_URI = "http://wso2.org/claims/addresses";
+    private static final String LOCAL_GROUPS_CLAIM_URI = "http://wso2.org/claims/groups";
+
 
     // OIDC Claims
     private static final String EMAIL = "email";
@@ -191,6 +193,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     private static final String DIVISION_WITH_DOT = "org.division";
     private static final String DIVISION_WITH_DOT_IN_URL = "http://wso2.com.division";
     private static final String ADDRESS = "address";
+    private static final String GROUPS = "groups";
 
     private static final String ROLE1 = "role1";
     private static final String ROLE2 = "role2";
@@ -675,6 +678,35 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
     }
 
+    @Test
+    public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtGroupsClaim() throws Exception {
+
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
+        requestMsgCtx.setScope(new String[]{OIDC_SCOPE, GROUPS});
+
+        ClaimMapping claimMappings[] = new ClaimMapping[]{
+                ClaimMapping.build(LOCAL_GROUPS_CLAIM_URI, GROUPS, "", true),
+        };
+
+        ServiceProvider serviceProvider = getSpWithRequestedClaimsMappings(claimMappings);
+        mockApplicationManagementService(serviceProvider);
+
+        Map<String, String> userClaims = new HashMap<>();
+        userClaims.put(LOCAL_GROUPS_CLAIM_URI, "groups1");
+
+        UserRealm userRealm = getUserRealmWithUserClaims(userClaims);
+        mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
+        mockClaimHandler();
+
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
+
+        assertNotNull(jwtClaimsSet);
+        assertNotNull(jwtClaimsSet.getClaim(GROUPS));
+        assertTrue(jwtClaimsSet.getClaim(GROUPS) instanceof JSONArray);
+
+    }
+
     private void mockClaimHandler() throws Exception {
 
         Map<String, String> claimMappings = new HashMap<>();
@@ -689,6 +721,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         claimMappings.put(COUNTRY, LOCAL_COUNTRY_CLAIM_URI);
         claimMappings.put(DIVISION, LOCAL_DIVISION_CLAIM_URI);
         claimMappings.put(DIVISION_WITH_DOT, LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_URI);
+        claimMappings.put(GROUPS, LOCAL_GROUPS_CLAIM_URI);
         // claimMappings.put(DIVISION_WITH_DOT_IN_URL, LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_IN_URL_FORMAT_URI);
 
         ClaimMetadataHandler claimMetadataHandler = spy(ClaimMetadataHandler.class);
