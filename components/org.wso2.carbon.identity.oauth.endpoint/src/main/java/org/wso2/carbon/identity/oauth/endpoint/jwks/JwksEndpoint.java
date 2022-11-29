@@ -121,11 +121,11 @@ public class JwksEndpoint {
         // If we read different algorithms from identity.xml then put them in a list.
         List<JWSAlgorithm> diffAlgorithms = findDifferentAlgorithms(accessTokenSignAlgorithm, config);
         // Create JWKS for different algorithms using new KeyID creation method.
-        populateJWKArray(certInfoList, diffAlgorithms, jwksArray, OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM);
+        populateJWKSArray(certInfoList, diffAlgorithms, jwksArray, OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM);
 
         // Add SHA-1 KeyID to the KeySet if the config is enabled.
         if (Boolean.parseBoolean(IdentityUtil.getProperty(ADD_PREVIOUS_VERSION_KID))) {
-            populateJWKArray(certInfoList, diffAlgorithms, jwksArray,
+            populateJWKSArray(certInfoList, diffAlgorithms, jwksArray,
                     OAuthConstants.SignatureAlgorithms.PREVIOUS_KID_HASHING_ALGORITHM);
 
             // This method add KeySets which have thumbprint of certificate as KeyIDs without appending the algo.
@@ -136,8 +136,8 @@ public class JwksEndpoint {
         return jwksJson.toString();
     }
 
-    private void populateJWKArray(List<CertificateInfo> certInfoList, List<JWSAlgorithm> diffAlgorithms, JSONArray jwksArray,
-                                  String hashingAlgorithm)
+    private void populateJWKSArray(List<CertificateInfo> certInfoList, List<JWSAlgorithm> diffAlgorithms, JSONArray jwksArray,
+                                   String hashingAlgorithm)
             throws IdentityOAuth2Exception, ParseException, CertificateEncodingException {
 
         for (CertificateInfo certInfo : certInfoList) {
