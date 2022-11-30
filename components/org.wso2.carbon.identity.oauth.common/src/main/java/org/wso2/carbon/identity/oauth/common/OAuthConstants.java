@@ -498,6 +498,9 @@ public final class OAuthConstants {
         public static final String SHA256 = "SHA-256";
         public static final String SHA384 = "SHA-384";
         public static final String SHA512 = "SHA-512";
+        public static final String SHA1 = "SHA-1";
+        public static final String KID_HASHING_ALGORITHM = SHA256;
+        public static final String PREVIOUS_KID_HASHING_ALGORITHM = SHA1;
 
         private SignatureAlgorithms() {
 
