@@ -1279,9 +1279,13 @@ public class OAuth2AuthzEndpoint {
     private String handleFailureAuthorization(OAuthMessage oAuthMessage, OIDCSessionState sessionState,
                                               OAuth2Parameters oauth2Params,
                                               OAuth2AuthorizeRespDTO authzRespDTO) {
-
-        String errorMsg = authzRespDTO.getErrorMsg() != null ? authzRespDTO.getErrorMsg()
-                : "Error occurred while processing authorization request before consent.";
+        sessionState.setAuthenticated(false);
+        String errorMsg;
+        if (authzRespDTO.getErrorMsg() != null) {
+            errorMsg = authzRespDTO.getErrorMsg();
+        } else {
+            errorMsg = "Error occurred while processing the request";
+        }
         OAuthProblemException oauthProblemException = OAuthProblemException.error(
                 authzRespDTO.getErrorCode(), errorMsg);
         return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), oauthProblemException, oauth2Params);
@@ -1290,12 +1294,8 @@ public class OAuth2AuthzEndpoint {
     private String handleFailureBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
                                               OAuth2AuthorizeRespDTO authzRespDTO) {
 
-        String errorMsg;
-        if (authzRespDTO.getErrorMsg() != null) {
-            errorMsg = authzRespDTO.getErrorMsg();
-        } else {
-            errorMsg = "Error occurred while processing the request";
-        }
+        String errorMsg = authzRespDTO.getErrorMsg() != null ? authzRespDTO.getErrorMsg()
+                : "Error occurred while processing authorization request before consent.";
         OAuthProblemException oauthProblemException = OAuthProblemException.error(
                 authzRespDTO.getErrorCode(), errorMsg);
         return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), oauthProblemException, oauth2Params);
