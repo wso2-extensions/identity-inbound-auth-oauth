@@ -151,7 +151,8 @@ public class OAuth2Service extends AbstractAdmin {
             return authzHandlerManager.handleAuthorizationAfterConsent(authzReqMsgCtx);
         } catch (Exception e) {
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "authorize-client", null);
+                    OAuthConstants.LogConstants.FAILED, "Error occurred when processing the authorization request.",
+                    "authorize-client", null);
             log.error("Error occurred when processing the authorization request. Returning an error back to client.",
                     e);
             OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();

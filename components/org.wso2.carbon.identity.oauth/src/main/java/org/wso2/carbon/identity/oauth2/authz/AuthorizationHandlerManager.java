@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.INVALID_SCOPE;
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.UNAUTHORIZED_CLIENT;
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.UNSUPPORTED_RESPONSE_TYPE;
@@ -224,7 +225,6 @@ public class AuthorizationHandlerManager {
 
         OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(authzReqDTO);
         ResponseTypeHandler authzHandler = getResponseHandler(authzReqDTO);
-        //validate requested scopes
         validateRequestedScopes(authzReqMsgCtx, authzHandler);
         return authzReqMsgCtx;
     }
@@ -238,7 +238,7 @@ public class AuthorizationHandlerManager {
     public OAuth2AuthorizeRespDTO handleAuthorizationAfterConsent(OAuthAuthzReqMessageContext authzReqMsgCtx)
             throws IdentityOAuth2Exception {
 
-        OAuth2AuthorizeReqDTO authzReqDTO =  authzReqMsgCtx.getAuthorizationReqDTO();
+        OAuth2AuthorizeReqDTO authzReqDTO = authzReqMsgCtx.getAuthorizationReqDTO();
         ResponseTypeHandler authzHandler = getResponseHandler(authzReqDTO);
 
         OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
@@ -273,10 +273,10 @@ public class AuthorizationHandlerManager {
      * validated requested scopes.
      *
      * @param authzReqMsgCtx authzReqMsgCtx
-     * @param authzHandler ResponseTypeHandler
+     * @param authzHandler   ResponseTypeHandler
      */
     private void validateRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
-                                            ResponseTypeHandler authzHandler) throws IdentityOAuth2Exception,
+                                         ResponseTypeHandler authzHandler) throws IdentityOAuth2Exception,
             IdentityOAuth2ScopeValidationException {
 
         // Get OIDC scopes from requested scopes and drop from requested scopes
@@ -284,7 +284,7 @@ public class AuthorizationHandlerManager {
         try {
             requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(authzReqMsgCtx.getAuthorizationReqDTO()
                     .getScopes());
-            String[] oidcRemovedScopes  = OAuth2Util.removeOIDCScopesFromRequestedScopes(authzReqMsgCtx
+            String[] oidcRemovedScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(authzReqMsgCtx
                     .getAuthorizationReqDTO().getScopes());
             authzReqMsgCtx.getAuthorizationReqDTO().setScopes(oidcRemovedScopes);
 
@@ -324,26 +324,25 @@ public class AuthorizationHandlerManager {
             dropUnregisteredScopeFromRequestedScopes(authzReqMsgCtx);
         }
 
-        //validate scopes using global scope validators
+        //Validate scopes using global scope validators.
         boolean valid = validateScopes(authzReqMsgCtx, authzHandler);
-
         if (valid) {
             // Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(authzReqMsgCtx, authzReqMsgCtx.getAuthorizedInternalScopes());
-            // Add OIDC scopes back to the request
+            // Add OIDC scopes back to the request.
             addRequestedOIDCScopes(authzReqMsgCtx, requestedOIDCScopes);
             // Add scopes that filtered from the allowed scopes list.
             addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         } else {
-            throw new IdentityOAuth2ScopeValidationException(INVALID_SCOPE, "Invalid Scopes");
+            throw new IdentityOAuth2ScopeValidationException(INVALID_SCOPE, "Requested scopes cannot be validated.");
         }
     }
 
     /**
-     * get scopes that specified in the allowed scopes list.
+     * Get scopes that specified in the allowed scopes list.
      *
      * @param authzReqMsgCtx authzReqMsgCtx
-     * @return - requestedOIDCScopes scopes list
+     * @return - allowed scopes list
      */
     private List<String> getAllowedScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx) {
         List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
@@ -379,6 +378,7 @@ public class AuthorizationHandlerManager {
         }
         return authorizedInternalScopes;
     }
+
     /**
      * remove internal scopes from requested scopes.
      *
@@ -434,7 +434,7 @@ public class AuthorizationHandlerManager {
     }
 
     private void addRequestedOIDCScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
-                                             String[] requestedOIDCScopes) {
+                                        String[] requestedOIDCScopes) {
         Set<String> scopesToReturn = new HashSet<>(Arrays.asList(authzReqMsgCtx.getApprovedScope()));
         for (String scope : requestedOIDCScopes) {
             scopesToReturn.add(scope);
@@ -488,12 +488,13 @@ public class AuthorizationHandlerManager {
         }
         return true;
     }
+
     /**
-     * validate scope using global scope validators.
+     * Validate scope using global scope validators.
      *
      * @param authzReqMsgCtx authzReqMsgCtx
-     * @param authzHandler responseTypeHandler
-     * @return boolean scopes are validated or no
+     * @param authzHandler   responseTypeHandler
+     * @return scopes are validated or no
      */
     private boolean validateScopes(OAuthAuthzReqMessageContext authzReqMsgCtx, ResponseTypeHandler authzHandler)
             throws IdentityOAuth2Exception {
@@ -578,7 +579,7 @@ public class AuthorizationHandlerManager {
                 .setTenantDomain(OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO));
 
         // load requested scopes
-        authorizeRequestMessageContext.setRequestedScope(authzReqDTO.getScopes());
+        authorizeRequestMessageContext.setRequestedScopes(authzReqDTO.getScopes());
 
         return authorizeRequestMessageContext;
     }

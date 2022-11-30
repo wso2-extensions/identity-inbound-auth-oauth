@@ -4573,37 +4573,36 @@ public class OAuth2Util {
 
     public static String[] getRequestedOIDCScopes(String[] requestedScopes)
             throws IdentityOAuthAdminException {
-        if (requestedScopes == null) {
-            throw new IdentityOAuthAdminException("Requested scopes are null");
+        if (ArrayUtils.isEmpty(requestedScopes)) {
+            return new String[0];
         }
-        String[] oidcScopes =
-                OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().getScopeNames();
-        if (oidcScopes == null) {
-            throw new IdentityOAuthAdminException("Error occurred during getting OIDC scopes");
+        String[] oidcScopes = OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().getScopeNames();
+        if (ArrayUtils.isEmpty(oidcScopes)) {
+            return new String[0];
         }
         Set<String> oidcScopeSet = new HashSet<>(Arrays.asList(oidcScopes));
         List<String> requestedOIDCScopes = Arrays.stream(requestedScopes).distinct()
                 .filter(s->oidcScopeSet.contains(s)).collect(Collectors.toList());
-        return requestedOIDCScopes.toArray(new String[requestedOIDCScopes.size()]);
+        return requestedOIDCScopes.toArray(new String[0]);
     }
 
     public static String[] removeOIDCScopesFromRequestedScopes(String[] requestedScopes)
             throws IdentityOAuthAdminException {
 
-        if (requestedScopes == null) {
-            throw new IdentityOAuthAdminException("Error occurred during getting OIDC scopes");
+        if (ArrayUtils.isEmpty(requestedScopes)) {
+            return new String[0];
         }
         String[] oidcScopes =
                 OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().getScopeNames();
-        if (oidcScopes == null) {
-            throw new IdentityOAuthAdminException("Error occurred during getting OIDC scopes");
+        if (ArrayUtils.isEmpty(oidcScopes)) {
+            return requestedScopes;
         }
         Set<String> oidcScopeSet = new HashSet<>(Arrays.asList(oidcScopes));
 
         List<String> removedRequestedScopes = Arrays.stream(requestedScopes).distinct()
                 .filter(s->!oidcScopeSet.contains(s)).collect(Collectors.toList());
 
-        return removedRequestedScopes.toArray(new String[removedRequestedScopes.size()]);
+        return removedRequestedScopes.toArray(new String[0]);
     }
 
 }

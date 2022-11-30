@@ -962,7 +962,8 @@ public class EndpointUtil {
             throws OAuthSystemException {
 
         try {
-            //filter out OIDC scopes
+            //Filter out OIDC scopes and unregistered scopes to prevent those scopes prompt for consent in the consent
+            // page.
             List<String> consentRequiredScopes = dropOIDCAndUnregisteredScopesFromConsentRequiredScopes(params);
 
             if (user != null && !isPromptContainsConsent(params)) {
@@ -977,11 +978,10 @@ public class EndpointUtil {
                 }
             }
             params.setConsentRequiredScopes(new HashSet<>(consentRequiredScopes));
-            String consentRequiredScopesValue = String.join(" ", consentRequiredScopes).trim();
 
             if (log.isDebugEnabled()) {
-                log.debug("Consent required scopes : " + consentRequiredScopesValue + " for request from client : " +
-                        params.getClientId());
+                log.debug("Consent required scopes : " + StringUtils.join(consentRequiredScopes, " ")
+                        + " for request from client : " + params.getClientId());
             }
         } catch (IdentityOAuth2ScopeException e) {
             throw new OAuthSystemException("Error occurred while retrieving user consents OAuth scopes.");
