@@ -101,6 +101,9 @@ public class AuthorizationHandlerManager {
     }
 
     @Deprecated
+    /**
+     * @deprecated Avoid using this, use handleAuthorizationAfterConsent instead
+     */
     public OAuth2AuthorizeRespDTO handleAuthorization(OAuth2AuthorizeReqDTO authzReqDTO)
             throws IdentityOAuth2Exception, IdentityOAuthAdminException, InvalidOAuthClientException {
 
@@ -279,11 +282,14 @@ public class AuthorizationHandlerManager {
                                          ResponseTypeHandler authzHandler) throws IdentityOAuth2Exception,
             IdentityOAuth2ScopeValidationException {
 
-        // Get OIDC scopes from requested scopes and drop from requested scopes
         String[] requestedOIDCScopes = null;
         try {
+            // Get OIDC scopes from requested scopes. At end of the scope validation OIDC scope will add to the
+            // approved scope list.
             requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(authzReqMsgCtx.getAuthorizationReqDTO()
                     .getScopes());
+            // OIDC scopes are not validated in the scope validation process. Hence, Removing OIDC scopes from the
+            // requested scopes by the app.
             String[] oidcRemovedScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(authzReqMsgCtx
                     .getAuthorizationReqDTO().getScopes());
             authzReqMsgCtx.getAuthorizationReqDTO().setScopes(oidcRemovedScopes);
@@ -295,7 +301,7 @@ public class AuthorizationHandlerManager {
         // Get scopes that specified in the allowed scopes list.
         List<String> requestedAllowedScopes = getAllowedScopesFromRequestedScopes(authzReqMsgCtx);
 
-        // Validate internal scopes.
+        // If it is management app, we validate internal scopes in the requested scopes.
         String[] authorizedInternalScopes = new String[0];
         boolean isManagementApp = isManagementApp(authzReqMsgCtx.getAuthorizationReqDTO());
         if (isManagementApp) {
@@ -325,8 +331,8 @@ public class AuthorizationHandlerManager {
         }
 
         //Validate scopes using global scope validators.
-        boolean valid = validateScopes(authzReqMsgCtx, authzHandler);
-        if (valid) {
+        boolean isValid = validateScopes(authzReqMsgCtx, authzHandler);
+        if (isValid) {
             // Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(authzReqMsgCtx, authzReqMsgCtx.getAuthorizedInternalScopes());
             // Add OIDC scopes back to the request.
@@ -490,11 +496,11 @@ public class AuthorizationHandlerManager {
     }
 
     /**
-     * Validate scope using global scope validators.
+     * Engage global scope validators.
      *
      * @param authzReqMsgCtx authzReqMsgCtx
      * @param authzHandler   responseTypeHandler
-     * @return scopes are validated or no
+     * @return scopes are validated or not
      */
     private boolean validateScopes(OAuthAuthzReqMessageContext authzReqMsgCtx, ResponseTypeHandler authzHandler)
             throws IdentityOAuth2Exception {
