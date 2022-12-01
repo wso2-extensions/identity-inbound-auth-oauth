@@ -87,8 +87,8 @@ import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2InvalidScopeException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeValidationException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
@@ -2354,7 +2354,7 @@ public class OAuth2AuthzEndpoint {
                 buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
         try {
             handleAuthorizationBeforeConsent(oAuthMessage, oauth2Params, authzReqDTO);
-        } catch (IdentityOAuth2ScopeValidationException e) {
+        } catch (IdentityOAuth2InvalidScopeException e) {
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
                     OAuthConstants.LogConstants.FAILED, "Error occurred when processing the authorization " +
                             "request from tenant: " + oauth2Params.getTenantDomain() + " application: " +
@@ -2426,22 +2426,22 @@ public class OAuth2AuthzEndpoint {
      */
     private void handleAuthorizationBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
                                              OAuth2AuthorizeReqDTO authzReqDTO)
-            throws IdentityOAuth2ScopeValidationException, OAuthSystemException {
+            throws IdentityOAuth2InvalidScopeException, OAuthSystemException {
 
         try {
             AuthorizationHandlerManager authzHandlerManager = AuthorizationHandlerManager.getInstance();
             OAuthAuthzReqMessageContext authzReqMsgCtx = authzHandlerManager.
                     handleAuthorizationBeforeConsent(authzReqDTO);
-            //Add OAuthAuthzReqMessageContext to SessionDataCacheEntry since we may lose validated scopes if IS crashes
-            //while getting consent.
+            // Add OAuthAuthzReqMessageContext to SessionDataCacheEntry, because we may lose validated scopes if IS
+            // crashes while getting consent.
             oAuthMessage.getSessionDataCacheEntry().setAuthzReqMsgCtx(authzReqMsgCtx);
-            if (authzReqMsgCtx.getApprovedScope() == null) {
-                oauth2Params.setScopes(new HashSet<>(Arrays.asList(new String[]{})));
+            if (ArrayUtils.isEmpty(authzReqMsgCtx.getApprovedScope())) {
+                oauth2Params.setScopes(new HashSet<>(Collections.emptyList()));
             } else {
                 oauth2Params.setScopes(new HashSet<>(Arrays.asList(authzReqMsgCtx.getApprovedScope())));
             }
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new OAuthSystemException("Error occurred when validating scopes", e);
+            throw new OAuthSystemException("Error occurred while validating scopes before consent.", e);
         }
 
     }

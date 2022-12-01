@@ -22,25 +22,28 @@ import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.base.IdentityException;
 
 /**
- * OAuth scope validation exception.
+ * OAuth invalid scope exception.
  */
 
-public class IdentityOAuth2ScopeValidationException extends IdentityException {
-    public IdentityOAuth2ScopeValidationException(String message) {
+public class IdentityOAuth2InvalidScopeException extends IdentityException {
+
+    private static final long serialVersionUID = 6685265285500081950L;
+
+    public IdentityOAuth2InvalidScopeException(String message) {
         super(message);
         this.setErrorCode(getDefaultErrorCode());
     }
 
-    public IdentityOAuth2ScopeValidationException(String errorCode, String message) {
+    public IdentityOAuth2InvalidScopeException(String errorCode, String message) {
         super(errorCode, message);
     }
 
-    public IdentityOAuth2ScopeValidationException(String message, Throwable cause) {
+    public IdentityOAuth2InvalidScopeException(String message, Throwable cause) {
         super(message, cause);
         this.setErrorCode(getDefaultErrorCode());
     }
 
-    public IdentityOAuth2ScopeValidationException(String errorCode, String message, Throwable cause) {
+    public IdentityOAuth2InvalidScopeException(String errorCode, String message, Throwable cause) {
         super(errorCode, message, cause);
     }
 

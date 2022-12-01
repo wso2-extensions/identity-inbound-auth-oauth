@@ -4581,9 +4581,8 @@ public class OAuth2Util {
             return new String[0];
         }
         Set<String> oidcScopeSet = new HashSet<>(Arrays.asList(oidcScopes));
-        List<String> requestedOIDCScopes = Arrays.stream(requestedScopes).distinct()
-                .filter(s->oidcScopeSet.contains(s)).collect(Collectors.toList());
-        return requestedOIDCScopes.toArray(new String[0]);
+        return Arrays.stream(requestedScopes).distinct()
+                .filter(oidcScopeSet::contains).toArray(String[]::new);
     }
 
     public static String[] removeOIDCScopesFromRequestedScopes(String[] requestedScopes)
@@ -4592,17 +4591,13 @@ public class OAuth2Util {
         if (ArrayUtils.isEmpty(requestedScopes)) {
             return new String[0];
         }
-        String[] oidcScopes =
-                OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().getScopeNames();
+        String[] oidcScopes = OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().getScopeNames();
         if (ArrayUtils.isEmpty(oidcScopes)) {
             return requestedScopes;
         }
         Set<String> oidcScopeSet = new HashSet<>(Arrays.asList(oidcScopes));
-
-        List<String> removedRequestedScopes = Arrays.stream(requestedScopes).distinct()
-                .filter(s->!oidcScopeSet.contains(s)).collect(Collectors.toList());
-
-        return removedRequestedScopes.toArray(new String[0]);
+        return Arrays.stream(requestedScopes).distinct()
+                .filter(s -> !oidcScopeSet.contains(s)).toArray(String[]::new);
     }
 
 }
