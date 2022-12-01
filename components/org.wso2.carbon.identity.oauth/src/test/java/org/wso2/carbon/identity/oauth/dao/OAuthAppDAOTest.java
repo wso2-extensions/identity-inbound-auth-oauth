@@ -100,8 +100,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     private static final String CONSUMER_SECRET = "87n9a540f544777860e44e75f605d435";
     private static final String APP_NAME = "myApp";
     private static final String CALLBACK = "http://localhost:8080/redirect";
-    private static final String[] SCOPE_VALIDATORS = {"org.wso2.carbon.identity.oauth2.validators.JDBCScopeValidator",
-            "org.wso2.carbon.identity.oauth2.validators.XACMLScopeValidator"};
+    private static final String[] SCOPE_VALIDATORS = {"org.wso2.carbon.identity.oauth2.validators.JDBCScopeValidator"};
     private static final int USER_ACCESS_TOKEN_EXPIRY_TIME = 3000;
     private static final int APPLICATION_ACCESS_TOKEN_EXPIRY_TIME = 2000;
     private static final int REFRESH_TOKEN_EXPIRY_TIME = 10000;
