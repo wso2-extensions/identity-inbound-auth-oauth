@@ -35,6 +35,6 @@ public interface AccessTokenResponseHandler {
      * @return Map of additional attributes to be added.
      * @throws IdentityOAuth2Exception Error while constructing additional token response attributes.
      */
-    Map<String, String> getAdditionalTokenResponseAttributes(OAuthTokenReqMessageContext tokReqMsgCtx)
+    Map<String, Object> getAdditionalTokenResponseAttributes(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception;
 }

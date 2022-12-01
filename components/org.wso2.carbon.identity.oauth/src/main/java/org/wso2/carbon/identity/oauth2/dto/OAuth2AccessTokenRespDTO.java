@@ -41,7 +41,10 @@ public class OAuth2AccessTokenRespDTO {
     ResponseHeader[] responseHeaders;
     String authorizedScopes;
     private String idToken;
+    //token response parameters will be replaced with parameterObjects
+    @Deprecated
     private Map<String, String> parameters;
+    private Map<String, Object> parameterObjects;
     private boolean isConsentedToken;
 
     public ResponseHeader[] getResponseHeaders() {
@@ -163,9 +166,21 @@ public class OAuth2AccessTokenRespDTO {
      * @param key   parameter key
      * @param value parameter value
      */
+    @Deprecated
     public void addParameter(String key, String value) {
 
         getParameterMap().put(key, value);
+    }
+
+    /**
+     * Add a custom parameter to the OAuth2 token response.
+     *
+     * @param key   parameter key.
+     * @param value parameter value.
+     */
+    public void addParameterObject(String key, Object value) {
+
+        getParameterObjectsMap().put(key, value);
     }
 
     /**
@@ -174,19 +189,42 @@ public class OAuth2AccessTokenRespDTO {
      * @param key parameter key
      * @return value associated with the key
      */
+    @Deprecated
     public String getParameter(String key) {
 
         return getParameterMap().get(key);
     }
 
     /**
+     * Get the custom parameter value associated to the key.
+     *
+     * @param key parameter key.
+     * @return value associated with the key.
+     */
+    public Object getParameterObject(String key) {
+
+        return getParameterObjectsMap().get(key);
+    }
+
+    /**
      * Get all custom parameters.
      *
-     * @return a key value map of all custom parameters
+     * @return a key value map of all custom parameters.
      */
+    @Deprecated
     public Map<String, String> getParameters() {
 
         return Collections.unmodifiableMap(getParameterMap());
+    }
+
+    /**
+     * Get all custom parameters.
+     *
+     * @return a key value map of all custom parameters.
+     */
+    public Map<String, Object> getParameterObjects() {
+
+        return Collections.unmodifiableMap(getParameterObjectsMap());
     }
 
     private Map<String, String> getParameterMap() {
@@ -196,6 +234,15 @@ public class OAuth2AccessTokenRespDTO {
         }
         return parameters;
     }
+
+    private Map<String, Object> getParameterObjectsMap() {
+
+        if (parameterObjects == null) {
+            parameterObjects = new HashMap<>();
+        }
+        return parameterObjects;
+    }
+
 
     public boolean getIsConsentedToken() {
 

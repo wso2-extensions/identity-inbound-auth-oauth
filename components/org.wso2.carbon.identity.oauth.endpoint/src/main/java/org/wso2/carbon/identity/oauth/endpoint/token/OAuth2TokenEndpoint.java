@@ -24,7 +24,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
-import org.apache.oltu.oauth2.as.response.OAuthASResponse.OAuthTokenResponseBuilder;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
@@ -45,6 +44,7 @@ import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthTokenRequest;
+import org.wso2.carbon.identity.oauth2.token.handlers.response.OAuthAPIResponse;
 
 import java.util.HashMap;
 import java.util.List;
@@ -211,12 +211,13 @@ public class OAuth2TokenEndpoint {
             oauth2AccessTokenResp.setTokenType(BEARER);
         }
 
-        OAuthTokenResponseBuilder oAuthRespBuilder = OAuthASResponse
+        OAuthAPIResponse.OAuthTokenResponseBuilder oAuthRespBuilder = OAuthAPIResponse
                 .tokenResponse(HttpServletResponse.SC_OK)
                 .setAccessToken(oauth2AccessTokenResp.getAccessToken())
                 .setRefreshToken(oauth2AccessTokenResp.getRefreshToken())
                 .setExpiresIn(Long.toString(oauth2AccessTokenResp.getExpiresIn()))
                 .setTokenType(oauth2AccessTokenResp.getTokenType());
+
         oAuthRespBuilder.setScope(oauth2AccessTokenResp.getAuthorizedScopes());
 
         if (oauth2AccessTokenResp.getIDToken() != null) {
@@ -226,6 +227,11 @@ public class OAuth2TokenEndpoint {
         // Set custom parameters in token response if supported
         if (MapUtils.isNotEmpty(oauth2AccessTokenResp.getParameters())) {
             oauth2AccessTokenResp.getParameters().forEach(oAuthRespBuilder::setParam);
+        }
+
+        // Set custom parameters in token response if supported
+        if (MapUtils.isNotEmpty(oauth2AccessTokenResp.getParameterObjects())) {
+            oauth2AccessTokenResp.getParameterObjects().forEach(oAuthRespBuilder::setParam);
         }
 
         OAuthResponse response = oAuthRespBuilder.buildJSONMessage();

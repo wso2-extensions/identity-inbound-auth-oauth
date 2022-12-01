@@ -540,11 +540,11 @@ public class AccessTokenIssuer {
                 getAccessTokenResponseHandlers();
         // Engaging token response handlers.
         for (AccessTokenResponseHandler tokenResponseHandler : tokenResponseHandlers) {
-            Map<String, String> additionalTokenResponseAttributes =
+            Map<String, Object> additionalTokenResponseAttributes =
                     tokenResponseHandler.getAdditionalTokenResponseAttributes(tokReqMsgCtx);
             if (additionalTokenResponseAttributes != null) {
-                for (Map.Entry<String, String> attribute : additionalTokenResponseAttributes.entrySet()) {
-                    tokenRespDTO.addParameter(attribute.getKey(), attribute.getValue());
+                for (Map.Entry<String, Object> attribute : additionalTokenResponseAttributes.entrySet()) {
+                    tokenRespDTO.addParameterObject(attribute.getKey(), attribute.getValue());
                 }
             }
         }
