@@ -914,14 +914,15 @@ public class EndpointUtil {
     }
 
     /**
-     * Drop OIDC scopes from consent required scopes
+     * Drop OIDC and unregistered scopes from consent required scopes.
      *
-     * @param params  OAuth2 parameters.
-     * @return allowedOAuthScopes consent required scopes
-     * @throws OAuthSystemException
+     * @param params OAuth2 parameters.
+     * @return consent required scopes
+     * @throws OAuthSystemException If retrieving OIDC scopes failed.
      */
     private static List<String> dropOIDCAndUnregisteredScopesFromConsentRequiredScopes(OAuth2Parameters params)
             throws OAuthSystemException {
+
         Set<String> allowedScopes = params.getScopes();
         List<String> allowedOAuthScopes = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(allowedScopes)) {

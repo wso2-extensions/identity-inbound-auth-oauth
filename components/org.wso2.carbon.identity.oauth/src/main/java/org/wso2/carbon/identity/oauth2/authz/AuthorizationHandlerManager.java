@@ -220,7 +220,7 @@ public class AuthorizationHandlerManager {
     /**
      * Handle authorization request (validate requested scopes) before the consent page.
      *
-     * @param authzReqDTO authzReqDTO
+     * @param authzReqDTO OAuth2AuthorizeReqDTO
      * @return OAuthAuthzReqMessageContext
      */
     public OAuthAuthzReqMessageContext handleAuthorizationBeforeConsent(OAuth2AuthorizeReqDTO authzReqDTO)
@@ -235,7 +235,7 @@ public class AuthorizationHandlerManager {
     /**
      * Handle authorization request after the consent page.
      *
-     * @param authzReqMsgCtx authzReqMsgCtx
+     * @param authzReqMsgCtx OAuthAuthzReqMessageContext
      * @return OAuth2AuthorizeRespDTO
      */
     public OAuth2AuthorizeRespDTO handleAuthorizationAfterConsent(OAuthAuthzReqMessageContext authzReqMsgCtx)
@@ -275,7 +275,7 @@ public class AuthorizationHandlerManager {
     /**
      * validated requested scopes.
      *
-     * @param authzReqMsgCtx authzReqMsgCtx
+     * @param authzReqMsgCtx OAuthAuthzReqMessageContext
      * @param authzHandler   ResponseTypeHandler
      */
     private void validateRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
@@ -379,7 +379,7 @@ public class AuthorizationHandlerManager {
     }
 
     /**
-     * remove internal scopes from requested scopes.
+     * Eemove internal scopes from requested scopes.
      *
      * @param authzReqMsgCtx authzReqMsgCtx
      */
@@ -488,8 +488,8 @@ public class AuthorizationHandlerManager {
     /**
      * Engage global scope validators.
      *
-     * @param authzReqMsgCtx authzReqMsgCtx
-     * @param authzHandler   responseTypeHandler
+     * @param authzReqMsgCtx OAuthAuthzReqMessageContext
+     * @param authzHandler   ResponseTypeHandler
      * @return scopes are validated or not
      */
     private boolean validateScopes(OAuthAuthzReqMessageContext authzReqMsgCtx, ResponseTypeHandler authzHandler)
