@@ -6,8 +6,8 @@ import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
-import org.wso2.carbon.identity.oauth.par.ValidateCallbackURL;
-import org.wso2.carbon.identity.oauth.par.ValidateCallbackURLImpl;
+import org.wso2.carbon.identity.oauth.par.api.ParAuthService;
+import org.wso2.carbon.identity.oauth.par.api.ParAuthServiceImpl;
 
 
 @Component(
@@ -21,9 +21,9 @@ public class ValidateCallbackURLServiceComponent {
     @Activate
     protected void activate(ComponentContext componentContext) {
         try {
-            ValidateCallbackURL callbackURL = new ValidateCallbackURLImpl();
+            ParAuthService callbackURL = new ParAuthServiceImpl();
 
-            componentContext.getBundleContext().registerService(ValidateCallbackURL.class, callbackURL, null);
+            componentContext.getBundleContext().registerService(ParAuthService.class, callbackURL, null);
             log.info("PAR validation Success");
         }
         catch (Throwable e){

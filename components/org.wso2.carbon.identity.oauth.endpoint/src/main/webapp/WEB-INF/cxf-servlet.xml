@@ -35,6 +35,7 @@
             <ref bean="deviceAuthEndpointBean"/>
             <ref bean="userAuthenticationEndpointBean"/>
             <ref bean="cibaEndpointBean"/>
+            <ref bean="parEndpointBean"/>
         </jaxrs:serviceBeans>
         <jaxrs:inInterceptors>
             <ref bean="oauthClientAuthnBean"/>
@@ -67,6 +68,7 @@
         <property name="oauthServerConfiguration"  ref="oauthServerConfigurationFactoryBean"/>
         <property name="requestObjectService"  ref="requestObjectServiceFactoryBean"/>
         <property name="cibaAuthService"  ref="cibaAuthServiceFactoryBean"/>
+<!--        <property name="parAuthService"  ref="parAuthServiceFactoryBean"/>-->
         <property name="idpManager" ref="idpManagerBean"/>
     </bean>
     <bean id="oidcProviderResponseBuilderBean" class="org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.impl.OIDProviderJSONResponseBuilder"/>
@@ -86,5 +88,7 @@
     </bean>
     <bean id="cibaEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.ciba.OAuth2CibaEndpoint"/>
     <bean id="cibaAuthServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.CibaServiceFactory"/>
+    <bean id="parEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.par.OAuth2ParEndpoint"/>
+<!--    <bean id="parAuthServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.ParServiceFactory"/>-->
     <bean id="idpManagerBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.IDPManagerFactory"/>
 </beans>

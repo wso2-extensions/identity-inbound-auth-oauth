@@ -18,12 +18,8 @@
             <bean class="com.fasterxml.jackson.jaxrs.base.JsonParseExceptionMapper"/>
         </jaxrs:providers>
     </jaxrs:server>
-    <bean id="CibaEndPointBean" class="org.wso2.carbon.identity.oauth.endpoint.ciba.OAuth2CibaEndpoint">
+    <bean id="CibaEndPointBean" class="org.wso2.carbon.identity.oauth.org.wso2.carbon.identity.oauth.par.endpoint.ciba.OAuth2CibaEndpoint">
         <property name="CibaAuthServiceImpl" ref="CibaAuthServiceFactoryBean"/>
     </bean>
-    <bean id="CibaAuthServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.CibaServiceFactory"/>
-<!--    <bean id="ParEndPointBean" class="org.wso2.carbon.identity.oauth.endpoint.par.OAuth2ParEndpoint">-->
-<!--        <property name="ParAuthServiceImpl" ref="ParAuthServiceFactoryBean"/>-->
-<!--    </bean>-->
-<!--    <bean id="ParAuthServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.ParServiceFactory"/>-->
+    <bean id="CibaAuthServiceFactoryBean" class="org.wso2.carbon.identity.oauth.org.wso2.carbon.identity.oauth.par.endpoint.factory.CibaServiceFactory"/>
 </beans>

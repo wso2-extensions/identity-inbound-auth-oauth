@@ -1,12 +1,14 @@
-package org.wso2.carbon.identity.oauth.par;
+package org.wso2.carbon.identity.oauth.par.api;
 
-public class ValidateCallbackURLImpl implements ValidateCallbackURL {
+import org.wso2.carbon.identity.oauth.par.api.ParAuthService;
+
+public class ParAuthServiceImpl implements ParAuthService {
 
 //    private static final Logger LOGGER = Logger.getLogger(ValidateCallbackURL.class.getName());
 
     @Override
-    public String validateCallbackURL(){
-        return "I'm backend";
+    public String par(){
+        return "Hello World!";
     }
 
 

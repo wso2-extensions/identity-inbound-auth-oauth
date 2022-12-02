@@ -132,6 +132,7 @@ public class EndpointUtil {
     private static final String OIDC = "oidc";
     private static final String OAUTH2_AUTHORIZE = "/oauth2/authorize";
     public static final String OAUTH2_CIBA_ENDPOINT = "oauth2/ciba";
+    public static final String OAUTH2_PAR_ENDPOINT = "oauth2/par";
     private static final String UTF_8 = "UTF-8";
     private static final String PROP_CLIENT_ID = "client_id";
     private static final String PROP_GRANT_TYPE = "response_type";
@@ -1449,6 +1450,16 @@ public class EndpointUtil {
 
         EndpointUtil.cibaAuthService = cibaAuthService;
     }
+
+//    public static ParAuthServiceImpl getParAuthService() {
+//
+//        return parAuthService;
+//    }
+//
+//    public static void setParAuthService(ParAuthServiceImpl parAuthService) {
+//
+//        EndpointUtil.parAuthService = parAuthService;
+//    }
 
     /**
      * This method retrieve the state to append to the error page URL.
