@@ -241,6 +241,10 @@
             <groupId>org.wso2.orbit.javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
         </dependency>
+        <dependency>
+            <groupId>xerces.wso2</groupId>
+            <artifactId>xercesImpl</artifactId>
+        </dependency>
         <!--Test Dependencies-->
         <dependency>
             <groupId>org.testng</groupId>
@@ -353,6 +357,8 @@
                             org.apache.commons.collections.map; version="${commons-collections.wso2.osgi.version.range}",
                             org.apache.commons.lang; version="${commons-lang.wso2.osgi.version.range}",
                             org.apache.commons.logging; version="${commons-logging.osgi.version.range}",
+                            org.apache.xerces.impl; resolution:=optional,
+                            org.apache.xerces.util; resolution:=optional,
 
                             com.google.gdata.client.authn.oauth; version="${gdata-core.imp.pkg.version.range}",
 

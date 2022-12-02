@@ -367,6 +367,11 @@
                 <artifactId>gson</artifactId>
                 <version>${com.google.code.gson.version}</version>
             </dependency>
+            <dependency>
+                <groupId>xerces.wso2</groupId>
+                <artifactId>xercesImpl</artifactId>
+                <version>${xercesImpl.version}</version>
+            </dependency>
 
             <!-- Carbon Identity Inbound Authentication OAuth dependency -->
             <dependency>
@@ -883,6 +888,9 @@
         <opensaml.version>3.3.1</opensaml.version>
         <opensaml3.wso2.version>3.3.1.wso2v6</opensaml3.wso2.version>
         <opensaml3.wso2.osgi.version.range>[3.3.1,3.4.0)</opensaml3.wso2.osgi.version.range>
+
+        <xercesImpl.version>2.8.1.wso2v2</xercesImpl.version>
+
 
         <joda.version>2.9.4</joda.version>
         <joda.wso2.version>2.9.4.wso2v1</joda.wso2.version>
