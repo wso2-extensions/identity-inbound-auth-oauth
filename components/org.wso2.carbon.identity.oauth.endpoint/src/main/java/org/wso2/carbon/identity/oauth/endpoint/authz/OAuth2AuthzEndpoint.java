@@ -1295,7 +1295,7 @@ public class OAuth2AuthzEndpoint {
                                               OAuth2AuthorizeRespDTO authzRespDTO) {
 
         String errorMsg = authzRespDTO.getErrorMsg() != null ? authzRespDTO.getErrorMsg()
-                : "Error occurred while processing authorization request before consent.";
+                : " Error occurred while processing authorization request.";
         OAuthProblemException oauthProblemException = OAuthProblemException.error(
                 authzRespDTO.getErrorCode(), errorMsg);
         return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), oauthProblemException, oauth2Params);
