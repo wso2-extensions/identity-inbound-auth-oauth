@@ -64,7 +64,7 @@
                                     <pathelement location="${settings.localRepository}/org/apache/axis2/wso2/axis2/${axis2.wso2.version}/axis2-${axis2.wso2.version}.jar" />
                                 </path>
                                 <java classname="org.apache.axis2.wsdl.WSDL2Java" fork="true">
-                                    <arg line="-uri src/main/resources/OAuthAdminService.wsdl -u -uw -o target/generated-code -p org.wso2.carbon.identity.oauth.stub -ns2p http://oauth.identity.carbon.wso2.org=org.wso2.carbon.identity.oauth.stub,http://dto.oauth.identity.carbon.wso2.org/xsd=org.wso2.carbon.identity.oauth.stub.dto,http://entitlement.oauth.carbon.wso2.org/xsd=org.wso2.carbon.identity.oauth.stub.types,http://org.apache.axis2/xsd=org.wso2.carbon.identity.oauth.stub.types.axis2" />
+                                    <arg line="-uri src/main/resources/OAuthAdminService.wsdl -u -uw -o target/generated-code -p org.wso2.carbon.identity.oauth.stub -ns2p http://oauth.identity.carbon.wso2.org=org.wso2.carbon.identity.oauth.stub,http://dto.oauth.identity.carbon.wso2.org/xsd=org.wso2.carbon.identity.oauth.stub.dto,http://org.apache.axis2/xsd=org.wso2.carbon.identity.oauth.stub.types.axis2" />
                                     <classpath refid="wsdl2java.classpath" />
                                     <classpath refid="maven.dependency.classpath" />
                                     <classpath refid="maven.compile.classpath" />
