@@ -145,9 +145,8 @@ public class OAuth2Service extends AbstractAdmin {
                     ", Client ID : " + oAuth2AuthorizeReqDTO.getConsumerKey() +
                     ", Authorization Response Type : " + oAuth2AuthorizeReqDTO.getResponseType() +
                     ", Requested callback URI : " + oAuth2AuthorizeReqDTO.getCallbackUrl() +
-                    ", Requested Scopes : " + OAuth2Util.buildScopeString(authzReqMsgCtx.getApprovedScope()) +
-                    ", Approved Scopes : " + OAuth2Util.buildScopeString(
-                    oAuth2AuthorizeReqDTO.getScopes()));
+                    ", Requested Scopes : " + OAuth2Util.buildScopeString(authzReqMsgCtx.getRequestedScopes()) +
+                    ", Approved Scopes : " + OAuth2Util.buildScopeString(oAuth2AuthorizeReqDTO.getScopes()));
         }
         try {
             AuthorizationHandlerManager authzHandlerManager =
