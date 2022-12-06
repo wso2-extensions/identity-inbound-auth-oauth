@@ -2360,9 +2360,6 @@ public class OAuth2AuthzEndpoint {
                             "request from tenant: " + oauth2Params.getTenantDomain() + " application: " +
                             oauth2Params.getClientId() + "before consent.",
                     "authorize-client", null);
-            log.error("Error occurred when processing the authorization request from tenant: " +
-                    oauth2Params.getTenantDomain() + " application: " + oauth2Params.getClientId()
-                    + "before consent.", e);
             OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
             authorizeRespDTO.setErrorCode(e.getErrorCode());
             authorizeRespDTO.setErrorMsg(e.getMessage());

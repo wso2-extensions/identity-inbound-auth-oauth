@@ -102,7 +102,8 @@ public class AuthorizationHandlerManager {
 
     @Deprecated
     /**
-     * @deprecated Avoid using this, use handleAuthorizationAfterConsent instead
+     * @deprecated Avoid using this, use {@link #handleAuthorization(OAuthAuthzReqMessageContext) handleAuthorization}
+     * method instead.
      */
     public OAuth2AuthorizeRespDTO handleAuthorization(OAuth2AuthorizeReqDTO authzReqDTO)
             throws IdentityOAuth2Exception, IdentityOAuthAdminException, InvalidOAuthClientException {
@@ -284,7 +285,7 @@ public class AuthorizationHandlerManager {
 
         String[] requestedOIDCScopes;
         try {
-            // Get OIDC scopes from requested scopes. At end of the scope validation OIDC scope will add to the
+            // Get OIDC scopes from requested scopes. At end of the scope validation OIDC scopes will add to the
             // approved scope list.
             requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(authzReqMsgCtx.getAuthorizationReqDTO()
                     .getScopes());
@@ -294,7 +295,7 @@ public class AuthorizationHandlerManager {
                     .getAuthorizationReqDTO().getScopes());
             authzReqMsgCtx.getAuthorizationReqDTO().setScopes(oidcRemovedScopes);
         } catch (IdentityOAuthAdminException e) {
-            throw new IdentityOAuth2Exception(e.getMessage());
+            throw new IdentityOAuth2Exception("Error occurred while validating requested scopes.", e);
         }
         // Get scopes that specified in the allowed scopes list.
         List<String> requestedAllowedScopes = getAllowedScopesFromRequestedScopes(authzReqMsgCtx);

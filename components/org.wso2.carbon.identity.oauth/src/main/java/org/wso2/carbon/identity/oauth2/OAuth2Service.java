@@ -98,6 +98,9 @@ public class OAuth2Service extends AbstractAdmin {
      * or an error code.
      */
     @Deprecated
+    /**
+     * @deprecated Avoid using this, use {@link #authorize(OAuthAuthzReqMessageContext) authorize} method instead.
+     */
     public OAuth2AuthorizeRespDTO authorize(OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO) {
 
         if (log.isDebugEnabled()) {

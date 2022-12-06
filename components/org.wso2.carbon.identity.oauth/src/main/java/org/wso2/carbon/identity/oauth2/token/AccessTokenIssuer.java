@@ -366,8 +366,14 @@ public class AccessTokenIssuer {
         List<String> scopesToBeValidated = new ArrayList<>();
         String[] requestedOIDCScopes = new String[0];
         try {
-            //remove OIDC scopes before validation
+            // Get OIDC scopes from requested scopes. At end of the scope validation OIDC scopes will add to the
+            // approved scope list.
             requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(requestedScopes);
+            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(tokReqMsgCtx.getScope());
+            // OIDC scopes are not validated in the scope validation process. Hence, Removing OIDC scopes from the
+            // requested scopes by the app.
+            String[] oidcRemovedScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(tokReqMsgCtx.getScope());
+            tokReqMsgCtx.setScope(oidcRemovedScopes);
         } catch (IdentityOAuthAdminException e) {
             throw new IdentityException("Unable to retrieve OIDC Scopes.");
         }
