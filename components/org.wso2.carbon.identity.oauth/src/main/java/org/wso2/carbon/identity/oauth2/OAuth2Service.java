@@ -157,6 +157,8 @@ public class OAuth2Service extends AbstractAdmin {
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
                     OAuthConstants.LogConstants.FAILED, "Error occurred when processing the authorization request.",
                     "authorize-client", null);
+            log.error("Error occurred when processing the authorization request. Returning an error back to client.",
+                    e);
             OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
             authorizeRespDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
             authorizeRespDTO.setErrorMsg("Error occurred when processing the authorization " +

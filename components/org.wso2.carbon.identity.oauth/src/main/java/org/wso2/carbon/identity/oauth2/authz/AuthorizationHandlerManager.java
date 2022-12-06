@@ -334,7 +334,7 @@ public class AuthorizationHandlerManager {
             // Add scopes that filtered from the allowed scopes list.
             addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         } else {
-            throw new IdentityOAuth2UnauthorizedScopeException(INVALID_SCOPE, "Requested scopes can not be validated.");
+            throw new IdentityOAuth2UnauthorizedScopeException(INVALID_SCOPE, "Scope validation failed.");
         }
     }
 
