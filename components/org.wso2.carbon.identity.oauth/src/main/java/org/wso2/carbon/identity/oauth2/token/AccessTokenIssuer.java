@@ -375,7 +375,7 @@ public class AccessTokenIssuer {
             String[] oidcRemovedScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(tokReqMsgCtx.getScope());
             tokReqMsgCtx.setScope(oidcRemovedScopes);
         } catch (IdentityOAuthAdminException e) {
-            throw new IdentityException("Unable to retrieve OIDC Scopes.");
+            throw new IdentityException("Error occurred while validating scopes.", e);
         }
         if (requestedScopes != null) {
             for (String scope : requestedScopes) {
