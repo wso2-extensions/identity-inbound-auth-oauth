@@ -684,7 +684,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         authzReqDTO.setResponseType("code");
         OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
         authzReqMsgCtx.setApprovedScope(new String[]{OAuthConstants.Scope.OPENID});
-        when(authorizationHandlerManager.handleAuthorizationBeforeConsent(any(OAuth2AuthorizeReqDTO.class)))
+        when(authorizationHandlerManager.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class)))
                 .thenReturn(authzReqMsgCtx);
 
         spy(FrameworkUtils.class);
@@ -1383,7 +1383,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         authzReqDTO.setResponseType("code");
         OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
         authzReqMsgCtx.setApprovedScope(new String[]{OAuthConstants.Scope.OPENID});
-        when(authorizationHandlerManager.handleAuthorizationBeforeConsent(any(OAuth2AuthorizeReqDTO.class)))
+        when(authorizationHandlerManager.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class)))
                 .thenReturn(authzReqMsgCtx);
 
         spy(FrameworkUtils.class);
@@ -1533,7 +1533,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         authzReqDTO.setResponseType("code");
         OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
         authzReqMsgCtx.setApprovedScope(new String[]{OAuthConstants.Scope.OPENID});
-        when(authorizationHandlerManager.handleAuthorizationBeforeConsent(any(OAuth2AuthorizeReqDTO.class)))
+        when(authorizationHandlerManager.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class)))
                 .thenReturn(authzReqMsgCtx);
 
         spy(FrameworkUtils.class);
