@@ -24,7 +24,6 @@ import org.wso2.carbon.identity.base.IdentityException;
 /**
  * OAuth invalid scope exception.
  */
-
 public class IdentityOAuth2UnauthorizedScopeException extends IdentityException {
 
     private static final long serialVersionUID = 6685265285500081950L;
