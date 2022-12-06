@@ -36,7 +36,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2InvalidScopeException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2UnauthorizedScopeException;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
@@ -223,8 +223,8 @@ public class AuthorizationHandlerManager {
      * @param authzReqDTO OAuth2AuthorizeReqDTO
      * @return OAuthAuthzReqMessageContext
      */
-    public OAuthAuthzReqMessageContext handleAuthorizationBeforeConsent(OAuth2AuthorizeReqDTO authzReqDTO)
-            throws IdentityOAuth2Exception, InvalidOAuthClientException, IdentityOAuth2InvalidScopeException {
+    public OAuthAuthzReqMessageContext validateScopesBeforeConsent(OAuth2AuthorizeReqDTO authzReqDTO)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException, IdentityOAuth2UnauthorizedScopeException {
 
         OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(authzReqDTO);
         ResponseTypeHandler authzHandler = getResponseHandler(authzReqDTO);
@@ -238,7 +238,7 @@ public class AuthorizationHandlerManager {
      * @param authzReqMsgCtx OAuthAuthzReqMessageContext
      * @return OAuth2AuthorizeRespDTO
      */
-    public OAuth2AuthorizeRespDTO handleAuthorizationAfterConsent(OAuthAuthzReqMessageContext authzReqMsgCtx)
+    public OAuth2AuthorizeRespDTO handleAuthorization(OAuthAuthzReqMessageContext authzReqMsgCtx)
             throws IdentityOAuth2Exception {
 
         OAuth2AuthorizeReqDTO authzReqDTO = authzReqMsgCtx.getAuthorizationReqDTO();
@@ -280,7 +280,7 @@ public class AuthorizationHandlerManager {
      */
     private void validateRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
                                          ResponseTypeHandler authzHandler) throws IdentityOAuth2Exception,
-            IdentityOAuth2InvalidScopeException {
+            IdentityOAuth2UnauthorizedScopeException {
 
         String[] requestedOIDCScopes;
         try {
@@ -333,7 +333,7 @@ public class AuthorizationHandlerManager {
             // Add scopes that filtered from the allowed scopes list.
             addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         } else {
-            throw new IdentityOAuth2InvalidScopeException(INVALID_SCOPE, "Requested scopes can not be validated.");
+            throw new IdentityOAuth2UnauthorizedScopeException(INVALID_SCOPE, "Requested scopes can not be validated.");
         }
     }
 
