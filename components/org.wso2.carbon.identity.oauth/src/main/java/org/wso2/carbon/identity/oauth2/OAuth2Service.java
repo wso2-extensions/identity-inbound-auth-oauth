@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -38,7 +38,6 @@ import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
-import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.authz.validators.DefaultResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -97,10 +96,6 @@ public class OAuth2Service extends AbstractAdmin {
      * @return <code>OAuth2AuthorizeRespDTO</code> instance containing the access token/authorization code
      * or an error code.
      */
-    @Deprecated
-    /**
-     * @deprecated Avoid using this, use {@link #authorize(OAuthAuthzReqMessageContext) authorize} method instead.
-     */
     public OAuth2AuthorizeRespDTO authorize(OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO) {
 
         if (log.isDebugEnabled()) {
@@ -119,43 +114,6 @@ public class OAuth2Service extends AbstractAdmin {
         } catch (Exception e) {
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
                     OAuthConstants.LogConstants.FAILED, "System error occurred.", "authorize-client", null);
-            log.error("Error occurred when processing the authorization request. Returning an error back to client.",
-                    e);
-            OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
-            authorizeRespDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
-            authorizeRespDTO.setErrorMsg("Error occurred when processing the authorization " +
-                    "request. Returning an error back to client.");
-            authorizeRespDTO.setCallbackURI(oAuth2AuthorizeReqDTO.getCallbackUrl());
-            return authorizeRespDTO;
-        }
-    }
-
-    /**
-     * Process the authorization request and issue an authorization code or access token depending
-     * on the Response Type available in the request.
-     *
-     * @param authzReqMsgCtx authzReqMsgCtx.
-     * @return <code>OAuth2AuthorizeRespDTO</code> instance containing the access token/authorization code
-     * or an error code.
-     */
-    public OAuth2AuthorizeRespDTO authorize(OAuthAuthzReqMessageContext authzReqMsgCtx) {
-        OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO =  authzReqMsgCtx.getAuthorizationReqDTO();
-        if (log.isDebugEnabled()) {
-            log.debug("Authorization Request received for user : " + oAuth2AuthorizeReqDTO.getUser() +
-                    ", Client ID : " + oAuth2AuthorizeReqDTO.getConsumerKey() +
-                    ", Authorization Response Type : " + oAuth2AuthorizeReqDTO.getResponseType() +
-                    ", Requested callback URI : " + oAuth2AuthorizeReqDTO.getCallbackUrl() +
-                    ", Requested Scopes : " + OAuth2Util.buildScopeString(authzReqMsgCtx.getRequestedScopes()) +
-                    ", Approved Scopes : " + OAuth2Util.buildScopeString(oAuth2AuthorizeReqDTO.getScopes()));
-        }
-        try {
-            AuthorizationHandlerManager authzHandlerManager =
-                    AuthorizationHandlerManager.getInstance();
-            return authzHandlerManager.handleAuthorization(authzReqMsgCtx);
-        } catch (Exception e) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "Error occurred when processing the authorization request.",
-                    "authorize-client", null);
             log.error("Error occurred when processing the authorization request. Returning an error back to client.",
                     e);
             OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
