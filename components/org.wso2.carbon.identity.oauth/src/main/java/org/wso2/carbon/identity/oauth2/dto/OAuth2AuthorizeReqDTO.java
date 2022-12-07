@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -22,7 +22,6 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
-import java.io.Serializable;
 import java.util.LinkedHashSet;
 import java.util.Properties;
 
@@ -31,9 +30,7 @@ import javax.servlet.http.Cookie;
 /**
  * OAuth 2 authorization request bean.
  */
-public class OAuth2AuthorizeReqDTO implements Serializable {
-
-    private static final long serialVersionUID = -4708580494325317575L;
+public class OAuth2AuthorizeReqDTO {
     private String consumerKey;
     private String[] scopes;
     private String responseType;

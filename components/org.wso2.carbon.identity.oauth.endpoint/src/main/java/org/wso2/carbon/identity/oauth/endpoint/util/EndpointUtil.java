@@ -1,13 +1,13 @@
 /*
- * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
- *
+ * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * 
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -89,6 +89,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
+import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
@@ -921,31 +923,25 @@ public class EndpointUtil {
         return Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames()));
     }
 
-    /**
-     * Drop OIDC and unregistered scopes from consent required scopes.
-     *
-     * @param params OAuth2 parameters.
-     * @return consent required scopes
-     * @throws OAuthSystemException If retrieving OIDC scopes failed.
-     */
-    private static List<String> dropOIDCAndUnregisteredScopesFromConsentRequiredScopes(OAuth2Parameters params)
-            throws OAuthSystemException {
+    private static List<String> getAllowedOAuthScopes(OAuth2Parameters params) throws OAuthSystemException {
 
         Set<String> allowedScopes = params.getScopes();
         List<String> allowedOAuthScopes = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(allowedScopes)) {
             try {
                 startTenantFlow(params.getTenantDomain());
-                /* If DropUnregisteredScopes scopes config is enabled
-                 then any unregistered scopes(excluding internal scopes
-                 and allowed scopes) is be dropped. Therefore they will
-                 not be shown in the user consent screen.*/
+
+            /* If DropUnregisteredScopes scopes config is enabled
+             then any unregistered scopes(excluding internal scopes
+             and allowed scopes) is be dropped. Therefore they will
+             not be shown in the user consent screen.*/
                 if (oauthServerConfiguration.isDropUnregisteredScopes()) {
                     if (log.isDebugEnabled()) {
                         log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
                     }
                     allowedScopes = dropUnregisteredScopes(params);
                 }
+
                 // Get registered OIDC scopes.
                 String[] oidcScopes = oAuthAdminService.getScopeNames();
                 List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
@@ -971,10 +967,8 @@ public class EndpointUtil {
             throws OAuthSystemException {
 
         try {
-            //Filter out OIDC scopes and unregistered scopes to prevent those scopes prompt for consent in the consent
-            // page.
-            List<String> consentRequiredScopes = dropOIDCAndUnregisteredScopesFromConsentRequiredScopes(params);
-
+            String consentRequiredScopes = StringUtils.EMPTY;
+            List<String> allowedOAuthScopes = getAllowedOAuthScopes(params);
             if (user != null && !isPromptContainsConsent(params)) {
                 String userId = getUserIdOfAuthenticatedUser(user);
                 String appId = getAppIdFromClientId(params.getClientId());
@@ -982,15 +976,35 @@ public class EndpointUtil {
                         userId, appId, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
                 if (existingUserConsent != null) {
                     if (CollectionUtils.isNotEmpty(existingUserConsent.getApprovedScopes())) {
-                        consentRequiredScopes.removeAll(existingUserConsent.getApprovedScopes());
+                        allowedOAuthScopes.removeAll(existingUserConsent.getApprovedScopes());
                     }
                 }
             }
-            params.setConsentRequiredScopes(new HashSet<>(consentRequiredScopes));
+            if (CollectionUtils.isNotEmpty(allowedOAuthScopes)) {
+                // Filter out internal scopes to be validated.
+                String[] requestedScopes = Oauth2ScopeUtils.getRequestedScopes(
+                        allowedOAuthScopes.toArray(new String[0]));
+                if (ArrayUtils.isNotEmpty(requestedScopes)) {
+                    // Remove the filtered internal scopes from the allowedOAuthScopes list.
+                    allowedOAuthScopes.removeAll(Arrays.asList(requestedScopes));
 
+                    JDBCPermissionBasedInternalScopeValidator scopeValidator =
+                            new JDBCPermissionBasedInternalScopeValidator();
+                    String[] validatedScope = scopeValidator.validateScope(requestedScopes, user, params.getClientId());
+
+                    // Filter out requested scopes from the validated scope array.
+                    for (String scope : requestedScopes) {
+                        if (ArrayUtils.contains(validatedScope, scope)) {
+                            allowedOAuthScopes.add(scope);
+                        }
+                    }
+                }
+                params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
+                consentRequiredScopes = String.join(" ", allowedOAuthScopes).trim();
+            }
             if (log.isDebugEnabled()) {
-                log.debug("Consent required scopes : " + StringUtils.join(consentRequiredScopes, " ")
-                        + " for request from client : " + params.getClientId());
+                log.debug("Consent required scopes : " + consentRequiredScopes + " for request from client : " +
+                        params.getClientId());
             }
         } catch (IdentityOAuth2ScopeException e) {
             throw new OAuthSystemException("Error occurred while retrieving user consents OAuth scopes.");

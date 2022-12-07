@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.oauth.cache;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 
 import java.io.Serializable;
@@ -33,10 +32,9 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class SessionDataCacheEntry extends CacheEntry {
 
-    private static final long serialVersionUID = -7182270780665398094L;
+    private static final long serialVersionUID = -4123547630178387354L;
     private AuthenticatedUser loggedInUser;
     private OAuth2Parameters oAuth2Parameters;
-    private OAuthAuthzReqMessageContext authzReqMsgCtx;
     private long authTime;
     private String authenticatedIdPs;
     private String essentialClaims;
@@ -47,14 +45,6 @@ public class SessionDataCacheEntry extends CacheEntry {
     private ConcurrentMap<String, String[]> paramMap = new ConcurrentHashMap<String, String[]>();
 
     private Map<String, Serializable> endpointParams = new HashMap<>();
-
-    public OAuthAuthzReqMessageContext getAuthzReqMsgCtx() {
-        return authzReqMsgCtx;
-    }
-
-    public void setAuthzReqMsgCtx(OAuthAuthzReqMessageContext authzReqMsgCtx) {
-        this.authzReqMsgCtx = authzReqMsgCtx;
-    }
 
     public OAuth2Parameters getoAuth2Parameters() {
         return oAuth2Parameters;

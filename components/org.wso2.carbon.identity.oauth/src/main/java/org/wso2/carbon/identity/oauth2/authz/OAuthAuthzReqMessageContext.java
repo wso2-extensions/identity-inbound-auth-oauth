@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -20,19 +20,17 @@ package org.wso2.carbon.identity.oauth2.authz;
 
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 
-import java.io.Serializable;
 import java.util.Properties;
 
 /**
  * OAuth authorization request message context.
  */
-public class OAuthAuthzReqMessageContext implements Serializable {
+public class OAuthAuthzReqMessageContext {
 
-    private static final long serialVersionUID = -5196424918451611897L;
     private OAuth2AuthorizeReqDTO authorizationReqDTO;
 
     private String[] approvedScope;
-    private String[] requestedScopes;
+
     private long validityPeriod;
 
     private long authorizationCodeValidityPeriod;
@@ -74,20 +72,6 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     public void setApprovedScope(String[] approvedScope) {
 
         this.approvedScope = approvedScope;
-    }
-
-    /**
-     * @return user requested scope list
-     */
-    public String[] getRequestedScopes() {
-        return requestedScopes;
-    }
-
-    /**
-     * @param requestedScopes user requested scopes list
-     */
-    public void setRequestedScopes(String[] requestedScopes) {
-        this.requestedScopes = requestedScopes;
     }
 
     @Deprecated
