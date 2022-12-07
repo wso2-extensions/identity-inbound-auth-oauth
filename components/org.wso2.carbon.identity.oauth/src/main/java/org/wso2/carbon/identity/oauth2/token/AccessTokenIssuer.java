@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -71,9 +72,11 @@ import org.wso2.carbon.utils.CarbonUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
@@ -361,6 +364,19 @@ public class AccessTokenIssuer {
         List<String> requestedAllowedScopes = new ArrayList<>();
         String[] requestedScopes = tokReqMsgCtx.getScope();
         List<String> scopesToBeValidated = new ArrayList<>();
+        String[] requestedOIDCScopes = new String[0];
+        try {
+            // Get OIDC scopes from requested scopes. At end of the scope validation OIDC scopes will add to the
+            // approved scope list.
+            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(requestedScopes);
+            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(tokReqMsgCtx.getScope());
+            // OIDC scopes are not validated in the scope validation process. Hence, Removing OIDC scopes from the
+            // requested scopes by the app.
+            String[] oidcRemovedScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(tokReqMsgCtx.getScope());
+            tokReqMsgCtx.setScope(oidcRemovedScopes);
+        } catch (IdentityOAuthAdminException e) {
+            throw new IdentityException("Error occurred while validating scopes.", e);
+        }
         if (requestedScopes != null) {
             for (String scope : requestedScopes) {
                 if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
@@ -429,6 +445,8 @@ public class AccessTokenIssuer {
             }
             // Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
+            // Add OIDC scopes back to the request
+            addRequestedOIDCScopes(tokReqMsgCtx, requestedOIDCScopes);
             addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         } else {
             if (log.isDebugEnabled()) {
@@ -707,11 +725,23 @@ public class AccessTokenIssuer {
         tokReqMsgCtx.setScope(scopesToReturn);
     }
 
+    private void addRequestedOIDCScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
+                                             String[] requestedOIDCScopes) {
+        if (tokReqMsgCtx.getScope() == null) {
+            tokReqMsgCtx.setScope(new String[0]);
+        }
+        Set<String> scopesToReturn = new HashSet<>(Arrays.asList(tokReqMsgCtx.getScope()));
+        scopesToReturn.addAll(Arrays.asList(requestedOIDCScopes));
+        String[] scopes = scopesToReturn.toArray(new String[0]);
+        tokReqMsgCtx.setScope(scopes);
+
+    }
     private void addAllowedScopes(OAuthTokenReqMessageContext tokReqMsgCtx, String[] allowedScopes) {
 
         String[] scopes = tokReqMsgCtx.getScope();
         String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, allowedScopes);
         tokReqMsgCtx.setScope(scopesToReturn);
+
     }
 
     private void removeInternalScopes(OAuthTokenReqMessageContext tokReqMsgCtx) {
