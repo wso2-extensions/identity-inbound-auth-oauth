@@ -439,7 +439,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         try {
             dao.updateOAuthConsumerApp(serviceProvider, authenticationRequestConfigConfig.getInboundAuthKey());
         } catch (IdentityOAuthAdminException e) {
-            throw new IdentityApplicationManagementException("Error occurred while updating oauth consumer app.", e);
+            throw new IdentityApplicationManagementException("Error occurred while updating oauth consumer app for "
+                    + authenticationRequestConfigConfig.getInboundAuthKey(), e);
         }
     }
 
