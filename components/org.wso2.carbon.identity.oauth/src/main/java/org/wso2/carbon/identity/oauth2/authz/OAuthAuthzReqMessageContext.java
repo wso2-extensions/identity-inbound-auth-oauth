@@ -29,8 +29,7 @@ import java.util.Properties;
 public class OAuthAuthzReqMessageContext implements Serializable {
 
     private static final long serialVersionUID = -5196424918451611897L;
-    private OAuth2AuthorizeReqDTO authorizationReqDTO;
-
+    private transient OAuth2AuthorizeReqDTO authorizationReqDTO;
     private String[] approvedScope;
     private String[] requestedScopes;
     private long validityPeriod;

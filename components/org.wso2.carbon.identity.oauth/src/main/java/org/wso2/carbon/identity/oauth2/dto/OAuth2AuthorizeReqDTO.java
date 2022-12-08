@@ -22,7 +22,6 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
-import java.io.Serializable;
 import java.util.LinkedHashSet;
 import java.util.Properties;
 
@@ -31,9 +30,8 @@ import javax.servlet.http.Cookie;
 /**
  * OAuth 2 authorization request bean.
  */
-public class OAuth2AuthorizeReqDTO implements Serializable {
+public class OAuth2AuthorizeReqDTO {
 
-    private static final long serialVersionUID = -4708580494325317575L;
     private String consumerKey;
     private String[] scopes;
     private String responseType;

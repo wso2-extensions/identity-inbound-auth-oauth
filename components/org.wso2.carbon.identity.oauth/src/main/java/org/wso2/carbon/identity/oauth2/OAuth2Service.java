@@ -99,7 +99,8 @@ public class OAuth2Service extends AbstractAdmin {
      */
     @Deprecated
     /**
-     * @deprecated Avoid using this, use {@link #authorize(OAuthAuthzReqMessageContext) authorize} method instead.
+     * @deprecated Avoid using this, use {@link #authorize(OAuthAuthzReqMessageContext, OAuth2AuthorizeReqDTO)
+     * authorize} method instead.
      */
     public OAuth2AuthorizeRespDTO authorize(OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO) {
 
@@ -139,19 +140,18 @@ public class OAuth2Service extends AbstractAdmin {
      * or an error code.
      */
     public OAuth2AuthorizeRespDTO authorize(OAuthAuthzReqMessageContext authzReqMsgCtx) {
-        OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO =  authzReqMsgCtx.getAuthorizationReqDTO();
+        OAuth2AuthorizeReqDTO authzReqDTO = authzReqMsgCtx.getAuthorizationReqDTO();
         if (log.isDebugEnabled()) {
-            log.debug("Authorization Request received for user : " + oAuth2AuthorizeReqDTO.getUser() +
-                    ", Client ID : " + oAuth2AuthorizeReqDTO.getConsumerKey() +
-                    ", Authorization Response Type : " + oAuth2AuthorizeReqDTO.getResponseType() +
-                    ", Requested callback URI : " + oAuth2AuthorizeReqDTO.getCallbackUrl() +
+            log.debug("Authorization Request received for user : " + authzReqDTO.getUser() +
+                    ", Client ID : " + authzReqDTO.getConsumerKey() +
+                    ", Authorization Response Type : " + authzReqDTO.getResponseType() +
+                    ", Requested callback URI : " + authzReqDTO.getCallbackUrl() +
                     ", Requested Scopes : " + OAuth2Util.buildScopeString(authzReqMsgCtx.getApprovedScope()) +
                     ", Approved Scopes : " + OAuth2Util.buildScopeString(
-                    oAuth2AuthorizeReqDTO.getScopes()));
+                    authzReqDTO.getScopes()));
         }
         try {
-            AuthorizationHandlerManager authzHandlerManager =
-                    AuthorizationHandlerManager.getInstance();
+            AuthorizationHandlerManager authzHandlerManager = AuthorizationHandlerManager.getInstance();
             return authzHandlerManager.handleAuthorization(authzReqMsgCtx);
         } catch (Exception e) {
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
@@ -163,9 +163,21 @@ public class OAuth2Service extends AbstractAdmin {
             authorizeRespDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
             authorizeRespDTO.setErrorMsg("Error occurred when processing the authorization " +
                     "request. Returning an error back to client.");
-            authorizeRespDTO.setCallbackURI(oAuth2AuthorizeReqDTO.getCallbackUrl());
+            authorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
             return authorizeRespDTO;
         }
+    }
+
+    /**
+     * Handle authorization request (validate requested scopes) before the consent page.
+     *
+     * @param authzReqDTO OAuth2AuthorizeReqDTO
+     * @return OAuthAuthzReqMessageContext
+     */
+    public OAuthAuthzReqMessageContext validateScopesBeforeConsent(OAuth2AuthorizeReqDTO authzReqDTO)
+            throws IdentityOAuth2Exception, IdentityOAuth2UnauthorizedScopeException, InvalidOAuthClientException {
+        AuthorizationHandlerManager authzHandlerManager = AuthorizationHandlerManager.getInstance();
+        return authzHandlerManager.validateScopesBeforeConsent(authzReqDTO);
     }
 
     /**

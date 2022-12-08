@@ -91,7 +91,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2UnauthorizedScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
-import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
@@ -1181,9 +1180,14 @@ public class OAuth2AuthzEndpoint {
         storeUserConsent(oAuthMessage, consent);
         OAuthResponse oauthResponse;
         String responseType = oauth2Params.getResponseType();
+        HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
+        OAuth2AuthorizeReqDTO authzReqDTO =
+                buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
+        OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext =
+                oAuthMessage.getSessionDataCacheEntry().getAuthzReqMsgCtx();
+        oAuthAuthzReqMessageContext.setAuthorizationReqDTO(authzReqDTO);
         // authorizing the request
-        OAuth2AuthorizeRespDTO authzRespDTO =
-                authorize(oAuthMessage.getSessionDataCacheEntry().getAuthzReqMsgCtx());
+        OAuth2AuthorizeRespDTO authzRespDTO = authorize(oAuthAuthzReqMessageContext);
 
         if (isSuccessfulAuthorization(authzRespDTO)) {
             oauthResponse =
@@ -2426,9 +2430,7 @@ public class OAuth2AuthzEndpoint {
             throws IdentityOAuth2UnauthorizedScopeException, OAuthSystemException {
 
         try {
-            AuthorizationHandlerManager authzHandlerManager = AuthorizationHandlerManager.getInstance();
-            OAuthAuthzReqMessageContext authzReqMsgCtx = authzHandlerManager.
-                    validateScopesBeforeConsent(authzReqDTO);
+            OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuth2Service().validateScopesBeforeConsent(authzReqDTO);
             // Add OAuthAuthzReqMessageContext to SessionDataCacheEntry, because we may lose validated scopes if IS
             // crashes while getting consent.
             oAuthMessage.getSessionDataCacheEntry().setAuthzReqMsgCtx(authzReqMsgCtx);
