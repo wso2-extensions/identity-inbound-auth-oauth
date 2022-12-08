@@ -30,6 +30,7 @@ public final class OAuthConstants {
     public static final String AMR = "amr";
     public static final String ACR = "acr";
     public static final String AT_HASH = "at_hash";
+    public static final String CORRELATION_ID_MDC = "Correlation-ID";
 
     //OAuth2 request headers.
     public static final String HTTP_REQ_HEADER_AUTHZ = "Authorization";
@@ -497,6 +498,9 @@ public final class OAuthConstants {
         public static final String SHA256 = "SHA-256";
         public static final String SHA384 = "SHA-384";
         public static final String SHA512 = "SHA-512";
+        public static final String SHA1 = "SHA-1";
+        public static final String KID_HASHING_ALGORITHM = SHA256;
+        public static final String PREVIOUS_KID_HASHING_ALGORITHM = SHA1;
 
         private SignatureAlgorithms() {
 
@@ -519,5 +523,7 @@ public final class OAuthConstants {
         public static final String OAUTH_INBOUND_SERVICE = "oauth-inbound-service";
         public static final String FAILED = "FAILED";
         public static final String SUCCESS = "SUCCESS";
+        public static final String CLIENT_ID = "client id";
+        public static final String TENANT_DOMAIN = "tenant domain";
     }
 }

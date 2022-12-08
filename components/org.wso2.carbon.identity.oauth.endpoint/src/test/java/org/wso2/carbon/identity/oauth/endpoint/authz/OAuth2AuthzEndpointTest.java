@@ -1695,7 +1695,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     }
 
     @Test(dataProvider = "provideAuthenticatedTimeFromCommonAuthData")
-    public void testGetAuthenticatedTimeFromCommonAuthCookie(Object sessionContextObject, Object updatedTimestamp,
+    public void testGetAuthenticatedTimeFromCommonAuthCookieValue(Object sessionContextObject, Object updatedTimestamp,
                                                              Object createdTimeStamp) throws Exception {
 
         SessionContext sessionContext = (SessionContext) sessionContextObject;
@@ -1709,10 +1709,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockStatic(FrameworkUtils.class);
         when(FrameworkUtils.getSessionContextFromCache(anyString(), anyString())).thenReturn(sessionContext);
 
-        Method getAuthenticatedTimeFromCommonAuthCookie = authzEndpointObject.getClass().
-                getDeclaredMethod("getAuthenticatedTimeFromCommonAuthCookie", Cookie.class, String.class);
-        getAuthenticatedTimeFromCommonAuthCookie.setAccessible(true);
-        long timestamp = (long) getAuthenticatedTimeFromCommonAuthCookie.invoke(authzEndpointObject, commonAuthCookie,
+        Method getAuthenticatedTimeFromCommonAuthCookieValue = authzEndpointObject.getClass().
+                getDeclaredMethod("getAuthenticatedTimeFromCommonAuthCookieValue", String.class, String.class);
+        getAuthenticatedTimeFromCommonAuthCookieValue.setAccessible(true);
+        long timestamp = (long) getAuthenticatedTimeFromCommonAuthCookieValue.invoke(authzEndpointObject,
+                commonAuthCookie.getValue(),
                 "abc");
 
         if (sessionContext == null) {
