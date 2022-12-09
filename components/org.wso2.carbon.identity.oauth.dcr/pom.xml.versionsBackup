@@ -22,13 +22,13 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.11.0-SNAPSHOT</version>
+        <version>6.10.25-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>org.wso2.carbon.identity.oidc.dcr</artifactId>
-    <name>WSO2 Carbon - OIDC Dynamic Client Registration</name>
-    <description>WSO2 Carbon - Dynamic Client Registration</description>
+    <artifactId>org.wso2.carbon.identity.oauth.dcr</artifactId>
+    <name>WSO2 Carbon - Dynamic Client Registration Web Service</name>
+    <description>WSO2 Carbon - Dynamic Client Registration Web</description>
     <packaging>bundle</packaging>
     <url>http://wso2.org</url>
 
@@ -46,8 +46,15 @@
         <dependency>
             <groupId>com.googlecode.json-simple.wso2</groupId>
             <artifactId>json-simple</artifactId>
-            <version>1.1.wso2v1</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-lang.wso2</groupId>
+            <artifactId>commons-lang</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon</groupId>
+            <artifactId>org.wso2.carbon.user.core</artifactId>
         </dependency>
 
         <dependency>
@@ -64,33 +71,13 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
             <artifactId>org.wso2.carbon.identity.oauth</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
-            <artifactId>org.wso2.carbon.identity.oauth.dcr</artifactId>
+            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.application.authentication.framework</artifactId>
-            <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>jcl-over-slf4j</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>log4j-over-slf4j</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
-        <!--Test Dependencies-->
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
@@ -120,8 +107,22 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.testutil</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.application.mgt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.sun.xml.parsers</groupId>
+            <artifactId>jaxp-ri</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -135,12 +136,13 @@
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
                         <Bundle-Description>Dynamic Client Registration Bundle</Bundle-Description>
-                        <Private-Package>org.wso2.carbon.identity.oidc.dcr.internal</Private-Package>
+                        <Private-Package>org.wso2.carbon.identity.oauth.dcr.internal</Private-Package>
                         <Import-Package>
                             org.osgi.framework; version="${osgi.framework.imp.pkg.version.range}",
                             org.osgi.service.component; version="${osgi.service.component.imp.pkg.version.range}",
 
                             org.apache.commons.logging; version="${commons-logging.osgi.version.range}",
+                            org.apache.commons.lang; version="${commons-lang.wso2.osgi.version.range}",
 
                             org.json,
                             org.json.simple,
@@ -148,23 +150,25 @@
 
                             org.wso2.carbon.context; version="${carbon.kernel.imp.pkg.version.range}",
                             org.wso2.carbon.utils.multitenancy;version="${carbon.kernel.imp.pkg.version.range}",
+
                             org.wso2.carbon.registry.api;version="${carbon.kernel.registry.imp.pkg.version.range}",
                             org.wso2.carbon.registry.core.*;version="${carbon.kernel.registry.imp.pkg.version.range}",
+                            org.wso2.carbon.user.core.*; version="${carbon.kernel.imp.pkg.version.range}",
 
+                            org.wso2.carbon.identity.core.*; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.base; version="${carbon.identity.framework.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.application.common; version="${carbon.identity.framework.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.application.common.model; version="${carbon.identity.framework.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.application.mgt;version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.application.common;version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.application.common.model;version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.application.mgt.*;version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework.*;version="${carbon.identity.framework.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.core.util;version="${carbon.identity.framework.imp.pkg.version.range}",
-
-                            org.wso2.carbon.identity.oauth.dcr.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.oauth2.util;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                             javax.servlet.http; version="${imp.pkg.version.javax.servlet}",
+                            org.wso2.carbon.user.api; version="${carbon.user.api.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.oauth.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.oauth2.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                         </Import-Package>
                         <Export-Package>
-                            !org.wso2.carbon.identity.oidc.dcr.internal,
-                            org.wso2.carbon.identity.oidc.dcr.*;version="${identity.inbound.auth.oauth.exp.pkg.version}"
+                            !org.wso2.carbon.identity.oauth.dcr.internal,
+                            org.wso2.carbon.identity.oauth.dcr.*;version="${identity.inbound.auth.oauth.exp.pkg.version}"
                         </Export-Package>
                     </instructions>
                 </configuration>
@@ -174,9 +178,27 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven.surefire.plugin.version}</version>
                 <configuration>
+                    <argLine>
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.io=ALL-UNNAMED
+                        --add-opens java.base/java.nio.charset=ALL-UNNAMED
+                        --add-opens java.base/java.net=ALL-UNNAMED
+                        --add-opens java.base/java.util.stream=ALL-UNNAMED
+                        --add-opens java.base/java.util.regex=ALL-UNNAMED
+                        --add-opens java.base/jdk.internal.util=ALL-UNNAMED
+                        --add-exports java.base/jdk.internal.loader=ALL-UNNAMED
+                        --add-opens java.xml/jdk.xml.internal=ALL-UNNAMED
+                        --add-opens java.base/sun.nio.fs=ALL-UNNAMED
+                        --add-opens java.base/sun.nio.cs=ALL-UNNAMED
+                        --add-opens java.base/sun.net.www.protocol.https=ALL-UNNAMED
+                    </argLine>
                     <suiteXmlFiles>
                         <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
                     </suiteXmlFiles>
+                    <systemPropertyVariables>
+                        <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
+                    </systemPropertyVariables>
                     <classpathDependencyExcludes>
                         <classpathDependencyExclude>org.ops4j.pax.logging</classpathDependencyExclude>
                         <classpathDependencyExclude>org.wso2.org.ops4j.pax.logging</classpathDependencyExclude>
@@ -189,19 +211,20 @@
                 <version>${jacoco.version}</version>
                 <executions>
                     <execution>
-                        <id>default-prepare-agent</id>
+                        <id>default-instrument</id>
                         <goals>
-                            <goal>prepare-agent</goal>
+                            <goal>instrument</goal>
                         </goals>
                     </execution>
                     <execution>
-                        <id>default-prepare-agent-integration</id>
+                        <id>default-restore-instrumented-classes</id>
                         <goals>
-                            <goal>prepare-agent-integration</goal>
+                            <goal>restore-instrumented-classes</goal>
                         </goals>
                     </execution>
                     <execution>
                         <id>default-report</id>
+                        <phase>prepare-package</phase>
                         <goals>
                             <goal>report</goal>
                         </goals>
@@ -225,7 +248,7 @@
                                         <limit implementation="org.jacoco.report.check.Limit">
                                             <counter>COMPLEXITY</counter>
                                             <value>COVEREDRATIO</value>
-                                            <!--<minimum>0.80</minimum>-->
+                                            <!--<minimum>0.60</minimum>-->
                                         </limit>
                                     </limits>
                                 </rule>
@@ -242,11 +265,10 @@
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
                 <configuration>
-                    <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+                    <threshold>High</threshold>
                 </configuration>
             </plugin>
         </plugins>
     </build>
-
 
 </project>
