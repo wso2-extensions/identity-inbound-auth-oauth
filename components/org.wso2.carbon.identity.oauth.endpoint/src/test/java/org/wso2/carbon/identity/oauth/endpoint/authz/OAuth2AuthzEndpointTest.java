@@ -684,8 +684,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         authzReqDTO.setResponseType("code");
         OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
         authzReqMsgCtx.setApprovedScope(new String[]{OAuthConstants.Scope.OPENID});
+        when(oAuth2Service.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class))).thenReturn(authzReqMsgCtx);
         when(authorizationHandlerManager.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class)))
                 .thenReturn(authzReqMsgCtx);
+
+        when(loginCacheEntry.getAuthzReqMsgCtx()).thenReturn(authzReqMsgCtx);
 
         spy(FrameworkUtils.class);
         doReturn("sample").when(FrameworkUtils.class, "resolveUserIdFromUsername", anyInt(), anyString(), anyString());
@@ -851,6 +854,10 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         when(consentCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
         when(consentCacheEntry.getLoggedInUser()).thenReturn(new AuthenticatedUser());
+
+        OAuth2AuthorizeReqDTO authorizeReqDTO =  new OAuth2AuthorizeReqDTO();
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authorizeReqDTO);
+        when(consentCacheEntry.getAuthzReqMsgCtx()).thenReturn(authzReqMsgCtx);
 
         mockStatic(OpenIDConnectUserRPStore.class);
         when(OpenIDConnectUserRPStore.getInstance()).thenReturn(openIDConnectUserRPStore);
@@ -1255,6 +1262,10 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
 
+        OAuth2AuthorizeReqDTO authorizeReqDTO =  new OAuth2AuthorizeReqDTO();
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authorizeReqDTO);
+        when(consentCacheEntry.getAuthzReqMsgCtx()).thenReturn(authzReqMsgCtx);
+
         Response response;
         try {
             response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
@@ -1383,9 +1394,10 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         authzReqDTO.setResponseType("code");
         OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
         authzReqMsgCtx.setApprovedScope(new String[]{OAuthConstants.Scope.OPENID});
+        when(oAuth2Service.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class))).thenReturn(authzReqMsgCtx);
         when(authorizationHandlerManager.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class)))
                 .thenReturn(authzReqMsgCtx);
-
+        when(loginCacheEntry.getAuthzReqMsgCtx()).thenReturn(authzReqMsgCtx);
         spy(FrameworkUtils.class);
         doReturn("sample").when(FrameworkUtils.class, "resolveUserIdFromUsername", anyInt(), anyString(), anyString());
         doNothing().when(FrameworkUtils.class, "startTenantFlow", anyString());
@@ -1533,9 +1545,10 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         authzReqDTO.setResponseType("code");
         OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
         authzReqMsgCtx.setApprovedScope(new String[]{OAuthConstants.Scope.OPENID});
+        when(oAuth2Service.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class))).thenReturn(authzReqMsgCtx);
         when(authorizationHandlerManager.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class)))
                 .thenReturn(authzReqMsgCtx);
-
+        when(loginCacheEntry.getAuthzReqMsgCtx()).thenReturn(authzReqMsgCtx);
         spy(FrameworkUtils.class);
         doReturn("sample").when(FrameworkUtils.class, "resolveUserIdFromUsername", anyInt(), anyString(), anyString());
         doNothing().when(FrameworkUtils.class, "startTenantFlow", anyString());

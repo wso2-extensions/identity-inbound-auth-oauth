@@ -140,6 +140,7 @@ public class OAuth2Service extends AbstractAdmin {
      * or an error code.
      */
     public OAuth2AuthorizeRespDTO authorize(OAuthAuthzReqMessageContext authzReqMsgCtx) {
+
         OAuth2AuthorizeReqDTO authzReqDTO = authzReqMsgCtx.getAuthorizationReqDTO();
         if (log.isDebugEnabled()) {
             log.debug("Authorization Request received for user : " + authzReqDTO.getUser() +
@@ -170,12 +171,15 @@ public class OAuth2Service extends AbstractAdmin {
 
     /**
      * Handle authorization request (validate requested scopes) before the consent page.
+     * We return a OAuthAuthzReqMessageContext object instead of a response object here since we use this context across
+     * the scope validation (before consent) and issuing code.
      *
      * @param authzReqDTO OAuth2AuthorizeReqDTO
      * @return OAuthAuthzReqMessageContext
      */
     public OAuthAuthzReqMessageContext validateScopesBeforeConsent(OAuth2AuthorizeReqDTO authzReqDTO)
             throws IdentityOAuth2Exception, IdentityOAuth2UnauthorizedScopeException, InvalidOAuthClientException {
+
         AuthorizationHandlerManager authzHandlerManager = AuthorizationHandlerManager.getInstance();
         return authzHandlerManager.validateScopesBeforeConsent(authzReqDTO);
     }
