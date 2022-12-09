@@ -1183,6 +1183,9 @@ public class OAuth2AuthzEndpoint {
         HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
         OAuth2AuthorizeReqDTO authzReqDTO =
                 buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
+        // We have persisted the oAuthAuthzReqMessageContext before the consent after scope validation. Here we
+        // retrieve it from the cache and use it again because it contains  information that was set during the scope
+        // validation process.
         OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext =
                 oAuthMessage.getSessionDataCacheEntry().getAuthzReqMsgCtx();
         oAuthAuthzReqMessageContext.setAuthorizationReqDTO(authzReqDTO);
