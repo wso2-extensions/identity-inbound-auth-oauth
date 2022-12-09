@@ -30,7 +30,7 @@ public class OAuthAuthzReqMessageContext implements Serializable {
 
     private static final long serialVersionUID = -5196424918451611897L;
     // We set OAuth2AuthorizeReqDTO as transient because we don't want to serialize OAuth2AuthorizeReqDTO because
-    // it contains cookies and request header.
+    // it contains cookies and request headers.
     private transient OAuth2AuthorizeReqDTO authorizationReqDTO;
     private String[] approvedScope;
     private String[] requestedScopes;
