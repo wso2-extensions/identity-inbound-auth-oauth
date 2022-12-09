@@ -2431,8 +2431,9 @@ public class OAuth2AuthzEndpoint {
 
         try {
             OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuth2Service().validateScopesBeforeConsent(authzReqDTO);
-            // Add OAuthAuthzReqMessageContext to SessionDataCacheEntry, because we may lose validated scopes if IS
-            // crashes while getting consent.
+            // Here we need to preserve the OAuthAuthzReqMessageContext to preserve backward compatibility as
+            // extensions might add information to context that needs to be available when authorizing
+            // (issue code, token) the request later.
             oAuthMessage.getSessionDataCacheEntry().setAuthzReqMsgCtx(authzReqMsgCtx);
             if (ArrayUtils.isEmpty(authzReqMsgCtx.getApprovedScope())) {
                 oauth2Params.setScopes(new HashSet<>(Collections.emptyList()));
