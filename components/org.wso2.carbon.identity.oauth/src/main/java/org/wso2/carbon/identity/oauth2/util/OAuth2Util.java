@@ -169,6 +169,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -4620,4 +4621,34 @@ public class OAuth2Util {
         }
         return isFederatedRoleBasedAuthzEnabled;
     }
+
+    public static String[] getRequestedOIDCScopes(String[] requestedScopes)
+            throws IdentityOAuthAdminException {
+        if (ArrayUtils.isEmpty(requestedScopes)) {
+            return new String[0];
+        }
+        String[] oidcScopes = OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().getScopeNames();
+        if (ArrayUtils.isEmpty(oidcScopes)) {
+            return new String[0];
+        }
+        Set<String> oidcScopeSet = new HashSet<>(Arrays.asList(oidcScopes));
+        return Arrays.stream(requestedScopes).distinct()
+                .filter(oidcScopeSet::contains).toArray(String[]::new);
+    }
+
+    public static String[] removeOIDCScopesFromRequestedScopes(String[] requestedScopes)
+            throws IdentityOAuthAdminException {
+
+        if (ArrayUtils.isEmpty(requestedScopes)) {
+            return new String[0];
+        }
+        String[] oidcScopes = OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().getScopeNames();
+        if (ArrayUtils.isEmpty(oidcScopes)) {
+            return requestedScopes;
+        }
+        Set<String> oidcScopeSet = new HashSet<>(Arrays.asList(oidcScopes));
+        return Arrays.stream(requestedScopes).distinct()
+                .filter(s -> !oidcScopeSet.contains(s)).toArray(String[]::new);
+    }
+
 }

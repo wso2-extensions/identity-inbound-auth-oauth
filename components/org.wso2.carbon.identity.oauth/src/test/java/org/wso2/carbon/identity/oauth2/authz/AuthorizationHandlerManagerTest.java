@@ -93,24 +93,6 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         Assert.assertNotNull(respDTO.getAccessToken(), "Access token returned is null");
     }
 
-    @Test
-    public void testHandleAuthorizationIDTokenTokenResponseTypeUnauthorized() throws Exception {
-        authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_ID_TOKEN_TOKEN);
-        authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID_UNAUTHORIZED_CLIENT);
-        authzReqDTO.setScopes(TestConstants.SCOPE_STRING.split(" "));
-        AuthenticatedUser user = new AuthenticatedUser();
-        user.setUserName(TestConstants.USER_NAME);
-        user.setTenantDomain(TestConstants.TENANT_DOMAIN);
-        user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
-        authzReqDTO.setUser(user);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
-        String errorCode = respDTO.getErrorCode();
-        Assert.assertNotNull(respDTO, "Response is null");
-        Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
-        Assert.assertEquals(errorCode, TestConstants.UNAUTHORIZED_CLIENT_ERROR_CODE,
-                            "Expected unauthorized_client error code but found : " + errorCode);
-    }
-
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
     public void testHandleAuthorizationIDTokenResponse(boolean isIDPIdColumnEnabled) throws Exception {
 
@@ -131,24 +113,6 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         Assert.assertNotNull(respDTO.getAccessToken(), "ID token returned is null");
     }
 
-    @Test
-    public void testHandleAuthorizationIDTokenResponseTypeUnauthorized() throws Exception {
-        authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_ID_TOKEN);
-        authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID_UNAUTHORIZED_CLIENT);
-        authzReqDTO.setScopes(TestConstants.SCOPE_STRING.split(" "));
-        AuthenticatedUser user = new AuthenticatedUser();
-        user.setUserName(TestConstants.USER_NAME);
-        user.setTenantDomain(TestConstants.TENANT_DOMAIN);
-        user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
-        authzReqDTO.setUser(user);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
-        String errorCode = respDTO.getErrorCode();
-        Assert.assertNotNull(respDTO, "Response is null");
-        Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
-        Assert.assertEquals(errorCode, TestConstants.UNAUTHORIZED_CLIENT_ERROR_CODE,
-                            "Expected unauthorized_client error code but found : " + errorCode);
-    }
-
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
     public void testHandleAuthorizationTokenResponse(boolean isIDPIdColumnEnabled) throws Exception {
 
@@ -167,24 +131,6 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
         Assert.assertNotNull(respDTO, "Response is null");
         Assert.assertNotNull(respDTO.getAccessToken(), "Access token returned is null");
-    }
-
-    @Test
-    public void testHandleAuthorizationTokenResponseTypeUnauthorized() throws Exception {
-        authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_TOKEN);
-        authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID_UNAUTHORIZED_CLIENT);
-        authzReqDTO.setScopes(TestConstants.SCOPE_STRING.split(" "));
-        AuthenticatedUser user = new AuthenticatedUser();
-        user.setUserName(TestConstants.USER_NAME);
-        user.setTenantDomain(TestConstants.TENANT_DOMAIN);
-        user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
-        authzReqDTO.setUser(user);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
-        String errorCode = respDTO.getErrorCode();
-        Assert.assertNotNull(respDTO, "Response is null");
-        Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
-        Assert.assertEquals(errorCode, TestConstants.UNAUTHORIZED_CLIENT_ERROR_CODE,
-                            "Expected unauthorized_client error code but found : " + errorCode);
     }
 
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
@@ -273,26 +219,6 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
         Assert.assertEquals(errorCode, OAuthError.CodeResponse.UNAUTHORIZED_CLIENT,
                             "Expected " + OAuthError.CodeResponse.UNAUTHORIZED_CLIENT + " error code but found : " +
-                            errorCode);
-    }
-
-    @Test
-    public void testHandleAuthorizationTokenResponseUnauthorizedScope() throws Exception {
-        authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
-        authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_TOKEN);
-        authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID);
-        authzReqDTO.setScopes(TestConstants.SCOPE_UNAUTHORIZED_SCOPE.split(" "));
-        AuthenticatedUser user = new AuthenticatedUser();
-        user.setUserName(TestConstants.USER_NAME);
-        user.setTenantDomain(TestConstants.TENANT_DOMAIN);
-        user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
-        authzReqDTO.setUser(user);
-        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
-        String errorCode = respDTO.getErrorCode();
-        Assert.assertNotNull(respDTO, "Response is null");
-        Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
-        Assert.assertEquals(errorCode, OAuthError.CodeResponse.INVALID_SCOPE,
-                            "Expected " + OAuthError.CodeResponse.INVALID_SCOPE + " error code but found : " +
                             errorCode);
     }
 
