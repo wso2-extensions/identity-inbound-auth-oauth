@@ -22,7 +22,8 @@ import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.reflect.Whitebox;
 import org.testng.annotations.AfterTest;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
@@ -139,17 +140,18 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
     private OIDCLogoutServlet logoutServlet;
 
-    @BeforeTest
-    public void setUp() throws Exception {
-
-        logoutServlet = new OIDCLogoutServlet();
-
+    @BeforeClass
+    public void setupBeforeClass() throws Exception {
         initiateInMemoryH2();
         createOAuthApp(CLIENT_ID_VALUE, SECRET, USERNAME, APP_NAME, "ACTIVE", CALLBACK_URL);
         createOAuthApp(CLIENT_ID_WITH_REGEX_CALLBACK, SECRET, USERNAME, APP_NAME, "ACTIVE",
                 REGEX_CALLBACK_URL);
         createOAuthApp(CLIENT_ID_FOR_REALM_TEST, SECRET, USERNAME, APP_NAME, "ACTIVE", CALLBACK_URL);
+    }
 
+    @BeforeMethod
+    public void setUp() throws Exception {
+        logoutServlet = new OIDCLogoutServlet();
     }
 
     @DataProvider(name = "provideDataForTestDoGet")

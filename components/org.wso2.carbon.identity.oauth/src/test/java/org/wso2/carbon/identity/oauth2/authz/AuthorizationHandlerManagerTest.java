@@ -152,6 +152,36 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         Assert.assertNotNull(respDTO.getAuthorizationCode(), "Code returned is null");
     }
 
+    @Test
+    public void testHandleAuthorizationCodeResponseTypeUnauthorized() throws Exception {
+        authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_CODE);
+        authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID_UNAUTHORIZED_CLIENT);
+        authzReqDTO.setScopes(TestConstants.SCOPE_STRING.split(" "));
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setUserName(TestConstants.USER_NAME);
+        user.setTenantDomain(TestConstants.TENANT_DOMAIN);
+        user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
+        authzReqDTO.setUser(user);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
+        String errorCode = respDTO.getErrorCode();
+        Assert.assertNotNull(respDTO, "Response is null");
+        Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
+        Assert.assertEquals(errorCode, TestConstants.UNAUTHORIZED_CLIENT_ERROR_CODE,
+                            "Expected unauthorized_client error code but found : " + errorCode);
+    }
+
+    @Test
+    public void testHandleInvalidResponseType() throws Exception {
+        authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_INVALID);
+        OAuth2AuthorizeRespDTO respDTO = authorizationHandlerManager.handleAuthorization(authzReqDTO);
+        String errorCode = respDTO.getErrorCode();
+        Assert.assertNotNull(respDTO, "Response is null");
+        Assert.assertNotNull(respDTO.getErrorCode(), "Error code returned is null");
+        Assert.assertEquals(errorCode, OAuthError.CodeResponse.UNSUPPORTED_RESPONSE_TYPE,
+                            "Expected " + OAuthError.CodeResponse.UNSUPPORTED_RESPONSE_TYPE +
+                             " error code but found : " + errorCode);
+    }
+
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
     public void testHandleAuthorizationTokenResponseNoScopes(boolean isIDPIdColumnEnabled) throws Exception {
 

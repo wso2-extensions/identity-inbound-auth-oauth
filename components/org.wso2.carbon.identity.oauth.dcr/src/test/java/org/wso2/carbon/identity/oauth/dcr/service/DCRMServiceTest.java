@@ -20,7 +20,7 @@ package org.wso2.carbon.identity.oauth.dcr.service;
 
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
-import org.mockito.internal.util.reflection.Whitebox;
+import org.mockito.internal.util.reflection.FieldSetter;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.IObjectFactory;
@@ -167,8 +167,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
             when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
             when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[]{dto});
         }
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
-
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
         try {
             dcrmService.getApplication(dummyConsumerKey);
         } catch (IdentityException ex) {
@@ -184,7 +184,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
         doThrow(new IdentityOAuthAdminException("")).when(mockOAuthAdminService)
                 .getOAuthApplicationData(dummyConsumerKey);
         when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[0]);
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
 
         try {
             dcrmService.getApplication(dummyConsumerKey);
@@ -201,7 +202,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
         doThrow(new IdentityOAuthAdminException("", new InvalidOAuthClientException(""))).when(mockOAuthAdminService)
                 .getOAuthApplicationData(dummyConsumerKey);
         when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[0]);
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
 
         try {
             dcrmService.getApplication(dummyConsumerKey);
@@ -216,7 +218,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
     public void getApplicationDTOTestUserUnauthorized() throws Exception {
 
         startTenantFlow();
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
         when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
         when(dto.getApplicationName()).thenReturn(dummyClientName);
 
@@ -237,10 +240,11 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
     @Test
     public void isUserAuthorizedTestWithIAMException() throws IdentityOAuthAdminException,
-            UserStoreException {
+            UserStoreException, NoSuchFieldException {
 
         startTenantFlow();
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
         when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
         when(dto.getApplicationName()).thenReturn(dummyClientName);
 
@@ -274,8 +278,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
         dto.setUsername(dummyUserName.concat("@").concat(dummyTenantDomain));
 
         when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
-
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
         try {
             startTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
@@ -339,7 +343,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 .thenReturn(new ServiceProvider());
         when(mockOAuthAdminService
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
         Application application = dcrmService.getApplicationByName(dummyClientName);
 
         assertEquals(application.getClientId(), dummyConsumerKey);
@@ -379,8 +384,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
         startTenantFlow();
         doThrow(new IdentityOAuthAdminException("", new InvalidOAuthClientException(""))).when(mockOAuthAdminService)
                 .getOAuthApplicationDataByAppName(dummyClientName);
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
-
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
         when(mockApplicationManagementService.getServiceProvider(anyString(), anyString()))
                 .thenReturn(new ServiceProvider());
         try {
@@ -396,8 +401,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
     public void getApplicationByNameUserUnauthorizedTest() throws Exception {
 
         startTenantFlow();
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
-
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
         when(mockApplicationManagementService.getServiceProvider(anyString(), anyString()))
                 .thenReturn(new ServiceProvider());
         when(mockOAuthAdminService.getOAuthApplicationDataByAppName(dummyClientName))
@@ -498,8 +503,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
         applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
         applicationRegistrationRequest.setConsumerKey(dummyConsumerKey);
         startTenantFlow();
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
-
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
         when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey))
                 .thenReturn(dto);
         when(dto.getApplicationName()).thenReturn(dummyClientName);
@@ -528,7 +533,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
 
         startTenantFlow();
 
@@ -581,7 +587,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
 
         startTenantFlow();
 
@@ -634,10 +641,11 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
     @Test
     public void registerApplicationWithFailedToRegisterTest() throws
-            IdentityApplicationManagementException, IdentityOAuthAdminException {
+            IdentityApplicationManagementException, IdentityOAuthAdminException, NoSuchFieldException {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
         startTenantFlow();
 
         List<String> redirectUri = new ArrayList<>();
@@ -668,7 +676,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
     public void testRegisterApplicationWithInvalidSPName() throws Exception {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
         startTenantFlow();
 
         dummyGrantTypes.add("implicit");
@@ -691,8 +700,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
-
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
         startTenantFlow();
 
         dummyGrantTypes.add("implicit");
@@ -734,7 +743,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         mockStatic(IdentityProviderManager.class);
         mockApplicationManagementService = mock(ApplicationManagementService.class);
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
 
         startTenantFlow();
 
@@ -817,7 +827,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
     public void registerApplicationTestWithErrorCreataingSPTenantTest(List<String> redirectUri) throws Exception {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
         startTenantFlow();
 
         dummyGrantTypes.add("implicit");
@@ -855,7 +866,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
         applicationRegistrationRequest.setRedirectUris(redirectUri);
         applicationRegistrationRequest.setConsumerKey(dummyConsumerKey);
         OAuthAdminService mockOAuthAdminService = mock(OAuthAdminService.class);
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
 
         whenNew(OAuthAdminService.class).withNoArguments().thenReturn(mockOAuthAdminService);
         IdentityOAuthAdminException identityOAuthAdminException = mock(IdentityOAuthAdminException.class);
@@ -896,7 +908,9 @@ public class DCRMServiceTest extends PowerMockTestCase {
     private OAuthConsumerAppDTO registerApplicationTestWithFailedToUpdateSP() throws Exception {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
+
         startTenantFlow();
 
         dummyGrantTypes.add("implicit");
@@ -1019,7 +1033,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
     }
 
     private OAuthConsumerAppDTO updateApplication()
-            throws IdentityOAuthAdminException, IdentityApplicationManagementException {
+            throws IdentityOAuthAdminException, IdentityApplicationManagementException, NoSuchFieldException {
 
         startTenantFlow();
         dummyGrantTypes.add("dummy1");
@@ -1038,7 +1052,9 @@ public class DCRMServiceTest extends PowerMockTestCase {
         dto.setUsername(dummyUserName.concat("@").concat(dummyTenantDomain));
 
         when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
+
         ServiceProvider serviceProvider = new ServiceProvider();
         serviceProvider.setApplicationName(dummyClientName);
 
@@ -1083,7 +1099,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
-        Whitebox.setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        FieldSetter.setField(dcrmService,
+                dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
 
         startTenantFlow();
 

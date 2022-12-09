@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>6.10.12-SNAPSHOT</version>
+    <version>6.11.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -561,8 +561,14 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
                 <groupId>org.powermock</groupId>
-                <artifactId>powermock-api-mockito</artifactId>
+                <artifactId>powermock-api-mockito2</artifactId>
                 <version>${powermock.version}</version>
                 <scope>test</scope>
             </dependency>
@@ -582,7 +588,7 @@
             <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.testutil</artifactId>
-                <version>${carbon.identity.testutil.version}</version>
+                <version>${carbon.identity.framework.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -648,6 +654,14 @@
                 <artifactId>org.wso2.carbon.identity.central.log.mgt</artifactId>
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.sun.xml.parsers</groupId>
+                <artifactId>jaxp-ri</artifactId>
+                <version>${jaxp-ri.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+
         </dependencies>
     </dependencyManagement>
 
@@ -790,6 +804,11 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>${maven-war-plugin.version}</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
             </plugin>
             <plugin>
@@ -814,13 +833,13 @@
         <apache.felix.scr.ds.annotations.version>1.2.4</apache.felix.scr.ds.annotations.version>
 
         <!-- Carbon kernel version -->
-        <carbon.kernel.version>4.7.0</carbon.kernel.version>
-        <carbon.kernel.feature.version>4.7.0</carbon.kernel.feature.version>
+        <carbon.kernel.version>4.7.1</carbon.kernel.version>
+        <carbon.kernel.feature.version>4.6.1</carbon.kernel.feature.version>
         <carbon.kernel.imp.pkg.version.range>[4.5.0, 5.0.0)</carbon.kernel.imp.pkg.version.range>
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.23.34</carbon.identity.framework.version>
+        <carbon.identity.framework.version>5.25.45</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.17.5, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
@@ -916,6 +935,7 @@
         <maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
         <maven.bundle.plugin.version>3.2.0</maven.bundle.plugin.version>
         <maven.buildnumber.plugin.version>1.4</maven.buildnumber.plugin.version>
+        <maven-war-plugin.version>3.3.1</maven-war-plugin.version>
 
         <!--Swagger Dependency Version-->
         <jackson-databind.version>2.13.2.1</jackson-databind.version>
@@ -927,12 +947,14 @@
         <junit.version>4.13.1</junit.version>
         <testng.version>6.9.10</testng.version>
         <jacoco.version>0.8.7</jacoco.version>
-        <powermock.version>1.7.4</powermock.version>
-        <maven.surefire.plugin.version>2.18.1</maven.surefire.plugin.version>
+        <mockito.version>2.28.2</mockito.version>
+        <powermock.version>2.0.9</powermock.version>
+        <maven.surefire.plugin.version>2.22.2</maven.surefire.plugin.version>
         <javaee.web.api.version>7.0</javaee.web.api.version>
         <h2database.version>2.1.210</h2database.version>
         <commons-codec.test.version>1.4</commons-codec.test.version>
-        <carbon.identity.testutil.version>5.20.448</carbon.identity.testutil.version>
+        <org.wso2.carbon.identity.testutil.version>5.23.18</org.wso2.carbon.identity.testutil.version>
+        <jaxp-ri.version>1.4.5</jaxp-ri.version>
         <!--SAML component version for test-->
         <carbon.identity.sso.saml.version>5.7.0</carbon.identity.sso.saml.version>
         <spring-context.version>5.1.1.RELEASE</spring-context.version>
@@ -946,7 +968,7 @@
         <log4j.verison>1.2.17</log4j.verison>
 
         <maven.checkstyleplugin.version>3.1.0</maven.checkstyleplugin.version>
-        <spotbugs-maven-plugin.version>3.1.12</spotbugs-maven-plugin.version>
+        <spotbugs-maven-plugin.version>4.7.2.1</spotbugs-maven-plugin.version>
         <findsecbugs-plugin.version>1.10.1</findsecbugs-plugin.version>
 
         <findbugs.annotations.version>3.0.1</findbugs.annotations.version>

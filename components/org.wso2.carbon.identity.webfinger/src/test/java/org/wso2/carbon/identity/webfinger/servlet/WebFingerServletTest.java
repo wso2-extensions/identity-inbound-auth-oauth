@@ -54,7 +54,7 @@ public class WebFingerServletTest {
 
             @Override
             public String answer(InvocationOnMock invocationOnMock) throws Throwable {
-                return parameters.get(invocationOnMock.getArgumentAt(0, String.class));
+                return parameters.get(invocationOnMock.getArgument(0));
             }
         });
 

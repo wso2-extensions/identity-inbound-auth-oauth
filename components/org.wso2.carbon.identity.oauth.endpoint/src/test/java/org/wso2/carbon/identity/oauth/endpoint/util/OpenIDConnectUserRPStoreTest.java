@@ -21,7 +21,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.AfterTest;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
@@ -61,7 +61,7 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
     @Mock
     TokenPersistenceProcessor tokenPersistenceProcessor;
 
-    @BeforeTest
+    @BeforeClass
     public void setUp() throws Exception {
 
         System.setProperty(

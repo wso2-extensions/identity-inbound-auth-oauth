@@ -613,7 +613,9 @@ public class OAuth2AuthzEndpoint {
                     params.put("clientId", clientId);
                     params.put("prompt", oauth2Params.getPrompt());
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.SUCCESS, null, "hand-over-to-consent-service", null);
+                            OAuthConstants.LogConstants.SUCCESS, "Prompt for consent is enabled. Overriding the " +
+                                    "existing consent and handing over to consent service.", "hand-over-to-consent" +
+                                    "-service", null);
                 }
                 getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
                         loggedInUser, value, true);
@@ -623,7 +625,8 @@ public class OAuth2AuthzEndpoint {
                     params.put("clientId", clientId);
                     params.put("prompt", oauth2Params.getPrompt());
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.SUCCESS, null, "hand-over-to-consent-service", null);
+                            OAuthConstants.LogConstants.SUCCESS, "Prompt for consent is not enabled. " +
+                                    "Handing over to consent service.", "hand-over-to-consent-service", null);
                 }
                 getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
                         loggedInUser, value, false);
@@ -696,12 +699,32 @@ public class OAuth2AuthzEndpoint {
 
     private void addSessionDataKeyToSessionDataCacheEntry(OAuthMessage oAuthMessage) {
 
-        Cookie cookie = FrameworkUtils.getAuthCookie(oAuthMessage.getRequest());
-        if (cookie != null) {
-            String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
+        String commonAuthIdCookieValue = getCommonAuthCookieString(oAuthMessage.getRequest());
+        if (StringUtils.isNotBlank(commonAuthIdCookieValue)) {
+            String sessionContextKey = DigestUtils.sha256Hex(commonAuthIdCookieValue);
             oAuthMessage.getSessionDataCacheEntry().getParamMap().put(FrameworkConstants.SESSION_DATA_KEY, new String[]
                     {sessionContextKey});
         }
+    }
+
+    /**
+     * Retrieves the value of the commonAuthId cookie either from request cookies if available or
+     * from the request attribute where the response header contains commonAuthId value.
+     *
+     * @param request HttpServletRequest An authorization or authentication request.
+     * @return String commonAuthId value.
+     */
+    private String getCommonAuthCookieString(HttpServletRequest request) {
+
+        Cookie cookie = FrameworkUtils.getAuthCookie(request);
+        String commonAuthIdCookieValue = null;
+
+        if (cookie != null) {
+            commonAuthIdCookieValue = cookie.getValue();
+        } else if (request.getAttribute(COMMONAUTH_COOKIE) != null) {
+            commonAuthIdCookieValue = (String) request.getAttribute(COMMONAUTH_COOKIE);
+        }
+        return commonAuthIdCookieValue;
     }
 
     private String getConsentFromRequest(OAuthMessage oAuthMessage) {
@@ -1006,15 +1029,15 @@ public class OAuth2AuthzEndpoint {
 
     private void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) {
 
-        Cookie cookie = FrameworkUtils.getAuthCookie(oAuthMessage.getRequest());
-        long authTime = getAuthenticatedTimeFromCommonAuthCookie(cookie,
+        String commonAuthIdCookieValue = getCommonAuthCookieString(oAuthMessage.getRequest());
+        long authTime = getAuthenticatedTimeFromCommonAuthCookieValue(commonAuthIdCookieValue,
                 oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters().getLoginTenantDomain());
 
         if (authTime > 0) {
             oAuthMessage.getSessionDataCacheEntry().setAuthTime(authTime);
         }
 
-        associateAuthenticationHistory(oAuthMessage.getSessionDataCacheEntry(), cookie);
+        associateAuthenticationHistory(oAuthMessage.getSessionDataCacheEntry(), commonAuthIdCookieValue);
     }
 
     private boolean isFormPostResponseMode(OAuthMessage oAuthMessage, String redirectURL) {
@@ -3422,16 +3445,16 @@ public class OAuth2AuthzEndpoint {
     }
 
     /**
-     * Associates the authentication method references done while logged into the session (if any) to the OAuth cache.
-     * The SessionDataCacheEntry then will be used when getting "AuthenticationMethodReferences". Please see
-     * <a href="https://tools.ietf.org/html/draft-ietf-oauth-amr-values-02" >draft-ietf-oauth-amr-values-02</a>.
+     *  Associates the authentication method references done while logged into the session (if any) to the OAuth cache.
+     *  The SessionDataCacheEntry then will be used when getting "AuthenticationMethodReferences". Please see
+     *  <a href="https://tools.ietf.org/html/draft-ietf-oauth-amr-values-02" >draft-ietf-oauth-amr-values-02</a>.
      *
-     * @param resultFromLogin
-     * @param cookie
+     * @param resultFromLogin The session context.
+     * @param cookieValue The cookie string which contains the commonAuthId value.
      */
-    private void associateAuthenticationHistory(SessionDataCacheEntry resultFromLogin, Cookie cookie) {
+    private void associateAuthenticationHistory(SessionDataCacheEntry resultFromLogin, String cookieValue) {
 
-        SessionContext sessionContext = getSessionContext(cookie,
+        SessionContext sessionContext = getSessionContext(cookieValue,
                 resultFromLogin.getoAuth2Parameters().getLoginTenantDomain());
         if (sessionContext != null && sessionContext.getSessionAuthHistory() != null
                 && sessionContext.getSessionAuthHistory().getHistory() != null) {
@@ -3444,43 +3467,38 @@ public class OAuth2AuthzEndpoint {
     }
 
     /**
-     * Returns the SessionContext associated with the cookie, if there is a one.
-     *
-     * @param cookie
+     * Returns the SessionContext associated with the cookie value, if there is a one.
+     * @param cookieValue String value of the cookie of commonAuthId.
      * @param loginTenantDomain Login tenant domain.
-     * @return the associate SessionContext or null.
+     * @return he associate SessionContext or null.
      */
-    private SessionContext getSessionContext(Cookie cookie, String loginTenantDomain) {
+    private SessionContext getSessionContext(String cookieValue, String loginTenantDomain) {
 
-        if (cookie != null) {
-            String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
+        if (StringUtils.isNotBlank(cookieValue)) {
+            String sessionContextKey = DigestUtils.sha256Hex(cookieValue);
             return FrameworkUtils.getSessionContextFromCache(sessionContextKey, loginTenantDomain);
         }
         return null;
     }
 
     /**
-     * Gets the last authenticated value from the commonAuthId cookie
+     * Gets the last authenticated value from the commonAuthId cookie value.
      *
-     * @param cookie CommonAuthId cookie
-     * @param loginTenantDomain Login tenant domain
-     * @return the last authenticated timestamp
+     * @param cookieValue       String CommonAuthId cookie values.
+     * @param loginTenantDomain String Login tenant domain.
+     * @return long The last authenticated timestamp.
      */
-    private long getAuthenticatedTimeFromCommonAuthCookie(Cookie cookie, String loginTenantDomain) {
+    private long getAuthenticatedTimeFromCommonAuthCookieValue(String cookieValue, String loginTenantDomain) {
 
         long authTime = 0;
-        if (cookie != null) {
-            String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
-            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextKey,
-                    loginTenantDomain);
-            if (sessionContext != null) {
-                if (sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
-                    authTime = Long.parseLong(
-                            sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP).toString());
-                } else {
-                    authTime = Long.parseLong(
-                            sessionContext.getProperty(FrameworkConstants.CREATED_TIMESTAMP).toString());
-                }
+        SessionContext sessionContext = getSessionContext(cookieValue, loginTenantDomain);
+        if (sessionContext != null) {
+            if (sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
+                authTime = Long.parseLong(
+                        sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP).toString());
+            } else {
+                authTime = Long.parseLong(
+                        sessionContext.getProperty(FrameworkConstants.CREATED_TIMESTAMP).toString());
             }
         }
         return authTime;

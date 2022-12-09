@@ -21,15 +21,12 @@ package org.wso2.carbon.identity.oauth;
 import org.apache.commons.lang.StringUtils;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
-
-import java.nio.file.Paths;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
@@ -43,7 +40,7 @@ import static org.wso2.carbon.identity.oauth2.TestConstants.LOCAL_IDP;
 @WithCarbonHome
 @WithRealmService
 public class OAuthUtilTest {
-
+    
     @DataProvider(name = "testGetAuthenticatedUser")
     public Object[][] fullQualifiedUserName() {
         return new Object[][] { { "JDBC/siripala@is.com", "siripala" }, { "JDBC/siripala", "siripala" },
@@ -165,9 +162,6 @@ public class OAuthUtilTest {
 
     private OAuthCache getOAuthCache(OAuthCacheKey oAuthCacheKey) {
 
-        // Set carbon home.
-        String carbonHome = Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString();
-        System.setProperty(CarbonBaseConstants.CARBON_HOME, carbonHome);
 
         // Add some value to OAuthCache.
         DummyOAuthCacheEntry dummyOAuthCacheEntry = new DummyOAuthCacheEntry("identifier");

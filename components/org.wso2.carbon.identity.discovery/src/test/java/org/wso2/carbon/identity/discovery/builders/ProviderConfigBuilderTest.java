@@ -21,10 +21,12 @@ package org.wso2.carbon.identity.discovery.builders;
 import com.nimbusds.jose.JWSAlgorithm;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.ServerConfigurationException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
@@ -42,7 +44,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.mockito.Matchers.anyString;
-import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
@@ -55,7 +56,7 @@ import static org.testng.Assert.assertNotNull;
 /**
  * Unit test covering ProviderConfigBuilder class.
  */
-public class ProviderConfigBuilderTest {
+public class ProviderConfigBuilderTest extends PowerMockTestCase {
 
     private String idTokenSignatureAlgorithm = "SHA256withRSA";
     private ProviderConfigBuilder providerConfigBuilder;
@@ -75,7 +76,6 @@ public class ProviderConfigBuilderTest {
     @BeforeMethod
     public void setUp() throws Exception {
 
-        initMocks(this);
         providerConfigBuilder = new ProviderConfigBuilder();
     }
 
@@ -101,9 +101,11 @@ public class ProviderConfigBuilderTest {
         when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString())).thenReturn(claims);
 
         when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
+        when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
 
         when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(idTokenSignatureAlgorithm)).thenReturn(JWSAlgorithm.RS256);
         when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString())).thenReturn(JWSAlgorithm.RS256);
+        when(mockOidProviderRequest.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         assertNotNull(providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest));
     }
 
@@ -119,6 +121,7 @@ public class ProviderConfigBuilderTest {
         when(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(anyString()))
             .thenThrow(new URISyntaxException("input", "URISyntaxException"));
         when(OAuth2Util.getIdTokenIssuer(anyString())).thenReturn("issuer");
+        when(mockOidProviderRequest.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
     }
 
@@ -139,7 +142,7 @@ public class ProviderConfigBuilderTest {
 
         when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString()))
             .thenThrow(new ClaimMetadataException("ClaimMetadataException"));
-
+        when(mockOidProviderRequest.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
     }
 
@@ -200,6 +203,9 @@ public class ProviderConfigBuilderTest {
         mockStatic(DiscoveryUtil.class);
         when(DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery()).thenReturn(Boolean.FALSE);
 
+        when(mockOidProviderRequest.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
+
         OIDProviderConfigResponse response = providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
         assertNotNull(response);
         assertEquals(response.getIssuer(), dummyIdIssuer);
@@ -246,6 +252,7 @@ public class ProviderConfigBuilderTest {
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getIdTokenIssuer(anyString()))
             .thenThrow(new IdentityOAuth2Exception("Configuration not found"));
+        when(mockOidProviderRequest.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
     }
 }

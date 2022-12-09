@@ -18,20 +18,30 @@
 
 package org.wso2.carbon.identity.oauth2.device.grant;
 
+import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.Assert;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
+import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.oauth2.dao.util.DAOUtils;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.Date;
 
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.when;
+
 @WithCarbonHome
 @WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
+@PrepareForTest({IdentityDatabaseUtil.class})
 public class DeviceFlowGrantTest extends PowerMockTestCase {
 
     private Date date = new Date();
@@ -39,9 +49,28 @@ public class DeviceFlowGrantTest extends PowerMockTestCase {
     private DeviceFlowDO deviceFlowDO1 = new DeviceFlowDO();
     private DeviceFlowDO deviceFlowDO2 = new DeviceFlowDO();
 
-    @BeforeTest
+    public static final String DB_NAME = "jdbc/WSO2CarbonDB";
+    public static final String H2_SCRIPT1_NAME = "h2.sql";
+    public static final String H2_SCRIPT2_NAME = "identity.sql";
+
+    @BeforeClass
+    public void setupBeforeClass() throws Exception {
+        DAOUtils.initializeBatchDataSource(DB_NAME, H2_SCRIPT1_NAME, H2_SCRIPT2_NAME);
+        System.setProperty(
+                CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
+        );
+        System.setProperty(
+                "java.naming.factory.initial",
+                "org.wso2.carbon.identity.common.testng.MockInitialContextFactory"
+        );
+    }
+
+    @BeforeMethod
     public void setUp() throws Exception {
 
+        mockStatic(IdentityDatabaseUtil.class);
+        when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(DAOUtils.getConnection(DB_NAME));
         deviceFlowDO1.setExpiryTime(new Timestamp(date.getTime() - 1000));
         deviceFlowDO1.setLastPollTime(new Timestamp(date.getTime() - 1000));
         deviceFlowDO1.setPollTime(1500);
@@ -52,7 +81,6 @@ public class DeviceFlowGrantTest extends PowerMockTestCase {
 
     @Test
     public void testIsExpiredDeviceCode() throws Exception {
-
         Assert.assertTrue(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class, "isExpiredDeviceCode", deviceFlowDO1, date));
         Assert.assertFalse(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,
                 "isExpiredDeviceCode", deviceFlowDO2, date));
@@ -60,7 +88,6 @@ public class DeviceFlowGrantTest extends PowerMockTestCase {
 
     @Test
     public void testIsValidPollTime() throws Exception {
-
         Assert.assertFalse(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,
                 "isWithinValidPollInterval", newTime, deviceFlowDO1));
         Assert.assertTrue(WhiteboxImpl.invokeMethod(DeviceFlowGrant.class,
