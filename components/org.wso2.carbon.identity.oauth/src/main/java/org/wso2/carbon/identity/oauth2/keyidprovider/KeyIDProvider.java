@@ -18,6 +18,7 @@ package org.wso2.carbon.identity.oauth2.keyidprovider;
 
 import com.nimbusds.jose.JWSAlgorithm;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.security.cert.Certificate;
 
@@ -37,4 +38,22 @@ public interface KeyIDProvider {
      */
     public String getKeyId(Certificate certificate, JWSAlgorithm signatureAlgorithm, String tenantDomain)
             throws IdentityOAuth2Exception;
+
+    /**
+     * Method containing the Key ID calculation logic with certificate thumbprint using SHA-1 alg and
+     * signature algorithm.
+     * This method is added to support migration from versions below IS 5.10 as we have switched the hashing algorithm
+     * from SHA-1 to SHA-256.
+     *
+     * @param certificate        Signing Certificate.
+     * @param signatureAlgorithm Signature Algorithm as a String.
+     * @param tenantDomain       Tenant Domain.
+     * @return String value of Previous Key ID.
+     * @throws IdentityOAuth2Exception When failed to generate Key ID properly.
+     */
+    default String getPreviousKeyId(Certificate certificate, JWSAlgorithm signatureAlgorithm, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        return OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate) + "_" + signatureAlgorithm.toString();
+    }
 }

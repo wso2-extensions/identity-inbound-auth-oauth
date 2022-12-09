@@ -27,7 +27,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.Assert;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
@@ -82,7 +82,7 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
     @Mock
     private CentralLogMgtServiceComponentHolder centralLogMgtServiceComponentHolderMock;
 
-    @BeforeTest
+    @BeforeMethod
     public void setUp() throws Exception {
 
         System.setProperty(CarbonBaseConstants.CARBON_HOME,

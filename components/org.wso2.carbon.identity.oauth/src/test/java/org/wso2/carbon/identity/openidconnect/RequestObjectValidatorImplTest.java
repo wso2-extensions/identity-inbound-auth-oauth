@@ -74,15 +74,15 @@ import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENA
 
 @WithRealmService(tenantId = SUPER_TENANT_ID, tenantDomain = SUPER_TENANT_DOMAIN_NAME,
         injectToSingletons = {OAuth2ServiceComponent.class})
-@WithCarbonHome
 @WithKeyStore
 @WithAxisConfiguration
-@WithH2Database(jndiName = "jdbc/WSO2CarbonDB", files = {"dbScripts/identity_req_obj.sql"}, dbName = "testdb2")
 @PrepareForTest({RequestObjectValidatorImpl.class, IdentityUtil.class, IdentityTenantUtil.class,
         OAuthServerConfiguration.class, OAuth2Util.class, IdentityProviderManager.class,
         IdentityApplicationManagementUtil.class, LoggerUtils.class, IdentityEventService.class,
         CentralLogMgtServiceComponentHolder.class})
 @PowerMockIgnore({"javax.crypto.*"})
+@WithCarbonHome
+@WithH2Database(jndiName = "jdbc/WSO2CarbonDB", files = {"dbScripts/identity_req_obj.sql"}, dbName = "testdb2")
 public class RequestObjectValidatorImplTest extends PowerMockTestCase {
 
     public static final String SOME_SERVER_URL = "some-server-url";

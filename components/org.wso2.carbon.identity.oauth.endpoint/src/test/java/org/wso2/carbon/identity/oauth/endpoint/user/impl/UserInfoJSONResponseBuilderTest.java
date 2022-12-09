@@ -58,6 +58,7 @@ import java.util.Map;
 import javax.sql.DataSource;
 
 import static org.junit.Assert.assertNull;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
@@ -322,6 +323,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
             when(userInfoJSONResponseBuilder.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
                     .thenReturn(inputClaims);
+            Mockito.when(IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
             mockDataSource();
             mockObjectsRelatedToTokenValidation();
             String responseString =

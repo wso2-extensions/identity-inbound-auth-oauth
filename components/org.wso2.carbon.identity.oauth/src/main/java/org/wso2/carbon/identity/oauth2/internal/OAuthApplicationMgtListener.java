@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth2.internal;
 
+import com.google.gson.Gson;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -86,6 +87,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     private static final String OAUTH = "oauth";
     private static final String SAAS_PROPERTY = "saasProperty";
     private static final Log log = LogFactory.getLog(OAuthApplicationMgtListener.class);
+    private ThreadLocal<Boolean> threadLocalForClaimConfigUpdates = ThreadLocal.withInitial(()->true);
 
     @Override
     public int getDefaultOrderId() {
@@ -100,6 +102,14 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         handleOAuthAppAssociationRemoval(serviceProvider);
         storeSaaSPropertyValue(serviceProvider);
         removeClientSecret(serviceProvider);
+
+        ServiceProvider existingSP = OAuth2ServiceComponentHolder.getApplicationMgtService()
+                .getServiceProvider(serviceProvider.getApplicationID());
+        String newClaimConfigString = new Gson().toJson(serviceProvider.getClaimConfig());
+        String existingClaimConfigString = new Gson().toJson(existingSP.getClaimConfig());
+        if (StringUtils.equals(newClaimConfigString, existingClaimConfigString)) {
+            threadLocalForClaimConfigUpdates.set(false);
+        }
         return true;
     }
 
@@ -132,7 +142,11 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         revokeAccessTokensWhenSaaSDisabled(serviceProvider, tenantDomain);
         addClientSecret(serviceProvider);
         updateAuthApplication(serviceProvider);
-        removeEntriesFromCache(serviceProvider, tenantDomain);
+
+        if (threadLocalForClaimConfigUpdates.get()) {
+            removeEntriesFromCache(serviceProvider, tenantDomain);
+        }
+        threadLocalForClaimConfigUpdates.remove();
         return true;
     }
 

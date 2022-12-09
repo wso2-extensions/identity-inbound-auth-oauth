@@ -22,7 +22,6 @@ import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -60,13 +59,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.isNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -190,11 +188,6 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
         roleMappings[1] = mapping2;
     }
 
-    @BeforeTest
-    public void initTest() {
-        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
-    }
-
     @DataProvider(name = "provideDataForGetClaimsFromUser")
     public Object[][] provideDataForGetClaimsFromUser() {
 
@@ -251,7 +244,7 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
         ClaimMapping[] claimMappings = (ClaimMapping[]) claimMappingObject;
         mockStatic(IdentityTenantUtil.class);
         if (mockRealm) {
-            when(IdentityTenantUtil.getRealm(anyString(), anyString())).thenReturn(mockedUserRealm);
+            when(IdentityTenantUtil.getRealm(anyString(), isNull())).thenReturn(mockedUserRealm);
         } else {
             when(IdentityTenantUtil.getRealm(anyString(), anyString())).thenReturn(null);
         }
@@ -271,6 +264,7 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
 
         AccessTokenDO accessTokenDO = getAccessTokenDO(clientId, authenticatedUser);
         if (mockAccessTokenDO) {
+            when(OAuth2Util.getAccessTokenIdentifier(any())).thenReturn("DummyIdentifier");
             when(OAuth2Util.getAccessTokenDOfromTokenIdentifier(anyString())).thenReturn(accessTokenDO);
         }
 
@@ -298,13 +292,13 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
         mockStatic(ClaimMetadataHandler.class);
         when(ClaimMetadataHandler.getInstance()).thenReturn(mockedClaimMetadataHandler);
         when(mockedClaimMetadataHandler.getMappingsMapFromOtherDialectToCarbon(
-                anyString(), isNull(Set.class), anyString(), anyBoolean())).thenReturn(spToLocalClaimMappings);
+                anyString(), isNull(), anyString(), anyBoolean())).thenReturn(spToLocalClaimMappings);
 
         if (userClaimsMap != null) {
-            when(mockedUserStoreManager.getUserClaimValuesWithID(anyString(), any(String[].class), anyString())).
+            when(mockedUserStoreManager.getUserClaimValuesWithID(anyString(), any(String[].class), isNull())).
                     thenReturn(userClaimsMap);
         } else {
-            when(mockedUserStoreManager.getUserClaimValuesWithID(anyString(), any(String[].class), anyString())).
+            when(mockedUserStoreManager.getUserClaimValuesWithID(anyString(), any(String[].class), isNull())).
                     thenThrow(new UserStoreException("UserNotFound"));
         }
 
