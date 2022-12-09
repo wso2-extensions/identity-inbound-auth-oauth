@@ -29,6 +29,7 @@ import org.wso2.carbon.utils.CarbonUtils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.file.Paths;
 import java.util.Collections;
@@ -108,10 +109,20 @@ public class CommonTestUtils {
     }
 
     public static void setFinalStatic(Field field, Object newValue) throws Exception {
+        
+        Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
+        getDeclaredFields0.setAccessible(true);
+        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
+        Field modifiers = null;
+        for (Field each : fields) {
+            if ("modifiers".equals(each.getName())) {
+                modifiers = each;
+                break;
+            }
+        }
         field.setAccessible(true);
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+        modifiers.setAccessible(true);
+        modifiers.setInt(field, field.getModifiers() & ~Modifier.FINAL);
         field.set(null, newValue);
     }
 

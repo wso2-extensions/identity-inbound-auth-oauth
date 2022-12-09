@@ -31,7 +31,9 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.core.internal.IdentityCoreServiceDataHolder;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -42,7 +44,10 @@ import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
+import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -55,10 +60,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyObject;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -70,7 +77,7 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTenantId;
  */
 @WithCarbonHome
 @PrepareForTest({IdentityDatabaseUtil.class, OAuth2Util.class, OAuth2TokenUtil.class, IdentityUtil.class,
-        OAuthServerConfiguration.class})
+        OAuthServerConfiguration.class, IdentityTenantUtil.class, IdentityCoreServiceDataHolder.class})
 public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
 
     public static Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
@@ -83,6 +90,18 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private ApplicationManagementService mockedApplicationManagementService;
+
+    @Mock
+    private IdentityCoreServiceDataHolder mockedIdentityCoreServiceDataHolder;
+
+    @Mock
+    RealmService mockedRealmService;
+
+    @Mock
+    private UserRealm mockedTenantUserRealm;
+
+    @Mock
+    private UserStoreManager mockedUserStoreManager;
 
     private Connection connection;
 
@@ -147,6 +166,13 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
         when(OAuth2Util.getUserStoreDomain(any())).thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
         when(OAuth2Util.getAuthenticatedIDP(any())).thenReturn("LOCAL");
+        mockStatic(IdentityTenantUtil.class);
+        mockStatic(IdentityCoreServiceDataHolder.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
+        when(IdentityCoreServiceDataHolder.getInstance()).thenReturn(mockedIdentityCoreServiceDataHolder);
+        when(mockedIdentityCoreServiceDataHolder.getRealmService()).thenReturn(mockedRealmService);
+        when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedTenantUserRealm);
+        when(mockedTenantUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
         authorizationCodeDAO.insertAuthorizationCode(authzCode, consumerKey, CALLBACK, authzCodeDO);
         return authzCodeDO;
     }
@@ -268,7 +294,8 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         OAuth2ServiceComponentHolder.setApplicationMgtService(mockedApplicationManagementService);
         when(mockedApplicationManagementService.getServiceProviderByClientId(anyString(), any(), anyString())).
                 thenReturn(mockedServiceProvider);
-        when(OAuth2Util.createAuthenticatedUser(anyString(), anyString(), anyString(), anyString())).
+        when(OAuth2Util.getTenantDomain(1234)).thenReturn("super.wso2");
+        when(OAuth2Util.createAuthenticatedUser(anyString(), anyString(), anyString(), isNull())).
                 thenReturn(mockedAuthenticatedUser);
         doNothing().when(mockedAuthenticatedUser, "setAuthenticatedSubjectIdentifier", anyString(), anyObject());
 

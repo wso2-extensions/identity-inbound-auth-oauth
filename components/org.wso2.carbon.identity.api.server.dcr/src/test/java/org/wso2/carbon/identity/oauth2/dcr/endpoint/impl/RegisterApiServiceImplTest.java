@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.dcr.endpoint.impl;
 import org.mockito.Mock;
 import org.osgi.framework.BundleContext;
 import org.osgi.util.tracker.ServiceTracker;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
@@ -51,6 +52,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 
 @PrepareForTest({BundleContext.class, ServiceTracker.class, PrivilegedCarbonContext.class, DCRMService.class})
+@PowerMockIgnore({"jdk.xml.*", "java.xml.*", "javax.xml.*", "org.w3c.dom.*", "org.xml.sax.*"})
 public class RegisterApiServiceImplTest extends PowerMockTestCase {
 
     private RegisterApiServiceImpl registerApiService = null;

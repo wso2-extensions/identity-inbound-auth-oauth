@@ -21,7 +21,7 @@ import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -45,6 +45,7 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
@@ -86,7 +87,7 @@ public class OpenIDConnectUserEndpointTest extends PowerMockIdentityBaseTest {
 
     private MultivaluedMap<String, String> paramMap;
 
-    @BeforeTest
+    @BeforeClass
     public void setUp() throws Exception {
 
         openIDConnectUserEndpoint = new OpenIDConnectUserEndpoint();
@@ -146,7 +147,7 @@ public class OpenIDConnectUserEndpointTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
         when(OAuth2Util.getClientIdForAccessToken(anyString())).thenReturn(clientID);
 
-        when(tokenValidator.validateToken(anyString(), anyObject())).thenReturn(tokenResponse);
+        when(tokenValidator.validateToken(nullable(String.class), anyObject())).thenReturn(tokenResponse);
         when(userInfoEndpointConfig.getUserInfoAccessTokenValidator()).thenReturn(tokenValidator);
         when(userInfoEndpointConfig.getUserInfoRequestValidator()).thenReturn(requestValidator);
         mockStatic(UserInfoEndpointConfig.class);

@@ -39,7 +39,7 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.AfterTest;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
@@ -144,6 +144,8 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
@@ -288,7 +290,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     private OAuth2ScopeConsentResponse oAuth2ScopeConsentResponse;
     private ServiceProvider dummySp;
 
-    @BeforeTest
+    @BeforeClass
     public void setUp() throws Exception {
 
         System.setProperty(
@@ -685,7 +687,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             mockEndpointUtil(false);
             when(oAuth2Service.handleAuthenticationFailure(oAuth2Params)).thenReturn(oAuthErrorDTO);
             when(oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(
-                    anyString(), anyString(), anyInt(), anyList())).thenReturn(true);
+                    anyString(), isNull(), anyInt(), anyList())).thenReturn(true);
 
             mockServiceURLBuilder();
 
@@ -1355,7 +1357,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         doNothing().when(FrameworkUtils.class, "startTenantFlow", anyString());
         doNothing().when(FrameworkUtils.class, "endTenantFlow");
         spy(IdentityTenantUtil.class);
-        doReturn(MultitenantConstants.SUPER_TENANT_ID).when(IdentityTenantUtil.class, "getTenantId", anyString());
+        doReturn(MultitenantConstants.SUPER_TENANT_ID).when(IdentityTenantUtil.class, "getTenantId",
+                nullable(String.class));
         doReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME).when(IdentityTenantUtil.class, "getTenantDomain",
                 anyInt());
 
@@ -1460,13 +1463,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(OIDCSessionManagementUtil.addOPBrowserStateCookie(any(HttpServletResponse.class)))
                 .thenReturn(newOpBrowserStateCookie);
         when(OIDCSessionManagementUtil.addOPBrowserStateCookie(any(HttpServletResponse.class),
-                any(HttpServletRequest.class), any(String.class), any(String.class)))
+                any(HttpServletRequest.class), nullable(String.class), nullable(String.class)))
                 .thenReturn(newOpBrowserStateCookie);
         when(OIDCSessionManagementUtil.getSessionManager()).thenReturn(oidcSessionManager);
-        when(oidcSessionManager.getOIDCSessionState(anyString(), anyString())).thenReturn(previousSessionState);
+        when(oidcSessionManager.getOIDCSessionState(anyString(), any(String.class))).thenReturn(previousSessionState);
         when(OIDCSessionManagementUtil.getSessionStateParam(anyString(), anyString(), anyString()))
                 .thenReturn("sessionStateValue");
-        when(OIDCSessionManagementUtil.addSessionStateToURL(anyString(), anyString(), anyString()))
+        when(OIDCSessionManagementUtil.addSessionStateToURL(anyString(), anyString(), isNull()))
                 .thenCallRealMethod();
 
         mockStatic(SessionDataCache.class);
@@ -1491,7 +1494,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         doNothing().when(FrameworkUtils.class, "startTenantFlow", anyString());
         doNothing().when(FrameworkUtils.class, "endTenantFlow");
         spy(IdentityTenantUtil.class);
-        doReturn(MultitenantConstants.SUPER_TENANT_ID).when(IdentityTenantUtil.class, "getTenantId", anyString());
+        doReturn(MultitenantConstants.SUPER_TENANT_ID).when(IdentityTenantUtil.class, "getTenantId",
+                nullable(String.class));
         doReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME).when(IdentityTenantUtil.class, "getTenantDomain",
                 anyInt());
 
@@ -1560,10 +1564,19 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         assertEquals((value != null), fileExists, "FormPostRedirectPage value is incorrect");
 
         Field formPostRedirectPage = authzEndpointObject.getClass().getDeclaredField("formPostRedirectPage");
+        Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
+        getDeclaredFields0.setAccessible(true);
+        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
+        Field modifiers = null;
+        for (Field each : fields) {
+            if ("modifiers".equals(each.getName())) {
+                modifiers = each;
+                break;
+            }
+        }
+        modifiers.setAccessible(true);
+        modifiers.setInt(formPostRedirectPage, formPostRedirectPage.getModifiers() & ~Modifier.FINAL);
 
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(formPostRedirectPage, formPostRedirectPage.getModifiers() & ~Modifier.FINAL);
         formPostRedirectPage.setAccessible(true);
         formPostRedirectPage.set(authzEndpointObject, value);
 
