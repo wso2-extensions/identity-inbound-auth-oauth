@@ -140,6 +140,7 @@ import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.core.tenant.TenantManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -503,6 +504,18 @@ public class OAuth2Util {
             return false;
         }
 
+        String tenantDomain = null;
+        try {
+            tenantDomain = appDO.getAppOwner().getTenantDomain();
+        } catch (NullPointerException e) {
+            // Ignore and proceed.
+        }
+        if (tenantDomain != null && !isTenantActive(tenantDomain)) {
+            log.error("Cannot retrieve application inside deactivated tenant: " + tenantDomain);
+            throw new InvalidOAuthClientException("Cannot retrieve application inside deactivated tenant: "
+                    + tenantDomain);
+        }
+
         // Cache miss
         boolean isHashDisabled = isHashDisabled();
         String appClientSecret = appDO.getOauthConsumerSecret();
@@ -533,6 +546,18 @@ public class OAuth2Util {
         }
 
         return true;
+    }
+
+    private static boolean isTenantActive(String tenantDomain) throws IdentityOAuth2Exception {
+        try {
+            TenantManager tenantManager = OAuthComponentServiceHolder.getInstance()
+                    .getRealmService().getTenantManager();
+            int tenantId = tenantManager.getTenantId(tenantDomain);
+            return tenantManager.isTenantActive(tenantId);
+        } catch (UserStoreException e) {
+            String error = "Error in obtaining tenant ID from tenant domain : " + tenantDomain;
+            throw new IdentityOAuth2Exception(error, e);
+        }
     }
 
     public static TokenPersistenceProcessor getPersistenceProcessor() {
