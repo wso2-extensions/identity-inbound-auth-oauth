@@ -2412,8 +2412,9 @@ public class OAuth2AuthzEndpoint {
                         params.put("user", authenticatedUser.getUserId());
                     } catch (UserIdNotFoundException e) {
                         if (StringUtils.isNotBlank(authenticatedUser.getAuthenticatedSubjectIdentifier())) {
-                            params.put("user",
-                                    authenticatedUser.getAuthenticatedSubjectIdentifier().replaceAll(".", "*"));
+                            params.put("user", LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(
+                                    authenticatedUser.getAuthenticatedSubjectIdentifier()) : authenticatedUser
+                                    .getAuthenticatedSubjectIdentifier());
                         }
                     }
                 }
@@ -2629,7 +2630,8 @@ public class OAuth2AuthzEndpoint {
             params.put("user", user.getUserId());
         } catch (UserIdNotFoundException e) {
             if (StringUtils.isNotBlank(user.getAuthenticatedSubjectIdentifier())) {
-                params.put("user", user.getAuthenticatedSubjectIdentifier());
+                params.put("user", LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(
+                        user.getAuthenticatedSubjectIdentifier()) : user.getAuthenticatedSubjectIdentifier());
             }
         }
 

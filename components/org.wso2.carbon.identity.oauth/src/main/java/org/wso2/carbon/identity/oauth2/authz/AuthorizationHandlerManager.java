@@ -544,8 +544,9 @@ public class AuthorizationHandlerManager {
                         params.put("user", authzReqDTO.getUser().getUserId());
                     } catch (UserIdNotFoundException e) {
                         if (StringUtils.isNotBlank(authzReqDTO.getUser().getAuthenticatedSubjectIdentifier())) {
-                            params.put("user", authzReqDTO.getUser().getAuthenticatedSubjectIdentifier().replaceAll(".",
-                                    "*"));
+                            params.put("user", LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(
+                                    authzReqDTO.getUser().getAuthenticatedSubjectIdentifier()) : authzReqDTO.getUser()
+                                    .getAuthenticatedSubjectIdentifier());
                         }
                     }
                 }
