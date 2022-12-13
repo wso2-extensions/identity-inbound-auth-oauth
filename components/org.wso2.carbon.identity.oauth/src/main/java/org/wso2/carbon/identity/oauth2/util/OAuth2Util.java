@@ -88,6 +88,9 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -170,6 +173,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -185,6 +189,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_TOKEN_EP_URL;
@@ -264,6 +269,7 @@ public class OAuth2Util {
      * this token, as defined in JWT
      */
     public static final String AUD = "aud";
+    public static final String ACR = "acr";
 
     /*
      * OPTIONAL. String representing the issuer of this token, as defined in JWT
@@ -4153,6 +4159,16 @@ public class OAuth2Util {
     }
 
     /**
+     * Check whether the ACR column is available in IDN_OAUTH2_ACCESS_TOKEN table.
+     *
+     * @return True if the column is available.
+     */
+    public static boolean checkACRColumnIsAvailable() {
+
+        return FrameworkUtils.isTableColumnExists("IDN_OAUTH2_ACCESS_TOKEN", "ACR");
+    }
+
+    /**
      * This can be used to load the oauth scope permissions bindings in oauth-scope-bindings.xml file.
      */
     public static void initiateOAuthScopePermissionsBindings(int tenantId) {
@@ -4622,6 +4638,38 @@ public class OAuth2Util {
         return isFederatedRoleBasedAuthzEnabled;
     }
 
+    /**
+     * Return the selected ACR value if available in the authentication context.
+     * @param tokenReqMsgCtxt OAuthTokenReqMessageContext object.
+     * @return selected ACR value from the authentication context.
+     */
+    public static Optional<String> getSelectedACRValue(OAuthTokenReqMessageContext tokenReqMsgCtxt) {
+
+        if (!OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
+            log.debug("'ACR' column is not available in the IDN_OAUTH2_ACCESS_TOKEN table. Hence the 'ACR' value will" +
+                    " not be return with the access token.");
+            return Optional.empty();
+        }
+        String authorizationCode = (String) tokenReqMsgCtxt.getProperty(AUTHZ_CODE);
+        if (authorizationCode == null) {
+            return Optional.empty();
+        }
+        AuthorizationGrantCacheEntry valueFromCacheByCode = AuthorizationGrantCache.getInstance()
+                .getValueFromCacheByCode(new AuthorizationGrantCacheKey(authorizationCode));
+        if (valueFromCacheByCode == null) {
+            return Optional.empty();
+        }
+        String selectedAcrValue = valueFromCacheByCode.getSelectedAcrValue();
+        if (selectedAcrValue == null) {
+            return Optional.empty();
+        }
+        if (selectedAcrValue.equalsIgnoreCase("null")) { // Returning null as a String.
+            return Optional.empty();
+        }
+        return Optional.of(selectedAcrValue);
+    }
+
+
     public static String[] getRequestedOIDCScopes(String[] requestedScopes)
             throws IdentityOAuthAdminException {
         if (ArrayUtils.isEmpty(requestedScopes)) {
@@ -4650,5 +4698,4 @@ public class OAuth2Util {
         return Arrays.stream(requestedScopes).distinct()
                 .filter(s -> !oidcScopeSet.contains(s)).toArray(String[]::new);
     }
-
 }

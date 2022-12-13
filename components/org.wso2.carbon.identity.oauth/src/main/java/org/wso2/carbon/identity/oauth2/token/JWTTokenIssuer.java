@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
@@ -58,6 +59,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getPrivateKey;
@@ -92,6 +94,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final Log log = LogFactory.getLog(JWTTokenIssuer.class);
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private Algorithm signatureAlgorithm = null;
+
+    private static final String AUTHORIZATION_CODE = "AuthorizationCode";
 
     public JWTTokenIssuer() throws IdentityOAuth2Exception {
 
@@ -458,7 +462,14 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         if (StringUtils.isNotEmpty(scope)) {
             jwtClaimsSetBuilder.claim(SCOPE, scope);
         }
-
+        if (OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
+            if (isAuthCodeGrant(tokenReqMessageContext)) {
+                Optional<String> selectedACRValueOptional = OAuth2Util.getSelectedACRValue(tokenReqMessageContext);
+                selectedACRValueOptional.ifPresent(acrValue -> jwtClaimsSetBuilder.claim(OAuth2Util.ACR, acrValue));
+            } else if (isRefreshTokenGrant(tokenReqMessageContext)) {
+                jwtClaimsSetBuilder.claim(OAuth2Util.ACR, tokenReqMessageContext.getAcr());
+            }
+        }
         jwtClaimsSetBuilder.claim(OAuthConstants.AUTHORIZED_USER_TYPE,
                 getAuthorizedUserType(authAuthzReqMessageContext, tokenReqMessageContext));
 
@@ -754,4 +765,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
         return jwtClaimsSet;
     }
+
+    private boolean isAuthCodeGrant(OAuthTokenReqMessageContext tokenReqMsgCtxt) {
+
+        String grantType = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getGrantType();
+        return OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equalsIgnoreCase(grantType);
+    }
+    private boolean isRefreshTokenGrant(OAuthTokenReqMessageContext tokenReqMsgCtxt) {
+
+        String grantType = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getGrantType();
+        return OAuthConstants.GrantTypes.REFRESH_TOKEN.equalsIgnoreCase(grantType);
+    }
+
 }

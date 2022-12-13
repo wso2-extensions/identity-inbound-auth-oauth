@@ -590,7 +590,13 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 tokReqMsgCtx.setConsentedToken(true);
             }
         }
-
+        if (OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
+            String previousACR = validationBean.getAcr(); // Get acr from previous token.
+            if (StringUtils.isNotEmpty(previousACR)) {
+                tokReqMsgCtx.setAcr(previousACR);
+                accessTokenDO.setAcr(previousACR);
+            }
+        }
         // sets accessToken, refreshToken and validity data
         setTokenData(accessTokenDO, tokReqMsgCtx, validationBean, tokenReq, timestamp);
         return accessTokenDO;

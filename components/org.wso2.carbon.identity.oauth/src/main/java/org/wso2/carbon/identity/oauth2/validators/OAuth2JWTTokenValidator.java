@@ -388,5 +388,9 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         validationReqDTO.addProperty(OAuth2Util.ISS, claimsSet.getIssuer());
         validationReqDTO.addProperty(OAuth2Util.AUD, String.join(",", claimsSet.getAudience()));
         validationReqDTO.addProperty(OAuth2Util.JTI, claimsSet.getJWTID());
+        Object acrClaim = claimsSet.getClaim(OAuth2Util.ACR);
+        if (acrClaim != null) {
+            validationReqDTO.addProperty(OAuth2Util.ACR, acrClaim);
+        }
     }
 }

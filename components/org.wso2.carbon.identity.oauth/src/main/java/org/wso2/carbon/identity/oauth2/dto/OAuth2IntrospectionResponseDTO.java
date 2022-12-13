@@ -116,6 +116,10 @@ public class OAuth2IntrospectionResponseDTO {
      */
     private String aut;
 
+    private String acr;
+
+//    private List<String> amr;
+
     /*
      * OPTIONAL. Represents the resource owner who authorized this token.
      */
@@ -317,4 +321,15 @@ public class OAuth2IntrospectionResponseDTO {
 
         this.authorizedUser = authorizedUser;
     }
+
+    public String getAcr() {
+
+    	return acr;
+    }
+
+    public void setAcr(String acr) {
+
+        this.acr = acr;
+    }
+
 }
