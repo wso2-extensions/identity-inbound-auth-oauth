@@ -774,20 +774,9 @@ public class EndpointUtil {
                 }
                 consentPage += "&tenantDomain=" + getSPTenantDomainFromClientId(params.getClientId());
 
-                if (entry != null) {
-                    user = entry.getLoggedInUser();
-                }
-                setConsentRequiredScopesToOAuthParams(user, params);
-                Set<String> consentRequiredScopesSet = params.getConsentRequiredScopes();
-                String consentRequiredScopes = StringUtils.EMPTY;
-                if (CollectionUtils.isNotEmpty(consentRequiredScopesSet)) {
-                    consentRequiredScopes = String.join(" ", consentRequiredScopesSet).trim();
-                }
-
                 consentPage = consentPage + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
-                        (consentRequiredScopes, UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
-                        + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" +
-                        "&spQueryParams=" + queryString;
+                        (EndpointUtil.getScope(params), UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
+                        + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&spQueryParams=" + queryString;
 
                 if (entry != null) {
 
@@ -967,6 +956,7 @@ public class EndpointUtil {
         return allowedOAuthScopes;
     }
 
+    @Deprecated
     private static void setConsentRequiredScopesToOAuthParams(AuthenticatedUser user, OAuth2Parameters params)
             throws OAuthSystemException {
 
