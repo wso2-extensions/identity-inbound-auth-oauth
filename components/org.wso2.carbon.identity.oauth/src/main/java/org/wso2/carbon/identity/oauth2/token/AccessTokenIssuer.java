@@ -491,7 +491,7 @@ public class AccessTokenIssuer {
 
         // Filter and remove global allowed scopes from context. These scope should not go through the scope validation
         // logic. We'll add these back to the response at the end of scope validation.
-        List<String> requestedAllowedScopes = filterGlobalAllowedScopes(tokReqMsgCtx);
+        String[] requestedGlobalAllowedScopes = filterGlobalAllowedScopes(tokReqMsgCtx);
 
         // Filter and remove OIDC scopes from the context. These scopes should not pass to scope validators.
         // We'll add these back to the response at the end of scope validation.
@@ -524,7 +524,7 @@ public class AccessTokenIssuer {
             // Add OIDC scopes back to the context.
             addRequestedOIDCScopes(tokReqMsgCtx, requestedOIDCScopes);
             // Add globally allowed scopes to the context.
-            addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
+            addAllowedScopes(tokReqMsgCtx, requestedGlobalAllowedScopes);
 
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
@@ -606,7 +606,7 @@ public class AccessTokenIssuer {
         return requestedOIDCScopes;
     }
 
-    private List<String> filterGlobalAllowedScopes(OAuthTokenReqMessageContext tokReqMsgCtx) {
+    private String[] filterGlobalAllowedScopes(OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         String[] requestedScopes = tokReqMsgCtx.getScope();
         List<String> requestedAllowedScopes = new ArrayList<>();
@@ -623,7 +623,7 @@ public class AccessTokenIssuer {
             }
             tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
         }
-        return requestedAllowedScopes;
+        return requestedAllowedScopes.toArray(new String [0]);
     }
 
     private ServiceProvider getServiceProvider(OAuth2AccessTokenReqDTO tokenReq) throws IdentityOAuth2Exception {
