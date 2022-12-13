@@ -4622,8 +4622,8 @@ public class OAuth2Util {
         return isFederatedRoleBasedAuthzEnabled;
     }
 
-    public static String[] getRequestedOIDCScopes(String[] requestedScopes)
-            throws IdentityOAuthAdminException {
+    public static String[] getRequestedOIDCScopes(String[] requestedScopes) throws IdentityOAuthAdminException {
+
         if (ArrayUtils.isEmpty(requestedScopes)) {
             return new String[0];
         }

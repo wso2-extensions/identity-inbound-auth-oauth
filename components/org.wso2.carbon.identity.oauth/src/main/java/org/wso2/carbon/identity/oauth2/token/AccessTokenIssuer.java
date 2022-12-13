@@ -360,104 +360,16 @@ public class AccessTokenIssuer {
             return tokenRespDTO;
         }
 
-        List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
-        List<String> requestedAllowedScopes = new ArrayList<>();
-        String[] requestedScopes = tokReqMsgCtx.getScope();
-        List<String> scopesToBeValidated = new ArrayList<>();
-        String[] requestedOIDCScopes = new String[0];
-        try {
-            // Get OIDC scopes from requested scopes. At end of the scope validation OIDC scopes will add to the
-            // approved scope list.
-            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(requestedScopes);
-            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(tokReqMsgCtx.getScope());
-            // OIDC scopes are not validated in the scope validation process. Hence, Removing OIDC scopes from the
-            // requested scopes by the app.
-            String[] oidcRemovedScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(tokReqMsgCtx.getScope());
-            tokReqMsgCtx.setScope(oidcRemovedScopes);
-        } catch (IdentityOAuthAdminException e) {
-            throw new IdentityException("Error occurred while validating scopes.", e);
-        }
-        if (requestedScopes != null) {
-            for (String scope : requestedScopes) {
-                if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
-                    requestedAllowedScopes.add(scope);
-                } else {
-                    scopesToBeValidated.add(scope);
-                }
-            }
-            tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
-        }
-
-        String[] authorizedInternalScopes = new String[0];
-        boolean isManagementApp = getServiceProvider(tokenReqDTO).isManagementApp();
-        if (isManagementApp) {
-            if (log.isDebugEnabled()) {
-                log.debug("Handling the internal scope validation.");
-            }
-            // Execute Internal SCOPE Validation.
-            JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
-            authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
-            // Execute internal console scopes validation.
-            if (IdentityUtil.isSystemRolesEnabled()) {
-                RoleBasedInternalScopeValidator roleBasedInternalScopeValidator = new RoleBasedInternalScopeValidator();
-                String[] roleBasedInternalConsoleScopes = roleBasedInternalScopeValidator.validateScope(tokReqMsgCtx);
-                authorizedInternalScopes = (String[]) ArrayUtils
-                        .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
-            }
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Skipping the internal scope validation as the application is not" +
-                        " configured as Management App");
-            }
-        }
-
-        // Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
-        // Those scopes should not send to the other scopes validators.
-        // Thus remove the scopes from the tokReqMsgCtx. Will be added to the response after executing
-        // the other scope validators.
-        removeInternalScopes(tokReqMsgCtx);
-
-        // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
-        tokReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
-
-        boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
-        if (isDropUnregisteredScopes) {
-            if (log.isDebugEnabled()) {
-                log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
-            }
-            String[] filteredScopes = OAuth2Util.dropUnregisteredScopes(
-                    tokReqMsgCtx.getScope(),
-                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain());
-            tokReqMsgCtx.setScope(filteredScopes);
-        }
-
-        boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
-        if (isValidScope) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                if (ArrayUtils.isNotEmpty(tokenReqDTO.getScope())) {
-                    params.put("scope", Arrays.asList(tokenReqDTO.getScope()));
-                }
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.SUCCESS, "OAuth scope validation is successful.", "validate-scope",
-                        null);
-            }
-            // Add authorized internal scopes to the request for sending in the response.
-            addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
-            // Add OIDC scopes back to the request
-            addRequestedOIDCScopes(tokReqMsgCtx, requestedOIDCScopes);
-            addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
-        } else {
+        boolean isValidScope = validateScopes(tokReqMsgCtx);
+        if (!isValidScope) {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid scope provided by client Id: " + tokenReqDTO.getClientId());
             }
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 params.put("clientId", tokenReqDTO.getClientId());
-                if (ArrayUtils.isNotEmpty(tokenReqDTO.getScope())) {
-                    params.put("scope", Arrays.asList(tokenReqDTO.getScope()));
-                }
+                params.put("requestedScopes", Arrays.asList(getRequestedScopes(tokenReqDTO)));
+
                 LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                         OAuthConstants.LogConstants.FAILED, "Invalid scope provided in the request.", "validate-scope",
                         null);
@@ -557,6 +469,161 @@ public class AccessTokenIssuer {
         }
 
         return tokenRespDTO;
+    }
+
+    private AuthorizationGrantHandler getAuthzGrantHandler(OAuth2AccessTokenReqDTO tokenReqDTO) {
+
+        String grantType = tokenReqDTO.getGrantType();
+        return authzGrantHandlers.get(grantType);
+    }
+
+    /**
+     * Validates requested scopes and set the authorized scopes to the OAuthTokenReqMessageContext.
+     *
+     * @param tokReqMsgCtx Context that carries the data about the token request
+     * @return True, scope validation was successful, false otherwise
+     *
+     * @throws IdentityException
+     */
+    private boolean validateScopes(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityException {
+
+        OAuth2AccessTokenReqDTO tokenReqDTO = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
+
+        // Filter and remove global allowed scopes from context. These scope should not go through the scope validation
+        // logic. We'll add these back to the response at the end of scope validation.
+        List<String> requestedAllowedScopes = filterGlobalAllowedScopes(tokReqMsgCtx);
+
+        // Filter and remove OIDC scopes from the context. These scopes should not pass to scope validators.
+        // We'll add these back to the response at the end of scope validation.
+        String[] requestedOIDCScopes = filterOIDCScopes(tokReqMsgCtx);
+
+        // Handle internal_* scopes. These are evaluated against user's permissions and handled separately from scope
+        // usual OAuth2 scope validation logic.
+        String[] authorizedInternalScopes = filterInternalScopes(tokReqMsgCtx);
+        // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
+        tokReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
+
+        // Drop unregistered scopes as a pre-caution to prevent to bogus scopes from being issued when no scope
+        // validators are present. In the present of a scope validator this could be disabled.
+        boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
+        if (isDropUnregisteredScopes) {
+            if (log.isDebugEnabled()) {
+                log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
+            }
+            String[] filteredScopes = OAuth2Util.dropUnregisteredScopes(
+                    tokReqMsgCtx.getScope(),
+                    tokenReqDTO.getTenantDomain());
+            tokReqMsgCtx.setScope(filteredScopes);
+        }
+
+        // Let the remaining scopes run through the scope validation logic.
+        boolean isValidScope = getAuthzGrantHandler(tokenReqDTO).validateScope(tokReqMsgCtx);
+        if (isValidScope) {
+            // Add authorized internal scopes to the context for sending in the response.
+            addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
+            // Add OIDC scopes back to the context.
+            addRequestedOIDCScopes(tokReqMsgCtx, requestedOIDCScopes);
+            // Add globally allowed scopes to the context.
+            addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
+
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("clientId", tokenReqDTO.getClientId());
+                params.put("requestedScopes", Arrays.asList(getRequestedScopes(tokenReqDTO)));
+                params.put("authorizedScopes", Arrays.asList(getAuthorizedScopes(tokReqMsgCtx)));
+
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.SUCCESS, "OAuth scope validation is successful.", "validate-scope",
+                        null);
+            }
+        }
+
+        return isValidScope;
+    }
+
+    private String[] getAuthorizedScopes(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (tokReqMsgCtx.getScope() != null) {
+            return tokReqMsgCtx.getScope();
+        }
+        return new String[0];
+    }
+
+    private String[] getRequestedScopes(OAuth2AccessTokenReqDTO tokenReqDTO) {
+
+        if (tokenReqDTO.getScope() != null) {
+            return tokenReqDTO.getScope();
+        }
+        return new String[0];
+    }
+
+    private String[] filterInternalScopes(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
+
+        String[] authorizedInternalScopes = new String[0];
+        OAuth2AccessTokenReqDTO tokenReqDTO = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
+        boolean isManagementApp = getServiceProvider(tokenReqDTO).isManagementApp();
+        if (isManagementApp) {
+            if (log.isDebugEnabled()) {
+                log.debug("Handling the internal scope validation.");
+            }
+            // Execute Internal SCOPE Validation.
+            JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
+            authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
+            // Execute internal console scopes validation.
+            if (IdentityUtil.isSystemRolesEnabled()) {
+                RoleBasedInternalScopeValidator roleBasedInternalScopeValidator = new RoleBasedInternalScopeValidator();
+                String[] roleBasedInternalConsoleScopes = roleBasedInternalScopeValidator.validateScope(tokReqMsgCtx);
+                authorizedInternalScopes = (String[]) ArrayUtils
+                        .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Skipping the internal scope validation as the application is not" +
+                        " configured as Management App");
+            }
+        }
+
+        // Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
+        // Those scopes should not send to the other scopes validators.
+        // Thus remove the scopes from the tokReqMsgCtx. Will be added to the response after executing
+        // the other scope validators.
+        removeInternalScopes(tokReqMsgCtx);
+        return authorizedInternalScopes;
+    }
+
+    private String[] filterOIDCScopes(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityException {
+
+        String[] requestedOIDCScopes;
+        try {
+            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(tokReqMsgCtx.getScope());
+            // OIDC scopes do not go through the scope validation logic.
+            // So we remove them from the context to avoid passing them to scope validators.
+            String[] oidcRemovedScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(tokReqMsgCtx.getScope());
+            tokReqMsgCtx.setScope(oidcRemovedScopes);
+        } catch (IdentityOAuthAdminException e) {
+            throw new IdentityException("Error occurred filtering OIDC scopes from requested scopes.", e);
+        }
+        return requestedOIDCScopes;
+    }
+
+    private List<String> filterGlobalAllowedScopes(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        String[] requestedScopes = tokReqMsgCtx.getScope();
+        List<String> requestedAllowedScopes = new ArrayList<>();
+        if (requestedScopes != null) {
+            List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
+            // Scopes that needs to be validated after filtering the globally allowed scopes.
+            List<String> scopesToBeValidated = new ArrayList<>();
+            for (String scope : requestedScopes) {
+                if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
+                    requestedAllowedScopes.add(scope);
+                } else {
+                    scopesToBeValidated.add(scope);
+                }
+            }
+            tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
+        }
+        return requestedAllowedScopes;
     }
 
     private ServiceProvider getServiceProvider(OAuth2AccessTokenReqDTO tokenReq) throws IdentityOAuth2Exception {
@@ -730,6 +797,12 @@ public class AccessTokenIssuer {
         if (tokReqMsgCtx.getScope() == null) {
             tokReqMsgCtx.setScope(new String[0]);
         }
+
+        if (ArrayUtils.isEmpty(requestedOIDCScopes)) {
+            // No oidc scopes to add.
+            return;
+        }
+
         Set<String> scopesToReturn = new HashSet<>(Arrays.asList(tokReqMsgCtx.getScope()));
         scopesToReturn.addAll(Arrays.asList(requestedOIDCScopes));
         String[] scopes = scopesToReturn.toArray(new String[0]);
