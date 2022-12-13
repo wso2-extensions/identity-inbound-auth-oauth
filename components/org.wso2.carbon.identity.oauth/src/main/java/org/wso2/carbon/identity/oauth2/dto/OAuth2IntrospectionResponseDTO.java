@@ -324,7 +324,7 @@ public class OAuth2IntrospectionResponseDTO {
 
     public String getAcr() {
 
-    	return acr;
+        return acr;
     }
 
     public void setAcr(String acr) {
