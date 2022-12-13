@@ -956,6 +956,7 @@ public class EndpointUtil {
         return allowedOAuthScopes;
     }
 
+
     @Deprecated
     private static void setConsentRequiredScopesToOAuthParams(AuthenticatedUser user, OAuth2Parameters params)
             throws OAuthSystemException {
