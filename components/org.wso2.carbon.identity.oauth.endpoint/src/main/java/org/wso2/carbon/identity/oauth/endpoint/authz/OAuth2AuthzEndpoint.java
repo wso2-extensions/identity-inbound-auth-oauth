@@ -873,8 +873,9 @@ public class OAuth2AuthzEndpoint {
                         userIdentifier = authnResult.getSubject().getUserId();
                     } catch (UserIdNotFoundException e) {
                         if (StringUtils.isNotBlank(authnResult.getSubject().getAuthenticatedSubjectIdentifier())) {
-                            userIdentifier = authnResult.getSubject().getAuthenticatedSubjectIdentifier().replaceAll(
-                                    ".", "*");
+                            userIdentifier = LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(authnResult
+                                    .getSubject().getAuthenticatedSubjectIdentifier()) : authnResult.getSubject()
+                                    .getAuthenticatedSubjectIdentifier();
                         }
                     }
                 }
@@ -2412,8 +2413,9 @@ public class OAuth2AuthzEndpoint {
                         params.put("user", authenticatedUser.getUserId());
                     } catch (UserIdNotFoundException e) {
                         if (StringUtils.isNotBlank(authenticatedUser.getAuthenticatedSubjectIdentifier())) {
-                            params.put("user",
-                                    authenticatedUser.getAuthenticatedSubjectIdentifier().replaceAll(".", "*"));
+                            params.put("user", LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(
+                                    authenticatedUser.getAuthenticatedSubjectIdentifier()) : authenticatedUser
+                                    .getAuthenticatedSubjectIdentifier());
                         }
                     }
                 }
@@ -2629,7 +2631,8 @@ public class OAuth2AuthzEndpoint {
             params.put("user", user.getUserId());
         } catch (UserIdNotFoundException e) {
             if (StringUtils.isNotBlank(user.getAuthenticatedSubjectIdentifier())) {
-                params.put("user", user.getAuthenticatedSubjectIdentifier());
+                params.put("user", LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(
+                        user.getAuthenticatedSubjectIdentifier()) : user.getAuthenticatedSubjectIdentifier());
             }
         }
 
