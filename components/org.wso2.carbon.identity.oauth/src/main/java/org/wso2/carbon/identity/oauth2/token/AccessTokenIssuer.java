@@ -39,7 +39,6 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -364,19 +363,7 @@ public class AccessTokenIssuer {
         List<String> requestedAllowedScopes = new ArrayList<>();
         String[] requestedScopes = tokReqMsgCtx.getScope();
         List<String> scopesToBeValidated = new ArrayList<>();
-        String[] requestedOIDCScopes = new String[0];
-        try {
-            // Get OIDC scopes from requested scopes. At end of the scope validation OIDC scopes will add to the
-            // approved scope list.
-            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(requestedScopes);
-            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(tokReqMsgCtx.getScope());
-            // OIDC scopes are not validated in the scope validation process. Hence, Removing OIDC scopes from the
-            // requested scopes by the app.
-            String[] oidcRemovedScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(tokReqMsgCtx.getScope());
-            tokReqMsgCtx.setScope(oidcRemovedScopes);
-        } catch (IdentityOAuthAdminException e) {
-            throw new IdentityException("Error occurred while validating scopes.", e);
-        }
+
         if (requestedScopes != null) {
             for (String scope : requestedScopes) {
                 if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
@@ -445,8 +432,6 @@ public class AccessTokenIssuer {
             }
             // Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
-            // Add OIDC scopes back to the request
-            addRequestedOIDCScopes(tokReqMsgCtx, requestedOIDCScopes);
             addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         } else {
             if (log.isDebugEnabled()) {

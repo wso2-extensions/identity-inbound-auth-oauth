@@ -55,7 +55,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.INVALID_SCOPE;
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.UNAUTHORIZED_CLIENT;
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.UNSUPPORTED_RESPONSE_TYPE;
@@ -284,20 +283,6 @@ public class AuthorizationHandlerManager {
                                          ResponseTypeHandler authzHandler) throws IdentityOAuth2Exception,
             IdentityOAuth2UnauthorizedScopeException {
 
-        String[] requestedOIDCScopes;
-        try {
-            // Get OIDC scopes from requested scopes. At end of the scope validation OIDC scopes will add to the
-            // approved scope list.
-            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(authzReqMsgCtx.getAuthorizationReqDTO()
-                    .getScopes());
-            // OIDC scopes are not validated in the scope validation process. Hence, Removing OIDC scopes from the
-            // requested scopes by the app.
-            String[] oidcRemovedScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(authzReqMsgCtx
-                    .getAuthorizationReqDTO().getScopes());
-            authzReqMsgCtx.getAuthorizationReqDTO().setScopes(oidcRemovedScopes);
-        } catch (IdentityOAuthAdminException e) {
-            throw new IdentityOAuth2Exception("Error occurred while validating requested scopes.", e);
-        }
         // Get scopes that specified in the allowed scopes list.
         List<String> requestedAllowedScopes = getAllowedScopesFromRequestedScopes(authzReqMsgCtx);
         // If it is management app, we validate internal scopes in the requested scopes.
@@ -331,8 +316,6 @@ public class AuthorizationHandlerManager {
         if (isValid && isValidatedScopesContainsInRequestedScopes) {
             // Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(authzReqMsgCtx, authzReqMsgCtx.getAuthorizedInternalScopes());
-            // Add OIDC scopes back to the request.
-            addRequestedOIDCScopes(authzReqMsgCtx, requestedOIDCScopes);
             // Add scopes that filtered from the allowed scopes list.
             addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         } else {
