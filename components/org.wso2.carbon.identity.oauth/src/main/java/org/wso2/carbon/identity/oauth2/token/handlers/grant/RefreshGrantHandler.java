@@ -59,6 +59,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserId;
@@ -146,11 +148,14 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
          */
         String[] requestedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
         String[] grantedScopes = tokReqMsgCtx.getScope();
+        String[] grantedInternalScopes = tokReqMsgCtx.getAuthorizedInternalScopes();
         if (ArrayUtils.isNotEmpty(requestedScopes)) {
             if (ArrayUtils.isEmpty(grantedScopes)) {
                 return false;
             }
-            List<String> grantedScopeList = Arrays.asList(grantedScopes);
+            List<String> grantedScopeList = Stream
+                    .concat(Arrays.stream(grantedScopes), Arrays.stream(grantedInternalScopes))
+                    .collect(Collectors.toList());
             for (String scope : requestedScopes) {
                 if (!grantedScopeList.contains(scope)) {
                     if (log.isDebugEnabled()) {
