@@ -873,8 +873,9 @@ public class OAuth2AuthzEndpoint {
                         userIdentifier = authnResult.getSubject().getUserId();
                     } catch (UserIdNotFoundException e) {
                         if (StringUtils.isNotBlank(authnResult.getSubject().getAuthenticatedSubjectIdentifier())) {
-                            userIdentifier = authnResult.getSubject().getAuthenticatedSubjectIdentifier().replaceAll(
-                                    ".", "*");
+                            userIdentifier = LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(authnResult
+                                    .getSubject().getAuthenticatedSubjectIdentifier()) : authnResult.getSubject()
+                                    .getAuthenticatedSubjectIdentifier();
                         }
                     }
                 }
