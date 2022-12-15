@@ -95,8 +95,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private Algorithm signatureAlgorithm = null;
 
-    private static final String AUTHORIZATION_CODE = "AuthorizationCode";
-
     public JWTTokenIssuer() throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {

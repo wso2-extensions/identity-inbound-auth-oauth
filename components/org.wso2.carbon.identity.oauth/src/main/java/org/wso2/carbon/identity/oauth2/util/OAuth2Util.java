@@ -173,7 +173,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -4646,8 +4645,10 @@ public class OAuth2Util {
     public static Optional<String> getSelectedACRValue(OAuthTokenReqMessageContext tokenReqMsgCtxt) {
 
         if (!OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
-            log.debug("'ACR' column is not available in the IDN_OAUTH2_ACCESS_TOKEN table. Hence the 'ACR' value will" +
-                    " not be return with the access token.");
+            if (log.isDebugEnabled()) {
+                log.debug("'ACR' column is not available in the IDN_OAUTH2_ACCESS_TOKEN table. Hence the 'ACR' value" +
+                        " will not be return with the access token.");
+            }
             return Optional.empty();
         }
         String authorizationCode = (String) tokenReqMsgCtxt.getProperty(AUTHZ_CODE);

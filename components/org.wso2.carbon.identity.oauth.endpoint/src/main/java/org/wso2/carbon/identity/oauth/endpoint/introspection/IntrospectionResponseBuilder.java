@@ -79,6 +79,7 @@ public class IntrospectionResponseBuilder {
     }
 
     /**
+     * Add the ACR attribute into the introspection response if it's available.
      * @param acr acr string
      * @return IntrospectionResponseBuilder
      */

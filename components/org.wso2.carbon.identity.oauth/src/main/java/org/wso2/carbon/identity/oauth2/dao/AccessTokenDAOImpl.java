@@ -171,8 +171,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             log.debug("Userstore domain for user: " + username + " is " + userDomain);
         }
 
-        String sql;
-        sql = getInsertAccessTokenQuery();
+        String sql = getInsertAccessTokenQuery();
         sql = OAuth2Util.getTokenPartitionedSqlByUserStore(sql, userDomain);
         String sqlAddScopes = OAuth2Util.getTokenPartitionedSqlByUserStore(SQLQueries.INSERT_OAUTH2_TOKEN_SCOPE,
                 userDomain);

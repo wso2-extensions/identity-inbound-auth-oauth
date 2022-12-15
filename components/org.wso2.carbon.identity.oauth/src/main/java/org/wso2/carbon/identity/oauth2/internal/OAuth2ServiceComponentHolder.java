@@ -142,11 +142,18 @@ public class OAuth2ServiceComponentHolder {
         OAuth2ServiceComponentHolder.consentedTokenColumnEnabled = consentedTokenColumnEnabled;
     }
 
+    /**
+     * @return True if the ACR column is available in the IDN_OAUTH2_ACCESS_TOKEN table.
+     */
     public static boolean isAcrColumnEnabled() {
 
         return isAcrColumnEnabled;
     }
 
+    /**
+     * Set whether the ACR column available or not in the IDN_OAUTH2_ACCESS_TOKEN table.
+     * @param isAcrColumnEnabled boolean flag which indicate whether the ACR column is available or not.
+     */
     public static void setAcrColumnEnabled(boolean isAcrColumnEnabled) {
 
         OAuth2ServiceComponentHolder.isAcrColumnEnabled = isAcrColumnEnabled;

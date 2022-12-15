@@ -311,10 +311,12 @@ public class AccessTokenDO extends CacheEntry {
     }
 
     public String getAcr() {
+
         return acr;
     }
 
     public void setAcr(String acr) {
+
         this.acr = acr;
     }
 }

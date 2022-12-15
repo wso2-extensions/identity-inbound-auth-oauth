@@ -87,9 +87,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     protected static final int SECONDS_TO_MILISECONDS_FACTOR = 1000;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
-
-    private static final String AUTHORIZATION_CODE = "AuthorizationCode";
-
     @Override
     public void init() throws IdentityOAuth2Exception {
         callbackManager = new OAuthCallbackManager();
@@ -398,11 +395,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().updateTokenIsConsented(
                     existingTokenBean.getTokenId(), true);
         }
-        /*setACRValueInTheToken(tokReqMsgCtx, existingTokenBean);
-        if (StringUtils.isNotEmpty(existingTokenBean.getAcr())) {
-            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().updateTokenAcr(
-                    existingTokenBean.getTokenId(), existingTokenBean.getAcr());
-        }*/
         setDetailsToMessageContext(tokReqMsgCtx, existingTokenBean);
         return createResponseWithTokenBean(existingTokenBean, expireTime, scope);
     }
@@ -1126,9 +1118,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         Optional<String> optionalSelectedACR = OAuth2Util.getSelectedACRValue(tokenReqMsgCtxt);
         if (!optionalSelectedACR.isPresent()) {
-
-            log.debug("ACR value is not available for the token issued for '"
-                    + tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getClientId() + "' client.");
+            if (log.isDebugEnabled()) {
+                log.debug("ACR value is not available for the token issued for '" +
+                        tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getClientId() + "' client.");
+            }
             return;
         }
         String selectedACRValue = optionalSelectedACR.get();
