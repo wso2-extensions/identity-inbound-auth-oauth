@@ -956,37 +956,6 @@ public class EndpointUtil {
         return allowedOAuthScopes;
     }
 
-    @Deprecated
-    private static void setConsentRequiredScopesToOAuthParams(AuthenticatedUser user, OAuth2Parameters params)
-            throws OAuthSystemException {
-
-        try {
-            //Filter out OIDC scopes and unregistered scopes to prevent those scopes prompt for consent in the consent
-            // page.
-            List<String> consentRequiredScopes = dropOIDCAndUnregisteredScopesFromConsentRequiredScopes(params);
-
-            if (user != null && !isPromptContainsConsent(params)) {
-                String userId = getUserIdOfAuthenticatedUser(user);
-                String appId = getAppIdFromClientId(params.getClientId());
-                OAuth2ScopeConsentResponse existingUserConsent = oAuth2ScopeService.getUserConsentForApp(
-                        userId, appId, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
-                if (existingUserConsent != null) {
-                    if (CollectionUtils.isNotEmpty(existingUserConsent.getApprovedScopes())) {
-                        consentRequiredScopes.removeAll(existingUserConsent.getApprovedScopes());
-                    }
-                }
-            }
-            params.setConsentRequiredScopes(new HashSet<>(consentRequiredScopes));
-
-            if (log.isDebugEnabled()) {
-                log.debug("Consent required scopes : " + StringUtils.join(consentRequiredScopes, " ")
-                        + " for request from client : " + params.getClientId());
-            }
-        } catch (IdentityOAuth2ScopeException e) {
-            throw new OAuthSystemException("Error occurred while retrieving user consents OAuth scopes.");
-        }
-    }
-
     private static String getUserIdOfAuthenticatedUser(AuthenticatedUser user) throws OAuthSystemException {
 
         try {
