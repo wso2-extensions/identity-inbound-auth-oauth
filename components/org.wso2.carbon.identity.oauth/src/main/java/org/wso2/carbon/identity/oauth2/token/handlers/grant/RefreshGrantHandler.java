@@ -150,7 +150,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         String[] grantedScopes = tokReqMsgCtx.getScope();
         String[] grantedInternalScopes = tokReqMsgCtx.getAuthorizedInternalScopes();
         if (ArrayUtils.isNotEmpty(requestedScopes)) {
-            if (ArrayUtils.isEmpty(grantedScopes)) {
+            if (ArrayUtils.isEmpty(grantedScopes) && ArrayUtils.isEmpty(grantedInternalScopes)) {
                 return false;
             }
             List<String> grantedScopeList = Stream
