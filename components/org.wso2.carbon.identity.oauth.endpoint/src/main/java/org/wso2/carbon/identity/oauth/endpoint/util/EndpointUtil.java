@@ -774,9 +774,19 @@ public class EndpointUtil {
                 }
                 consentPage += "&tenantDomain=" + getSPTenantDomainFromClientId(params.getClientId());
 
+                if (entry != null) {
+                    user = entry.getLoggedInUser();
+                }
+                setConsentRequiredScopesToOAuthParams(user, params);
+                Set<String> consentRequiredScopesSet = params.getConsentRequiredScopes();
+                String consentRequiredScopes = StringUtils.EMPTY;
+                if (CollectionUtils.isNotEmpty(consentRequiredScopesSet)) {
+                    consentRequiredScopes = String.join(" ", consentRequiredScopesSet).trim();
+                }
+
                 consentPage = consentPage + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
-                        (EndpointUtil.getScope(params), UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
-                        + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&spQueryParams=" + queryString;
+                        (consentRequiredScopes, UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
+                        + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" + "&spQueryParams=" + queryString;
 
                 if (entry != null) {
 
@@ -911,49 +921,73 @@ public class EndpointUtil {
     }
 
     /**
-     * Drop OIDC and unregistered scopes from consent required scopes.
+     * Drop unregistered scopes from consent required scopes.
      *
      * @param params OAuth2 parameters.
      * @return consent required scopes
      * @throws OAuthSystemException If retrieving OIDC scopes failed.
      */
-    private static List<String> dropOIDCAndUnregisteredScopesFromConsentRequiredScopes(OAuth2Parameters params)
+    private static List<String> dropUnregisteredScopesFromConsentRequiredScopes(OAuth2Parameters params)
             throws OAuthSystemException {
 
         Set<String> allowedScopes = params.getScopes();
-        List<String> allowedOAuthScopes = new ArrayList<>();
+        List<String> allowedRegisteredScopes = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(allowedScopes)) {
             try {
                 startTenantFlow(params.getTenantDomain());
                 /* If DropUnregisteredScopes scopes config is enabled
                  then any unregistered scopes(excluding internal scopes
-                 and allowed scopes) is be dropped. Therefore they will
+                 and allowed scopes) will be dropped. Therefore, they will
                  not be shown in the user consent screen.*/
                 if (oauthServerConfiguration.isDropUnregisteredScopes()) {
                     if (log.isDebugEnabled()) {
                         log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
                     }
                     allowedScopes = dropUnregisteredScopes(params);
-                }
-                // Get registered OIDC scopes.
-                String[] oidcScopes = oAuthAdminService.getScopeNames();
-                List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
-                for (String scope : allowedScopes) {
-                    if (!oidcScopeList.contains(scope)) {
-                        allowedOAuthScopes.add(scope);
+                    for (String scope : allowedScopes) {
+                        allowedRegisteredScopes.add(scope);
                     }
                 }
-            } catch (IdentityOAuthAdminException e) {
-                throw new OAuthSystemException("Error while retrieving OIDC scopes.", e);
+            } catch (OAuthSystemException e) {
+                throw new OAuthSystemException("Error while dropping unregistered scopes.", e);
             } finally {
                 PrivilegedCarbonContext.endTenantFlow();
             }
         }
         if (log.isDebugEnabled()) {
-            log.debug("Allowed OAuth scopes : " + allowedOAuthScopes.stream()
+            log.debug("Allowed registered scopes : " + allowedRegisteredScopes.stream()
                     .collect(Collectors.joining(" ")) + " for client : " + params.getClientId());
         }
-        return allowedOAuthScopes;
+        return allowedRegisteredScopes;
+    }
+
+    private static void setConsentRequiredScopesToOAuthParams(AuthenticatedUser user, OAuth2Parameters params)
+            throws OAuthSystemException {
+
+        try {
+            //Filter out unregistered scopes to prevent those scopes prompt for consent in the consent page.
+            List<String> consentRequiredScopes = dropUnregisteredScopesFromConsentRequiredScopes(params);
+
+            if (user != null && !isPromptContainsConsent(params)) {
+                String userId = getUserIdOfAuthenticatedUser(user);
+                String appId = getAppIdFromClientId(params.getClientId());
+                OAuth2ScopeConsentResponse existingUserConsent = oAuth2ScopeService.getUserConsentForApp(
+                        userId, appId, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
+                if (existingUserConsent != null) {
+                    if (CollectionUtils.isNotEmpty(existingUserConsent.getApprovedScopes())) {
+                        consentRequiredScopes.removeAll(existingUserConsent.getApprovedScopes());
+                    }
+                }
+            }
+            params.setConsentRequiredScopes(new HashSet<>(consentRequiredScopes));
+
+            if (log.isDebugEnabled()) {
+                log.debug("Consent required scopes : " + StringUtils.join(consentRequiredScopes, " ")
+                        + " for request from client : " + params.getClientId());
+            }
+        } catch (IdentityOAuth2ScopeException e) {
+            throw new OAuthSystemException("Error occurred while retrieving user consents OAuth scopes.");
+        }
     }
 
     private static String getUserIdOfAuthenticatedUser(AuthenticatedUser user) throws OAuthSystemException {
