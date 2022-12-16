@@ -944,9 +944,9 @@ public class EndpointUtil {
                         log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
                     }
                     allowedScopes = dropUnregisteredScopes(params);
-                    for (String scope : allowedScopes) {
-                        allowedRegisteredScopes.add(scope);
-                    }
+                }
+                for (String scope : allowedScopes) {
+                    allowedRegisteredScopes.add(scope);
                 }
             } catch (OAuthSystemException e) {
                 throw new OAuthSystemException("Error while dropping unregistered scopes.", e);
