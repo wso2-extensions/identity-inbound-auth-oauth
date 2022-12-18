@@ -724,6 +724,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
         tokenRespDTO.setAuthorizedScopes(scope);
         tokenRespDTO.setIsConsentedToken(existingAccessTokenDO.isConsentedToken());
+        tokenRespDTO.setAcr(existingAccessTokenDO.getAcr());
         return tokenRespDTO;
     }
 

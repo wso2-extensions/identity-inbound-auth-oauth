@@ -306,6 +306,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         }
         tokenResp.setAuthorizedScopes(scope);
         tokenResp.setIsConsentedToken(accessTokenBean.isConsentedToken());
+        tokenResp.setAcr(accessTokenBean.getAcr());
         return tokenResp;
     }
 
