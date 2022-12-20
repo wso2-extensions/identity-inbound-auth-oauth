@@ -72,6 +72,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
     public static final String AUTHZ_USER = "AUTHZ_USER";
     public static final String LOWER_AUTHZ_USER = "LOWER(AUTHZ_USER)";
     private static final String UTC = "UTC";
+    private static final String ACR_COLUMN_NAME = "ACR";
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
     private static final String IDN_OAUTH2_ACCESS_TOKEN = "IDN_OAUTH2_ACCESS_TOKEN";
@@ -97,10 +98,25 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
 
         try {
             String driverName = connection.getMetaData().getDriverName();
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                if (driverName.contains("MySQL")
-                        || driverName.contains("MariaDB")
-                        || driverName.contains("H2")) {
+            boolean isMySQLTypeDB = driverName.contains("MySQL") || driverName.contains("MariaDB")
+                    || driverName.contains("H2");
+            if (OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
+                if (isMySQLTypeDB) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_IDP_NAME_WITH_ACR_MYSQL;
+                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_WITH_ACR_DB2SQL;
+                } else if (driverName.contains("MS SQL")
+                        || driverName.contains("Microsoft")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_WITH_ACR_MSSQL;
+                } else if (driverName.contains("PostgreSQL")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_WITH_ACR_POSTGRESQL;
+                } else if (driverName.contains("INFORMIX")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_WITH_ACR_INFORMIX;
+                } else {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_WITH_ACR_ORACLE;
+                }
+            } else {
+                if (isMySQLTypeDB) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MYSQL;
                 } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_DB2SQL;
@@ -113,23 +129,6 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_INFORMIX;
                 } else {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_ORACLE;
-                }
-            } else {
-                if (driverName.contains("MySQL")
-                        || driverName.contains("MariaDB")
-                        || driverName.contains("H2")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_MYSQL;
-                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_DB2SQL;
-                } else if (driverName.contains("MS SQL")
-                        || driverName.contains("Microsoft")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_MSSQL;
-                } else if (driverName.contains("PostgreSQL")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_POSTGRESQL;
-                } else if (driverName.contains("INFORMIX")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_INFORMIX;
-                } else {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_ORACLE;
                 }
             }
 
@@ -185,6 +184,11 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
                     validationDataDO.setAuthorizedUser(user);
 
+                    if (OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
+                        int acrColumnIndex = resultSet.findColumn(ACR_COLUMN_NAME);
+                        String acr = resultSet.getString(acrColumnIndex);
+                        validationDataDO.setAcr(acr);
+                    }
                 } else {
                     scopes.add(resultSet.getString(5));
                 }

@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.model;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
 import java.sql.Timestamp;
@@ -69,6 +70,8 @@ public class AccessTokenDO extends CacheEntry {
     private String tokenType;
 
     private TokenBinding tokenBinding;
+
+    private String acr;
 
     public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope, Timestamp issuedTime,
                          Timestamp refreshTokenIssuedTime, long validityPeriodInMillis,
@@ -136,6 +139,9 @@ public class AccessTokenDO extends CacheEntry {
         newTokenDO.setGrantType(tokenDO.getGrantType());
         newTokenDO.setTokenBinding(tokenDO.getTokenBinding());
         newTokenDO.setIsConsentedToken(tokenDO.isConsentedToken());
+        if (OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
+            newTokenDO.setAcr(tokenDO.getAcr());
+        }
 
         return newTokenDO;
     }
@@ -302,5 +308,15 @@ public class AccessTokenDO extends CacheEntry {
     public void setTokenBinding(TokenBinding tokenBinding) {
 
         this.tokenBinding = tokenBinding;
+    }
+
+    public String getAcr() {
+
+        return acr;
+    }
+
+    public void setAcr(String acr) {
+
+        this.acr = acr;
     }
 }

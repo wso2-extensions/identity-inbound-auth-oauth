@@ -66,6 +66,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -167,7 +168,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 }
 
                 long expireTime = getAccessTokenExpiryTimeMillis(existingTokenBean);
-                if (isExistingTokenValid(existingTokenBean, expireTime)) {
+                if (isExistingTokenValid(tokReqMsgCtx, existingTokenBean, expireTime)) {
                     if (log.isDebugEnabled()) {
                         log.debug("Existing token is active for client Id: " + consumerKey + ", user: " +
                                 authorizedUserId + " and scope: " + scope + ". Therefore issuing the same token.");
@@ -394,7 +395,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().updateTokenIsConsented(
                     existingTokenBean.getTokenId(), true);
         }
-
         setDetailsToMessageContext(tokReqMsgCtx, existingTokenBean);
         return createResponseWithTokenBean(existingTokenBean, expireTime, scope);
     }
@@ -411,6 +411,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         AccessTokenDO newTokenBean = createNewTokenBean(tokReqMsgCtx, oAuthAppBean, existingTokenBean, timestamp,
                 validityPeriodInMillis, oauthTokenIssuer);
         setDetailsToMessageContext(tokReqMsgCtx, validityPeriodInMillis, newTokenBean, timestamp);
+
+        setACRValueInTheToken(tokReqMsgCtx, newTokenBean);
 
         /* Check whether the existing token needs to be expired and send the corresponding parameters to the
         persistAccessTokenInDB method. */
@@ -430,10 +432,17 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         return createResponseWithTokenBean(newTokenBean, validityPeriodInMillis, scope);
     }
 
-    private boolean isExistingTokenValid(AccessTokenDO existingTokenBean, long expireTime) {
+    private boolean isExistingTokenValid(OAuthTokenReqMessageContext tokenReqMessageContext,
+            AccessTokenDO existingTokenBean, long expireTime) {
 
         if (TOKEN_STATE_ACTIVE.equals(existingTokenBean.getTokenState()) && expireTime != 0) {
-            return true;
+            Optional<String> selectedACRValue = OAuth2Util.getSelectedACRValue(tokenReqMessageContext);
+            /*
+            * If ACR value is available, check it with the previous ACR value. If ACR value is not available, then
+            * check if the previous access token had an ACR value.
+            * */
+            return selectedACRValue.map(s -> StringUtils.equals(s, existingTokenBean.getAcr()))
+                    .orElseGet(() -> StringUtils.isEmpty(existingTokenBean.getAcr()));
         } else {
             if (log.isDebugEnabled()) {
                 if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
@@ -715,6 +724,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
         tokenRespDTO.setAuthorizedScopes(scope);
         tokenRespDTO.setIsConsentedToken(existingAccessTokenDO.isConsentedToken());
+        tokenRespDTO.setAcr(existingAccessTokenDO.getAcr());
         return tokenRespDTO;
     }
 
@@ -1103,4 +1113,21 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
         return tokReqMsgCtx.getAuthorizedUser().isFederatedUser();
     }
+
+
+    private void setACRValueInTheToken(OAuthTokenReqMessageContext tokenReqMsgCtxt, AccessTokenDO accessTokenDO) {
+
+        Optional<String> optionalSelectedACR = OAuth2Util.getSelectedACRValue(tokenReqMsgCtxt);
+        if (!optionalSelectedACR.isPresent()) {
+            if (log.isDebugEnabled()) {
+                log.debug("ACR value is not available for the token issued for '" +
+                        tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getClientId() + "' client.");
+            }
+            return;
+        }
+        String selectedACRValue = optionalSelectedACR.get();
+        accessTokenDO.setAcr(selectedACRValue);
+        tokenReqMsgCtxt.setAcr(selectedACRValue);
+    }
+
 }

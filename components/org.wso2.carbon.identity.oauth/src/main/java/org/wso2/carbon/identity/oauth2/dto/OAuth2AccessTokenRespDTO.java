@@ -43,6 +43,7 @@ public class OAuth2AccessTokenRespDTO {
     private String idToken;
     private Map<String, String> parameters;
     private boolean isConsentedToken;
+    private String acr;
 
     public ResponseHeader[] getResponseHeaders() {
         if (responseHeaders == null) {
@@ -205,5 +206,15 @@ public class OAuth2AccessTokenRespDTO {
     public void setIsConsentedToken(boolean isConsentedToken) {
 
         this.isConsentedToken = isConsentedToken;
+    }
+
+    public void setAcr(String acr) {
+
+        this.acr = acr;
+    }
+
+    public String getAcr() {
+
+        return acr;
     }
 }

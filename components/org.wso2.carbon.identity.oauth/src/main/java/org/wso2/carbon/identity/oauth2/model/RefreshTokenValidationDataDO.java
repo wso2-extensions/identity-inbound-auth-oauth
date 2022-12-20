@@ -49,6 +49,8 @@ public class RefreshTokenValidationDataDO {
 
     private long accessTokenValidityInMillis;
 
+    private String acr;
+
     public String getAccessToken() {
         return accessToken;
     }
@@ -137,5 +139,15 @@ public class RefreshTokenValidationDataDO {
 
     public void setAccessTokenValidityInMillis(long accessTokenValidityInMillis) {
         this.accessTokenValidityInMillis = accessTokenValidityInMillis;
+    }
+
+    public void setAcr(String acr) {
+
+        this.acr = acr;
+    }
+
+    public String getAcr() {
+
+        return acr;
     }
 }

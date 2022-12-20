@@ -58,6 +58,7 @@ public class OAuth2ServiceComponentHolder {
     private static List<ClaimProvider> claimProviders = new ArrayList<>();
     private static boolean idpIdColumnEnabled = false;
     private static boolean consentedTokenColumnEnabled = false;
+    private static boolean isAcrColumnEnabled = false;
     private List<TokenBinder> tokenBinders = new ArrayList<>();
     private Map<String, ResponseTypeRequestValidator> responseTypeRequestValidators = new HashMap<>();
     private OAuthAdminServiceImpl oauthAdminService;
@@ -139,6 +140,23 @@ public class OAuth2ServiceComponentHolder {
     public static void setConsentedTokenColumnEnabled(boolean consentedTokenColumnEnabled) {
 
         OAuth2ServiceComponentHolder.consentedTokenColumnEnabled = consentedTokenColumnEnabled;
+    }
+
+    /**
+     * @return True if the ACR column is available in the IDN_OAUTH2_ACCESS_TOKEN table.
+     */
+    public static boolean isAcrColumnEnabled() {
+
+        return isAcrColumnEnabled;
+    }
+
+    /**
+     * Set whether the ACR column available or not in the IDN_OAUTH2_ACCESS_TOKEN table.
+     * @param isAcrColumnEnabled boolean flag which indicate whether the ACR column is available or not.
+     */
+    public static void setAcrColumnEnabled(boolean isAcrColumnEnabled) {
+
+        OAuth2ServiceComponentHolder.isAcrColumnEnabled = isAcrColumnEnabled;
     }
 
     public static RegistryService getRegistryService() {
