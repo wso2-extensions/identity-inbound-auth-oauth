@@ -1878,7 +1878,7 @@ public class OAuthAdminServiceImpl {
             int tenantId = getTenantId(tenantDomain);
             return  OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().getScopeNames(tenantId);
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantDomain, e);
+            throw handleError("Error while loading OIDC scopes of tenant: " + tenantDomain, e);
         }
     }
 }

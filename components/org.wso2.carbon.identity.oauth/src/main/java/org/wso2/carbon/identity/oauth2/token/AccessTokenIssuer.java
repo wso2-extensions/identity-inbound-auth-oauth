@@ -316,9 +316,6 @@ public class AccessTokenIssuer {
         try {
             isValidGrant = authzGrantHandler.validateGrant(tokReqMsgCtx);
         } catch (IdentityOAuth2Exception e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error occurred while validating grant", e);
-            }
             if (e.getErrorCode() != null) {
                 errorCode = e.getErrorCode();
             }
@@ -326,6 +323,7 @@ public class AccessTokenIssuer {
             if (e.getErrorCode() != null) {
                 errorCode = e.getErrorCode();
             }
+            log.error("Error occurred while validating grant: " +  error);
         }
 
         AuthenticatedUser authenticatedUser = tokReqMsgCtx.getAuthorizedUser();
