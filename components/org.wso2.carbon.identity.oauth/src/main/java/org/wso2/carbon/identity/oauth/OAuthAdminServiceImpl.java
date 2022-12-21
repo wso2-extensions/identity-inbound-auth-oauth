@@ -66,7 +66,6 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -1869,28 +1868,17 @@ public class OAuthAdminServiceImpl {
     /**
      * Returns OIDC scopes registered in the tenant.
      *
-     * @param tenantName tenant name
+     * @param tenantDomain tenant domain
      * @return List of OIDC scopes registered in tenant.
      * @throws IdentityOAuthAdminException exception if OIDC scope retrieval fails.
      */
-    public List<String> getRegisteredOIDCScope(String tenantName) throws IdentityOAuthAdminException {
-
+    public List<String> getRegisteredOIDCScope(String tenantDomain) throws IdentityOAuthAdminException {
 
         try {
-            int tenantId = getTenantId(tenantName);
-            List<String> oidcScopes = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    getScopeNames(tenantId);
-
-            if (CollectionUtils.isEmpty(oidcScopes)) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("Could not load oidc scopes. Hence returning an empty list.");
-                }
-                return Collections.emptyList();
-            }
-
-            return oidcScopes;
+            int tenantId = getTenantId(tenantDomain);
+            return  OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().getScopeNames(tenantId);
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantName, e);
+            throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantDomain, e);
         }
     }
 }
