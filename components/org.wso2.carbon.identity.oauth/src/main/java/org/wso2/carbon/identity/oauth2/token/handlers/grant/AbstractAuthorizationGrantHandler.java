@@ -282,8 +282,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     }
                     break;
                 }
-            } else {
-                tokReqMsgCtx.setOidcScopes(new ArrayList<>());
             }
         }
         // Deriving the list of global level scope validation implementations.

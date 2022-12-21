@@ -19,13 +19,11 @@ package org.wso2.carbon.identity.oauth2.validators;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Set;
 
 /**
@@ -64,6 +62,6 @@ public class OIDCScopeHandler extends OAuth2ScopeHandler {
     @Override
     public boolean canHandle(OAuthTokenReqMessageContext tokReqMsgCtx) {
         String[] scopes = tokReqMsgCtx.getScope();
-        return scopes != null && Arrays.asList(scopes).contains(OAuthConstants.Scope.OPENID);
+        return scopes != null && !tokReqMsgCtx.getOidcScopes().isEmpty();
     }
 }
