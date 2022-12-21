@@ -52,7 +52,6 @@ import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -2288,44 +2287,4 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         }
         fail("Expected IdentityOAuth2Exception was not thrown by getServiceProvider method");
     }
-
-    @DataProvider(name = "requestedOIDCScopeData")
-    public static Object[][] requestedOIDCScopeDataProvider() {
-
-        return new Object[][]{
-                {new String[]{"openid", "create"}, new String[]{"openid"}},
-                {new String[]{"openid", "openid", "create"}, new String[]{"openid"}},
-                {null, new String[0]}
-        };
-    }
-
-    @Test(dataProvider = "requestedOIDCScopeData")
-    public void testGetRequestedOIDCScopes(Object scopes, Object expected) throws Exception {
-        String[] requestedScopes = (String[]) scopes;
-        String[] expectedScopes = (String[]) expected;
-        mockStatic(OAuth2ServiceComponentHolder.class);
-        mockStatic(OAuthAdminServiceImpl.class);
-        when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(oAuth2ServiceComponentHolder);
-        when(OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService()).thenReturn(oAuthAdminService);
-        when(oAuthAdminService.getScopeNames()).
-                thenReturn(oidcScopes);
-        String[] requestedOIDCScopes = null;
-        try {
-            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(requestedScopes);
-        } catch (IdentityOAuthAdminException e) {
-            return;
-        }
-        assertEquals(requestedOIDCScopes, expectedScopes);
-    }
-
-    @DataProvider(name = "removeOIDCScopesData")
-    public static Object[][] removeOIDCScopesDataProvider() {
-
-        return new Object[][]{
-                {new String[]{"openid", "create"}, new String[]{"create"}},
-                {new String[]{"openid", "openid", "create"}, new String[]{"create"}},
-                {null, new String[0]}
-        };
-    }
-
 }

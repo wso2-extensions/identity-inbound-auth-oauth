@@ -66,6 +66,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -84,6 +85,7 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionT
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildScopeString;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTenantId;
 
 /**
  * OAuth OSGi service implementation.
@@ -1861,6 +1863,34 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_FOUND_SCOPE,
                     String.format(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_FOUND_SCOPE.getMessage(),
                             scopeName));
+        }
+    }
+
+    /**
+     * Returns OIDC scopes registered in the tenant.
+     *
+     * @param tenantName tenant name
+     * @return List of OIDC scopes registered in tenant.
+     * @throws IdentityOAuthAdminException exception if OIDC scope retrieval fails.
+     */
+    public List<String> getRegisteredOIDCScope(String tenantName) throws IdentityOAuthAdminException {
+
+
+        try {
+            int tenantId = getTenantId(tenantName);
+            List<String> oidcScopes = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                    getScopeNames(tenantId);
+
+            if (CollectionUtils.isEmpty(oidcScopes)) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Could not load oidc scopes. Hence returning an empty list.");
+                }
+                return Collections.emptyList();
+            }
+
+            return oidcScopes;
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantName, e);
         }
     }
 }
