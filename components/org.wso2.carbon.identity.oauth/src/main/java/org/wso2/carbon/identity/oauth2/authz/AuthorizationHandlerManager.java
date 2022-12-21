@@ -54,6 +54,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.INVALID_SCOPE;
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.UNAUTHORIZED_CLIENT;
@@ -310,6 +311,16 @@ public class AuthorizationHandlerManager {
             }
             dropUnregisteredScopeFromRequestedScopes(authzReqMsgCtx);
         }
+
+        List<String> requestedOidcScopes;
+        try {
+            requestedOidcScopes = getRequestedOidcScopes(authzReqMsgCtx,
+                    authzReqMsgCtx.getAuthorizationReqDTO().getScopes());
+        } catch (IdentityOAuthAdminException e) {
+            throw new IdentityOAuth2Exception("Error while validating requested scopes.", e);
+        }
+        authzReqMsgCtx.setOidcScopes(requestedOidcScopes);
+        removeOidcScopesFromRequestedScopes(authzReqMsgCtx, requestedOidcScopes);
         //Validate scopes using global scope validators.
         boolean isValid = validateScopes(authzReqMsgCtx, authzHandler);
         boolean isValidatedScopesContainsInRequestedScopes = isValidatedScopesContainsInRequestedScopes(authzReqMsgCtx);
@@ -318,6 +329,9 @@ public class AuthorizationHandlerManager {
             addAuthorizedInternalScopes(authzReqMsgCtx, authzReqMsgCtx.getAuthorizedInternalScopes());
             // Add scopes that filtered from the allowed scopes list.
             addAllowedScopes(authzReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
+            // Add oidc scopes.
+            addOidcScopes(authzReqMsgCtx);
+
         } else {
             throw new IdentityOAuth2UnauthorizedScopeException(INVALID_SCOPE, "Scope validation failed.");
         }
@@ -376,7 +390,7 @@ public class AuthorizationHandlerManager {
     }
 
     /**
-     * Eemove internal scopes from requested scopes.
+     * Remove internal scopes from requested scopes.
      *
      * @param authzReqMsgCtx authzReqMsgCtx
      */
@@ -392,6 +406,24 @@ public class AuthorizationHandlerManager {
                 scopes.add(scope);
             }
         }
+        authzReqMsgCtx.getAuthorizationReqDTO().setScopes(scopes.toArray(new String[0]));
+    }
+
+    /**
+     * Remove oidc scopes from requested scopes.
+     *
+     * @param authzReqMsgCtx authzReqMsgCtx
+     */
+    private void removeOidcScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
+                                                     List<String> oidcScopes) {
+
+        if (ArrayUtils.isEmpty(authzReqMsgCtx.getAuthorizationReqDTO().getScopes())) {
+            return;
+        }
+        String[] requestedScopes = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
+        List<String> scopes =
+                Arrays.stream(requestedScopes).distinct().filter(scope -> !oidcScopes.contains(scope))
+                .collect(Collectors.toList());
         authzReqMsgCtx.getAuthorizationReqDTO().setScopes(scopes.toArray(new String[0]));
     }
 
@@ -428,18 +460,29 @@ public class AuthorizationHandlerManager {
         authzReqMsgCtx.setApprovedScope(scopesToReturn);
     }
 
-    private void addRequestedOIDCScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
-                                        String[] requestedOIDCScopes) {
-        Set<String> scopesToReturn = new HashSet<>(Arrays.asList(authzReqMsgCtx.getApprovedScope()));
-        scopesToReturn.addAll(Arrays.asList(requestedOIDCScopes));
-        String[] scopes = scopesToReturn.toArray(new String[0]);
-        authzReqMsgCtx.setApprovedScope(scopes);
+    private List<String> getRequestedOidcScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
+                                        String[] requestedScopes) throws IdentityOAuthAdminException {
+
+        List<String> oidcScopes = OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService()
+                    .getRegisteredOIDCScope(authzReqMsgCtx.getAuthorizationReqDTO()
+                            .getTenantDomain());
+        return Arrays.stream(requestedScopes).distinct().filter(oidcScopes::contains).collect(Collectors.toList());
     }
 
     private void addAllowedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx, String[] allowedScopes) {
 
         String[] scopes = authzReqMsgCtx.getApprovedScope();
         String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, allowedScopes);
+        authzReqMsgCtx.setApprovedScope(scopesToReturn);
+    }
+
+    private void addOidcScopes(OAuthAuthzReqMessageContext authzReqMsgCtx) {
+
+        if (authzReqMsgCtx.getOidcScopes().isEmpty()) {
+            return;
+        }
+        String[] scopes = authzReqMsgCtx.getApprovedScope();
+        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, authzReqMsgCtx.getOidcScopes().toArray());
         authzReqMsgCtx.setApprovedScope(scopesToReturn);
     }
 

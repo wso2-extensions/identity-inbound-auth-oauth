@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -77,6 +78,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
@@ -419,6 +421,15 @@ public class AccessTokenIssuer {
             tokReqMsgCtx.setScope(filteredScopes);
         }
 
+        List<String> requestedOidcScopes;
+        try {
+            requestedOidcScopes = getRequestedOidcScopes(tokReqMsgCtx, tokReqMsgCtx.getScope());
+        } catch (IdentityOAuthAdminException e) {
+            throw new IdentityOAuth2Exception("Error while validating requested scopes.", e);
+        }
+        tokReqMsgCtx.setOidcScopes(requestedOidcScopes);
+        removeOidcScopesFromRequestedScopes(tokReqMsgCtx, requestedOidcScopes);
+
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
         if (isValidScope) {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -434,6 +445,7 @@ public class AccessTokenIssuer {
             // Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
             addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
+            addOidcScopes(tokReqMsgCtx);
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid scope provided by client Id: " + tokenReqDTO.getClientId());
@@ -970,5 +982,42 @@ public class AccessTokenIssuer {
     private static boolean isNotActiveState(String appState) {
 
         return !APP_STATE_ACTIVE.equalsIgnoreCase(appState);
+    }
+
+    private List<String> getRequestedOidcScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
+                                                String[] requestedScopes) throws IdentityOAuthAdminException {
+
+        List<String> oidcScopes = OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService()
+                .getRegisteredOIDCScope(tokReqMsgCtx.getOauth2AccessTokenReqDTO()
+                        .getTenantDomain());
+        return Arrays.stream(requestedScopes).distinct().filter(oidcScopes::contains).collect(Collectors.toList());
+    }
+
+    /**
+     * Remove oidc scopes from requested scopes.
+     *
+     * @param tokReqMsgCtx tokReqMsgCtx
+     */
+    private void removeOidcScopesFromRequestedScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
+                                                     List<String> oidcScopes) {
+
+        if (ArrayUtils.isEmpty(tokReqMsgCtx.getScope())) {
+            return;
+        }
+        String[] requestedScopes = tokReqMsgCtx.getScope();
+        List<String> scopes =
+                Arrays.stream(requestedScopes).distinct().filter(scope -> !oidcScopes.contains(scope))
+                        .collect(Collectors.toList());
+        tokReqMsgCtx.setScope(scopes.toArray(new String[0]));
+    }
+
+    private void addOidcScopes(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (tokReqMsgCtx.getOidcScopes().isEmpty()) {
+            return;
+        }
+        String[] scopes = tokReqMsgCtx.getScope();
+        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, tokReqMsgCtx.getOidcScopes().toArray());
+        tokReqMsgCtx.setScope(scopesToReturn);
     }
 }

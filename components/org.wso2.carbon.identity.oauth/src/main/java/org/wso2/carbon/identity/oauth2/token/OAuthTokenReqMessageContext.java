@@ -23,6 +23,8 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -49,6 +51,7 @@ public class OAuthTokenReqMessageContext {
     private Properties properties = new Properties();
 
     private String[] authorizedInternalScopes;
+    private List<String> oidcScopes;
 
     private TokenBinding tokenBinding;
 
@@ -160,6 +163,21 @@ public class OAuthTokenReqMessageContext {
 
     public void setAuthorizedInternalScopes(String[] authorizedInternalScopes) {
         this.authorizedInternalScopes = authorizedInternalScopes;
+    }
+
+    /**
+     * @return user oidc scope list
+     */
+    public List<String> getOidcScopes() {
+
+        return Collections.unmodifiableList(oidcScopes);
+    }
+
+    /**
+     * @param oidcScopes user oidc scopes list
+     */
+    public void setOidcScopes(List<String> oidcScopes) {
+        this.oidcScopes = oidcScopes;
     }
 
     public boolean isConsentedToken() {

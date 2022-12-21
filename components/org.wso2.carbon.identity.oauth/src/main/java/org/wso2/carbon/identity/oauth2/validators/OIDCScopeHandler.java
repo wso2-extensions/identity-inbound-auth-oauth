@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Set;
 
@@ -52,6 +53,7 @@ public class OIDCScopeHandler extends OAuth2ScopeHandler {
             // Remove openid scope from the token message context.
             String[] scopes = (String[]) ArrayUtils.removeElement(tokReqMsgCtx.getScope(), OAuthConstants.Scope.OPENID);
             tokReqMsgCtx.setScope(scopes);
+            tokReqMsgCtx.setOidcScopes(new ArrayList<>());
             if (log.isDebugEnabled()) {
                 log.debug("id_token is not allowed for requested grant type: " + grantType + ". Removing 'openid' " +
                         "scope.");

@@ -149,22 +149,22 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         String[] requestedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
         String[] grantedScopes = tokReqMsgCtx.getScope();
         String[] grantedInternalScopes = tokReqMsgCtx.getAuthorizedInternalScopes();
+        List<String> oidcScopes = tokReqMsgCtx.getOidcScopes();
+        List<String> grantedScopeList = Stream.concat(Arrays.stream(grantedScopes),
+                        Arrays.stream(grantedInternalScopes)).collect(Collectors.toList());
+        grantedScopeList.addAll(oidcScopes);
         if (ArrayUtils.isNotEmpty(requestedScopes)) {
-            if (ArrayUtils.isEmpty(grantedScopes)) {
+            if (grantedScopeList.isEmpty()) {
                 return false;
             }
-            List<String> grantedScopeList = Stream
-                    .concat(Arrays.stream(grantedScopes), Arrays.stream(grantedInternalScopes))
-                    .collect(Collectors.toList());
-            for (String scope : requestedScopes) {
-                if (!grantedScopeList.contains(scope)) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("scope: " + scope + "is not granted for this refresh token");
-                    }
-                    return false;
-                }
+            List<String> filteredScopes = Arrays.stream(requestedScopes).distinct().filter(grantedScopeList::contains)
+                            .collect(Collectors.toList());
+            if (filteredScopes.isEmpty()) {
+                return false;
             }
-            tokReqMsgCtx.setScope(requestedScopes);
+            tokReqMsgCtx.setScope(filteredScopes.toArray(new String[0]));
+        } else {
+            tokReqMsgCtx.setScope(new String[0]);
         }
         return true;
     }
