@@ -55,8 +55,10 @@ import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -147,12 +149,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
           resource owner
          */
         String[] requestedScopes = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope();
-        String[] grantedScopes = tokReqMsgCtx.getScope();
-        String[] grantedInternalScopes = tokReqMsgCtx.getAuthorizedInternalScopes();
-        List<String> oidcScopes = tokReqMsgCtx.getOidcScopes();
-        List<String> grantedScopeList = Stream.concat(Arrays.stream(grantedScopes),
-                        Arrays.stream(grantedInternalScopes)).collect(Collectors.toList());
-        grantedScopeList.addAll(oidcScopes);
+        Set<String> grantedScopeList = getGrantedScopeList(tokReqMsgCtx);
         if (ArrayUtils.isNotEmpty(requestedScopes)) {
             if (grantedScopeList.isEmpty()) {
                 return false;
@@ -167,6 +164,17 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             tokReqMsgCtx.setScope(new String[0]);
         }
         return true;
+    }
+
+    private HashSet<String> getGrantedScopeList(OAuthTokenReqMessageContext tokReqMsgCtx) {
+        String[] grantedScopes = tokReqMsgCtx.getScope();
+        String[] grantedInternalScopes = tokReqMsgCtx.getAuthorizedInternalScopes();
+        List<String> oidcScopes = tokReqMsgCtx.getOidcScopes();
+        List<String> grantedScopeList = Stream.concat(Arrays.stream(grantedScopes),
+                Arrays.stream(grantedInternalScopes)).collect(Collectors.toList());
+        grantedScopeList.addAll(oidcScopes);
+        return new HashSet<String>(grantedScopeList);
+
     }
 
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,

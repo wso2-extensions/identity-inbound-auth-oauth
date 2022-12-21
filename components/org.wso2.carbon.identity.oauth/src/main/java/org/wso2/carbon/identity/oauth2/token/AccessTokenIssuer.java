@@ -423,12 +423,12 @@ public class AccessTokenIssuer {
 
         List<String> requestedOidcScopes;
         try {
-            requestedOidcScopes = getRequestedOidcScopes(tokReqMsgCtx, tokReqMsgCtx.getScope());
+            requestedOidcScopes = getRequestedOidcScopes(tokReqMsgCtx);
         } catch (IdentityOAuthAdminException e) {
             throw new IdentityOAuth2Exception("Error while validating requested scopes.", e);
         }
         tokReqMsgCtx.setOidcScopes(requestedOidcScopes);
-        removeOidcScopesFromRequestedScopes(tokReqMsgCtx, requestedOidcScopes);
+        removeOidcScopesFromRequestedScopes(tokReqMsgCtx);
 
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
         if (isValidScope) {
@@ -984,9 +984,9 @@ public class AccessTokenIssuer {
         return !APP_STATE_ACTIVE.equalsIgnoreCase(appState);
     }
 
-    private List<String> getRequestedOidcScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
-                                                String[] requestedScopes) throws IdentityOAuthAdminException {
-
+    private List<String> getRequestedOidcScopes(OAuthTokenReqMessageContext tokReqMsgCtx)
+            throws IdentityOAuthAdminException {
+        String[] requestedScopes = tokReqMsgCtx.getScope();
         List<String> oidcScopes = OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService()
                 .getRegisteredOIDCScope(tokReqMsgCtx.getOauth2AccessTokenReqDTO()
                         .getTenantDomain());
@@ -998,12 +998,12 @@ public class AccessTokenIssuer {
      *
      * @param tokReqMsgCtx tokReqMsgCtx
      */
-    private void removeOidcScopesFromRequestedScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
-                                                     List<String> oidcScopes) {
+    private void removeOidcScopesFromRequestedScopes(OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         if (ArrayUtils.isEmpty(tokReqMsgCtx.getScope())) {
             return;
         }
+        List<String> oidcScopes = tokReqMsgCtx.getOidcScopes();
         String[] requestedScopes = tokReqMsgCtx.getScope();
         List<String> scopes =
                 Arrays.stream(requestedScopes).distinct().filter(scope -> !oidcScopes.contains(scope))

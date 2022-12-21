@@ -314,13 +314,12 @@ public class AuthorizationHandlerManager {
 
         List<String> requestedOidcScopes;
         try {
-            requestedOidcScopes = getRequestedOidcScopes(authzReqMsgCtx,
-                    authzReqMsgCtx.getAuthorizationReqDTO().getScopes());
+            requestedOidcScopes = getRequestedOidcScopes(authzReqMsgCtx);
         } catch (IdentityOAuthAdminException e) {
             throw new IdentityOAuth2Exception("Error while validating requested scopes.", e);
         }
         authzReqMsgCtx.setOidcScopes(requestedOidcScopes);
-        removeOidcScopesFromRequestedScopes(authzReqMsgCtx, requestedOidcScopes);
+        removeOidcScopesFromRequestedScopes(authzReqMsgCtx);
         //Validate scopes using global scope validators.
         boolean isValid = validateScopes(authzReqMsgCtx, authzHandler);
         boolean isValidatedScopesContainsInRequestedScopes = isValidatedScopesContainsInRequestedScopes(authzReqMsgCtx);
@@ -414,12 +413,12 @@ public class AuthorizationHandlerManager {
      *
      * @param authzReqMsgCtx authzReqMsgCtx
      */
-    private void removeOidcScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
-                                                     List<String> oidcScopes) {
+    private void removeOidcScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx) {
 
         if (ArrayUtils.isEmpty(authzReqMsgCtx.getAuthorizationReqDTO().getScopes())) {
             return;
         }
+        List<String> oidcScopes = authzReqMsgCtx.getOidcScopes();
         String[] requestedScopes = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
         List<String> scopes =
                 Arrays.stream(requestedScopes).distinct().filter(scope -> !oidcScopes.contains(scope))
@@ -460,9 +459,9 @@ public class AuthorizationHandlerManager {
         authzReqMsgCtx.setApprovedScope(scopesToReturn);
     }
 
-    private List<String> getRequestedOidcScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
-                                        String[] requestedScopes) throws IdentityOAuthAdminException {
-
+    private List<String> getRequestedOidcScopes(OAuthAuthzReqMessageContext authzReqMsgCtx)
+            throws IdentityOAuthAdminException {
+        String[] requestedScopes = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
         List<String> oidcScopes = OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService()
                     .getRegisteredOIDCScope(authzReqMsgCtx.getAuthorizationReqDTO()
                             .getTenantDomain());
