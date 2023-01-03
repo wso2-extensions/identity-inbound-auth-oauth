@@ -757,8 +757,10 @@ public class EndpointUtil {
                             "&" + PROP_REDIRECT_URI + "=" + URLEncoder.encode(params.getRedirectURI(), UTF_8));
                 }
 
-                entry.setQueryString(entry.getQueryString() + "&" + PROP_OIDC_SCOPE +
-                        "=" + URLEncoder.encode(StringUtils.join(getRequestedOIDCScopes(params), "+"), UTF_8));
+                if (params != null) {
+                    entry.setQueryString(entry.getQueryString() + "&" + PROP_OIDC_SCOPE +
+                            "=" + URLEncoder.encode(StringUtils.join(getRequestedOIDCScopes(params), "+"), UTF_8));
+                }
                 queryString = URLEncoder.encode(entry.getQueryString(), UTF_8);
             }
 
