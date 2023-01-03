@@ -136,6 +136,7 @@ public class EndpointUtil {
     private static final String PROP_GRANT_TYPE = "response_type";
     private static final String PROP_RESPONSE_TYPE = "response_type";
     private static final String PROP_SCOPE = "scope";
+    private static final String PROP_OIDC_SCOPE = "requested_oidc_scope";
     private static final String PROP_ERROR = "error";
     private static final String PROP_ERROR_DESCRIPTION = "error_description";
     private static final String PROP_REDIRECT_URI = "redirect_uri";
@@ -755,6 +756,9 @@ public class EndpointUtil {
                     entry.setQueryString(entry.getQueryString() +
                             "&" + PROP_REDIRECT_URI + "=" + URLEncoder.encode(params.getRedirectURI(), UTF_8));
                 }
+
+                entry.setQueryString(entry.getQueryString() + "&" + PROP_OIDC_SCOPE +
+                        "=" + URLEncoder.encode(StringUtils.join(getRequestedOIDCScopes(params), "+"), UTF_8));
                 queryString = URLEncoder.encode(entry.getQueryString(), UTF_8);
             }
 
@@ -921,11 +925,42 @@ public class EndpointUtil {
     }
 
     /**
+     * Return a list of consent requested OIDC scopes
+     *
+     * @param params OAuth2 parameters.
+     * @return consent requested OIDC scopes in lower case
+     * @throws OAuthSystemException If retrieving OIDC scopes failed.
+     */
+    private static List<String> getRequestedOIDCScopes(OAuth2Parameters params)
+            throws OAuthSystemException {
+
+        Set<String> allowedScopes = params.getScopes();
+        List<String> requestedOIDCScopes = new ArrayList<>();
+        try {
+            startTenantFlow(params.getTenantDomain());
+
+            // Get registered OIDC scopes.
+            String[] oidcScopes = oAuthAdminService.getScopeNames();
+            List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
+            for (String scope : allowedScopes) {
+                if (oidcScopeList.contains(scope)) {
+                    requestedOIDCScopes.add(scope.toLowerCase());
+                }
+            }
+        } catch (IdentityOAuthAdminException e) {
+            throw new OAuthSystemException("Error while retrieving OIDC scopes.", e);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+        return requestedOIDCScopes;
+    }
+
+    /**
      * Drop unregistered scopes from consent required scopes.
      *
      * @param params OAuth2 parameters.
      * @return consent required scopes
-     * @throws OAuthSystemException If retrieving OIDC scopes failed.
+     * @throws OAuthSystemException If dropping unregistered scopes failed.
      */
     private static List<String> dropUnregisteredScopesFromConsentRequiredScopes(OAuth2Parameters params)
             throws OAuthSystemException {
