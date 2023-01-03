@@ -21,6 +21,8 @@ package org.wso2.carbon.identity.oauth2.authz;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 
 import java.io.Serializable;
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -49,6 +51,7 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     private long codeIssuedTime;
 
     private String[] authorizedInternalScopes;
+    private List<String> oidcScopes;
 
     private Properties properties = new Properties();
 
@@ -89,6 +92,21 @@ public class OAuthAuthzReqMessageContext implements Serializable {
      */
     public void setRequestedScopes(String[] requestedScopes) {
         this.requestedScopes = requestedScopes;
+    }
+
+    /**
+     * @return user oidc scope list
+     */
+    public List<String> getOidcScopes() {
+
+        return Collections.unmodifiableList(oidcScopes);
+    }
+
+    /**
+     * @param oidcScopes user oidc scopes list
+     */
+    public void setOidcScopes(List<String> oidcScopes) {
+        this.oidcScopes = oidcScopes;
     }
 
     @Deprecated
