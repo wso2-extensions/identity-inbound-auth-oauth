@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -88,8 +88,10 @@ import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2UnauthorizedScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -498,7 +500,8 @@ public class OAuth2AuthzEndpoint {
             handlePostConsent(oAuthMessage);
 
             OIDCSessionState sessionState = new OIDCSessionState();
-            String redirectURL = handleUserConsent(oAuthMessage, consent, sessionState);
+            OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
+            String redirectURL = handleUserConsent(oAuthMessage, consent, sessionState, oauth2Params);
 
             if (isFormPostResponseMode(oAuthMessage, redirectURL)) {
                 return handleFormPostResponseMode(oAuthMessage, sessionState, redirectURL);
@@ -610,7 +613,9 @@ public class OAuth2AuthzEndpoint {
                     params.put("clientId", clientId);
                     params.put("prompt", oauth2Params.getPrompt());
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.SUCCESS, null, "hand-over-to-consent-service", null);
+                            OAuthConstants.LogConstants.SUCCESS, "Prompt for consent is enabled. Overriding the " +
+                                    "existing consent and handing over to consent service.", "hand-over-to-consent" +
+                                    "-service", null);
                 }
                 getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
                         loggedInUser, value, true);
@@ -620,7 +625,8 @@ public class OAuth2AuthzEndpoint {
                     params.put("clientId", clientId);
                     params.put("prompt", oauth2Params.getPrompt());
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.SUCCESS, null, "hand-over-to-consent-service", null);
+                            OAuthConstants.LogConstants.SUCCESS, "Prompt for consent is not enabled. " +
+                                    "Handing over to consent service.", "hand-over-to-consent-service", null);
                 }
                 getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
                         loggedInUser, value, false);
@@ -693,12 +699,32 @@ public class OAuth2AuthzEndpoint {
 
     private void addSessionDataKeyToSessionDataCacheEntry(OAuthMessage oAuthMessage) {
 
-        Cookie cookie = FrameworkUtils.getAuthCookie(oAuthMessage.getRequest());
-        if (cookie != null) {
-            String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
+        String commonAuthIdCookieValue = getCommonAuthCookieString(oAuthMessage.getRequest());
+        if (StringUtils.isNotBlank(commonAuthIdCookieValue)) {
+            String sessionContextKey = DigestUtils.sha256Hex(commonAuthIdCookieValue);
             oAuthMessage.getSessionDataCacheEntry().getParamMap().put(FrameworkConstants.SESSION_DATA_KEY, new String[]
                     {sessionContextKey});
         }
+    }
+
+    /**
+     * Retrieves the value of the commonAuthId cookie either from request cookies if available or
+     * from the request attribute where the response header contains commonAuthId value.
+     *
+     * @param request HttpServletRequest An authorization or authentication request.
+     * @return String commonAuthId value.
+     */
+    private String getCommonAuthCookieString(HttpServletRequest request) {
+
+        Cookie cookie = FrameworkUtils.getAuthCookie(request);
+        String commonAuthIdCookieValue = null;
+
+        if (cookie != null) {
+            commonAuthIdCookieValue = cookie.getValue();
+        } else if (request.getAttribute(COMMONAUTH_COOKIE) != null) {
+            commonAuthIdCookieValue = (String) request.getAttribute(COMMONAUTH_COOKIE);
+        }
+        return commonAuthIdCookieValue;
     }
 
     private String getConsentFromRequest(OAuthMessage oAuthMessage) {
@@ -847,8 +873,9 @@ public class OAuth2AuthzEndpoint {
                         userIdentifier = authnResult.getSubject().getUserId();
                     } catch (UserIdNotFoundException e) {
                         if (StringUtils.isNotBlank(authnResult.getSubject().getAuthenticatedSubjectIdentifier())) {
-                            userIdentifier = authnResult.getSubject().getAuthenticatedSubjectIdentifier().replaceAll(
-                                    ".", "*");
+                            userIdentifier = LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(authnResult
+                                    .getSubject().getAuthenticatedSubjectIdentifier()) : authnResult.getSubject()
+                                    .getAuthenticatedSubjectIdentifier();
                         }
                     }
                 }
@@ -896,6 +923,7 @@ public class OAuth2AuthzEndpoint {
 
         boolean isOIDCRequest = OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes());
         AuthenticatedUser authenticatedUser = authenticationResult.getSubject();
+
         if (authenticatedUser.getUserAttributes() != null) {
             authenticatedUser.setUserAttributes(new ConcurrentHashMap<>(authenticatedUser.getUserAttributes()));
         }
@@ -1002,15 +1030,15 @@ public class OAuth2AuthzEndpoint {
 
     private void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) {
 
-        Cookie cookie = FrameworkUtils.getAuthCookie(oAuthMessage.getRequest());
-        long authTime = getAuthenticatedTimeFromCommonAuthCookie(cookie,
+        String commonAuthIdCookieValue = getCommonAuthCookieString(oAuthMessage.getRequest());
+        long authTime = getAuthenticatedTimeFromCommonAuthCookieValue(commonAuthIdCookieValue,
                 oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters().getLoginTenantDomain());
 
         if (authTime > 0) {
             oAuthMessage.getSessionDataCacheEntry().setAuthTime(authTime);
         }
 
-        associateAuthenticationHistory(oAuthMessage.getSessionDataCacheEntry(), cookie);
+        associateAuthenticationHistory(oAuthMessage.getSessionDataCacheEntry(), commonAuthIdCookieValue);
     }
 
     private boolean isFormPostResponseMode(OAuthMessage oAuthMessage, String redirectURL) {
@@ -1169,17 +1197,24 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private String handleUserConsent(OAuthMessage oAuthMessage, String consent, OIDCSessionState sessionState)
+    private String handleUserConsent(OAuthMessage oAuthMessage, String consent, OIDCSessionState sessionState,
+                                     OAuth2Parameters oauth2Params)
             throws OAuthSystemException {
 
-        OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         storeUserConsent(oAuthMessage, consent);
         OAuthResponse oauthResponse;
         String responseType = oauth2Params.getResponseType();
         HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
+        OAuth2AuthorizeReqDTO authzReqDTO =
+                buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
+        // We have persisted the oAuthAuthzReqMessageContext before the consent after scope validation. Here we
+        // retrieve it from the cache and use it again because it contains  information that was set during the scope
+        // validation process.
+        OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext =
+                oAuthMessage.getSessionDataCacheEntry().getAuthzReqMsgCtx();
+        oAuthAuthzReqMessageContext.setAuthorizationReqDTO(authzReqDTO);
         // authorizing the request
-        OAuth2AuthorizeRespDTO authzRespDTO =
-                authorize(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
+        OAuth2AuthorizeRespDTO authzRespDTO = authorize(oAuthAuthzReqMessageContext);
 
         if (isSuccessfulAuthorization(authzRespDTO)) {
             oauthResponse =
@@ -1275,7 +1310,6 @@ public class OAuth2AuthzEndpoint {
     private String handleFailureAuthorization(OAuthMessage oAuthMessage, OIDCSessionState sessionState,
                                               OAuth2Parameters oauth2Params,
                                               OAuth2AuthorizeRespDTO authzRespDTO) {
-
         sessionState.setAuthenticated(false);
         String errorMsg;
         if (authzRespDTO.getErrorMsg() != null) {
@@ -1283,6 +1317,16 @@ public class OAuth2AuthzEndpoint {
         } else {
             errorMsg = "Error occurred while processing the request";
         }
+        OAuthProblemException oauthProblemException = OAuthProblemException.error(
+                authzRespDTO.getErrorCode(), errorMsg);
+        return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), oauthProblemException, oauth2Params);
+    }
+
+    private String handleFailureBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
+                                              OAuth2AuthorizeRespDTO authzRespDTO) {
+
+        String errorMsg = authzRespDTO.getErrorMsg() != null ? authzRespDTO.getErrorMsg()
+                : "Error occurred while processing authorization request.";
         OAuthProblemException oauthProblemException = OAuthProblemException.error(
                 authzRespDTO.getErrorCode(), errorMsg);
         return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), oauthProblemException, oauth2Params);
@@ -2333,6 +2377,27 @@ public class OAuth2AuthzEndpoint {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
+
+        //Here we validate all scopes before user consent to prevent invalidate scopes prompt for consent in the
+        // consent page.
+        HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
+        OAuth2AuthorizeReqDTO authzReqDTO =
+                buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
+        try {
+            validateScopesBeforeConsent(oAuthMessage, oauth2Params, authzReqDTO);
+        } catch (IdentityOAuth2UnauthorizedScopeException e) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "Error occurred when processing the authorization " +
+                            "request from tenant: " + oauth2Params.getTenantDomain() + " application: " +
+                            oauth2Params.getClientId() + "before consent.",
+                    "authorize-client", null);
+            OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
+            authorizeRespDTO.setErrorCode(e.getErrorCode());
+            authorizeRespDTO.setErrorMsg(e.getMessage());
+            authorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
+            return handleFailureBeforeConsent(oAuthMessage, oauth2Params, authorizeRespDTO);
+        }
+
         boolean hasUserApproved = isUserAlreadyApproved(oauth2Params, authenticatedUser);
 
         if (hasPromptContainsConsent(oauth2Params)) {
@@ -2348,8 +2413,9 @@ public class OAuth2AuthzEndpoint {
                         params.put("user", authenticatedUser.getUserId());
                     } catch (UserIdNotFoundException e) {
                         if (StringUtils.isNotBlank(authenticatedUser.getAuthenticatedSubjectIdentifier())) {
-                            params.put("user",
-                                    authenticatedUser.getAuthenticatedSubjectIdentifier().replaceAll(".", "*"));
+                            params.put("user", LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(
+                                    authenticatedUser.getAuthenticatedSubjectIdentifier()) : authenticatedUser
+                                    .getAuthenticatedSubjectIdentifier());
                         }
                     }
                 }
@@ -2381,6 +2447,33 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
+    /**
+     * Validate scopes before consent page
+     *
+     * @param  oAuthMessage oAuthMessage
+     * @param oauth2Params oauth2Params
+     */
+    private void validateScopesBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
+                                             OAuth2AuthorizeReqDTO authzReqDTO)
+            throws IdentityOAuth2UnauthorizedScopeException, OAuthSystemException {
+
+        try {
+            OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuth2Service().validateScopesBeforeConsent(authzReqDTO);
+            // Here we need to preserve the OAuthAuthzReqMessageContext to preserve backward compatibility as
+            // extensions might add information to context that needs to be available when authorizing
+            // (issue code, token) the request later.
+            oAuthMessage.getSessionDataCacheEntry().setAuthzReqMsgCtx(authzReqMsgCtx);
+            if (ArrayUtils.isEmpty(authzReqMsgCtx.getApprovedScope())) {
+                oauth2Params.setScopes(new HashSet<>(Collections.emptyList()));
+            } else {
+                oauth2Params.setScopes(new HashSet<>(Arrays.asList(authzReqMsgCtx.getApprovedScope())));
+            }
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new OAuthSystemException("Error occurred while validating scopes before consent.", e);
+        }
+
+    }
+
     private OAuth2Parameters getOauth2Params(OAuthMessage oAuthMessage) {
 
         return oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters();
@@ -2400,7 +2493,7 @@ public class OAuth2AuthzEndpoint {
 
         if (isConsentSkipped(serviceProvider)) {
             sessionState.setAddSessionState(true);
-            return handleUserConsent(oAuthMessage, APPROVE, sessionState);
+            return handleUserConsent(oAuthMessage, APPROVE, sessionState, oauth2Params);
         } else if (hasUserApproved) {
             return handleApproveAlwaysWithPromptForNewConsent(oAuthMessage, sessionState, oauth2Params);
         } else {
@@ -2538,7 +2631,8 @@ public class OAuth2AuthzEndpoint {
             params.put("user", user.getUserId());
         } catch (UserIdNotFoundException e) {
             if (StringUtils.isNotBlank(user.getAuthenticatedSubjectIdentifier())) {
-                params.put("user", user.getAuthenticatedSubjectIdentifier());
+                params.put("user", LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(
+                        user.getAuthenticatedSubjectIdentifier()) : user.getAuthenticatedSubjectIdentifier());
             }
         }
 
@@ -2871,7 +2965,7 @@ public class OAuth2AuthzEndpoint {
                         "'prompt' is set to none, and consent is disabled for the OAuth client.",
                         "validate-existing-consent", configs);
             }
-            return handleUserConsent(oAuthMessage, APPROVE, sessionState);
+            return handleUserConsent(oAuthMessage, APPROVE, sessionState, oauth2Params);
         } else if (hasUserApproved) {
             return handleApprovedAlwaysWithoutPromptingForNewConsent(oAuthMessage, sessionState, oauth2Params);
         } else {
@@ -2924,7 +3018,7 @@ public class OAuth2AuthzEndpoint {
                         "'prompt' is set to none, and existing user consent found for the OAuth client.",
                         "validate-existing-consent", null);
             }
-            return handleUserConsent(oAuthMessage, APPROVE, sessionState);
+            return handleUserConsent(oAuthMessage, APPROVE, sessionState, oauth2Params);
         }
     }
 
@@ -2943,7 +3037,7 @@ public class OAuth2AuthzEndpoint {
                     authenticatedUser, preConsent, oAuthMessage);
         } else {
             sessionState.setAddSessionState(true);
-            return handleUserConsent(oAuthMessage, APPROVE, sessionState);
+            return handleUserConsent(oAuthMessage, APPROVE, sessionState, oauth2Params);
         }
     }
 
@@ -3027,16 +3121,11 @@ public class OAuth2AuthzEndpoint {
     /**
      * Here we set the authenticated user to the session data
      *
-     * @param oauth2Params
+     * @param authzReqMsgCtx authzReqMsgCtx
      * @return
      */
-    private OAuth2AuthorizeRespDTO authorize(OAuth2Parameters oauth2Params,
-                                             SessionDataCacheEntry sessionDataCacheEntry,
-                                             HttpRequestHeaderHandler httpRequestHeaderHandler) {
-
-        OAuth2AuthorizeReqDTO authzReqDTO =
-                buildAuthRequest(oauth2Params, sessionDataCacheEntry, httpRequestHeaderHandler);
-        return getOAuth2Service().authorize(authzReqDTO);
+    private OAuth2AuthorizeRespDTO authorize(OAuthAuthzReqMessageContext authzReqMsgCtx) {
+        return getOAuth2Service().authorize(authzReqMsgCtx);
     }
 
     private OAuth2AuthorizeReqDTO buildAuthRequest(OAuth2Parameters oauth2Params, SessionDataCacheEntry
@@ -3359,16 +3448,16 @@ public class OAuth2AuthzEndpoint {
     }
 
     /**
-     * Associates the authentication method references done while logged into the session (if any) to the OAuth cache.
-     * The SessionDataCacheEntry then will be used when getting "AuthenticationMethodReferences". Please see
-     * <a href="https://tools.ietf.org/html/draft-ietf-oauth-amr-values-02" >draft-ietf-oauth-amr-values-02</a>.
+     *  Associates the authentication method references done while logged into the session (if any) to the OAuth cache.
+     *  The SessionDataCacheEntry then will be used when getting "AuthenticationMethodReferences". Please see
+     *  <a href="https://tools.ietf.org/html/draft-ietf-oauth-amr-values-02" >draft-ietf-oauth-amr-values-02</a>.
      *
-     * @param resultFromLogin
-     * @param cookie
+     * @param resultFromLogin The session context.
+     * @param cookieValue The cookie string which contains the commonAuthId value.
      */
-    private void associateAuthenticationHistory(SessionDataCacheEntry resultFromLogin, Cookie cookie) {
+    private void associateAuthenticationHistory(SessionDataCacheEntry resultFromLogin, String cookieValue) {
 
-        SessionContext sessionContext = getSessionContext(cookie,
+        SessionContext sessionContext = getSessionContext(cookieValue,
                 resultFromLogin.getoAuth2Parameters().getLoginTenantDomain());
         if (sessionContext != null && sessionContext.getSessionAuthHistory() != null
                 && sessionContext.getSessionAuthHistory().getHistory() != null) {
@@ -3381,43 +3470,38 @@ public class OAuth2AuthzEndpoint {
     }
 
     /**
-     * Returns the SessionContext associated with the cookie, if there is a one.
-     *
-     * @param cookie
+     * Returns the SessionContext associated with the cookie value, if there is a one.
+     * @param cookieValue String value of the cookie of commonAuthId.
      * @param loginTenantDomain Login tenant domain.
-     * @return the associate SessionContext or null.
+     * @return he associate SessionContext or null.
      */
-    private SessionContext getSessionContext(Cookie cookie, String loginTenantDomain) {
+    private SessionContext getSessionContext(String cookieValue, String loginTenantDomain) {
 
-        if (cookie != null) {
-            String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
+        if (StringUtils.isNotBlank(cookieValue)) {
+            String sessionContextKey = DigestUtils.sha256Hex(cookieValue);
             return FrameworkUtils.getSessionContextFromCache(sessionContextKey, loginTenantDomain);
         }
         return null;
     }
 
     /**
-     * Gets the last authenticated value from the commonAuthId cookie
+     * Gets the last authenticated value from the commonAuthId cookie value.
      *
-     * @param cookie CommonAuthId cookie
-     * @param loginTenantDomain Login tenant domain
-     * @return the last authenticated timestamp
+     * @param cookieValue       String CommonAuthId cookie values.
+     * @param loginTenantDomain String Login tenant domain.
+     * @return long The last authenticated timestamp.
      */
-    private long getAuthenticatedTimeFromCommonAuthCookie(Cookie cookie, String loginTenantDomain) {
+    private long getAuthenticatedTimeFromCommonAuthCookieValue(String cookieValue, String loginTenantDomain) {
 
         long authTime = 0;
-        if (cookie != null) {
-            String sessionContextKey = DigestUtils.sha256Hex(cookie.getValue());
-            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextKey,
-                    loginTenantDomain);
-            if (sessionContext != null) {
-                if (sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
-                    authTime = Long.parseLong(
-                            sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP).toString());
-                } else {
-                    authTime = Long.parseLong(
-                            sessionContext.getProperty(FrameworkConstants.CREATED_TIMESTAMP).toString());
-                }
+        SessionContext sessionContext = getSessionContext(cookieValue, loginTenantDomain);
+        if (sessionContext != null) {
+            if (sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
+                authTime = Long.parseLong(
+                        sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP).toString());
+            } else {
+                authTime = Long.parseLong(
+                        sessionContext.getProperty(FrameworkConstants.CREATED_TIMESTAMP).toString());
             }
         }
         return authTime;

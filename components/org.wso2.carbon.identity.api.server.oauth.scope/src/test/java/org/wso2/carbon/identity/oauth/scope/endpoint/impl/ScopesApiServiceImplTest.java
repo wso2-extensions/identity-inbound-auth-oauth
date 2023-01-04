@@ -21,6 +21,7 @@ import org.apache.commons.logging.Log;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -31,10 +32,10 @@ import org.wso2.carbon.identity.oauth.scope.endpoint.exceptions.ScopeEndpointExc
 import org.wso2.carbon.identity.oauth.scope.endpoint.util.ScopeUtils;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -42,6 +43,7 @@ import java.util.Set;
 
 import javax.ws.rs.core.Response;
 
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.reset;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
@@ -53,7 +55,7 @@ import static org.testng.Assert.assertNull;
 
 @PowerMockIgnore("javax.*")
 @PrepareForTest({ScopeUtils.class, OAuth2ScopeService.class})
-public class ScopesApiServiceImplTest extends PowerMockIdentityBaseTest {
+public class ScopesApiServiceImplTest extends PowerMockTestCase {
 
     private ScopesApiServiceImpl scopesApiService = new ScopesApiServiceImpl();
     private String someScopeName;
@@ -165,7 +167,8 @@ public class ScopesApiServiceImplTest extends PowerMockIdentityBaseTest {
     public void testGetScope(Response.Status expectation, Throwable throwable) throws Exception {
 
         if (Response.Status.OK.equals(expectation)) {
-            when(oAuth2ScopeService.getScope(someScopeName)).thenReturn(any(Scope.class));
+            when(oAuth2ScopeService.getScope(someScopeName))
+                    .thenReturn(new Scope(someScopeName, someScopeName, someScopeDescription));
             assertEquals(scopesApiService.getScope(someScopeName).getStatus(), Response.Status.OK.getStatusCode(),
                     "Error occurred while getting a scope");
         } else if (Response.Status.BAD_REQUEST.equals(expectation)) {
@@ -201,8 +204,7 @@ public class ScopesApiServiceImplTest extends PowerMockIdentityBaseTest {
                 reset(oAuth2ScopeService);
             }
         } else if (Response.Status.INTERNAL_SERVER_ERROR.equals(expectation)) {
-            when(oAuth2ScopeService.getScope(someScopeName)).thenThrow(IdentityOAuth2ScopeException.class);
-            ;
+            when(oAuth2ScopeService.getScope(someScopeName)).thenThrow(throwable);
             callRealMethod();
             try {
                 scopesApiService.getScope(someScopeName);
@@ -236,7 +238,7 @@ public class ScopesApiServiceImplTest extends PowerMockIdentityBaseTest {
 
         if (Response.Status.OK.equals(expectation)) {
             when(oAuth2ScopeService.getScopes(any(Integer.class), any(Integer.class), any(Boolean.class),
-                    any(String.class))).thenReturn(scopes);
+                    isNull())).thenReturn(scopes);
             when(ScopeUtils.class, "getScopeDTOs", any(Set.class)).thenCallRealMethod();
             Response response = scopesApiService.getScopes(startIndex, count);
             assertEquals(response.getStatus(), Response.Status.OK.getStatusCode(),
@@ -244,7 +246,7 @@ public class ScopesApiServiceImplTest extends PowerMockIdentityBaseTest {
             assertEquals(((HashSet) response.getEntity()).size(), count, "Cannot Retrieve Expected Scopes");
         } else if (Response.Status.INTERNAL_SERVER_ERROR.equals(expectation)) {
             when(oAuth2ScopeService.getScopes(any(Integer.class), any(Integer.class))).
-                    thenThrow(IdentityOAuth2ScopeException.class);
+                    thenThrow(IdentityOAuth2ScopeServerException.class);
             callRealMethod();
             try {
                 scopesApiService.getScopes(startIndex, count);
@@ -431,7 +433,7 @@ public class ScopesApiServiceImplTest extends PowerMockIdentityBaseTest {
                 reset(oAuth2ScopeService);
             }
         } else if (Response.Status.INTERNAL_SERVER_ERROR.equals(expectation)) {
-            when(oAuth2ScopeService.isScopeExists("scope")).thenThrow(IdentityOAuth2ScopeException.class);
+            when(oAuth2ScopeService.isScopeExists("scope")).thenThrow(throwable);
             callRealMethod();
             try {
                 scopesApiService.isScopeExists(someScopeName);

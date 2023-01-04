@@ -23,6 +23,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeClass;
@@ -31,8 +32,7 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
 
-import java.util.Dictionary;
-
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
@@ -45,6 +45,7 @@ import static org.testng.Assert.assertEquals;
 /**
  * Unit test covering OIDCDiscoveryServiceComponent class.
  */
+@PowerMockIgnore("org.mockito.*")
 public class OIDCDiscoveryServiceComponentTest {
 
     @Mock
@@ -91,7 +92,8 @@ public class OIDCDiscoveryServiceComponentTest {
                 serviceName[0] = defaultOIDCProcessor.getClass().getName();
                 return null;
             }
-        }).when(bundleContext).registerService(anyString(), any(DefaultOIDCProcessor.class), any(Dictionary.class));
+        }).when(bundleContext).registerService(anyString(), any(DefaultOIDCProcessor.class),
+                isNull());
 
         OIDCDiscoveryServiceComponent oidcDiscoveryServiceComponent = new OIDCDiscoveryServiceComponent();
         oidcDiscoveryServiceComponent.activate(context);

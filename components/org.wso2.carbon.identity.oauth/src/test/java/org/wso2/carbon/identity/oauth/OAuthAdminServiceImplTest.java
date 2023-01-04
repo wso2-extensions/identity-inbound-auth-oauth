@@ -25,7 +25,7 @@ import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.mockito.internal.util.reflection.Whitebox;
+import org.mockito.internal.util.reflection.FieldSetter;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -144,8 +144,8 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         IdentityCoreServiceComponent identityCoreServiceComponent = new IdentityCoreServiceComponent();
         ConfigurationContextService configurationContextService = new ConfigurationContextService
                 (configurationContext, null);
-        Whitebox.setInternalState(identityCoreServiceComponent, "configurationContextService",
-                configurationContextService);
+        FieldSetter.setField(identityCoreServiceComponent, identityCoreServiceComponent.getClass().
+                getDeclaredField("configurationContextService"), configurationContextService);
         when(configurationContext.getAxisConfiguration()).thenReturn(axisConfiguration);
 
 
@@ -657,10 +657,13 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         OAuthTokenPersistenceFactory tokenPersistenceFactory = OAuthTokenPersistenceFactory.getInstance();
 
         TokenManagementDAOImpl mockTokenManagementDAOImpl = mock(TokenManagementDAOImpl.class);
-        Whitebox.setInternalState(tokenPersistenceFactory, "managementDAO", mockTokenManagementDAOImpl);
+        FieldSetter.setField(tokenPersistenceFactory,
+                tokenPersistenceFactory.getClass().getDeclaredField("managementDAO"), mockTokenManagementDAOImpl);
 
         AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
-        Whitebox.setInternalState(tokenPersistenceFactory, "tokenDAO", mockAccessTokenDAO);
+        FieldSetter.setField(tokenPersistenceFactory,
+                tokenPersistenceFactory.getClass().getDeclaredField("tokenDAO"), mockAccessTokenDAO);
+
 
         when(mockAccessTokenDAO.getActiveAcessTokenDataByConsumerKey(anyString()))
                 .thenReturn(accessTokenDOSet);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -71,10 +71,13 @@ import org.wso2.carbon.utils.CarbonUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
@@ -310,9 +313,6 @@ public class AccessTokenIssuer {
         try {
             isValidGrant = authzGrantHandler.validateGrant(tokReqMsgCtx);
         } catch (IdentityOAuth2Exception e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error occurred while validating grant", e);
-            }
             if (e.getErrorCode() != null) {
                 errorCode = e.getErrorCode();
             }
@@ -320,6 +320,7 @@ public class AccessTokenIssuer {
             if (e.getErrorCode() != null) {
                 errorCode = e.getErrorCode();
             }
+            log.error("Error occurred while validating grant: " +  error);
         }
 
         AuthenticatedUser authenticatedUser = tokReqMsgCtx.getAuthorizedUser();
@@ -360,6 +361,7 @@ public class AccessTokenIssuer {
         List<String> requestedAllowedScopes = new ArrayList<>();
         String[] requestedScopes = tokReqMsgCtx.getScope();
         List<String> scopesToBeValidated = new ArrayList<>();
+
         if (requestedScopes != null) {
             for (String scope : requestedScopes) {
                 if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
@@ -702,15 +704,27 @@ public class AccessTokenIssuer {
                                              String[] authorizedInternalScopes) {
 
         String[] scopes = tokReqMsgCtx.getScope();
-        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, authorizedInternalScopes);
-        tokReqMsgCtx.setScope(scopesToReturn);
+        tokReqMsgCtx.setScope(Stream.concat(Arrays.stream(scopes), Arrays.stream(authorizedInternalScopes))
+                .distinct().toArray(String[]::new));
     }
 
+    private void addRequestedOIDCScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
+                                             String[] requestedOIDCScopes) {
+        if (tokReqMsgCtx.getScope() == null) {
+            tokReqMsgCtx.setScope(new String[0]);
+        }
+        Set<String> scopesToReturn = new HashSet<>(Arrays.asList(tokReqMsgCtx.getScope()));
+        scopesToReturn.addAll(Arrays.asList(requestedOIDCScopes));
+        String[] scopes = scopesToReturn.toArray(new String[0]);
+        tokReqMsgCtx.setScope(scopes);
+
+    }
     private void addAllowedScopes(OAuthTokenReqMessageContext tokReqMsgCtx, String[] allowedScopes) {
 
         String[] scopes = tokReqMsgCtx.getScope();
         String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, allowedScopes);
         tokReqMsgCtx.setScope(scopesToReturn);
+
     }
 
     private void removeInternalScopes(OAuthTokenReqMessageContext tokReqMsgCtx) {

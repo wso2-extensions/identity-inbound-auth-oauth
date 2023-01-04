@@ -47,14 +47,13 @@ public class UserInfoISAccessTokenValidatorTest extends PowerMockTestCase {
     @Mock
     private HttpServletRequest httpServletRequest;
     @Mock
-    private Scanner scanner;
-    @Mock
     private OAuth2TokenValidationService oAuth2TokenValidationService;
     private UserInforRequestDefaultValidator userInforRequestDefaultValidator;
     private UserInfoISAccessTokenValidator userInfoISAccessTokenValidator;
     private final String token = "ZWx1c3VhcmlvOnlsYWNsYXZl";
     private final String basicAuthHeader = "Bearer " + token;
     private static String contentTypeHeaderValue = "application/x-www-form-urlencoded";
+    private Scanner scanner;
 
     @BeforeClass
     public void setup() {
