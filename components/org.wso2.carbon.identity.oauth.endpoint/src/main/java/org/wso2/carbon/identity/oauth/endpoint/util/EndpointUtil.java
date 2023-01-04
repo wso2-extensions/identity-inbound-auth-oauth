@@ -759,7 +759,7 @@ public class EndpointUtil {
 
                 if (params != null) {
                     entry.setQueryString(entry.getQueryString() + "&" + PROP_OIDC_SCOPE +
-                            "=" + URLEncoder.encode(StringUtils.join(getRequestedOIDCScopes(params), "+"), UTF_8));
+                            "=" + URLEncoder.encode(StringUtils.join(getRequestedOIDCScopes(params), " "), UTF_8));
                 }
                 queryString = URLEncoder.encode(entry.getQueryString(), UTF_8);
             }
