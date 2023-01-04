@@ -70,6 +70,7 @@ import org.wso2.carbon.utils.CarbonUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -367,9 +368,7 @@ public class AccessTokenIssuer {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 params.put("clientId", tokenReqDTO.getClientId());
-                if (ArrayUtils.isNotEmpty(tokenReqDTO.getScope())) {
-                    params.put("scope", Arrays.asList(tokenReqDTO.getScope()));
-                }
+                params.put("requestedScopes", getScopeList(tokenReqDTO.getScope()));
                 LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                         OAuthConstants.LogConstants.FAILED, "Invalid scope provided in the request.", "validate-scope",
                         null);
@@ -546,23 +545,26 @@ public class AccessTokenIssuer {
         AuthorizationGrantHandler authzGrantHandler = authzGrantHandlers.get(grantType);
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
         if (isValidScope) {
+            // Add authorized internal scopes to the request for sending in the response.
+            addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
+            addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
                 params.put("clientId", tokenReqDTO.getClientId());
-                if (ArrayUtils.isNotEmpty(tokenReqDTO.getScope())) {
-                    params.put("scope", Arrays.asList(tokenReqDTO.getScope()));
-                }
-                // TODO: Add requested and approved scopes
+                params.put("requestedScopes", getScopeList(tokenReqDTO.getScope()));
+                params.put("authorizedScopes", getScopeList(tokReqMsgCtx.getScope()));
                 LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                         OAuthConstants.LogConstants.SUCCESS, "OAuth scope validation is successful.", "validate-scope",
                         null);
             }
-            // Add authorized internal scopes to the request for sending in the response.
-            addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
-            addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         }
 
         return isValidScope;
+    }
+
+    private List<String> getScopeList(String[] scopes) {
+
+        return ArrayUtils.isEmpty(scopes) ? Collections.emptyList() : Arrays.asList(scopes);
     }
 
     private ServiceProvider getServiceProvider(OAuth2AccessTokenReqDTO tokenReq) throws IdentityOAuth2Exception {
