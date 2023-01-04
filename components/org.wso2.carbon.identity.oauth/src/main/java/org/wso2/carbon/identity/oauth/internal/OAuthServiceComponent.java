@@ -242,7 +242,7 @@ public class OAuthServiceComponent {
     protected void setAccessTokenResponseHandler(AccessTokenResponseHandler accessTokenResponseHandler) {
 
         if (log.isDebugEnabled()) {
-            log.info("Access token response handler impl added: " + accessTokenResponseHandler.getClass().getName());
+            log.debug("Access token response handler impl added: " + accessTokenResponseHandler.getClass().getName());
         }
         OAuthComponentServiceHolder.getInstance().addAccessTokenResponseHandler(accessTokenResponseHandler);
     }
@@ -250,7 +250,7 @@ public class OAuthServiceComponent {
     protected void unsetAccessTokenResponseHandler(AccessTokenResponseHandler accessTokenResponseHandler) {
 
         if (log.isDebugEnabled()) {
-            log.info("Access access token response handler removed: " +
+            log.debug("Access access token response handler removed: " +
                     accessTokenResponseHandler.getClass().getName());
         }
         OAuthComponentServiceHolder.getInstance().removeAccessTokenResponseHandler(accessTokenResponseHandler);

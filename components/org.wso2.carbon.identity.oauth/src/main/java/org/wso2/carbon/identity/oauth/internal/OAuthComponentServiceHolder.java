@@ -247,7 +247,7 @@ public class OAuthComponentServiceHolder {
     }
 
     /**
-     * Register access token response handlers for modifying token response attributes.
+     * Registers access token response handlers for modifying token response attributes.
      *
      * @param accessTokenResponseHandler {@link AccessTokenResponseHandler} instance.
      */

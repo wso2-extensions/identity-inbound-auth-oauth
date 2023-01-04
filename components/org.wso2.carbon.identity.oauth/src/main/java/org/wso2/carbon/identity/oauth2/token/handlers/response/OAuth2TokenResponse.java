@@ -23,20 +23,20 @@ import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 /**
  * Holds response for the OAuth flow api calls.
  */
-public class OAuthAPIResponse extends org.apache.oltu.oauth2.as.response.OAuthASResponse {
+public class OAuth2TokenResponse extends org.apache.oltu.oauth2.as.response.OAuthASResponse {
 
-    protected OAuthAPIResponse(String uri, int responseStatus) {
+    protected OAuth2TokenResponse(String uri, int responseStatus) {
 
         super(uri, responseStatus);
     }
 
-    public static OAuthAPIResponse.OAuthTokenResponseBuilder tokenResponse(int code) {
+    public static OAuth2TokenResponse.OAuthTokenResponseBuilder tokenResponse(int code) {
 
-        return new OAuthAPIResponse.OAuthTokenResponseBuilder(code);
+        return new OAuth2TokenResponse.OAuthTokenResponseBuilder(code);
     }
 
     /**
-     * Builds the token response fields and returns {@link OAuthAPIResponse} instance.
+     * Builds the token response fields and returns {@link OAuth2TokenResponse} instance.
      */
     public static class OAuthTokenResponseBuilder extends OAuthASResponse.OAuthTokenResponseBuilder {
 

@@ -41,7 +41,7 @@ public class OAuth2AccessTokenRespDTO {
     ResponseHeader[] responseHeaders;
     String authorizedScopes;
     private String idToken;
-    //token response parameters will be replaced with parameterObjects
+    // Token response parameters will be replaced with parameterObjects
     @Deprecated
     private Map<String, String> parameters;
     private Map<String, Object> parameterObjects;
