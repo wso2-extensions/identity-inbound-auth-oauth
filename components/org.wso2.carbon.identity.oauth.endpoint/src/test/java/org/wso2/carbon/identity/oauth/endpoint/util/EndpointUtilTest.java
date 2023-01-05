@@ -358,7 +358,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
             if (parameters.getScopes().contains("openid")) {
                 Assert.assertTrue(consentUrl.contains(URLEncoder.encode(REQUESTED_OIDC_SCOPES, "UTF-8")),
-                        "incorrect requested OIDC scopes query parameter");
+                        "incorrect requested OIDC scopes query parameter " + consentUrl +
+                                " " + URLEncoder.encode(REQUESTED_OIDC_SCOPES, "UTF-8"));
             }
 
         } catch (OAuthSystemException e) {
