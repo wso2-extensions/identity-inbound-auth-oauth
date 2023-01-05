@@ -39,7 +39,6 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -61,6 +60,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
+import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
@@ -78,6 +78,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
@@ -314,9 +315,6 @@ public class AccessTokenIssuer {
         try {
             isValidGrant = authzGrantHandler.validateGrant(tokReqMsgCtx);
         } catch (IdentityOAuth2Exception e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error occurred while validating grant", e);
-            }
             if (e.getErrorCode() != null) {
                 errorCode = e.getErrorCode();
             }
@@ -324,6 +322,7 @@ public class AccessTokenIssuer {
             if (e.getErrorCode() != null) {
                 errorCode = e.getErrorCode();
             }
+            log.error("Error occurred while validating grant: " +  error);
         }
 
         AuthenticatedUser authenticatedUser = tokReqMsgCtx.getAuthorizedUser();
@@ -364,19 +363,7 @@ public class AccessTokenIssuer {
         List<String> requestedAllowedScopes = new ArrayList<>();
         String[] requestedScopes = tokReqMsgCtx.getScope();
         List<String> scopesToBeValidated = new ArrayList<>();
-        String[] requestedOIDCScopes = new String[0];
-        try {
-            // Get OIDC scopes from requested scopes. At end of the scope validation OIDC scopes will add to the
-            // approved scope list.
-            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(requestedScopes);
-            requestedOIDCScopes = OAuth2Util.getRequestedOIDCScopes(tokReqMsgCtx.getScope());
-            // OIDC scopes are not validated in the scope validation process. Hence, Removing OIDC scopes from the
-            // requested scopes by the app.
-            String[] oidcRemovedScopes = OAuth2Util.removeOIDCScopesFromRequestedScopes(tokReqMsgCtx.getScope());
-            tokReqMsgCtx.setScope(oidcRemovedScopes);
-        } catch (IdentityOAuthAdminException e) {
-            throw new IdentityException("Error occurred while validating scopes.", e);
-        }
+
         if (requestedScopes != null) {
             for (String scope : requestedScopes) {
                 if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
@@ -445,8 +432,6 @@ public class AccessTokenIssuer {
             }
             // Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
-            // Add OIDC scopes back to the request
-            addRequestedOIDCScopes(tokReqMsgCtx, requestedOIDCScopes);
             addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
         } else {
             if (log.isDebugEnabled()) {
@@ -548,6 +533,19 @@ public class AccessTokenIssuer {
                 }
                 tokenRespDTO = handleError(OAuth2ErrorCodes.SERVER_ERROR, "Server Error", tokenReqDTO);
                 return tokenRespDTO;
+            }
+        }
+
+        List<AccessTokenResponseHandler> tokenResponseHandlers = OAuthComponentServiceHolder.getInstance().
+                getAccessTokenResponseHandlers();
+        // Engaging token response handlers.
+        for (AccessTokenResponseHandler tokenResponseHandler : tokenResponseHandlers) {
+            Map<String, Object> additionalTokenResponseAttributes =
+                    tokenResponseHandler.getAdditionalTokenResponseAttributes(tokReqMsgCtx);
+            if (additionalTokenResponseAttributes != null) {
+                for (Map.Entry<String, Object> attribute : additionalTokenResponseAttributes.entrySet()) {
+                    tokenRespDTO.addParameterObject(attribute.getKey(), attribute.getValue());
+                }
             }
         }
 
@@ -721,8 +719,8 @@ public class AccessTokenIssuer {
                                              String[] authorizedInternalScopes) {
 
         String[] scopes = tokReqMsgCtx.getScope();
-        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, authorizedInternalScopes);
-        tokReqMsgCtx.setScope(scopesToReturn);
+        tokReqMsgCtx.setScope(Stream.concat(Arrays.stream(scopes), Arrays.stream(authorizedInternalScopes))
+                .distinct().toArray(String[]::new));
     }
 
     private void addRequestedOIDCScopes(OAuthTokenReqMessageContext tokReqMsgCtx,

@@ -310,9 +310,9 @@ public class ResponseTypeHandlerUtil {
                     params.put("user", authorizationReqDTO.getUser().getUserId());
                 } catch (UserIdNotFoundException e) {
                     if (StringUtils.isNotBlank(authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier())) {
-                        params.put("user",
-                                authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier().replaceAll(".",
-                                        "*"));
+                        params.put("user", LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(
+                                authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier()) :
+                                authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier());
                     }
                 }
             }

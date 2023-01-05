@@ -84,6 +84,7 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionT
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildScopeString;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTenantId;
 
 /**
  * OAuth OSGi service implementation.
@@ -1861,6 +1862,23 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_FOUND_SCOPE,
                     String.format(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_FOUND_SCOPE.getMessage(),
                             scopeName));
+        }
+    }
+
+    /**
+     * Returns OIDC scopes registered in the tenant.
+     *
+     * @param tenantDomain tenant domain
+     * @return List of OIDC scopes registered in tenant.
+     * @throws IdentityOAuthAdminException exception if OIDC scope retrieval fails.
+     */
+    public List<String> getRegisteredOIDCScope(String tenantDomain) throws IdentityOAuthAdminException {
+
+        try {
+            int tenantId = getTenantId(tenantDomain);
+            return  OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().getScopeNames(tenantId);
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while loading OIDC scopes of tenant: " + tenantDomain, e);
         }
     }
 }
