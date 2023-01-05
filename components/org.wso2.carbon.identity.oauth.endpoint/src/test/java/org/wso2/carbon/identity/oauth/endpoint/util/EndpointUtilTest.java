@@ -345,6 +345,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
             if (queryString != null && cacheEntryExists) {
                 Assert.assertTrue(consentUrl.contains(queryString), "spQueryParams value is not found in url");
             }
+
         } catch (OAuthSystemException e) {
             Assert.assertTrue(e.getMessage().contains("Error while retrieving the application name"));
         }
