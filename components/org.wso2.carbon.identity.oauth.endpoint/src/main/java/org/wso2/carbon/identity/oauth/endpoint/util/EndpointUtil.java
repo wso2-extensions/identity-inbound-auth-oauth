@@ -136,7 +136,7 @@ public class EndpointUtil {
     private static final String PROP_GRANT_TYPE = "response_type";
     private static final String PROP_RESPONSE_TYPE = "response_type";
     private static final String PROP_SCOPE = "scope";
-    private static final String PROP_OIDC_SCOPE = "requested_oidc_scope";
+    private static final String PROP_OIDC_SCOPE = "requested_oidc_scopes";
     private static final String PROP_ERROR = "error";
     private static final String PROP_ERROR_DESCRIPTION = "error_description";
     private static final String PROP_REDIRECT_URI = "redirect_uri";

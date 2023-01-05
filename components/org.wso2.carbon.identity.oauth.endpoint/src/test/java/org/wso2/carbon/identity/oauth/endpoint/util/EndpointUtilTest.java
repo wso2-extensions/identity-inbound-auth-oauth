@@ -196,7 +196,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     private static final String USER_INFO_RESPONSE_BUILDER =
             "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilder";
 
-    private static final String REQUESTED_OIDC_SCOPES = "requested_oidc_scope=openid email";
+    private static final String REQUESTED_OIDC_SCOPES = "requested_oidc_scopes=openid profile";
 
     private String username;
     private String password;
@@ -354,11 +354,11 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
             if (queryString != null && cacheEntryExists) {
                 Assert.assertTrue(consentUrl.contains(queryString), "spQueryParams value is not found in url");
-                if (parameters.getScopes().contains("openid")) {
-                    Assert.assertTrue(
-                            consentUrl.contains(URLEncoder.encode(REQUESTED_OIDC_SCOPES, "UTF-8")),
-                            "incorrect requested OIDC scopes query parameter");
-                }
+            }
+
+            if (parameters.getScopes().contains("openid")) {
+                Assert.assertTrue(consentUrl.contains(URLEncoder.encode(REQUESTED_OIDC_SCOPES, "UTF-8")),
+                        "incorrect requested OIDC scopes query parameter");
             }
 
         } catch (OAuthSystemException e) {
