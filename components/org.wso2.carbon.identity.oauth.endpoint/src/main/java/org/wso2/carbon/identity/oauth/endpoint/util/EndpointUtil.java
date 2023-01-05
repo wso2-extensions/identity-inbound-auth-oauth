@@ -942,8 +942,7 @@ public class EndpointUtil {
             startTenantFlow(params.getTenantDomain());
 
             // Get registered OIDC scopes.
-            String[] oidcScopes = oAuthAdminService.getScopeNames();
-            List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
+            List<String> oidcScopeList = oAuthAdminService.getRegisteredOIDCScope(params.getTenantDomain());
             for (String scope : allowedScopes) {
                 if (oidcScopeList.contains(scope)) {
                     requestedOIDCScopes.add(scope.toLowerCase());
@@ -951,8 +950,6 @@ public class EndpointUtil {
             }
         } catch (IdentityOAuthAdminException e) {
             throw new OAuthSystemException("Error while retrieving OIDC scopes.", e);
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
         }
         return requestedOIDCScopes;
     }
