@@ -558,7 +558,6 @@ public class AccessTokenIssuer {
                         null);
             }
         }
-
         return isValidScope;
     }
 
