@@ -522,10 +522,11 @@ public class AccessTokenIssuer {
             }
         }
 
-        // Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
-        // Those scopes should not send to the other scopes validators.
-        // Thus remove the scopes from the tokReqMsgCtx. Will be added to the response after executing
-        // the other scope validators.
+        /*
+         Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
+         Those scopes should not send to the other scopes validators. Thus remove the scopes from the tokReqMsgCtx.
+         Will be added to the response after executing the other scope validators.
+        */
         removeInternalScopes(tokReqMsgCtx);
 
         // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
