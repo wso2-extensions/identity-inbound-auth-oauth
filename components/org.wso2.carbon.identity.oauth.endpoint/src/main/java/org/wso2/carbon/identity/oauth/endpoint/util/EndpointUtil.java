@@ -939,8 +939,6 @@ public class EndpointUtil {
         Set<String> allowedScopes = params.getScopes();
         List<String> requestedOIDCScopes = new ArrayList<>();
         try {
-            startTenantFlow(params.getTenantDomain());
-
             // Get registered OIDC scopes.
             List<String> oidcScopeList = oAuthAdminService.getRegisteredOIDCScope(params.getTenantDomain());
             for (String scope : allowedScopes) {

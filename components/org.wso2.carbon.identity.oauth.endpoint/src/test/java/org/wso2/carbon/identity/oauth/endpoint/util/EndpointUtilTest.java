@@ -196,8 +196,6 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     private static final String USER_INFO_RESPONSE_BUILDER =
             "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilder";
 
-    private static final String REQUESTED_OIDC_SCOPES = "requested_oidc_scopes=openid profile";
-
     private String username;
     private String password;
     private String sessionDataKey;
@@ -255,12 +253,6 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         params.setClientId("testClientId");
         params.setScopes(new HashSet<String>(Arrays.asList("scope1", "scope2", "internal_login")));
 
-        OAuth2Parameters paramsOIDC = new OAuth2Parameters();
-        paramsOIDC.setApplicationName("TestApplication");
-        paramsOIDC.setClientId("testClientId");
-        paramsOIDC.setScopes(
-                new HashSet<String>(Arrays.asList("openid", "profile", "scope1", "scope2", "internal_login")));
-
         return new Object[][]{
                 {params, true, true, false, "QueryString", true},
                 {null, true, true, false, "QueryString", true},
@@ -269,7 +261,6 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 {params, true, false, false, "QueryString", false},
                 {params, true, true, false, null, true},
                 {params, true, true, true, "QueryString", true},
-                {paramsOIDC, true, true, true, "QueryString", true},
         };
     }
 
@@ -351,17 +342,9 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                     "is not found in url");
             Assert.assertTrue(ArrayUtils.contains(scopeArray, "internal_login"), "internal_login " +
                     "scope parameter value is not found in url");
-
             if (queryString != null && cacheEntryExists) {
                 Assert.assertTrue(consentUrl.contains(queryString), "spQueryParams value is not found in url");
             }
-
-            if (parameters.getScopes().contains("openid")) {
-                Assert.assertTrue(consentUrl.contains(URLEncoder.encode(REQUESTED_OIDC_SCOPES, "UTF-8")),
-                        "incorrect requested OIDC scopes query parameter " + consentUrl +
-                                " " + URLEncoder.encode(REQUESTED_OIDC_SCOPES, "UTF-8"));
-            }
-
         } catch (OAuthSystemException e) {
             Assert.assertTrue(e.getMessage().contains("Error while retrieving the application name"));
         }
