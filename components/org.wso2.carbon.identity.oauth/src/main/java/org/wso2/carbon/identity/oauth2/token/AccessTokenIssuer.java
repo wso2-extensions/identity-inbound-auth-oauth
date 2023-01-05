@@ -491,7 +491,7 @@ public class AccessTokenIssuer {
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
             /*
              In authorization code flow, we have already done scope validation during the /authorize call an issued an
-             authorization code with the authorized scopes. In this flow we only consider the scopes bound to the
+             authorization code with the authorized scopes. During the token flow we only consider the scopes bound to the
              issued authorization code and simply ignore any 'scope' parameter sent in the subsequent token request.
              Therefore, it does not make sense to go through scope validation again as there will be no new scopes to
              validate.
