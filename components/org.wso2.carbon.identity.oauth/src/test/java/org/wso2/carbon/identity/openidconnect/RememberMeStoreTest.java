@@ -17,7 +17,7 @@ package org.wso2.carbon.identity.openidconnect;
 
 import org.apache.commons.collections.map.HashedMap;
 import org.junit.Assert;
-import org.mockito.internal.util.reflection.Whitebox;
+import org.powermock.reflect.Whitebox;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth2.TestConstants;

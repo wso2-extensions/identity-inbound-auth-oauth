@@ -24,23 +24,30 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
+import java.io.File;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 
 @PrepareForTest({
         HttpServletRequest.class,
-        OAuth2Util.class
+        OAuth2Util.class,
+        IdentityUtil.class
 })
 @WithCarbonHome
 public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
@@ -54,11 +61,23 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
 
     @BeforeMethod
     public void setUp() throws Exception {
+        System.setProperty(
+                CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
+        );
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getIdentityConfigDirPath())
+                .thenReturn(System.getProperty("user.dir")
+                        + File.separator + "src"
+                        + File.separator + "test"
+                        + File.separator + "resources"
+                        + File.separator + "conf");
 
         OAuth2ServiceComponentHolder.addAuthenticationHandler(basicAuthClientAuthenticator);
         OAuth2ServiceComponentHolder.addAuthenticationHandler(sampleClientAuthenticator);
         sampleClientAuthenticator.enabled = true;
     }
+
 
     @AfterMethod
     public void cleanup() {

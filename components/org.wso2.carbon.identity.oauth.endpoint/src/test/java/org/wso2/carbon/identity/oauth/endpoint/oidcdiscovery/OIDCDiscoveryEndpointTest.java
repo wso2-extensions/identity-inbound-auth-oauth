@@ -19,7 +19,7 @@ package org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery;
 import org.junit.Assert;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
@@ -63,7 +64,7 @@ public class OIDCDiscoveryEndpointTest extends PowerMockIdentityBaseTest {
     private OIDCDiscoveryEndpoint oidcDiscoveryEndpoint;
     private Object identityUtilObj;
 
-    @BeforeTest
+    @BeforeClass
     public void setUp() throws Exception {
 
         oidcDiscoveryEndpoint = new OIDCDiscoveryEndpoint();
@@ -99,10 +100,20 @@ public class OIDCDiscoveryEndpointTest extends PowerMockIdentityBaseTest {
                 OAuthConstants.TENANT_NAME_FROM_CONTEXT, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
         Field threadLocalPropertiesField = identityUtilObj.getClass().getDeclaredField("threadLocalProperties");
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(threadLocalPropertiesField,
-                threadLocalPropertiesField.getModifiers() & ~Modifier.FINAL);
+
+        Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
+        getDeclaredFields0.setAccessible(true);
+        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
+        Field modifiers = null;
+        for (Field each : fields) {
+            if ("modifiers".equals(each.getName())) {
+                modifiers = each;
+                break;
+            }
+        }
+        modifiers.setAccessible(true);
+        modifiers.setInt(threadLocalPropertiesField, threadLocalPropertiesField.getModifiers() & ~Modifier.FINAL);
+
         threadLocalPropertiesField.setAccessible(true);
         threadLocalPropertiesField.set(identityUtilObj, threadLocalProperties);
 

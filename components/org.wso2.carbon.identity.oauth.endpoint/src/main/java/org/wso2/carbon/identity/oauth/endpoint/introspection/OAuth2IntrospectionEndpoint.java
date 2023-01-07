@@ -89,9 +89,6 @@ public class OAuth2IntrospectionEndpoint {
             if (StringUtils.isNotBlank(token)) {
                 params.put("token", token.replaceAll(".", "*"));
             }
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                    OAuthConstants.LogConstants.SUCCESS, "Successfully received introspect request.",
-                    "receive-introspect-request", null);
             if (StringUtils.isBlank(token)) {
                 LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                         OAuthConstants.LogConstants.FAILED, "'token' parameter cannot be empty.",

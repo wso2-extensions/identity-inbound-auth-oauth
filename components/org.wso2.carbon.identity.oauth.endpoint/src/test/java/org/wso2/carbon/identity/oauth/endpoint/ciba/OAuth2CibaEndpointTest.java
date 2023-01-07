@@ -24,7 +24,7 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.powermock.reflect.internal.WhiteboxImpl;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
@@ -113,7 +113,7 @@ public class OAuth2CibaEndpointTest extends PowerMockTestCase {
     CibaAuthCodeResponse authCodeResponse = new CibaAuthCodeResponse();
     String[] scopes = new String[]{"scope1", "scope2", OAuthConstants.Scope.OPENID};
 
-    @BeforeTest
+    @BeforeClass
     public void setUp() throws Exception {
 
         System.setProperty(

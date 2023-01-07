@@ -19,13 +19,25 @@
 package org.wso2.carbon.identity.oauth2.device.codegenerator;
 
 import org.apache.commons.lang.StringUtils;
+import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.core.util.IdentityConfigParser;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.utils.CarbonUtils;
 
+import java.nio.file.Paths;
 import java.util.Random;
 
+import static org.powermock.api.mockito.PowerMockito.doReturn;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.spy;
+import static org.powermock.api.mockito.PowerMockito.when;
+
+@PrepareForTest({IdentityUtil.class, CarbonUtils.class, IdentityConfigParser.class})
 public class GenerateKeysTest extends PowerMockTestCase {
 
     private static final int NUMBER_OF_KEYS_GENERATED = 10;
@@ -43,6 +55,14 @@ public class GenerateKeysTest extends PowerMockTestCase {
 
     @Test(dataProvider = "provideKeyLengths")
     public void testGetKey(int[] keyLengths) throws Exception {
+
+        String carbonHome = Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString();
+        spy(CarbonUtils.class);
+        doReturn(carbonHome).when(CarbonUtils.class, "getCarbonHome");
+
+        IdentityConfigParser mockConfigParser = mock(IdentityConfigParser.class);
+        mockStatic(IdentityConfigParser.class);
+        when(IdentityConfigParser.getInstance()).thenReturn(mockConfigParser);
 
         // First, test zero length scenario.
         Assert.assertNotEquals(StringUtils.EMPTY, GenerateKeys.getKey(0));

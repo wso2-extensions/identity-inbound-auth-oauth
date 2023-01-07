@@ -32,10 +32,11 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.AfterTest;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -123,13 +124,14 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
 
     private OAuth2TokenEndpoint oAuth2TokenEndpoint;
 
-    @BeforeTest
+    @BeforeClass
     public void setUp() throws Exception {
 
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
                           );
+        PrivilegedCarbonContext.startTenantFlow();
         oAuth2TokenEndpoint = new OAuth2TokenEndpoint();
 
         initiateInMemoryH2();
