@@ -393,8 +393,10 @@ public class OAuth2AuthzEndpoint {
         if (log.isDebugEnabled()) {
             log.debug("Server error occurred while performing authorization", e);
         }
+        String message = StringUtils.isEmpty(e.getMessage()) ? "Server error occurred while performing authorization" :
+                e.getMessage();
         OAuthProblemException ex = OAuthProblemException.error(OAuth2ErrorCodes.SERVER_ERROR,
-                "Server error occurred while performing authorization");
+                message);
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
                 EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), ex, params))).build();
     }
