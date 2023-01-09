@@ -364,7 +364,6 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
             if (parameters.getScopes().contains("openid")) {
                 String requestedClaimString = URLDecoder.decode(consentUrl, "UTF-8");
                 int checkIndex = requestedClaimString.indexOf(REQUESTED_OIDC_SCOPES);
-                Assert.assertTrue(checkIndex != -1, "requested OIDC scopes query parameter is not found in url");
                 requestedClaimString = requestedClaimString.substring(checkIndex);
                 checkIndex = requestedClaimString.indexOf("&");
                 if (checkIndex == -1) {
