@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.endpoint.util;
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
@@ -361,8 +362,19 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
             }
 
             if (parameters.getScopes().contains("openid")) {
-                Assert.assertTrue(URLDecoder.decode(consentUrl, "UTF-8").contains(REQUESTED_OIDC_SCOPES),
-                        "incorrect requested OIDC scopes query parameter");
+                String requestedClaimString = URLDecoder.decode(consentUrl, "UTF-8");
+                int checkIndex = requestedClaimString.indexOf(REQUESTED_OIDC_SCOPES);
+                Assert.assertTrue(checkIndex != -1, "requested OIDC scopes query parameter is not found in url");
+                requestedClaimString = requestedClaimString.substring(checkIndex);
+                checkIndex = requestedClaimString.indexOf("&");
+                if (checkIndex == -1) {
+                    Assert.assertTrue(StringUtils.equals(requestedClaimString, REQUESTED_OIDC_SCOPES),
+                            "incorrect requested OIDC scopes in query parameter");
+                } else {
+                    Assert.assertTrue(
+                            StringUtils.equals(requestedClaimString.substring(0, checkIndex), REQUESTED_OIDC_SCOPES),
+                            "incorrect requested OIDC scopes in query parameter");
+                }
             }
 
         } catch (OAuthSystemException e) {
