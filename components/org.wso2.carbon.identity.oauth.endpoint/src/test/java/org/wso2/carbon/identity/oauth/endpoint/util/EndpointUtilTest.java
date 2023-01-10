@@ -372,7 +372,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                     requestedClaimString = requestedClaimString.substring(0, checkIndex);
                 }
                 Assert.assertTrue(StringUtils.equals(requestedClaimString, REQUESTED_OIDC_SCOPES),
-                        "incorrect requested OIDC scopes in query parameter");
+                        "Incorrect requested OIDC scopes in query parameter.");
             }
 
         } catch (OAuthSystemException e) {
