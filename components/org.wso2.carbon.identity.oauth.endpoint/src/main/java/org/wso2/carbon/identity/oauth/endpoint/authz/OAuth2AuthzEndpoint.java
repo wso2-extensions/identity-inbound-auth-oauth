@@ -390,7 +390,6 @@ public class OAuth2AuthzEndpoint {
         if (oAuthMessage.getSessionDataCacheEntry() != null) {
             params = oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters();
         }
-        log.error("Server error occurred while performing authorization", e);
         OAuthProblemException ex = OAuthProblemException.error(OAuth2ErrorCodes.SERVER_ERROR,
                 "Server error occurred while performing authorization");
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
@@ -2467,7 +2466,8 @@ public class OAuth2AuthzEndpoint {
                 oauth2Params.setScopes(new HashSet<>(Arrays.asList(authzReqMsgCtx.getApprovedScope())));
             }
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new OAuthSystemException("Error occurred while validating scopes before consent.", e);
+            log.error("Error occurred while validating requested scopes.", e);
+            throw new OAuthSystemException("Error occurred while validating requested scopes", e);
         }
 
     }
