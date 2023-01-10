@@ -198,7 +198,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     private static final String USER_INFO_RESPONSE_BUILDER =
             "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilder";
 
-    private static final String REQUESTED_OIDC_SCOPES = "requested_oidc_scopes=openid+profile";
+    private static final String REQUESTED_OIDC_SCOPES_KEY = "requested_oidc_scopes=";
+    private static final String REQUESTED_OIDC_SCOPES_VALUES = "openid+profile";
 
     private String username;
     private String password;
@@ -362,16 +363,17 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
             }
 
             if (parameters.getScopes().contains("openid")) {
-                String requestedClaimString = URLDecoder.decode(consentUrl, "UTF-8");
-                int checkIndex = requestedClaimString.indexOf(REQUESTED_OIDC_SCOPES);
+                String decodedConsentUrl = URLDecoder.decode(consentUrl, "UTF-8");
+                int checkIndex = decodedConsentUrl.indexOf(REQUESTED_OIDC_SCOPES_KEY);
                 Assert.assertTrue(checkIndex != -1, "Requested OIDC scopes query parameter is not found in url.");
 
-                requestedClaimString = requestedClaimString.substring(checkIndex);
+                String requestedClaimString = decodedConsentUrl.substring(checkIndex);
                 checkIndex = requestedClaimString.indexOf("&");
                 if (checkIndex != -1) {
                     requestedClaimString = requestedClaimString.substring(0, checkIndex);
                 }
-                Assert.assertTrue(StringUtils.equals(requestedClaimString, REQUESTED_OIDC_SCOPES),
+                Assert.assertTrue(StringUtils.equals(
+                        requestedClaimString, REQUESTED_OIDC_SCOPES_KEY + REQUESTED_OIDC_SCOPES_VALUES),
                         "Incorrect requested OIDC scopes in query parameter.");
             }
 
