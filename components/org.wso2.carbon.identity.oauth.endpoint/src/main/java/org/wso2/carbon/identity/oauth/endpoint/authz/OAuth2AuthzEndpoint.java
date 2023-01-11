@@ -2469,7 +2469,8 @@ public class OAuth2AuthzEndpoint {
                 oauth2Params.setScopes(new HashSet<>(Arrays.asList(authzReqMsgCtx.getApprovedScope())));
             }
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new OAuthSystemException("Error occurred while validating scopes before consent.", e);
+            log.error("Error occurred while validating requested scopes.", e);
+            throw new OAuthSystemException("Error occurred while validating requested scopes", e);
         }
 
     }
