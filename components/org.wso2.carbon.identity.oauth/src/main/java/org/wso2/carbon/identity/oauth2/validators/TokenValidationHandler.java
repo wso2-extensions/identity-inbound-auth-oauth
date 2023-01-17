@@ -546,6 +546,9 @@ public class TokenValidationHandler {
             // Add authenticated user object since username attribute may not have the domain appended if the
             // subject identifier is built based in the SP config.
             introResp.setAuthorizedUser(accessTokenDO.getAuthzUser());
+            if (OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
+                introResp.setAcr(accessTokenDO.getAcr());
+            }
         }
 
         if (messageContext.getProperty(OAuth2Util.JWT_ACCESS_TOKEN) != null
@@ -567,6 +570,11 @@ public class TokenValidationHandler {
             // set the token not to be used before time in seconds
             if (messageContext.getProperty(OAuth2Util.NBF) != null) {
                 introResp.setNbf(Long.parseLong((String) messageContext.getProperty(OAuth2Util.NBF)));
+            }
+            if (messageContext.getProperty(OAuth2Util.ACR) != null) {
+                if (messageContext.getProperty(OAuth2Util.ACR) instanceof List) {
+                    introResp.setAcr((String) messageContext.getProperty(OAuth2Util.ACR));
+                }
             }
         }
 

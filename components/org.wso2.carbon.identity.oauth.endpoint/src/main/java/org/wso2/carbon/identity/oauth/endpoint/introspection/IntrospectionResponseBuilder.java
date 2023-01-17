@@ -79,6 +79,18 @@ public class IntrospectionResponseBuilder {
     }
 
     /**
+     * Add the ACR attribute into the introspection response if it's available.
+     * @param acr acr string
+     * @return IntrospectionResponseBuilder
+     */
+    public IntrospectionResponseBuilder setAcr(String acr) {
+        if (StringUtils.isNotBlank(acr)) {
+            parameters.put(IntrospectionResponse.ACR, acr);
+        }
+        return this;
+    }
+
+    /**
      * @param jwtId jwt ID
      * @return IntrospectionResponseBuilder
      */

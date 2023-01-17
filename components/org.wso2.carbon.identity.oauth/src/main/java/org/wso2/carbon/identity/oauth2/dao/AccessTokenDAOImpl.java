@@ -84,6 +84,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     private static final int DEFAULT_TOKEN_PERSIST_RETRY_COUNT = 5;
     private static final String IDN_OAUTH2_ACCESS_TOKEN = "IDN_OAUTH2_ACCESS_TOKEN";
     private static final String CONSENTED_TOKEN_COLUMN_NAME = "CONSENTED_TOKEN";
+    private static final String ACR_COLUMN_NAME = "ACR";
     private boolean isTokenCleanupFeatureEnabled = OAuthServerConfiguration.getInstance().isTokenCleanupEnabled();
     private static final String DEFAULT_TOKEN_TO_SESSION_MAPPING = "DEFAULT";
 
@@ -170,20 +171,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             log.debug("Userstore domain for user: " + username + " is " + userDomain);
         }
 
-        String sql;
-        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-                sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN_WITH_IDP_NAME_WITH_CONSENTED_TOKEN;
-            } else {
-                sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN_WITH_IDP_NAME;
-            }
-        } else {
-            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-                sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN_WITH_CONSENTED_TOKEN;
-            } else {
-                sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN;
-            }
-        }
+        String sql = getInsertAccessTokenQuery();
         sql = OAuth2Util.getTokenPartitionedSqlByUserStore(sql, userDomain);
         String sqlAddScopes = OAuth2Util.getTokenPartitionedSqlByUserStore(SQLQueries.INSERT_OAUTH2_TOKEN_SCOPE,
                 userDomain);
@@ -230,9 +218,22 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             } else {
                 insertTokenPrepStmt.setString(18, NONE);
             }
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                if (OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
                     insertTokenPrepStmt.setString(19, Boolean.toString(accessTokenDO.isConsentedToken()));
+                    insertTokenPrepStmt.setString(20, accessTokenDO.getAcr());
+                    insertTokenPrepStmt.setString(21, authenticatedIDP);
+                    insertTokenPrepStmt.setInt(22, tenantId);
+                    insertTokenPrepStmt.setString(23, getPersistenceProcessor().getProcessedClientId(consumerKey));
+                } else {
+                    insertTokenPrepStmt.setString(19, Boolean.toString(accessTokenDO.isConsentedToken()));
+                    insertTokenPrepStmt.setString(20, authenticatedIDP);
+                    insertTokenPrepStmt.setInt(21, tenantId);
+                    insertTokenPrepStmt.setString(22, getPersistenceProcessor().getProcessedClientId(consumerKey));
+                }
+            } else {
+                if (OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
+                    insertTokenPrepStmt.setString(19, accessTokenDO.getAcr());
                     insertTokenPrepStmt.setString(20, authenticatedIDP);
                     insertTokenPrepStmt.setInt(21, tenantId);
                     insertTokenPrepStmt.setString(22, getPersistenceProcessor().getProcessedClientId(consumerKey));
@@ -241,14 +242,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     insertTokenPrepStmt.setInt(20, tenantId);
                     insertTokenPrepStmt.setString(21, getPersistenceProcessor().getProcessedClientId(consumerKey));
                 }
-            } else {
-                if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-                    insertTokenPrepStmt.setString(19, Boolean.toString(accessTokenDO.isConsentedToken()));
-                    insertTokenPrepStmt.setString(20, getPersistenceProcessor().getProcessedClientId(consumerKey));
-                } else {
-                    insertTokenPrepStmt.setString(19, getPersistenceProcessor().getProcessedClientId(consumerKey));
-                }
             }
+
             insertTokenPrepStmt.executeUpdate();
 
             String accessTokenId = accessTokenDO.getTokenId();
@@ -349,6 +344,25 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             IdentityDatabaseUtil.closeStatement(insertTokenPrepStmt);
         }
 
+    }
+
+    private static String getInsertAccessTokenQuery() {
+
+        boolean isConsentedTokenColAvailable = OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled();
+        boolean isACRColAvailable = OAuth2ServiceComponentHolder.isAcrColumnEnabled();
+
+        if (isConsentedTokenColAvailable && isACRColAvailable) {
+            // CONSENTED_TOKEN & ACR columns are available.
+            return SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN_WITH_IDP_NAME_WITH_CONSENTED_TOKEN_WITH_ACR;
+        } else if (isConsentedTokenColAvailable) {
+            // Only CONSENTED_TOKEN column is available.
+            return SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN_WITH_IDP_NAME_WITH_CONSENTED_TOKEN;
+        } else if (isACRColAvailable) {
+            // Only ACR column is available.
+            return SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN_WITH_IDP_NAME_WITH_ACR;
+        }
+        // No additional columns available in the IDN_OAUTH2_ACCESS_TOKEN table.
+        return SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN_WITH_IDP_NAME;
     }
 
     @Override
@@ -459,10 +473,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
 
             prepStmt.setString(6, tokenBindingReference);
-
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                prepStmt.setString(7, authenticatedIDP);
-            }
+            prepStmt.setString(7, authenticatedIDP);
 
             resultSet = prepStmt.executeQuery();
 
@@ -517,6 +528,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     if (StringUtils.isNotEmpty(isConsentedToken)) {
                         accessTokenDO.setIsConsentedToken(Boolean.parseBoolean(isConsentedToken));
                     }
+                    if (OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
+                        int acrColumnIndex = resultSet.findColumn(ACR_COLUMN_NAME);
+                        accessTokenDO.setAcr(resultSet.getString(acrColumnIndex));
+                    }
                     if (StringUtils.isNotBlank(tokenBindingReference) && !NONE.equals(tokenBindingReference)) {
                         setTokenBindingToAccessTokenDO(accessTokenDO, connection, tokenId);
                     }
@@ -545,94 +560,90 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
     private String getLatestAccessTokenQuerySQL(Connection connection) throws SQLException {
 
-        String sql;
-        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-                if (connection.getMetaData().getDriverName().contains("MySQL")
-                        || connection.getMetaData().getDriverName().contains("H2")) {
-                    sql = SQLQueries.
-                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MYSQL;
-                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                    sql = SQLQueries.
-                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_DB2SQL;
-                } else if (connection.getMetaData().getDriverName().contains("MS SQL")) {
-                    sql = SQLQueries.
-                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
-                } else if (connection.getMetaData().getDriverName().contains("Microsoft")) {
-                    sql = SQLQueries.
-                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
-                } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
-                    sql = SQLQueries.
-                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_POSTGRESQL;
-                } else if (connection.getMetaData().getDriverName().contains("Informix")) {
-                    // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
-                    sql = SQLQueries.
-                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_INFORMIX;
-                } else {
-                    sql = SQLQueries.
-                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_ORACLE;
-                }
+        boolean isConsentedTokenColAvailable = OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled();
+        boolean isACRColAvailable = OAuth2ServiceComponentHolder.isAcrColumnEnabled();
+
+        if (isConsentedTokenColAvailable && isACRColAvailable) {
+            if (connection.getMetaData().getDriverName().contains("MySQL")
+                    || connection.getMetaData().getDriverName().contains("H2")) {
+                return SQLQueries.
+                        GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_WITH_ACR_MYSQL;
+            } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                return SQLQueries.
+                        GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_WITH_ACR_DB2SQL;
+            } else if (connection.getMetaData().getDriverName().contains("MS SQL")
+                    || connection.getMetaData().getDriverName().contains("Microsoft")) {
+                return SQLQueries.
+                        GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_WITH_ACR_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
+            } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
+                return SQLQueries.
+                    GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_WITH_ACR_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_POSTGRESQL;
+            } else if (connection.getMetaData().getDriverName().contains("Informix")) {
+                // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
+                return SQLQueries.
+                        GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_WITH_ACR_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_INFORMIX;
             } else {
-                if (connection.getMetaData().getDriverName().contains("MySQL")
-                        || connection.getMetaData().getDriverName().contains("H2")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MYSQL;
-                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_DB2SQL;
-                } else if (connection.getMetaData().getDriverName().contains("MS SQL")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
-                } else if (connection.getMetaData().getDriverName().contains("Microsoft")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
-                } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_POSTGRESQL;
-                } else if (connection.getMetaData().getDriverName().contains("Informix")) {
-                    // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_INFORMIX;
-                } else {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_ORACLE;
-                }
+                return SQLQueries.
+                        GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_WITH_ACR_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_ORACLE;
+            }
+        } else if (isConsentedTokenColAvailable) {
+            if (connection.getMetaData().getDriverName().contains("MySQL")
+                    || connection.getMetaData().getDriverName().contains("H2")) {
+                return SQLQueries.
+                        GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MYSQL;
+            } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                return SQLQueries.
+                        GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_DB2SQL;
+            } else if (connection.getMetaData().getDriverName().contains("MS SQL")
+                        || connection.getMetaData().getDriverName().contains("Microsoft")) {
+                return SQLQueries.
+                        GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
+            } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
+                return SQLQueries.
+                        GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_POSTGRESQL;
+            } else if (connection.getMetaData().getDriverName().contains("Informix")) {
+                // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
+                return SQLQueries.
+                        GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_INFORMIX;
+            } else {
+                return SQLQueries.
+                        GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_ORACLE;
+            }
+        } else if (isACRColAvailable) {
+            if (connection.getMetaData().getDriverName().contains("MySQL")
+                    || connection.getMetaData().getDriverName().contains("H2")) {
+                return SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_WITH_ACR_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MYSQL;
+            } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                return SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_WITH_ACR_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_DB2SQL;
+            } else if (connection.getMetaData().getDriverName().contains("MS SQL")
+                    || connection.getMetaData().getDriverName().contains("Microsoft")) {
+                return SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_WITH_ACR_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
+            } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
+                return SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_WITH_ACR_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_POSTGRESQL;
+            } else if (connection.getMetaData().getDriverName().contains("Informix")) {
+                // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
+                return SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_WITH_ACR_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_INFORMIX;
+            } else {
+                return SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_WITH_ACR_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_ORACLE;
             }
         } else {
-            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-                if (connection.getMetaData().getDriverName().contains("MySQL")
-                        || connection.getMetaData().getDriverName().contains("H2")) {
-                    sql = SQLQueries.GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_MYSQL;
-                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                    sql = SQLQueries.GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_DB2SQL;
-                } else if (connection.getMetaData().getDriverName().contains("MS SQL")) {
-                    sql = SQLQueries.GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_MSSQL;
-                } else if (connection.getMetaData().getDriverName().contains("Microsoft")) {
-                    sql = SQLQueries.GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_MSSQL;
-                } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
-                    sql = SQLQueries.
-                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_POSTGRESQL;
-                } else if (connection.getMetaData().getDriverName().contains("Informix")) {
-                    // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
-                    sql = SQLQueries.
-                            GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_INFORMIX;
-                } else {
-                    sql = SQLQueries.GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_ORACLE;
-                }
+            if (connection.getMetaData().getDriverName().contains("MySQL")
+                    || connection.getMetaData().getDriverName().contains("H2")) {
+                return SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MYSQL;
+            } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                return SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_DB2SQL;
+            } else if (connection.getMetaData().getDriverName().contains("MS SQL")
+                    || connection.getMetaData().getDriverName().contains("Microsoft")) {
+                return SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
+            } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
+                return SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_POSTGRESQL;
+            } else if (connection.getMetaData().getDriverName().contains("Informix")) {
+                // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
+                return SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_INFORMIX;
             } else {
-                if (connection.getMetaData().getDriverName().contains("MySQL")
-                        || connection.getMetaData().getDriverName().contains("H2")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_MYSQL;
-                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_DB2SQL;
-                } else if (connection.getMetaData().getDriverName().contains("MS SQL")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_MSSQL;
-                } else if (connection.getMetaData().getDriverName().contains("Microsoft")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_MSSQL;
-                } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_POSTGRESQL;
-                } else if (connection.getMetaData().getDriverName().contains("Informix")) {
-                    // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_INFORMIX;
-                } else {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_ORACLE;
-                }
+                return SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_ORACLE;
             }
         }
-        return sql;
     }
 
     private AccessTokenDO getLatestAccessTokenByState(Connection connection, String consumerKey,
@@ -962,29 +973,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         ResultSet resultSet = null;
         try {
             String sql;
-            boolean isConsentedColumnDataFetched = false;
             if (includeExpired) {
-                if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                        sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN_IDP_NAME;
-                } else {
-                        sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN;
-                }
+                sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN_IDP_NAME;
             } else {
-                if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-                            sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME_WITH_CONSENTED_TOKEN;
-                            isConsentedColumnDataFetched = true;
-                        } else {
-                            sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME;
-                        }
-                } else {
-                        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-                            sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_WITH_CONSENTED_TOKEN;
-                            isConsentedColumnDataFetched = true;
-                        } else {
-                            sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN;
-                        }
-                }
+                sql = getAccessTokenSQLQuery();
             }
 
             sql = OAuth2Util.getTokenPartitionedSqlByToken(sql, accessTokenIdentifier);
@@ -1019,14 +1011,17 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String subjectIdentifier = resultSet.getString(14);
                     String authenticatedIDP = null;
                     String tokenBindingReference = resultSet.getString(15);
-                    if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                        authenticatedIDP = resultSet.getString(16);
-                    }
-
+                    authenticatedIDP = resultSet.getString(16);
                     boolean isConsentedToken = false;
-                    if (isConsentedColumnDataFetched) {
+                    if (!includeExpired && OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                        // When consented token data fetched from the table.
                         int consentedTokenColumnIndex = resultSet.findColumn(CONSENTED_TOKEN_COLUMN_NAME);
                         isConsentedToken = resultSet.getBoolean(consentedTokenColumnIndex);
+                    }
+                    String acr = null;
+                    if (!includeExpired && OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
+                        int acrColumnIndex = resultSet.findColumn(ACR_COLUMN_NAME);
+                        acr = resultSet.getString(acrColumnIndex);
                     }
 
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authorizedUser,
@@ -1050,6 +1045,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     dataDO.setGrantType(grantType);
                     dataDO.setTenantID(tenantId);
                     dataDO.setIsConsentedToken(isConsentedToken);
+                    dataDO.setAcr(acr);
 
                     if (StringUtils.isNotBlank(tokenBindingReference) && !NONE.equals(tokenBindingReference)) {
                         setTokenBindingToAccessTokenDO(dataDO, connection, tokenId);
@@ -1074,6 +1070,22 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
         return dataDO;
     }
+
+    private static String getAccessTokenSQLQuery() {
+
+        boolean isConsentedTokenColAvailable = OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled();
+        boolean isACRColAvailable = OAuth2ServiceComponentHolder.isAcrColumnEnabled();
+        if (isConsentedTokenColAvailable && isACRColAvailable) {
+            return SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME_WITH_CONSENTED_TOKEN_WITH_ACR;
+        } else if (isConsentedTokenColAvailable) {
+            return SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME_WITH_CONSENTED_TOKEN;
+        } else if (isACRColAvailable) {
+            return SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME_WITH_ACR;
+        } else {
+            return SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME;
+        }
+    }
+
 
     private void setTokenBindingToAccessTokenDO(AccessTokenDO dataDO, Connection connection, String tokenId)
             throws SQLException {
@@ -2515,48 +2527,23 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             String sql;
 
             String driverName = connection.getMetaData().getDriverName();
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                if (driverName.contains("MySQL")
-                        || driverName.contains("MariaDB")
-                        || driverName.contains("H2")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MYSQL;
-                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_DB2SQL;
-                } else if (driverName.contains("MS SQL")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
-                } else if (driverName.contains("Microsoft")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
-                } else if (driverName.contains("PostgreSQL")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_POSTGRESQL;
-                } else if (driverName.contains("Informix")) {
-                    // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_INFORMIX;
-                } else {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_ORACLE;
-                    sql = sql.replace("ROWNUM < 2", "ROWNUM < " + Integer.toString(limit + 1));
-                    sqlAltered = true;
-                }
+            if (driverName.contains("MySQL")
+                    || driverName.contains("MariaDB")
+                    || driverName.contains("H2")) {
+                sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MYSQL;
+            } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_DB2SQL;
+            } else if (driverName.contains("MS SQL") || driverName.contains("Microsoft")) {
+                sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
+            } else if (driverName.contains("PostgreSQL")) {
+                sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_POSTGRESQL;
+            } else if (driverName.contains("Informix")) {
+                // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
+                sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_INFORMIX;
             } else {
-                if (driverName.contains("MySQL")
-                        || driverName.contains("MariaDB")
-                        || driverName.contains("H2")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_MYSQL;
-                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_DB2SQL;
-                } else if (driverName.contains("MS SQL")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_MSSQL;
-                } else if (driverName.contains("Microsoft")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_MSSQL;
-                } else if (driverName.contains("PostgreSQL")) {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_POSTGRESQL;
-                } else if (driverName.contains("Informix")) {
-                    // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_INFORMIX;
-                } else {
-                    sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_ORACLE;
-                    sql = sql.replace("ROWNUM < 2", "ROWNUM < " + Integer.toString(limit + 1));
-                    sqlAltered = true;
-                }
+                sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_ORACLE;
+                sql = sql.replace("ROWNUM < 2", "ROWNUM < " + Integer.toString(limit + 1));
+                sqlAltered = true;
             }
 
             if (!includeExpiredTokens) {
