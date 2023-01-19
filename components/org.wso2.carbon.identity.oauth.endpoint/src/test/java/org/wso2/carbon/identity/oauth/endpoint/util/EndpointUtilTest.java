@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth.endpoint.util;
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
@@ -79,7 +78,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -198,9 +196,6 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     private static final String USER_INFO_RESPONSE_BUILDER =
             "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilder";
 
-    private static final String REQUESTED_OIDC_SCOPES_KEY = "requested_oidc_scopes=";
-    private static final String REQUESTED_OIDC_SCOPES_VALUES = "openid+profile";
-
     private String username;
     private String password;
     private String sessionDataKey;
@@ -256,15 +251,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         OAuth2Parameters params = new OAuth2Parameters();
         params.setApplicationName("TestApplication");
         params.setClientId("testClientId");
-        params.setTenantDomain("testTenantDomain");
         params.setScopes(new HashSet<String>(Arrays.asList("scope1", "scope2", "internal_login")));
-
-        OAuth2Parameters paramsOIDC = new OAuth2Parameters();
-        paramsOIDC.setApplicationName("TestApplication");
-        paramsOIDC.setClientId("testClientId");
-        paramsOIDC.setTenantDomain("testTenantDomain");
-        paramsOIDC.setScopes(
-                new HashSet<String>(Arrays.asList("openid", "profile", "scope1", "scope2", "internal_login")));
 
         return new Object[][]{
                 {params, true, true, false, "QueryString", true},
@@ -274,7 +261,6 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 {params, true, false, false, "QueryString", false},
                 {params, true, true, false, null, true},
                 {params, true, true, true, "QueryString", true},
-                {paramsOIDC, true, true, true, "QueryString", true},
         };
     }
 
@@ -321,8 +307,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         }
 
         EndpointUtil.setOAuthAdminService(mockedOAuthAdminService);
-        when(mockedOAuthAdminService.getRegisteredOIDCScope(anyString()))
-                .thenReturn(Arrays.asList("openid", "email", "profile", "groups"));
+        when(mockedOAuthAdminService.getScopeNames()).thenReturn(new String[0]);
         JDBCPermissionBasedInternalScopeValidator scopeValidatorSpy = PowerMockito.spy(
                 new JDBCPermissionBasedInternalScopeValidator());
         doNothing().when(scopeValidatorSpy, method(JDBCPermissionBasedInternalScopeValidator.class,
@@ -357,24 +342,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                     "is not found in url");
             Assert.assertTrue(ArrayUtils.contains(scopeArray, "internal_login"), "internal_login " +
                     "scope parameter value is not found in url");
-
             if (queryString != null && cacheEntryExists) {
                 Assert.assertTrue(consentUrl.contains(queryString), "spQueryParams value is not found in url");
-            }
-
-            if (parameters.getScopes().contains("openid")) {
-                String decodedConsentUrl = URLDecoder.decode(consentUrl, "UTF-8");
-                int checkIndex = decodedConsentUrl.indexOf(REQUESTED_OIDC_SCOPES_KEY);
-                Assert.assertTrue(checkIndex != -1, "Requested OIDC scopes query parameter is not found in url.");
-
-                String requestedClaimString = decodedConsentUrl.substring(checkIndex);
-                checkIndex = requestedClaimString.indexOf("&");
-                if (checkIndex != -1) {
-                    requestedClaimString = requestedClaimString.substring(0, checkIndex);
-                }
-                Assert.assertTrue(StringUtils.equals(
-                        requestedClaimString, REQUESTED_OIDC_SCOPES_KEY + REQUESTED_OIDC_SCOPES_VALUES),
-                        "Incorrect requested OIDC scopes in query parameter.");
             }
 
         } catch (OAuthSystemException e) {
