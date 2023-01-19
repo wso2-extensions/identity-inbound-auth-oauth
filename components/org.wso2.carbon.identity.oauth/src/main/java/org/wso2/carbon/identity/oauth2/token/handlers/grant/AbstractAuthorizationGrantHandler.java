@@ -1114,7 +1114,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         return tokReqMsgCtx.getAuthorizedUser().isFederatedUser();
     }
 
-
     private void setACRValueInTheToken(OAuthTokenReqMessageContext tokenReqMsgCtxt, AccessTokenDO accessTokenDO) {
 
         Optional<String> optionalSelectedACR = OAuth2Util.getSelectedACRValue(tokenReqMsgCtxt);

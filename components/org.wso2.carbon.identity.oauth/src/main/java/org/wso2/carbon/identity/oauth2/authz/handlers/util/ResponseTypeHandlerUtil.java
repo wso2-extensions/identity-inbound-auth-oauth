@@ -49,12 +49,14 @@ import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
+import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
@@ -63,6 +65,7 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -605,6 +608,7 @@ public class ResponseTypeHandlerUtil {
         newTokenBean.setValidityPeriodInMillis(validityPeriodInMillis);
         newTokenBean.setValidityPeriod(validityPeriodInMillis / SECOND_TO_MILLISECONDS_FACTOR);
         newTokenBean.setGrantType(getGrantType(authorizationReqDTO.getResponseType()));
+        newTokenBean.setAcr(authorizationReqDTO.getSelectedAcr());
         newTokenBean.setAccessToken(getNewAccessToken(oauthAuthzMsgCtx, oauthIssuerImpl));
         setRefreshTokenDetails(oauthAuthzMsgCtx, oAuthAppBean, existingTokenBean, newTokenBean, oauthIssuerImpl,
                 timestamp);
@@ -1030,4 +1034,5 @@ public class ResponseTypeHandlerUtil {
 
         return oAuthClientAuthnContext;
     }
+
 }
