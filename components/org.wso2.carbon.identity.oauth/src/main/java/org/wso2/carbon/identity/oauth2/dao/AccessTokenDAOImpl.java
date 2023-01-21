@@ -974,7 +974,11 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         try {
             String sql;
             if (includeExpired) {
-                sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN_IDP_NAME;
+                if (OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
+                    sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN_IDP_NAME_WITH_ACR;
+                }  else {
+                    sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN_IDP_NAME;
+                }
             } else {
                 sql = getAccessTokenSQLQuery();
             }
@@ -1019,7 +1023,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         isConsentedToken = resultSet.getBoolean(consentedTokenColumnIndex);
                     }
                     String acr = null;
-                    if (!includeExpired && OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
+                    if (OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
                         int acrColumnIndex = resultSet.findColumn(ACR_COLUMN_NAME);
                         acr = resultSet.getString(acrColumnIndex);
                     }
