@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -461,11 +462,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSetBuilder.claim(SCOPE, scope);
         }
         if (OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
-            if (isAuthCodeGrant(tokenReqMessageContext)) {
-                Optional<String> selectedACRValueOptional = OAuth2Util.getSelectedACRValue(tokenReqMessageContext);
-                selectedACRValueOptional.ifPresent(acrValue -> jwtClaimsSetBuilder.claim(OAuth2Util.ACR, acrValue));
-            } else if (isRefreshTokenGrant(tokenReqMessageContext)) {
-                jwtClaimsSetBuilder.claim(OAuth2Util.ACR, tokenReqMessageContext.getAcr());
+            String acr = getAcr(authAuthzReqMessageContext, tokenReqMessageContext);
+            if (StringUtils.isNotEmpty(acr)) {
+                jwtClaimsSetBuilder.claim(OAuth2Util.ACR, acr);
             }
         }
         jwtClaimsSetBuilder.claim(OAuthConstants.AUTHORIZED_USER_TYPE,
@@ -605,6 +604,30 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             }
         }
         return scopeString;
+    }
+
+    /**
+     * Get the Selected Acr value to be added to the JWT claims.
+     *
+     * @param authAuthzReqMessageContext Auth Request Message Context.
+     * @param tokenReqMessageContext     Token Request Message Context.
+     * @return Selected ACR value.
+     */
+    private String getAcr(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
+                          OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
+        String selectedACRValue = null;
+        if (tokenReqMessageContext != null) {
+            Optional<String> optionalSelectedACR = OAuth2Util.getSelectedACRValue(tokenReqMessageContext);
+            if (!optionalSelectedACR.isPresent()) {
+                throw new IdentityOAuth2Exception(
+                        "ACR value is not presented in the token.");
+            }
+            selectedACRValue = optionalSelectedACR.get();
+        } else {
+            OAuth2AuthorizeReqDTO authorizationReqDTO = authAuthzReqMessageContext.getAuthorizationReqDTO();
+            selectedACRValue = authorizationReqDTO.getSelectedAcr();
+        }
+        return selectedACRValue;
     }
 
     /**
