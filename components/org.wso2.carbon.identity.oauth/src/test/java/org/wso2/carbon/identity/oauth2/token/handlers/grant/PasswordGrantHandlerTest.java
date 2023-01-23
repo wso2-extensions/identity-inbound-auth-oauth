@@ -31,7 +31,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
+import org.wso2.carbon.identity.login.resolver.mgt.ResolvedUserResult;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -138,8 +138,8 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(OAuth2ServiceComponentHolder.getApplicationMgtService()).thenReturn(applicationManagementService);
         mockStatic(FrameworkUtils.class);
         ResolvedUserResult resolvedUserResult = new ResolvedUserResult(ResolvedUserResult.UserResolvedStatus.FAIL);
-        when(FrameworkUtils.processMultiAttributeLoginIdentification(anyString(), anyString())).
-                thenReturn(resolvedUserResult);
+        when(FrameworkUtils.processLoginResolverIdentification(anyString(), anyString())).thenReturn(
+                resolvedUserResult);
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantIdOfUser(anyString())).thenReturn(1);
 
@@ -219,8 +219,8 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
         OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
         mockStatic(FrameworkUtils.class);
         ResolvedUserResult resolvedUserResult = new ResolvedUserResult(ResolvedUserResult.UserResolvedStatus.FAIL);
-        when(FrameworkUtils.processMultiAttributeLoginIdentification(anyString(), anyString())).
-                thenReturn(resolvedUserResult);
+        when(FrameworkUtils.processLoginResolverIdentification(anyString(), anyString())).thenReturn(
+                resolvedUserResult);
         if (e instanceof IdentityApplicationManagementException) {
             when(applicationManagementService
                     .getServiceProviderByClientId(anyString(), anyString(), anyString())).thenThrow(e);

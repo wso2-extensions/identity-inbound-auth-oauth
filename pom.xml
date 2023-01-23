@@ -531,7 +531,7 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
-                <artifactId>org.wso2.carbon.identity.multi.attribute.login.mgt</artifactId>
+                <artifactId>org.wso2.carbon.identity.login.resolver.mgt</artifactId>
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
             <!--Test Dependencies-->
@@ -839,7 +839,7 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.25.70</carbon.identity.framework.version>
+        <carbon.identity.framework.version>5.25.83-SNAPSHOT</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.17.5, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
