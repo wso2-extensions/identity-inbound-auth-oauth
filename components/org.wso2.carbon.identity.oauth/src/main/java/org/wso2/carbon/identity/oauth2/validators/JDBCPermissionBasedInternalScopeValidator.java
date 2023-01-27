@@ -242,7 +242,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
                     PERMISSION_ROOT)) {
                 return new ArrayList<>(allScopes);
             } else if (ArrayUtils.contains(allowedResourcesForUser, ADMIN_PERMISSION_ROOT)) {
-                return new ArrayList<>(getAdminAllowedScopes(allScopes, requestedScopes));
+                return new ArrayList<>(getAdminAllowedScopes(allScopes, requestedScopes, isSystemScope));
             }
 
             for (Scope scope : allScopes) {
@@ -423,7 +423,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
             username = UserCoreUtil.addDomainToName(username, authenticatedUser.getUserStoreDomain());
         }
         String[] allowedUIResourcesForUser =
-                authorizationManager.getAllowedUIResourcesForUser(username, "/");
+                authorizationManager.getAllowedUIResourcesForUser(username, ROOT);
         return (String[]) ArrayUtils.add(allowedUIResourcesForUser, EVERYONE_PERMISSION);
     }
 
@@ -494,11 +494,11 @@ public class JDBCPermissionBasedInternalScopeValidator {
         PrivilegedCarbonContext.endTenantFlow();
     }
 
-    private Set<Scope> getAdminAllowedScopes(Set<Scope> allScopes, String[] requestedScopes) {
+    private Set<Scope> getAdminAllowedScopes(Set<Scope> allScopes, String[] requestedScopes, boolean isSystemScope) {
 
         Set<Scope> adminAllowedScopes = new HashSet<>(allScopes);
         for (Scope scope : allScopes) {
-            if (!ArrayUtils.contains(requestedScopes, scope.getName())) {
+            if (!ArrayUtils.contains(requestedScopes, scope.getName()) && !isSystemScope) {
                 continue;
             }
             List<ScopeBinding> scopeBindings = scope.getScopeBindings();
