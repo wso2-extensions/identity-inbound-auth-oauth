@@ -241,8 +241,6 @@ public class JDBCPermissionBasedInternalScopeValidator {
             if (ArrayUtils.contains(allowedResourcesForUser, ROOT) || ArrayUtils.contains(allowedResourcesForUser,
                     PERMISSION_ROOT)) {
                 return new ArrayList<>(allScopes);
-            } else if (ArrayUtils.contains(allowedResourcesForUser, ADMIN_PERMISSION_ROOT)) {
-                return new ArrayList<>(getAdminAllowedScopes(allScopes, requestedScopes, isSystemScope));
             }
 
             for (Scope scope : allScopes) {
@@ -492,28 +490,5 @@ public class JDBCPermissionBasedInternalScopeValidator {
     private void endTenantFlow() {
 
         PrivilegedCarbonContext.endTenantFlow();
-    }
-
-    private Set<Scope> getAdminAllowedScopes(Set<Scope> allScopes, String[] requestedScopes, boolean isSystemScope) {
-
-        Set<Scope> adminAllowedScopes = new HashSet<>(allScopes);
-        for (Scope scope : allScopes) {
-            if (!ArrayUtils.contains(requestedScopes, scope.getName()) && !isSystemScope) {
-                continue;
-            }
-            List<ScopeBinding> scopeBindings = scope.getScopeBindings();
-            for (ScopeBinding scopeBinding : scopeBindings) {
-                if (PERMISSION_BINDING_TYPE.equalsIgnoreCase(scopeBinding.getBindingType())) {
-                    List<String> bindings = scopeBinding.getBindings();
-                    for (String binding : bindings) {
-                        if (!binding.startsWith(ADMIN_PERMISSION_ROOT) && !binding.equals(EVERYONE_PERMISSION)) {
-                            adminAllowedScopes.remove(scope);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        return adminAllowedScopes;
     }
 }
