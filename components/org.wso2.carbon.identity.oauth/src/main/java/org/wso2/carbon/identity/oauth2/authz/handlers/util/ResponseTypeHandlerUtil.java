@@ -49,14 +49,12 @@ import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
-import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
-import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
@@ -65,7 +63,6 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -193,7 +190,7 @@ public class ResponseTypeHandlerUtil {
                     }
 
                     // Return existing token if it is still valid.
-                    if (isAccessTokenValid(existingTokenBean)) {
+                    if (isAccessTokenValid(authorizationReqDTO, existingTokenBean)) {
                         return existingTokenBean;
                     }
                 }
@@ -815,12 +812,22 @@ public class ResponseTypeHandlerUtil {
         return refreshTokenValidityPeriodInMillis;
     }
 
-    private static boolean isAccessTokenValid(AccessTokenDO tokenBean) throws IdentityOAuth2Exception {
+    private static boolean isAccessTokenValid(OAuth2AuthorizeReqDTO authorizationReqDTO, AccessTokenDO tokenBean)
+            throws IdentityOAuth2Exception {
 
         if (tokenBean != null) {
             long expireTime = getAccessTokenExpiryTimeMillis(tokenBean);
             if (TOKEN_STATE_ACTIVE.equals(tokenBean.getTokenState()) && expireTime != 0) {
-                return true;
+                if(StringUtils.isNotEmpty(authorizationReqDTO.getSelectedAcr())
+                        && StringUtils.isNotEmpty(tokenBean.getAcr())) {
+                    if(!tokenBean.getAcr().equals(authorizationReqDTO.getSelectedAcr())) {
+                        return false;
+                    } else {
+                        return true;
+                    }
+                } else {
+                    return false;
+                }
             } else {
                 if (log.isDebugEnabled()) {
                     if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
