@@ -83,6 +83,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedEx
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
+import org.wso2.carbon.identity.oauth.endpoint.par.ParRequestData;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
@@ -103,6 +104,7 @@ import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
+import org.wso2.carbon.identity.oauth.endpoint.par.ParRequestUtil;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
@@ -161,6 +163,7 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TENANT_DOMAIN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
+import static org.wso2.carbon.identity.oauth.endpoint.par.RequestUriValidator.isValidRequestUri;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
@@ -290,6 +293,8 @@ public class OAuth2AuthzEndpoint {
         } catch (OAuthSystemException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
             return handleOAuthSystemException(oAuthMessage, e);
+        } catch (RequestObjectException e) {
+            throw new RuntimeException(e);
         } finally {
             handleCachePersistence(oAuthMessage);
             if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
@@ -339,7 +344,7 @@ public class OAuth2AuthzEndpoint {
         OAuth2Parameters oAuth2Parameters = getOAuth2ParamsFromOAuthMessage(oAuthMessage);
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(getErrorPageURL
                 (oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
-                        .INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request", null,
+                                .INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request", null,
                         oAuth2Parameters))).build();
     }
 
@@ -964,7 +969,8 @@ public class OAuth2AuthzEndpoint {
         OAuth2Parameters oAuth2Parameters = getOAuth2ParamsFromOAuthMessage(oAuthMessage);
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
                 getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
-                        .OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request", appName,
+                                .OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
+                                "Invalid authorization request", appName,
                         oAuth2Parameters)
         )).build();
     }
@@ -992,7 +998,8 @@ public class OAuth2AuthzEndpoint {
     }
 
     private void addToAuthenticationResultDetailsToOAuthMessage(OAuthMessage oAuthMessage,
-                AuthenticationResult authnResult, AuthenticatedUser authenticatedUser) {
+                                                                AuthenticationResult authnResult,
+                                                                AuthenticatedUser authenticatedUser) {
 
         oAuthMessage.getSessionDataCacheEntry().setLoggedInUser(authenticatedUser);
         oAuthMessage.getSessionDataCacheEntry().setAuthenticatedIdPs(authnResult.getAuthenticatedIdPs());
@@ -1025,7 +1032,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response handleInitialAuthorizationRequest(OAuthMessage oAuthMessage) throws OAuthSystemException,
-            OAuthProblemException, URISyntaxException, InvalidRequestParentException {
+            OAuthProblemException, URISyntaxException, InvalidRequestParentException, RequestObjectException {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             Map<String, Object> params = new HashMap<>();
@@ -1430,7 +1437,7 @@ public class OAuth2AuthzEndpoint {
 
         String[] scopes = authzRespDTO.getScope();
         if (scopes != null && scopes.length > 0) {
-            String scopeString =  StringUtils.join(scopes, " ");
+            String scopeString = StringUtils.join(scopes, " ");
             builder.setScope(scopeString.trim());
         }
     }
@@ -1528,7 +1535,7 @@ public class OAuth2AuthzEndpoint {
      * @throws OAuthProblemException OAuthProblemException
      */
     private String handleOAuthAuthorizationRequest(OAuthMessage oAuthMessage)
-            throws OAuthSystemException, OAuthProblemException, InvalidRequestException {
+            throws OAuthSystemException, OAuthProblemException, InvalidRequestException, RequestObjectException {
 
         OAuth2ClientValidationResponseDTO validationResponse = validateClient(oAuthMessage);
 
@@ -1642,7 +1649,7 @@ public class OAuth2AuthzEndpoint {
      * @param request http servlet request.
      * @return instance of OAuthAuthzRequest.
      * @throws OAuthProblemException thrown when initializing the OAuthAuthzRequestClass instance.
-     * @throws OAuthSystemException thrown when initializing the OAuthAuthzRequestClass instance.
+     * @throws OAuthSystemException  thrown when initializing the OAuthAuthzRequestClass instance.
      */
     private OAuthAuthzRequest getOAuthAuthzRequest(HttpServletRequest request)
             throws OAuthProblemException, OAuthSystemException {
@@ -1669,7 +1676,7 @@ public class OAuth2AuthzEndpoint {
                     oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
                 }
             } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
-                    NoSuchMethodException e) {
+                     NoSuchMethodException e) {
                 log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
                         "Hence initiating the default implementation");
                 oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
@@ -1884,11 +1891,13 @@ public class OAuth2AuthzEndpoint {
                     Map<String, Object> configs = new HashMap<>();
                     configs.put("isPkceMandatory", Boolean.toString(validationResponse.isPkceMandatory()));
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "Unsupported PKCE Challenge Method.", "validate-pkce",
+                            OAuthConstants.LogConstants.FAILED, "Unsupported PKCE Challenge Method.",
+                            "validate-pkce",
                             configs);
                 }
                 return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
-                        .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE, "Unsupported PKCE Challenge Method", null,
+                                .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE,
+                        "Unsupported PKCE Challenge Method", null,
                         oAuth2Parameters);
             }
         }
@@ -1962,14 +1971,35 @@ public class OAuth2AuthzEndpoint {
     private String populateOauthParameters(OAuth2Parameters params, OAuthMessage oAuthMessage,
                                            OAuth2ClientValidationResponseDTO validationResponse,
                                            OAuthAuthzRequest oauthRequest)
-            throws OAuthSystemException, InvalidRequestException {
+            throws OAuthSystemException, InvalidRequestException, RequestObjectException {
 
         String clientId = oAuthMessage.getClientId();
+
+//        if (oAuthMessage.isParRequest()) {
+//            Map<String, Map<String, String[]>> parRequests = ParRequestData.getRequests();
+//            String requestUri = oAuthMessage.getRequest_uri();
+//
+//            if (isValidRequestUri(requestUri)) {
+//                params.setClientId(clientId);
+//                params.setRedirectURI(parRequests.get(requestUri).get("redirect_uri")[0]);
+//                params.setResponseType(parRequests.get(requestUri).get("response_type")[0]);
+//                params.setScopes(new HashSet<String>(Arrays.asList(parRequests.get(requestUri).get("scope"))));
+//            }
+//
+//        } else {
+//            params.setClientId(clientId);
+//            params.setRedirectURI(validationResponse.getCallbackURL());
+//            params.setResponseType(oauthRequest.getResponseType());
+//            params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
+//            params.setScopes(oauthRequest.getScopes());
+//        }
+
         params.setClientId(clientId);
         params.setRedirectURI(validationResponse.getCallbackURL());
         params.setResponseType(oauthRequest.getResponseType());
         params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
         params.setScopes(oauthRequest.getScopes());
+
         if (params.getScopes() == null) { // to avoid null pointers
             Set<String> scopeSet = new HashSet<String>();
             scopeSet.add("");
@@ -2009,6 +2039,8 @@ public class OAuth2AuthzEndpoint {
 
         handleMaxAgeParameter(oauthRequest, params);
 
+
+
         /*
             OIDC Request object will supersede parameters sent in the OAuth Authorization request. So handling the
             OIDC Request object needs to done after processing all request parameters.
@@ -2031,7 +2063,13 @@ public class OAuth2AuthzEndpoint {
                             null, params);
                 }
             }
+        } else {
+            handleParRequest(oAuthMessage, oauthRequest, params);
         }
+        //else if request is request with a request_uri follow par request flow
+//        if (isRequestUri(oauthRequest)) {
+//            handleParRequest(oAuthMessage, oauthRequest, params);
+//        }
 
         if (isPkceSupportEnabled()) {
             String pkceChallengeCode = getPkceCodeChallenge(oAuthMessage, params);
@@ -2122,6 +2160,26 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
+    private void handleParRequest(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
+                                  OAuth2Parameters parameters) throws RequestObjectException, InvalidRequestException {
+
+        String requestObjValue = null;
+        if (isRequestUri(oauthRequest)) {
+            requestObjValue = oauthRequest.getParam(REQUEST_URI);
+            // TODO:
+//        } else if (isRequestParameter(oauthRequest)) {
+//            requestObjValue = oauthRequest.getParam(REQUEST);
+        }
+
+        if (StringUtils.isNotEmpty(requestObjValue)) {
+            handleParRequestObject(oAuthMessage, oauthRequest, parameters);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Authorization Request does not contain a Request Object or Request Object reference.");
+            }
+        }
+    }
+
     private void validateRequestObjectParams(OAuthAuthzRequest oauthRequest) throws RequestObjectException {
 
         // With in the same request it can not be used both request parameter and request_uri parameter.
@@ -2153,6 +2211,9 @@ public class OAuth2AuthzEndpoint {
               When the request parameter is used, the OpenID Connect request parameter values contained in the JWT
               supersede those passed using the OAuth 2.0 request syntax
              */
+
+        //--->
+
         overrideAuthzParameters(oAuthMessage, parameters, oauthRequest.getParam(REQUEST),
                 oauthRequest.getParam(REQUEST_URI), requestObject);
 
@@ -2167,6 +2228,38 @@ public class OAuth2AuthzEndpoint {
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
         persistRequestObject(parameters, requestObject);
+    }
+
+    private void handleParRequestObject(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
+                                     OAuth2Parameters parameters)
+            throws RequestObjectException, InvalidRequestException {
+
+        RequestObject requestObject = ParRequestUtil.buildRequest(oauthRequest, parameters);
+        if (requestObject == null) {
+            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Unable to build a valid Request " +
+                    "Object from the authorization request.");
+        }
+            /*
+              When the request parameter is used, the OpenID Connect request parameter values contained in the JWT
+              supersede those passed using the OAuth 2.0 request syntax
+             */
+
+        //--->
+
+//        overrideAuthzParameters(oAuthMessage, parameters, oauthRequest.getParam(REQUEST),
+//                oauthRequest.getParam(REQUEST_URI), requestObject);
+
+        // If the redirect uri was not given in auth request the registered redirect uri will be available here,
+        // so validating if the registered redirect uri is a single uri that can be properly redirected.
+        if (StringUtils.isBlank(parameters.getRedirectURI()) ||
+                StringUtils.startsWith(parameters.getRedirectURI(), REGEX_PATTERN)) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "Redirect URI is not present in the authorization request.",
+                    "validate-input-parameters", null);
+            throw new InvalidRequestException("Redirect URI is not present in the authorization request.",
+                    OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
+        }
+        //persistRequestObject(parameters, requestObject);
     }
 
     private void overrideAuthzParameters(OAuthMessage oAuthMessage, OAuth2Parameters params,
@@ -2674,12 +2767,12 @@ public class OAuth2AuthzEndpoint {
     /**
      * Filter requested claims based on OIDC claims and return the claims which includes in OIDC.
      *
-     * @param claimsForApproval         Consent required claims.
-     * @param oauth2Params              OAuth parameters.
-     * @param spTenantDomain            Tenant domain.
-     * @return                          Requested OIDC claim list.
-     * @throws RequestObjectException   If an error occurred while getting essential claims for the session data key.
-     * @throws ClaimMetadataException   If an error occurred while getting claim mappings.
+     * @param claimsForApproval Consent required claims.
+     * @param oauth2Params      OAuth parameters.
+     * @param spTenantDomain    Tenant domain.
+     * @return Requested OIDC claim list.
+     * @throws RequestObjectException If an error occurred while getting essential claims for the session data key.
+     * @throws ClaimMetadataException If an error occurred while getting claim mappings.
      */
     private List<ClaimMetaData> getRequestedOidcClaimsList(ConsentClaimsData claimsForApproval,
                                                            OAuth2Parameters oauth2Params, String spTenantDomain)
@@ -3262,7 +3355,7 @@ public class OAuth2AuthzEndpoint {
     private String manageOIDCSessionState(OAuthMessage oAuthMessage,
                                           OIDCSessionState sessionStateObj, OAuth2Parameters oAuth2Parameters,
                                           String authenticatedUser, String redirectURL, SessionDataCacheEntry
-                                                  sessionDataCacheEntry)  {
+                                                  sessionDataCacheEntry) {
 
         HttpServletRequest request = oAuthMessage.getRequest();
         HttpServletResponse response = oAuthMessage.getResponse();
@@ -3399,7 +3492,7 @@ public class OAuth2AuthzEndpoint {
     /**
      * Gets the last authenticated value from the commonAuthId cookie
      *
-     * @param cookie CommonAuthId cookie
+     * @param cookie            CommonAuthId cookie
      * @param loginTenantDomain Login tenant domain
      * @return the last authenticated timestamp
      */
@@ -3467,6 +3560,7 @@ public class OAuth2AuthzEndpoint {
 
     /**
      * Store sessionID using the redirect URl.
+     *
      * @param oAuthMessage
      * @param sessionState
      * @param redirectURL
@@ -3574,6 +3668,7 @@ public class OAuth2AuthzEndpoint {
 
     /**
      * Return OAuth2Parameters retrieved from OAuthMessage.
+     *
      * @param oAuthMessage
      * @return OAuth2Parameters
      */

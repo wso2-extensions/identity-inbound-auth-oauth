@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -16,21 +16,22 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.par.api;
+package org.wso2.carbon.identity.oauth.par.exceptions;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
 /**
- * Provides authentication services.
+ * Client exception from par core component.
  */
-public class ParAuthServiceImpl implements ParAuthService {
+public class ParClientException extends IdentityOAuth2Exception {
 
-    private static Log log = LogFactory.getLog(ParAuthServiceImpl.class);
+    public ParClientException(String errorDescription, Throwable cause) {
 
-    @Override
-    public String par() {
+        super(errorDescription, cause);
+    }
 
-        return null;
+    public ParClientException(String errorDescription) {
+
+        super(errorDescription);
     }
 }
