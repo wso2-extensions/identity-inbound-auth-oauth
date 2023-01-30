@@ -462,7 +462,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSetBuilder.claim(SCOPE, scope);
         }
         if (OAuth2ServiceComponentHolder.isAcrColumnEnabled()) {
-            String acr = getAcr(authAuthzReqMessageContext, tokenReqMessageContext);
+            String acr = null;
+            if (tokenReqMessageContext != null && isRefreshTokenGrant(tokenReqMessageContext)) {
+                acr = tokenReqMessageContext.getAcr();
+            } else {
+                acr = getAcr(authAuthzReqMessageContext, tokenReqMessageContext);
+            }
             if (StringUtils.isNotEmpty(acr)) {
                 jwtClaimsSetBuilder.claim(OAuth2Util.ACR, acr);
             }
