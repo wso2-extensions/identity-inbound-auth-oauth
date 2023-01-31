@@ -818,9 +818,9 @@ public class ResponseTypeHandlerUtil {
         if (tokenBean != null) {
             long expireTime = getAccessTokenExpiryTimeMillis(tokenBean);
             if (TOKEN_STATE_ACTIVE.equals(tokenBean.getTokenState()) && expireTime != 0) {
-                if(StringUtils.isNotEmpty(authorizationReqDTO.getSelectedAcr())
+                if (StringUtils.isNotEmpty(authorizationReqDTO.getSelectedAcr())
                         && StringUtils.isNotEmpty(tokenBean.getAcr())) {
-                    if(!tokenBean.getAcr().equals(authorizationReqDTO.getSelectedAcr())) {
+                    if (!tokenBean.getAcr().equals(authorizationReqDTO.getSelectedAcr())) {
                         return false;
                     } else {
                         return true;
