@@ -102,7 +102,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
         if (ArrayUtils.isEmpty(requestedScopes)) {
             return requestedScopes;
         }
-        List<Scope> userAllowedScopes = getUserAllowedScopes(tokReqMsgCtx.getAuthorizedUser(), requestedScopes,
+        Set<Scope> userAllowedScopes = getUserAllowedScopes(tokReqMsgCtx.getAuthorizedUser(), requestedScopes,
                 tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
         String[] userAllowedScopesAsArray = getScopeNames(userAllowedScopes);
         return userAllowedScopesAsArray;
@@ -135,25 +135,25 @@ public class JDBCPermissionBasedInternalScopeValidator {
      */
     public String[] validateScope(String[] requestedScopes, AuthenticatedUser authenticatedUser, String clientId) {
 
-        List<Scope> userAllowedScopes = getUserAllowedScopes(authenticatedUser, requestedScopes, clientId);
+        Set<Scope> userAllowedScopes = getUserAllowedScopes(authenticatedUser, requestedScopes, clientId);
         String[] userAllowedScopesAsArray = getScopeNames(userAllowedScopes);
         return userAllowedScopesAsArray;
     }
 
-    private String[] getScopeNames(List<Scope> scopes) {
+    private String[] getScopeNames(Set<Scope> scopes) {
 
         return scopes.stream()
                 .map(Scope::getName).toArray(String[]::new);
     }
 
-    private List<Scope> getUserAllowedScopes(AuthenticatedUser authenticatedUser, String[] requestedScopes,
+    private Set<Scope> getUserAllowedScopes(AuthenticatedUser authenticatedUser, String[] requestedScopes,
                                              String clientId) {
 
-        List<Scope> userAllowedScopes = new ArrayList<>();
+        Set<Scope> userAllowedScopes = new HashSet<>();
 
         try {
             if (requestedScopes == null) {
-                return new ArrayList<>();
+                return new HashSet<>();
             }
             String tenantDomain = authenticatedUser.getTenantDomain();
             boolean isFederatedRoleBasedAuthzEnabled = false;
@@ -168,8 +168,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
 
             Set<Scope> allScopes = getScopesOfPermissionType(tenantId);
             if (ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
-                List<Scope> allScopesList = new ArrayList<>(allScopes);
-                requestedScopes = getScopeNames(allScopesList);
+                requestedScopes = getScopeNames(allScopes);
             } else {
                 // filter out the internal scopes
                 requestedScopes = Oauth2ScopeUtils.getRequestedScopes(requestedScopes);
