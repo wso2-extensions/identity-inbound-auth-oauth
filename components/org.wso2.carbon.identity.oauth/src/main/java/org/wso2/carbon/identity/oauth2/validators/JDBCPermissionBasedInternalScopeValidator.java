@@ -167,14 +167,14 @@ public class JDBCPermissionBasedInternalScopeValidator {
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
 
             Set<Scope> allScopes = getScopesOfPermissionType(tenantId);
-            List<Scope> allScopesList = new ArrayList<>(allScopes);
-
             if (ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
+                List<Scope> allScopesList = new ArrayList<>(allScopes);
                 requestedScopes = getScopeNames(allScopesList);
             } else {
                 // filter out the internal scopes
                 requestedScopes = Oauth2ScopeUtils.getRequestedScopes(requestedScopes);
             }
+            Set<String> requestedScopesSet = new HashSet<>(Arrays.asList(requestedScopes));
 
             startTenantFlow(tenantDomain, tenantId);
             AuthorizationManager authorizationManager = OAuthComponentServiceHolder.getInstance().getRealmService()
@@ -224,7 +224,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
             }
 
             for (Scope scope : allScopes) {
-                if (!ArrayUtils.contains(requestedScopes, scope.getName())) {
+                if (!requestedScopesSet.contains(scope.getName())) {
                     continue;
                 }
                 List<ScopeBinding> bindings = scope.getScopeBindings();
@@ -234,7 +234,9 @@ public class JDBCPermissionBasedInternalScopeValidator {
                         for (String binding : scopeBinding.getBindings()) {
                             boolean isAllowed = false;
                             for (String allowedScope : allowedResourcesForUser) {
-                                if (binding.startsWith(allowedScope)) {
+                                // Append "/" for both variables to avoid making it true for cases such as
+                                // binding = "/protected-a/scope" and allowedScope = "/protected"
+                                if ((binding + "/").startsWith(allowedScope + "/")) {
                                     isAllowed = true;
                                     break;
                                 }
