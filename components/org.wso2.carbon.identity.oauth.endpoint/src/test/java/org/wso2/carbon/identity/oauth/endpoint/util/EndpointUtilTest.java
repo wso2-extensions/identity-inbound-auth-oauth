@@ -766,8 +766,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 thenReturn(USER_INFO_CLAIM_DIALECT);
     }
 
-    private List<Scope> getScopeList() {
-        List<Scope> scopeList = new ArrayList<>();
+    private Set<Scope> getScopeList() {
+        Set<Scope> scopeList = new HashSet<>();
         // Add some sample scopes.
         scopeList.add(new Scope("internal_login", "Login", "description1"));
         scopeList.add(new Scope("internal_config_mgt_update", "Update Configs", "description2"));

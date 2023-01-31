@@ -97,26 +97,15 @@ public class JDBCPermissionBasedInternalScopeValidator {
      */
     public String[] validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) {
 
-        // filter internal scopes
-        String[] requestedScopes = Oauth2ScopeUtils.getRequestedScopes(tokReqMsgCtx.getScope());
+        String[] requestedScopes = tokReqMsgCtx.getScope();
         //If the token is not requested for specific scopes, return true
         if (ArrayUtils.isEmpty(requestedScopes)) {
             return requestedScopes;
         }
-        List<Scope> userAllowedScopes = getUserAllowedScopes(tokReqMsgCtx.getAuthorizedUser(), requestedScopes,
+        Set<Scope> userAllowedScopes = getUserAllowedScopes(tokReqMsgCtx.getAuthorizedUser(), requestedScopes,
                 tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
-        String[] userAllowedScopesAsArray = getScopes(userAllowedScopes);
-        if (ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
-            return userAllowedScopesAsArray;
-        }
-
-        List<String> scopesToRespond = new ArrayList<>();
-        for (String scope : requestedScopes) {
-            if (ArrayUtils.contains(userAllowedScopesAsArray, scope)) {
-                scopesToRespond.add(scope);
-            }
-        }
-        return scopesToRespond.toArray(new String[0]);
+        String[] userAllowedScopesAsArray = getScopeNames(userAllowedScopes);
+        return userAllowedScopesAsArray;
     }
 
     /**
@@ -127,9 +116,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
      */
     public String[] validateScope(OAuthAuthzReqMessageContext authzReqMessageContext) {
 
-        // Remove openid scope from the list if available
-        String[] requestedScopes = Oauth2ScopeUtils.getRequestedScopes(authzReqMessageContext.getAuthorizationReqDTO
-                ().getScopes());
+        String[] requestedScopes = authzReqMessageContext.getAuthorizationReqDTO().getScopes();
         //If the token is not requested for specific scopes, return true
         if (ArrayUtils.isEmpty(requestedScopes)) {
             return requestedScopes;
@@ -148,38 +135,26 @@ public class JDBCPermissionBasedInternalScopeValidator {
      */
     public String[] validateScope(String[] requestedScopes, AuthenticatedUser authenticatedUser, String clientId) {
 
-        List<Scope> userAllowedScopes = getUserAllowedScopes(authenticatedUser, requestedScopes, clientId);
-
-        String[] userAllowedScopesAsArray = getScopes(userAllowedScopes);
-        if (ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
-            return userAllowedScopesAsArray;
-        }
-
-        List<String> scopesToRespond = new ArrayList<>();
-        for (String scope : requestedScopes) {
-            if (ArrayUtils.contains(userAllowedScopesAsArray, scope)) {
-                scopesToRespond.add(scope);
-            }
-        }
-        return scopesToRespond.toArray(new String[0]);
+        Set<Scope> userAllowedScopes = getUserAllowedScopes(authenticatedUser, requestedScopes, clientId);
+        String[] userAllowedScopesAsArray = getScopeNames(userAllowedScopes);
+        return userAllowedScopesAsArray;
     }
 
-    private String[] getScopes(List<Scope> scopes) {
+    private String[] getScopeNames(Set<Scope> scopes) {
 
         return scopes.stream()
                 .map(Scope::getName).toArray(String[]::new);
     }
 
-    private List<Scope> getUserAllowedScopes(AuthenticatedUser authenticatedUser, String[] requestedScopes,
+    private Set<Scope> getUserAllowedScopes(AuthenticatedUser authenticatedUser, String[] requestedScopes,
                                              String clientId) {
 
-        List<Scope> userAllowedScopes = new ArrayList<>();
+        Set<Scope> userAllowedScopes = new HashSet<>();
 
         try {
             if (requestedScopes == null) {
-                return new ArrayList<>();
+                return new HashSet<>();
             }
-            boolean isSystemScope = ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE);
             String tenantDomain = authenticatedUser.getTenantDomain();
             boolean isFederatedRoleBasedAuthzEnabled = false;
             if (authenticatedUser.isFederatedUser()) {
@@ -190,6 +165,16 @@ public class JDBCPermissionBasedInternalScopeValidator {
                 }
             }
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+
+            Set<Scope> allScopes = getScopesOfPermissionType(tenantId);
+            if (ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
+                requestedScopes = getScopeNames(allScopes);
+            } else {
+                // filter out the internal scopes
+                requestedScopes = Oauth2ScopeUtils.getRequestedScopes(requestedScopes);
+            }
+            Set<String> requestedScopesSet = new HashSet<>(Arrays.asList(requestedScopes));
+
             startTenantFlow(tenantDomain, tenantId);
             AuthorizationManager authorizationManager = OAuthComponentServiceHolder.getInstance().getRealmService()
                     .getTenantUserRealm(tenantId).getAuthorizationManager();
@@ -237,16 +222,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
                 }
             }
 
-            Set<Scope> allScopes = getScopesOfPermissionType(tenantId);
-            if (ArrayUtils.contains(allowedResourcesForUser, ROOT) || ArrayUtils.contains(allowedResourcesForUser,
-                    PERMISSION_ROOT)) {
-                return new ArrayList<>(allScopes);
-            } else if (ArrayUtils.contains(allowedResourcesForUser, ADMIN_PERMISSION_ROOT)) {
-                return new ArrayList<>(getAdminAllowedScopes(allScopes, requestedScopes));
-            }
-
             for (Scope scope : allScopes) {
-                if (!isSystemScope && !ArrayUtils.contains(requestedScopes, scope.getName())) {
+                if (!requestedScopesSet.contains(scope.getName())) {
                     continue;
                 }
                 List<ScopeBinding> bindings = scope.getScopeBindings();
@@ -256,6 +233,8 @@ public class JDBCPermissionBasedInternalScopeValidator {
                         for (String binding : scopeBinding.getBindings()) {
                             boolean isAllowed = false;
                             for (String allowedScope : allowedResourcesForUser) {
+                                // Append "/" for both variables to avoid making it true for cases such as
+                                // binding = "/protected-a/scope" and allowedScope = "/protected"
                                 if ((binding + "/").startsWith(allowedScope + "/")) {
                                     isAllowed = true;
                                     break;
@@ -423,7 +402,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
             username = UserCoreUtil.addDomainToName(username, authenticatedUser.getUserStoreDomain());
         }
         String[] allowedUIResourcesForUser =
-                authorizationManager.getAllowedUIResourcesForUser(username, "/");
+                authorizationManager.getAllowedUIResourcesForUser(username, ROOT);
         return (String[]) ArrayUtils.add(allowedUIResourcesForUser, EVERYONE_PERMISSION);
     }
 
@@ -492,28 +471,5 @@ public class JDBCPermissionBasedInternalScopeValidator {
     private void endTenantFlow() {
 
         PrivilegedCarbonContext.endTenantFlow();
-    }
-
-    private Set<Scope> getAdminAllowedScopes(Set<Scope> allScopes, String[] requestedScopes) {
-
-        Set<Scope> adminAllowedScopes = new HashSet<>(allScopes);
-        for (Scope scope : allScopes) {
-            if (!ArrayUtils.contains(requestedScopes, scope.getName())) {
-                continue;
-            }
-            List<ScopeBinding> scopeBindings = scope.getScopeBindings();
-            for (ScopeBinding scopeBinding : scopeBindings) {
-                if (PERMISSION_BINDING_TYPE.equalsIgnoreCase(scopeBinding.getBindingType())) {
-                    List<String> bindings = scopeBinding.getBindings();
-                    for (String binding : bindings) {
-                        if (!binding.startsWith(ADMIN_PERMISSION_ROOT) && !binding.equals(EVERYONE_PERMISSION)) {
-                            adminAllowedScopes.remove(scope);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        return adminAllowedScopes;
     }
 }
