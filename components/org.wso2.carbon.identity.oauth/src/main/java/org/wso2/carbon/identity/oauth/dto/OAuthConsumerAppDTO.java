@@ -192,7 +192,13 @@ public class OAuthConsumerAppDTO {
 
         if (audiences != null) {
             if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                /*
+                 * This is done to ensure that in case the user does not disable legacy audiences and continues to use
+                 * the previous version, but at a later stage
+                 * */
                 this.audiences = audiences;
+                this.idTokenAudiences = audiences;
+                this.accessTokenAudiences = audiences;
             } else {
                 this.setIdTokenAudiences(audiences);
             }
@@ -200,14 +206,27 @@ public class OAuthConsumerAppDTO {
     }
 
     public String[] getIdTokenAudiences() {
-
-        return idTokenAudiences;
+        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+            return audiences;
+        } else {
+            return idTokenAudiences;
+        }
     }
 
     public void setIdTokenAudiences(String[] idTokenAudiences) {
 
         if (idTokenAudiences != null) {
-            this.idTokenAudiences = idTokenAudiences;
+            if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                /*
+                * This is done to ensure that in case the user does not disable legacy audiences and continues to use
+                * the previous version, but at a later stage
+                * */
+                this.audiences = idTokenAudiences;
+                this.idTokenAudiences = idTokenAudiences;
+                this.accessTokenAudiences = idTokenAudiences;
+            } else {
+                this.idTokenAudiences = idTokenAudiences;
+            }
         }
     }
 
