@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -65,6 +66,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -98,6 +100,7 @@ public class AccessTokenIssuer {
     private static final Log log = LogFactory.getLog(AccessTokenIssuer.class);
     private Map<String, AuthorizationGrantHandler> authzGrantHandlers;
     public static final String OAUTH_APP_DO = "OAuthAppDO";
+    private static final String INBOUND_AUTH2_TYPE = "oauth2";
 
     /**
      * Private constructor which will not allow to create objects of this class from outside
@@ -152,6 +155,7 @@ public class AccessTokenIssuer {
         AuthorizationGrantHandler authzGrantHandler = authzGrantHandlers.get(grantType);
 
         OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
+
         boolean isRefreshRequest = GrantType.REFRESH_TOKEN.toString().equals(grantType);
 
         triggerPreListeners(tokenReqDTO, tokReqMsgCtx, isRefreshRequest);
@@ -264,6 +268,13 @@ public class AccessTokenIssuer {
         validateRequestTenantDomain(tenantDomainOfApp, tokenReqDTO);
 
         tokenReqDTO.setTenantDomain(tenantDomainOfApp);
+
+        //set application id.
+        tokReqMsgCtx.setAppId(getApplicationId(tokenReqDTO.getClientId(),
+                tokenReqDTO.getTenantDomain()));
+
+        //set organization id.
+        tokReqMsgCtx.setOrgId(getOrganizationID(tokenReqDTO.getTenantDomain()));
 
         tokReqMsgCtx.addProperty(OAUTH_APP_DO, oAuthAppDO);
 
@@ -1008,5 +1019,29 @@ public class AccessTokenIssuer {
     private static boolean isNotActiveState(String appState) {
 
         return !APP_STATE_ACTIVE.equalsIgnoreCase(appState);
+    }
+
+    private String getApplicationId(String clientId, String tenantName) throws IdentityOAuth2Exception {
+
+        try {
+            return OAuth2ServiceComponentHolder.getApplicationMgtService()
+                    .getApplicationResourceIDByInboundKey(clientId, INBOUND_AUTH2_TYPE, tenantName);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving application resource id for client : " +
+                    clientId + " tenant : " + tenantName, e);
+        }
+    }
+
+    private String getOrganizationID(String tenantDomain) {
+
+        String orgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
+        if (!StringUtils.isEmpty(orgId)) {
+            return orgId;
+        }
+        try {
+            return OAuth2ServiceComponentHolder.getOrganizationManagerService().resolveOrganizationId(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            return orgId;
+        }
     }
 }

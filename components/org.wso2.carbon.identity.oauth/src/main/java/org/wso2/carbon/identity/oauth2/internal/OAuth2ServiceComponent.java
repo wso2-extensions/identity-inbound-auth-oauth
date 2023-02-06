@@ -72,6 +72,7 @@ import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.organization.management.role.management.service.RoleManager;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.idp.mgt.IdpManager;
@@ -631,6 +632,27 @@ public class OAuth2ServiceComponent {
             log.debug("Unset organization user resident resolver service.");
         }
         OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(null);
+    }
+
+    @Reference(name = "identity.organization.management.component",
+            service = OrganizationManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationManager")
+    protected void setOrganizationManager(OrganizationManager organizationManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the organization manager service.");
+        }
+        OAuth2ServiceComponentHolder.setOrganizationManagerService(organizationManager);
+    }
+
+    protected void unsetOrganizationManager(OrganizationManager organizationManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unset the organization manager service.");
+        }
+        OAuth2ServiceComponentHolder.setOrganizationManagerService(null);
     }
 
     private static void loadScopeConfigFile() {

@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 
 import static org.mockito.Matchers.anyString;
@@ -47,17 +48,23 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
     private AuthorizationHandlerManager authorizationHandlerManager;
     private OAuth2AuthorizeReqDTO authzReqDTO = new OAuth2AuthorizeReqDTO();
     private ServiceProvider serviceProvider;
+    private OrganizationManager organizationManager;
 
     @BeforeClass
     public void setUp() throws Exception {
 
         applicationManagementService = mock(ApplicationManagementService.class);
         OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
+        organizationManager = mock(OrganizationManager.class);
+        OAuth2ServiceComponentHolder.setOrganizationManagerService(organizationManager);
         serviceProvider = mock(ServiceProvider.class);
         authzReqDTO.setTenantDomain(TestConstants.TENANT_DOMAIN);
         when(serviceProvider.isManagementApp()).thenReturn(true);
         when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
                 .thenReturn(serviceProvider);
+        when(applicationManagementService.getApplicationResourceIDByInboundKey(anyString(), anyString(), anyString()))
+                .thenReturn("test-appId");
+        when(organizationManager.resolveTenantDomain(anyString())).thenReturn("test-orgId");
         authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
     }
 

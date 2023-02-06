@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.organization.management.role.management.service.RoleManager;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
@@ -70,6 +71,7 @@ public class OAuth2ServiceComponentHolder {
     private List<ScopeDTO> oidcScopesClaims = new ArrayList<>();
     private List<Scope> oauthScopeBinding = new ArrayList<>();
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
+    private static OrganizationManager organizationManager;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -378,5 +380,15 @@ public class OAuth2ServiceComponentHolder {
             OrganizationUserResidentResolverService organizationUserResidentResolverService) {
 
         OAuth2ServiceComponentHolder.organizationUserResidentResolverService = organizationUserResidentResolverService;
+    }
+
+    public static OrganizationManager getOrganizationManagerService() {
+
+        return organizationManager;
+    }
+
+    public static void setOrganizationManagerService(OrganizationManager organizationManager) {
+
+        OAuth2ServiceComponentHolder.organizationManager = organizationManager;
     }
 }

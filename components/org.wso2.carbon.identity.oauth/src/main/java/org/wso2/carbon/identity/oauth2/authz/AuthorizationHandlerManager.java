@@ -22,6 +22,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -45,6 +46,7 @@ import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.util.ArrayList;
@@ -68,6 +70,7 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 public class AuthorizationHandlerManager {
 
     public static final String OAUTH_APP_PROPERTY = "OAuthAppDO";
+    private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private static final Log log = LogFactory.getLog(AuthorizationHandlerManager.class);
 
     private static AuthorizationHandlerManager instance;
@@ -576,6 +579,13 @@ public class AuthorizationHandlerManager {
         // load requested scopes
         authorizeRequestMessageContext.setRequestedScopes(authzReqDTO.getScopes());
 
+        //set application id.
+        authorizeRequestMessageContext.setAppId(getApplicationId(authzReqDTO.getConsumerKey(),
+                authzReqDTO.getTenantDomain()));
+
+        //set organization id.
+        authorizeRequestMessageContext.setOrgId(getOrganizationID(authzReqDTO.getTenantDomain()));
+
         return authorizeRequestMessageContext;
     }
 
@@ -647,5 +657,29 @@ public class AuthorizationHandlerManager {
 
         ResponseTypeHandler responseTypeHandler = responseHandlers.get(oAuth2Parameters.getResponseType());
         return responseTypeHandler.handleAuthenticationFailure(oAuth2Parameters);
+    }
+
+    private String getApplicationId(String clientId, String tenantName) throws IdentityOAuth2Exception {
+
+        try {
+            return OAuth2ServiceComponentHolder.getApplicationMgtService()
+                    .getApplicationResourceIDByInboundKey(clientId, INBOUND_AUTH2_TYPE, tenantName);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving application resource id for client : " +
+                    clientId + " tenant : " + tenantName, e);
+        }
+    }
+
+    private String getOrganizationID(String tenantDomain) {
+
+        String orgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
+        if (!StringUtils.isEmpty(orgId)) {
+            return orgId;
+        }
+        try {
+            return OAuth2ServiceComponentHolder.getOrganizationManagerService().resolveOrganizationId(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            return orgId;
+        }
     }
 }
