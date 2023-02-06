@@ -54,6 +54,26 @@ public class OAuthTokenReqMessageContext {
 
     private boolean isConsentedToken;
 
+    private String appId;
+
+    private String orgId;
+
+    public String getOrgId() {
+        return orgId;
+    }
+
+    public void setOrgId(String orgId) {
+        this.orgId = orgId;
+    }
+
+    public String getAppId() {
+        return appId;
+    }
+
+    public void setAppId(String appId) {
+        this.appId = appId;
+    }
+
     public OAuthTokenReqMessageContext(OAuth2AccessTokenReqDTO oauth2AccessTokenReqDTO) {
 
         this.oauth2AccessTokenReqDTO = oauth2AccessTokenReqDTO;
