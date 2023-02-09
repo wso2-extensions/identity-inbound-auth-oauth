@@ -1776,8 +1776,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 getDeclaredMethod("getAuthenticatedTimeFromCommonAuthCookieValue", String.class, String.class);
         getAuthenticatedTimeFromCommonAuthCookieValue.setAccessible(true);
         long timestamp = (long) getAuthenticatedTimeFromCommonAuthCookieValue.invoke(authzEndpointObject,
-                commonAuthCookie.getValue(),
-                "abc");
+                commonAuthCookie.getValue(), "abc");
 
         if (sessionContext == null) {
             assertEquals(timestamp, 0, "Authenticated time should be 0 when session context is null");

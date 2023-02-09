@@ -709,10 +709,11 @@ public class OAuth2AuthzEndpoint {
 
     /**
      * Retrieves the value of the commonAuthId cookie either from request cookies if available or
-     * from the request attribute where the response header contains commonAuthId value.
+     * from the request attribute when the response header contains commonAuthId value.
      *
      * @param request HttpServletRequest An authorization or authentication request.
-     * @return String commonAuthId value.
+     * @return String commonAuthId value. Returns null when cookie value is not found at request
+     * cookies or the request attributes.
      */
     private String getCommonAuthCookieString(HttpServletRequest request) {
 
@@ -3474,7 +3475,7 @@ public class OAuth2AuthzEndpoint {
      * Returns the SessionContext associated with the cookie value, if there is a one.
      * @param cookieValue String value of the cookie of commonAuthId.
      * @param loginTenantDomain Login tenant domain.
-     * @return he associate SessionContext or null.
+     * @return The associate SessionContext or null.
      */
     private SessionContext getSessionContext(String cookieValue, String loginTenantDomain) {
 
@@ -3496,7 +3497,9 @@ public class OAuth2AuthzEndpoint {
 
         long authTime = 0;
         SessionContext sessionContext = getSessionContext(cookieValue, loginTenantDomain);
-        if (sessionContext != null) {
+        if (sessionContext == null) {
+            return authTime;
+        }
             if (sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
                 authTime = Long.parseLong(
                         sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP).toString());
@@ -3504,7 +3507,6 @@ public class OAuth2AuthzEndpoint {
                 authTime = Long.parseLong(
                         sessionContext.getProperty(FrameworkConstants.CREATED_TIMESTAMP).toString());
             }
-        }
         return authTime;
     }
 
