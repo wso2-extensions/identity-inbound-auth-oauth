@@ -490,8 +490,14 @@ public class AccessTokenIssuer {
 
         OAuth2AccessTokenReqDTO tokenReqDTO = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         String grantType = tokenReqDTO.getGrantType();
-        // If the grant type is code then we need to skip the scope validation altogether.
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
+            /*
+             In the authorization code flow, we have already completed scope validation during the /authorize call and
+             issued an authorization code with the authorized scopes. During the token flow we only consider the
+             scopes bound to the issued authorization code and simply ignore any 'scope' parameter sent in the
+             subsequent token request. Therefore, it does not make sense to go through scope validation again as
+             there won't be any new scopes to validate.
+            */
             if (log.isDebugEnabled()) {
                 log.debug("Skipping scope validation for authorization code flow as scope validation has already " +
                         "happened in the authorize flow.");
