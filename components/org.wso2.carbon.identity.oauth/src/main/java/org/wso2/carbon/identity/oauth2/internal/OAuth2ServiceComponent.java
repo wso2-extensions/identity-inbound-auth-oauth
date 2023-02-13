@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -775,5 +776,28 @@ public class OAuth2ServiceComponent {
             }
         }
         return permissions;
+    }
+
+    @Reference(
+            name = "org.wso2.carbon.identity.event.services. ",
+            service = IdentityEventService.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIdentityEventService"
+    )
+    protected void setIdentityEventService(IdentityEventService identityEventService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("IdentityEventService set in OpenIDConnectServiceComponent bundle");
+        }
+        OAuth2ServiceComponentHolder.setIdentityEventService(identityEventService);
+    }
+
+    protected void unsetIdentityEventService(IdentityEventService identityEventService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("IdentityEventService unset in OpenIDConnectServiceComponent bundle");
+        }
+        OAuth2ServiceComponentHolder.setIdentityEventService(null);
     }
 }

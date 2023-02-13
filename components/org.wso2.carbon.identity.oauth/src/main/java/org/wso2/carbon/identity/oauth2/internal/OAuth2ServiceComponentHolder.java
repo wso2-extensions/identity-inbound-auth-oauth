@@ -23,6 +23,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
@@ -58,6 +59,7 @@ public class OAuth2ServiceComponentHolder {
     private static List<ClaimProvider> claimProviders = new ArrayList<>();
     private static boolean idpIdColumnEnabled = false;
     private static boolean consentedTokenColumnEnabled = false;
+    private static IdentityEventService identityEventService;
     private List<TokenBinder> tokenBinders = new ArrayList<>();
     private Map<String, ResponseTypeRequestValidator> responseTypeRequestValidators = new HashMap<>();
     private OAuthAdminServiceImpl oauthAdminService;
@@ -378,5 +380,13 @@ public class OAuth2ServiceComponentHolder {
             OrganizationUserResidentResolverService organizationUserResidentResolverService) {
 
         OAuth2ServiceComponentHolder.organizationUserResidentResolverService = organizationUserResidentResolverService;
+    }
+
+    public static IdentityEventService getIdentityEventService() {
+        return identityEventService;
+    }
+
+    public static void setIdentityEventService(IdentityEventService identityEventService) {
+        OAuth2ServiceComponentHolder.identityEventService = identityEventService;
     }
 }

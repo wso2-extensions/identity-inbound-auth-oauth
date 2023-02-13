@@ -40,6 +40,10 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.event.IdentityEventConstants;
+import org.wso2.carbon.identity.event.IdentityEventException;
+import org.wso2.carbon.identity.event.event.Event;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -80,6 +84,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
     private static final String PASSWORD_GRANT_AUTHENTICATOR_NAME = "BASIC";
     private static final String PUBLISH_PASSWORD_GRANT_LOGIN = "OAuth.PublishPasswordGrantLogin";
     private static final String REMOTE_IP_ADDRESS = "remote-ip-address";
+    private static final String PASSWORD_EXPIRY_VALIDATION_EVENT_NAME = "PASSWORD_EXPIRY_VALIDATION";
 
     @Override
     public boolean issueRefreshToken() throws IdentityOAuth2Exception {
@@ -227,6 +232,8 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             }
 
             if (authenticated) {
+                triggerPasswordExpiryValidationEvent(PASSWORD_EXPIRY_VALIDATION_EVENT_NAME, tenantAwareUserName,
+                        userTenantDomain, userStoreManager);
 
                 AuthenticatedUser authenticatedUser
                         = new AuthenticatedUser(authenticationResult.getAuthenticatedUser().get());
@@ -451,5 +458,33 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         }
         return userNameWithTenant;
 
+    }
+
+    /**
+     * This method will trigger an event to check whether the password is expired.
+     * @param eventName
+     * @param username authenticated user
+     * @param tenantDomain
+     * @param userStoreManager
+     * @throws IdentityOAuth2Exception if password is expired or any other exceptions
+     */
+    private void triggerPasswordExpiryValidationEvent(String eventName, String username, String tenantDomain,
+                                                      org.wso2.carbon.user.core.UserStoreManager userStoreManager)
+            throws IdentityOAuth2Exception {
+
+        IdentityEventService eventService = OAuth2ServiceComponentHolder.getIdentityEventService();
+        Map<String, Object> eventProperties = new HashMap<>();
+        eventProperties.put(IdentityEventConstants.EventProperty.USER_NAME, username);
+        eventProperties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, tenantDomain);
+        eventProperties.put(IdentityEventConstants.EventProperty.USER_STORE_MANAGER, userStoreManager);
+
+        Event event = new Event(eventName, eventProperties);
+        try {
+            if (eventService != null) {
+                eventService.handleEvent(event);
+            }
+        } catch (IdentityEventException e) {
+            throw new IdentityOAuth2Exception(e.getMessage());
+        }
     }
 }
