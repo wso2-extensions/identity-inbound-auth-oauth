@@ -1484,6 +1484,9 @@ public class SQLQueries {
     public static final String GET_CONSENT_ID_FOR_CONSENT = "SELECT CONSENT_ID FROM IDN_OAUTH2_USER_CONSENT WHERE " +
             "USER_ID = ? AND APP_ID = ? AND TENANT_ID = ?";
 
+    public static final String IS_INVALID_REVOKE_REFRESH_TOKEN =
+            "SELECT 1 FROM IDN_OAUTH2_ACCESS_TOKEN WHERE REFRESH_TOKEN_HASH = ? AND (TOKEN_STATE='INACTIVE' OR"
+                    + " TOKEN_STATE='REVOKED' OR TOKEN_STATE='EXPIRED')";
     private SQLQueries() {
 
     }

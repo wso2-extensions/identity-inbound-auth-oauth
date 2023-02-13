@@ -53,7 +53,9 @@ import org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuth
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
 import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthenticator;
+import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeRequestValidator;
@@ -631,6 +633,53 @@ public class OAuth2ServiceComponent {
             log.debug("Unset organization user resident resolver service.");
         }
         OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(null);
+    }
+
+
+    @Reference(
+            name = "access.token.dao.service",
+            service = AccessTokenDAO.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAccessTokenDAOService"
+    )
+    protected void setAccessTokenDAOService(AccessTokenDAO accessTokenDAO) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Adding the Access Token DAO Service : " + accessTokenDAO.getName());
+        }
+        OAuthComponentServiceHolder.getInstance().setExternalAccessTokenDAOService(accessTokenDAO);
+    }
+
+    protected void unsetAccessTokenDAOService(AccessTokenDAO accessTokenDAO) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing the Access Token DAO Service : " + accessTokenDAO.getName());
+        }
+        OAuthComponentServiceHolder.getInstance().setExternalAccessTokenDAOService(null);
+    }
+
+    @Reference(
+            name = "token.management.dao.service",
+            service = TokenManagementDAO.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetTokenMgtDAOService"
+    )
+    protected void setTokenMgtDAOService(TokenManagementDAO tokenMgtDAOService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Adding the Token Mgt DAO Service : " + tokenMgtDAOService.getName());
+        }
+        OAuthComponentServiceHolder.getInstance().setTokenManagementDAOService(tokenMgtDAOService);
+    }
+
+    protected void unsetTokenMgtDAOService(TokenManagementDAO tokenManagementDAO) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing the Token Mgt DAO Service : " + tokenManagementDAO.getName());
+        }
+        OAuthComponentServiceHolder.getInstance().setTokenManagementDAOService(null);
     }
 
     private static void loadScopeConfigFile() {

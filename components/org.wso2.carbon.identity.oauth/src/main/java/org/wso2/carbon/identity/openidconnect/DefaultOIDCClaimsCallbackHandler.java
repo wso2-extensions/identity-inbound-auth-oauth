@@ -304,15 +304,18 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             Object previousAccessTokenObject = requestMsgCtx.getProperty(RefreshGrantHandler.PREV_ACCESS_TOKEN);
 
             if (previousAccessTokenObject != null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Retrieving claims from previous access token of user : " + requestMsgCtx
-                            .getAuthorizedUser());
-                }
                 RefreshTokenValidationDataDO refreshTokenValidationDataDO =
                         (RefreshTokenValidationDataDO) previousAccessTokenObject;
-                userAttributes = getUserAttributesCachedAgainstToken(refreshTokenValidationDataDO.getAccessToken());
-                requestMsgCtx.addProperty(OIDCConstants.HAS_NON_OIDC_CLAIMS,
-                        isTokenHasCustomUserClaims(refreshTokenValidationDataDO));
+                if (refreshTokenValidationDataDO.getAccessToken() != null) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Retrieving claims from previous access token of user : " + requestMsgCtx
+                                .getAuthorizedUser());
+                    }
+                    userAttributes = getUserAttributesCachedAgainstToken(refreshTokenValidationDataDO.getAccessToken());
+                    requestMsgCtx.addProperty(OIDCConstants.HAS_NON_OIDC_CLAIMS,
+                            isTokenHasCustomUserClaims(refreshTokenValidationDataDO));
+                }
+                //TODO://add a debug log if else, no access token previously set in refresh grant validation DO
             }
         }
         return userAttributes;

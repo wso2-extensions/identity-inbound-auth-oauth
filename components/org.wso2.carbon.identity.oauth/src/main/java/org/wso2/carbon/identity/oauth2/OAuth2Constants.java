@@ -33,4 +33,7 @@ public class OAuth2Constants {
 
     }
     public static final String GROUPS = "groups";
+
+    public static final String OAUTH_TOKEN_PERSISTENCE_ENABLE = "OAuth.TokenPersistence.Enable";
+    public static final String FRAMEWORK_PERSISTENCE_ENABLE = "JDBCPersistenceManager.SessionDataPersist.Enable";
 }

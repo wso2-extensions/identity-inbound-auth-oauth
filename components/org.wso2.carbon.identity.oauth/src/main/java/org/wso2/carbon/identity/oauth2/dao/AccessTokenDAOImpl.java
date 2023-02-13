@@ -2941,4 +2941,14 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
         }
     }
+
+    @Override
+    public String getName() {
+        return null;
+    }
+
+    @Override
+    public boolean isInvalidToken(String tokenIdentifier) throws IdentityOAuth2Exception {
+        return false;
+    }
 }

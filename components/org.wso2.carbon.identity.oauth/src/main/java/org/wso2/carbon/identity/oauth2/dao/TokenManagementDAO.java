@@ -73,4 +73,8 @@ public interface TokenManagementDAO {
             IdentityOAuth2Exception;
 
     Set<String> getAllTimeAuthorizedClientIds(AuthenticatedUser authzUser) throws IdentityOAuth2Exception;
+
+    String getName();
+
+    boolean isInvalidRefreshToken(String refreshToken) throws IdentityOAuth2Exception;
 }

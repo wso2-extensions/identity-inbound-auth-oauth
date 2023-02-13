@@ -273,4 +273,8 @@ public interface AccessTokenDAO {
     default void updateTokenIsConsented(String tokenId, boolean isConsentedGrant)
             throws IdentityOAuth2Exception {
     }
+
+    String getName();
+
+    boolean isInvalidToken(String tokenIdentifier) throws IdentityOAuth2Exception;
 }

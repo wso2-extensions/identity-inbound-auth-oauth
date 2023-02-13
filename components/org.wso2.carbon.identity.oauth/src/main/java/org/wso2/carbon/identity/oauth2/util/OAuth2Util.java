@@ -51,6 +51,7 @@ import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -154,6 +155,7 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
@@ -166,6 +168,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -347,6 +350,10 @@ public class OAuth2Util {
 
     public static final String ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE = "Invalid Access Token. Access token is " +
             "not ACTIVE.";
+
+    private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
+    private static final String ALGO_PREFIX = "RS";
+    private static final String ALGO_PREFIX_PS = "PS";
 
     private OAuth2Util() {
 
@@ -1812,6 +1819,7 @@ public class OAuth2Util {
         }
 
         if (accessTokenDO == null) {
+            //TODO:// introspection response could return empty and we should consider it as an acceptable response
             // this means the token is not active so we can't proceed further
             throw new IllegalArgumentException(ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE);
         }
@@ -4468,5 +4476,176 @@ public class OAuth2Util {
             }
         }
         return IdentityTenantUtil.getTenantDomainFromContext();
+    }
+
+    public static SignedJWT getSignedJWT(String tokenIdentifier) throws ParseException {
+        return SignedJWT.parse(tokenIdentifier);
+    }
+
+    public static IdentityProvider getResidentIDPForIssuer(String jwtIssuer) throws IdentityOAuth2Exception {
+
+        String tenantDomain = getTenantDomain();
+        String issuer = StringUtils.EMPTY;
+        IdentityProvider residentIdentityProvider;
+        try {
+            residentIdentityProvider = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
+        } catch (IdentityProviderManagementException e) {
+            String errorMsg =
+                    String.format("Error while getting Resident Identity Provider of '%s' tenant.", tenantDomain);
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        }
+        FederatedAuthenticatorConfig[] fedAuthnConfigs = residentIdentityProvider.getFederatedAuthenticatorConfigs();
+        FederatedAuthenticatorConfig oauthAuthenticatorConfig =
+                IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
+                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
+        if (oauthAuthenticatorConfig != null) {
+            issuer = IdentityApplicationManagementUtil.getProperty(oauthAuthenticatorConfig.getProperties(),
+                    OIDC_IDP_ENTITY_ID).getValue();
+        }
+        if (!jwtIssuer.equals(issuer)) {
+            throw new IdentityOAuth2Exception("No Registered IDP found for the token with issuer name : " + jwtIssuer);
+        }
+        return residentIdentityProvider;
+    }
+
+    private static String getTenantDomain() {
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        if (StringUtils.isEmpty(tenantDomain)) {
+            tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+        return tenantDomain;
+    }
+
+    public static boolean validateSignature(SignedJWT signedJWT, IdentityProvider idp)
+            throws JOSEException, IdentityOAuth2Exception, ParseException {
+
+        JWSVerifier verifier = null;
+        X509Certificate x509Certificate = null;
+        JWTClaimsSet jwtClaimsSet = signedJWT.getJWTClaimsSet();
+
+        Map<String, String> realm = (HashMap) jwtClaimsSet.getClaim(OAuthConstants.OIDCClaims.REALM);
+
+        // Get certificate from tenant if available in claims.
+        if (MapUtils.isNotEmpty(realm)) {
+            String tenantDomain = null;
+            // Get signed key tenant from JWT token or ID token based on claim key.
+            if (realm.get(OAuthConstants.OIDCClaims.SIGNING_TENANT) != null) {
+                tenantDomain = realm.get(OAuthConstants.OIDCClaims.SIGNING_TENANT);
+            } else if (realm.get(OAuthConstants.OIDCClaims.TENANT) != null) {
+                tenantDomain = realm.get(OAuthConstants.OIDCClaims.TENANT);
+            }
+            if (tenantDomain != null) {
+                int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+                x509Certificate = (X509Certificate) OAuth2Util.getCertificate(tenantDomain, tenantId);
+            }
+        } else {
+            x509Certificate = resolveSignerCertificate(idp);
+        }
+        if (x509Certificate == null) {
+            throw new IdentityOAuth2Exception("Unable to locate certificate for Identity Provider: " + idp
+                    .getDisplayName());
+        }
+        String alg = signedJWT.getHeader().getAlgorithm().getName();
+        if (StringUtils.isEmpty(alg)) {
+            throw new IdentityOAuth2Exception("Algorithm must not be null.");
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Signature Algorithm found in the Token Header: " + alg);
+            }
+            if (alg.indexOf(ALGO_PREFIX) == 0 || alg.indexOf(ALGO_PREFIX_PS) == 0) {
+                // At this point 'x509Certificate' will never be null.
+                PublicKey publicKey = x509Certificate.getPublicKey();
+                if (publicKey instanceof RSAPublicKey) {
+                    verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
+                } else {
+                    throw new IdentityOAuth2Exception("Public key is not an RSA public key.");
+                }
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Signature Algorithm not supported yet: " + alg);
+                }
+            }
+            if (verifier == null) {
+                throw new IdentityOAuth2Exception("Could not create a signature verifier for algorithm type: " + alg);
+            }
+        }
+        boolean isValid = signedJWT.verify(verifier);
+        if (log.isDebugEnabled()) {
+            log.debug("Signature verified: " + isValid);
+        }
+        return isValid;
+    }
+
+    /**
+     * The default implementation resolves one certificate to Identity Provider and ignores the JWT header.
+     * Override this method, to resolve and enforce the certificate in any other way
+     * such as x5t attribute of the header.
+     *
+     * @param idp    The identity provider, if you need it.
+     * @return the resolved X509 Certificate, to be used to validate the JWT signature.
+     * @throws IdentityOAuth2Exception something goes wrong.
+     */
+    private static X509Certificate resolveSignerCertificate(IdentityProvider idp) throws IdentityOAuth2Exception {
+        X509Certificate x509Certificate;
+        String tenantDomain = getTenantDomain();
+        try {
+            x509Certificate = (X509Certificate) IdentityApplicationManagementUtil
+                    .decodeCertificate(idp.getCertificate());
+        } catch (CertificateException e) {
+            throw new IdentityOAuth2Exception("Error occurred while decoding public certificate of Identity Provider "
+                    + idp.getIdentityProviderName() + " for tenant domain " + tenantDomain, e);
+        }
+        return x509Certificate;
+    }
+
+    public static boolean isActive(Date expirationTime) {
+        long timeStampSkewMillis = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
+        long expirationTimeInMillis = expirationTime.getTime();
+        long currentTimeInMillis = System.currentTimeMillis();
+        if ((currentTimeInMillis + timeStampSkewMillis) > expirationTimeInMillis) {
+            if (log.isDebugEnabled()) {
+                log.debug("Token is expired." +
+                        ", Expiration Time(ms) : " + expirationTimeInMillis +
+                        ", TimeStamp Skew : " + timeStampSkewMillis +
+                        ", Current Time : " + currentTimeInMillis + ". Token Rejected and validation terminated.");
+            }
+            return false;
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Expiration Time(exp) of Token was validated successfully.");
+        }
+        return true;
+    }
+
+    public static String getTokenIdentifier(String tokenIdentifier, String consumerKey)
+            throws IdentityOAuth2Exception {
+
+        String accessTokenHash = tokenIdentifier;
+        try {
+            OauthTokenIssuer oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
+            //check for persist alias for the token type
+            if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
+                accessTokenHash = oauthTokenIssuer.getAccessTokenHash(tokenIdentifier);
+            }
+            return accessTokenHash;
+        } catch (OAuthSystemException e) {
+            if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                log.debug("Error while getting access token hash for token(hashed): " + DigestUtils
+                        .sha256Hex(accessTokenHash));
+            }
+            throw new IdentityOAuth2Exception("Error while getting access token hash.", e);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
+        }
+    }
+
+    public static String[] getScopes(Object scopes) {
+
+        if (scopes instanceof String) {
+            return ((String) scopes).split(" ");
+        }
+        return new String[0];
     }
 }

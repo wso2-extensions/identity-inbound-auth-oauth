@@ -442,6 +442,9 @@ public class TokenValidationHandler {
         } else {
             try {
                 String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                //TODO:// for token non persistent scenario need to by pass the get access token call and directly
+                // check if token is persisted in db as a non active token (revoked, invalid, inactive, expired)
+                // throw illegal argument exception
                 accessTokenDO = OAuth2Util.findAccessToken(validationRequest.getAccessToken().getIdentifier(),
                         false);
                 boolean isCrossTenantTokenIntrospectionAllowed

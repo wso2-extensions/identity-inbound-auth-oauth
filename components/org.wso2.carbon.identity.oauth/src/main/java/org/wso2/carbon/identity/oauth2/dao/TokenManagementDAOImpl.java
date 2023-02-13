@@ -763,4 +763,31 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         return distinctConsumerKeys;
     }
 
+    @Override
+    public String getName() {
+        return "TokenManagementDAOImpl";
+    }
+
+    @Override
+    public boolean isInvalidRefreshToken(String refreshToken) throws IdentityOAuth2Exception {
+        if (log.isDebugEnabled()) {
+            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.REFRESH_TOKEN)) {
+                log.debug("Validating refresh token(hashed) to see if its invalid: "
+                        + DigestUtils.sha256Hex(refreshToken));
+            }
+        }
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            String sql = OAuth2Util.getTokenPartitionedSqlByToken(SQLQueries.IS_INVALID_REVOKE_REFRESH_TOKEN,
+                    refreshToken);
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                preparedStatement.setString(1, getHashingPersistenceProcessor().getProcessedRefreshToken(refreshToken));
+                try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                    return resultSet.next();
+                }
+            }
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error while checking existence of token as an invalid token.", e);
+        }
+    }
+
 }
