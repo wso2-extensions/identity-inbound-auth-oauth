@@ -49,6 +49,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.PasswordPolicyUtils;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -80,6 +81,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
     private static final String PASSWORD_GRANT_AUTHENTICATOR_NAME = "BASIC";
     private static final String PUBLISH_PASSWORD_GRANT_LOGIN = "OAuth.PublishPasswordGrantLogin";
     private static final String REMOTE_IP_ADDRESS = "remote-ip-address";
+    private static final String ERROR_INVALID_CREDENTIALS = "17002";
 
     @Override
     public boolean issueRefreshToken() throws IdentityOAuth2Exception {
@@ -199,6 +201,11 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
 
             String tenantAwareUserName = MultitenantUtils.getTenantAwareUsername(username);
             String userTenantDomain = MultitenantUtils.getTenantDomain(username);
+            AbstractUserStoreManager userStoreManager = getUserStoreManager(userTenantDomain);
+            if (!userStoreManager.isExistingUser(tenantAwareUserName)) {
+                throw new IdentityOAuth2Exception("User doesn't exist");
+            }
+
             ResolvedUserResult resolvedUserResult =
                     FrameworkUtils.processMultiAttributeLoginIdentification(tenantAwareUserName, userTenantDomain);
             String userId = null;
@@ -209,7 +216,6 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 tokenReq.setResourceOwnerUsername(tenantAwareUserName + "@" + userTenantDomain);
             }
 
-            AbstractUserStoreManager userStoreManager = getUserStoreManager(userTenantDomain);
             AuthenticationResult authenticationResult;
             if (userId != null) {
                 authenticationResult = userStoreManager.authenticateWithID(userId, tokenReq.getResourceOwnerPassword());
@@ -224,6 +230,11 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                     && authenticationResult.getAuthenticatedUser().isPresent();
             if (log.isDebugEnabled()) {
                 log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: " + authenticated);
+            }
+            if (OAuth2Util.checkPasswordResetEnforcementEnabled()) {
+                if (PasswordPolicyUtils.isUserPasswordExpired(userTenantDomain, tenantAwareUserName)) {
+                    throw new IdentityOAuth2Exception(ERROR_INVALID_CREDENTIALS, "Password has expired");
+                }
             }
 
             if (authenticated) {

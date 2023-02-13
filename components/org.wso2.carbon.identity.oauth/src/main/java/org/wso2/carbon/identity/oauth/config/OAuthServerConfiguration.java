@@ -149,6 +149,8 @@ public class OAuthServerConfiguration {
     private boolean cacheEnabled = false;
     private boolean isTokenRenewalPerRequestEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
+    // property relevant to API-based grant types. Only supports password grant type at the moment
+    private boolean isExpiredPasswordResetEnforcementForPasswordGrantEnabled = false;
     private boolean isExtendRenewedTokenExpiryTimeEnabled = true;
     private boolean assertionsUserNameEnabled = false;
     private boolean accessTokenPartitioningEnabled = false;
@@ -372,6 +374,9 @@ public class OAuthServerConfiguration {
 
         // read token persistence processor config
         parseTokenPersistenceProcessorConfig(oauthElem);
+
+        // read password reset enforcement config
+        parseCheckPasswordResetEnforcementConfig(oauthElem);
 
         // read supported grant types
         parseSupportedGrantTypesConfig(oauthElem);
@@ -1184,6 +1189,10 @@ public class OAuthServerConfiguration {
 
     public boolean isAccessTokenPartitioningEnabled() {
         return accessTokenPartitioningEnabled;
+    }
+
+    public boolean isExpiredPasswordResetEnforcementForPasswordGrantEnabled() {
+        return isExpiredPasswordResetEnforcementForPasswordGrantEnabled;
     }
 
     public Map<String, String> getIdTokenAllowedForGrantTypesMap() {
@@ -2068,6 +2077,24 @@ public class OAuthServerConfiguration {
             log.debug("Token Persistence Processor was set to : " + tokenPersistenceProcessorClassName);
         }
 
+    }
+
+    private void parseCheckPasswordResetEnforcementConfig(OMElement oauthConfigElem) {
+
+        OMElement enablePasswordResetEnforcementElem =
+                oauthConfigElem
+                        .getFirstChildWithName(
+                                getQNameWithIdentityNS(
+                                        ConfigElements.ENABLE_EXPIRED_PASSWORD_RESET_ENFORCEMENT_FOR_PASSWORD_GRANT));
+        if (enablePasswordResetEnforcementElem != null) {
+            isExpiredPasswordResetEnforcementForPasswordGrantEnabled =
+                    Boolean.parseBoolean(enablePasswordResetEnforcementElem.getText());
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Enable Password Reset Enforcement was set to : "
+                    + isExpiredPasswordResetEnforcementForPasswordGrantEnabled);
+        }
     }
 
     /**
@@ -3290,6 +3317,8 @@ public class OAuthServerConfiguration {
         public static final String ENABLE_ASSERTIONS = "EnableAssertions";
         public static final String ENABLE_ASSERTIONS_USERNAME = "UserName";
         public static final String ENABLE_ACCESS_TOKEN_PARTITIONING = "EnableAccessTokenPartitioning";
+        public static final String ENABLE_EXPIRED_PASSWORD_RESET_ENFORCEMENT_FOR_PASSWORD_GRANT =
+                "EnableExpiredPasswordResetEnforcementForPasswordGrant";
         public static final String REDIRECT_TO_REQUESTED_REDIRECT_URI = "RedirectToRequestedRedirectUri";
         public static final String ACCESS_TOKEN_PARTITIONING_DOMAINS = "AccessTokenPartitioningDomains";
         // OpenIDConnect configurations

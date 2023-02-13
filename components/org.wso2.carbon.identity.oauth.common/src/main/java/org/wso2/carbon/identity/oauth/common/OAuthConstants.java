@@ -222,7 +222,7 @@ public final class OAuthConstants {
     }
 
     /**
-     * Define OAuth2.0 request parameters
+     * Define OAuth2.0 request parameters.
      */
     public static class OAuth20Params {
 
@@ -248,7 +248,7 @@ public final class OAuthConstants {
     }
 
     /**
-     * Define OIDC prompt values
+     * Define OIDC prompt values.
      */
     public static class Prompt {
 
@@ -280,7 +280,7 @@ public final class OAuthConstants {
     }
 
     /**
-     * Define OAuth2.0 endpoints
+     * Define OAuth2.0 endpoints.
      */
     public static class OAuth20Endpoints {
 

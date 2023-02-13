@@ -430,6 +430,13 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
                 .isAccessTokenPartitioningEnabled());
     }
 
+    @Test
+    public void testPasswordResetEnforcementEnabled() {
+
+        Assert.assertFalse(OAuthServerConfiguration.getInstance()
+                .isExpiredPasswordResetEnforcementForPasswordGrantEnabled());
+    }
+
     private String fillURLPlaceholdersForTest(String url) {
 
         return url.replace("${carbon.protocol}", "https")

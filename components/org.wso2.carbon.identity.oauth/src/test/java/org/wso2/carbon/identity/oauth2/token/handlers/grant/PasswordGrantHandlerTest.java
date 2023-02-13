@@ -176,6 +176,7 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
 
         when(localAndOutboundAuthenticationConfig.isUseUserstoreDomainInLocalSubjectIdentifier()).thenReturn(true);
         when(localAndOutboundAuthenticationConfig.isUseTenantDomainInLocalSubjectIdentifier()).thenReturn(true);
+        when(userStoreManager.isExistingUser(username)).thenReturn(true);
 
         PasswordGrantHandler passwordGrantHandler = new PasswordGrantHandler();
         boolean isValid = passwordGrantHandler.validateGrant(tokReqMsgCtx);

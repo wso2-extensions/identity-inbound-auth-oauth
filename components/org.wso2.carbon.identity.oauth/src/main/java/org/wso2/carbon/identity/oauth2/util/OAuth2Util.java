@@ -824,6 +824,11 @@ public class OAuth2Util {
         return OAuthServerConfiguration.getInstance().isAccessTokenPartitioningEnabled();
     }
 
+    public static boolean checkPasswordResetEnforcementEnabled() {
+
+        return OAuthServerConfiguration.getInstance().isExpiredPasswordResetEnforcementForPasswordGrantEnabled();
+    }
+
     public static boolean checkUserNameAssertionEnabled() {
 
         return OAuthServerConfiguration.getInstance().isUserNameAssertionEnabled();
