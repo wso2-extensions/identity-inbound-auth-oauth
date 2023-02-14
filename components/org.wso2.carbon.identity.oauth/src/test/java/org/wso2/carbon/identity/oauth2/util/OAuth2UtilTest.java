@@ -34,6 +34,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -51,6 +52,7 @@ import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -89,6 +91,7 @@ import org.wso2.carbon.utils.ConfigurationContextService;
 import org.wso2.carbon.utils.NetworkUtils;
 
 import java.net.SocketException;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -121,12 +124,14 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
         OAuth2Util.class, OAuthComponentServiceHolder.class, AppInfoCache.class, IdentityConfigParser.class,
         PrivilegedCarbonContext.class, IdentityTenantUtil.class, CarbonUtils.class,
         IdentityCoreServiceComponent.class, NetworkUtils.class, IdentityApplicationManagementUtil.class,
-        IdentityProviderManager.class, FederatedAuthenticatorConfig.class, FrameworkUtils.class, LoggerUtils.class})
+        IdentityProviderManager.class, FederatedAuthenticatorConfig.class, FrameworkUtils.class, LoggerUtils.class,
+        OAuth2ServiceComponentHolder.class, OAuthAdminServiceImpl.class})
 public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
     private String[] scopeArrayUnSorted = new String[]{"scope2", "scope3", "scope1"};
     private String[] scopeArray = new String[]{"openid", "scope1", "scope2"};
+    private String[] oidcScopes = new String[]{"address", "phone", "openid", "profile", "groups", "email"};
     private String scopeString = "scope1 scope2 scope3";
     private String clientId = "dummyClientId";
     private String clientSecret = "dummyClientSecret";
@@ -196,9 +201,18 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     @Mock
     private AccessTokenDAO accessTokenDAO;
 
+    @Mock
+    OAuth2ServiceComponentHolder oAuth2ServiceComponentHolder;
+
+    @Mock
+    OAuthAdminServiceImpl oAuthAdminService;
+
     @BeforeMethod
     public void setUp() throws Exception {
-
+        System.setProperty(
+                CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
+        );
         authzUser = new AuthenticatedUser();
         issuedTime = new Timestamp(System.currentTimeMillis());
         refreshTokenIssuedTime = new Timestamp(System.currentTimeMillis());
@@ -2034,11 +2048,13 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
-    public void testGetOAuthTokenIssuerForOAuthAppWithException() throws Exception {
+    public void testGetOAuthTokenIssuerForOAuthAppWithException() {
 
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenThrow(IdentityOAuth2Exception.class);
-
+        when(appInfoCache.getValueFromCache(clientId)).
+                thenAnswer (i -> {
+                    throw new IdentityOAuth2Exception("IdentityOAuth2Exception");
+                });
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
 
@@ -2047,6 +2063,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         } catch (IdentityOAuth2Exception ex) {
             assertEquals(ex.getMessage(), "Error while retrieving app information for clientId: " + clientId);
             return;
+        } catch (InvalidOAuthClientException e) {
+            throw new RuntimeException(e);
         }
         fail("Expected IdentityOAuth2Exception was not thrown by getOAuthTokenIssuerForOAuthApp method");
     }
@@ -2221,10 +2239,13 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
-    public void testGetServiceProviderWithIdentityInvalidOAuthClientException() throws Exception {
+    public void testGetServiceProviderWithIdentityInvalidOAuthClientException() {
 
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenThrow(InvalidOAuthClientException.class);
+        when(appInfoCache.getValueFromCache(clientId)).
+                thenAnswer (i -> {
+                     throw new InvalidOAuthClientException("InvalidOAuthClientException");
+                 });
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
 

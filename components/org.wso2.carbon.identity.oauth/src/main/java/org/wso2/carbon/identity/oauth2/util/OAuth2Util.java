@@ -140,6 +140,7 @@ import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.core.tenant.TenantManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -199,6 +200,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoi
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_USER_INFO_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_CONSENT_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_WEB_FINGER_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgorithms.PREVIOUS_KID_HASHING_ALGORITHM;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
 
@@ -501,6 +504,18 @@ public class OAuth2Util {
             return false;
         }
 
+        String tenantDomain = null;
+        try {
+            tenantDomain = appDO.getAppOwner().getTenantDomain();
+        } catch (NullPointerException e) {
+            // Ignore and proceed.
+        }
+        if (tenantDomain != null && !isTenantActive(tenantDomain)) {
+            log.error("Cannot retrieve application inside deactivated tenant: " + tenantDomain);
+            throw new InvalidOAuthClientException("Cannot retrieve application inside deactivated tenant: "
+                    + tenantDomain);
+        }
+
         // Cache miss
         boolean isHashDisabled = isHashDisabled();
         String appClientSecret = appDO.getOauthConsumerSecret();
@@ -531,6 +546,18 @@ public class OAuth2Util {
         }
 
         return true;
+    }
+
+    private static boolean isTenantActive(String tenantDomain) throws IdentityOAuth2Exception {
+        try {
+            TenantManager tenantManager = OAuthComponentServiceHolder.getInstance()
+                    .getRealmService().getTenantManager();
+            int tenantId = tenantManager.getTenantId(tenantDomain);
+            return tenantManager.isTenantActive(tenantId);
+        } catch (UserStoreException e) {
+            String error = "Error in obtaining tenant ID from tenant domain : " + tenantDomain;
+            throw new IdentityOAuth2Exception(error, e);
+        }
     }
 
     public static TokenPersistenceProcessor getPersistenceProcessor() {
@@ -2934,6 +2961,21 @@ public class OAuth2Util {
     }
 
     /**
+     * Method to obtain 'kid' value generated with SHA-1 alg for the signing key to be included the JWT header.
+     *
+     * @param certificate        Signing Certificate.
+     * @param signatureAlgorithm relevant signature algorithm.
+     * @return                   KID value as a String.
+     * @throws IdentityOAuth2Exception
+     */
+    public static String getPreviousKID(Certificate certificate, JWSAlgorithm signatureAlgorithm, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        return OAuth2ServiceComponentHolder.getKeyIDProvider()
+                .getPreviousKeyId(certificate, signatureAlgorithm, tenantDomain);
+    }
+
+    /**
      * Helper method to add public certificate to JWT_HEADER to signature verification.
      *
      * @param tenantDomain
@@ -2969,7 +3011,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Method to obtain certificate thumbprint.
+     * Method to obtain certificate thumbprint with default SHA-256 algorithm.
      *
      * @param certificate java.security.cert type certificate.
      * @return Certificate thumbprint as a String.
@@ -2977,12 +3019,22 @@ public class OAuth2Util {
      */
     public static String getThumbPrint(Certificate certificate) throws IdentityOAuth2Exception {
 
+        return getThumbPrintWithAlgorithm(certificate, KID_HASHING_ALGORITHM);
+    }
+
+    public static String getThumbPrintWithPrevAlgorithm(Certificate certificate)
+            throws IdentityOAuth2Exception {
+
+        return getThumbPrintWithAlgorithm(certificate, PREVIOUS_KID_HASHING_ALGORITHM);
+    }
+
+    private static String getThumbPrintWithAlgorithm(Certificate certificate, String algorithm)
+            throws IdentityOAuth2Exception {
         try {
-            MessageDigest digestValue = MessageDigest.getInstance("SHA-256");
+            MessageDigest digestValue = MessageDigest.getInstance(algorithm);
             byte[] der = certificate.getEncoded();
             digestValue.update(der);
             byte[] digestInBytes = digestValue.digest();
-
             String publicCertThumbprint = hexify(digestInBytes);
             String thumbprint = new String(new Base64(0, null, true).
                     encode(publicCertThumbprint.getBytes(Charsets.UTF_8)), Charsets.UTF_8);
@@ -2995,10 +3047,9 @@ public class OAuth2Util {
             String error = "Error occurred while encoding thumbPrint from certificate.";
             throw new IdentityOAuth2Exception(error, e);
         } catch (NoSuchAlgorithmException e) {
-            String error = "Error in obtaining SHA-256 thumbprint from certificate.";
+            String error = String.format("Error in obtaining %s thumbprint from certificate.", algorithm);
             throw new IdentityOAuth2Exception(error, e);
         }
-
     }
 
     private static boolean isRSAAlgorithm(JWEAlgorithm algorithm) {

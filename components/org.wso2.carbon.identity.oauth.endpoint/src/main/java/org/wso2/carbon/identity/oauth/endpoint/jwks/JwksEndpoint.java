@@ -66,6 +66,7 @@ public class JwksEndpoint {
     private static final String SECURITY_KEY_STORE_LOCATION = "Security.KeyStore.Location";
     private static final String SECURITY_KEY_STORE_PW = "Security.KeyStore.Password";
     private static final String KEYS = "keys";
+    private static final String ADD_PREVIOUS_VERSION_KID = "JWTValidatorConfigs.JWKSEndpoint.AddPreviousVersionKID";
 
     @GET
     @Path(value = "/jwks")
@@ -120,25 +121,80 @@ public class JwksEndpoint {
         // If we read different algorithms from identity.xml then put them in a list.
         List<JWSAlgorithm> diffAlgorithms = findDifferentAlgorithms(accessTokenSignAlgorithm, config);
         // Create JWKS for different algorithms using new KeyID creation method.
+        populateJWKSArray(certInfoList, diffAlgorithms, jwksArray,
+                OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM);
+
+        // Add SHA-1 KeyID to the KeySet if the config is enabled.
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(ADD_PREVIOUS_VERSION_KID))) {
+            populateJWKSArray(certInfoList, diffAlgorithms, jwksArray,
+                    OAuthConstants.SignatureAlgorithms.PREVIOUS_KID_HASHING_ALGORITHM);
+
+            // This method add KeySets which have thumbprint of certificate as KeyIDs without appending the algo.
+            // This KeyID format is deprecated. However, we are enabling old KeyID based on config to support migration.
+            createKeySetUsingOldKeyID(jwksArray, certInfoList, accessTokenSignAlgorithm);
+        }
+        jwksJson.put(KEYS, jwksArray);
+        return jwksJson.toString();
+    }
+
+    private void populateJWKSArray(List<CertificateInfo> certInfoList, List<JWSAlgorithm> diffAlgorithms,
+                                   JSONArray jwksArray, String hashingAlgorithm)
+            throws IdentityOAuth2Exception, ParseException, CertificateEncodingException {
+
         for (CertificateInfo certInfo : certInfoList) {
             for (JWSAlgorithm algorithm : diffAlgorithms) {
                 String alias = certInfo.getCertificateAlias();
                 X509Certificate cert = (X509Certificate) certInfo.getCertificate();
                 Certificate[] certChain = certInfo.getCertificateChain();
                 List<Base64> encodedCertList = generateEncodedCertList(certChain, alias);
-                RSAKey.Builder jwk = new RSAKey.Builder((RSAPublicKey) cert.getPublicKey());
-                jwk.keyID(OAuth2Util.getKID(cert, algorithm, getTenantDomain()));
-                jwk.algorithm(algorithm);
-                jwk.keyUse(KeyUse.parse(KEY_USE));
-                jwk.x509CertChain(encodedCertList);
-                jwk.x509CertSHA256Thumbprint(Base64URL.encode(OAuth2Util.getThumbPrint(cert, alias)));
+                RSAKey.Builder jwk = getJWK(algorithm, encodedCertList, cert,
+                        hashingAlgorithm, alias);
                 jwksArray.add(jwk.build().toJSONObject());
             }
         }
-        jwksJson.put(KEYS, jwksArray);
-        return jwksJson.toString();
     }
 
+    private RSAKey.Builder getJWK(JWSAlgorithm algorithm, List<Base64> encodedCertList, X509Certificate certificate,
+                                  String kidAlgorithm, String alias)
+            throws ParseException, IdentityOAuth2Exception {
+        RSAKey.Builder jwk = new RSAKey.Builder((RSAPublicKey) certificate.getPublicKey());
+        if (kidAlgorithm.equals(OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM)) {
+            jwk.keyID(OAuth2Util.getKID(certificate, algorithm, getTenantDomain()));
+        } else {
+            jwk.keyID(OAuth2Util.getPreviousKID(certificate, algorithm, getTenantDomain()));
+        }
+        jwk.algorithm(algorithm);
+        jwk.keyUse(KeyUse.parse(KEY_USE));
+        jwk.x509CertChain(encodedCertList);
+        jwk.x509CertSHA256Thumbprint(Base64URL.encode(OAuth2Util.getThumbPrint(certificate, alias)));
+        return jwk;
+    }
+
+    /**
+     * This method generates the kid value without the algo appended to the end of kid.
+     * This method is marked as @Deprecated because we issue kids with algo appended at present,
+     * and we are keeping this to only support migration efforts.
+     *
+     * @param jwksArray
+     * @param certInfoList
+     * @param algorithm
+     * @throws IdentityOAuth2Exception
+     * @throws ParseException
+     */
+    @Deprecated
+    private void createKeySetUsingOldKeyID(JSONArray jwksArray, List<CertificateInfo> certInfoList,
+                                           JWSAlgorithm algorithm) throws IdentityOAuth2Exception, ParseException {
+
+        for (CertificateInfo certInfo : certInfoList) {
+            X509Certificate cert = (X509Certificate) certInfo.getCertificate();
+            RSAPublicKey publicKey = (RSAPublicKey) cert.getPublicKey();
+            RSAKey.Builder jwk = new RSAKey.Builder(publicKey);
+            jwk.keyID(OAuth2Util.getThumbPrintWithPrevAlgorithm(cert));
+            jwk.algorithm(algorithm);
+            jwk.keyUse(KeyUse.parse(KEY_USE));
+            jwksArray.add(jwk.build().toJSONObject());
+        }
+    }
     /**
      * This method read identity.xml and find different signing algorithms
      *

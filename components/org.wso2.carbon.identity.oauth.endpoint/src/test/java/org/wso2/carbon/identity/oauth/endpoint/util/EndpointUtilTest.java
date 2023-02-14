@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.endpoint.util;
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
@@ -33,7 +34,7 @@ import org.mockito.stubbing.Answer;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
@@ -76,7 +77,9 @@ import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -93,6 +96,8 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyMap;
@@ -193,6 +198,9 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     private static final String USER_INFO_RESPONSE_BUILDER =
             "org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilder";
 
+    private static final String REQUESTED_OIDC_SCOPES_KEY = "requested_oidc_scopes=";
+    private static final String REQUESTED_OIDC_SCOPES_VALUES = "openid+profile";
+
     private String username;
     private String password;
     private String sessionDataKey;
@@ -200,7 +208,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     private AuthenticatedUser user;
     private OAuth2ScopeConsentResponse oAuth2ScopeConsentResponse;
 
-    @BeforeTest
+    @BeforeMethod
     public void setUp() {
 
         username = "myUsername";
@@ -248,7 +256,15 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         OAuth2Parameters params = new OAuth2Parameters();
         params.setApplicationName("TestApplication");
         params.setClientId("testClientId");
-        params.setScopes(new HashSet<String>(Arrays.asList("scope1", "scope2", "internal_login", "SYSTEM")));
+        params.setTenantDomain("testTenantDomain");
+        params.setScopes(new HashSet<String>(Arrays.asList("scope1", "scope2", "internal_login")));
+
+        OAuth2Parameters paramsOIDC = new OAuth2Parameters();
+        paramsOIDC.setApplicationName("TestApplication");
+        paramsOIDC.setClientId("testClientId");
+        paramsOIDC.setTenantDomain("testTenantDomain");
+        paramsOIDC.setScopes(
+                new HashSet<String>(Arrays.asList("openid", "profile", "scope1", "scope2", "internal_login")));
 
         return new Object[][]{
                 {params, true, true, false, "QueryString", true},
@@ -258,6 +274,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 {params, true, false, false, "QueryString", false},
                 {params, true, true, false, null, true},
                 {params, true, true, true, "QueryString", true},
+                {paramsOIDC, true, true, true, "QueryString", true},
         };
     }
 
@@ -286,7 +303,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         mockStatic(FrameworkUtils.class);
         when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString())).thenReturn("sample");
         when(FrameworkUtils.getRedirectURLWithFilteredParams(anyString(), anyMap()))
-                .then(i -> i.getArgumentAt(0, String.class));
+                .then(i -> i.getArgument(0));
         mockStatic(OAuth2Util.class);
         spy(EndpointUtil.class);
         doReturn("sampleId").when(EndpointUtil.class, "getAppIdFromClientId", anyString());
@@ -304,14 +321,15 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         }
 
         EndpointUtil.setOAuthAdminService(mockedOAuthAdminService);
-        when(mockedOAuthAdminService.getScopeNames()).thenReturn(new String[0]);
+        when(mockedOAuthAdminService.getRegisteredOIDCScope(anyString()))
+                .thenReturn(Arrays.asList("openid", "email", "profile", "groups"));
         JDBCPermissionBasedInternalScopeValidator scopeValidatorSpy = PowerMockito.spy(
                 new JDBCPermissionBasedInternalScopeValidator());
         doNothing().when(scopeValidatorSpy, method(JDBCPermissionBasedInternalScopeValidator.class,
                 "endTenantFlow")).withNoArguments();
         when(scopeValidatorSpy, method(JDBCPermissionBasedInternalScopeValidator.class,
                 "getUserAllowedScopes", AuthenticatedUser.class, String[].class, String.class))
-                .withArguments(any(AuthenticatedUser.class), any(), anyString())
+                .withArguments(nullable(AuthenticatedUser.class), any(), anyString())
                 .thenReturn(getScopeList());
         PowerMockito.whenNew(JDBCPermissionBasedInternalScopeValidator.class).withNoArguments()
                 .thenReturn(scopeValidatorSpy);
@@ -339,10 +357,24 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                     "is not found in url");
             Assert.assertTrue(ArrayUtils.contains(scopeArray, "internal_login"), "internal_login " +
                     "scope parameter value is not found in url");
-            Assert.assertFalse(ArrayUtils.contains(scopeArray, "SYSTEM"), "SYSTEM scope" +
-                    "parameter should not contain in the url.");
+
             if (queryString != null && cacheEntryExists) {
                 Assert.assertTrue(consentUrl.contains(queryString), "spQueryParams value is not found in url");
+            }
+
+            if (parameters.getScopes().contains("openid")) {
+                String decodedConsentUrl = URLDecoder.decode(consentUrl, "UTF-8");
+                int checkIndex = decodedConsentUrl.indexOf(REQUESTED_OIDC_SCOPES_KEY);
+                Assert.assertTrue(checkIndex != -1, "Requested OIDC scopes query parameter is not found in url.");
+
+                String requestedClaimString = decodedConsentUrl.substring(checkIndex);
+                checkIndex = requestedClaimString.indexOf("&");
+                if (checkIndex != -1) {
+                    requestedClaimString = requestedClaimString.substring(0, checkIndex);
+                }
+                Assert.assertTrue(StringUtils.equals(
+                                requestedClaimString, REQUESTED_OIDC_SCOPES_KEY + REQUESTED_OIDC_SCOPES_VALUES),
+                        "Incorrect requested OIDC scopes in query parameter.");
             }
 
         } catch (OAuthSystemException e) {
@@ -493,7 +525,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 thenReturn(mockedOAuthErrorResponseBuilder);
         when(mockedOAuthErrorResponseBuilder.location(anyString())).thenReturn(mockedOAuthErrorResponseBuilder);
         when(mockedOAuthErrorResponseBuilder.setState(anyString())).thenReturn(mockedOAuthErrorResponseBuilder);
-        when(mockedOAuthErrorResponseBuilder.setParam(anyString(), anyString())).
+        when(mockedOAuthErrorResponseBuilder.setParam(anyString(), isNull())).
                 thenReturn(mockedOAuthErrorResponseBuilder);
         if (exeObject != null) {
             OAuthSystemException oAuthSystemException = (OAuthSystemException) exeObject;
@@ -716,9 +748,18 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         Object claimUtilObject = constructor.newInstance(new Object[0]);
         Field logField = claimUtilObject.getClass().getDeclaredField("log");
 
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(logField, logField.getModifiers() & ~Modifier.FINAL);
+        Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
+        getDeclaredFields0.setAccessible(true);
+        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
+        Field modifiers = null;
+        for (Field each : fields) {
+            if ("modifiers".equals(each.getName())) {
+                modifiers = each;
+                break;
+            }
+        }
+        modifiers.setAccessible(true);
+        modifiers.setInt(logField, logField.getModifiers() & ~Modifier.FINAL);
 
         logField.setAccessible(true);
         logField.set(claimUtilObject, mockedLog);
@@ -756,8 +797,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 thenReturn(USER_INFO_CLAIM_DIALECT);
     }
 
-    private List<Scope> getScopeList() {
-        List<Scope> scopeList = new ArrayList<>();
+    private Set<Scope> getScopeList() {
+        Set<Scope> scopeList = new HashSet<>();
         // Add some sample scopes.
         scopeList.add(new Scope("internal_login", "Login", "description1"));
         scopeList.add(new Scope("internal_config_mgt_update", "Update Configs", "description2"));

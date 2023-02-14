@@ -45,7 +45,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
-import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 
 /**
  * Utility functions related to OAuth 2 scopes.
@@ -338,7 +337,7 @@ public class Oauth2ScopeUtils {
             return ArrayUtils.EMPTY_STRING_ARRAY;
         }
         for (String scope : scopes) {
-            if (scope.startsWith(INTERNAL_SCOPE_PREFIX) || scope.equalsIgnoreCase(SYSTEM_SCOPE)) {
+            if (scope.startsWith(INTERNAL_SCOPE_PREFIX)) {
                 requestedScopes.add(scope);
             }
         }

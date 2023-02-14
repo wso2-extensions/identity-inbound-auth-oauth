@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant.saml;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.joda.time.DateTime;
 import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
 import org.powermock.reflect.internal.WhiteboxImpl;
@@ -210,6 +210,7 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         WhiteboxImpl.setInternalState(IdentityUtil.class, "configuration", configuration);
         saml1BearerGrantHandler.profileValidator = new SAMLSignatureProfileValidator();
         assertEquals(saml1BearerGrantHandler.validateGrant(oAuthTokenReqMessageContext), expectedResult);
+        WhiteboxImpl.setInternalState(KeyStoreManager.class, "mtKeyStoreManagers", new ConcurrentHashMap());
         WhiteboxImpl.setInternalState(IdentityUtil.class, "configuration", new HashMap<>());
     }
 

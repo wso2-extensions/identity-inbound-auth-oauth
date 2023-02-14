@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oidc.session;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -107,7 +108,11 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
             removeOPBrowserStateCookiesInRoot(request, response);
 
             cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
-            cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/");
+            if (isOrganizationQualifiedRequest()) {
+                cookie.setPath(FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX + loginTenantDomain + "/");
+            } else {
+                cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/");
+            }
         } else {
             cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
             cookie.setPath("/");
@@ -176,5 +181,10 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
             result.append(Integer.toString((byt & 0xff) + 0x100, 16).substring(1));
         }
         return result.toString();
+    }
+
+    private static boolean isOrganizationQualifiedRequest() {
+
+        return PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId() != null;
     }
 }

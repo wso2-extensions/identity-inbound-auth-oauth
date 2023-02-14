@@ -61,7 +61,6 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
 
     @BeforeClass
     public void setUp() throws Exception {
-
         requestObjectDAO = new RequestObjectDAOImpl();
         requestedEssentialClaims = new ArrayList<>();
         List lstRequestedClaims = new ArrayList<>();
