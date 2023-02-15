@@ -232,6 +232,9 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             }
 
             if (authenticated) {
+                if (log.isDebugEnabled()) {
+                    log.debug(PASSWORD_EXPIRY_VALIDATION_EVENT_NAME + " event is triggered");
+                }
                 triggerPasswordExpiryValidationEvent(PASSWORD_EXPIRY_VALIDATION_EVENT_NAME, tenantAwareUserName,
                         userTenantDomain, userStoreManager);
 
@@ -462,9 +465,9 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
 
     /**
      * This method will trigger an event to check whether the password is expired.
-     * @param eventName
+     * @param eventName name of the event
      * @param username authenticated user
-     * @param tenantDomain
+     * @param tenantDomain tenant domain of the user
      * @param userStoreManager
      * @throws IdentityOAuth2Exception if password is expired or any other exceptions
      */
@@ -484,7 +487,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 eventService.handleEvent(event);
             }
         } catch (IdentityEventException e) {
-            throw new IdentityOAuth2Exception(e.getMessage());
+            throw new IdentityOAuth2Exception(e.getMessage(), e); // Password has expired error message
         }
     }
 }

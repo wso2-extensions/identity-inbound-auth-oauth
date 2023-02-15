@@ -383,6 +383,7 @@ public class OAuth2ServiceComponentHolder {
     }
 
     public static IdentityEventService getIdentityEventService() {
+
         return identityEventService;
     }
 

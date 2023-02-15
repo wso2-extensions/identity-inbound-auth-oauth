@@ -788,7 +788,7 @@ public class OAuth2ServiceComponent {
     protected void setIdentityEventService(IdentityEventService identityEventService) {
 
         if (log.isDebugEnabled()) {
-            log.debug("IdentityEventService set in OpenIDConnectServiceComponent bundle");
+            log.debug("IdentityEventService set in OAuth2ServiceComponent bundle");
         }
         OAuth2ServiceComponentHolder.setIdentityEventService(identityEventService);
     }
@@ -796,7 +796,7 @@ public class OAuth2ServiceComponent {
     protected void unsetIdentityEventService(IdentityEventService identityEventService) {
 
         if (log.isDebugEnabled()) {
-            log.debug("IdentityEventService unset in OpenIDConnectServiceComponent bundle");
+            log.debug("IdentityEventService unset in OAuth2ServiceComponent bundle");
         }
         OAuth2ServiceComponentHolder.setIdentityEventService(null);
     }
