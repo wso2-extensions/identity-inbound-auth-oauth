@@ -290,7 +290,6 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         String authzCode = UUID.randomUUID().toString();
         AuthzCodeDO authzCodeDO = persistAuthorizationCode(consumerKey, authzCodeID, authzCode,
             OAuthConstants.AuthorizationCodeState.ACTIVE);
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(false);
         OAuth2ServiceComponentHolder.setApplicationMgtService(mockedApplicationManagementService);
         when(mockedApplicationManagementService.getServiceProviderByClientId(anyString(), any(), anyString())).
                 thenReturn(mockedServiceProvider);

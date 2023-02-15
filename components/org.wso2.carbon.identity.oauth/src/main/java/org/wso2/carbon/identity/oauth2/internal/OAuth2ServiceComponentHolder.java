@@ -121,25 +121,6 @@ public class OAuth2ServiceComponentHolder {
         OAuth2ServiceComponentHolder.audienceEnabled = audienceEnabled;
     }
 
-    public static boolean isIDPIdColumnEnabled() {
-
-        return idpIdColumnEnabled;
-    }
-
-    public static void setIDPIdColumnEnabled(boolean idpIdColumnEnabled) {
-
-        OAuth2ServiceComponentHolder.idpIdColumnEnabled = idpIdColumnEnabled;
-    }
-
-    public static boolean isConsentedTokenColumnEnabled() {
-
-        return consentedTokenColumnEnabled;
-    }
-
-    public static void setConsentedTokenColumnEnabled(boolean consentedTokenColumnEnabled) {
-
-        OAuth2ServiceComponentHolder.consentedTokenColumnEnabled = consentedTokenColumnEnabled;
-    }
 
     public static RegistryService getRegistryService() {
 

@@ -18,7 +18,6 @@ package org.wso2.carbon.identity.oauth2.authz;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -61,22 +60,9 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
     }
 
-    /**
-     * This data provider is added to enable affected test cases to be tested in both
-     * where the IDP_ID column is available and not available in the relevant tables.
-     */
-    @DataProvider(name = "IdpIDColumnAvailabilityDataProvider")
-    public Object[][] idpIDColumnAvailabilityDataProvider() {
-        return new Object[][]{
-                {true},
-                {false}
-        };
-    }
+    @Test
+    public void testHandleAuthorizationIDTokenTokenResponse() throws Exception {
 
-    @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
-    public void testHandleAuthorizationIDTokenTokenResponse(boolean isIDPIdColumnEnabled) throws Exception {
-
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
         authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_ID_TOKEN_TOKEN);
         authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID);
@@ -93,10 +79,9 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         Assert.assertNotNull(respDTO.getAccessToken(), "Access token returned is null");
     }
 
-    @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
-    public void testHandleAuthorizationIDTokenResponse(boolean isIDPIdColumnEnabled) throws Exception {
+    @Test
+    public void testHandleAuthorizationIDTokenResponse() throws Exception {
 
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
         authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_ID_TOKEN);
         authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID);
@@ -113,10 +98,9 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         Assert.assertNotNull(respDTO.getAccessToken(), "ID token returned is null");
     }
 
-    @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
-    public void testHandleAuthorizationTokenResponse(boolean isIDPIdColumnEnabled) throws Exception {
+    @Test
+    public void testHandleAuthorizationTokenResponse() throws Exception {
 
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
         authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_TOKEN);
         authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID);
@@ -133,10 +117,9 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         Assert.assertNotNull(respDTO.getAccessToken(), "Access token returned is null");
     }
 
-    @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
-    public void testHandleAuthorizationCodeResponse(boolean isIDPIdColumnEnabled) throws Exception {
+    @Test
+    public void testHandleAuthorizationCodeResponse() throws Exception {
 
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
         authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_CODE);
         authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID);
@@ -182,10 +165,9 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
                              " error code but found : " + errorCode);
     }
 
-    @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
-    public void testHandleAuthorizationTokenResponseNoScopes(boolean isIDPIdColumnEnabled) throws Exception {
+    @Test
+    public void testHandleAuthorizationTokenResponseNoScopes() throws Exception {
 
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
         authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_TOKEN);
         authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID);

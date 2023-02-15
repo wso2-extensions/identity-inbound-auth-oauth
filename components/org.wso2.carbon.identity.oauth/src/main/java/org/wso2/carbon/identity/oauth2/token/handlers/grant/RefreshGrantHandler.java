@@ -575,25 +575,23 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         accessTokenDO.setIssuedTime(timestamp);
         accessTokenDO.setTokenBinding(tokReqMsgCtx.getTokenBinding());
 
-        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-            String previousGrantType = validationBean.getGrantType();
-            // Check if the previous grant type is consent refresh token type or not.
-            if (!StringUtils.equals(OAuthConstants.GrantTypes.REFRESH_TOKEN, previousGrantType)) {
-                // If the previous grant type is not a refresh token, then check if it's a consent token or not.
-                if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(previousGrantType)) {
-                    accessTokenDO.setIsConsentedToken(true);
-                }
-            } else {
-                /* When previousGrantType == refresh_token, we need to check whether the original grant type
-                 is consented or not. */
-                AccessTokenDO accessTokenDOFromTokenIdentifier = OAuth2Util.getAccessTokenDOFromTokenIdentifier(
-                        validationBean.getAccessToken(), false);
-                accessTokenDO.setIsConsentedToken(accessTokenDOFromTokenIdentifier.isConsentedToken());
+        String previousGrantType = validationBean.getGrantType();
+        // Check if the previous grant type is consent refresh token type or not.
+        if (!StringUtils.equals(OAuthConstants.GrantTypes.REFRESH_TOKEN, previousGrantType)) {
+            // If the previous grant type is not a refresh token, then check if it's a consent token or not.
+            if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(previousGrantType)) {
+                accessTokenDO.setIsConsentedToken(true);
             }
+        } else {
+            /* When previousGrantType == refresh_token, we need to check whether the original grant type
+             is consented or not. */
+            AccessTokenDO accessTokenDOFromTokenIdentifier = OAuth2Util.getAccessTokenDOFromTokenIdentifier(
+                    validationBean.getAccessToken(), false);
+            accessTokenDO.setIsConsentedToken(accessTokenDOFromTokenIdentifier.isConsentedToken());
+        }
 
-            if (accessTokenDO.isConsentedToken()) {
-                tokReqMsgCtx.setConsentedToken(true);
-            }
+        if (accessTokenDO.isConsentedToken()) {
+            tokReqMsgCtx.setConsentedToken(true);
         }
 
         // sets accessToken, refreshToken and validity data

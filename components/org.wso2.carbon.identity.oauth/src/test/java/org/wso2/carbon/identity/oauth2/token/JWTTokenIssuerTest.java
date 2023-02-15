@@ -78,7 +78,7 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 
-@WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
+@WithH2Database(files = {"dbScripts/identity.sql"})
 @PrepareForTest(
         {
                 OAuthServerConfiguration.class,

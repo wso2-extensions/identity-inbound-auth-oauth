@@ -40,7 +40,7 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 
 @WithCarbonHome
-@WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
+@WithH2Database(files = {"dbScripts/identity.sql"})
 @PrepareForTest({IdentityDatabaseUtil.class})
 public class DeviceFlowGrantTest extends PowerMockTestCase {
 

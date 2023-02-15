@@ -59,7 +59,7 @@ import static org.testng.Assert.assertEquals;
         ServiceURLBuilder.class, ServiceURL.class, CarbonUtils.class, IdentityConfigParser.class})
 @PowerMockIgnore({"javax.crypto.*"})
 @WithCarbonHome
-@WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
+@WithH2Database(files = {"dbScripts/identity.sql"})
 public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
 
     private OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO = new OAuth2AuthorizeReqDTO();

@@ -48,7 +48,6 @@ import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -465,16 +464,15 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         newTokenBean.setGrantType(tokenReq.getGrantType());
         /* If the existing token is available, the consented token flag will be extracted from that. Otherwise,
         from the current grant. */
-        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-            if (existingTokenBean != null) {
-                newTokenBean.setIsConsentedToken(existingTokenBean.isConsentedToken());
-            } else {
-                if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(tokenReq.getGrantType())) {
-                    newTokenBean.setIsConsentedToken(true);
-                }
+        if (existingTokenBean != null) {
+            newTokenBean.setIsConsentedToken(existingTokenBean.isConsentedToken());
+        } else {
+            if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(tokenReq.getGrantType())) {
+                newTokenBean.setIsConsentedToken(true);
             }
-            tokReqMsgCtx.setConsentedToken(newTokenBean.isConsentedToken());
         }
+        tokReqMsgCtx.setConsentedToken(newTokenBean.isConsentedToken());
+
         newTokenBean.setTokenType(getTokenType());
         newTokenBean.setIssuedTime(timestamp);
         newTokenBean.setAccessToken(getNewAccessToken(tokReqMsgCtx, oauthTokenIssuer));

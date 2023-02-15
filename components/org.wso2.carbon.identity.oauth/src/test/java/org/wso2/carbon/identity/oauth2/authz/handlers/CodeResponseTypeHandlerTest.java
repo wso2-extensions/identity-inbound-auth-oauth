@@ -22,7 +22,6 @@ import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
@@ -36,14 +35,13 @@ import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
 /**
  * Test class covering CodeResponseTypeHandler
  */
 
 @WithCarbonHome
-@WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
+@WithH2Database(files = {"dbScripts/identity.sql"})
 @WithRealmService(tenantId = TestConstants.TENANT_ID,
         tenantDomain = TestConstants.TENANT_DOMAIN,
         initUserStoreManager = true,
@@ -77,22 +75,9 @@ public class CodeResponseTypeHandlerTest extends PowerMockTestCase {
     public void tearDown() throws Exception {
     }
 
-    /**
-     * This data provider is added to enable affected test cases to be tested in both
-     * where the IDP_ID column is available and not available in the relevant tables.
-     */
-    @DataProvider(name = "IdpIDColumnAvailabilityDataProvider")
-    public Object[][] idpIDColumnAvailabilityDataProvider() {
-        return new Object[][]{
-                {true},
-                {false}
-        };
-    }
+    @Test
+    public void testIssue() throws Exception {
 
-    @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
-    public void testIssue(boolean isIDPIdColumnEnabled) throws Exception {
-
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setGrantTypes("implicit");
         oAuthAppDO.setOauthConsumerKey(TEST_CONSUMER_KEY);

@@ -45,7 +45,6 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -129,22 +128,9 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         assertNotNull(responseDTO);
     }
 
-    /**
-     * This data provider is added to enable affected test cases to be tested in both
-     * where the IDP_ID column is available and not available in the relevant tables.
-     */
-    @DataProvider(name = "IdpIDColumnAvailabilityDataProvider")
-    public Object[][] idpIDColumnAvailabilityDataProvider() {
-        return new Object[][]{
-                {true},
-                {false}
-        };
-    }
+    @Test
+    public void testFindOAuthConsumerIfTokenIsValid() throws Exception {
 
-    @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
-    public void testFindOAuthConsumerIfTokenIsValid(boolean isIDPIdColumnEnabled) throws Exception {
-
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         mockRequiredObjects();
         OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
         OAuth2TokenValidationRequestDTO.OAuth2AccessToken oAuth2AccessToken =
@@ -166,15 +152,14 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
     @DataProvider(name = "CommonDataProvider")
     public Object[][] commonDataProvider() {
         return new Object[][]{
-                {true, "1234"},
-                {false, "12345"}
+                {"1234"},
+                {"12345"}
         };
     }
 
     @Test(dataProvider = "CommonDataProvider")
-    public void testBuildIntrospectionResponse(boolean isIDPIdColumnEnabled, String accessTokenId) throws Exception {
+    public void testBuildIntrospectionResponse(String accessTokenId) throws Exception {
 
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         mockRequiredObjects();
         when(realmService.getTenantManager()).thenReturn(tenantManager);
         doReturn(MultitenantConstants.SUPER_TENANT_ID).when(tenantManager).getTenantId(Mockito.anyString());

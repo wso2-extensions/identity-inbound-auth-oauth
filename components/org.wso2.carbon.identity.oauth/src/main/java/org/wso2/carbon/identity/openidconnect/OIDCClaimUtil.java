@@ -29,7 +29,6 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -42,10 +41,8 @@ import java.util.Map;
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang.ArrayUtils.isNotEmpty;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.InternalRoleDomains.
-        APPLICATION_DOMAIN;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.InternalRoleDomains.
-        WORKFLOW_DOMAIN;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.InternalRoleDomains.APPLICATION_DOMAIN;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.InternalRoleDomains.WORKFLOW_DOMAIN;
 
 /**
  * Utility to handle OIDC Claim related functionality.
@@ -230,23 +227,18 @@ public class OIDCClaimUtil {
                                                                      ServiceProvider serviceProvider,
                                                                      boolean isConsentedToken) {
 
-        if (!OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-            return filterUserClaimsBasedOnConsent(userClaims, authenticatedUser, clientId, spTenantDomain, grantType,
-                    serviceProvider);
+        if (isConsentedToken && !FrameworkUtils.isConsentPageSkippedForSP(serviceProvider)) {
+            return OpenIDConnectServiceComponentHolder.getInstance()
+                    .getHighestPriorityOpenIDConnectClaimFilter()
+                    .getClaimsFilteredByUserConsent(userClaims, authenticatedUser, clientId, spTenantDomain);
         } else {
-            if (isConsentedToken && !FrameworkUtils.isConsentPageSkippedForSP(serviceProvider)) {
-                return OpenIDConnectServiceComponentHolder.getInstance()
-                        .getHighestPriorityOpenIDConnectClaimFilter()
-                        .getClaimsFilteredByUserConsent(userClaims, authenticatedUser, clientId, spTenantDomain);
-            } else {
-                if (log.isDebugEnabled()) {
-                    String msg = "Filtering user claims based on consent skipped for grant type. Returning " +
-                            "original user claims for user:%s, for clientId:%s of tenantDomain:%s";
-                    log.debug(String.format(msg, authenticatedUser.toFullQualifiedUsername(),
-                            clientId, spTenantDomain));
-                }
-                return userClaims;
+            if (log.isDebugEnabled()) {
+                String msg = "Filtering user claims based on consent skipped for grant type. Returning " +
+                        "original user claims for user:%s, for clientId:%s of tenantDomain:%s";
+                log.debug(String.format(msg, authenticatedUser.toFullQualifiedUsername(),
+                        clientId, spTenantDomain));
             }
+            return userClaims;
         }
     }
 
