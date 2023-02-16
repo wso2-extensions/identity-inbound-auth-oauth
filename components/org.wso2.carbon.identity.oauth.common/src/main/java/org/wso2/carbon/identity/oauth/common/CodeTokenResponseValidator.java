@@ -69,7 +69,7 @@ public class CodeTokenResponseValidator extends TokenValidator {
         if (StringUtils.isNotBlank(request.getParameter(REQUEST_URI))) {
             // PAR spec mandates request_uri to have client_id, response_type in accordance to OAuth 2.0. Also
             // 'request' parameter is disallowed if 'request_uri' parameter is present in the authorization request.
-            requiredParams = new ArrayList<>(Arrays.asList(CLIENT_ID, REQUEST_URI));
+            requiredParams = new ArrayList<>(Arrays.asList(RESPONSE_TYPE, CLIENT_ID, REQUEST_URI));
             notAllowedParams.add(REQUEST);
         }
         super.validateRequiredParameters(request);

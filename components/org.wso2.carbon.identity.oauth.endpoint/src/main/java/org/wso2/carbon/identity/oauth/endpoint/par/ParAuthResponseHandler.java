@@ -4,12 +4,17 @@ package org.wso2.carbon.identity.oauth.endpoint.par;
 import net.minidev.json.JSONObject;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
+import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ParErrorDTO;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthCodeResponse;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
@@ -24,7 +29,8 @@ public class ParAuthResponseHandler {
 
     public Response createAuthResponse(@Context HttpServletResponse response, ParAuthCodeResponse parAuthCodeResponse) {
 
-        String request_uri = "urn:ietf:params:wso2is:request_uri:" + UUID.randomUUID().toString();
+        String request_uri = "urn:ietf:params:wso2is:request_uri:" + UUID.randomUUID();
+
         if (log.isDebugEnabled()) {
             log.debug("Setting ExpiryTime for the response to the  request made by client with clientID : " +
                     parAuthCodeResponse.getClientId() + ".");
@@ -33,8 +39,8 @@ public class ParAuthResponseHandler {
         response.setContentType(MediaType.APPLICATION_JSON);
 
         JSONObject parAuthResponse = new JSONObject();
-        parAuthResponse.put(ParConstants.EXPIRES_IN, ParConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC);
         parAuthResponse.put(ParConstants.REQUEST_URI, request_uri);
+        parAuthResponse.put(ParConstants.EXPIRES_IN, ParConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC);
 
         if (log.isDebugEnabled()) {
             log.debug("Creating PAR Authentication response to the request made by client with clientID : " +
@@ -78,6 +84,11 @@ public class ParAuthResponseHandler {
         }
     }
 
+//    public OAuthAuthzRequest buildParOauthRequest( HttpServletRequest request) throws OAuthProblemException, OAuthSystemException {
+//
+//        return new ParRequestBuilder(request);
+//    }
+
     public Response handleServerException(OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO) {
 
         return null;
@@ -109,5 +120,9 @@ public class ParAuthResponseHandler {
         responseBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
         return responseBuilder.entity(parErrorResponse.toString()).build();
     }
+
+
+
+
 
 }

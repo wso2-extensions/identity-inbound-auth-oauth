@@ -83,6 +83,8 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedEx
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
+import org.wso2.carbon.identity.oauth.endpoint.par.OAuth2ParEndpoint;
+import org.wso2.carbon.identity.oauth.endpoint.par.ParRequestBuilder;
 import org.wso2.carbon.identity.oauth.endpoint.par.ParRequestData;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
@@ -163,7 +165,6 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TENANT_DOMAIN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
-import static org.wso2.carbon.identity.oauth.endpoint.par.RequestUriValidator.isValidRequestUri;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
@@ -175,15 +176,7 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSSOConsentService;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.retrieveStateForErrorURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.DISPLAY;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.ID_TOKEN_HINT;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.LOGIN_HINT;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.MAX_AGE;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.NONCE;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.PROMPT;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.*;
 
 /**
  * Rest implementation of OAuth2 authorize endpoint.
@@ -1539,6 +1532,15 @@ public class OAuth2AuthzEndpoint {
 
         OAuth2ClientValidationResponseDTO validationResponse = validateClient(oAuthMessage);
 
+        // if request_uri present, then replace the response type param with the value given in PAR
+//        if (oAuthMessage.isParRequest()) {
+//
+//            Map<String, Map<String, String[]>> parRequestUriRequests = ParRequestData.getRequests();
+//
+//            oAuthMessage.getRequest().getParameter(RESPONSE_TYPE).replace("",
+//                    parRequestUriRequests.get(oAuthMessage.getRequest_uri()).get("response_type")[0]);
+//            //oauthRequest.getParam(RESPONSE_TYPE).replace("",parRequests.get(requestUri).get("response_type")[0]);
+//        }
 
         if (!validationResponse.isValidClient()) {
             EndpointUtil.triggerOnRequestValidationFailure(oAuthMessage, validationResponse);
@@ -1557,7 +1559,20 @@ public class OAuth2AuthzEndpoint {
             setSPAttributeToRequest(oAuthMessage.getRequest(), validationResponse.getApplicationName(), tenantDomain);
         }
 
-        OAuthAuthzRequest oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
+        //TODO: Skip this validation if request contains request_uri
+
+//        OAuthAuthzRequest oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
+
+        OAuthAuthzRequest oauthRequest;
+
+        if (oAuthMessage.getRequest_uri() != null) {
+            //get requestUri, and its related OauthRequest
+            oauthRequest = ParRequestData.getOauthRequests().get(oAuthMessage.getRequest_uri()); //get requestUri, and its related request
+        } else {
+            oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
+        }
+
+
 
         OAuth2Parameters params = new OAuth2Parameters();
         String sessionDataKey = UUIDGenerator.generateUUID();
@@ -1657,6 +1672,9 @@ public class OAuth2AuthzEndpoint {
         OAuthAuthzRequest oAuthAuthzRequest;
 
         if (isDefaultOAuthAuthzRequestClassConfigured()) {
+
+            //TODO: Check if request contains request_uri, ans skip the validation of it does.
+
             oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
         } else {
             try {
@@ -1975,16 +1993,22 @@ public class OAuth2AuthzEndpoint {
 
         String clientId = oAuthMessage.getClientId();
 
+        //if request is  PAR request that has either request_uri or request param, populate params method with
 //        if (oAuthMessage.isParRequest()) {
-//            Map<String, Map<String, String[]>> parRequests = ParRequestData.getRequests();
-//            String requestUri = oAuthMessage.getRequest_uri();
 //
-//            if (isValidRequestUri(requestUri)) {
-//                params.setClientId(clientId);
-//                params.setRedirectURI(parRequests.get(requestUri).get("redirect_uri")[0]);
-//                params.setResponseType(parRequests.get(requestUri).get("response_type")[0]);
-//                params.setScopes(new HashSet<String>(Arrays.asList(parRequests.get(requestUri).get("scope"))));
-//            }
+//            params = handleParRequestObject(oAuthMessage, oauthRequest, params);
+////            Map<String, Map<String, String[]>> parRequests = ParRequestData.getRequests();
+////            String requestUri = oAuthMessage.getRequest_uri();
+////
+////            if (isValidRequestUri(requestUri)) {
+//
+//
+//
+////                params.setClientId(clientId);
+////                params.setRedirectURI(parRequests.get(requestUri).get("redirect_uri")[0]);
+////                params.setResponseType(parRequests.get(requestUri).get("response_type")[0]);
+////                params.setScopes(new HashSet<String>(Arrays.asList(parRequests.get(requestUri).get("scope"))));
+////            }
 //
 //        } else {
 //            params.setClientId(clientId);
@@ -1993,6 +2017,10 @@ public class OAuth2AuthzEndpoint {
 //            params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
 //            params.setScopes(oauthRequest.getScopes());
 //        }
+
+
+        //TODO: oauthRequest.getParam(RESPONSE_TYPE).replace("",parRequests.get(requestUri).get("response_type")[0]);
+
 
         params.setClientId(clientId);
         params.setRedirectURI(validationResponse.getCallbackURL());
@@ -2063,9 +2091,10 @@ public class OAuth2AuthzEndpoint {
                             null, params);
                 }
             }
-        } else {
-            handleParRequest(oAuthMessage, oauthRequest, params);
         }
+//        else {
+//            handleParRequest(oAuthMessage, oauthRequest, params);
+//        }
         //else if request is request with a request_uri follow par request flow
 //        if (isRequestUri(oauthRequest)) {
 //            handleParRequest(oAuthMessage, oauthRequest, params);
@@ -2230,15 +2259,20 @@ public class OAuth2AuthzEndpoint {
         persistRequestObject(parameters, requestObject);
     }
 
-    private void handleParRequestObject(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
+    private OAuth2Parameters handleParRequestObject(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
                                      OAuth2Parameters parameters)
             throws RequestObjectException, InvalidRequestException {
 
-        RequestObject requestObject = ParRequestUtil.buildRequest(oauthRequest, parameters);
-        if (requestObject == null) {
-            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Unable to build a valid Request " +
-                    "Object from the authorization request.");
-        }
+        //RequestObject requestObject = ParRequestUtil.buildRequest(oauthRequest, parameters);
+
+        //populate the oAuth2Params object with values obtained from PAR request
+        parameters = ParRequestUtil.buildRequestPrams(oAuthMessage, parameters);
+
+
+//        if (requestObject == null) {
+//            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Unable to build a valid Request " +
+//                    "Object from the authorization request.");
+//        }
             /*
               When the request parameter is used, the OpenID Connect request parameter values contained in the JWT
               supersede those passed using the OAuth 2.0 request syntax
@@ -2260,6 +2294,8 @@ public class OAuth2AuthzEndpoint {
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
         //persistRequestObject(parameters, requestObject);
+
+        return parameters;
     }
 
     private void overrideAuthzParameters(OAuthMessage oAuthMessage, OAuth2Parameters params,

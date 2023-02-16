@@ -19,8 +19,13 @@
 package org.wso2.carbon.identity.oauth.endpoint.par;
 
 import org.apache.cxf.interceptor.InInterceptors;
+import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
+import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ParErrorDTO;
+import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthCodeResponse;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -32,7 +37,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
-import java.time.LocalTime;
 import java.util.*;
 
 /**
@@ -44,18 +48,25 @@ public class OAuth2ParEndpoint {
 
     private ParAuthResponseHandler parAuthResponseHandler = new ParAuthResponseHandler();
     private ParAuthCodeResponse parAuthCodeResponse = new ParAuthCodeResponse();
+    private static OAuthAuthzRequest oAuthAuthzRequest;
 
     @POST
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
     @Produces("application/json")
     public Response par(@Context HttpServletRequest request, @Context HttpServletResponse response,
-                        MultivaluedMap<String, String> paramMap) throws ParErrorDTO {
+                        MultivaluedMap<String, String> paramMap) throws ParErrorDTO, OAuthProblemException, OAuthSystemException, InvalidOAuthRequestException {
 
-        LocalTime requestMadeAt = java.time.LocalTime.now();
+        long requestMadeAt = Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis();
+        //LocalTime requestMadeAt = java.time.LocalTime.now();
 
         OAuth2Service oAuth2Service = new OAuth2Service();
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.validateClientInfo(request);
+
+
+        //build ParReqyestObject.oAuthrequest
+//        oAuthAuthzRequest = new ParRequestBuilder(request);
+
 
         if (!oAuth2ClientValidationResponseDTO.isValidClient()) {
 
@@ -65,18 +76,21 @@ public class OAuth2ParEndpoint {
             return getErrorResponse(rejectRequestWithRequestUri()); // passes par error object to obtain error response
         }
 
+
+
         Response resp = getAuthResponse(response, parAuthCodeResponse);
         ParRequestData.addRequest(parAuthCodeResponse.getRequestUri(), request.getParameterMap());
         ParRequestData.addTime(parAuthCodeResponse.getRequestUri(), requestMadeAt);
+        ParRequestData.addOauthRequest(parAuthCodeResponse.getRequestUri(), ParRequestUtil.buildParOauthRequest(request));
 
         return resp;
     }
 
     /**
-     * Creates CIBA AuthenticationResponse.
+     * Creates PAR AuthenticationResponse.
      *
      * @param response             Authentication response object.
-     * @param parAuthCodeResponse CIBA Authentication Request Data Transfer Object.
+     * @param parAuthCodeResponse PAR Authentication Request Data Transfer Object.
      * @return Response for AuthenticationRequest.
      */
     private Response getAuthResponse(@Context HttpServletResponse response, ParAuthCodeResponse parAuthCodeResponse) {
@@ -98,7 +112,7 @@ public class OAuth2ParEndpoint {
     /**
      * Creates PAR Authentication Error Response.
      *
-     * @param parErrorDTO Par Authentication Failed Exception.
+     * @param parErrorDTO PAR Authentication Failed Exception.
      * @return response PAR Authentication Error Responses for AuthenticationRequest.
      */
     private Response getErrorResponse(ParErrorDTO parErrorDTO) {
@@ -118,5 +132,9 @@ public class OAuth2ParEndpoint {
         parErrorDTO.setErrorCode(HttpServletResponse.SC_BAD_REQUEST);
         parErrorDTO.setErrorMsg("requestUri_provided");
         return parErrorDTO;
+    }
+
+    public static OAuthAuthzRequest getOAuthAuthzRequest() {
+        return oAuthAuthzRequest;
     }
 }

@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.authz.validators;
 import org.apache.commons.lang.StringUtils;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_TYPE;
 
 /**
  * The default implementation of the ResponseTypeRequestValidator. If there is no ResponseTypeRequestValidator

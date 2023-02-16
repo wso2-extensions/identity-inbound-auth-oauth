@@ -24,7 +24,10 @@ import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 
 import java.time.Duration;
 import java.time.LocalTime;
+import java.util.Calendar;
 import java.util.Map;
+import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 public class RequestUriValidator {
 
@@ -50,14 +53,15 @@ public class RequestUriValidator {
 
     public static boolean requestUriExpired(String requestUri) throws InvalidRequestException {
 
-        Map<String, LocalTime> requestTimes = ParRequestData.getRequestTimes();
-        LocalTime currentTime = java.time.LocalTime.now();
-        LocalTime requestMade = requestTimes.get(requestUri);
+        Map<String, Long> requestTimes = ParRequestData.getRequestTimes();
+        //LocalTime currentTime = java.time.LocalTime.now();
+        long currentTime = Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis();
+        long requestMade = requestTimes.get(requestUri);
         long defaultExpiryInSecs = ParConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC;
 
-        long duration = Duration.between(requestMade, currentTime).getSeconds();
+        long duration = (currentTime - requestMade);
 
-        if (duration < defaultExpiryInSecs) {
+        if (TimeUnit.MILLISECONDS.toSeconds(duration) < defaultExpiryInSecs) {
             return false;
         } else {
             throw new InvalidRequestException("Request URI expired",

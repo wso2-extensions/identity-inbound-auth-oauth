@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.par;
 
+import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
+
 import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,16 +27,22 @@ import java.util.Map;
 public class ParRequestData {
 
     private static Map<String, Map<String,String[]>> requests = new HashMap<>();
-    private static Map<String, LocalTime> requestTimes = new HashMap<>();
+    private static Map<String, Long> requestTimes = new HashMap<>();
+    private static Map<String, OAuthAuthzRequest> oauthRequests = new HashMap<>();
 
     public static void addRequest(String requestUri, Map<String, String[]> parameters) {
 
         requests.put(requestUri, parameters);
     }
 
-    public static void addTime(String requestUri, LocalTime currentTime) {
+    public static void addTime(String requestUri, long currentTime) {
 
         requestTimes.put(requestUri, currentTime);
+    }
+
+    public static void addOauthRequest(String requestUri, OAuthAuthzRequest oauthRequest) {
+
+        oauthRequests.put(requestUri, oauthRequest);
     }
 
     public static Map<String, Map<String, String[]>> getRequests() {
@@ -42,8 +50,13 @@ public class ParRequestData {
         return requests;
     }
 
-    public static Map<String, LocalTime> getRequestTimes() {
+    public static Map<String, Long> getRequestTimes() {
 
         return requestTimes;
+    }
+
+    public static Map<String, OAuthAuthzRequest> getOauthRequests() {
+
+        return oauthRequests;
     }
 }
