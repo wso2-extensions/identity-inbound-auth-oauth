@@ -351,6 +351,11 @@
                 <artifactId>json-simple</artifactId>
                 <version>${json-simple.version}</version>
             </dependency>
+            <dependency>
+                <groupId>libthrift.wso2</groupId>
+                <artifactId>libthrift</artifactId>
+                <version>${libthrift.version}</version>
+            </dependency>
 
             <!-- Other library dependencies -->
             <dependency>
@@ -905,6 +910,7 @@
         <org.apache.cxf.version>3.3.7</org.apache.cxf.version>
         <encoder.wso2.version>1.2.0.wso2v1</encoder.wso2.version>
         <json-simple.version>1.1.wso2v1</json-simple.version>
+        <libthrift.version>0.16.0.wso2v1</libthrift.version>
 
         <org.slf4j.verison>1.7.21</org.slf4j.verison>
         <com.google.code.gson.version>2.9.0</com.google.code.gson.version>
