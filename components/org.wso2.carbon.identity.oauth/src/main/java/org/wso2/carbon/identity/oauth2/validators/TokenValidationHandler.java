@@ -43,13 +43,10 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.TreeMap;
 
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TENANT_NAME_FROM_CONTEXT;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isParsableJWT;
 
 /**
@@ -322,21 +319,9 @@ public class TokenValidationHandler {
                         OAuthConstants.LogConstants.FAILED, "System error occurred.", "validate-token", null);
                 throw new IdentityOAuth2Exception("Error occurred while validating token.", exception);
             } else {
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                        OAuthConstants.LogConstants.FAILED, "Token validation failed.", "validate-token", null);
                 return buildIntrospectionErrorResponse("Token validation failed");
-            }
-        } else {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put(OAuth2Util.CLIENT_ID, introResp.getClientId());
-                Optional.of(IdentityUtil.threadLocalProperties.get()).ifPresent(threadLocal -> {
-                    if (threadLocal.get(TENANT_NAME_FROM_CONTEXT) != null) {
-                        params.put(OAuthConstants.LogConstants.TENANT_DOMAIN,
-                                threadLocal.get(TENANT_NAME_FROM_CONTEXT));
-                    }
-                });
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.SUCCESS, "Token is successfully validated.", "validate-token",
-                        null);
             }
         }
 
