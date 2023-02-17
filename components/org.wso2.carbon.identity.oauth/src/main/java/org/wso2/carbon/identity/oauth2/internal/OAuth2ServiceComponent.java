@@ -779,7 +779,7 @@ public class OAuth2ServiceComponent {
     }
 
     @Reference(
-            name = "org.wso2.carbon.identity.event.services. ",
+            name = "org.wso2.carbon.identity.event.services.IdentityEventService",
             service = IdentityEventService.class,
             cardinality = ReferenceCardinality.OPTIONAL,
             policy = ReferencePolicy.DYNAMIC,

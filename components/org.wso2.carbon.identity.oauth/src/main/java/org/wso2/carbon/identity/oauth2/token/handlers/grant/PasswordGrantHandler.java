@@ -84,7 +84,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
     private static final String PASSWORD_GRANT_AUTHENTICATOR_NAME = "BASIC";
     private static final String PUBLISH_PASSWORD_GRANT_LOGIN = "OAuth.PublishPasswordGrantLogin";
     private static final String REMOTE_IP_ADDRESS = "remote-ip-address";
-    private static final String PASSWORD_EXPIRY_VALIDATION_EVENT_NAME = "PASSWORD_EXPIRY_VALIDATION";
+    private static final String PASSWORD_GRANT_POST_AUTHENTICATION_EVENT = "PASSWORD_GRANT_POST_AUTHENTICATION";
 
     @Override
     public boolean issueRefreshToken() throws IdentityOAuth2Exception {
@@ -231,12 +231,13 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: " + authenticated);
             }
 
+            triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT, tenantAwareUserName,
+                    userTenantDomain, userStoreManager, authenticated);
+            if (log.isDebugEnabled()) {
+                log.debug(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT + " event is triggered");
+            }
+
             if (authenticated) {
-                if (log.isDebugEnabled()) {
-                    log.debug(PASSWORD_EXPIRY_VALIDATION_EVENT_NAME + " event is triggered");
-                }
-                triggerPasswordExpiryValidationEvent(PASSWORD_EXPIRY_VALIDATION_EVENT_NAME, tenantAwareUserName,
-                        userTenantDomain, userStoreManager);
 
                 AuthenticatedUser authenticatedUser
                         = new AuthenticatedUser(authenticationResult.getAuthenticatedUser().get());
@@ -472,14 +473,15 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
      * @throws IdentityOAuth2Exception if password is expired or any other exceptions
      */
     private void triggerPasswordExpiryValidationEvent(String eventName, String username, String tenantDomain,
-                                                      org.wso2.carbon.user.core.UserStoreManager userStoreManager)
-            throws IdentityOAuth2Exception {
+                                                      org.wso2.carbon.user.core.UserStoreManager userStoreManager,
+                                                      boolean authenticated) throws IdentityOAuth2Exception {
 
         IdentityEventService eventService = OAuth2ServiceComponentHolder.getIdentityEventService();
         Map<String, Object> eventProperties = new HashMap<>();
         eventProperties.put(IdentityEventConstants.EventProperty.USER_NAME, username);
         eventProperties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, tenantDomain);
         eventProperties.put(IdentityEventConstants.EventProperty.USER_STORE_MANAGER, userStoreManager);
+        eventProperties.put(IdentityEventConstants.EventProperty.AUTHENTICATION_STATUS, authenticated);
 
         Event event = new Event(eventName, eventProperties);
         try {
@@ -487,7 +489,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 eventService.handleEvent(event);
             }
         } catch (IdentityEventException e) {
-            throw new IdentityOAuth2Exception(e.getMessage(), e); // Password has expired error message
+            throw new IdentityOAuth2Exception("Authentication Failed! " + e.getMessage(), e); // Password has expired
         }
     }
 }
