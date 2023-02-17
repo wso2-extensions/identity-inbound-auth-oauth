@@ -352,11 +352,6 @@ public class OAuth2Util {
     private static final String CLIENT_SECRET_POST = "client_secret_post";
     private static final String PRIVATE_KEY_JWT = "private_key_jwt";
 
-    // Supported Response Modes.
-    private static final String QUERY_RESPONSE_MODE = "query";
-    private static final String FRAGMENT_RESPONSE_MODE = "fragment";
-    private static final String FORM_POST_RESPONSE_MODE = "form_post";
-
     public static final String ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE = "Invalid Access Token. Access token is " +
             "not ACTIVE.";
 
@@ -3593,12 +3588,7 @@ public class OAuth2Util {
      */
     public static List<String> getSupportedResponseModes() {
 
-        List<String> responseModes = new ArrayList<>();
-        responseModes.add(QUERY_RESPONSE_MODE);
-        responseModes.add(FRAGMENT_RESPONSE_MODE);
-        responseModes.add(FORM_POST_RESPONSE_MODE);
-
-        return responseModes;
+        return OAuthServerConfiguration.getInstance().getSupportedResponseModeNames();
     }
 
     /**

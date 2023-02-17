@@ -101,7 +101,10 @@ public final class OAuthConstants {
     public static final String CLIENT_AUTH_CREDENTIAL_VALIDATION = "StrictClientCredentialValidation";
     public static final String ACCESS_TOKEN = "accessToken";
     public static final String ID_TOKEN = "id_token";
+    public static final String CODE = "code";
     public static final String USERINFO = "userinfo";
+    public static final String AUTHENTICATED_IDPS = "AuthenticatedIdPs";
+    public static final String SESSION_STATE = "session_state";
     public static final String AUTHZ_CODE = "AuthorizationCode";
 
     //Constants for reading EndpointConfig.properties
@@ -532,4 +535,20 @@ public final class OAuthConstants {
         public static final String CLIENT_ID = "client id";
         public static final String TENANT_DOMAIN = "tenant domain";
     }
+
+    /**
+     * Response Mode constants.
+     */
+    public static class ResponseModes {
+
+        public static final String DEFAULT = "default";
+        public static final String QUERY = "query";
+        public static final String FRAGMENT = "fragment";
+        public static final String FORM_POST = "form_post";
+        public static final String JWT = "jwt";
+        public static final String QUERY_JWT = "query.jwt";
+        public static final String FRAGMENT_JWT = "fragment.jwt";
+        public static final String FORM_POST_JWT = "form_post.jwt";
+    }
+
 }
