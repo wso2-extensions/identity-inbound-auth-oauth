@@ -35,6 +35,8 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.model.PermissionsAndRoleConfig;
+import org.wso2.carbon.identity.application.common.model.RoleMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -654,6 +656,62 @@ public class ClaimsUtil {
         authorizationGrantCacheEntry.setValidityPeriod(validityPeriod);
         AuthorizationGrantCache.getInstance()
                 .addToCacheByToken(authorizationGrantCacheKey, authorizationGrantCacheEntry);
+    }
+
+
+    /**
+     * This method will update the role claim value received from the IdP using the defined role claim configuration
+     * for the IdP.
+     * Also, if "ReturnOnlyMappedLocalRoles" configuration is enabled, then server will only return the mapped role
+     * values.
+     *
+     * @param identityProvider      identity provider
+     * @param currentRoleClaimValue current role claim value.
+     * @return updated role claim string
+     */
+    public static String getUpdatedRoleClaimValue(IdentityProvider identityProvider, String currentRoleClaimValue) {
+
+        if (StringUtils.equalsIgnoreCase(IdentityApplicationConstants.RESIDENT_IDP_RESERVED_NAME, identityProvider
+                .getIdentityProviderName())) {
+            return currentRoleClaimValue;
+        }
+
+        if (isIdPRoleMappingsConfigured(identityProvider)) {
+
+            PermissionsAndRoleConfig permissionAndRoleConfig = identityProvider.getPermissionAndRoleConfig();
+            String[] receivedRoles = currentRoleClaimValue.split(FrameworkUtils.getMultiAttributeSeparator());
+            List<String> updatedRoleClaimValues = new ArrayList<>();
+            loop:
+            for (String receivedRole : receivedRoles) {
+                for (RoleMapping roleMapping : permissionAndRoleConfig.getRoleMappings()) {
+                    if (roleMapping.getRemoteRole().equals(receivedRole)) {
+                        updatedRoleClaimValues.add(roleMapping.getLocalRole().getLocalRoleName());
+                        continue loop;
+                    }
+                }
+                if (!OAuthServerConfiguration.getInstance().isReturnOnlyMappedLocalRoles()) {
+                    updatedRoleClaimValues.add(receivedRole);
+                }
+            }
+            if (!updatedRoleClaimValues.isEmpty()) {
+                return StringUtils.join(updatedRoleClaimValues, FrameworkUtils.getMultiAttributeSeparator());
+            }
+            return null;
+        }
+        // If role mappings are not configured for Idp, return the current role claim value.
+        return currentRoleClaimValue;
+    }
+
+
+    /**
+     * Asserts whether role mapping is configured for an identity provider.
+     * @param identityProvider The identity provider to be checked.
+     * @return                 Whether role mapping is configured for the identity provider
+     */
+    private static boolean isIdPRoleMappingsConfigured(IdentityProvider identityProvider) {
+
+        PermissionsAndRoleConfig permissionAndRoleConfig = identityProvider.getPermissionAndRoleConfig();
+        return permissionAndRoleConfig != null && ArrayUtils.isNotEmpty(permissionAndRoleConfig.getRoleMappings());
     }
 
     /**

@@ -51,9 +51,7 @@ import org.wso2.carbon.identity.application.common.model.CertificateInfo;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
-import org.wso2.carbon.identity.application.common.model.PermissionsAndRoleConfig;
 import org.wso2.carbon.identity.application.common.model.Property;
-import org.wso2.carbon.identity.application.common.model.RoleMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
@@ -286,7 +284,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                                     entry.getValue())) {
 
                         IdentityProvider identityProvider = getIdentityProvider(assertion, tenantDomain);
-                        String updatedRoleClaimValue = getUpdatedRoleClaimValue(identityProvider,
+                        String updatedRoleClaimValue = ClaimsUtil.getUpdatedRoleClaimValue(identityProvider,
                                 entry.getValue());
                         if (updatedRoleClaimValue != null) {
                             entry.setValue(updatedRoleClaimValue);
@@ -301,50 +299,6 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         }
     }
 
-    /**
-     * This method will update the role claim value received from the IdP using the defined role claim configuration
-     * for the IdP.
-     * Also, if "ReturnOnlyMappedLocalRoles" configuration is enabled, then server will only return the mapped role
-     * values.
-     *
-     * @param identityProvider      identity provider
-     * @param currentRoleClaimValue current role claim value.
-     * @return updated role claim string
-     */
-    private String getUpdatedRoleClaimValue(IdentityProvider identityProvider, String currentRoleClaimValue) {
-
-        if (StringUtils.equalsIgnoreCase(IdentityApplicationConstants.RESIDENT_IDP_RESERVED_NAME, identityProvider
-                .getIdentityProviderName())) {
-            return currentRoleClaimValue;
-        }
-
-        PermissionsAndRoleConfig permissionAndRoleConfig = identityProvider.getPermissionAndRoleConfig();
-        if (permissionAndRoleConfig != null && ArrayUtils.isNotEmpty(permissionAndRoleConfig.getRoleMappings())) {
-
-            String[] receivedRoles = currentRoleClaimValue.split(FrameworkUtils.getMultiAttributeSeparator());
-            List<String> updatedRoleClaimValues = new ArrayList<>();
-            loop:
-            for (String receivedRole : receivedRoles) {
-                for (RoleMapping roleMapping : permissionAndRoleConfig.getRoleMappings()) {
-                    if (roleMapping.getRemoteRole().equals(receivedRole)) {
-                        updatedRoleClaimValues.add(roleMapping.getLocalRole().getLocalRoleName());
-                        continue loop;
-                    }
-                }
-                if (!OAuthServerConfiguration.getInstance().isReturnOnlyMappedLocalRoles()) {
-                    updatedRoleClaimValues.add(receivedRole);
-                }
-            }
-            if (!updatedRoleClaimValues.isEmpty()) {
-                return StringUtils.join(updatedRoleClaimValues, FrameworkUtils.getMultiAttributeSeparator());
-            }
-            return null;
-        }
-        if (!OAuthServerConfiguration.getInstance().isReturnOnlyMappedLocalRoles()) {
-            return currentRoleClaimValue;
-        }
-        return null;
-    }
 
     protected Map<String, String> handleClaimsForIDP(Map<String, String> attributes, String tenantDomain,
                                                      IdentityProvider identityProvider, boolean localClaimDialect,
@@ -1506,7 +1460,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         if (localClaims != null && StringUtils
                 .isNotBlank(localClaims.get(roleClaimURI))) {
 
-            String updatedRoleClaimValue = getUpdatedRoleClaimValue(identityProvider,
+            String updatedRoleClaimValue = ClaimsUtil.getUpdatedRoleClaimValue(identityProvider,
                     localClaims.get(roleClaimURI));
             if (updatedRoleClaimValue != null) {
                 localClaims.put(roleClaimURI, updatedRoleClaimValue);
