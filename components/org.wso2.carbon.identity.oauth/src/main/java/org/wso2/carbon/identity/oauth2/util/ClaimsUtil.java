@@ -758,7 +758,7 @@ public class ClaimsUtil {
      * @param claims           A map of claims that needs to be mapped
      * @return                 The map of claims after IdP role mapping
      */
-    private static Map<String, String> handleIdPRoleMapping(IdentityProvider identityProvider,
+    public static Map<String, String> handleIdPRoleMapping(IdentityProvider identityProvider,
                                                             Map<String, String> claims) {
 
         if (claims != null) {
