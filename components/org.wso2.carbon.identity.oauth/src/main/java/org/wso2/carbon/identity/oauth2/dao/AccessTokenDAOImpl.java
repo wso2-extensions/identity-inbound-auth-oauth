@@ -549,7 +549,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
             if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
                 if (connection.getMetaData().getDriverName().contains("MySQL")
-                        || connection.getMetaData().getDriverName().contains("H2")) {
+                        || connection.getMetaData().getDriverName().contains("H2")
+                        || connection.getMetaData().getDriverName().contains("MariaDB")) {
                     sql = SQLQueries.
                             GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MYSQL;
                 } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
