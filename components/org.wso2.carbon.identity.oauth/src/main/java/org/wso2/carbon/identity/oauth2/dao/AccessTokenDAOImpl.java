@@ -29,6 +29,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.util.JdbcUtils;
@@ -549,7 +550,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
             if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
                 if (connection.getMetaData().getDriverName().contains("MySQL")
-                        || connection.getMetaData().getDriverName().contains("H2")) {
+                        || connection.getMetaData().getDriverName().contains(FrameworkConstants.H2)
+                        || connection.getMetaData().getDriverName().contains(FrameworkConstants.MARIA_DB)) {
                     sql = SQLQueries.
                             GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MYSQL;
                 } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
