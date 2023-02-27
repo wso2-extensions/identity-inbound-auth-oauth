@@ -37,6 +37,7 @@ import org.slf4j.MDC;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
+import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -99,6 +100,8 @@ import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -153,6 +156,9 @@ public class EndpointUtil {
     private static IdpManager idpManager;
     private static final String ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL = "OAuth.AllowAdditionalParamsFromErrorUrl";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
+    private static final String SPLITTING_CHAR = "&";
+    private static final String PADDING_CHAR = "=";
+
 
     public static void setIdpManager(IdpManager idpManager) {
 
@@ -816,6 +822,35 @@ public class EndpointUtil {
         }
 
         return consentPage;
+    }
+
+    /**
+     * Checks if a configuration is available to allow consent page redirect params.
+     *
+     * @return True if query params are allowed in consent page redirect url.
+     */
+    public static boolean isConsentPageRedirectParamsAllowed() {
+        return FileBasedConfigurationBuilder.getInstance().isConsentPageRedirectParamsAllowed();
+    }
+
+    /**
+     * Get a query parameter value from a URL.
+     *
+     * @param url               URL.
+     * @param queryParameter    Required query parameter name.
+     * @return Query parameter value.
+     * @throws URISyntaxException If url is not in valid syntax.
+     */
+    public static String getQueryParameter(String url, String queryParameter) throws URISyntaxException {
+
+        String queryParams = new URI(url).getQuery();
+        Map<String, String> queryParamMap = new HashMap<>();
+        if (StringUtils.isNotBlank(queryParams)) {
+            queryParamMap = Arrays.stream(queryParams.split(SPLITTING_CHAR))
+                    .map(entry -> entry.split(PADDING_CHAR))
+                    .collect(Collectors.toMap(entry -> entry[0], entry -> entry[1]));
+        }
+        return queryParamMap.get(queryParameter);
     }
 
     /**
