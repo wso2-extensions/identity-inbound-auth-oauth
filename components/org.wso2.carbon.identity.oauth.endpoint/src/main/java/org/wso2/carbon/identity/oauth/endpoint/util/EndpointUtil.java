@@ -806,8 +806,11 @@ public class EndpointUtil {
                             entry.getEndpointParams());
                     entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
                     sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
-                    IdentityUtil.threadLocalProperties.get().put(OAuthConstants.SESSION_DATA_KEY_CONSENT,
-                            sessionDataKeyConsent);
+                    if( IdentityUtil.threadLocalProperties.get().
+                            get(OAuthConstants.SESSION_DATA_KEY_CONSENT).equals("initialSessionDataKeyConsent")){
+                        IdentityUtil.threadLocalProperties.get().put(OAuthConstants.SESSION_DATA_KEY_CONSENT,
+                                sessionDataKeyConsent);
+                    }
                 } else {
                     if (log.isDebugEnabled()) {
                         log.debug("Cache Entry is Null from SessionDataCache.");

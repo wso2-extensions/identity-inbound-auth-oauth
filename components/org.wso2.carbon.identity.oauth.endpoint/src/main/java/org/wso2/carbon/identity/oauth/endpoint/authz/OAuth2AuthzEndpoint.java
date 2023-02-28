@@ -3117,13 +3117,13 @@ public class OAuth2AuthzEndpoint {
             throws OAuthSystemException {
 
         try {
+            IdentityUtil.threadLocalProperties.get().put(OAuthConstants.SESSION_DATA_KEY_CONSENT,
+                    "initialSessionDataKeyConsent");
             String userConsentURL = getUserConsentURL(sessionDataKey, oauth2Params, authenticatedUser, oAuthMessage);
             userConsentURL = FrameworkUtils.appendQueryParamsStringToUrl(userConsentURL, additionalQueryParams);
             return getConsentPageRedirectURLWithFilteredParams(userConsentURL);
         } finally {
-            if (IdentityUtil.threadLocalProperties.get().get(OAuthConstants.SESSION_DATA_KEY_CONSENT) != null) {
-                IdentityUtil.threadLocalProperties.get().remove(OAuthConstants.SESSION_DATA_KEY_CONSENT);
-            }
+            IdentityUtil.threadLocalProperties.get().remove(OAuthConstants.SESSION_DATA_KEY_CONSENT);
         }
     }
 
