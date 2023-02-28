@@ -297,9 +297,6 @@ public class OAuth2AuthzEndpoint {
             if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
                 FrameworkUtils.endTenantFlow();
             }
-            if (IdentityUtil.threadLocalProperties.get().get(OAuthConstants.SESSION_DATA_KEY_CONSENT) != null) {
-                IdentityUtil.threadLocalProperties.get().remove(OAuthConstants.SESSION_DATA_KEY_CONSENT);
-            }
         }
     }
 
@@ -3119,9 +3116,15 @@ public class OAuth2AuthzEndpoint {
                                      String additionalQueryParams, OAuthMessage oAuthMessage)
             throws OAuthSystemException {
 
-        String userConsentURL = getUserConsentURL(sessionDataKey, oauth2Params, authenticatedUser, oAuthMessage);
-        userConsentURL = FrameworkUtils.appendQueryParamsStringToUrl(userConsentURL, additionalQueryParams);
-        return getConsentPageRedirectURLWithFilteredParams(userConsentURL);
+        try {
+            String userConsentURL = getUserConsentURL(sessionDataKey, oauth2Params, authenticatedUser, oAuthMessage);
+            userConsentURL = FrameworkUtils.appendQueryParamsStringToUrl(userConsentURL, additionalQueryParams);
+            return getConsentPageRedirectURLWithFilteredParams(userConsentURL);
+        } finally {
+            if (IdentityUtil.threadLocalProperties.get().get(OAuthConstants.SESSION_DATA_KEY_CONSENT) != null) {
+                IdentityUtil.threadLocalProperties.get().remove(OAuthConstants.SESSION_DATA_KEY_CONSENT);
+            }
+        }
     }
 
     private String getConsentPageRedirectURLWithFilteredParams(String redirectURL) {
