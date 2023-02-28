@@ -158,7 +158,6 @@ import javax.ws.rs.core.Response;
 
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.MANDATORY_CLAIMS;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.REQUESTED_CLAIMS;
-import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.SESSION_DATA_KEY_CONSENT;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.USER_CLAIMS_CONSENT_ONLY;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TENANT_DOMAIN;
@@ -297,6 +296,9 @@ public class OAuth2AuthzEndpoint {
             handleCachePersistence(oAuthMessage);
             if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
                 FrameworkUtils.endTenantFlow();
+            }
+            if (IdentityUtil.threadLocalProperties.get().get(OAuthConstants.SESSION_DATA_KEY_CONSENT) != null) {
+                IdentityUtil.threadLocalProperties.get().remove(OAuthConstants.SESSION_DATA_KEY_CONSENT);
             }
         }
     }
@@ -3122,29 +3124,20 @@ public class OAuth2AuthzEndpoint {
         return getConsentPageRedirectURLWithFilteredParams(userConsentURL);
     }
 
-    private String getConsentPageRedirectURLWithFilteredParams(String redirectURL) throws OAuthSystemException {
+    private String getConsentPageRedirectURLWithFilteredParams(String redirectURL) {
 
-        String sessionDataKeyConsent = "";
         String consentPage = null;
-        try {
-            sessionDataKeyConsent = EndpointUtil.getQueryParameter(redirectURL, SESSION_DATA_KEY_CONSENT);
-        } catch (URISyntaxException e) {
-            throw new OAuthSystemException("Error while getting sessionDataKeyConsent from userConsentURL: " +
-                    redirectURL, e);
-        }
-        SessionDataCache sessionDataCache = SessionDataCache.getInstance();
+        String sessionDataKeyConsent = (String) IdentityUtil.threadLocalProperties.get().
+                get(OAuthConstants.SESSION_DATA_KEY_CONSENT);
+
         SessionDataCacheEntry entry = SessionDataCache.getInstance().getValueFromCache((
                 new SessionDataCacheKey(sessionDataKeyConsent)));
 
-        if (EndpointUtil.isConsentPageRedirectParamsAllowed()) {
-            consentPage = FrameworkUtils.getRedirectURLWithFilteredParams(redirectURL,
-                    entry.getEndpointParams());
-        } else {
+        if (!EndpointUtil.isConsentPageRedirectParamsAllowed()) {
             consentPage = FrameworkUtils.getConsentPageRedirectURLWithFilteredParams(redirectURL,
                     entry.getEndpointParams());
         }
 
-        sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
         return consentPage;
     }
 
