@@ -98,6 +98,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
@@ -224,10 +225,11 @@ public class OAuth2AuthzEndpoint {
     private static final String AUTHENTICATION_ENDPOINT = "/authenticationendpoint";
     private static final String OAUTH_RESPONSE_JSP_PAGE = "/oauth_response.jsp";
 
-
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
     private static OpenIDConnectClaimFilterImpl openIDConnectClaimFilter;
+
+    private static ScopeMetadataService scopeMetadataService;
 
     public static OpenIDConnectClaimFilterImpl getOpenIDConnectClaimFilter() {
 
@@ -237,6 +239,16 @@ public class OAuth2AuthzEndpoint {
     public static void setOpenIDConnectClaimFilter(OpenIDConnectClaimFilterImpl openIDConnectClaimFilter) {
 
         OAuth2AuthzEndpoint.openIDConnectClaimFilter = openIDConnectClaimFilter;
+    }
+
+    public static ScopeMetadataService getScopeService() {
+
+        return scopeMetadataService;
+    }
+
+    public static void setScopeService(ScopeMetadataService scopeMetadataService) {
+
+        OAuth2AuthzEndpoint.scopeMetadataService = scopeMetadataService;
     }
 
     private static Class<? extends OAuthAuthzRequest> oAuthAuthzRequestClass;
@@ -3127,6 +3139,7 @@ public class OAuth2AuthzEndpoint {
      * @return
      */
     private OAuth2AuthorizeRespDTO authorize(OAuthAuthzReqMessageContext authzReqMsgCtx) {
+
         return getOAuth2Service().authorize(authzReqMsgCtx);
     }
 

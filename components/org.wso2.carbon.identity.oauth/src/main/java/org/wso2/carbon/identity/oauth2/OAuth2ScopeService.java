@@ -30,26 +30,32 @@ import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.model.UserApplicationScopeConsentDO;
+import org.wso2.carbon.identity.oauth2.scopeservice.OAuth2Resource;
+import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadata;
+import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCache;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.
-        ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SATIFIED_THE_REGEX;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SATIFIED_THE_REGEX;
 
 /**
  * OAuth2ScopeService use for scope handling
  */
-public class OAuth2ScopeService {
+public class OAuth2ScopeService implements ScopeMetadataService {
+
     private static final Log log = LogFactory.getLog(OAuth2ScopeService.class);
     private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
+
+    private static final String OAuth2ScopeResourceName = "OAuth 2.0 Scopes";
 
     /**
      * Register a scope with the bindings
@@ -822,5 +828,33 @@ public class OAuth2ScopeService {
         consentToBeAdded.setApprovedScopes(approvedScopes);
         consentToBeAdded.setDeniedScopes(disapprovedScopes);
         return consentToBeAdded;
+    }
+
+    @Override
+    public String getName() {
+
+        return "OAuth2ScopeService";
+    }
+
+    @Override
+    public List<OAuth2Resource> getMetadata(List<String> scopes) {
+
+        List<ScopeMetadata> scopesArray = new ArrayList<>();
+        for (String scopeName : scopes) {
+            try {
+                Scope scope = getScope(scopeName);
+                ScopeMetadata scopeMetadata = new ScopeMetadata(scope.getName(), scope.getDisplayName(),
+                        scope.getDescription());
+                scopesArray.add(scopeMetadata);
+            } catch (IdentityOAuth2ScopeException e) {
+                log.error("Error while retrieving scope: " + scopeName);
+            }
+        }
+        if (scopesArray.isEmpty()) {
+            return Collections.singletonList(new OAuth2Resource());
+        } else {
+            OAuth2Resource resource = new OAuth2Resource(OAuth2ScopeResourceName, OAuth2ScopeResourceName, scopesArray);
+            return Collections.singletonList(resource);
+        }
     }
 }
