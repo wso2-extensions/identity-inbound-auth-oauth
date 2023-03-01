@@ -40,6 +40,7 @@ import org.owasp.encoder.Encode;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
+import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthHistory;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
@@ -3129,19 +3130,23 @@ public class OAuth2AuthzEndpoint {
 
     private String getConsentPageRedirectURLWithFilteredParams(String redirectURL) {
 
-        String consentPage = null;
+        String consentPage = redirectURL;
         String sessionDataKeyConsent = (String) IdentityUtil.threadLocalProperties.get().
                 get(OAuthConstants.SESSION_DATA_KEY_CONSENT);
 
         SessionDataCacheEntry entry = SessionDataCache.getInstance().getValueFromCache((
                 new SessionDataCacheKey(sessionDataKeyConsent)));
 
-        if (!EndpointUtil.isConsentPageRedirectParamsAllowed()) {
-            consentPage = FrameworkUtils.getConsentPageRedirectURLWithFilteredParams(redirectURL,
+        if (isFilterAllRedirectQueryParams()) {
+            consentPage = EndpointUtil.getConsentPageRedirectURLWithFilteredParams(redirectURL,
                     entry.getEndpointParams());
         }
 
         return consentPage;
+    }
+
+    private boolean isFilterAllRedirectQueryParams() {
+        return !FileBasedConfigurationBuilder.getInstance().isAuthEndpointRedirectParamsConfigAvailable();
     }
 
     /**

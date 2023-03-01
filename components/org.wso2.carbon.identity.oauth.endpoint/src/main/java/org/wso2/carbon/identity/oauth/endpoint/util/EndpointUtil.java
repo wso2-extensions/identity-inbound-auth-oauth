@@ -28,6 +28,8 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
@@ -99,7 +101,9 @@ import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -154,8 +158,9 @@ public class EndpointUtil {
     private static IdpManager idpManager;
     private static final String ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL = "OAuth.AllowAdditionalParamsFromErrorUrl";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
-    private static final String SPLITTING_CHAR = "&";
-    private static final String PADDING_CHAR = "=";
+    private static final String HASH_CHAR = "#";
+    private static final String HASH_CHAR_ENCODED = "%23";
+    private static final String QUESTION_MARK = "?";
 
 
     public static void setIdpManager(IdpManager idpManager) {
@@ -806,8 +811,9 @@ public class EndpointUtil {
                             entry.getEndpointParams());
                     entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
                     sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
-                    if( IdentityUtil.threadLocalProperties.get().
-                            get(OAuthConstants.SESSION_DATA_KEY_CONSENT).equals("initialSessionDataKeyConsent")){
+
+                    if (IdentityUtil.threadLocalProperties.get().
+                            get(OAuthConstants.SESSION_DATA_KEY_CONSENT).equals("initialSessionDataKeyConsent")) {
                         IdentityUtil.threadLocalProperties.get().put(OAuthConstants.SESSION_DATA_KEY_CONSENT,
                                 sessionDataKeyConsent);
                     }
@@ -826,14 +832,55 @@ public class EndpointUtil {
 
         return consentPage;
     }
+    
+    public static String getConsentPageRedirectURLWithFilteredParams(String redirectUrl,
+                                                                     Map<String, Serializable> endpointParams) {
 
-    /**
-     * Checks if a configuration is available to allow consent page redirect params.
-     *
-     * @return True if query params are allowed in consent page redirect url.
-     */
-    public static boolean isConsentPageRedirectParamsAllowed() {
-        return FileBasedConfigurationBuilder.getInstance().isConsentPageRedirectParamsAllowed();
+        URIBuilder uriBuilder;
+
+        // Check if the URL is a fragment URL. Only the path of the URL is considered here.
+        boolean isAFragmentURL =
+                redirectUrl != null && redirectUrl.contains(HASH_CHAR) && redirectUrl.contains(QUESTION_MARK)
+                        && redirectUrl.indexOf(HASH_CHAR) < redirectUrl.indexOf(QUESTION_MARK);
+        try {
+            // Encode the hash character if the redirect URL is a fragmented URL.
+            if (isAFragmentURL) {
+                int splitIndex = redirectUrl.indexOf(QUESTION_MARK);
+                uriBuilder = new URIBuilder(redirectUrl.substring(0, splitIndex).replace(HASH_CHAR, HASH_CHAR_ENCODED)
+                        + redirectUrl.substring(splitIndex));
+            } else {
+                uriBuilder = new URIBuilder(redirectUrl);
+            }
+        } catch (URISyntaxException e) {
+            log.warn("Unable to filter redirect params for url." + redirectUrl, e);
+            return redirectUrl;
+        }
+
+        List<NameValuePair> queryParamsList = uriBuilder.getQueryParams();
+
+        // Remove all the query params from the consent URL and store them in the endpointParams map.
+        endpointParams.putAll(queryParamsList.stream().collect(Collectors.toMap(NameValuePair::getName,
+                NameValuePair::getValue)));
+
+        String sessionDataKeyConsent = (String) endpointParams.get(OAuthConstants.SESSION_DATA_KEY_CONSENT);
+
+        // Set the sessionDataKeyConsent to redirect URL.
+        if (sessionDataKeyConsent != null) {
+            uriBuilder.setParameter(OAuthConstants.SESSION_DATA_KEY_CONSENT, sessionDataKeyConsent);
+            endpointParams.remove(OAuthConstants.SESSION_DATA_KEY_CONSENT);
+        }
+
+        String redirectURLWithFilteredParams = uriBuilder.toString();
+
+        // Decode the hash character if the redirect URL is a fragmented URL.
+        if (isAFragmentURL) {
+            int splitIndex = redirectUrl.indexOf(QUESTION_MARK);
+            redirectURLWithFilteredParams =
+                    redirectURLWithFilteredParams.substring(0, splitIndex).replace(HASH_CHAR_ENCODED, HASH_CHAR)
+                            + redirectURLWithFilteredParams.substring(splitIndex);
+        }
+        return redirectURLWithFilteredParams;
+
     }
 
     /**
