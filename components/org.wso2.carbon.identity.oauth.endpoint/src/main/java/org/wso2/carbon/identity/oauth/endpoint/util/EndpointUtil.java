@@ -39,7 +39,6 @@ import org.slf4j.MDC;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
-import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -811,12 +810,8 @@ public class EndpointUtil {
                             entry.getEndpointParams());
                     entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
                     sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
+                    setSessionDataKeyConsentThreadLocal(sessionDataKeyConsent);
 
-                    if (IdentityUtil.threadLocalProperties.get().
-                            get(OAuthConstants.SESSION_DATA_KEY_CONSENT).equals("initialSessionDataKeyConsent")) {
-                        IdentityUtil.threadLocalProperties.get().put(OAuthConstants.SESSION_DATA_KEY_CONSENT,
-                                sessionDataKeyConsent);
-                    }
                 } else {
                     if (log.isDebugEnabled()) {
                         log.debug("Cache Entry is Null from SessionDataCache.");
@@ -832,11 +827,26 @@ public class EndpointUtil {
 
         return consentPage;
     }
+
+    /**
+     * Set the sessionDataKeyConsent to thread local.
+     */
+    private static void setSessionDataKeyConsentThreadLocal(String sessionDataKeyConsent) {
+        if (IdentityUtil.threadLocalProperties.get().
+                get(OAuthConstants.SESSION_DATA_KEY_CONSENT) != null && IdentityUtil.threadLocalProperties.get().
+                get(OAuthConstants.SESSION_DATA_KEY_CONSENT).equals("initialSessionDataKeyConsent")) {
+
+            IdentityUtil.threadLocalProperties.get().put(OAuthConstants.SESSION_DATA_KEY_CONSENT,
+                    sessionDataKeyConsent);
+        }
+
+    }
     
     public static String getConsentPageRedirectURLWithFilteredParams(String redirectUrl,
                                                                      Map<String, Serializable> endpointParams) {
 
         URIBuilder uriBuilder;
+        String sessionDataKeyConsent = null;
 
         // Check if the URL is a fragment URL. Only the path of the URL is considered here.
         boolean isAFragmentURL =
@@ -858,13 +868,17 @@ public class EndpointUtil {
 
         List<NameValuePair> queryParamsList = uriBuilder.getQueryParams();
 
-        // Remove all the query params from the consent URL and store them in the endpointParams map.
-        endpointParams.putAll(queryParamsList.stream().collect(Collectors.toMap(NameValuePair::getName,
-                NameValuePair::getValue)));
+        // Remove all the query params from the consent URL
+        uriBuilder.clearParameters();
 
-        String sessionDataKeyConsent = (String) endpointParams.get(OAuthConstants.SESSION_DATA_KEY_CONSENT);
+        // Store query params in the endpointParams map.
+        if (!queryParamsList.isEmpty()) {
+            endpointParams.putAll(queryParamsList.stream().collect(Collectors.toMap(NameValuePair::getName,
+                    NameValuePair::getValue)));
+            sessionDataKeyConsent = (String) endpointParams.get(OAuthConstants.SESSION_DATA_KEY_CONSENT);
+        }
 
-        // Set the sessionDataKeyConsent to redirect URL.
+        // Set the sessionDataKeyConsent to redirect URL and remove from filtered params.
         if (sessionDataKeyConsent != null) {
             uriBuilder.setParameter(OAuthConstants.SESSION_DATA_KEY_CONSENT, sessionDataKeyConsent);
             endpointParams.remove(OAuthConstants.SESSION_DATA_KEY_CONSENT);

@@ -75,6 +75,7 @@ import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 
+import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -381,6 +382,34 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
             Assert.assertTrue(e.getMessage().contains("Error while retrieving the application name"));
         }
 
+    }
+
+    @DataProvider(name = "provideDataForConsentURLFilteredParams")
+    public Object[][] provideURLParamData() {
+
+        String url1 = "https://localhost:9443/authenticationendpoint/oauth2_consent.do?queryString=queryString&" +
+                "sessionDataKeyConsent=1234567890";
+        String url2 = "https://localhost:9443/authenticationendpoint/oauth2_consent.do?queryString=queryString";
+        String url3 = "https://localhost:9443/authenticationendpoint/oauth2_consent.do";
+
+        String sessionDataKeyConsentQueryString = "sessionDataKeyConsent=1234567890";
+
+        String expectedOutput1 = OIDC_CONSENT_PAGE_URL + "?" + sessionDataKeyConsentQueryString;
+        String expectedOutput2 = OIDC_CONSENT_PAGE_URL;
+
+        return new Object[][]{
+                {url1, expectedOutput1},
+                {url2, expectedOutput2},
+                {url3, expectedOutput2}
+        };
+    }
+
+    @Test(dataProvider = "provideDataForConsentURLFilteredParams")
+    public void testGetConsentPageRedirectURLWithFilteredParams(String url, String expectedOutput) {
+
+        Map<String, Serializable> endpointParams = new HashMap<>();
+        String modifiedUrl = EndpointUtil.getConsentPageRedirectURLWithFilteredParams(url, endpointParams);
+        assertEquals(modifiedUrl, expectedOutput);
     }
 
     @DataProvider(name = "provideScopeData")

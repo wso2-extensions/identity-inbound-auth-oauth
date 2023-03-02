@@ -3137,9 +3137,9 @@ public class OAuth2AuthzEndpoint {
         SessionDataCacheEntry entry = SessionDataCache.getInstance().getValueFromCache((
                 new SessionDataCacheKey(sessionDataKeyConsent)));
 
-        if (isFilterAllRedirectQueryParams()) {
-            consentPage = EndpointUtil.getConsentPageRedirectURLWithFilteredParams(redirectURL,
-                    entry.getEndpointParams());
+        if (entry != null && isFilterAllRedirectQueryParams()) {
+                consentPage = EndpointUtil.getConsentPageRedirectURLWithFilteredParams(redirectURL,
+                        entry.getEndpointParams());
         }
 
         return consentPage;
