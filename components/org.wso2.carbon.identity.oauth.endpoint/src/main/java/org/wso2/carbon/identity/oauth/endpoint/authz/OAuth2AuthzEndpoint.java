@@ -3137,16 +3137,16 @@ public class OAuth2AuthzEndpoint {
         SessionDataCacheEntry entry = SessionDataCache.getInstance().getValueFromCache((
                 new SessionDataCacheKey(sessionDataKeyConsent)));
 
-        if (entry != null && isFilterAllRedirectQueryParams()) {
-                consentPage = EndpointUtil.getConsentPageRedirectURLWithFilteredParams(redirectURL,
+        if (entry != null && !isAuthEndpointRedirectParamsConfigAvailable()) {
+            consentPage = EndpointUtil.getConsentPageRedirectURLWithFilteredParams(redirectURL,
                         entry.getEndpointParams());
         }
 
         return consentPage;
     }
 
-    private boolean isFilterAllRedirectQueryParams() {
-        return !FileBasedConfigurationBuilder.getInstance().isAuthEndpointRedirectParamsConfigAvailable();
+    private boolean isAuthEndpointRedirectParamsConfigAvailable() {
+        return FileBasedConfigurationBuilder.getInstance().isAuthEndpointRedirectParamsConfigAvailable();
     }
 
     /**
