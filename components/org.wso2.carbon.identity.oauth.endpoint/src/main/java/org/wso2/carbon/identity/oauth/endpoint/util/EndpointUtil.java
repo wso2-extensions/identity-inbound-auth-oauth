@@ -810,7 +810,6 @@ public class EndpointUtil {
                             entry.getEndpointParams());
                     entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
                     sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
-                    setSessionDataKeyConsentThreadLocal(sessionDataKeyConsent);
 
                 } else {
                     if (log.isDebugEnabled()) {
@@ -826,20 +825,6 @@ public class EndpointUtil {
         }
 
         return consentPage;
-    }
-
-    /**
-     * Set the sessionDataKeyConsent to thread local.
-     */
-    private static void setSessionDataKeyConsentThreadLocal(String sessionDataKeyConsent) {
-        if (IdentityUtil.threadLocalProperties.get().
-                get(OAuthConstants.SESSION_DATA_KEY_CONSENT) != null && IdentityUtil.threadLocalProperties.get().
-                get(OAuthConstants.SESSION_DATA_KEY_CONSENT).equals("initialSessionDataKeyConsent")) {
-
-            IdentityUtil.threadLocalProperties.get().put(OAuthConstants.SESSION_DATA_KEY_CONSENT,
-                    sessionDataKeyConsent);
-        }
-
     }
     
     public static String getConsentPageRedirectURLWithFilteredParams(String redirectUrl,
@@ -895,6 +880,27 @@ public class EndpointUtil {
         }
         return redirectURLWithFilteredParams;
 
+    }
+
+    /**
+     * Get a query parameter value from a URL.
+     *
+     * @param url               URL.
+     * @param queryParameter    Required query parameter name.
+     * @return Query parameter value.
+     * @throws URISyntaxException If url is not in valid syntax.
+     */
+    public static String getQueryParameter(String url, String queryParameter) throws URISyntaxException {
+
+        URIBuilder uriBuilder = new URIBuilder(url);
+        List<NameValuePair> queryParamsList = uriBuilder.getQueryParams();
+        String sessionDataKeyConsent = queryParamsList.stream()
+                .filter(queryParam -> queryParameter.equals(queryParam.getName()))
+                .map(NameValuePair::getValue)
+                .findFirst()
+                .orElse(null);
+
+        return sessionDataKeyConsent;
     }
 
     /**
