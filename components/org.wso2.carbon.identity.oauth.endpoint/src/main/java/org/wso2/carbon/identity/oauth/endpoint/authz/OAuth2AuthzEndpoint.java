@@ -83,11 +83,10 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedEx
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
-import org.wso2.carbon.identity.oauth.endpoint.par.OAuth2ParEndpoint;
-import org.wso2.carbon.identity.oauth.endpoint.par.ParRequestBuilder;
-import org.wso2.carbon.identity.oauth.endpoint.par.ParRequestData;
+import org.wso2.carbon.identity.oauth.endpoint.par.*;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
+import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -106,7 +105,6 @@ import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
-import org.wso2.carbon.identity.oauth.endpoint.par.ParRequestUtil;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
@@ -123,19 +121,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.StringJoiner;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -165,6 +151,7 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TENANT_DOMAIN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
+import static org.wso2.carbon.identity.oauth.endpoint.par.RequestUriValidator.isValidRequestUri;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
@@ -287,6 +274,8 @@ public class OAuth2AuthzEndpoint {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
             return handleOAuthSystemException(oAuthMessage, e);
         } catch (RequestObjectException e) {
+            throw new RuntimeException(e);
+        } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
             handleCachePersistence(oAuthMessage);
@@ -1024,8 +1013,7 @@ public class OAuth2AuthzEndpoint {
         return RESPONSE_MODE_FORM_POST.equals(oauth2Params.getResponseMode()) && isJSON(redirectURL);
     }
 
-    private Response handleInitialAuthorizationRequest(OAuthMessage oAuthMessage) throws OAuthSystemException,
-            OAuthProblemException, URISyntaxException, InvalidRequestParentException, RequestObjectException {
+    private Response handleInitialAuthorizationRequest(OAuthMessage oAuthMessage) throws Exception {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             Map<String, Object> params = new HashMap<>();
@@ -1528,7 +1516,7 @@ public class OAuth2AuthzEndpoint {
      * @throws OAuthProblemException OAuthProblemException
      */
     private String handleOAuthAuthorizationRequest(OAuthMessage oAuthMessage)
-            throws OAuthSystemException, OAuthProblemException, InvalidRequestException, RequestObjectException {
+            throws Exception {
 
         OAuth2ClientValidationResponseDTO validationResponse = validateClient(oAuthMessage);
 
@@ -1567,7 +1555,10 @@ public class OAuth2AuthzEndpoint {
 
         if (oAuthMessage.getRequest_uri() != null) {
             //get requestUri, and its related OauthRequest
-            oauthRequest = ParRequestData.getOauthRequests().get(oAuthMessage.getRequest_uri()); //get requestUri, and its related request
+            //oauthRequest = ParRequestData.getOauthRequests().get(oAuthMessage.getRequest_uri()); //get requestUri, and its related request
+            //oauthRequest = Objects.requireNonNull(DataRecordWriter.readObject(oAuthMessage.getRequest_uri())).getParAuthRequest();
+            String uuid = oAuthMessage.getRequest_uri().substring(oAuthMessage.getRequest_uri().length() - 36);
+            oauthRequest = DataRecordWriter.readRecord(uuid).getParAuthRequest();
         } else {
             oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
         }

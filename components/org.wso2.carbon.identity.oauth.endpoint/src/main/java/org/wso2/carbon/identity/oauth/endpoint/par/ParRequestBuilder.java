@@ -9,11 +9,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
 
-public class ParRequestBuilder extends OAuthAuthzRequest{
+public class ParRequestBuilder extends OAuthAuthzRequest implements Serializable {
 
     private Logger log = LoggerFactory.getLogger(OAuthRequest.class);
     protected HttpServletRequest request;

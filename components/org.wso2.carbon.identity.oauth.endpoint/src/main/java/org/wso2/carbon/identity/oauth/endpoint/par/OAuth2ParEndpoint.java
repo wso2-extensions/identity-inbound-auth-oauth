@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.par;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
@@ -37,6 +38,11 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
+import java.io.FileOutputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -55,13 +61,15 @@ public class OAuth2ParEndpoint {
     @Consumes("application/x-www-form-urlencoded")
     @Produces("application/json")
     public Response par(@Context HttpServletRequest request, @Context HttpServletResponse response,
-                        MultivaluedMap<String, String> paramMap) throws ParErrorDTO, OAuthProblemException, OAuthSystemException, InvalidOAuthRequestException {
+                        MultivaluedMap<String, String> paramMap) throws ParErrorDTO, Exception {
 
         long requestMadeAt = Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis();
         //LocalTime requestMadeAt = java.time.LocalTime.now();
 
         OAuth2Service oAuth2Service = new OAuth2Service();
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.validateClientInfo(request);
+
+        DataRecordWriter dataRecordWriter = new DataRecordWriter();
 
 
         //build ParReqyestObject.oAuthrequest
@@ -77,11 +85,33 @@ public class OAuth2ParEndpoint {
         }
 
 
+        OAuthAuthzRequest parOAuthRequest = ParRequestUtil.buildParOauthRequest(request);
+
+        String request_uri = parAuthCodeResponse.getRequestUri();
+        //String uuid
 
         Response resp = getAuthResponse(response, parAuthCodeResponse);
         ParRequestData.addRequest(parAuthCodeResponse.getRequestUri(), request.getParameterMap());
         ParRequestData.addTime(parAuthCodeResponse.getRequestUri(), requestMadeAt);
-        ParRequestData.addOauthRequest(parAuthCodeResponse.getRequestUri(), ParRequestUtil.buildParOauthRequest(request));
+        ParRequestData.addOauthRequest(parAuthCodeResponse.getRequestUri(), parOAuthRequest);
+        //String uuid = parAuthCodeResponse.getRequestUri().substring(reqUUID.length() - 36);
+
+        // Make parOAuthRequest serializable
+        SerializableObject serializableParOAuthRequest = new SerializableObject(parOAuthRequest);
+
+        // Serialize serializableParOAuthRequest
+        List<Object> testObject = new ArrayList<>();
+        ParAuthRequestSerializer serializer = new ParAuthRequestSerializer();
+        //Object obj = serializer.serializeSessionObject(request);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        String json = objectMapper.writeValueAsString(parOAuthRequest);
+
+
+        DataRecordWriter.writeObject(parAuthCodeResponse.getRequestUri(), json, requestMadeAt);
+
+        // build serialized object
+//        DataRecordWriter.writeObject(parAuthCodeResponse.getRequestUri(), serializableParAuthRequest, requestMadeAt);
 
         return resp;
     }
