@@ -271,20 +271,21 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 new HashSet<String>(Arrays.asList("openid", "profile", "scope1", "scope2", "internal_login")));
 
         return new Object[][]{
-                {params, true, true, false, "QueryString", true},
-                {null, true, true, false, "QueryString", true},
-                {params, false, true, false, "QueryString", true},
-                {params, true, false, false, "QueryString", true},
-                {params, true, false, false, "QueryString", false},
-                {params, true, true, false, null, true},
-                {params, true, true, true, "QueryString", true},
-                {paramsOIDC, true, true, true, "QueryString", true},
+                {params, true, true, false, "QueryString", true, true},
+                {null, true, true, false, "QueryString", true, false},
+                {params, false, true, false, "QueryString", true, true},
+                {params, true, false, false, "QueryString", true, false},
+                {params, true, false, false, "QueryString", false, true},
+                {params, true, true, false, null, true, true},
+                {params, true, true, true, "QueryString", true, false},
+                {paramsOIDC, true, true, true, "QueryString", true, false},
         };
     }
 
     @Test(dataProvider = "provideDataForUserConsentURL")
     public void testGetUserConsentURL(Object oAuth2ParamObject, boolean isOIDC, boolean cacheEntryExists,
-                                      boolean throwError, String queryString, boolean isDebugEnabled) throws Exception {
+                                      boolean throwError, String queryString, boolean isDebugEnabled,
+                                      boolean isConfigAvailable) throws Exception {
 
         setMockedLog(isDebugEnabled);
         OAuth2Parameters parameters = (OAuth2Parameters) oAuth2ParamObject;
@@ -301,6 +302,10 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOIDCConsentPageUrl()).thenReturn(OIDC_CONSENT_PAGE_URL);
         when(OAuth2Util.OAuthURL.getOAuth2ConsentPageUrl()).thenReturn(OAUTH2_CONSENT_PAGE_URL);
+
+        mockStatic(FileBasedConfigurationBuilder.class);
+        when(FileBasedConfigurationBuilder.getInstance()).thenReturn(fileBasedConfigurationBuilder);
+        when(fileBasedConfigurationBuilder.isAuthEndpointRedirectParamsConfigAvailable()).thenReturn(isConfigAvailable);
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
