@@ -60,6 +60,7 @@ import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
@@ -205,6 +206,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     private String username;
     private String password;
     private String sessionDataKey;
+    private String sessionDataKeyConsent;
     private String clientId;
     private AuthenticatedUser user;
     private OAuth2ScopeConsentResponse oAuth2ScopeConsentResponse;
@@ -215,6 +217,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         username = "myUsername";
         password = "myPassword";
         sessionDataKey = "1234567890";
+        sessionDataKeyConsent = "1234567891";
         clientId = "myClientId";
         user = new AuthenticatedUser();
         user.setFederatedUser(false);
@@ -337,7 +340,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
         String consentUrl;
         try {
-            consentUrl = EndpointUtil.getUserConsentURL(parameters, username, sessionDataKey, isOIDC);
+            consentUrl = EndpointUtil.getUserConsentURL(parameters, username, isOIDC, mockedSessionDataCacheEntry,
+                    sessionDataKeyConsent);
             if (isOIDC) {
                 Assert.assertTrue(consentUrl.contains(OIDC_CONSENT_PAGE_URL), "Incorrect consent page url for OIDC");
             } else {
@@ -408,7 +412,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     public void testGetConsentPageRedirectURLWithFilteredParams(String url, String expectedOutput) {
 
         Map<String, Serializable> endpointParams = new HashMap<>();
-        String modifiedUrl = EndpointUtil.getConsentPageRedirectURLWithFilteredParams(url, endpointParams);
+        String modifiedUrl = EndpointUtil.getRedirectURLWithFilteredParams(url, endpointParams,
+                OAuthConstants.SESSION_DATA_KEY_CONSENT);
         assertEquals(modifiedUrl, expectedOutput);
     }
 

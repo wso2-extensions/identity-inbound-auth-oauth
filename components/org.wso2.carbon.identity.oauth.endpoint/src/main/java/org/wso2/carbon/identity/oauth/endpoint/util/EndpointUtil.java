@@ -112,7 +112,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
@@ -734,110 +733,42 @@ public class EndpointUtil {
      * @param oAuthMessage      oAuth Message.
      * @return                  The consent url.
      */
+    @Deprecated
     public static String getUserConsentURL(OAuth2Parameters params, String loggedInUser, String sessionDataKey,
                                            boolean isOIDC, OAuthMessage oAuthMessage) throws OAuthSystemException {
 
-        String queryString = "";
-        if (log.isDebugEnabled()) {
-            log.debug("Received Session Data Key is: " + sessionDataKey);
-            if (params == null) {
-                log.debug("Received OAuth2 params are Null for UserConsentURL");
-            }
-        }
-        SessionDataCache sessionDataCache = SessionDataCache.getInstance();
         SessionDataCacheEntry entry;
         if (oAuthMessage != null) {
             entry = oAuthMessage.getResultFromLogin();
         } else {
-            entry = sessionDataCache.getValueFromCache(new SessionDataCacheKey(sessionDataKey));
+            entry = SessionDataCache.getInstance().getValueFromCache(new SessionDataCacheKey(sessionDataKey));
         }
-
-        AuthenticatedUser user = null;
-        String consentPage = null;
         String sessionDataKeyConsent = UUID.randomUUID().toString();
-        try {
-            if (entry != null && entry.getQueryString() != null) {
 
-                queryString = entry.getQueryString();
-                if (queryString.contains(REQUEST_URI) && params != null) {
-                    // When request_uri requests come without redirect_uri, we need to append it to the SPQueryParams
-                    // to be used in storing consent data
-                    queryString = queryString +
-                            "&" + PROP_REDIRECT_URI + "=" + URLEncoder.encode(params.getRedirectURI(), UTF_8);
-                }
-
-                if (params != null) {
-                    queryString = queryString + "&" + PROP_OIDC_SCOPE +
-                            "=" + URLEncoder.encode(StringUtils.join(getRequestedOIDCScopes(params), " "), UTF_8);
-                }
-                entry.setQueryString(queryString);
-                queryString = URLEncoder.encode(queryString, UTF_8);
-            }
-
-            if (isOIDC) {
-                consentPage = OAuth2Util.OAuthURL.getOIDCConsentPageUrl();
-            } else {
-                consentPage = OAuth2Util.OAuthURL.getOAuth2ConsentPageUrl();
-            }
-            if (params != null) {
-                consentPage += "?" + OAuthConstants.OIDC_LOGGED_IN_USER + "=" + URLEncoder.encode(loggedInUser,
-                        UTF_8) + "&application=";
-
-                if (StringUtils.isNotEmpty(params.getDisplayName())) {
-                    consentPage += URLEncoder.encode(params.getDisplayName(), UTF_8);
-                } else {
-                    consentPage += URLEncoder.encode(params.getApplicationName(), UTF_8);
-                }
-                consentPage += "&tenantDomain=" + getSPTenantDomainFromClientId(params.getClientId());
-
-                if (entry != null) {
-                    user = entry.getLoggedInUser();
-                }
-                setConsentRequiredScopesToOAuthParams(user, params);
-                Set<String> consentRequiredScopesSet = params.getConsentRequiredScopes();
-                String consentRequiredScopes = StringUtils.EMPTY;
-                if (CollectionUtils.isNotEmpty(consentRequiredScopesSet)) {
-                    consentRequiredScopes = String.join(" ", consentRequiredScopesSet).trim();
-                }
-
-                consentPage = consentPage + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
-                        (consentRequiredScopes, UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
-                        + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" + "&spQueryParams=" + queryString;
-
-                if (entry != null) {
-
-                    entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
-                    sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
-
-                } else {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Cache Entry is Null from SessionDataCache.");
-                    }
-                }
-
-            } else {
-                throw new OAuthSystemException("Error while retrieving the application name");
-            }
-        } catch (UnsupportedEncodingException e) {
-            throw new OAuthSystemException("Error while encoding the url", e);
-        }
-
-        return consentPage;
+        return getUserConsentURL(params, loggedInUser, isOIDC, entry, sessionDataKeyConsent);
     }
 
-    public static String getUserConsentURL(OAuth2Parameters params, String loggedInUser, String sessionDataKey,
-                                           boolean isOIDC, OAuthMessage oAuthMessage, SessionDataCacheEntry entry,
+    /**
+     * Returns the consent page URL.
+     *
+     * @param params                OAuth2 Parameters.
+     * @param loggedInUser          The logged in user
+     * @param isOIDC                Whether the flow is an OIDC or not.
+     * @param entry                 SessionDataCacheEntry.
+     * @param sessionDataKeyConsent SessionDataKey for consent.
+     * @return                      The consent url.
+     */
+    public static String getUserConsentURL(OAuth2Parameters params, String loggedInUser,
+                                           boolean isOIDC, SessionDataCacheEntry entry,
                                            String sessionDataKeyConsent)
             throws OAuthSystemException {
 
         String queryString = "";
         if (log.isDebugEnabled()) {
-            log.debug("Received Session Data Key is: " + sessionDataKey);
             if (params == null) {
                 log.debug("Received OAuth2 params are Null for UserConsentURL");
             }
         }
-
 
         AuthenticatedUser user = null;
         String consentPage = null;
@@ -890,8 +821,6 @@ public class EndpointUtil {
                         (consentRequiredScopes, UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
                         + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" + "&spQueryParams=" + queryString;
 
-                entry.getEndpointParams().put(OAuthConstants.SESSION_DATA_KEY_CONSENT, sessionDataKeyConsent);
-
             } else {
                 throw new OAuthSystemException("Error while retrieving the application name");
             }
@@ -899,13 +828,19 @@ public class EndpointUtil {
             throw new OAuthSystemException("Error while encoding the url", e);
         }
 
-
-
         return consentPage;
     }
-    
-    public static String getConsentPageRedirectURLWithFilteredParams(String redirectUrl,
-                                                                     Map<String, Serializable> endpointParams) {
+
+    /**
+     * Returns the consent page URL with filtered query params.
+     *
+     * @param redirectUrl    The redirect URL.
+     * @param endpointParams The map for store filtered params.
+     * @param key            The key parameter to refers the filtered params.
+     * @return redirect URL with filtered query params except the key.
+     */
+    public static String getRedirectURLWithFilteredParams(String redirectUrl,
+                                                          Map<String, Serializable> endpointParams, String key) {
 
         URIBuilder uriBuilder;
 
@@ -927,8 +862,8 @@ public class EndpointUtil {
             return redirectUrl;
         }
 
-        String sessionDataKeyConsent = uriBuilder.getQueryParams().stream()
-                .filter(param -> OAuthConstants.SESSION_DATA_KEY_CONSENT.equals(param.getName()))
+        String value = uriBuilder.getQueryParams().stream()
+                .filter(param -> key.equals(param.getName()))
                 .map(NameValuePair::getValue)
                 .findFirst()
                 .orElse(null);
@@ -941,13 +876,13 @@ public class EndpointUtil {
         // Store query params in the endpointParams map.
         if (!queryParamsList.isEmpty()) {
             endpointParams.putAll(queryParamsList.stream()
-                    .filter(queryParam -> !queryParam.getName().equals(OAuthConstants.SESSION_DATA_KEY_CONSENT))
+                    .filter(queryParam -> !queryParam.getName().equals(key))
                     .collect(Collectors.toMap(NameValuePair::getName, NameValuePair::getValue)));
         }
 
-        // Set the sessionDataKeyConsent to redirect URL and remove from filtered params.
-        if (sessionDataKeyConsent != null) {
-            uriBuilder.setParameter(OAuthConstants.SESSION_DATA_KEY_CONSENT, sessionDataKeyConsent);
+        // Set the sessionDataKeyConsent to redirect URL.
+        if (value != null) {
+            uriBuilder.setParameter(key, value);
         }
 
         String redirectURLWithFilteredParams = uriBuilder.toString();
@@ -961,27 +896,6 @@ public class EndpointUtil {
         }
         return redirectURLWithFilteredParams;
 
-    }
-
-    /**
-     * Get the value of a query parameter from a URL.
-     *
-     * @param url               The URL to extract the parameter from.
-     * @param queryParameter    Required query parameter name.
-     * @return The value of the query parameter, or null if it is not present in the URL.
-     * @throws URISyntaxException If url is not in valid syntax.
-     */
-    public static String getQueryParameter(String url, String queryParameter) throws URISyntaxException {
-
-        URIBuilder uriBuilder = new URIBuilder(url);
-        List<NameValuePair> queryParamsList = uriBuilder.getQueryParams();
-        String sessionDataKeyConsent = queryParamsList.stream()
-                .filter(queryParam -> queryParameter.equals(queryParam.getName()))
-                .map(NameValuePair::getValue)
-                .findFirst()
-                .orElse(null);
-
-        return sessionDataKeyConsent;
     }
 
     /**

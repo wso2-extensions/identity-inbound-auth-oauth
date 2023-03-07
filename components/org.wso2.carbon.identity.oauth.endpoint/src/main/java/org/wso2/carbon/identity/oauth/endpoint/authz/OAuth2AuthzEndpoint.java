@@ -2375,7 +2375,7 @@ public class OAuth2AuthzEndpoint {
      */
     private String doUserAuthorization(OAuthMessage oAuthMessage, String sessionDataKeyFromLogin,
                                        OIDCSessionState sessionState)
-            throws OAuthSystemException, ConsentHandlingFailedException, OAuthProblemException, URISyntaxException {
+            throws OAuthSystemException, ConsentHandlingFailedException, OAuthProblemException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
@@ -2490,7 +2490,7 @@ public class OAuth2AuthzEndpoint {
     private String handleConsent(OAuthMessage oAuthMessage, String sessionDataKey,
                                  OIDCSessionState sessionState, OAuth2Parameters oauth2Params,
                                  AuthenticatedUser authenticatedUser, boolean hasUserApproved)
-            throws OAuthSystemException, ConsentHandlingFailedException, URISyntaxException {
+            throws OAuthSystemException, ConsentHandlingFailedException {
 
         ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
 
@@ -2517,7 +2517,7 @@ public class OAuth2AuthzEndpoint {
     private String promptUserForConsent(String sessionDataKey, OAuth2Parameters oauth2Params,
                                         AuthenticatedUser user, boolean ignoreExistingConsents,
                                         OAuthMessage oAuthMessage)
-            throws ConsentHandlingFailedException, OAuthSystemException, URISyntaxException {
+            throws ConsentHandlingFailedException, OAuthSystemException {
 
         String clientId = oauth2Params.getClientId();
         String tenantDomain = oauth2Params.getTenantDomain();
@@ -3027,7 +3027,7 @@ public class OAuth2AuthzEndpoint {
 
     private String handleApproveAlwaysWithPromptForNewConsent(OAuthMessage oAuthMessage, OIDCSessionState sessionState,
                                                               OAuth2Parameters oauth2Params)
-            throws ConsentHandlingFailedException, OAuthSystemException, URISyntaxException {
+            throws ConsentHandlingFailedException, OAuthSystemException {
 
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
         String preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, authenticatedUser);
@@ -3102,28 +3102,11 @@ public class OAuth2AuthzEndpoint {
         return prompts != null && Arrays.asList(prompts).contains(OAuthConstants.Prompt.CONSENT);
     }
 
-//    private String getUserConsentURL(String sessionDataKey,
-//                                     OAuth2Parameters oauth2Params,
-//                                     AuthenticatedUser user, OAuthMessage oAuthMessage) throws OAuthSystemException {
-//
-//        String loggedInUser = user.getAuthenticatedSubjectIdentifier();
-//        SessionDataCache sessionDataCache = SessionDataCache.getInstance();
-//        SessionDataCacheEntry entry;
-//        if (oAuthMessage != null) {
-//            entry = oAuthMessage.getResultFromLogin();
-//        } else {
-//            entry = sessionDataCache.getValueFromCache(new SessionDataCacheKey(sessionDataKey));
-//        }
-//        String sessionDataKeyConsent = UUID.randomUUID().toString();
-//        return EndpointUtil.getUserConsentURL(oauth2Params, loggedInUser, sessionDataKey,
-//                OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes()), oAuthMessage, entry, sessionDataKeyConsent);
-//    }
-
     private String getUserConsentURL(String sessionDataKey,
                                      OAuth2Parameters oauth2Params,
                                      AuthenticatedUser authenticatedUser,
                                      String additionalQueryParams, OAuthMessage oAuthMessage)
-            throws OAuthSystemException, URISyntaxException {
+            throws OAuthSystemException {
 
         SessionDataCache sessionDataCache = SessionDataCache.getInstance();
         SessionDataCacheEntry entry;
@@ -3132,17 +3115,20 @@ public class OAuth2AuthzEndpoint {
         } else {
             entry = sessionDataCache.getValueFromCache(new SessionDataCacheKey(sessionDataKey));
         }
+
         String sessionDataKeyConsent = UUID.randomUUID().toString();
         String loggedInUser = authenticatedUser.getAuthenticatedSubjectIdentifier();
-        String userConsentURL = EndpointUtil.getUserConsentURL(oauth2Params, loggedInUser, sessionDataKey,
-                OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes()), oAuthMessage, entry, sessionDataKeyConsent);
+        String userConsentURL = EndpointUtil.getUserConsentURL(oauth2Params, loggedInUser,
+                OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes()), entry, sessionDataKeyConsent);
+        //Append additional query params to the consent page URL.
         userConsentURL = FrameworkUtils.appendQueryParamsStringToUrl(userConsentURL, additionalQueryParams);
+        //Filter the query params from the consent page URL.
         userConsentURL =  getConsentPageRedirectURLWithFilteredParams(userConsentURL, entry, sessionDataKeyConsent);
+
         if (entry != null) {
 
             entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
             sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
-
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Cache Entry is Null from SessionDataCache.");
@@ -3153,26 +3139,17 @@ public class OAuth2AuthzEndpoint {
     }
 
     private String getConsentPageRedirectURLWithFilteredParams(String redirectURL, SessionDataCacheEntry entry,
-                                                               String sessionDataKeyConsent) throws URISyntaxException {
+                                                               String sessionDataKeyConsent) {
 
         String consentPage = redirectURL;
-//        SessionDataCacheEntry entry = null;
-//
-//        String sessionDataKeyConsent = EndpointUtil.getQueryParameter(redirectURL,
-//                    OAuthConstants.SESSION_DATA_KEY_CONSENT);
-//
-//        if (sessionDataKeyConsent != null) {
-//            entry = SessionDataCache.getInstance().getValueFromCache((
-//                    new SessionDataCacheKey(sessionDataKeyConsent)));
-//        }
 
         if (entry != null) {
             if (isAuthEndpointRedirectParamsConfigAvailable()) {
                 consentPage = FrameworkUtils.getRedirectURLWithFilteredParams(consentPage,
                         entry.getEndpointParams());
             } else {
-                consentPage = EndpointUtil.getConsentPageRedirectURLWithFilteredParams(redirectURL,
-                        entry.getEndpointParams());
+                consentPage = EndpointUtil.getRedirectURLWithFilteredParams(redirectURL,
+                        entry.getEndpointParams(), OAuthConstants.SESSION_DATA_KEY_CONSENT);
             }
         } else {
             log.error("SessionDataCacheEntry is null for sessionDataKeyConsent: " + sessionDataKeyConsent);
