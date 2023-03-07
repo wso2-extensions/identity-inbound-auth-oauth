@@ -824,6 +824,85 @@ public class EndpointUtil {
 
         return consentPage;
     }
+
+    public static String getUserConsentURL(OAuth2Parameters params, String loggedInUser, String sessionDataKey,
+                                           boolean isOIDC, OAuthMessage oAuthMessage, SessionDataCacheEntry entry,
+                                           String sessionDataKeyConsent)
+            throws OAuthSystemException {
+
+        String queryString = "";
+        if (log.isDebugEnabled()) {
+            log.debug("Received Session Data Key is: " + sessionDataKey);
+            if (params == null) {
+                log.debug("Received OAuth2 params are Null for UserConsentURL");
+            }
+        }
+
+
+        AuthenticatedUser user = null;
+        String consentPage = null;
+        try {
+            if (entry != null && entry.getQueryString() != null) {
+
+                queryString = entry.getQueryString();
+                if (queryString.contains(REQUEST_URI) && params != null) {
+                    // When request_uri requests come without redirect_uri, we need to append it to the SPQueryParams
+                    // to be used in storing consent data
+                    queryString = queryString +
+                            "&" + PROP_REDIRECT_URI + "=" + URLEncoder.encode(params.getRedirectURI(), UTF_8);
+                }
+
+                if (params != null) {
+                    queryString = queryString + "&" + PROP_OIDC_SCOPE +
+                            "=" + URLEncoder.encode(StringUtils.join(getRequestedOIDCScopes(params), " "), UTF_8);
+                }
+                entry.setQueryString(queryString);
+                queryString = URLEncoder.encode(queryString, UTF_8);
+            }
+
+            if (isOIDC) {
+                consentPage = OAuth2Util.OAuthURL.getOIDCConsentPageUrl();
+            } else {
+                consentPage = OAuth2Util.OAuthURL.getOAuth2ConsentPageUrl();
+            }
+            if (params != null) {
+                consentPage += "?" + OAuthConstants.OIDC_LOGGED_IN_USER + "=" + URLEncoder.encode(loggedInUser,
+                        UTF_8) + "&application=";
+
+                if (StringUtils.isNotEmpty(params.getDisplayName())) {
+                    consentPage += URLEncoder.encode(params.getDisplayName(), UTF_8);
+                } else {
+                    consentPage += URLEncoder.encode(params.getApplicationName(), UTF_8);
+                }
+                consentPage += "&tenantDomain=" + getSPTenantDomainFromClientId(params.getClientId());
+
+                if (entry != null) {
+                    user = entry.getLoggedInUser();
+                }
+                setConsentRequiredScopesToOAuthParams(user, params);
+                Set<String> consentRequiredScopesSet = params.getConsentRequiredScopes();
+                String consentRequiredScopes = StringUtils.EMPTY;
+                if (CollectionUtils.isNotEmpty(consentRequiredScopesSet)) {
+                    consentRequiredScopes = String.join(" ", consentRequiredScopesSet).trim();
+                }
+
+                consentPage = consentPage + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
+                        (consentRequiredScopes, UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
+                        + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" + "&spQueryParams=" + queryString;
+
+                entry.getEndpointParams().put(OAuthConstants.SESSION_DATA_KEY_CONSENT, sessionDataKeyConsent);
+
+            } else {
+                throw new OAuthSystemException("Error while retrieving the application name");
+            }
+        } catch (UnsupportedEncodingException e) {
+            throw new OAuthSystemException("Error while encoding the url", e);
+        }
+
+
+
+        return consentPage;
+    }
     
     public static String getConsentPageRedirectURLWithFilteredParams(String redirectUrl,
                                                                      Map<String, Serializable> endpointParams) {
