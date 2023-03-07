@@ -806,8 +806,6 @@ public class EndpointUtil {
 
                 if (entry != null) {
 
-                    consentPage = FrameworkUtils.getRedirectURLWithFilteredParams(consentPage,
-                            entry.getEndpointParams());
                     entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
                     sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
 
@@ -831,7 +829,6 @@ public class EndpointUtil {
                                                                      Map<String, Serializable> endpointParams) {
 
         URIBuilder uriBuilder;
-        String sessionDataKeyConsent = null;
 
         // Check if the URL is a fragment URL. Only the path of the URL is considered here.
         boolean isAFragmentURL =
@@ -851,6 +848,12 @@ public class EndpointUtil {
             return redirectUrl;
         }
 
+        String sessionDataKeyConsent = uriBuilder.getQueryParams().stream()
+                .filter(param -> OAuthConstants.SESSION_DATA_KEY_CONSENT.equals(param.getName()))
+                .map(NameValuePair::getValue)
+                .findFirst()
+                .orElse(null);
+
         List<NameValuePair> queryParamsList = uriBuilder.getQueryParams();
 
         // Remove all the query params from the consent URL
@@ -858,15 +861,14 @@ public class EndpointUtil {
 
         // Store query params in the endpointParams map.
         if (!queryParamsList.isEmpty()) {
-            endpointParams.putAll(queryParamsList.stream().collect(Collectors.toMap(NameValuePair::getName,
-                    NameValuePair::getValue)));
-            sessionDataKeyConsent = (String) endpointParams.get(OAuthConstants.SESSION_DATA_KEY_CONSENT);
+            endpointParams.putAll(queryParamsList.stream()
+                    .filter(queryParam -> !queryParam.getName().equals(OAuthConstants.SESSION_DATA_KEY_CONSENT))
+                    .collect(Collectors.toMap(NameValuePair::getName, NameValuePair::getValue)));
         }
 
         // Set the sessionDataKeyConsent to redirect URL and remove from filtered params.
         if (sessionDataKeyConsent != null) {
             uriBuilder.setParameter(OAuthConstants.SESSION_DATA_KEY_CONSENT, sessionDataKeyConsent);
-            endpointParams.remove(OAuthConstants.SESSION_DATA_KEY_CONSENT);
         }
 
         String redirectURLWithFilteredParams = uriBuilder.toString();
@@ -883,11 +885,11 @@ public class EndpointUtil {
     }
 
     /**
-     * Get a query parameter value from a URL.
+     * Get the value of a query parameter from a URL.
      *
-     * @param url               URL.
+     * @param url               The URL to extract the parameter from.
      * @param queryParameter    Required query parameter name.
-     * @return Query parameter value.
+     * @return The value of the query parameter, or null if it is not present in the URL.
      * @throws URISyntaxException If url is not in valid syntax.
      */
     public static String getQueryParameter(String url, String queryParameter) throws URISyntaxException {

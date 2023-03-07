@@ -3136,7 +3136,10 @@ public class OAuth2AuthzEndpoint {
         }
 
         if (entry != null) {
-            if (!isAuthEndpointRedirectParamsConfigAvailable()) {
+            if (isAuthEndpointRedirectParamsConfigAvailable()) {
+                consentPage = FrameworkUtils.getRedirectURLWithFilteredParams(consentPage,
+                        entry.getEndpointParams());
+            } else {
                 consentPage = EndpointUtil.getConsentPageRedirectURLWithFilteredParams(redirectURL,
                         entry.getEndpointParams());
             }
