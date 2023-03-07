@@ -40,7 +40,6 @@ import org.owasp.encoder.Encode;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
-import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthHistory;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
@@ -3108,58 +3107,11 @@ public class OAuth2AuthzEndpoint {
                                      String additionalQueryParams, OAuthMessage oAuthMessage)
             throws OAuthSystemException {
 
-        SessionDataCache sessionDataCache = SessionDataCache.getInstance();
-        SessionDataCacheEntry entry;
-        if (oAuthMessage != null) {
-            entry = oAuthMessage.getResultFromLogin();
-        } else {
-            entry = sessionDataCache.getValueFromCache(new SessionDataCacheKey(sessionDataKey));
-        }
 
-        String sessionDataKeyConsent = UUID.randomUUID().toString();
         String loggedInUser = authenticatedUser.getAuthenticatedSubjectIdentifier();
-        String userConsentURL = EndpointUtil.getUserConsentURL(oauth2Params, loggedInUser,
-                OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes()), entry, sessionDataKeyConsent);
-        //Append additional query params to the consent page URL.
-        userConsentURL = FrameworkUtils.appendQueryParamsStringToUrl(userConsentURL, additionalQueryParams);
-        //Filter the query params from the consent page URL.
-        userConsentURL =  getConsentPageRedirectURLWithFilteredParams(userConsentURL, entry, sessionDataKeyConsent);
+        return EndpointUtil.getUserConsentURL(oauth2Params, loggedInUser, sessionDataKey,
+                OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes()), oAuthMessage, additionalQueryParams);
 
-        if (entry != null) {
-
-            entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
-            sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Cache Entry is Null from SessionDataCache.");
-            }
-        }
-        return userConsentURL;
-
-    }
-
-    private String getConsentPageRedirectURLWithFilteredParams(String redirectURL, SessionDataCacheEntry entry,
-                                                               String sessionDataKeyConsent) {
-
-        String consentPage = redirectURL;
-
-        if (entry != null) {
-            if (isAuthEndpointRedirectParamsConfigAvailable()) {
-                consentPage = FrameworkUtils.getRedirectURLWithFilteredParams(consentPage,
-                        entry.getEndpointParams());
-            } else {
-                consentPage = EndpointUtil.getRedirectURLWithFilteredParams(redirectURL,
-                        entry.getEndpointParams(), OAuthConstants.SESSION_DATA_KEY_CONSENT);
-            }
-        } else {
-            log.error("SessionDataCacheEntry is null for sessionDataKeyConsent: " + sessionDataKeyConsent);
-        }
-
-        return consentPage;
-    }
-
-    private boolean isAuthEndpointRedirectParamsConfigAvailable() {
-        return FileBasedConfigurationBuilder.getInstance().isAuthEndpointRedirectParamsConfigAvailable();
     }
 
     /**

@@ -308,9 +308,13 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString())).thenReturn("sample");
         when(FrameworkUtils.getRedirectURLWithFilteredParams(anyString(), anyMap()))
                 .then(i -> i.getArgument(0));
+        when(FrameworkUtils.appendQueryParamsStringToUrl(anyString(), anyString()))
+                .then(i -> i.getArgument(0));
         mockStatic(OAuth2Util.class);
         spy(EndpointUtil.class);
         doReturn("sampleId").when(EndpointUtil.class, "getAppIdFromClientId", anyString());
+        when(EndpointUtil.getRedirectURLWithFilteredParams(anyString(), anyMap(), anyString()))
+                .then(i -> i.getArgument(0));
         mockStatic(SessionDataCache.class);
         when(SessionDataCache.getInstance()).thenReturn(mockedSessionDataCache);
         if (cacheEntryExists) {
@@ -340,8 +344,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
         String consentUrl;
         try {
-            consentUrl = EndpointUtil.getUserConsentURL(parameters, username, isOIDC, mockedSessionDataCacheEntry,
-                    sessionDataKeyConsent);
+            consentUrl = EndpointUtil.getUserConsentURL(parameters, username, sessionDataKey, isOIDC);
             if (isOIDC) {
                 Assert.assertTrue(consentUrl.contains(OIDC_CONSENT_PAGE_URL), "Incorrect consent page url for OIDC");
             } else {

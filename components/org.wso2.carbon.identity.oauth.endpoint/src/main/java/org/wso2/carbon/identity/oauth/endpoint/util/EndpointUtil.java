@@ -39,6 +39,7 @@ import org.slf4j.MDC;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
+import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -112,6 +113,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
@@ -737,15 +739,7 @@ public class EndpointUtil {
     public static String getUserConsentURL(OAuth2Parameters params, String loggedInUser, String sessionDataKey,
                                            boolean isOIDC, OAuthMessage oAuthMessage) throws OAuthSystemException {
 
-        SessionDataCacheEntry entry;
-        if (oAuthMessage != null) {
-            entry = oAuthMessage.getResultFromLogin();
-        } else {
-            entry = SessionDataCache.getInstance().getValueFromCache(new SessionDataCacheKey(sessionDataKey));
-        }
-        String sessionDataKeyConsent = UUID.randomUUID().toString();
-
-        return getUserConsentURL(params, loggedInUser, isOIDC, entry, sessionDataKeyConsent);
+        return getUserConsentURL(params, loggedInUser, sessionDataKey, isOIDC, null, StringUtils.EMPTY);
     }
 
     /**
@@ -754,24 +748,32 @@ public class EndpointUtil {
      * @param params                OAuth2 Parameters.
      * @param loggedInUser          The logged in user
      * @param isOIDC                Whether the flow is an OIDC or not.
-     * @param entry                 SessionDataCacheEntry.
-     * @param sessionDataKeyConsent SessionDataKey for consent.
+     * @param oAuthMessage          oAuth Message.
+     * @param additionalQueryParams Additional query params to be appended to the consent page url.
      * @return                      The consent url.
      */
-    public static String getUserConsentURL(OAuth2Parameters params, String loggedInUser,
-                                           boolean isOIDC, SessionDataCacheEntry entry,
-                                           String sessionDataKeyConsent)
+    public static String getUserConsentURL(OAuth2Parameters params, String loggedInUser, String sessionDataKey,
+                                           boolean isOIDC, OAuthMessage oAuthMessage, String additionalQueryParams)
             throws OAuthSystemException {
 
         String queryString = "";
         if (log.isDebugEnabled()) {
+            log.debug("Received Session Data Key is: " + sessionDataKey);
             if (params == null) {
                 log.debug("Received OAuth2 params are Null for UserConsentURL");
             }
         }
+        SessionDataCache sessionDataCache = SessionDataCache.getInstance();
+        SessionDataCacheEntry entry;
+        if (oAuthMessage != null) {
+            entry = oAuthMessage.getResultFromLogin();
+        } else {
+            entry = sessionDataCache.getValueFromCache(new SessionDataCacheKey(sessionDataKey));
+        }
 
         AuthenticatedUser user = null;
         String consentPage = null;
+        String sessionDataKeyConsent = UUID.randomUUID().toString();
         try {
             if (entry != null && entry.getQueryString() != null) {
 
@@ -821,6 +823,26 @@ public class EndpointUtil {
                         (consentRequiredScopes, UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
                         + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" + "&spQueryParams=" + queryString;
 
+                // Append additional query params to the consent page url.
+                consentPage = FrameworkUtils.appendQueryParamsStringToUrl(consentPage, additionalQueryParams);
+
+                if (entry != null) {
+                    // Filter the query parameters from the consent page url.
+                    if (isAuthEndpointRedirectParamsConfigAvailable()) {
+                        consentPage = FrameworkUtils.getRedirectURLWithFilteredParams(consentPage,
+                                entry.getEndpointParams());
+                    } else {
+                        consentPage = EndpointUtil.getRedirectURLWithFilteredParams(consentPage,
+                                entry.getEndpointParams(), OAuthConstants.SESSION_DATA_KEY_CONSENT);
+                    }
+                    entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
+                    sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Cache Entry is Null from SessionDataCache.");
+                    }
+                }
+
             } else {
                 throw new OAuthSystemException("Error while retrieving the application name");
             }
@@ -829,6 +851,10 @@ public class EndpointUtil {
         }
 
         return consentPage;
+    }
+
+    private static boolean isAuthEndpointRedirectParamsConfigAvailable() {
+        return FileBasedConfigurationBuilder.getInstance().isAuthEndpointRedirectParamsConfigAvailable();
     }
 
     /**
