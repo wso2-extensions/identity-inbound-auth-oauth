@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
@@ -42,7 +44,8 @@ public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
 
     private static final Log log = LogFactory.getLog(CarbonOAuthTokenRequest.class);
 
-    public CarbonOAuthAuthzRequest(HttpServletRequest request) throws OAuthSystemException, OAuthProblemException {
+    @JsonCreator
+    public CarbonOAuthAuthzRequest(@JsonProperty HttpServletRequest request) throws OAuthSystemException, OAuthProblemException {
         super(request);
     }
 

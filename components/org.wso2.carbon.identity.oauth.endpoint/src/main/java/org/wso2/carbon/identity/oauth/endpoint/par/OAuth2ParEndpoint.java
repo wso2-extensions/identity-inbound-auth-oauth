@@ -18,11 +18,16 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.par;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import net.minidev.json.JSONValue;
+import netscape.javascript.JSObject;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.json.JSONObject;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ParErrorDTO;
@@ -44,6 +49,8 @@ import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
+
+import static net.minidev.json.JSONValue.toJSONString;
 
 /**
  * Rest implementation for OAuth2 PAR endpoint.
@@ -97,17 +104,22 @@ public class OAuth2ParEndpoint {
         //String uuid = parAuthCodeResponse.getRequestUri().substring(reqUUID.length() - 36);
 
         // Make parOAuthRequest serializable
-        SerializableObject serializableParOAuthRequest = new SerializableObject(parOAuthRequest);
+        //SerializableObject serializableParOAuthRequest = new SerializableObject(parOAuthRequest);
 
-        // Serialize serializableParOAuthRequest
-        List<Object> testObject = new ArrayList<>();
-        ParAuthRequestSerializer serializer = new ParAuthRequestSerializer();
-        //Object obj = serializer.serializeSessionObject(request);
+        // Serialize serializableParOAuthRequest (JOS)
+        //ParAuthRequestSerializer serializer = new ParAuthRequestSerializer();
+        //Object obj = serializer.serializeSessionObject(serializableParOAuthRequest);
 
+        // Serialize parOAuthRequest to JSON String
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(parOAuthRequest);
 
 
+//        String jsonReq = toJSONString(request);
+//        objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
+//        String jsonReq = objectMapper.writeValueAsString(request);
+
+        // Store values to Database
         DataRecordWriter.writeObject(parAuthCodeResponse.getRequestUri(), json, requestMadeAt);
 
         // build serialized object

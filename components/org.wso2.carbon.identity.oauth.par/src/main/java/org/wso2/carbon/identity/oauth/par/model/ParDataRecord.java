@@ -2,6 +2,7 @@ package org.wso2.carbon.identity.oauth.par.model;
 
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.Serializable;
 
 public class ParDataRecord implements Serializable {

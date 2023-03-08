@@ -310,7 +310,13 @@
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.central.log.mgt</artifactId>
         </dependency>
-<!--        <dependency>-->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>2.13.4</version>
+            <scope>compile</scope>
+        </dependency>
+        <!--        <dependency>-->
 <!--            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>-->
 <!--            <artifactId>org.wso2.carbon.identity.oauth.endpoint</artifactId>-->
 <!--        </dependency>-->

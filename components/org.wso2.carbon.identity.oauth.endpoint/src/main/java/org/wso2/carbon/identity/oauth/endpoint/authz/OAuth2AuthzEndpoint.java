@@ -1564,7 +1564,6 @@ public class OAuth2AuthzEndpoint {
         }
 
 
-
         OAuth2Parameters params = new OAuth2Parameters();
         String sessionDataKey = UUIDGenerator.generateUUID();
         params.setSessionDataKey(sessionDataKey);

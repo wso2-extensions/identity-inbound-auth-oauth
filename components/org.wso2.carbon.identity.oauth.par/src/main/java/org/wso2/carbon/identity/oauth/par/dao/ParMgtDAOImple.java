@@ -3,22 +3,19 @@ package org.wso2.carbon.identity.oauth.par.dao;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import net.minidev.json.JSONObject;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.logging.log4j.core.jackson.Log4jJsonObjectMapper;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
-import org.graalvm.compiler.lir.alloc.lsra.LinearScan;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParDataRecord;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 
-import java.awt.image.RescaleOp;
-import java.io.Serializable;
+import javax.servlet.http.HttpServletRequest;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ParMgtDAOImple implements ParMgtDAO{
 
@@ -31,10 +28,6 @@ public class ParMgtDAOImple implements ParMgtDAO{
 
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
                     ParSQLQueries.STORE_PAR_REQUEST)) {
-
-                List<Object> testObject = new ArrayList<>();
-                testObject.add("String");
-                testObject.add(new Integer(1234));
 
                 prepStmt.setString(1, reqUUID.substring(reqUUID.length() - 36));
                 prepStmt.setString(2, oauthRequest);
@@ -68,7 +61,16 @@ public class ParMgtDAOImple implements ParMgtDAO{
 
                         ObjectMapper objectMapper = new ObjectMapper();
                         String jsonString = resultSet.getString(1);
-                        OAuthAuthzRequest parAuthRequest = objectMapper.readValue(jsonString, OAuthAuthzRequest.class);
+
+                        CarbonOAuthAuthzRequest parAuthRequest = objectMapper.readValue(jsonString, CarbonOAuthAuthzRequest.class);
+
+//                        Map<String, String> params = new HashMap<String, String>();
+//
+//                        String parts[] = jsonString.split(",");
+//
+//                        for (String part : parts)
+//
+//                        OAuthAuthzRequest jsonObject = new JSONObject(jsonString);
 
                         Long requestMadeAt = Long.valueOf(resultSet.getString(2));
                         ParDataRecord record = new ParDataRecord(parAuthRequest, requestMadeAt);
