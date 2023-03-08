@@ -3108,8 +3108,8 @@ public class OAuth2AuthzEndpoint {
             throws OAuthSystemException {
 
         String loggedInUser = authenticatedUser.getAuthenticatedSubjectIdentifier();
-        return EndpointUtil.getUserConsentURL(oauth2Params, loggedInUser, sessionDataKey,
-                OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes()), oAuthMessage, additionalQueryParams);
+        return EndpointUtil.getUserConsentURL(oauth2Params, loggedInUser, sessionDataKey, oAuthMessage,
+                additionalQueryParams);
 
     }
 

@@ -734,12 +734,13 @@ public class EndpointUtil {
      * @param isOIDC            Whether the flow is an OIDC or not.
      * @param oAuthMessage      oAuth Message.
      * @return                  The consent url.
+     * @deprecated use {{@link #getUserConsentURL(OAuth2Parameters, String, String, OAuthMessage, String)}} instead.
      */
     @Deprecated
     public static String getUserConsentURL(OAuth2Parameters params, String loggedInUser, String sessionDataKey,
                                            boolean isOIDC, OAuthMessage oAuthMessage) throws OAuthSystemException {
 
-        return getUserConsentURL(params, loggedInUser, sessionDataKey, isOIDC, null, StringUtils.EMPTY);
+        return getUserConsentURL(params, loggedInUser, sessionDataKey, null, StringUtils.EMPTY);
     }
 
     /**
@@ -747,13 +748,12 @@ public class EndpointUtil {
      *
      * @param params                OAuth2 Parameters.
      * @param loggedInUser          The logged in user
-     * @param isOIDC                Whether the flow is an OIDC or not.
      * @param oAuthMessage          oAuth Message.
      * @param additionalQueryParams Additional query params to be appended to the consent page url.
      * @return                      The consent url.
      */
     public static String getUserConsentURL(OAuth2Parameters params, String loggedInUser, String sessionDataKey,
-                                           boolean isOIDC, OAuthMessage oAuthMessage, String additionalQueryParams)
+                                           OAuthMessage oAuthMessage, String additionalQueryParams)
             throws OAuthSystemException {
 
         String queryString = "";
@@ -763,6 +763,12 @@ public class EndpointUtil {
                 log.debug("Received OAuth2 params are Null for UserConsentURL");
             }
         }
+
+        boolean isOIDC = false;
+        if (params != null) {
+            isOIDC = OAuth2Util.isOIDCAuthzRequest(params.getScopes());
+        }
+
         SessionDataCache sessionDataCache = SessionDataCache.getInstance();
         SessionDataCacheEntry entry;
         if (oAuthMessage != null) {
@@ -776,21 +782,7 @@ public class EndpointUtil {
         String sessionDataKeyConsent = UUID.randomUUID().toString();
         try {
             if (entry != null && entry.getQueryString() != null) {
-
-                queryString = entry.getQueryString();
-                if (queryString.contains(REQUEST_URI) && params != null) {
-                    // When request_uri requests come without redirect_uri, we need to append it to the SPQueryParams
-                    // to be used in storing consent data
-                    queryString = queryString +
-                            "&" + PROP_REDIRECT_URI + "=" + URLEncoder.encode(params.getRedirectURI(), UTF_8);
-                }
-
-                if (params != null) {
-                    queryString = queryString + "&" + PROP_OIDC_SCOPE +
-                            "=" + URLEncoder.encode(StringUtils.join(getRequestedOIDCScopes(params), " "), UTF_8);
-                }
-                entry.setQueryString(queryString);
-                queryString = URLEncoder.encode(queryString, UTF_8);
+                queryString = getQueryString(params, entry);
             }
 
             if (isOIDC) {
@@ -812,12 +804,7 @@ public class EndpointUtil {
                 if (entry != null) {
                     user = entry.getLoggedInUser();
                 }
-                setConsentRequiredScopesToOAuthParams(user, params);
-                Set<String> consentRequiredScopesSet = params.getConsentRequiredScopes();
-                String consentRequiredScopes = StringUtils.EMPTY;
-                if (CollectionUtils.isNotEmpty(consentRequiredScopesSet)) {
-                    consentRequiredScopes = String.join(" ", consentRequiredScopesSet).trim();
-                }
+                String consentRequiredScopes = getConsentRequiredScopes(params, user);
 
                 consentPage = consentPage + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
                         (consentRequiredScopes, UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
@@ -828,13 +815,7 @@ public class EndpointUtil {
 
                 if (entry != null) {
                     // Filter the query parameters from the consent page url.
-                    if (isAuthEndpointRedirectParamsConfigAvailable()) {
-                        consentPage = FrameworkUtils.getRedirectURLWithFilteredParams(consentPage,
-                                entry.getEndpointParams());
-                    } else {
-                        consentPage = EndpointUtil.getRedirectURLWithFilteredParams(consentPage,
-                                entry.getEndpointParams(), OAuthConstants.SESSION_DATA_KEY_CONSENT);
-                    }
+                    consentPage = getConsentPageURLWithFilteredParams(entry, consentPage);
                     entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
                     sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
                 } else {
@@ -853,6 +834,51 @@ public class EndpointUtil {
         return consentPage;
     }
 
+    private static String getConsentPageURLWithFilteredParams(SessionDataCacheEntry entry, String consentPage) {
+
+        if (isAuthEndpointRedirectParamsConfigAvailable()) {
+            consentPage = FrameworkUtils.getRedirectURLWithFilteredParams(consentPage,
+                    entry.getEndpointParams());
+        } else {
+            consentPage = EndpointUtil.getRedirectURLWithFilteredParams(consentPage,
+                    entry.getEndpointParams(), OAuthConstants.SESSION_DATA_KEY_CONSENT);
+        }
+        return consentPage;
+    }
+
+    private static String getConsentRequiredScopes(OAuth2Parameters params, AuthenticatedUser user)
+            throws OAuthSystemException {
+
+        setConsentRequiredScopesToOAuthParams(user, params);
+        Set<String> consentRequiredScopesSet = params.getConsentRequiredScopes();
+        String consentRequiredScopes = StringUtils.EMPTY;
+        if (CollectionUtils.isNotEmpty(consentRequiredScopesSet)) {
+            consentRequiredScopes = String.join(" ", consentRequiredScopesSet).trim();
+        }
+        return consentRequiredScopes;
+    }
+
+    private static String getQueryString(OAuth2Parameters params, SessionDataCacheEntry entry) throws
+            UnsupportedEncodingException, OAuthSystemException {
+
+        String queryString;
+        queryString = entry.getQueryString();
+        if (queryString.contains(REQUEST_URI) && params != null) {
+            // When request_uri requests come without redirect_uri, we need to append it to the SPQueryParams
+            // to be used in storing consent data
+            queryString = queryString +
+                    "&" + PROP_REDIRECT_URI + "=" + URLEncoder.encode(params.getRedirectURI(), UTF_8);
+        }
+
+        if (params != null) {
+            queryString = queryString + "&" + PROP_OIDC_SCOPE +
+                    "=" + URLEncoder.encode(StringUtils.join(getRequestedOIDCScopes(params), " "), UTF_8);
+        }
+        entry.setQueryString(queryString);
+        queryString = URLEncoder.encode(queryString, UTF_8);
+        return queryString;
+    }
+
     private static boolean isAuthEndpointRedirectParamsConfigAvailable() {
         return FileBasedConfigurationBuilder.getInstance().isAuthEndpointRedirectParamsConfigAvailable();
     }
@@ -865,7 +891,7 @@ public class EndpointUtil {
      * @param key            The key parameter to refers the filtered params.
      * @return redirect URL with filtered query params except the key.
      */
-    public static String getRedirectURLWithFilteredParams(String redirectUrl,
+    private static String getRedirectURLWithFilteredParams(String redirectUrl,
                                                           Map<String, Serializable> endpointParams, String key) {
 
         URIBuilder uriBuilder;

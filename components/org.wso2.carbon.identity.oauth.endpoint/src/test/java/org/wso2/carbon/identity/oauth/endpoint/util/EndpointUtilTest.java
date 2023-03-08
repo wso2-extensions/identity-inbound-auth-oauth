@@ -60,7 +60,6 @@ import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
@@ -76,7 +75,6 @@ import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 
-import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -299,6 +297,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 .thenReturn(oAuth2ScopeConsentResponse);
 
         mockStatic(OAuth2Util.class);
+        when(OAuth2Util.isOIDCAuthzRequest(any(Set.class))).thenReturn(isOIDC);
+
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOIDCConsentPageUrl()).thenReturn(OIDC_CONSENT_PAGE_URL);
         when(OAuth2Util.OAuthURL.getOAuth2ConsentPageUrl()).thenReturn(OAUTH2_CONSENT_PAGE_URL);
@@ -315,11 +315,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 .then(i -> i.getArgument(0));
         when(FrameworkUtils.appendQueryParamsStringToUrl(anyString(), anyString()))
                 .then(i -> i.getArgument(0));
-        mockStatic(OAuth2Util.class);
         spy(EndpointUtil.class);
         doReturn("sampleId").when(EndpointUtil.class, "getAppIdFromClientId", anyString());
-        when(EndpointUtil.getRedirectURLWithFilteredParams(anyString(), anyMap(), anyString()))
-                .then(i -> i.getArgument(0));
         mockStatic(SessionDataCache.class);
         when(SessionDataCache.getInstance()).thenReturn(mockedSessionDataCache);
         if (cacheEntryExists) {
@@ -356,73 +353,52 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 Assert.assertTrue(consentUrl.contains(OAUTH2_CONSENT_PAGE_URL), "Incorrect consent page url for OAuth");
             }
 
-            Assert.assertTrue(consentUrl.contains(URLEncoder.encode(username, "UTF-8")),
-                    "loggedInUser parameter value is not found in url");
-            Assert.assertTrue(consentUrl.contains(URLEncoder.encode("TestApplication", "ISO-8859-1")),
-                    "application parameter value is not found in url");
-            List<NameValuePair> nameValuePairList = URLEncodedUtils.parse(consentUrl, StandardCharsets.UTF_8);
-            Optional<NameValuePair> optionalScope = nameValuePairList.stream().filter(nameValuePair ->
-                    nameValuePair.getName().equals("scope")).findAny();
-            Assert.assertTrue(optionalScope.isPresent());
-            NameValuePair scopeNameValuePair = optionalScope.get();
-            String[] scopeArray = scopeNameValuePair.getValue().split(" ");
-            Assert.assertTrue(ArrayUtils.contains(scopeArray, "scope2"), "scope parameter value " +
-                    "is not found in url");
-            Assert.assertTrue(ArrayUtils.contains(scopeArray, "internal_login"), "internal_login " +
-                    "scope parameter value is not found in url");
+            if (isConfigAvailable) {
+                Assert.assertTrue(consentUrl.contains(URLEncoder.encode(username, "UTF-8")),
+                        "loggedInUser parameter value is not found in url");
+                Assert.assertTrue(consentUrl.contains(URLEncoder.encode("TestApplication", "ISO-8859-1")),
+                        "application parameter value is not found in url");
+                List<NameValuePair> nameValuePairList = URLEncodedUtils.parse(consentUrl, StandardCharsets.UTF_8);
+                Optional<NameValuePair> optionalScope = nameValuePairList.stream().filter(nameValuePair ->
+                        nameValuePair.getName().equals("scope")).findAny();
+                Assert.assertTrue(optionalScope.isPresent());
+                NameValuePair scopeNameValuePair = optionalScope.get();
+                String[] scopeArray = scopeNameValuePair.getValue().split(" ");
+                Assert.assertTrue(ArrayUtils.contains(scopeArray, "scope2"), "scope parameter value " +
+                        "is not found in url");
+                Assert.assertTrue(ArrayUtils.contains(scopeArray, "internal_login"), "internal_login " +
+                        "scope parameter value is not found in url");
 
-            if (queryString != null && cacheEntryExists) {
-                Assert.assertTrue(consentUrl.contains(queryString), "spQueryParams value is not found in url");
-            }
-
-            if (parameters.getScopes().contains("openid")) {
-                String decodedConsentUrl = URLDecoder.decode(consentUrl, "UTF-8");
-                int checkIndex = decodedConsentUrl.indexOf(REQUESTED_OIDC_SCOPES_KEY);
-                Assert.assertTrue(checkIndex != -1, "Requested OIDC scopes query parameter is not found in url.");
-
-                String requestedClaimString = decodedConsentUrl.substring(checkIndex);
-                checkIndex = requestedClaimString.indexOf("&");
-                if (checkIndex != -1) {
-                    requestedClaimString = requestedClaimString.substring(0, checkIndex);
+                if (queryString != null && cacheEntryExists) {
+                    Assert.assertTrue(consentUrl.contains(queryString), "spQueryParams value is not found in url");
                 }
-                Assert.assertTrue(StringUtils.equals(
-                                requestedClaimString, REQUESTED_OIDC_SCOPES_KEY + REQUESTED_OIDC_SCOPES_VALUES),
-                        "Incorrect requested OIDC scopes in query parameter.");
+
+                if (parameters.getScopes().contains("openid")) {
+                    String decodedConsentUrl = URLDecoder.decode(consentUrl, "UTF-8");
+                    int checkIndex = decodedConsentUrl.indexOf(REQUESTED_OIDC_SCOPES_KEY);
+                    Assert.assertTrue(checkIndex != -1, "Requested OIDC scopes query parameter is not found in url.");
+
+                    String requestedClaimString = decodedConsentUrl.substring(checkIndex);
+                    checkIndex = requestedClaimString.indexOf("&");
+                    if (checkIndex != -1) {
+                        requestedClaimString = requestedClaimString.substring(0, checkIndex);
+                    }
+                    Assert.assertTrue(StringUtils.equals(
+                                    requestedClaimString, REQUESTED_OIDC_SCOPES_KEY + REQUESTED_OIDC_SCOPES_VALUES),
+                            "Incorrect requested OIDC scopes in query parameter.");
+                }
+            } else {
+                String queryParamString = consentUrl.substring(consentUrl.indexOf("?") + 1);
+                List<NameValuePair> nameValuePairList = URLEncodedUtils.parse(queryParamString, StandardCharsets.UTF_8);
+                Optional<NameValuePair> sessionDataKeyConsent = nameValuePairList.stream().filter(nameValuePair ->
+                        nameValuePair.getName().equals("sessionDataKeyConsent")).findAny();
+                Assert.assertTrue(sessionDataKeyConsent.isPresent());
             }
 
         } catch (OAuthSystemException e) {
             Assert.assertTrue(e.getMessage().contains("Error while retrieving the application name"));
         }
 
-    }
-
-    @DataProvider(name = "provideDataForConsentURLFilteredParams")
-    public Object[][] provideURLParamData() {
-
-        String url1 = "https://localhost:9443/authenticationendpoint/oauth2_consent.do?queryString=queryString&" +
-                "sessionDataKeyConsent=1234567890";
-        String url2 = "https://localhost:9443/authenticationendpoint/oauth2_consent.do?queryString=queryString";
-        String url3 = "https://localhost:9443/authenticationendpoint/oauth2_consent.do";
-
-        String sessionDataKeyConsentQueryString = "sessionDataKeyConsent=1234567890";
-
-        String expectedOutput1 = OIDC_CONSENT_PAGE_URL + "?" + sessionDataKeyConsentQueryString;
-        String expectedOutput2 = OIDC_CONSENT_PAGE_URL;
-
-        return new Object[][]{
-                {url1, expectedOutput1},
-                {url2, expectedOutput2},
-                {url3, expectedOutput2}
-        };
-    }
-
-    @Test(dataProvider = "provideDataForConsentURLFilteredParams")
-    public void testGetConsentPageRedirectURLWithFilteredParams(String url, String expectedOutput) {
-
-        Map<String, Serializable> endpointParams = new HashMap<>();
-        String modifiedUrl = EndpointUtil.getRedirectURLWithFilteredParams(url, endpointParams,
-                OAuthConstants.SESSION_DATA_KEY_CONSENT);
-        assertEquals(modifiedUrl, expectedOutput);
     }
 
     @DataProvider(name = "provideScopeData")
