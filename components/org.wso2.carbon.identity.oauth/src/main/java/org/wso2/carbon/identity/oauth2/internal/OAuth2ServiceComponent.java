@@ -272,10 +272,11 @@ public class OAuth2ServiceComponent {
 
             // Registering OAuth2Service as a OSGIService
             bundleContext.registerService(OAuth2Service.class.getName(), new OAuth2Service(), null);
+            OAuth2ScopeService oAuth2ScopeService = new OAuth2ScopeService();
             // Registering OAuth2ScopeService as a OSGIService
-            bundleContext.registerService(OAuth2ScopeService.class.getName(), new OAuth2ScopeService(), null);
+            bundleContext.registerService(OAuth2ScopeService.class.getName(), oAuth2ScopeService, null);
             // Registering OAuth2ScopeService under ScopeService interface as the default service.
-            bundleContext.registerService(ScopeMetadataService.class, new OAuth2ScopeService(), null);
+            bundleContext.registerService(ScopeMetadataService.class, oAuth2ScopeService, null);
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
 

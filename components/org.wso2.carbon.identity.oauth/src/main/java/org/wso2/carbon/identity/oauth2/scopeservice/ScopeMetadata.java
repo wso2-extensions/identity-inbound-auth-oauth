@@ -32,32 +32,39 @@ public class ScopeMetadata {
     }
 
     public ScopeMetadata(String identifier, String displayName, String description) {
+
         this.identifier = identifier;
         this.displayName = displayName;
         this.description = description;
     }
 
     public String getIdentifier() {
+
         return identifier;
     }
 
     public void setIdentifier(String identifier) {
+
         this.identifier = identifier;
     }
 
     public String getDisplayName() {
+
         return displayName;
     }
 
     public void setDisplayName(String displayName) {
+
         this.displayName = displayName;
     }
 
     public String getDescription() {
+
         return description;
     }
 
     public void setDescription(String description) {
+
         this.description = description;
     }
 

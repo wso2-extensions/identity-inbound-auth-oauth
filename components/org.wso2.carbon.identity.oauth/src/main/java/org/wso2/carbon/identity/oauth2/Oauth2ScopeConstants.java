@@ -79,8 +79,9 @@ public class Oauth2ScopeConstants {
         ERROR_CODE_FAILED_TO_CHECK_ALREADY_USER_CONSENTED("51015", "Error occurred while checking " +
                 "whether user : %s is already consented for all scopes for application : %s in tenant with Id : %d."),
         ERROR_CODE_FAILED_TO_CHECK_EXISTING_CONSENTS_FOR_USER("51016", "Error occurred while checking " +
-                "whether user : %s has an existing consent for app : %s in tenant with id : %d");
-
+                "whether user : %s has an existing consent for app : %s in tenant with id : %d"),
+        ERROR_CODE_FAILED_TO_GET_SCOPE_METADATA("51017", "Error occurred while retrieving scope metadata " +
+                                                        "for scope %s.");
         private final String code;
         private final String message;
 

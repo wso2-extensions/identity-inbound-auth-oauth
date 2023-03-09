@@ -41,30 +41,37 @@ public class OAuth2Resource {
     }
 
     public String getName() {
+
         return name;
     }
 
     public void setName(String name) {
+
         this.name = name;
     }
 
     public String getId() {
+
         return id;
     }
 
     public void setId(String id) {
+
         this.id = id;
     }
 
     public List<ScopeMetadata> getScopes() {
+
         return scopes;
     }
 
     public void setScopes(List<ScopeMetadata> scopes) {
+
         this.scopes = scopes;
     }
 
     public String toJSON() {
+
         StringBuilder builder = new StringBuilder();
         builder.append("{");
         builder.append("\"name\": \"").append(name).append("\",");

@@ -837,7 +837,7 @@ public class OAuth2ScopeService implements ScopeMetadataService {
     }
 
     @Override
-    public List<OAuth2Resource> getMetadata(List<String> scopes) {
+    public List<OAuth2Resource> getMetadata(List<String> scopes) throws Exception {
 
         List<ScopeMetadata> scopesArray = new ArrayList<>();
         for (String scopeName : scopes) {
@@ -847,7 +847,9 @@ public class OAuth2ScopeService implements ScopeMetadataService {
                         scope.getDescription());
                 scopesArray.add(scopeMetadata);
             } catch (IdentityOAuth2ScopeException e) {
-                log.error("Error while retrieving scope: " + scopeName);
+                log.warn("Error while retrieving scopes", e);
+                throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
+                        ERROR_CODE_FAILED_TO_GET_SCOPE_METADATA, e);
             }
         }
         if (scopesArray.isEmpty()) {
