@@ -837,7 +837,7 @@ public class OAuth2ScopeService implements ScopeMetadataService {
     }
 
     @Override
-    public List<OAuth2Resource> getMetadata(List<String> scopes) throws Exception {
+    public List<OAuth2Resource> getMetadata(List<String> scopes) throws IdentityOAuth2ScopeServerException {
 
         List<ScopeMetadata> scopesArray = new ArrayList<>();
         for (String scopeName : scopes) {
