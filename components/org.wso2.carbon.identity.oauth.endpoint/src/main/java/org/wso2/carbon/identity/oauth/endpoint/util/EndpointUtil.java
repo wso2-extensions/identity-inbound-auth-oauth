@@ -158,10 +158,6 @@ public class EndpointUtil {
     private static IdpManager idpManager;
     private static final String ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL = "OAuth.AllowAdditionalParamsFromErrorUrl";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
-    private static final String HASH_CHAR = "#";
-    private static final String HASH_CHAR_ENCODED = "%23";
-    private static final String QUESTION_MARK = "?";
-
 
     public static void setIdpManager(IdpManager idpManager) {
 
