@@ -241,12 +241,12 @@ public class OAuth2AuthzEndpoint {
         OAuth2AuthzEndpoint.openIDConnectClaimFilter = openIDConnectClaimFilter;
     }
 
-    public static ScopeMetadataService getScopeService() {
+    public static ScopeMetadataService getScopeMetadataService() {
 
         return scopeMetadataService;
     }
 
-    public static void setScopeService(ScopeMetadataService scopeMetadataService) {
+    public static void setScopeMetadataService(ScopeMetadataService scopeMetadataService) {
 
         OAuth2AuthzEndpoint.scopeMetadataService = scopeMetadataService;
     }
