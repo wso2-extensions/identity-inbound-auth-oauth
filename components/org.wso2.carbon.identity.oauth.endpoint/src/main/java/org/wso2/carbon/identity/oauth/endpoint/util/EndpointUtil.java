@@ -841,13 +841,12 @@ public class EndpointUtil {
                                                               String consentPageUrl, String sessionDataKeyConsent) {
 
         if (isAuthEndpointRedirectParamsFilterConfigAvailable()) {
-            consentPageUrl = FrameworkUtils.getRedirectURLWithFilteredParams(consentPageUrl,
+            return FrameworkUtils.getRedirectURLWithFilteredParams(consentPageUrl,
                     endpointParams);
         } else {
-            consentPageUrl = EndpointUtil.getRedirectURLWithFilteredParams(consentPageUrl,
+            return EndpointUtil.getRedirectURLWithFilteredParams(consentPageUrl,
                     endpointParams, sessionDataKeyConsent);
         }
-        return consentPageUrl;
     }
 
     private static String getConsentRequiredScopesAsString(Set<String> consentRequiredScopesSet) {
@@ -885,12 +884,12 @@ public class EndpointUtil {
     }
 
     /**
-     * Returns the consent page URL with filtered query params.
+     * Returns the consent page URL after filtering the query params.
      *
      * @param redirectUrl           The redirect URL.
      * @param endpointParams        The map for store filtered params.
      * @param sessionDataKeyConsent The value of sessionDataKeyConsent.
-     * @return redirect URL with filtered query params except the key.
+     * @return redirect URL after filtering the query params except the sessionDataKeyConsent.
      */
     private static String getRedirectURLWithFilteredParams(String redirectUrl,
                                                           Map<String, Serializable> endpointParams, String
@@ -898,19 +897,8 @@ public class EndpointUtil {
 
         URIBuilder uriBuilder;
 
-        // Check if the URL is a fragment URL. Only the path of the URL is considered here.
-        boolean isAFragmentURL =
-                redirectUrl != null && redirectUrl.contains(HASH_CHAR) && redirectUrl.contains(QUESTION_MARK)
-                        && redirectUrl.indexOf(HASH_CHAR) < redirectUrl.indexOf(QUESTION_MARK);
         try {
-            // Encode the hash character if the redirect URL is a fragmented URL.
-            if (isAFragmentURL) {
-                int splitIndex = redirectUrl.indexOf(QUESTION_MARK);
-                uriBuilder = new URIBuilder(redirectUrl.substring(0, splitIndex).replace(HASH_CHAR, HASH_CHAR_ENCODED)
-                        + redirectUrl.substring(splitIndex));
-            } else {
-                uriBuilder = new URIBuilder(redirectUrl);
-            }
+            uriBuilder = new URIBuilder(redirectUrl);
         } catch (URISyntaxException e) {
             log.warn("Unable to filter redirect params for url." + redirectUrl, e);
             return redirectUrl;
@@ -931,16 +919,7 @@ public class EndpointUtil {
             uriBuilder.setParameter(OAuthConstants.SESSION_DATA_KEY_CONSENT, sessionDataKeyConsent);
         }
 
-        String redirectURLWithFilteredParams = uriBuilder.toString();
-
-        // Decode the hash character if the redirect URL is a fragmented URL.
-        if (isAFragmentURL) {
-            int splitIndex = redirectUrl.indexOf(QUESTION_MARK);
-            redirectURLWithFilteredParams =
-                    redirectURLWithFilteredParams.substring(0, splitIndex).replace(HASH_CHAR_ENCODED, HASH_CHAR)
-                            + redirectURLWithFilteredParams.substring(splitIndex);
-        }
-        return redirectURLWithFilteredParams;
+        return uriBuilder.toString();
 
     }
 

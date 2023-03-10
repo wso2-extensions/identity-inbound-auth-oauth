@@ -269,11 +269,11 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 new HashSet<String>(Arrays.asList("openid", "profile", "scope1", "scope2", "internal_login")));
 
         return new Object[][]{
-                {params, true, true, false, "QueryString", true, true},
+                {params, true, true, false, "QueryString", true, false},
                 {null, true, true, false, "QueryString", true, false},
                 {params, false, true, false, "QueryString", true, true},
                 {params, true, false, false, "QueryString", true, false},
-                {params, true, false, false, "QueryString", false, true},
+                {params, true, false, false, "QueryString", false, false},
                 {params, true, true, false, null, true, true},
                 {params, true, true, true, "QueryString", true, false},
                 {paramsOIDC, true, true, true, "QueryString", true, false},
@@ -390,6 +390,9 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
             } else {
                 String queryParamString = consentUrl.substring(consentUrl.indexOf("?") + 1);
                 List<NameValuePair> nameValuePairList = URLEncodedUtils.parse(queryParamString, StandardCharsets.UTF_8);
+                if (cacheEntryExists) {
+                    Assert.assertEquals(nameValuePairList.size(), 1);
+                }
                 Optional<NameValuePair> sessionDataKeyConsent = nameValuePairList.stream().filter(nameValuePair ->
                         nameValuePair.getName().equals("sessionDataKeyConsent")).findAny();
                 Assert.assertTrue(sessionDataKeyConsent.isPresent());
