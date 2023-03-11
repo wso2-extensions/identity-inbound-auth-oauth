@@ -23,13 +23,13 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.10.22</version>
+        <version>6.10.16</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>org.wso2.carbon.identity.oauth.par</artifactId>
+    <artifactId>org.wso2.carbon.identity.oauth</artifactId>
     <packaging>bundle</packaging>
-    <name>PAR - OAuth</name>
+    <name>WSO2 Carbon - OAuth</name>
     <description>A custom wso2 products or solution</description>
     <url>http://wso2.org</url>
 
@@ -57,7 +57,7 @@
             <groupId>commons-lang.wso2</groupId>
             <artifactId>commons-lang</artifactId>
         </dependency>
-        <dependency>
+         <dependency>
             <groupId>org.ops4j.pax.logging</groupId>
             <artifactId>pax-logging-api</artifactId>
         </dependency>
@@ -166,16 +166,6 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.entitlement</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <scope>provided</scope>
         </dependency>
 
         <!--SAML Common Util dependency-->
@@ -321,8 +311,9 @@
             <artifactId>org.wso2.carbon.identity.central.log.mgt</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
-            <artifactId>org.wso2.carbon.identity.oauth</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>2.13.4</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>
@@ -339,7 +330,7 @@
                             ${project.artifactId}
                         </Bundle-SymbolicName>
                         <Private-Package>
-                            org.wso2.carbon.identity.oauth.par.internal,
+                            org.wso2.carbon.identity.oauth.internal,
                         </Private-Package>
                         <Import-Package>
                             javax.cache,
@@ -421,10 +412,18 @@
                             version="${carbon.identity.framework.imp.pkg.version.range}",
                         </Import-Package>
                         <Export-Package>
-                            !org.wso2.carbon.identity.oauth.par.internal,
-                            org.wso2.carbon.identity.oauth.par.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
+                            !org.wso2.carbon.identity.oauth.internal,
+                            !org.wso2.carbon.identity.oauth.common.*,
+                            org.wso2.carbon.identity.oauth.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
+                            org.wso2.carbon.identity.oauth2.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
+                            org.wso2.carbon.identity.openidconnect.*;version="${identity.inbound.auth.oauth.exp.pkg.version}",
                         </Export-Package>
                         <DynamicImport-Package>*</DynamicImport-Package>
+                        <ListenerManager-RequiredServices>
+                            org.wso2.carbon.identity.oauth2.OAuth2Service,
+                            org.wso2.carbon.identity.oauth2.OAuth2ScopeService,
+                            org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl
+                        </ListenerManager-RequiredServices>
                     </instructions>
                 </configuration>
             </plugin>

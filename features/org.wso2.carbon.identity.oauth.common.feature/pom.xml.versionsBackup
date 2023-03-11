@@ -22,36 +22,36 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.10.22</version>
+        <version>6.10.16</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>org.wso2.carbon.identity.oauth.feature</artifactId>
+    <artifactId>org.wso2.carbon.identity.oauth.common.feature</artifactId>
     <packaging>pom</packaging>
-    <name>OAuth Feature</name>
+    <name>Identity OAuth Common Feature</name>
     <url>http://wso2.org</url>
-    <description>This feature contains the bundles required for Identity OAuth functionality</description>
+    <description>This feature contains the common bundles required for OAuth BE and FE functionality</description>
 
     <dependencies>
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
-            <artifactId>org.wso2.carbon.identity.oauth.server.feature</artifactId>
-            <type>zip</type>
+            <artifactId>org.wso2.carbon.identity.oauth.common</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
-            <artifactId>org.wso2.carbon.identity.oauth.ui.feature</artifactId>
-            <type>zip</type>
+            <groupId>org.wso2.orbit.org.apache.oltu.oauth2</groupId>
+            <artifactId>oltu</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
-            <artifactId>org.wso2.carbon.identity.oauth.common.feature</artifactId>
-            <type>zip</type>
+            <groupId>org.json.wso2</groupId>
+            <artifactId>json</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
-            <artifactId>org.wso2.carbon.identity.oauth.dcr.server.feature</artifactId>
-            <type>zip</type>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
         </dependency>
     </dependencies>
 
@@ -69,21 +69,22 @@
                             <goal>p2-feature-gen</goal>
                         </goals>
                         <configuration>
-                            <id>org.wso2.carbon.identity.oauth</id>
+                            <id>org.wso2.carbon.identity.oauth.common</id>
                             <propertiesFile>../etc/feature.properties</propertiesFile>
-                            <includedFeatures>
-                                <includedFeatureDef>
-                                    org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oauth.server.feature
-                                </includedFeatureDef>
-                                <includedFeatureDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oauth.ui.feature
-                                </includedFeatureDef>
-                                <includedFeatureDef>
-                                    org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oauth.common.feature
-                                </includedFeatureDef>
-                                <includedFeatureDef>
-                                    org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oauth.dcr.server.feature
-                                </includedFeatureDef>
-                            </includedFeatures>
+                            <adviceFile>
+                                <properties>
+                                    <propertyDef>org.wso2.carbon.p2.category.type:common</propertyDef>
+                                    <propertyDef>org.eclipse.equinox.p2.type.group:false</propertyDef>
+                                </properties>
+                            </adviceFile>
+                            <bundles>
+                                <bundleDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oauth.common</bundleDef>
+                                <bundleDef>org.wso2.orbit.org.apache.oltu.oauth2:oltu</bundleDef>
+                                <bundleDef>org.json.wso2:json</bundleDef>
+                            </bundles>
+                            <importFeatures>
+                                <importFeatureDef>org.wso2.carbon.identity.core.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
+                            </importFeatures>
                         </configuration>
                     </execution>
                 </executions>
