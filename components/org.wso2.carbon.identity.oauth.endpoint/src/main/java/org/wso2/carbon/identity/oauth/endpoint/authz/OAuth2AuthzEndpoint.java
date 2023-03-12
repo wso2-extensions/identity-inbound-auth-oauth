@@ -18,6 +18,7 @@
 package org.wso2.carbon.identity.oauth.endpoint.authz;
 
 import com.nimbusds.jwt.SignedJWT;
+import org.apache.catalina.util.ParameterMap;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -1549,19 +1550,19 @@ public class OAuth2AuthzEndpoint {
 
         //TODO: Skip this validation if request contains request_uri
 
-//        OAuthAuthzRequest oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
+        OAuthAuthzRequest oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
 
-        OAuthAuthzRequest oauthRequest;
-
-        if (oAuthMessage.getRequest_uri() != null) {
-            //get requestUri, and its related OauthRequest
-            //oauthRequest = ParRequestData.getOauthRequests().get(oAuthMessage.getRequest_uri()); //get requestUri, and its related request
-            //oauthRequest = Objects.requireNonNull(DataRecordWriter.readObject(oAuthMessage.getRequest_uri())).getParAuthRequest();
-            String uuid = oAuthMessage.getRequest_uri().substring(oAuthMessage.getRequest_uri().length() - 36);
-            oauthRequest = DataRecordWriter.readRecord(uuid).getParAuthRequest();
-        } else {
-            oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
-        }
+//        OAuthAuthzRequest oauthRequest;
+//
+//        if (oAuthMessage.getRequest_uri() != null) {
+//            //get requestUri, and its related OauthRequest
+//            //oauthRequest = ParRequestData.getOauthRequests().get(oAuthMessage.getRequest_uri()); //get requestUri, and its related request
+//            //oauthRequest = Objects.requireNonNull(DataRecordWriter.readObject(oAuthMessage.getRequest_uri())).getParAuthRequest();
+//            String uuid = oAuthMessage.getRequest_uri().substring(oAuthMessage.getRequest_uri().length() - 36);
+//            //oauthRequest = DataRecordWriter.readRecord(uuid).getParAuthRequest();
+//        } else {
+//            oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
+//        }
 
 
         OAuth2Parameters params = new OAuth2Parameters();
@@ -1979,44 +1980,48 @@ public class OAuth2AuthzEndpoint {
     private String populateOauthParameters(OAuth2Parameters params, OAuthMessage oAuthMessage,
                                            OAuth2ClientValidationResponseDTO validationResponse,
                                            OAuthAuthzRequest oauthRequest)
-            throws OAuthSystemException, InvalidRequestException, RequestObjectException {
+            throws Exception {
 
         String clientId = oAuthMessage.getClientId();
 
         //if request is  PAR request that has either request_uri or request param, populate params method with
-//        if (oAuthMessage.isParRequest()) {
-//
+        if (oAuthMessage.isParRequest()) {
+
 //            params = handleParRequestObject(oAuthMessage, oauthRequest, params);
-////            Map<String, Map<String, String[]>> parRequests = ParRequestData.getRequests();
-////            String requestUri = oAuthMessage.getRequest_uri();
-////
-////            if (isValidRequestUri(requestUri)) {
-//
-//
-//
-////                params.setClientId(clientId);
-////                params.setRedirectURI(parRequests.get(requestUri).get("redirect_uri")[0]);
-////                params.setResponseType(parRequests.get(requestUri).get("response_type")[0]);
-////                params.setScopes(new HashSet<String>(Arrays.asList(parRequests.get(requestUri).get("scope"))));
-////            }
-//
-//        } else {
-//            params.setClientId(clientId);
-//            params.setRedirectURI(validationResponse.getCallbackURL());
-//            params.setResponseType(oauthRequest.getResponseType());
-//            params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
-//            params.setScopes(oauthRequest.getScopes());
-//        }
+            String uuid = oAuthMessage.getRequest_uri().substring(oAuthMessage.getRequest_uri().length() - 36);
+            Map<String, ArrayList<String>> paramMap = DataRecordWriter.readRecord(uuid).getParamMap();
+            //ParameterMap parameterMap = DataRecordWriter.readRecord(uuid).getParamMap();
+            String requestUri = oAuthMessage.getRequest_uri();
+
+            params.setClientId(clientId);
+            params.setRedirectURI(paramMap.get("redirect_uri").get(0));
+            params.setResponseType(paramMap.get("response_type").get(0));
+            params.setScopes(new HashSet<String>(paramMap.get("scope")));
+
+//            if (isValidRequestUri(requestUri)) {
+//                params.setClientId(clientId);
+//                params.setRedirectURI(paramMap.get("redirect_uri").toString());
+//                params.setResponseType(paramMap.get("response_type").toString());
+//                params.setScopes(new HashSet<String>(Arrays.asList(paramMap.get("scope").toString())));
+//            }
+
+        } else {
+            params.setClientId(clientId);
+            params.setRedirectURI(validationResponse.getCallbackURL());
+            params.setResponseType(oauthRequest.getResponseType());
+            params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
+            params.setScopes(oauthRequest.getScopes());
+        }
 
 
         //TODO: oauthRequest.getParam(RESPONSE_TYPE).replace("",parRequests.get(requestUri).get("response_type")[0]);
 
 
-        params.setClientId(clientId);
-        params.setRedirectURI(validationResponse.getCallbackURL());
-        params.setResponseType(oauthRequest.getResponseType());
-        params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
-        params.setScopes(oauthRequest.getScopes());
+//        params.setClientId(clientId);
+//        params.setRedirectURI(validationResponse.getCallbackURL());
+//        params.setResponseType(oauthRequest.getResponseType());
+//        params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
+//        params.setScopes(oauthRequest.getScopes());
 
         if (params.getScopes() == null) { // to avoid null pointers
             Set<String> scopeSet = new HashSet<String>();
@@ -2072,11 +2077,11 @@ public class OAuth2AuthzEndpoint {
                             + clientId + " of tenantDomain: " + params.getTenantDomain(), e);
                 }
                 if (StringUtils.isNotBlank(oAuthMessage.getRequest().getParameter(REQUEST_URI))) {
-                    return EndpointUtil.getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes
+                    return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes
                                     .OAuth2SubErrorCodes.INVALID_REQUEST_URI,
                             e.getErrorCode(), e.getErrorMessage(), null, params);
                 } else {
-                    return EndpointUtil.getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes
+                    return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes
                                     .OAuth2SubErrorCodes.INVALID_REQUEST_OBJECT, e.getErrorCode(), e.getErrorMessage(),
                             null, params);
                 }

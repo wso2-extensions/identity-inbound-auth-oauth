@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.minidev.json.JSONObject;
+import org.apache.catalina.util.ParameterMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
@@ -62,7 +63,9 @@ public class ParMgtDAOImple implements ParMgtDAO{
                         ObjectMapper objectMapper = new ObjectMapper();
                         String jsonString = resultSet.getString(1);
 
-                        CarbonOAuthAuthzRequest parAuthRequest = objectMapper.readValue(jsonString, CarbonOAuthAuthzRequest.class);
+//                        Map<String, String[]> params;
+                        ParameterMap params;
+                        params = objectMapper.readValue(jsonString, ParameterMap.class);
 
 //                        Map<String, String> params = new HashMap<String, String>();
 //
@@ -73,7 +76,7 @@ public class ParMgtDAOImple implements ParMgtDAO{
 //                        OAuthAuthzRequest jsonObject = new JSONObject(jsonString);
 
                         Long requestMadeAt = Long.valueOf(resultSet.getString(2));
-                        ParDataRecord record = new ParDataRecord(parAuthRequest, requestMadeAt);
+                        ParDataRecord record = new ParDataRecord(params, requestMadeAt);
                         return record;
                     } else {
                         throw new ParCoreException(

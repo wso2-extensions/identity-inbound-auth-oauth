@@ -112,7 +112,7 @@ public class OAuth2ParEndpoint {
 
         // Serialize parOAuthRequest to JSON String
         ObjectMapper objectMapper = new ObjectMapper();
-        String json = objectMapper.writeValueAsString(parOAuthRequest);
+        String json = objectMapper.writeValueAsString(request.getParameterMap());
 
 
 //        String jsonReq = toJSONString(request);

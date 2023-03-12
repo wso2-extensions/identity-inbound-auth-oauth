@@ -14,11 +14,11 @@ public class SQLQueries {
      */
 
     public static class ParSQLQueries {
-        public static final String STORE_PAR_REQUEST = "INSERT INTO IDN_OAUTH_PAR " +
-                "(REQ_URI_UUID, AUTH_REQ_OBJ, REQ_MADE) VALUES (?,?,?)";
+        public static final String STORE_PAR_REQUEST = "INSERT INTO IDN_OAUTH_PAR_PARAMS " +
+                "(REQ_URI_UUID, PARAM_MAP, REQ_MADE) VALUES (?,?,?)";
 
         public static final String RETRIEVE_PAR_REQUEST_DATA =
-                "SELECT AUTH_REQ_OBJ, REQ_MADE FROM IDN_OAUTH_PAR " +
+                "SELECT PARAM_MAP, REQ_MADE FROM IDN_OAUTH_PAR_PARAMS " +
                         " WHERE REQ_URI_UUID = ? ";
     }
 }
