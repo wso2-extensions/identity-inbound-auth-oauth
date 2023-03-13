@@ -3103,21 +3103,14 @@ public class OAuth2AuthzEndpoint {
 
     private String getUserConsentURL(String sessionDataKey,
                                      OAuth2Parameters oauth2Params,
-                                     AuthenticatedUser user, OAuthMessage oAuthMessage) throws OAuthSystemException {
-
-        String loggedInUser = user.getAuthenticatedSubjectIdentifier();
-        return EndpointUtil.getUserConsentURL(oauth2Params, loggedInUser, sessionDataKey,
-                OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes()), oAuthMessage);
-    }
-
-    private String getUserConsentURL(String sessionDataKey,
-                                     OAuth2Parameters oauth2Params,
                                      AuthenticatedUser authenticatedUser,
                                      String additionalQueryParams, OAuthMessage oAuthMessage)
             throws OAuthSystemException {
 
-        String userConsentURL = getUserConsentURL(sessionDataKey, oauth2Params, authenticatedUser, oAuthMessage);
-        return FrameworkUtils.appendQueryParamsStringToUrl(userConsentURL, additionalQueryParams);
+        String loggedInUser = authenticatedUser.getAuthenticatedSubjectIdentifier();
+        return EndpointUtil.getUserConsentURL(oauth2Params, loggedInUser, sessionDataKey, oAuthMessage,
+                additionalQueryParams);
+
     }
 
     /**

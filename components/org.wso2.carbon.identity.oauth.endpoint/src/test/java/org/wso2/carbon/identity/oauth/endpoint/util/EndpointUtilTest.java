@@ -204,6 +204,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     private String username;
     private String password;
     private String sessionDataKey;
+    private String sessionDataKeyConsent;
     private String clientId;
     private AuthenticatedUser user;
     private OAuth2ScopeConsentResponse oAuth2ScopeConsentResponse;
@@ -214,6 +215,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         username = "myUsername";
         password = "myPassword";
         sessionDataKey = "1234567890";
+        sessionDataKeyConsent = "1234567891";
         clientId = "myClientId";
         user = new AuthenticatedUser();
         user.setFederatedUser(false);
@@ -267,20 +269,21 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 new HashSet<String>(Arrays.asList("openid", "profile", "scope1", "scope2", "internal_login")));
 
         return new Object[][]{
-                {params, true, true, false, "QueryString", true},
-                {null, true, true, false, "QueryString", true},
-                {params, false, true, false, "QueryString", true},
-                {params, true, false, false, "QueryString", true},
-                {params, true, false, false, "QueryString", false},
-                {params, true, true, false, null, true},
-                {params, true, true, true, "QueryString", true},
-                {paramsOIDC, true, true, true, "QueryString", true},
+                {params, true, true, false, "QueryString", true, false},
+                {null, true, true, false, "QueryString", true, false},
+                {params, false, true, false, "QueryString", true, true},
+                {params, true, false, false, "QueryString", true, false},
+                {params, true, false, false, "QueryString", false, false},
+                {params, true, true, false, null, true, true},
+                {params, true, true, true, "QueryString", true, false},
+                {paramsOIDC, true, true, true, "QueryString", true, false},
         };
     }
 
     @Test(dataProvider = "provideDataForUserConsentURL")
     public void testGetUserConsentURL(Object oAuth2ParamObject, boolean isOIDC, boolean cacheEntryExists,
-                                      boolean throwError, String queryString, boolean isDebugEnabled) throws Exception {
+                                      boolean throwError, String queryString, boolean isDebugEnabled,
+                                      boolean isConfigAvailable) throws Exception {
 
         setMockedLog(isDebugEnabled);
         OAuth2Parameters parameters = (OAuth2Parameters) oAuth2ParamObject;
@@ -294,9 +297,15 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 .thenReturn(oAuth2ScopeConsentResponse);
 
         mockStatic(OAuth2Util.class);
+        when(OAuth2Util.isOIDCAuthzRequest(any(Set.class))).thenReturn(isOIDC);
+
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOIDCConsentPageUrl()).thenReturn(OIDC_CONSENT_PAGE_URL);
         when(OAuth2Util.OAuthURL.getOAuth2ConsentPageUrl()).thenReturn(OAUTH2_CONSENT_PAGE_URL);
+
+        mockStatic(FileBasedConfigurationBuilder.class);
+        when(FileBasedConfigurationBuilder.getInstance()).thenReturn(fileBasedConfigurationBuilder);
+        when(fileBasedConfigurationBuilder.isAuthEndpointRedirectParamsConfigAvailable()).thenReturn(isConfigAvailable);
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
@@ -304,7 +313,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString())).thenReturn("sample");
         when(FrameworkUtils.getRedirectURLWithFilteredParams(anyString(), anyMap()))
                 .then(i -> i.getArgument(0));
-        mockStatic(OAuth2Util.class);
+        when(FrameworkUtils.appendQueryParamsStringToUrl(anyString(), anyString()))
+                .then(i -> i.getArgument(0));
         spy(EndpointUtil.class);
         doReturn("sampleId").when(EndpointUtil.class, "getAppIdFromClientId", anyString());
         mockStatic(SessionDataCache.class);
@@ -343,38 +353,49 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 Assert.assertTrue(consentUrl.contains(OAUTH2_CONSENT_PAGE_URL), "Incorrect consent page url for OAuth");
             }
 
-            Assert.assertTrue(consentUrl.contains(URLEncoder.encode(username, "UTF-8")),
-                    "loggedInUser parameter value is not found in url");
-            Assert.assertTrue(consentUrl.contains(URLEncoder.encode("TestApplication", "ISO-8859-1")),
-                    "application parameter value is not found in url");
-            List<NameValuePair> nameValuePairList = URLEncodedUtils.parse(consentUrl, StandardCharsets.UTF_8);
-            Optional<NameValuePair> optionalScope = nameValuePairList.stream().filter(nameValuePair ->
-                    nameValuePair.getName().equals("scope")).findAny();
-            Assert.assertTrue(optionalScope.isPresent());
-            NameValuePair scopeNameValuePair = optionalScope.get();
-            String[] scopeArray = scopeNameValuePair.getValue().split(" ");
-            Assert.assertTrue(ArrayUtils.contains(scopeArray, "scope2"), "scope parameter value " +
-                    "is not found in url");
-            Assert.assertTrue(ArrayUtils.contains(scopeArray, "internal_login"), "internal_login " +
-                    "scope parameter value is not found in url");
+            if (isConfigAvailable) {
+                Assert.assertTrue(consentUrl.contains(URLEncoder.encode(username, "UTF-8")),
+                        "loggedInUser parameter value is not found in url");
+                Assert.assertTrue(consentUrl.contains(URLEncoder.encode("TestApplication", "ISO-8859-1")),
+                        "application parameter value is not found in url");
+                List<NameValuePair> nameValuePairList = URLEncodedUtils.parse(consentUrl, StandardCharsets.UTF_8);
+                Optional<NameValuePair> optionalScope = nameValuePairList.stream().filter(nameValuePair ->
+                        nameValuePair.getName().equals("scope")).findAny();
+                Assert.assertTrue(optionalScope.isPresent());
+                NameValuePair scopeNameValuePair = optionalScope.get();
+                String[] scopeArray = scopeNameValuePair.getValue().split(" ");
+                Assert.assertTrue(ArrayUtils.contains(scopeArray, "scope2"), "scope parameter value " +
+                        "is not found in url");
+                Assert.assertTrue(ArrayUtils.contains(scopeArray, "internal_login"), "internal_login " +
+                        "scope parameter value is not found in url");
 
-            if (queryString != null && cacheEntryExists) {
-                Assert.assertTrue(consentUrl.contains(queryString), "spQueryParams value is not found in url");
-            }
-
-            if (parameters.getScopes().contains("openid")) {
-                String decodedConsentUrl = URLDecoder.decode(consentUrl, "UTF-8");
-                int checkIndex = decodedConsentUrl.indexOf(REQUESTED_OIDC_SCOPES_KEY);
-                Assert.assertTrue(checkIndex != -1, "Requested OIDC scopes query parameter is not found in url.");
-
-                String requestedClaimString = decodedConsentUrl.substring(checkIndex);
-                checkIndex = requestedClaimString.indexOf("&");
-                if (checkIndex != -1) {
-                    requestedClaimString = requestedClaimString.substring(0, checkIndex);
+                if (queryString != null && cacheEntryExists) {
+                    Assert.assertTrue(consentUrl.contains(queryString), "spQueryParams value is not found in url");
                 }
-                Assert.assertTrue(StringUtils.equals(
-                                requestedClaimString, REQUESTED_OIDC_SCOPES_KEY + REQUESTED_OIDC_SCOPES_VALUES),
-                        "Incorrect requested OIDC scopes in query parameter.");
+
+                if (parameters.getScopes().contains("openid")) {
+                    String decodedConsentUrl = URLDecoder.decode(consentUrl, "UTF-8");
+                    int checkIndex = decodedConsentUrl.indexOf(REQUESTED_OIDC_SCOPES_KEY);
+                    Assert.assertTrue(checkIndex != -1, "Requested OIDC scopes query parameter is not found in url.");
+
+                    String requestedClaimString = decodedConsentUrl.substring(checkIndex);
+                    checkIndex = requestedClaimString.indexOf("&");
+                    if (checkIndex != -1) {
+                        requestedClaimString = requestedClaimString.substring(0, checkIndex);
+                    }
+                    Assert.assertTrue(StringUtils.equals(
+                                    requestedClaimString, REQUESTED_OIDC_SCOPES_KEY + REQUESTED_OIDC_SCOPES_VALUES),
+                            "Incorrect requested OIDC scopes in query parameter.");
+                }
+            } else {
+                String queryParamString = consentUrl.substring(consentUrl.indexOf("?") + 1);
+                List<NameValuePair> nameValuePairList = URLEncodedUtils.parse(queryParamString, StandardCharsets.UTF_8);
+                if (cacheEntryExists) {
+                    Assert.assertEquals(nameValuePairList.size(), 1);
+                }
+                Optional<NameValuePair> sessionDataKeyConsent = nameValuePairList.stream().filter(nameValuePair ->
+                        nameValuePair.getName().equals("sessionDataKeyConsent")).findAny();
+                Assert.assertTrue(sessionDataKeyConsent.isPresent());
             }
 
         } catch (OAuthSystemException e) {
