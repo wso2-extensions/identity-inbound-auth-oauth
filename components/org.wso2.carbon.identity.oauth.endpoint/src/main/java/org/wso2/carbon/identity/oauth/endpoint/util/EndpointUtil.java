@@ -834,7 +834,8 @@ public class EndpointUtil {
     }
 
     private static String filterQueryParamsFromConsentPageUrl(Map<String, Serializable> endpointParams,
-                                                              String consentPageUrl, String sessionDataKeyConsent) {
+                                                              String consentPageUrl, String sessionDataKeyConsent)
+            throws OAuthSystemException {
 
         if (isAuthEndpointRedirectParamsFilterConfigAvailable()) {
             return FrameworkUtils.getRedirectURLWithFilteredParams(consentPageUrl,
@@ -889,7 +890,7 @@ public class EndpointUtil {
      */
     private static String getRedirectURLWithFilteredParams(String redirectUrl,
                                                           Map<String, Serializable> endpointParams, String
-                                                                   sessionDataKeyConsent) {
+                                                                   sessionDataKeyConsent) throws OAuthSystemException {
 
         URIBuilder uriBuilder;
 
@@ -897,7 +898,7 @@ public class EndpointUtil {
             uriBuilder = new URIBuilder(redirectUrl);
         } catch (URISyntaxException e) {
             log.warn("Unable to filter redirect params for url." + redirectUrl, e);
-            return redirectUrl;
+            throw new OAuthSystemException("Unable to filter redirect params for url: " + redirectUrl, e);
         }
 
         List<NameValuePair> queryParamsList = uriBuilder.getQueryParams();
