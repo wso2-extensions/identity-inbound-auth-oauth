@@ -199,6 +199,11 @@ public class OAuth2TokenEndpoint {
     private void validateOAuthApplication(OAuthClientAuthnContext oAuthClientAuthnContext)
             throws InvalidApplicationClientException {
 
+        if (!oAuthClientAuthnContext.isAuthenticated()) {
+            throw new InvalidApplicationClientException(oAuthClientAuthnContext.getErrorMessage(),
+                    oAuthClientAuthnContext.getErrorCode());
+        }
+
         if (isNotBlank(oAuthClientAuthnContext.getClientId()) && !oAuthClientAuthnContext
                 .isMultipleAuthenticatorsEngaged()) {
             validateOauthApplication(oAuthClientAuthnContext.getClientId());

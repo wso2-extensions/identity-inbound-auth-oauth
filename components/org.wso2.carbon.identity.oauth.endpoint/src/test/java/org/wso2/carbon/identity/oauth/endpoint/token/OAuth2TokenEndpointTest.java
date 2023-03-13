@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthTokenRequest;
@@ -86,7 +87,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({EndpointUtil.class, IdentityDatabaseUtil.class, OAuthServerConfiguration.class,
-        CarbonOAuthTokenRequest.class, LoggerUtils.class, IdentityTenantUtil.class})
+        CarbonOAuthTokenRequest.class, LoggerUtils.class, IdentityTenantUtil.class, })
 public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -250,11 +251,17 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         requestParams.put(OAuth.OAUTH_USERNAME, new String[]{USERNAME});
         requestParams.put(OAuth.OAUTH_PASSWORD, new String[]{"password"});
 
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+
         mockStatic(LoggerUtils.class);
         when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<String, Object>());
+
+        request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT, oAuthClientAuthnContext);
+
         when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(authzHeader);
         when(request.getHeaderNames()).thenReturn(
                 Collections.enumeration(new ArrayList<String>() {{
@@ -347,11 +354,15 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         requestParams.put(OAuth.OAUTH_USERNAME, new String[]{USERNAME});
         requestParams.put(OAuth.OAUTH_PASSWORD, new String[]{"password"});
 
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+
         mockStatic(LoggerUtils.class);
         when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<String, Object>());
+        request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT, oAuthClientAuthnContext);
         when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(AUTHORIZATION_HEADER);
         when(request.getHeaderNames()).thenReturn(
                 Collections.enumeration(new ArrayList<String>() {{
