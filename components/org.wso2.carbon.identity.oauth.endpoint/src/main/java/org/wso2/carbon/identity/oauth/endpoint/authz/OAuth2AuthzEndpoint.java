@@ -257,7 +257,7 @@ public class OAuth2AuthzEndpoint {
                 FrameworkUtils.startTenantFlow(tenantDomain);
             }
 
-            if (isPassthroughToFramework(oAuthMessage)) {
+            if (request.getRequestURI() != null || isPassthroughToFramework(oAuthMessage)) {
                 return handleAuthFlowThroughFramework(oAuthMessage);
             } else if (isInitialRequestFromClient(oAuthMessage)) {
                 return handleInitialAuthorizationRequest(oAuthMessage);
