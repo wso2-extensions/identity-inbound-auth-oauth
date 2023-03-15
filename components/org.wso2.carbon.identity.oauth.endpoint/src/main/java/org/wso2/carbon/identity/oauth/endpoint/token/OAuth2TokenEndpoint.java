@@ -136,9 +136,15 @@ public class OAuth2TokenEndpoint {
             startSuperTenantFlow();
             validateRepeatedParams(request, paramMap);
             HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
-
             CarbonOAuthTokenRequest oauthRequest = buildCarbonOAuthTokenRequest(httpRequest);
-            validateOAuthApplication(oauthRequest.getoAuthClientAuthnContext());
+            OAuthClientAuthnContext oauthClientAuthnContext = oauthRequest.getoAuthClientAuthnContext();
+
+            if (!oauthClientAuthnContext.isAuthenticated()
+                    && OAuth2ErrorCodes.INVALID_CLIENT.equals(oauthClientAuthnContext.getErrorCode())) {
+                return handleBasicAuthFailure(oauthClientAuthnContext.getErrorMessage());
+            }
+
+            validateOAuthApplication(oauthClientAuthnContext);
             OAuth2AccessTokenRespDTO oauth2AccessTokenResp = issueAccessToken(oauthRequest, httpRequest);
 
             if (oauth2AccessTokenResp.getErrorMsg() != null) {
@@ -198,11 +204,6 @@ public class OAuth2TokenEndpoint {
 
     private void validateOAuthApplication(OAuthClientAuthnContext oAuthClientAuthnContext)
             throws InvalidApplicationClientException {
-
-        if (!oAuthClientAuthnContext.isAuthenticated()) {
-            throw new InvalidApplicationClientException(oAuthClientAuthnContext.getErrorMessage(),
-                    oAuthClientAuthnContext.getErrorCode());
-        }
 
         if (isNotBlank(oAuthClientAuthnContext.getClientId()) && !oAuthClientAuthnContext
                 .isMultipleAuthenticatorsEngaged()) {
