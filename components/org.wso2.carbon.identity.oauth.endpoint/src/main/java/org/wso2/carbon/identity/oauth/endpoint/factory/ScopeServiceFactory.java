@@ -63,7 +63,9 @@ public class ScopeServiceFactory extends AbstractFactoryBean<ScopeMetadataServic
                     if (scopeService instanceof OAuth2ScopeService) {
                         continue;
                     }
-                    log.debug("Returning the ScopeService: " + scopeService.getClass().getName());
+                    if (log.isDebugEnabled()) {
+                        log.debug("Returning the ScopeService: " + scopeService.getClass().getName());
+                    }
                     this.scopeMetadataService = (ScopeMetadataService) scopeService;
                 }
             } else {
