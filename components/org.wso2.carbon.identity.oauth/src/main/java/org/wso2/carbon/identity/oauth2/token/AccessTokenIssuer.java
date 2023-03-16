@@ -504,7 +504,22 @@ public class AccessTokenIssuer {
             }
             return true;
         }
-
+        if (GrantType.REFRESH_TOKEN.toString().equals(grantType)) {
+            AuthorizationGrantHandler authzGrantHandler = authzGrantHandlers.get(grantType);
+            boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
+            if (isValidScope) {
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("clientId", tokenReqDTO.getClientId());
+                    params.put("requestedScopes", getScopeList(tokenReqDTO.getScope()));
+                    params.put("authorizedScopes", getScopeList(tokReqMsgCtx.getScope()));
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.SUCCESS, "OAuth scope validation is successful.",
+                            "validate-scope", null);
+                }
+            }
+            return isValidScope;
+        }
         List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
         List<String> requestedAllowedScopes = new ArrayList<>();
         String[] requestedScopes = tokReqMsgCtx.getScope();

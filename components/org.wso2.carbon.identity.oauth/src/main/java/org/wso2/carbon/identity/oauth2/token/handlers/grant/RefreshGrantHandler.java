@@ -154,17 +154,23 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 return false;
             }
             List<String> grantedScopeList = Stream
-                    .concat(Arrays.stream(grantedScopes), Arrays.stream(grantedInternalScopes))
+                    .concat(grantedScopes == null
+                            ? Stream.empty()
+                            : Arrays.stream(grantedScopes), grantedInternalScopes == null
+                            ? Stream.empty()
+                            : Arrays.stream(grantedInternalScopes))
                     .collect(Collectors.toList());
             for (String scope : requestedScopes) {
                 if (!grantedScopeList.contains(scope)) {
                     if (log.isDebugEnabled()) {
                         log.debug("scope: " + scope + "is not granted for this refresh token");
                     }
-                    return false;
+                    requestedScopes = (String[]) ArrayUtils.removeElement(requestedScopes, scope);
                 }
             }
             tokReqMsgCtx.setScope(requestedScopes);
+        } else {
+            tokReqMsgCtx.setScope(grantedScopes);
         }
         return true;
     }
