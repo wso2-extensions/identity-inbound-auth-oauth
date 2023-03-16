@@ -831,12 +831,6 @@ public class OAuth2ScopeService implements ScopeMetadataService {
     }
 
     @Override
-    public String getName() {
-
-        return "OAuth2ScopeService";
-    }
-
-    @Override
     public List<OAuth2Resource> getMetadata(List<String> scopes) throws IdentityOAuth2ScopeServerException {
 
         List<ScopeMetadata> scopesArray = new ArrayList<>();

@@ -25,9 +25,6 @@ import java.util.List;
  */
 public interface ScopeMetadataService {
 
-    // Returns the name of Scope Metadata Service.
-    String getName();
-
     // Returns the metadata of the scopes.
     List<OAuth2Resource> getMetadata(List<String> permissions) throws Exception;
 }
