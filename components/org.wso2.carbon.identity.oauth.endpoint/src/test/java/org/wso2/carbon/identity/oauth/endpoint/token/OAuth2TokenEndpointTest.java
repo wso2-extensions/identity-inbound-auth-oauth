@@ -455,6 +455,8 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         assertNotNull(response.getEntity(), "Response entity is null");
         assertTrue(response.getEntity().toString().contains(OAuth2ErrorCodes.INVALID_CLIENT),
                 "Expected error code not found");
+        assertTrue(response.getMetadata().containsKey(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE),
+                "Missing WWW-Authenticate header");
     }
 
     @DataProvider(name = "testGetAccessTokenDataProvider")
