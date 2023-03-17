@@ -165,12 +165,10 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                     if (log.isDebugEnabled()) {
                         log.debug("scope: " + scope + "is not granted for this refresh token");
                     }
-                    requestedScopes = (String[]) ArrayUtils.removeElement(requestedScopes, scope);
+                    return false;
                 }
             }
             tokReqMsgCtx.setScope(requestedScopes);
-        } else {
-            tokReqMsgCtx.setScope(grantedScopes);
         }
         return true;
     }
