@@ -826,7 +826,7 @@ public class EndpointUtil {
                 consentPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(consentPageUrl, additionalQueryParams);
 
                 // Append scope metadata to the consent page url.
-                consentPageUrl = getConsentPageURLWithScopeMetadata(consentPageUrl, params.getScopes(),
+                consentPageUrl = getConsentPageURLWithScopeMetadata(consentPageUrl, params.getConsentRequiredScopes(),
                         params.getTenantDomain());
 
                 if (entry != null) {
