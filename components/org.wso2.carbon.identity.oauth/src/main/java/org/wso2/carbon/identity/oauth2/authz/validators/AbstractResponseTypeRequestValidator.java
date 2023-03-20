@@ -250,6 +250,9 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
      */
     private boolean validateCallbackURI(String callbackURI, OAuthAppDO oauthApp) {
 
+        if (callbackURI == null) {
+            return false;
+        }
         String regexp = null;
         String registeredCallbackUrl = oauthApp.getCallbackUrl();
         if (registeredCallbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
@@ -260,17 +263,17 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
                     registeredCallbackUrl);
         }
         if (callbackURI.matches(OAuthConstants.LOOPBACK_IP_REGEX)) {
-            callbackURI = callbackURI.replaceFirst(OAuthConstants.LOOPBACK_IP_PORT_REGEX, "");
+            callbackURI = callbackURI.replaceFirst(OAuthConstants.LOOPBACK_IP_PORT_REGEX, StringUtils.EMPTY);
             if (regexp != null) {
-                regexp = regexp.replaceAll(OAuthConstants.LOOPBACK_IP_PORT_REGEX, "");
+                regexp = regexp.replaceAll(OAuthConstants.LOOPBACK_IP_PORT_REGEX, StringUtils.EMPTY);
                 if (!callbackURI.matches(regexp)) {
                     log.debug("Regex might contain port number capture group/groups for loopback ip address");
                     return false;
                 }
                 return true;
             } else {
-                registeredCallbackUrl = registeredCallbackUrl.replaceFirst(
-                        OAuthConstants.LOOPBACK_IP_PORT_REGEX, "");
+                registeredCallbackUrl =
+                        registeredCallbackUrl.replaceFirst(OAuthConstants.LOOPBACK_IP_PORT_REGEX, StringUtils.EMPTY);
             }
         }
         return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
