@@ -781,7 +781,11 @@ public class EndpointUtil {
                 queryString = getQueryString(params, entry);
             }
 
-            if (isOIDC) {
+            ServiceProvider sp = getServiceProvider(params);
+
+            if (isExternalConsentManagementEnabledForSP(sp)) {
+                consentPageUrl = getExternalConsentUrlForSP(sp);
+            } else if (isOIDC) {
                 consentPageUrl = OAuth2Util.OAuthURL.getOIDCConsentPageUrl();
             } else {
                 consentPageUrl = OAuth2Util.OAuthURL.getOAuth2ConsentPageUrl();
@@ -828,9 +832,34 @@ public class EndpointUtil {
             }
         } catch (UnsupportedEncodingException e) {
             throw new OAuthSystemException("Error while encoding the url", e);
+        } catch (IdentityOAuth2Exception e) {
+            throw new OAuthSystemException("Error retrieve Service Provider for clientId:" + params.getClientId() , e);
         }
 
         return consentPageUrl;
+    }
+
+    private static ServiceProvider getServiceProvider(OAuth2Parameters params) throws IdentityOAuth2Exception {
+        ServiceProvider sp = null;
+        if (params != null) {
+            sp = OAuth2Util.getServiceProvider(params.getClientId());
+        }
+        return sp;
+    }
+
+    private static boolean isExternalConsentManagementEnabledForSP(ServiceProvider sp) {
+        return FrameworkUtils.isExternalConsentManagementEnabledForSP(sp);
+    }
+
+    private static String getExternalConsentUrlForSP(ServiceProvider sp) throws OAuthSystemException {
+
+        String externalConsentUrl = FrameworkUtils.getExternalConsentUrlForSP(sp);
+        if (StringUtils.isNotBlank(externalConsentUrl)) {
+            return externalConsentUrl;
+        } else {
+            throw new OAuthSystemException("External consent management is enabled for the service provider: " +
+                    sp.getApplicationName() + " but the external consent url is not configured.");
+        }
     }
 
     private static String filterQueryParamsFromConsentPageUrl(Map<String, Serializable> endpointParams,
