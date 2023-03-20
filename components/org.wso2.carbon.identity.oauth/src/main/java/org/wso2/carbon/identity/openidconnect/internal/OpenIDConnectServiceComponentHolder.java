@@ -16,6 +16,7 @@
 
 package org.wso2.carbon.identity.openidconnect.internal;
 
+import org.wso2.carbon.identity.application.authentication.framework.ApplicationRolesResolver;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
@@ -32,6 +33,7 @@ import java.util.List;
  */
 public class OpenIDConnectServiceComponentHolder {
 
+    private ApplicationRolesResolver applicationRolesResolver = null;
     private static OpenIDConnectServiceComponentHolder instance = new OpenIDConnectServiceComponentHolder();
     private List<OpenIDConnectClaimFilter> openIDConnectClaimFilters = new ArrayList<>();
     private List<ClaimProvider> claimProviders = new ArrayList<>();
@@ -115,5 +117,25 @@ public class OpenIDConnectServiceComponentHolder {
     public SSOConsentService getSsoConsentService() {
 
         return ssoConsentService;
+    }
+
+    /**
+     * Get ApplicationRolesResolver.
+     *
+     * @return ApplicationRolesResolver
+     */
+    public ApplicationRolesResolver getApplicationRolesResolver() {
+
+        return applicationRolesResolver;
+    }
+
+    /**
+     * Set ApplicationRolesResolver.
+     *
+     * @param applicationRolesResolver ApplicationRolesResolver
+     */
+    public void setApplicationRolesResolver(ApplicationRolesResolver applicationRolesResolver) {
+
+        this.applicationRolesResolver = applicationRolesResolver;
     }
 }
