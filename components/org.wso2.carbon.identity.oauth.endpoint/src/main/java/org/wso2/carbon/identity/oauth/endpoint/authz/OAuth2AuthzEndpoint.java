@@ -257,7 +257,7 @@ public class OAuth2AuthzEndpoint {
                 FrameworkUtils.startTenantFlow(tenantDomain);
             }
 
-            if (request.getRequestURI() != null || isPassthroughToFramework(oAuthMessage)) {
+            if (isPassthroughToFramework(oAuthMessage)) {
                 return handleAuthFlowThroughFramework(oAuthMessage);
             } else if (isInitialRequestFromClient(oAuthMessage)) {
                 return handleInitialAuthorizationRequest(oAuthMessage);
@@ -1550,30 +1550,32 @@ public class OAuth2AuthzEndpoint {
 
         //TODO: Skip this validation if request contains request_uri
 
-        OAuthAuthzRequest oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
+        //OAuthAuthzRequest oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
 
-//        OAuthAuthzRequest oauthRequest;
-//
-//        if (oAuthMessage.getRequest_uri() != null) {
-//            //get requestUri, and its related OauthRequest
-//            //oauthRequest = ParRequestData.getOauthRequests().get(oAuthMessage.getRequest_uri()); //get requestUri, and its related request
-//            //oauthRequest = Objects.requireNonNull(DataRecordWriter.readObject(oAuthMessage.getRequest_uri())).getParAuthRequest();
-//            String uuid = oAuthMessage.getRequest_uri().substring(oAuthMessage.getRequest_uri().length() - 36);
-//            //oauthRequest = DataRecordWriter.readRecord(uuid).getParAuthRequest();
-//        } else {
-//            oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
-//        }
+        OAuthAuthzRequest oauthRequest = null;
+        Map<String,String> paramMap;
+
+        // if PAR request,
+        if (oAuthMessage.getRequest_uri() != null) {
+            String uuid = oAuthMessage.getRequest_uri().substring(oAuthMessage.getRequest_uri().length() - 36);
+            String requestUri = oAuthMessage.getRequest_uri();
+            paramMap = ParRequestData.getRequests().get(requestUri); // get the parameterMap for given request_uri
+        } else {
+            //paramMap = (Map<String, String>) oAuthMessage.getRequest().getParameterMap();
+            paramMap = null;
+        }
 
 
         OAuth2Parameters params = new OAuth2Parameters();
         String sessionDataKey = UUIDGenerator.generateUUID();
         params.setSessionDataKey(sessionDataKey);
-        String redirectURI = populateOauthParameters(params, oAuthMessage, validationResponse, oauthRequest);
+        String redirectURI = populateOauthParameters(params, oAuthMessage, validationResponse, oauthRequest, paramMap);
         if (redirectURI != null) {
             return redirectURI;
         }
 
         String prompt = oauthRequest.getParam(OAuthConstants.OAuth20Params.PROMPT);
+        String prompt1 = paramMap.get(OAuthConstants.OAuth20Params.PROMPT);
         params.setPrompt(prompt);
 
         redirectURI = analyzePromptParameter(oAuthMessage, params, prompt);
@@ -1596,7 +1598,7 @@ public class OAuth2AuthzEndpoint {
                     .SUCCESS_COMPLETED);
             oAuthMessage.getRequest().setAttribute(FrameworkConstants.SESSION_DATA_KEY, sessionDataKey);
             return getLoginPageURL(oAuthMessage.getClientId(), sessionDataKey, oAuthMessage.isForceAuthenticate(),
-                    oAuthMessage.isPassiveAuthentication(), oauthRequest.getScopes(),
+                    oAuthMessage.isPassiveAuthentication(), new HashSet<>(Arrays.asList(paramMap.get("scopes").split(","))),
                     oAuthMessage.getRequest().getParameterMap(), oAuthMessage.getRequest());
         } catch (IdentityOAuth2Exception e) {
             return handleException(e);
@@ -1979,49 +1981,49 @@ public class OAuth2AuthzEndpoint {
 
     private String populateOauthParameters(OAuth2Parameters params, OAuthMessage oAuthMessage,
                                            OAuth2ClientValidationResponseDTO validationResponse,
-                                           OAuthAuthzRequest oauthRequest)
+                                           OAuthAuthzRequest oauthRequest, Map<String,String> paramMap)
             throws Exception {
 
         String clientId = oAuthMessage.getClientId();
 
-        //if request is  PAR request that has either request_uri or request param, populate params method with
-        if (oAuthMessage.isParRequest()) {
-
-//            params = handleParRequestObject(oAuthMessage, oauthRequest, params);
-            String uuid = oAuthMessage.getRequest_uri().substring(oAuthMessage.getRequest_uri().length() - 36);
-            Map<String, ArrayList<String>> paramMap = DataRecordWriter.readRecord(uuid).getParamMap();
-            //ParameterMap parameterMap = DataRecordWriter.readRecord(uuid).getParamMap();
-            String requestUri = oAuthMessage.getRequest_uri();
-
-            params.setClientId(clientId);
-            params.setRedirectURI(paramMap.get("redirect_uri").get(0));
-            params.setResponseType(paramMap.get("response_type").get(0));
-            params.setScopes(new HashSet<String>(paramMap.get("scope")));
-
-//            if (isValidRequestUri(requestUri)) {
-//                params.setClientId(clientId);
-//                params.setRedirectURI(paramMap.get("redirect_uri").toString());
-//                params.setResponseType(paramMap.get("response_type").toString());
-//                params.setScopes(new HashSet<String>(Arrays.asList(paramMap.get("scope").toString())));
-//            }
-
-        } else {
-            params.setClientId(clientId);
-            params.setRedirectURI(validationResponse.getCallbackURL());
-            params.setResponseType(oauthRequest.getResponseType());
-            params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
-            params.setScopes(oauthRequest.getScopes());
-        }
+//        //if request is  PAR request that has either request_uri or request param, populate params method with
+//        if (oAuthMessage.isParRequest()) {
+//
+////            params = handleParRequestObject(oAuthMessage, oauthRequest, params);
+//            String uuid = oAuthMessage.getRequest_uri().substring(oAuthMessage.getRequest_uri().length() - 36);
+//            Map<String, ArrayList<String>> paramMap = DataRecordWriter.readRecord(uuid).getParamMap();
+//            //ParameterMap parameterMap = DataRecordWriter.readRecord(uuid).getParamMap();
+//            String requestUri = oAuthMessage.getRequest_uri();
+//
+//            params.setClientId(clientId);
+//            params.setRedirectURI(paramMap.get("redirect_uri").get(0));
+//            params.setResponseType(paramMap.get("response_type").get(0));
+//            params.setScopes(new HashSet<String>(paramMap.get("scope")));
+//
+////            if (isValidRequestUri(requestUri)) {
+////                params.setClientId(clientId);
+////                params.setRedirectURI(paramMap.get("redirect_uri").toString());
+////                params.setResponseType(paramMap.get("response_type").toString());
+////                params.setScopes(new HashSet<String>(Arrays.asList(paramMap.get("scope").toString())));
+////            }
+//
+//        } else {
+//            params.setClientId(clientId);
+//            params.setRedirectURI(validationResponse.getCallbackURL());
+//            params.setResponseType(oauthRequest.getResponseType());
+//            params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
+//            params.setScopes(oauthRequest.getScopes());
+//        }
 
 
         //TODO: oauthRequest.getParam(RESPONSE_TYPE).replace("",parRequests.get(requestUri).get("response_type")[0]);
 
 
-//        params.setClientId(clientId);
-//        params.setRedirectURI(validationResponse.getCallbackURL());
-//        params.setResponseType(oauthRequest.getResponseType());
-//        params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
-//        params.setScopes(oauthRequest.getScopes());
+        params.setClientId(clientId);
+        params.setRedirectURI(validationResponse.getCallbackURL());
+        params.setResponseType(oauthRequest.getResponseType());
+        params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
+        params.setScopes(oauthRequest.getScopes());
 
         if (params.getScopes() == null) { // to avoid null pointers
             Set<String> scopeSet = new HashSet<String>();

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.minidev.json.JSONValue;
 import netscape.javascript.JSObject;
+import org.apache.catalina.util.ParameterMap;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
@@ -97,8 +98,17 @@ public class OAuth2ParEndpoint {
         String request_uri = parAuthCodeResponse.getRequestUri();
         //String uuid
 
+        // convert <String, String[]>
+        Map<String, String> parameters = new ParameterMap<>();
+        for (Map.Entry<String, String[]> entry: request.getParameterMap().entrySet()) {
+            String key = entry.getKey();
+            String[] values = entry.getValue();
+            String value = Arrays.toString(values);
+            parameters.put(key, value);
+        }
+
         Response resp = getAuthResponse(response, parAuthCodeResponse);
-        ParRequestData.addRequest(parAuthCodeResponse.getRequestUri(), request.getParameterMap());
+        ParRequestData.addRequest(parAuthCodeResponse.getRequestUri(), parameters);
         ParRequestData.addTime(parAuthCodeResponse.getRequestUri(), requestMadeAt);
         ParRequestData.addOauthRequest(parAuthCodeResponse.getRequestUri(), parOAuthRequest);
         //String uuid = parAuthCodeResponse.getRequestUri().substring(reqUUID.length() - 36);

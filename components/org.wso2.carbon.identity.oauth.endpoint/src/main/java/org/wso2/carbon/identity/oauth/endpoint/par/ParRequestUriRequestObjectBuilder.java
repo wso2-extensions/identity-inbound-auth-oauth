@@ -19,15 +19,15 @@ public class ParRequestUriRequestObjectBuilder {
     private static final String REQUEST = "request";
     private static final String REQUEST_URI = "request_uri";
     public OAuth2Parameters populateWithParValues(OAuthMessage oAuthMessage, OAuth2Parameters oAuth2Parameters) throws InvalidRequestException{
-        Map<String, Map<String, String[]>> parRequestUriRequests = ParRequestData.getRequests();
+        Map<String, Map<String, String>> parRequestUriRequests = ParRequestData.getRequests();
 
         HttpServletRequest request = oAuthMessage.getRequest();
 
         if (isValidRequestUri(request.getParameter(REQUEST_URI))){
-            oAuth2Parameters.setClientId(request.getParameterMap().get("client_id")[0]);
-            oAuth2Parameters.setRedirectURI(parRequestUriRequests.get(request.getParameter(REQUEST_URI)).get("redirect_uri")[0]);
-            oAuth2Parameters.setResponseType(parRequestUriRequests.get(request.getParameter(REQUEST_URI)).get("response_type")[0]);
-            oAuth2Parameters.setScopes(new HashSet<String>(Arrays.asList(parRequestUriRequests.get(request.getParameter(REQUEST_URI)).get("scope"))));
+            oAuth2Parameters.setClientId(Arrays.toString(request.getParameterMap().get("client_id")));
+            oAuth2Parameters.setRedirectURI(parRequestUriRequests.get(request.getParameter(REQUEST_URI)).get("redirect_uri"));
+            oAuth2Parameters.setResponseType(parRequestUriRequests.get(request.getParameter(REQUEST_URI)).get("response_type"));
+            oAuth2Parameters.setScopes(new HashSet<>(Arrays.asList(parRequestUriRequests.get(request.getParameter(REQUEST_URI)).get("scope").split(","))));
         }
 
         return oAuth2Parameters;

@@ -41,7 +41,7 @@ public class RequestUriValidator {
 
 
     public static boolean requestUriExists(String requestUri) throws InvalidRequestException {
-        Map<String, Map<String, String[]>> parRequests = ParRequestData.getRequests();
+        Map<String, Map<String, String>> parRequests = ParRequestData.getRequests();
 
         if (parRequests.containsKey(requestUri) ) {
             return true;

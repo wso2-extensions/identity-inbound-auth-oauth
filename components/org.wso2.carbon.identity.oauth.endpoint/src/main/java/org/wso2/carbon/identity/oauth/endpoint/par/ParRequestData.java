@@ -26,11 +26,11 @@ import java.util.Map;
 
 public class ParRequestData {
 
-    private static Map<String, Map<String,String[]>> requests = new HashMap<>();
+    private static Map<String, Map<String,String>> requests = new HashMap<>();
     private static Map<String, Long> requestTimes = new HashMap<>();
     private static Map<String, OAuthAuthzRequest> oauthRequests = new HashMap<>();
 
-    public static void addRequest(String requestUri, Map<String, String[]> parameters) {
+    public static void addRequest(String requestUri, Map<String, String> parameters) {
 
         requests.put(requestUri, parameters);
     }
@@ -45,7 +45,7 @@ public class ParRequestData {
         oauthRequests.put(requestUri, oauthRequest);
     }
 
-    public static Map<String, Map<String, String[]>> getRequests() {
+    public static Map<String, Map<String, String>> getRequests() {
 
         return requests;
     }
