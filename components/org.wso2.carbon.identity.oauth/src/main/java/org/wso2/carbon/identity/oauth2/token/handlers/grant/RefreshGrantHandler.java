@@ -136,10 +136,6 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
 
-        if (!super.validateScope(tokReqMsgCtx)) {
-            return false;
-        }
-
         /*
           The requested scope MUST NOT include any scope
           not originally granted by the resource owner, and if omitted is
