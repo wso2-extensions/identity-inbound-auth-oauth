@@ -24,8 +24,10 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -51,13 +53,27 @@ public class OIDCScopeHandler extends OAuth2ScopeHandler {
         } else {
             // Remove openid scope from the token message context.
             String[] scopes = (String[]) ArrayUtils.removeElement(tokReqMsgCtx.getScope(), OAuthConstants.Scope.OPENID);
+
+            //Get all the registered oidc scopes of a tenant
+            List<String> oidcScopes = OAuth2Util.getOIDCScopes(tokReqMsgCtx.getOauth2AccessTokenReqDTO()
+                    .getTenantDomain());
+
+            //Check whether the is there any oidc scope in the request
+            for (String scope : scopes) {
+                if (oidcScopes.contains(scope)) {
+                    scopes = (String[]) ArrayUtils.removeElement(scopes, scope);
+                }
+            }
+
             tokReqMsgCtx.setScope(scopes);
+
             if (log.isDebugEnabled()) {
                 log.debug("id_token is not allowed for requested grant type: " + grantType + ". Removing 'openid' " +
                         "scope.");
             }
             // Returning 'true' since we are dropping openid scope and don't need to prevent issuing the token for
             // remaining scopes.
+
             return true;
         }
     }
