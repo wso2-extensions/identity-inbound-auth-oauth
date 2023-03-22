@@ -822,15 +822,16 @@ public class EndpointUtil {
                         (consentRequiredScopes, UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
                         + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" + "&spQueryParams=" + queryString;
 
+                // Append scope metadata to additionalQueryParams.
+                String scopeMetadataQueryParam = getScopeMetadataQueryParam(params.getConsentRequiredScopes(),
+                        params.getTenantDomain());
+                if (StringUtils.isNotBlank(scopeMetadataQueryParam)) {
+                    additionalQueryParams = StringUtils.isNotBlank(additionalQueryParams) ? additionalQueryParams +
+                            "&" + scopeMetadataQueryParam : scopeMetadataQueryParam;
+                }
+
                 // Append additional query params to the consent page url.
                 consentPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(consentPageUrl, additionalQueryParams);
-
-                // Append scope metadata to the consent page url.
-                String metadataQueryParam = getScopeMetadataQueryParam(params.getConsentRequiredScopes(),
-                        params.getTenantDomain());
-                if (StringUtils.isNotBlank(metadataQueryParam)) {
-                    consentPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(consentPageUrl, metadataQueryParam);
-                }
 
                 if (entry != null) {
                     // Filter the query parameters from the consent page url.
@@ -858,17 +859,13 @@ public class EndpointUtil {
         try {
             List<String> oidcScopeList = oAuthAdminService.getRegisteredOIDCScope(tenantDomain);
             List<String> nonOidcScopeList = new ArrayList<>();
-
-            for (String scope : scopes) {
-                if (!oidcScopeList.contains(scope)) {
-                    nonOidcScopeList.add(scope.toLowerCase());
-                }
-            }
+            oidcScopeList.retainAll(scopes);
+            nonOidcScopeList.addAll(scopes.stream().filter(scope ->
+                    !oidcScopeList.contains(scope)).collect(Collectors.toList()));
 
             if (nonOidcScopeList.isEmpty()) {
                 return null;
             }
-
             List<OAuth2Resource> scopesMetaData = scopeMetadataService.getMetadata(nonOidcScopeList);
             String scopeMetadata = new Gson().toJson(scopesMetaData);
             return "scopeMetadata=" + URLEncoder.encode(scopeMetadata, UTF_8);
