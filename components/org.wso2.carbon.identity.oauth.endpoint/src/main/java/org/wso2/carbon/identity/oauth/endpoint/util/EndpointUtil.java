@@ -826,8 +826,11 @@ public class EndpointUtil {
                 consentPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(consentPageUrl, additionalQueryParams);
 
                 // Append scope metadata to the consent page url.
-                consentPageUrl = getConsentPageURLWithScopeMetadata(consentPageUrl, params.getConsentRequiredScopes(),
+                String metadataQueryParam = getScopeMetadataQueryParam(params.getConsentRequiredScopes(),
                         params.getTenantDomain());
+                if (StringUtils.isNotBlank(metadataQueryParam)) {
+                    consentPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(consentPageUrl, metadataQueryParam);
+                }
 
                 if (entry != null) {
                     // Filter the query parameters from the consent page url.
@@ -850,27 +853,29 @@ public class EndpointUtil {
         return consentPageUrl;
     }
 
-    private static String getConsentPageURLWithScopeMetadata(String consentPageURL, Set<String> scopes,
-                                                             String tenantDomain) {
+    private static String getScopeMetadataQueryParam(Set<String> scopes, String tenantDomain) {
 
         try {
             List<String> oidcScopeList = oAuthAdminService.getRegisteredOIDCScope(tenantDomain);
             List<String> nonOidcScopeList = new ArrayList<>();
+
             for (String scope : scopes) {
                 if (!oidcScopeList.contains(scope)) {
                     nonOidcScopeList.add(scope.toLowerCase());
                 }
             }
+
             if (nonOidcScopeList.isEmpty()) {
-                return consentPageURL;
+                return null;
             }
+
             List<OAuth2Resource> scopesMetaData = scopeMetadataService.getMetadata(nonOidcScopeList);
             String scopeMetadata = new Gson().toJson(scopesMetaData);
-            consentPageURL = consentPageURL + "&scopeMetadata=" + URLEncoder.encode(scopeMetadata, UTF_8);
+            return "scopeMetadata=" + URLEncoder.encode(scopeMetadata, UTF_8);
         } catch (Exception e) {
-            log.error("Error while retrieving scope metadata for scopes: " + scopes, e);
+            log.warn("Error while retrieving scope metadata for scopes: " + scopes, e);
         }
-        return consentPageURL;
+        return null;
     }
 
     private static String filterQueryParamsFromConsentPageUrl(Map<String, Serializable> endpointParams,
