@@ -80,9 +80,6 @@ public class OAuth2ParEndpoint {
         DataRecordWriter dataRecordWriter = new DataRecordWriter();
 
 
-        //build ParReqyestObject.oAuthrequest
-//        oAuthAuthzRequest = new ParRequestBuilder(request);
-
 
         if (!oAuth2ClientValidationResponseDTO.isValidClient()) {
 
@@ -96,16 +93,17 @@ public class OAuth2ParEndpoint {
         OAuthAuthzRequest parOAuthRequest = ParRequestUtil.buildParOauthRequest(request);
 
         String request_uri = parAuthCodeResponse.getRequestUri();
-        //String uuid
 
-        // convert <String, String[]>
-        Map<String, String> parameters = new ParameterMap<>();
+        System.out.println("Param map at PAR Endpoint");
+        Map<String, String> parameters = new HashMap<>();
         for (Map.Entry<String, String[]> entry: request.getParameterMap().entrySet()) {
             String key = entry.getKey();
-            String[] values = entry.getValue();
-            String value = Arrays.toString(values);
+            String value = entry.getValue()[0];//Arrays.toString(entry.getValue());
+            //String value = Arrays.toString(values);
             parameters.put(key, value);
+            System.out.println(key + " : " + value);
         }
+        System.out.println("end");
 
         Response resp = getAuthResponse(response, parAuthCodeResponse);
         ParRequestData.addRequest(parAuthCodeResponse.getRequestUri(), parameters);
@@ -122,7 +120,7 @@ public class OAuth2ParEndpoint {
 
         // Serialize parOAuthRequest to JSON String
         ObjectMapper objectMapper = new ObjectMapper();
-        String json = objectMapper.writeValueAsString(request.getParameterMap());
+        String json = objectMapper.writeValueAsString(parameters);
 
 
 //        String jsonReq = toJSONString(request);

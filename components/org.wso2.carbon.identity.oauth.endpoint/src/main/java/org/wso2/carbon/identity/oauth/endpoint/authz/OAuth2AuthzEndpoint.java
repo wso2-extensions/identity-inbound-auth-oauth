@@ -1552,30 +1552,41 @@ public class OAuth2AuthzEndpoint {
 
         //OAuthAuthzRequest oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
 
-        OAuthAuthzRequest oauthRequest = null;
+        //OAuthAuthzRequest oauthRequest = null;
         Map<String,String> paramMap;
 
         // if PAR request,
         if (oAuthMessage.getRequest_uri() != null) {
             String uuid = oAuthMessage.getRequest_uri().substring(oAuthMessage.getRequest_uri().length() - 36);
             String requestUri = oAuthMessage.getRequest_uri();
+            System.out.println("request_uri: " + requestUri);
             paramMap = ParRequestData.getRequests().get(requestUri); // get the parameterMap for given request_uri
         } else {
             //paramMap = (Map<String, String>) oAuthMessage.getRequest().getParameterMap();
             paramMap = null;
+            System.out.println("this is else");
+        }
+
+        if (paramMap != null) {
+            System.out.println("paramMap not null");
+            for (String value : paramMap.values()) {
+                System.out.println(value);
+            }
+        } else {
+            System.out.println("paramMap is Null");
         }
 
 
         OAuth2Parameters params = new OAuth2Parameters();
         String sessionDataKey = UUIDGenerator.generateUUID();
         params.setSessionDataKey(sessionDataKey);
-        String redirectURI = populateOauthParameters(params, oAuthMessage, validationResponse, oauthRequest, paramMap);
+        String redirectURI = populateOauthParameters(params, oAuthMessage, validationResponse, paramMap);
         if (redirectURI != null) {
             return redirectURI;
         }
 
-        String prompt = oauthRequest.getParam(OAuthConstants.OAuth20Params.PROMPT);
-        String prompt1 = paramMap.get(OAuthConstants.OAuth20Params.PROMPT);
+        //String prompt = oauthRequest.getParam(OAuthConstants.OAuth20Params.PROMPT);
+        String prompt = paramMap.get(OAuthConstants.OAuth20Params.PROMPT);
         params.setPrompt(prompt);
 
         redirectURI = analyzePromptParameter(oAuthMessage, params, prompt);
@@ -1981,57 +1992,36 @@ public class OAuth2AuthzEndpoint {
 
     private String populateOauthParameters(OAuth2Parameters params, OAuthMessage oAuthMessage,
                                            OAuth2ClientValidationResponseDTO validationResponse,
-                                           OAuthAuthzRequest oauthRequest, Map<String,String> paramMap)
+                                           Map<String,String> paramMap)
             throws Exception {
 
         String clientId = oAuthMessage.getClientId();
 
-//        //if request is  PAR request that has either request_uri or request param, populate params method with
-//        if (oAuthMessage.isParRequest()) {
-//
-////            params = handleParRequestObject(oAuthMessage, oauthRequest, params);
-//            String uuid = oAuthMessage.getRequest_uri().substring(oAuthMessage.getRequest_uri().length() - 36);
-//            Map<String, ArrayList<String>> paramMap = DataRecordWriter.readRecord(uuid).getParamMap();
-//            //ParameterMap parameterMap = DataRecordWriter.readRecord(uuid).getParamMap();
-//            String requestUri = oAuthMessage.getRequest_uri();
-//
-//            params.setClientId(clientId);
-//            params.setRedirectURI(paramMap.get("redirect_uri").get(0));
-//            params.setResponseType(paramMap.get("response_type").get(0));
-//            params.setScopes(new HashSet<String>(paramMap.get("scope")));
-//
-////            if (isValidRequestUri(requestUri)) {
-////                params.setClientId(clientId);
-////                params.setRedirectURI(paramMap.get("redirect_uri").toString());
-////                params.setResponseType(paramMap.get("response_type").toString());
-////                params.setScopes(new HashSet<String>(Arrays.asList(paramMap.get("scope").toString())));
-////            }
-//
-//        } else {
-//            params.setClientId(clientId);
-//            params.setRedirectURI(validationResponse.getCallbackURL());
-//            params.setResponseType(oauthRequest.getResponseType());
-//            params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
-//            params.setScopes(oauthRequest.getScopes());
-//        }
-
-
-        //TODO: oauthRequest.getParam(RESPONSE_TYPE).replace("",parRequests.get(requestUri).get("response_type")[0]);
-
 
         params.setClientId(clientId);
         params.setRedirectURI(validationResponse.getCallbackURL());
-        params.setResponseType(oauthRequest.getResponseType());
-        params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
-        params.setScopes(oauthRequest.getScopes());
+        //params.setResponseType(oauthRequest.getResponseType());
+        params.setResponseType(paramMap.get("response_type"));
+        System.out.println("response_type: " + params.getResponseType());
+        //params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
+        params.setResponseMode(paramMap.get("response_mode"));
+        System.out.println("response_mode: " + params.getResponseMode());
+        //params.setScopes(oauthRequest.getScopes());
+        String[] scopesArray = paramMap.get("scopes").split(",");
+        params.setScopes(new HashSet<>(Arrays.asList(scopesArray)));
+        System.out.println("scopes: " + params.getScopes());
 
         if (params.getScopes() == null) { // to avoid null pointers
             Set<String> scopeSet = new HashSet<String>();
             scopeSet.add("");
             params.setScopes(scopeSet);
         }
-        params.setState(oauthRequest.getState());
+        OAuthAuthzRequest authzRequest;
+        //params.setState(oauthRequest.getState());
+        params.setState(paramMap.get("state"));
         params.setApplicationName(validationResponse.getApplicationName());
+
+
 
         String spDisplayName = getSpDisplayName(clientId);
         if (StringUtils.isNotBlank(spDisplayName)) {
@@ -2039,10 +2029,14 @@ public class OAuth2AuthzEndpoint {
         }
 
         // OpenID Connect specific request parameters
-        params.setNonce(oauthRequest.getParam(OAuthConstants.OAuth20Params.NONCE));
-        params.setDisplay(oauthRequest.getParam(OAuthConstants.OAuth20Params.DISPLAY));
-        params.setIDTokenHint(oauthRequest.getParam(OAuthConstants.OAuth20Params.ID_TOKEN_HINT));
-        params.setLoginHint(oauthRequest.getParam(OAuthConstants.OAuth20Params.LOGIN_HINT));
+//        params.setNonce(oauthRequest.getParam(OAuthConstants.OAuth20Params.NONCE));
+        params.setNonce(paramMap.get(OAuthConstants.OAuth20Params.NONCE));
+//        params.setDisplay(oauthRequest.getParam(OAuthConstants.OAuth20Params.DISPLAY));
+        params.setDisplay(paramMap.get(OAuthConstants.OAuth20Params.DISPLAY));
+//        params.setIDTokenHint(oauthRequest.getParam(OAuthConstants.OAuth20Params.ID_TOKEN_HINT));
+        params.setIDTokenHint(paramMap.get(OAuthConstants.OAuth20Params.ID_TOKEN_HINT));
+//        params.setLoginHint(oauthRequest.getParam(OAuthConstants.OAuth20Params.LOGIN_HINT));
+        params.setLoginHint(paramMap.get(OAuthConstants.OAuth20Params.LOGIN_HINT));
 
         // Set the service provider tenant domain.
         params.setTenantDomain(getSpTenantDomain(clientId));
@@ -2051,28 +2045,30 @@ public class OAuth2AuthzEndpoint {
         String loginTenantDomain = getLoginTenantDomain(oAuthMessage, clientId);
         params.setLoginTenantDomain(loginTenantDomain);
 
-        if (StringUtils.isNotBlank(oauthRequest.getParam(ACR_VALUES)) && !"null".equals(oauthRequest.getParam
+        if (StringUtils.isNotBlank(paramMap.get(ACR_VALUES)) && !"null".equals(paramMap.get
                 (ACR_VALUES))) {
-            List acrValuesList = Arrays.asList(oauthRequest.getParam(ACR_VALUES).split(" "));
+            List acrValuesList = Arrays.asList(paramMap.get(ACR_VALUES).split(" "));
             LinkedHashSet acrValuesHashSet = new LinkedHashSet<>(acrValuesList);
             params.setACRValues(acrValuesHashSet);
             oAuthMessage.getRequest().setAttribute(ACR_VALUES, acrValuesList);
         }
-        if (StringUtils.isNotBlank(oauthRequest.getParam(CLAIMS))) {
-            params.setEssentialClaims(oauthRequest.getParam(CLAIMS));
+        if (StringUtils.isNotBlank(paramMap.get(CLAIMS))) {
+            params.setEssentialClaims(paramMap.get(CLAIMS));
         }
 
-        handleMaxAgeParameter(oauthRequest, params);
+        handleMaxAgeParameter(paramMap, params);
 
-
+        // add request_uri and request parameters to the paramMap
+        paramMap.put(REQUEST_URI, oAuthMessage.getRequest_uri());
+        paramMap.put(REQUEST, oAuthMessage.getRequest().getParameter(REQUEST));
 
         /*
             OIDC Request object will supersede parameters sent in the OAuth Authorization request. So handling the
             OIDC Request object needs to done after processing all request parameters.
          */
-        if (OAuth2Util.isOIDCAuthzRequest(oauthRequest.getScopes())) {
+        if (OAuth2Util.isOIDCAuthzRequest(params.getScopes())) {
             try {
-                handleOIDCRequestObject(oAuthMessage, oauthRequest, params);
+                handleOIDCRequestObject(oAuthMessage, paramMap, params);
             } catch (RequestObjectException e) {
                 if (log.isDebugEnabled()) {
                     log.debug("Request Object Handling failed due to : " + e.getErrorCode() + " for client_id: "
@@ -2089,13 +2085,11 @@ public class OAuth2AuthzEndpoint {
                 }
             }
         }
-//        else {
-//            handleParRequest(oAuthMessage, oauthRequest, params);
-//        }
-        //else if request is request with a request_uri follow par request flow
-//        if (isRequestUri(oauthRequest)) {
-//            handleParRequest(oAuthMessage, oauthRequest, params);
-//        }
+
+        //System.out.println("paramMap");
+        for (String value : paramMap.values()) {
+            System.out.println(value);
+        }
 
         if (isPkceSupportEnabled()) {
             String pkceChallengeCode = getPkceCodeChallenge(oAuthMessage, params);
@@ -2140,10 +2134,10 @@ public class OAuth2AuthzEndpoint {
         return loginTenantDomain;
     }
 
-    private void handleMaxAgeParameter(OAuthAuthzRequest oauthRequest,
+    private void handleMaxAgeParameter(Map<String,String> paramMap,
                                        OAuth2Parameters params) throws InvalidRequestException {
         // Set max_age parameter sent in the authorization request.
-        String maxAgeParam = oauthRequest.getParam(OAuthConstants.OIDCClaims.MAX_AGE);
+        String maxAgeParam = paramMap.get(OAuthConstants.OIDCClaims.MAX_AGE);
         if (StringUtils.isNotBlank(maxAgeParam)) {
             try {
                 params.setMaxAge(Long.parseLong(maxAgeParam));
@@ -2165,20 +2159,20 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private void handleOIDCRequestObject(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
+    private void handleOIDCRequestObject(OAuthMessage oAuthMessage, Map<String,String> paramMap,
                                          OAuth2Parameters parameters)
             throws RequestObjectException, InvalidRequestException {
 
-        validateRequestObjectParams(oauthRequest);
+        validateRequestObjectParams(paramMap);
         String requestObjValue = null;
-        if (isRequestUri(oauthRequest)) {
-            requestObjValue = oauthRequest.getParam(REQUEST_URI);
-        } else if (isRequestParameter(oauthRequest)) {
-            requestObjValue = oauthRequest.getParam(REQUEST);
+        if (isRequestUri(paramMap)) {
+            requestObjValue = paramMap.get(REQUEST_URI);
+        } else if (isRequestParameter(paramMap)) {
+            requestObjValue = paramMap.get(REQUEST);
         }
 
         if (StringUtils.isNotEmpty(requestObjValue)) {
-            handleRequestObject(oAuthMessage, oauthRequest, parameters);
+            handleRequestObject(oAuthMessage, paramMap, parameters);
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Authorization Request does not contain a Request Object or Request Object reference.");
@@ -2186,35 +2180,15 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private void handleParRequest(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
-                                  OAuth2Parameters parameters) throws RequestObjectException, InvalidRequestException {
-
-        String requestObjValue = null;
-        if (isRequestUri(oauthRequest)) {
-            requestObjValue = oauthRequest.getParam(REQUEST_URI);
-            // TODO:
-//        } else if (isRequestParameter(oauthRequest)) {
-//            requestObjValue = oauthRequest.getParam(REQUEST);
-        }
-
-        if (StringUtils.isNotEmpty(requestObjValue)) {
-            handleParRequestObject(oAuthMessage, oauthRequest, parameters);
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Authorization Request does not contain a Request Object or Request Object reference.");
-            }
-        }
-    }
-
-    private void validateRequestObjectParams(OAuthAuthzRequest oauthRequest) throws RequestObjectException {
+    private void validateRequestObjectParams(Map<String,String> paramMap) throws RequestObjectException {
 
         // With in the same request it can not be used both request parameter and request_uri parameter.
-        if (StringUtils.isNotEmpty(oauthRequest.getParam(REQUEST)) && StringUtils.isNotEmpty(oauthRequest.getParam
+        if (StringUtils.isNotEmpty(paramMap.get(REQUEST)) && StringUtils.isNotEmpty(paramMap.get
                 (REQUEST_URI))) {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
-                params.put("request", oauthRequest.getParam(REQUEST));
-                params.put("request_uri", oauthRequest.getParam(REQUEST_URI));
+                params.put("request", paramMap.get(REQUEST));
+                params.put("request_uri", paramMap.get(REQUEST_URI));
                 LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                         OAuthConstants.LogConstants.FAILED, "request and request_uri parameters associated with the " +
                                 "same authorization request", "validate-oauth-client", null);
@@ -2224,11 +2198,11 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private void handleRequestObject(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
+    private void handleRequestObject(OAuthMessage oAuthMessage, Map<String,String> paramMap,
                                      OAuth2Parameters parameters)
             throws RequestObjectException, InvalidRequestException {
 
-        RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oauthRequest, parameters);
+        RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(paramMap, parameters);
         if (requestObject == null) {
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Unable to build a valid Request " +
                     "Object from the authorization request.");
@@ -2240,8 +2214,8 @@ public class OAuth2AuthzEndpoint {
 
         //--->
 
-        overrideAuthzParameters(oAuthMessage, parameters, oauthRequest.getParam(REQUEST),
-                oauthRequest.getParam(REQUEST_URI), requestObject);
+        overrideAuthzParameters(oAuthMessage, parameters, paramMap.get(REQUEST),
+                paramMap.get(REQUEST_URI), requestObject);
 
         // If the redirect uri was not given in auth request the registered redirect uri will be available here,
         // so validating if the registered redirect uri is a single uri that can be properly redirected.
@@ -2254,45 +2228,6 @@ public class OAuth2AuthzEndpoint {
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
         persistRequestObject(parameters, requestObject);
-    }
-
-    private OAuth2Parameters handleParRequestObject(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
-                                     OAuth2Parameters parameters)
-            throws RequestObjectException, InvalidRequestException {
-
-        //RequestObject requestObject = ParRequestUtil.buildRequest(oauthRequest, parameters);
-
-        //populate the oAuth2Params object with values obtained from PAR request
-        parameters = ParRequestUtil.buildRequestPrams(oAuthMessage, parameters);
-
-
-//        if (requestObject == null) {
-//            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Unable to build a valid Request " +
-//                    "Object from the authorization request.");
-//        }
-            /*
-              When the request parameter is used, the OpenID Connect request parameter values contained in the JWT
-              supersede those passed using the OAuth 2.0 request syntax
-             */
-
-        //--->
-
-//        overrideAuthzParameters(oAuthMessage, parameters, oauthRequest.getParam(REQUEST),
-//                oauthRequest.getParam(REQUEST_URI), requestObject);
-
-        // If the redirect uri was not given in auth request the registered redirect uri will be available here,
-        // so validating if the registered redirect uri is a single uri that can be properly redirected.
-        if (StringUtils.isBlank(parameters.getRedirectURI()) ||
-                StringUtils.startsWith(parameters.getRedirectURI(), REGEX_PATTERN)) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "Redirect URI is not present in the authorization request.",
-                    "validate-input-parameters", null);
-            throw new InvalidRequestException("Redirect URI is not present in the authorization request.",
-                    OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
-        }
-        //persistRequestObject(parameters, requestObject);
-
-        return parameters;
     }
 
     private void overrideAuthzParameters(OAuthMessage oAuthMessage, OAuth2Parameters params,
@@ -2387,15 +2322,15 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private static boolean isRequestUri(OAuthAuthzRequest oAuthAuthzRequest) {
+    private static boolean isRequestUri(Map<String,String> paramMap) {
 
-        String param = oAuthAuthzRequest.getParam(REQUEST_URI);
+        String param = paramMap.get(REQUEST_URI);
         return StringUtils.isNotBlank(param);
     }
 
-    private static boolean isRequestParameter(OAuthAuthzRequest oAuthAuthzRequest) {
+    private static boolean isRequestParameter(Map<String,String> paramMap) {
 
-        String param = oAuthAuthzRequest.getParam(REQUEST);
+        String param = paramMap.get(REQUEST);
         return StringUtils.isNotBlank(param);
     }
 

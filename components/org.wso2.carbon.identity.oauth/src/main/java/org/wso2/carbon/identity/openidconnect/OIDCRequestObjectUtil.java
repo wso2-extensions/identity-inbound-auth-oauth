@@ -53,10 +53,10 @@ public class OIDCRequestObjectUtil {
      * Fetch and invoke the matched request builder class based on the identity.xml configurations.
      * Build and validate the Request Object extracted from request information
      *
-     * @param oauthRequest authorization request
+     * @param paramMap contains all parameters in the request
      * @throws RequestObjectException
      */
-    public static RequestObject buildRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters oAuth2Parameters)
+    public static RequestObject buildRequestObject(Map<String,String> paramMap, OAuth2Parameters oAuth2Parameters)
             throws RequestObjectException {
         /*
           So that the request is a valid OAuth 2.0 Authorization Request, values for the response_type and client_id
@@ -66,10 +66,10 @@ public class OIDCRequestObjectUtil {
         RequestObject requestObject;
         RequestObjectBuilder requestObjectBuilder;
         String requestObjType;
-        if (isRequestParameter(oauthRequest)) {
+        if (isRequestParameter(paramMap)) {
             requestObjectBuilder = getRequestObjectBuilder(REQUEST_PARAM_VALUE_BUILDER);
             requestObjType = REQUEST;
-        } else if (isRequestUri(oauthRequest)) {
+        } else if (isRequestUri(paramMap)) {
             requestObjectBuilder = getRequestObjectBuilder(REQUEST_URI_PARAM_VALUE_BUILDER);
             requestObjType = REQUEST_URI;
 
@@ -82,14 +82,14 @@ public class OIDCRequestObjectUtil {
             String error = "Unable to build the OIDC Request Object from:";
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
-                params.put(REQUEST, oauthRequest.getParam(REQUEST));
-                params.put(REQUEST_URI, oauthRequest.getParam(REQUEST_URI));
+                params.put(REQUEST, paramMap.get(REQUEST));
+                params.put(REQUEST_URI, paramMap.get(REQUEST_URI));
                 LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                         OAuthConstants.LogConstants.FAILED, "Server error occurred.", "parse-request-object", null);
             }
             throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, error + requestObjType);
         }
-        requestObject = requestObjectBuilder.buildRequestObject(oauthRequest.getParam(requestObjType),
+        requestObject = requestObjectBuilder.buildRequestObject(paramMap.get(requestObjType),
                 oAuth2Parameters);
         RequestObjectValidator requestObjectValidator = OAuthServerConfiguration.getInstance()
                 .getRequestObjectValidator();
@@ -198,13 +198,13 @@ public class OIDCRequestObjectUtil {
         return OAuthServerConfiguration.getInstance().getRequestObjectBuilders().get(requestParamValueBuilder);
     }
 
-    private static boolean isRequestUri(OAuthAuthzRequest oAuthAuthzRequest) {
+    private static boolean isRequestUri(Map<String,String> paramMap) {
 
-        return StringUtils.isNotBlank(oAuthAuthzRequest.getParam(REQUEST_URI));
+        return StringUtils.isNotBlank(paramMap.get(REQUEST_URI));//.getParam(REQUEST_URI));
     }
 
-    private static boolean isRequestParameter(OAuthAuthzRequest oAuthAuthzRequest) {
+    private static boolean isRequestParameter(Map<String,String> paramMap) {
 
-        return StringUtils.isNotBlank(oAuthAuthzRequest.getParam(REQUEST));
+        return StringUtils.isNotBlank(paramMap.get(REQUEST));
     }
 }
