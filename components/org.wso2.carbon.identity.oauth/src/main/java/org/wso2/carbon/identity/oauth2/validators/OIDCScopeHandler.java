@@ -51,6 +51,7 @@ public class OIDCScopeHandler extends OAuth2ScopeHandler {
             // if id_token is allowed for requested grant type.
             return true;
         } else {
+
             // Remove openid scope from the token message context.
             String[] scopes = (String[]) ArrayUtils.removeElement(tokReqMsgCtx.getScope(), OAuthConstants.Scope.OPENID);
 
