@@ -784,7 +784,7 @@ public class EndpointUtil {
 
             ServiceProvider sp = getServiceProvider(params);
 
-            if (isExternalConsentManagementEnabledForSP(sp)) {
+            if (isExternalizedConsentPageEnabledForSP(sp)) {
                 consentPageUrl = getExternalConsentUrlForSP(sp);
             } else if (isOIDC) {
                 consentPageUrl = OAuth2Util.OAuthURL.getOIDCConsentPageUrl();
@@ -849,15 +849,15 @@ public class EndpointUtil {
         return sp;
     }
 
-    private static boolean isExternalConsentManagementEnabledForSP(ServiceProvider sp) {
+    private static boolean isExternalizedConsentPageEnabledForSP(ServiceProvider sp) {
 
         if (sp == null) {
             throw new IllegalArgumentException("A null reference received for service provider.");
         }
         boolean isEnabled = false;
         LocalAndOutboundAuthenticationConfig config = sp.getLocalAndOutBoundAuthenticationConfig();
-        if (config != null && config.getExternalConsentManagement() != null) {
-            isEnabled = config.getExternalConsentManagement().isEnabled();
+        if (config != null && config.getExternalizedConsentPageConfig() != null) {
+            isEnabled = config.getExternalizedConsentPageConfig().isEnabled();
         }
 
         if (log.isDebugEnabled()) {
@@ -875,8 +875,8 @@ public class EndpointUtil {
         }
         String externalConsentUrl = "";
         LocalAndOutboundAuthenticationConfig config = sp.getLocalAndOutBoundAuthenticationConfig();
-        if (config != null && config.getExternalConsentManagement() != null) {
-            externalConsentUrl = config.getExternalConsentManagement().getExternalConsentUrl();
+        if (config != null && config.getExternalizedConsentPageConfig() != null) {
+            externalConsentUrl = config.getExternalizedConsentPageConfig().getExternalConsentUrl();
         }
 
         if (log.isDebugEnabled()) {
