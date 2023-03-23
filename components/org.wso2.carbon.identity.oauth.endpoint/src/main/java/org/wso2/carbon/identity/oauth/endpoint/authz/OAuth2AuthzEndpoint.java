@@ -309,9 +309,9 @@ public class OAuth2AuthzEndpoint {
         // Validate repeated parameters
         if (!validateParams(request, paramMap)) {
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).location(new URI(getErrorPageURL(request,
-                    OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
-                            .INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request with repeated parameters",
-                    null)))
+                            OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
+                                    .INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request with repeated parameters",
+                            null)))
                     .build();
         }
         HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
@@ -953,7 +953,7 @@ public class OAuth2AuthzEndpoint {
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
                 getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
                                 .OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
-                                "Invalid authorization request", appName,
+                        "Invalid authorization request", appName,
                         oAuth2Parameters)
         )).build();
     }
@@ -1548,19 +1548,18 @@ public class OAuth2AuthzEndpoint {
             setSPAttributeToRequest(oAuthMessage.getRequest(), validationResponse.getApplicationName(), tenantDomain);
         }
 
-        //TODO: Skip this validation if request contains request_uri
 
-        //OAuthAuthzRequest oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
-
-        //OAuthAuthzRequest oauthRequest = null;
-        Map<String,String> paramMap;
+        Map<String, String> paramMap = new HashMap<>();
 
         // if PAR request,
         if (oAuthMessage.getRequest_uri() != null) {
             String uuid = oAuthMessage.getRequest_uri().substring(oAuthMessage.getRequest_uri().length() - 36);
             String requestUri = oAuthMessage.getRequest_uri();
             System.out.println("request_uri: " + requestUri);
-            paramMap = ParRequestData.getRequests().get(requestUri); // get the parameterMap for given request_uri
+            Map<String, String> paramMapHashMap = ParRequestData.getRequests().get(requestUri); // get the parameterMap for given request_uri
+            System.out.println("paramMap from AuthEndpoint (HashMap): \n" + paramMapHashMap + "\nend\n");
+            paramMap = DataRecordWriter.readRecord(uuid).getParamMap(); //get data from Database
+            System.out.println("paramMap from AuthEndpoint (Database): \n" + paramMap + "\nend\n");
         } else {
             //paramMap = (Map<String, String>) oAuthMessage.getRequest().getParameterMap();
             paramMap = null;
@@ -1992,7 +1991,7 @@ public class OAuth2AuthzEndpoint {
 
     private String populateOauthParameters(OAuth2Parameters params, OAuthMessage oAuthMessage,
                                            OAuth2ClientValidationResponseDTO validationResponse,
-                                           Map<String,String> paramMap)
+                                           Map<String, String> paramMap)
             throws Exception {
 
         String clientId = oAuthMessage.getClientId();
@@ -2020,7 +2019,6 @@ public class OAuth2AuthzEndpoint {
         //params.setState(oauthRequest.getState());
         params.setState(paramMap.get("state"));
         params.setApplicationName(validationResponse.getApplicationName());
-
 
 
         String spDisplayName = getSpDisplayName(clientId);
@@ -2134,7 +2132,7 @@ public class OAuth2AuthzEndpoint {
         return loginTenantDomain;
     }
 
-    private void handleMaxAgeParameter(Map<String,String> paramMap,
+    private void handleMaxAgeParameter(Map<String, String> paramMap,
                                        OAuth2Parameters params) throws InvalidRequestException {
         // Set max_age parameter sent in the authorization request.
         String maxAgeParam = paramMap.get(OAuthConstants.OIDCClaims.MAX_AGE);
@@ -2159,7 +2157,7 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private void handleOIDCRequestObject(OAuthMessage oAuthMessage, Map<String,String> paramMap,
+    private void handleOIDCRequestObject(OAuthMessage oAuthMessage, Map<String, String> paramMap,
                                          OAuth2Parameters parameters)
             throws RequestObjectException, InvalidRequestException {
 
@@ -2180,7 +2178,7 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private void validateRequestObjectParams(Map<String,String> paramMap) throws RequestObjectException {
+    private void validateRequestObjectParams(Map<String, String> paramMap) throws RequestObjectException {
 
         // With in the same request it can not be used both request parameter and request_uri parameter.
         if (StringUtils.isNotEmpty(paramMap.get(REQUEST)) && StringUtils.isNotEmpty(paramMap.get
@@ -2198,7 +2196,7 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private void handleRequestObject(OAuthMessage oAuthMessage, Map<String,String> paramMap,
+    private void handleRequestObject(OAuthMessage oAuthMessage, Map<String, String> paramMap,
                                      OAuth2Parameters parameters)
             throws RequestObjectException, InvalidRequestException {
 
@@ -2322,13 +2320,13 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private static boolean isRequestUri(Map<String,String> paramMap) {
+    private static boolean isRequestUri(Map<String, String> paramMap) {
 
         String param = paramMap.get(REQUEST_URI);
         return StringUtils.isNotBlank(param);
     }
 
-    private static boolean isRequestParameter(Map<String,String> paramMap) {
+    private static boolean isRequestParameter(Map<String, String> paramMap) {
 
         String param = paramMap.get(REQUEST);
         return StringUtils.isNotBlank(param);

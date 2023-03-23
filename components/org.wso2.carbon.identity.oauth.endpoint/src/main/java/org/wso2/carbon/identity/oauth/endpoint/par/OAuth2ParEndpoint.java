@@ -62,7 +62,6 @@ public class OAuth2ParEndpoint {
 
     private ParAuthResponseHandler parAuthResponseHandler = new ParAuthResponseHandler();
     private ParAuthCodeResponse parAuthCodeResponse = new ParAuthCodeResponse();
-    private static OAuthAuthzRequest oAuthAuthzRequest;
 
     @POST
     @Path("/")
@@ -72,14 +71,9 @@ public class OAuth2ParEndpoint {
                         MultivaluedMap<String, String> paramMap) throws ParErrorDTO, Exception {
 
         long requestMadeAt = Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis();
-        //LocalTime requestMadeAt = java.time.LocalTime.now();
 
         OAuth2Service oAuth2Service = new OAuth2Service();
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.validateClientInfo(request);
-
-        DataRecordWriter dataRecordWriter = new DataRecordWriter();
-
-
 
         if (!oAuth2ClientValidationResponseDTO.isValidClient()) {
 
@@ -90,48 +84,25 @@ public class OAuth2ParEndpoint {
         }
 
 
-        OAuthAuthzRequest parOAuthRequest = ParRequestUtil.buildParOauthRequest(request);
-
-        String request_uri = parAuthCodeResponse.getRequestUri();
-
         System.out.println("Param map at PAR Endpoint");
         Map<String, String> parameters = new HashMap<>();
         for (Map.Entry<String, String[]> entry: request.getParameterMap().entrySet()) {
             String key = entry.getKey();
-            String value = entry.getValue()[0];//Arrays.toString(entry.getValue());
-            //String value = Arrays.toString(values);
+            String value = entry.getValue()[0];
             parameters.put(key, value);
             System.out.println(key + " : " + value);
         }
         System.out.println("end");
 
+        // get response
         Response resp = getAuthResponse(response, parAuthCodeResponse);
-        ParRequestData.addRequest(parAuthCodeResponse.getRequestUri(), parameters);
-        ParRequestData.addTime(parAuthCodeResponse.getRequestUri(), requestMadeAt);
-        ParRequestData.addOauthRequest(parAuthCodeResponse.getRequestUri(), parOAuthRequest);
-        //String uuid = parAuthCodeResponse.getRequestUri().substring(reqUUID.length() - 36);
 
-        // Make parOAuthRequest serializable
-        //SerializableObject serializableParOAuthRequest = new SerializableObject(parOAuthRequest);
-
-        // Serialize serializableParOAuthRequest (JOS)
-        //ParAuthRequestSerializer serializer = new ParAuthRequestSerializer();
-        //Object obj = serializer.serializeSessionObject(serializableParOAuthRequest);
-
-        // Serialize parOAuthRequest to JSON String
+        // serialize parameter to JSON String
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(parameters);
 
-
-//        String jsonReq = toJSONString(request);
-//        objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
-//        String jsonReq = objectMapper.writeValueAsString(request);
-
         // Store values to Database
         DataRecordWriter.writeObject(parAuthCodeResponse.getRequestUri(), json, requestMadeAt);
-
-        // build serialized object
-//        DataRecordWriter.writeObject(parAuthCodeResponse.getRequestUri(), serializableParAuthRequest, requestMadeAt);
 
         return resp;
     }
@@ -184,7 +155,4 @@ public class OAuth2ParEndpoint {
         return parErrorDTO;
     }
 
-    public static OAuthAuthzRequest getOAuthAuthzRequest() {
-        return oAuthAuthzRequest;
-    }
 }
