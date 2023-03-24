@@ -21,6 +21,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.Charsets;
@@ -92,6 +93,8 @@ import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
+import org.wso2.carbon.identity.oauth2.scopeservice.OAuth2Resource;
+import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
@@ -152,6 +155,7 @@ public class EndpointUtil {
     private static OAuth2Service oAuth2Service;
     private static OAuth2ScopeService oAuth2ScopeService;
     private static OAuthAdminServiceImpl oAuthAdminService;
+    private static ScopeMetadataService scopeMetadataService;
     private static SSOConsentService ssoConsentService;
     private static OAuthServerConfiguration oauthServerConfiguration;
     private static RequestObjectService requestObjectService;
@@ -193,6 +197,16 @@ public class EndpointUtil {
     public static void setRequestObjectService(RequestObjectService requestObjectService) {
 
         EndpointUtil.requestObjectService = requestObjectService;
+    }
+
+    public static ScopeMetadataService getScopeMetadataService() {
+
+        return scopeMetadataService;
+    }
+
+    public static void setScopeMetadataService(ScopeMetadataService scopeMetadataService) {
+
+        EndpointUtil.scopeMetadataService = scopeMetadataService;
     }
 
     private EndpointUtil() {
@@ -813,6 +827,14 @@ public class EndpointUtil {
                         (consentRequiredScopes, UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
                         + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" + "&spQueryParams=" + queryString;
 
+                // Append scope metadata to additionalQueryParams.
+                String scopeMetadataQueryParam = getScopeMetadataQueryParam(params.getConsentRequiredScopes(),
+                        params.getTenantDomain());
+                if (StringUtils.isNotBlank(scopeMetadataQueryParam)) {
+                    additionalQueryParams = StringUtils.isNotBlank(additionalQueryParams) ? additionalQueryParams +
+                            "&" + scopeMetadataQueryParam : scopeMetadataQueryParam;
+                }
+
                 // Append additional query params to the consent page url.
                 consentPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(consentPageUrl, additionalQueryParams);
 
@@ -827,7 +849,6 @@ public class EndpointUtil {
                         log.debug("Cache Entry is Null from SessionDataCache.");
                     }
                 }
-
             } else {
                 throw new OAuthSystemException("Error while retrieving the application name");
             }
@@ -839,6 +860,7 @@ public class EndpointUtil {
 
         return consentPageUrl;
     }
+
 
     private static ServiceProvider getServiceProvider(OAuth2Parameters params) throws IdentityOAuth2Exception {
 
@@ -890,6 +912,27 @@ public class EndpointUtil {
             throw new OAuthSystemException("External consent management is enabled for the service provider: " +
                     sp.getApplicationName() + " but the external consent url is not configured.");
         }
+
+    private static String getScopeMetadataQueryParam(Set<String> scopes, String tenantDomain) {
+
+        try {
+            List<String> oidcScopeList = oAuthAdminService.getRegisteredOIDCScope(tenantDomain);
+            List<String> nonOidcScopeList = new ArrayList<>();
+            oidcScopeList.retainAll(scopes);
+            nonOidcScopeList.addAll(scopes.stream().filter(scope ->
+                    !oidcScopeList.contains(scope)).collect(Collectors.toList()));
+
+            if (nonOidcScopeList.isEmpty()) {
+                return null;
+            }
+            List<OAuth2Resource> scopesMetaData = scopeMetadataService.getMetadata(nonOidcScopeList);
+            String scopeMetadata = new Gson().toJson(scopesMetaData);
+            return "scopeMetadata=" + URLEncoder.encode(scopeMetadata, UTF_8);
+        } catch (Exception e) {
+            log.warn("Error while retrieving scope metadata for scopes: " + scopes, e);
+        }
+        return null;
+
     }
 
     private static String filterQueryParamsFromConsentPageUrl(Map<String, Serializable> endpointParams,

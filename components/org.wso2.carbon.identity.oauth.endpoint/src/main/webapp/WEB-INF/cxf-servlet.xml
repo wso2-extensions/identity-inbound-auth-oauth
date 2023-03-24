@@ -69,6 +69,7 @@
         <property name="requestObjectService"  ref="requestObjectServiceFactoryBean"/>
         <property name="cibaAuthService"  ref="cibaAuthServiceFactoryBean"/>
         <property name="idpManager" ref="idpManagerBean"/>
+        <property name="scopeMetadataService" ref="scopeServiceFactoryBean"/>
     </bean>
     <bean id="oidcProviderResponseBuilderBean" class="org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.impl.OIDProviderJSONResponseBuilder"/>
     <bean id="oAuth2ServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.OAuth2ServiceFactory"/>
