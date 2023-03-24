@@ -876,7 +876,7 @@ public class EndpointUtil {
         String externalConsentUrl = "";
         LocalAndOutboundAuthenticationConfig config = sp.getLocalAndOutBoundAuthenticationConfig();
         if (config != null && config.getExternalizedConsentPageConfig() != null) {
-            externalConsentUrl = config.getExternalizedConsentPageConfig().getExternalConsentUrl();
+            externalConsentUrl = config.getExternalizedConsentPageConfig().getConsentPageUrl();
         }
 
         if (log.isDebugEnabled()) {
