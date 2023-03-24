@@ -1658,7 +1658,7 @@ public class OAuth2AuthzEndpoint {
      * @throws OAuthSystemException  thrown when initializing the OAuthAuthzRequestClass instance.
      */
     private OAuthAuthzRequest getOAuthAuthzRequest(HttpServletRequest request)
-            throws OAuthProblemException, OAuthSystemException {
+            throws Exception {
 
         OAuthAuthzRequest oAuthAuthzRequest;
 
@@ -1985,43 +1985,43 @@ public class OAuth2AuthzEndpoint {
         String clientId = oAuthMessage.getClientId();
 
         //if request is  PAR request that has either request_uri or request param, populate params method with
-        if (oAuthMessage.isParRequest()) {
-
-//            params = handleParRequestObject(oAuthMessage, oauthRequest, params);
-            String uuid = oAuthMessage.getRequest_uri().substring(oAuthMessage.getRequest_uri().length() - 36);
-            Map<String, ArrayList<String>> paramMap = DataRecordWriter.readRecord(uuid).getParamMap();
-            //ParameterMap parameterMap = DataRecordWriter.readRecord(uuid).getParamMap();
-            String requestUri = oAuthMessage.getRequest_uri();
-
-            params.setClientId(clientId);
-            params.setRedirectURI(paramMap.get("redirect_uri").get(0));
-            params.setResponseType(paramMap.get("response_type").get(0));
-            params.setScopes(new HashSet<String>(paramMap.get("scope")));
-
-//            if (isValidRequestUri(requestUri)) {
-//                params.setClientId(clientId);
-//                params.setRedirectURI(paramMap.get("redirect_uri").toString());
-//                params.setResponseType(paramMap.get("response_type").toString());
-//                params.setScopes(new HashSet<String>(Arrays.asList(paramMap.get("scope").toString())));
-//            }
-
-        } else {
-            params.setClientId(clientId);
-            params.setRedirectURI(validationResponse.getCallbackURL());
-            params.setResponseType(oauthRequest.getResponseType());
-            params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
-            params.setScopes(oauthRequest.getScopes());
-        }
+//        if (oAuthMessage.isParRequest()) {
+//
+////            params = handleParRequestObject(oAuthMessage, oauthRequest, params);
+//            String uuid = oAuthMessage.getRequest_uri().substring(oAuthMessage.getRequest_uri().length() - 36);
+//            Map<String, ArrayList<String>> paramMap = DataRecordWriter.readRecord(uuid).getParamMap();
+//            //ParameterMap parameterMap = DataRecordWriter.readRecord(uuid).getParamMap();
+//            String requestUri = oAuthMessage.getRequest_uri();
+//
+//            params.setClientId(clientId);
+//            params.setRedirectURI(paramMap.get("redirect_uri").get(0));
+//            params.setResponseType(paramMap.get("response_type").get(0));
+//            params.setScopes(new HashSet<String>(paramMap.get("scope")));
+//
+////            if (isValidRequestUri(requestUri)) {
+////                params.setClientId(clientId);
+////                params.setRedirectURI(paramMap.get("redirect_uri").toString());
+////                params.setResponseType(paramMap.get("response_type").toString());
+////                params.setScopes(new HashSet<String>(Arrays.asList(paramMap.get("scope").toString())));
+////            }
+//
+//        } else {
+//            params.setClientId(clientId);
+//            params.setRedirectURI(validationResponse.getCallbackURL());
+//            params.setResponseType(oauthRequest.getResponseType());
+//            params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
+//            params.setScopes(oauthRequest.getScopes());
+//        }
 
 
         //TODO: oauthRequest.getParam(RESPONSE_TYPE).replace("",parRequests.get(requestUri).get("response_type")[0]);
 
 
-//        params.setClientId(clientId);
-//        params.setRedirectURI(validationResponse.getCallbackURL());
-//        params.setResponseType(oauthRequest.getResponseType());
-//        params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
-//        params.setScopes(oauthRequest.getScopes());
+        params.setClientId(clientId);
+        params.setRedirectURI(validationResponse.getCallbackURL());
+        params.setResponseType(oauthRequest.getResponseType());
+        params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
+        params.setScopes(oauthRequest.getScopes());
 
         if (params.getScopes() == null) { // to avoid null pointers
             Set<String> scopeSet = new HashSet<String>();
@@ -2087,13 +2087,6 @@ public class OAuth2AuthzEndpoint {
                 }
             }
         }
-//        else {
-//            handleParRequest(oAuthMessage, oauthRequest, params);
-//        }
-        //else if request is request with a request_uri follow par request flow
-//        if (isRequestUri(oauthRequest)) {
-//            handleParRequest(oAuthMessage, oauthRequest, params);
-//        }
 
         if (isPkceSupportEnabled()) {
             String pkceChallengeCode = getPkceCodeChallenge(oAuthMessage, params);
@@ -2169,9 +2162,10 @@ public class OAuth2AuthzEndpoint {
 
         validateRequestObjectParams(oauthRequest);
         String requestObjValue = null;
-        if (isRequestUri(oauthRequest)) {
-            requestObjValue = oauthRequest.getParam(REQUEST_URI);
-        } else if (isRequestParameter(oauthRequest)) {
+//        if (isRequestUri(oauthRequest)) {
+//            requestObjValue = oauthRequest.getParam(REQUEST_URI);
+//        } else
+            if (isRequestParameter(oauthRequest)) {
             requestObjValue = oauthRequest.getParam(REQUEST);
         }
 

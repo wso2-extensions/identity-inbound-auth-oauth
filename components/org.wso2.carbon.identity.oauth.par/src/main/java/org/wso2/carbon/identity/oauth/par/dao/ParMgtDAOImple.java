@@ -64,8 +64,8 @@ public class ParMgtDAOImple implements ParMgtDAO{
                         String jsonString = resultSet.getString(1);
 
 //                        Map<String, String[]> params;
-                        ParameterMap params;
-                        params = objectMapper.readValue(jsonString, ParameterMap.class);
+                        HashMap<String, String> params;
+                        params = objectMapper.readValue(jsonString, HashMap.class);
 
 //                        Map<String, String> params = new HashMap<String, String>();
 //

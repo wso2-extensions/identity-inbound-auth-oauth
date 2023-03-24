@@ -316,6 +316,11 @@
             <version>2.13.4</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+            <artifactId>org.wso2.carbon.identity.oauth.endpoint</artifactId>
+            <type>war</type>
+        </dependency>
         <!--        <dependency>-->
 <!--            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>-->
 <!--            <artifactId>org.wso2.carbon.identity.oauth.endpoint</artifactId>-->

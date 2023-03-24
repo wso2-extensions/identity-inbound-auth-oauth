@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.minidev.json.JSONValue;
 import netscape.javascript.JSObject;
+import org.apache.catalina.util.ParameterMap;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
@@ -92,38 +93,26 @@ public class OAuth2ParEndpoint {
         }
 
 
-        OAuthAuthzRequest parOAuthRequest = ParRequestUtil.buildParOauthRequest(request);
+        System.out.println("Param map at PAR Endpoint");
+        HashMap<String, String> parameters = new HashMap<>();
+        for (ParameterMap.Entry<String, String[]> entry: request.getParameterMap().entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue()[0];
+            parameters.put(key, value);
+            System.out.println(key + " : " + value);
+        }
 
-        String request_uri = parAuthCodeResponse.getRequestUri();
-        //String uuid
+        System.out.println("end");
 
+        // get response
         Response resp = getAuthResponse(response, parAuthCodeResponse);
-        ParRequestData.addRequest(parAuthCodeResponse.getRequestUri(), request.getParameterMap());
-        ParRequestData.addTime(parAuthCodeResponse.getRequestUri(), requestMadeAt);
-        ParRequestData.addOauthRequest(parAuthCodeResponse.getRequestUri(), parOAuthRequest);
-        //String uuid = parAuthCodeResponse.getRequestUri().substring(reqUUID.length() - 36);
 
-        // Make parOAuthRequest serializable
-        //SerializableObject serializableParOAuthRequest = new SerializableObject(parOAuthRequest);
-
-        // Serialize serializableParOAuthRequest (JOS)
-        //ParAuthRequestSerializer serializer = new ParAuthRequestSerializer();
-        //Object obj = serializer.serializeSessionObject(serializableParOAuthRequest);
-
-        // Serialize parOAuthRequest to JSON String
+        // serialize parameter to JSON String
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(request.getParameterMap());
 
-
-//        String jsonReq = toJSONString(request);
-//        objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
-//        String jsonReq = objectMapper.writeValueAsString(request);
-
         // Store values to Database
         DataRecordWriter.writeObject(parAuthCodeResponse.getRequestUri(), json, requestMadeAt);
-
-        // build serialized object
-//        DataRecordWriter.writeObject(parAuthCodeResponse.getRequestUri(), serializableParAuthRequest, requestMadeAt);
 
         return resp;
     }

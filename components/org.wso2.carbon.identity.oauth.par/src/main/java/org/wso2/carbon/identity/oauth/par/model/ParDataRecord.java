@@ -11,15 +11,15 @@ import java.util.Map;
 public class ParDataRecord implements Serializable {
 
     //private Map<String, String[]> params;
-    private ParameterMap parameterMap;
+    private HashMap<String, String> parameterMap;
     private long reqMade;
 
-    public ParDataRecord(ParameterMap parameterMap , long reqMade) {
+    public ParDataRecord(HashMap<String, String> parameterMap , long reqMade) {
         this.parameterMap = parameterMap;
         this.reqMade = reqMade;
     }
 
-    public ParameterMap getParamMap() {
+    public HashMap getParamMap() {
         return parameterMap;
     }
 
