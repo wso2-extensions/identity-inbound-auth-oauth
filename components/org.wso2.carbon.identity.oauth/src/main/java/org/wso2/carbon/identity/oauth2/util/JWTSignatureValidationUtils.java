@@ -189,7 +189,7 @@ public class JWTSignatureValidationUtils {
             }
         }
 
-        // At this point 'verifier' will never be null;
+        // At this point 'verifier' will never be null.
         return signedJWT.verify(verifier);
     }
 
