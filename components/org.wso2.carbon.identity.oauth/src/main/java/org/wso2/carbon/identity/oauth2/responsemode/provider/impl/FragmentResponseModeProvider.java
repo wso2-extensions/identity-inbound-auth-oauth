@@ -45,6 +45,7 @@ public class FragmentResponseModeProvider extends AbstractResponseModeProvider {
 
         String redirectUrl = authorizationResponseDTO.getRedirectUrl();
         String sessionState = authorizationResponseDTO.getSessionState();
+        String state = authorizationResponseDTO.getState();
 
         if (!authorizationResponseDTO.isError()) {
             String code = authorizationResponseDTO.getSuccessResponseDTO().getAuthorizationCode();
@@ -61,7 +62,7 @@ public class FragmentResponseModeProvider extends AbstractResponseModeProvider {
             }
 
             if (accessToken != null) {
-                queryParams.add(OAuthConstants.ACCESS_TOKEN + "=" + accessToken);
+                queryParams.add(OAuthConstants.ACCESS_TOKEN_RESPONSE_PARAM + "=" + accessToken);
             }
 
             if (authenticatedIdPs != null && !authenticatedIdPs.isEmpty()) {
@@ -70,6 +71,10 @@ public class FragmentResponseModeProvider extends AbstractResponseModeProvider {
 
             if (sessionState != null) {
                 queryParams.add(OAuthConstants.SESSION_STATE + "=" + sessionState);
+            }
+
+            if (state != null) {
+                queryParams.add(OAuthConstants.STATE + "=" + state);
             }
 
             redirectUrl = FrameworkUtils.appendQueryParamsStringToUrl(redirectUrl,
@@ -87,6 +92,10 @@ public class FragmentResponseModeProvider extends AbstractResponseModeProvider {
             if (StringUtils.isNotBlank(authorizationResponseDTO.getSessionState())) {
                 redirectUrl += "&" + OAuthConstants.SESSION_STATE + "=" +
                         authorizationResponseDTO.getSessionState();
+            }
+
+            if (StringUtils.isNotBlank(state)) {
+                redirectUrl += "&" + OAuthConstants.STATE + "=" + state;
             }
         }
         authorizationResponseDTO.setRedirectUrl(redirectUrl);

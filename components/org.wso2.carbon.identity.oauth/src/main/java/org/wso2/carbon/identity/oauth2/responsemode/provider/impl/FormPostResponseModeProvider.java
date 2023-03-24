@@ -47,7 +47,7 @@ public class FormPostResponseModeProvider extends AbstractResponseModeProvider {
         } else {
             params = buildParams(authorizationResponseDTO.getSuccessResponseDTO().getFormPostBody(),
                     authorizationResponseDTO.getAuthenticatedIDPs(),
-                    authorizationResponseDTO.getSessionState());
+                    authorizationResponseDTO.getSessionState(), authorizationResponseDTO.getState());
         }
         String htmlForm = createBaseFormPage(params, authorizationResponseDTO.getRedirectUrl(),
                 authorizationResponseDTO.getFormPostRedirectPage());
@@ -67,7 +67,7 @@ public class FormPostResponseModeProvider extends AbstractResponseModeProvider {
         return AuthResponseType.POST_RESPONSE;
     }
 
-    private String buildParams(String jsonPayLoad, String authenticatedIdPs, String sessionStateValue) {
+    private String buildParams(String jsonPayLoad, String authenticatedIdPs, String sessionStateValue, String state) {
 
         JSONObject jsonObject = new JSONObject(jsonPayLoad);
         StringBuilder paramStringBuilder = new StringBuilder();
@@ -80,15 +80,21 @@ public class FormPostResponseModeProvider extends AbstractResponseModeProvider {
                     .append("\"/>\n");
         }
 
-        if (authenticatedIdPs != null && !authenticatedIdPs.isEmpty()) {
+        if (StringUtils.isNotEmpty(authenticatedIdPs)) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"AuthenticatedIdPs\" value=\"")
                     .append(authenticatedIdPs)
                     .append("\"/>\n");
         }
 
-        if (sessionStateValue != null && !sessionStateValue.isEmpty()) {
+        if (StringUtils.isNotEmpty(sessionStateValue)) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"session_state\" value=\"")
                     .append(sessionStateValue)
+                    .append("\"/>\n");
+        }
+
+        if (StringUtils.isNotEmpty(state)) {
+            paramStringBuilder.append("<input type=\"hidden\" name=\"state\" value=\"")
+                    .append(state)
                     .append("\"/>\n");
         }
         return paramStringBuilder.toString();
@@ -114,6 +120,12 @@ public class FormPostResponseModeProvider extends AbstractResponseModeProvider {
         if (StringUtils.isNotEmpty(authorizationResponseDTO.getSessionState())) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"session_state\" value=\"")
                     .append(authorizationResponseDTO.getSessionState())
+                    .append("\"/>\n");
+        }
+
+        if (StringUtils.isNotEmpty(authorizationResponseDTO.getState())) {
+            paramStringBuilder.append("<input type=\"hidden\" name=\"state\" value=\"")
+                    .append(authorizationResponseDTO.getState())
                     .append("\"/>\n");
         }
 

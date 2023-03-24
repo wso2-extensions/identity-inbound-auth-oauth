@@ -100,11 +100,13 @@ public final class OAuthConstants {
     // OAuth client authenticator properties
     public static final String CLIENT_AUTH_CREDENTIAL_VALIDATION = "StrictClientCredentialValidation";
     public static final String ACCESS_TOKEN = "accessToken";
+    public static final String ACCESS_TOKEN_RESPONSE_PARAM = "access_token";
     public static final String ID_TOKEN = "id_token";
     public static final String CODE = "code";
     public static final String USERINFO = "userinfo";
     public static final String AUTHENTICATED_IDPS = "AuthenticatedIdPs";
     public static final String SESSION_STATE = "session_state";
+    public static final String STATE = "state";
     public static final String AUTHZ_CODE = "AuthorizationCode";
 
     //Constants for reading EndpointConfig.properties
