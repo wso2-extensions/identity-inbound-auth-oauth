@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -47,6 +48,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +56,9 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.IS_EXTENDED_TOKEN;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isAccessTokenExtendedTableExist;
 
 /*
 NOTE
@@ -97,27 +102,42 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
 
         try {
             String driverName = connection.getMetaData().getDriverName();
+            boolean isMysqlOrMarinaDBOrH2 =
+                    driverName.contains("MySQL") || driverName.contains("MariaDB") || driverName.contains("H2");
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                if (driverName.contains("MySQL")
-                        || driverName.contains("MariaDB")
-                        || driverName.contains("H2")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MYSQL;
-                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_DB2SQL;
-                } else if (driverName.contains("MS SQL")
-                        || driverName.contains("Microsoft")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MSSQL;
-                } else if (driverName.contains("PostgreSQL")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_POSTGRESQL;
-                } else if (driverName.contains("INFORMIX")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_INFORMIX;
+                if (isAccessTokenExtendedTableExist()) {
+                    if (isMysqlOrMarinaDBOrH2) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MYSQL;
+                    } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_DB2SQL;
+                    } else if (driverName.contains("MS SQL")
+                            || driverName.contains("Microsoft")) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_MSSQL;
+                    } else if (driverName.contains("PostgreSQL")) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_POSTGRESQL;
+                    } else if (driverName.contains("INFORMIX")) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_INFORMIX;
+                    } else {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_ORACLE;
+                    }
                 } else {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_ORACLE;
+                    if (isMysqlOrMarinaDBOrH2) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MYSQL;
+                    } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_DB2SQL;
+                    } else if (driverName.contains("MS SQL")
+                            || driverName.contains("Microsoft")) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MSSQL;
+                    } else if (driverName.contains("PostgreSQL")) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_POSTGRESQL;
+                    } else if (driverName.contains("INFORMIX")) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_INFORMIX;
+                    } else {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_ORACLE;
+                    }
                 }
             } else {
-                if (driverName.contains("MySQL")
-                        || driverName.contains("MariaDB")
-                        || driverName.contains("H2")) {
+                if (isMysqlOrMarinaDBOrH2) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_MYSQL;
                 } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_DB2SQL;
@@ -150,6 +170,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
 
             int iterateId = 0;
             List<String> scopes = new ArrayList<>();
+            Map<String, String> extendedParams = new HashMap<>();
             while (resultSet.next()) {
 
                 if (iterateId == 0) {
@@ -183,10 +204,14 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain,
                             authenticatedIDP);
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
+                    extendedParams.put(resultSet.getString(16), resultSet.getString(17));
                     validationDataDO.setAuthorizedUser(user);
 
                 } else {
-                    scopes.add(resultSet.getString(5));
+                    if (!scopes.contains(resultSet.getString(5))) {
+                        scopes.add(resultSet.getString(5));
+                    }
+                    extendedParams.put(resultSet.getString(16), resultSet.getString(17));
                 }
 
                 iterateId++;
@@ -197,6 +222,10 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                         scopes.toArray(new String[scopes.size()])));
             }
 
+            if (extendedParams.size() > 0) {
+                extendedParams.remove(IS_EXTENDED_TOKEN);
+                validationDataDO.setAccessTokenExtendedAttributes(new AccessTokenExtendedAttributes(extendedParams));
+            }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when validating a refresh token", e);
         } finally {

@@ -481,6 +481,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         newTokenBean.setValidityPeriodInMillis(validityPeriodInMillis);
         newTokenBean.setValidityPeriod(validityPeriodInMillis / SECONDS_TO_MILISECONDS_FACTOR);
         newTokenBean.setTokenBinding(tokReqMsgCtx.getTokenBinding());
+        newTokenBean.setAccessTokenExtendedAttributes(tokenReq.getAccessTokenExtendedAttributes());
         setRefreshTokenDetails(tokReqMsgCtx, oAuthAppBean, existingTokenBean, timestamp, validityPeriodInMillis,
                 tokenReq, newTokenBean, oauthTokenIssuer);
         return newTokenBean;
@@ -499,6 +500,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         } else {
             // no valid refresh token found in existing Token
             newTokenBean.setRefreshTokenIssuedTime(timestamp);
+            // Set refresh token validity period.
             newTokenBean.setRefreshTokenValidityPeriodInMillis(
                     getRefreshTokenValidityPeriod(tokenReq.getClientId(), oAuthAppBean, tokReqMsgCtx));
             newTokenBean.setRefreshToken(getRefreshToken(tokReqMsgCtx, oauthTokenIssuer));

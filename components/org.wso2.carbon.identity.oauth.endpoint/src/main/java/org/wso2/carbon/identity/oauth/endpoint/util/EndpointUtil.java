@@ -91,6 +91,7 @@ import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
+import org.wso2.carbon.identity.oauth2.token.extension.JsBaseExtensionBuilderFactory;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
@@ -155,6 +156,8 @@ public class EndpointUtil {
     private static OAuthServerConfiguration oauthServerConfiguration;
     private static RequestObjectService requestObjectService;
     private static CibaAuthServiceImpl cibaAuthService;
+    private static JsBaseExtensionBuilderFactory jsBaseExtensionBuilderFactory;
+
     private static IdpManager idpManager;
     private static final String ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL = "OAuth.AllowAdditionalParamsFromErrorUrl";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
@@ -1681,4 +1684,14 @@ public class EndpointUtil {
                 .getValue();
     }
 
+    public static JsBaseExtensionBuilderFactory getJsBaseExtensionBuilderFactory() {
+
+        return jsBaseExtensionBuilderFactory;
+    }
+
+    public static void setJsBaseExtensionBuilderFactory(
+            JsBaseExtensionBuilderFactory jsBaseExtensionBuilderFactory) {
+
+        EndpointUtil.jsBaseExtensionBuilderFactory = jsBaseExtensionBuilderFactory;
+    }
 }

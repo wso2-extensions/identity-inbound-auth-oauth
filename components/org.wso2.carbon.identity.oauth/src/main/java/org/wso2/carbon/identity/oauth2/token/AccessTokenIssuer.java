@@ -153,6 +153,22 @@ public class AccessTokenIssuer {
 
         OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
         boolean isRefreshRequest = GrantType.REFRESH_TOKEN.toString().equals(grantType);
+        boolean isCodeRequest = GrantType.AUTHORIZATION_CODE.toString().equals(grantType);
+
+        if (isCodeRequest) {
+
+            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(getAuthorizationCode(tokenReqDTO));
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
+                    AuthorizationGrantCache.getInstance().getValueFromCacheByCode(cacheKey);
+            if (authorizationGrantCacheEntry != null &&
+                    authorizationGrantCacheEntry.getAccessTokenExtensionDO() != null) {
+                tokReqMsgCtx.setRefreshTokenvalidityPeriod(
+                        authorizationGrantCacheEntry.getAccessTokenExtensionDO().getRefreshTokenValidityPeriod());
+                tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
+                        authorizationGrantCacheEntry.getAccessTokenExtensionDO());
+            }
+        }
+
 
         triggerPreListeners(tokenReqDTO, tokReqMsgCtx, isRefreshRequest);
 

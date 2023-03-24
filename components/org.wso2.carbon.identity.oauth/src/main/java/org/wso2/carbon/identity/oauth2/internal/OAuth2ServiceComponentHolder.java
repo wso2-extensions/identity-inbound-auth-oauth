@@ -60,6 +60,7 @@ public class OAuth2ServiceComponentHolder {
     private static boolean idpIdColumnEnabled = false;
     private static boolean consentedTokenColumnEnabled = false;
     private static IdentityEventService identityEventService;
+    private static boolean tokenExtendedTableExist = false;
     private List<TokenBinder> tokenBinders = new ArrayList<>();
     private Map<String, ResponseTypeRequestValidator> responseTypeRequestValidators = new HashMap<>();
     private OAuthAdminServiceImpl oauthAdminService;
@@ -203,6 +204,16 @@ public class OAuth2ServiceComponentHolder {
     public static void unregisterClaimProvider(ClaimProvider claimProvider) {
 
         claimProviders.remove(claimProvider);
+    }
+
+    public static boolean isTokenExtendedTableExist() {
+
+        return tokenExtendedTableExist;
+    }
+
+    public static void setTokenExtendedTableExist(boolean tokenExtendedTableExist) {
+
+        OAuth2ServiceComponentHolder.tokenExtendedTableExist = tokenExtendedTableExist;
     }
 
     public List<TokenBinder> getTokenBinders() {

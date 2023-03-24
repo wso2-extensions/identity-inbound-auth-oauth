@@ -84,6 +84,7 @@ import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
+import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
@@ -359,6 +360,9 @@ public class OAuth2Util {
 
     public static final String ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE = "Invalid Access Token. Access token is " +
             "not ACTIVE.";
+    public static final String IS_EXTENDED_TOKEN = "isExtendedToken";
+    public static final String DYNAMIC_TOKEN_DATA_FUNCTION = "dynamicTokenData";
+    public static final String ACCESS_TOKEN_JS_OBJECT = "access_token";
 
     private OAuth2Util() {
 
@@ -934,7 +938,9 @@ public class OAuth2Util {
                     + wordBoundaryRegex, partitionedAccessTokenTable);
             partitionedSql = partitionedSql.replaceAll(wordBoundaryRegex + accessTokenScopeTable + wordBoundaryRegex,
                     partitionedAccessTokenScopeTable);
-
+            partitionedSql = partitionedSql.replaceAll(
+                    wordBoundaryRegex + OAuthConstants.ACCESS_TOKEN_STORE_ATTRIBUTES_TABLE + wordBoundaryRegex,
+                    partitionedAccessTokenTable);
             if (log.isDebugEnabled()) {
                 log.debug("Original SQL: " + sql);
                 log.debug("Partitioned SQL: " + partitionedSql);
@@ -4140,6 +4146,11 @@ public class OAuth2Util {
         }
 
         return isIdpIdAvailableInAuthzCodeTable && isIdpIdAvailableInTokenTable && isIdpIdAvailableInTokenAuditTable;
+    }
+
+    public static boolean isAccessTokenExtendedTableExist() {
+
+        return IdentityDatabaseUtil.isTableExists(OAuthConstants.ACCESS_TOKEN_STORE_ATTRIBUTES_TABLE);
     }
 
     /**

@@ -63,6 +63,7 @@
         <module>features/org.wso2.carbon.identity.oauth.server.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.ui.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.dcr.server.feature</module>
+        <module>components/org.wso2.carbon.identity.oauth.extension</module>
     </modules>
 
     <dependencyManagement>
@@ -653,6 +654,11 @@
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.central.log.mgt</artifactId>
                 <version>${carbon.identity.framework.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.conditional.auth.functions</groupId>
+                <artifactId>org.wso2.carbon.identity.conditional.auth.functions.choreo</artifactId>
+                <version>1.2.20</version>
             </dependency>
             <dependency>
                 <groupId>com.sun.xml.parsers</groupId>
