@@ -2162,35 +2162,15 @@ public class OAuth2AuthzEndpoint {
 
         validateRequestObjectParams(oauthRequest);
         String requestObjValue = null;
-//        if (isRequestUri(oauthRequest)) {
-//            requestObjValue = oauthRequest.getParam(REQUEST_URI);
-//        } else
+        if (isRequestUri(oauthRequest)) {
+            requestObjValue = oauthRequest.getParam(REQUEST_URI);
+        } else
             if (isRequestParameter(oauthRequest)) {
             requestObjValue = oauthRequest.getParam(REQUEST);
         }
 
         if (StringUtils.isNotEmpty(requestObjValue)) {
             handleRequestObject(oAuthMessage, oauthRequest, parameters);
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Authorization Request does not contain a Request Object or Request Object reference.");
-            }
-        }
-    }
-
-    private void handleParRequest(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
-                                  OAuth2Parameters parameters) throws RequestObjectException, InvalidRequestException {
-
-        String requestObjValue = null;
-        if (isRequestUri(oauthRequest)) {
-            requestObjValue = oauthRequest.getParam(REQUEST_URI);
-            // TODO:
-//        } else if (isRequestParameter(oauthRequest)) {
-//            requestObjValue = oauthRequest.getParam(REQUEST);
-        }
-
-        if (StringUtils.isNotEmpty(requestObjValue)) {
-            handleParRequestObject(oAuthMessage, oauthRequest, parameters);
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Authorization Request does not contain a Request Object or Request Object reference.");
@@ -2246,45 +2226,6 @@ public class OAuth2AuthzEndpoint {
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
         persistRequestObject(parameters, requestObject);
-    }
-
-    private OAuth2Parameters handleParRequestObject(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
-                                     OAuth2Parameters parameters)
-            throws RequestObjectException, InvalidRequestException {
-
-        //RequestObject requestObject = ParRequestUtil.buildRequest(oauthRequest, parameters);
-
-        //populate the oAuth2Params object with values obtained from PAR request
-        parameters = ParRequestUtil.buildRequestPrams(oAuthMessage, parameters);
-
-
-//        if (requestObject == null) {
-//            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Unable to build a valid Request " +
-//                    "Object from the authorization request.");
-//        }
-            /*
-              When the request parameter is used, the OpenID Connect request parameter values contained in the JWT
-              supersede those passed using the OAuth 2.0 request syntax
-             */
-
-        //--->
-
-//        overrideAuthzParameters(oAuthMessage, parameters, oauthRequest.getParam(REQUEST),
-//                oauthRequest.getParam(REQUEST_URI), requestObject);
-
-        // If the redirect uri was not given in auth request the registered redirect uri will be available here,
-        // so validating if the registered redirect uri is a single uri that can be properly redirected.
-        if (StringUtils.isBlank(parameters.getRedirectURI()) ||
-                StringUtils.startsWith(parameters.getRedirectURI(), REGEX_PATTERN)) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "Redirect URI is not present in the authorization request.",
-                    "validate-input-parameters", null);
-            throw new InvalidRequestException("Redirect URI is not present in the authorization request.",
-                    OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
-        }
-        //persistRequestObject(parameters, requestObject);
-
-        return parameters;
     }
 
     private void overrideAuthzParameters(OAuthMessage oAuthMessage, OAuth2Parameters params,

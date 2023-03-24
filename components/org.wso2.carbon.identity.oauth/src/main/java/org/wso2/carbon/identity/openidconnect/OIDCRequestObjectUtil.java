@@ -69,9 +69,9 @@ public class OIDCRequestObjectUtil {
         if (isRequestParameter(oauthRequest)) {
             requestObjectBuilder = getRequestObjectBuilder(REQUEST_PARAM_VALUE_BUILDER);
             requestObjType = REQUEST;
-//        } else if (isRequestUri(oauthRequest)) {
-//            requestObjectBuilder = getRequestObjectBuilder(REQUEST_URI_PARAM_VALUE_BUILDER);
-//            requestObjType = REQUEST_URI;
+        } else if (isRequestUri(oauthRequest)) {
+            requestObjectBuilder = getRequestObjectBuilder(REQUEST_URI_PARAM_VALUE_BUILDER);
+            requestObjType = REQUEST_URI;
 
         } else {
             // Unsupported request object type.

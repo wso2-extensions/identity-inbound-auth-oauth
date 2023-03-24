@@ -109,7 +109,7 @@ public class OAuth2ParEndpoint {
 
         // serialize parameter to JSON String
         ObjectMapper objectMapper = new ObjectMapper();
-        String json = objectMapper.writeValueAsString(request.getParameterMap());
+        String json = objectMapper.writeValueAsString(parameters);
 
         // Store values to Database
         DataRecordWriter.writeObject(parAuthCodeResponse.getRequestUri(), json, requestMadeAt);

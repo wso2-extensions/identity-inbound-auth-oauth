@@ -22,6 +22,7 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
         //System.out.println("paramMap from AuthEndpoint (HashMap): \n" + paramMapHashMap + "\nend\n");
         params = DataRecordWriter.readRecord(uuid).getParamMap(); //get data from Database
         System.out.println("paramMap from AuthEndpoint (Database): \n" + params + "\nend\n");
+//        request.set
     }
 
     @Override
@@ -33,4 +34,6 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
 
         return super.getParameter(name);
     }
+
 }
+`

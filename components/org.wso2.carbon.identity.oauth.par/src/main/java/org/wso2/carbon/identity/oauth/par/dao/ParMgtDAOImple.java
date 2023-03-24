@@ -23,7 +23,7 @@ public class ParMgtDAOImple implements ParMgtDAO{
     private static final Log log = LogFactory.getLog(ParMgtDAOImple.class);
 
     @Override
-    public void persistParRequest(String reqUUID, String oauthRequest, long reqMadeAt) throws ParCoreException {
+    public void persistParRequest(String reqUUID, String paramMap, long reqMadeAt) throws ParCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)){
 
@@ -31,17 +31,17 @@ public class ParMgtDAOImple implements ParMgtDAO{
                     ParSQLQueries.STORE_PAR_REQUEST)) {
 
                 prepStmt.setString(1, reqUUID.substring(reqUUID.length() - 36));
-                prepStmt.setString(2, oauthRequest);
+                prepStmt.setString(2, paramMap);
                 prepStmt.setLong(3, reqMadeAt);
                 prepStmt.execute();
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw new ParCoreException("Error occurred in persisting the successful authentication identified by" +
-                        " authCodeKey: " + oauthRequest, e);
+                        " authCodeKey: " + paramMap, e);
             }
         } catch (SQLException e) {
             throw new ParCoreException("Error occurred in persisting the successful authentication identified by " +
-                    "authCodeKey: " + oauthRequest, e);
+                    "authCodeKey: " + paramMap, e);
         }
     }
 
@@ -63,17 +63,8 @@ public class ParMgtDAOImple implements ParMgtDAO{
                         ObjectMapper objectMapper = new ObjectMapper();
                         String jsonString = resultSet.getString(1);
 
-//                        Map<String, String[]> params;
                         HashMap<String, String> params;
                         params = objectMapper.readValue(jsonString, HashMap.class);
-
-//                        Map<String, String> params = new HashMap<String, String>();
-//
-//                        String parts[] = jsonString.split(",");
-//
-//                        for (String part : parts)
-//
-//                        OAuthAuthzRequest jsonObject = new JSONObject(jsonString);
 
                         Long requestMadeAt = Long.valueOf(resultSet.getString(2));
                         ParDataRecord record = new ParDataRecord(params, requestMadeAt);

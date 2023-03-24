@@ -9,8 +9,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ParDataRecord implements Serializable {
-
-    //private Map<String, String[]> params;
     private HashMap<String, String> parameterMap;
     private long reqMade;
 
@@ -19,7 +17,7 @@ public class ParDataRecord implements Serializable {
         this.reqMade = reqMade;
     }
 
-    public HashMap getParamMap() {
+    public HashMap<String, String> getParamMap() {
         return parameterMap;
     }
 
