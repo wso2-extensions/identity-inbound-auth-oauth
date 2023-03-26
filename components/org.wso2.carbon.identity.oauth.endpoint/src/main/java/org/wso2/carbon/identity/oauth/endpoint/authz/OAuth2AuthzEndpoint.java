@@ -99,9 +99,9 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
@@ -203,6 +203,7 @@ public class OAuth2AuthzEndpoint {
     private static final String CLAIMS = "claims";
     public static final String COMMA_SEPARATOR = ",";
     public static final String SPACE_SEPARATOR = " ";
+    private static final String RESPONSE_MODE_FORM_POST = "form_post";
     private boolean isCacheAvailable = false;
     private static final String RESPONSE_MODE = "response_mode";
     private static final String REQUEST = "request";
@@ -887,7 +888,7 @@ public class OAuth2AuthzEndpoint {
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         boolean isOIDCRequest = OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes());
 
-        String sessionStateValue;
+        String sessionStateValue = null;
         if (isOIDCRequest) {
             sessionState.setAddSessionState(true);
             sessionStateValue = manageOIDCSessionState(oAuthMessage,
@@ -897,7 +898,8 @@ public class OAuth2AuthzEndpoint {
         }
 
         if (OAuthServerConfiguration.getInstance().isOAuthResponseJspPageAvailable()) {
-            String params = buildParams(redirectURL, authenticatedIdPs, sessionStateValue);
+            String params = buildParams(authorizationResponseDTO.getRedirectUrl(), authenticatedIdPs,
+                    sessionStateValue);
             String redirectURI = oauth2Params.getRedirectURI();
             forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
         } else {
@@ -3539,8 +3541,8 @@ public class OAuth2AuthzEndpoint {
                             log.debug("User is authenticated to a new client. Restore browser session state.");
                         }
                         String oldOPBrowserStateCookieId = opBrowserStateCookie.getValue();
-                                             pBrowserStateCookie = OIDCSessionManagementUtil
-                                .addOPBrowserStateCookie(response, request, oAuth2Parameters.getLoginTenantDomain(),
+                        opBrowserStateCookie = OIDCSessionManagementUtil.addOPBrowserStateCookie
+                                (response, request, oAuth2Parameters.getLoginTenantDomain(),
                                         sessionDataCacheEntry.getSessionContextIdentifier());
                         String newOPBrowserStateCookieId = opBrowserStateCookie.getValue();
                         previousSessionState.addSessionParticipant(oAuth2Parameters.getClientId());
@@ -3786,7 +3788,8 @@ public class OAuth2AuthzEndpoint {
      * @param sessionState
      * @param authorizationResponseDTO
      */
-    private void storeSidClaim(AuthorizationResponseDTO authorizationResponseDTO, OAuthMessage oAuthMessage, OIDCSessionState sessionState) {
+    private void storeSidClaim(AuthorizationResponseDTO authorizationResponseDTO, OAuthMessage oAuthMessage,
+                               OIDCSessionState sessionState) {
 
         if (authorizationResponseDTO.getSuccessResponseDTO().getIdToken() != null) {
             String oidcSessionState = (String) oAuthMessage.getProperty(OIDC_SESSION_ID);
