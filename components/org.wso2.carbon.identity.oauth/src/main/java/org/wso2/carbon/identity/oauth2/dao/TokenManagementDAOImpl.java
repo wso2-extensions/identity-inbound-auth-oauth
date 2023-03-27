@@ -204,14 +204,20 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain,
                             authenticatedIDP);
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
-                    extendedParams.put(resultSet.getString(16), resultSet.getString(17));
+                    if (isAccessTokenExtendedTableExist() && resultSet.getString(16) != null &&
+                            resultSet.getString(17) != null) {
+                        extendedParams.put(resultSet.getString(16), resultSet.getString(17));
+                    }
                     validationDataDO.setAuthorizedUser(user);
 
                 } else {
                     if (!scopes.contains(resultSet.getString(5))) {
                         scopes.add(resultSet.getString(5));
                     }
-                    extendedParams.put(resultSet.getString(16), resultSet.getString(17));
+                    if (isAccessTokenExtendedTableExist() && resultSet.getString(16) != null &&
+                            resultSet.getString(17) != null) {
+                        extendedParams.put(resultSet.getString(16), resultSet.getString(17));
+                    }
                 }
 
                 iterateId++;

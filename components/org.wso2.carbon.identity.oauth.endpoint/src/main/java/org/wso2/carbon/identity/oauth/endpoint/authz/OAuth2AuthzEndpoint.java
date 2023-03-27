@@ -87,8 +87,8 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
-import org.wso2.carbon.identity.oauth.extension.engine.JSBasedEngine;
-import org.wso2.carbon.identity.oauth.extension.engine.JSBasedEngineImpl;
+import org.wso2.carbon.identity.oauth.extension.utils.EngineUtils;
+import org.wso2.carbon.identity.oauth.extension.engine.JSEngine;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -1491,10 +1491,11 @@ public class OAuth2AuthzEndpoint {
         try {
             ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
             // TODO: Improve to read the script separately instead of reading from adaptive script.
-            if (serviceProvider.getLocalAndOutBoundAuthenticationConfig().getAuthenticationScriptConfig() == null) {
+            if (EndpointUtil.isExternalizedConsentPageEnabledForSP(serviceProvider) &&
+                    serviceProvider.getLocalAndOutBoundAuthenticationConfig().getAuthenticationScriptConfig() == null) {
                 return null;
             }
-            JSBasedEngine jsBasedEngine = JSBasedEngineImpl.getInstance().createEngine();
+            JSEngine jsEngine = EngineUtils.getEngineFromConfig();
             JsLogger jsLogger = new JsLogger();
             Map<String, Object> bindings = new HashMap<>();
             bindings.put(FrameworkConstants.JSAttributes.JS_LOG, jsLogger);
@@ -1503,7 +1504,8 @@ public class OAuth2AuthzEndpoint {
             Map<String, Object> parameterMap =
                     mapper.convertValue(oAuthMessage.getRequest().getParameterMap(), Map.class);
             js_objects.add(ACCESS_TOKEN_JS_OBJECT);
-            Map<String, Object> result = jsBasedEngine
+            Map<String, Object> result = jsEngine
+                    .createEngine()
                     .addBindings(bindings)
                     .evalScript(
                             serviceProvider.getLocalAndOutBoundAuthenticationConfig().getAuthenticationScriptConfig()

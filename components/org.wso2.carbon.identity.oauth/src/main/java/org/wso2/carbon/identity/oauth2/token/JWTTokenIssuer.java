@@ -483,12 +483,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
         }
 
-        if (tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes() != null) {
-            Map<String, String> customeClaims =
+        if (tokenReqMessageContext != null && tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
+                tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes() != null) {
+            Map<String, String> customClaims =
                     tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes()
                             .getParameters();
-            if (customeClaims != null && !customeClaims.isEmpty()) {
-                for (Map.Entry<String, String> entry : customeClaims.entrySet()) {
+            if (customClaims != null && !customClaims.isEmpty()) {
+                for (Map.Entry<String, String> entry : customClaims.entrySet()) {
                     jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
                 }
             }

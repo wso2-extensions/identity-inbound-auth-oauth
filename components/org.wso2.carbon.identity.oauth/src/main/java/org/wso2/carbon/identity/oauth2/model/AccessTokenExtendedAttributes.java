@@ -6,6 +6,9 @@ import com.hazelcast.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.Serializable;
 import java.util.Map;
 
+/**
+ * This class is used to store the extended attributes of the access token.
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AccessTokenExtendedAttributes implements Serializable {
 
@@ -22,6 +25,7 @@ public class AccessTokenExtendedAttributes implements Serializable {
 
         this.refreshTokenValidityPeriod = refreshTokenValidityPeriod;
         this.parameters = parameters;
+        this.isExtendedToken = isExtendedToken;
     }
 
     public AccessTokenExtendedAttributes(int refreshTokenValidityPeriod, Map<String, String> parameters) {
@@ -36,31 +40,61 @@ public class AccessTokenExtendedAttributes implements Serializable {
         this.parameters = parameters;
     }
 
+    /**
+     * This method is used to get the refresh token validity period.
+     *
+     * @return Validity period of the refresh token.
+     */
     public int getRefreshTokenValidityPeriod() {
 
         return refreshTokenValidityPeriod;
     }
 
+    /**
+     * This method is used to set the refresh token validity period.
+     *
+     * @param refreshTokenValidityPeriod Validity period of the refresh token.
+     */
     public void setRefreshTokenValidityPeriod(int refreshTokenValidityPeriod) {
 
         this.refreshTokenValidityPeriod = refreshTokenValidityPeriod;
     }
 
+    /**
+     * This method is used to get the parameters.
+     *
+     * @return Parameters of the access token.
+     */
     public Map<String, String> getParameters() {
 
         return parameters;
     }
 
+    /**
+     * This method is used to set the parameters.
+     *
+     * @param parameters Parameters of the access token.
+     */
     public void setParameters(Map<String, String> parameters) {
 
         this.parameters = parameters;
     }
 
+    /**
+     * This method is used to check whether the token is extended token.
+     *
+     * @return True if the token is extended token.
+     */
     public boolean isExtendedToken() {
 
         return isExtendedToken;
     }
 
+    /**
+     * This method is used to set whether the token is extended token.
+     *
+     * @param isExtendedToken True if the token is extended token.
+     */
     public void setExtendedToken(boolean isExtendedToken) {
 
         this.isExtendedToken = isExtendedToken;
