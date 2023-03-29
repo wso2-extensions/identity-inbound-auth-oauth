@@ -107,18 +107,18 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                 if (isAccessTokenExtendedTableExist()) {
                     if (isMysqlOrMarinaDBOrH2) {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MYSQL;
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_MYSQL;
                     } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_DB2SQL;
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_DB2SQL;
                     } else if (driverName.contains("MS SQL")
                             || driverName.contains("Microsoft")) {
                         sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_MSSQL;
                     } else if (driverName.contains("PostgreSQL")) {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_POSTGRESQL;
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_POSTGRESQL;
                     } else if (driverName.contains("INFORMIX")) {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_INFORMIX;
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_INFORMIX;
                     } else {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_ORACLE;
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_ORACLE;
                     }
                 } else {
                     if (isMysqlOrMarinaDBOrH2) {
