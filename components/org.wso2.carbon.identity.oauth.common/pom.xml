@@ -91,15 +91,6 @@
             <groupId>org.ops4j.pax.logging</groupId>
             <artifactId>pax-logging-api</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.wso2.carbon.identity.conditional.auth.functions</groupId>
-            <artifactId>org.wso2.carbon.identity.conditional.auth.functions.choreo</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-            <version>4.3.4</version>
-        </dependency>
     </dependencies>
 
     <build>
