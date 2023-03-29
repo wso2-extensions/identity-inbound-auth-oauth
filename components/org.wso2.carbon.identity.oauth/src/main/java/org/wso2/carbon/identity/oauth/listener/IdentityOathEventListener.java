@@ -354,8 +354,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
 
         if (CollectionUtils.isNotEmpty(accessTokenDOSet)) {
             for (AccessTokenDO accessTokenDO : accessTokenDOSet) {
-                if (StringUtils.isNotEmpty(accessTokenDO.getGrantType()) &&
-                        StringUtils.equalsIgnoreCase(OAuthConstants.GrantTypes.PASSWORD,
+                if (StringUtils.equalsIgnoreCase(OAuthConstants.GrantTypes.PASSWORD,
                                 accessTokenDO.getGrantType())) {
                     continue;
                 }
