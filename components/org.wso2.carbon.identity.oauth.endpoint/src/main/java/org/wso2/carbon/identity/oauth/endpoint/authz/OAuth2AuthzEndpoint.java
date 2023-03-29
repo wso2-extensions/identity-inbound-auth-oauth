@@ -87,8 +87,8 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
-import org.wso2.carbon.identity.oauth.extension.utils.EngineUtils;
 import org.wso2.carbon.identity.oauth.extension.engine.JSEngine;
+import org.wso2.carbon.identity.oauth.extension.utils.EngineUtils;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -1474,7 +1474,8 @@ public class OAuth2AuthzEndpoint {
 
     private void setAuthorizationCode(OAuthMessage oAuthMessage, OAuth2AuthorizeRespDTO authzRespDTO,
                                       OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
-                                      String tokenBindingValue, OAuth2Parameters oauth2Params) throws OAuthSystemException {
+                                      String tokenBindingValue, OAuth2Parameters oauth2Params)
+            throws OAuthSystemException {
 
         builder.setCode(authzRespDTO.getAuthorizationCode());
         AccessTokenExtendedAttributes tokenExtendedAttributes = null;
@@ -1491,7 +1492,7 @@ public class OAuth2AuthzEndpoint {
         try {
             ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
             // TODO: Improve to read the script separately instead of reading from adaptive script.
-            if (EndpointUtil.isExternalizedConsentPageEnabledForSP(serviceProvider) &&
+            if (EndpointUtil.isExternalizedConsentPageEnabledForSP(serviceProvider) ||
                     serviceProvider.getLocalAndOutBoundAuthenticationConfig().getAuthenticationScriptConfig() == null) {
                 return null;
             }
@@ -1499,11 +1500,11 @@ public class OAuth2AuthzEndpoint {
             JsLogger jsLogger = new JsLogger();
             Map<String, Object> bindings = new HashMap<>();
             bindings.put(FrameworkConstants.JSAttributes.JS_LOG, jsLogger);
-            List<String> js_objects = new ArrayList<>();
+            List<String> accessTokenJSObject = new ArrayList<>();
             ObjectMapper mapper = new ObjectMapper();
             Map<String, Object> parameterMap =
                     mapper.convertValue(oAuthMessage.getRequest().getParameterMap(), Map.class);
-            js_objects.add(ACCESS_TOKEN_JS_OBJECT);
+            accessTokenJSObject.add(ACCESS_TOKEN_JS_OBJECT);
             Map<String, Object> result = jsEngine
                     .createEngine()
                     .addBindings(bindings)
@@ -1511,7 +1512,7 @@ public class OAuth2AuthzEndpoint {
                             serviceProvider.getLocalAndOutBoundAuthenticationConfig().getAuthenticationScriptConfig()
                                     .getContent())
                     .invokeFunction(DYNAMIC_TOKEN_DATA_FUNCTION, parameterMap)
-                    .getJSObjects(js_objects);
+                    .getJSObjects(accessTokenJSObject);
             ObjectMapper objectMapper = new ObjectMapper();
             String json = objectMapper.writeValueAsString(result.get(ACCESS_TOKEN_JS_OBJECT));
             AccessTokenExtendedAttributes
@@ -1523,8 +1524,10 @@ public class OAuth2AuthzEndpoint {
         } catch (Exception e) {
             String msg = "Error occurred when processing consent response request from tenant: " +
                     oauth2Params.getTenantDomain() + " application: " + oauth2Params.getClientId() + "after consent.";
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, msg, "authorize-client", null);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                        OAuthConstants.LogConstants.FAILED, msg, "authorize-client", null);
+            }
             log.warn(msg, e);
         }
         return null;

@@ -1,7 +1,26 @@
+/*
+ * Copyright (c) 2023, WSO2 LLC. (http://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.identity.oauth.extension.engine.impl;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openjdk.nashorn.api.scripting.ClassFilter;
 import org.openjdk.nashorn.api.scripting.NashornScriptEngineFactory;
 import org.openjdk.nashorn.api.scripting.ScriptObjectMirror;
 import org.wso2.carbon.identity.oauth.extension.engine.JSEngine;
@@ -21,8 +40,9 @@ import javax.script.ScriptException;
  */
 public class OpenJdkJSEngineImpl implements JSEngine {
 
+    private ClassFilter classFilter;
     private final ScriptEngine engine;
-    public static final String[] NASHORN_ARGS = {"--no-java"};
+    private static final String[] NASHORN_ARGS = {"--no-java"};
     private static final String REMOVE_FUNCTIONS = "var quit=function(){Log.error('quit function is restricted.')};" +
             "var exit=function(){Log.error('exit function is restricted.')};" +
             "var print=function(){Log.error('print function is restricted.')};" +
@@ -40,7 +60,8 @@ public class OpenJdkJSEngineImpl implements JSEngine {
     public OpenJdkJSEngineImpl() {
 
         NashornScriptEngineFactory factory = new NashornScriptEngineFactory();
-        this.engine = factory.getScriptEngine(NASHORN_ARGS);
+        classFilter = new OpenJdkNashornRestrictedClassFilter();
+        this.engine = factory.getScriptEngine(NASHORN_ARGS, getClassLoader(), classFilter);
     }
 
     /**
@@ -64,27 +85,21 @@ public class OpenJdkJSEngineImpl implements JSEngine {
     }
 
     @Override
-    public ScriptEngine getEngine() throws ScriptException {
-
-        return engine;
-    }
-
-    @Override
     public JSEngine addBindings(Map<String, Object> bindings) {
 
-        engine.getBindings(javax.script.ScriptContext.ENGINE_SCOPE).putAll(bindings);
+        engine.getBindings(ScriptContext.ENGINE_SCOPE).putAll(bindings);
         return OPEN_JDK_JS_ENGINE_INSTANCE;
     }
 
     @Override
     public JSEngine evalScript(String script) throws ScriptException {
 
-        engine.eval(script);
+        engine.eval(script, engine.getBindings(ScriptContext.ENGINE_SCOPE));
         return OPEN_JDK_JS_ENGINE_INSTANCE;
     }
 
     @Override
-    public JSEngine invokeFunction(String functionName, Object... args) throws ScriptException, NoSuchMethodException {
+    public JSEngine invokeFunction(String functionName, Object... args) throws NoSuchMethodException, ScriptException {
 
         Object scriptObj = engine.get(functionName);
         if (scriptObj != null && ((ScriptObjectMirror) scriptObj).isFunction()) {
@@ -92,7 +107,8 @@ public class OpenJdkJSEngineImpl implements JSEngine {
             invocable.invokeFunction(functionName, args);
             return OPEN_JDK_JS_ENGINE_INSTANCE;
         }
-        log.warn("Function " + functionName + " is not defined in the script.");
+
+        log.warn("Function is not defined in the script.");
         return OPEN_JDK_JS_ENGINE_INSTANCE;
     }
 
@@ -106,5 +122,20 @@ public class OpenJdkJSEngineImpl implements JSEngine {
             }
         }
         return jsObjects;
+    }
+
+    private ClassLoader getClassLoader() {
+
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        return classLoader == null ? NashornScriptEngineFactory.class.getClassLoader() : classLoader;
+    }
+
+    private static class OpenJdkNashornRestrictedClassFilter implements ClassFilter {
+
+        @Override
+        public boolean exposeToScripts(String s) {
+
+            return false;
+        }
     }
 }
