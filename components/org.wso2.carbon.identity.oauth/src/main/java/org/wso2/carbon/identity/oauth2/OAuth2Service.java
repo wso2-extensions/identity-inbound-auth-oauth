@@ -300,7 +300,7 @@ public class OAuth2Service extends AbstractAdmin {
                 validationResponseDTO.setPkceSupportPlain(appDO.isPkceSupportPlain());
                 return validationResponseDTO;
             } else {    // Provided callback URL does not match the registered callback url.
-                log.warn("Provided Callback URL does not match with the registered one.");
+                log.warn("Provided Callback URL does not match with the registered URL.");
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     Map<String, Object> params = new HashMap<>();
                     params.put("clientId", clientId);
@@ -310,7 +310,7 @@ public class OAuth2Service extends AbstractAdmin {
                     configurations.put("redirectUri", appDO.getApplicationName());
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                             OAuthConstants.LogConstants.FAILED,
-                            "redirect_uri in request does not match with the registered one.",
+                            "redirect_uri in request does not match with the registered redirect URI.",
                             "validate-input-parameters", configurations);
                 }
                 validationResponseDTO.setValidClient(false);
