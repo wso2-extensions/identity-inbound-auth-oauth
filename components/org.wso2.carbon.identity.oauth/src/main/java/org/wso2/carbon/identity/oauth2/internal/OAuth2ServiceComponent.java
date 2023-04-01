@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -641,6 +642,29 @@ public class OAuth2ServiceComponent {
             log.debug("Unset organization user resident resolver service.");
         }
         OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(null);
+    }
+    
+    @Reference(
+            name = "refreshtoken.grant.processor",
+            service = RefreshTokenGrantProcessor.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRefreshTokenGrantProcessor"
+    )
+    protected void setRefreshTokenGrantProcessor(RefreshTokenGrantProcessor refreshTokenGrantProcessor) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting refresh token grant processor.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setRefreshTokenGrantProcessor(refreshTokenGrantProcessor);
+    }
+
+    protected void unsetRefreshTokenGrantProcessor(RefreshTokenGrantProcessor refreshTokenGrantProcessor) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unset refresh token grant processor.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setRefreshTokenGrantProcessor(null);
     }
 
     private static void loadScopeConfigFile() {

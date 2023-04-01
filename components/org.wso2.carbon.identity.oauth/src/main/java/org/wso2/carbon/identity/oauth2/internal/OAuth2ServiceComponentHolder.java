@@ -26,6 +26,8 @@ import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
@@ -73,6 +75,7 @@ public class OAuth2ServiceComponentHolder {
     private List<Scope> oauthScopeBinding = new ArrayList<>();
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
     private static List<String> jwtRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
+    private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -412,5 +415,16 @@ public class OAuth2ServiceComponentHolder {
 
     public static void setIdentityEventService(IdentityEventService identityEventService) {
         OAuth2ServiceComponentHolder.identityEventService = identityEventService;
+    }
+
+    public RefreshTokenGrantProcessor getRefreshTokenGrantProcessor() {
+        if (refreshTokenGrantProcessor == null) {
+            refreshTokenGrantProcessor = new DefaultRefreshTokenGrantProcessor();
+        }
+        return refreshTokenGrantProcessor;
+    }
+
+    public void setRefreshTokenGrantProcessor(RefreshTokenGrantProcessor refreshTokenGrantProcessor) {
+        this.refreshTokenGrantProcessor = refreshTokenGrantProcessor;
     }
 }
