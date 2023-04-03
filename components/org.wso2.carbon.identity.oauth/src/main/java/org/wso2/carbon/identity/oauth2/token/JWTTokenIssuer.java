@@ -43,8 +43,10 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth2.ExternalTokenService;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
@@ -753,5 +755,23 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSet = jwtClaimsSetBuilder.build();
         }
         return jwtClaimsSet;
+    }
+    
+    @Override
+    public String refreshToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
+        ExternalTokenService tokenSvc = OAuth2ServiceComponentHolder.getInstance().getExternalTokenService();
+        if (tokenSvc != null) {
+            return tokenSvc.getRefreshToken(oauthAuthzMsgCtx);
+        }
+        return super.refreshToken(oauthAuthzMsgCtx);
+    }
+    
+    @Override
+    public String refreshToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException {
+        ExternalTokenService tokenSvc = OAuth2ServiceComponentHolder.getInstance().getExternalTokenService();
+        if (tokenSvc != null) {
+            return tokenSvc.getRefreshToken(tokReqMsgCtx);
+        }
+        return super.refreshToken(tokReqMsgCtx);
     }
 }
