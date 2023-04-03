@@ -45,6 +45,9 @@ import org.wso2.carbon.identity.application.authentication.framework.config.buil
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.common.model.ExternalizedConsentPageConfig;
+import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.ServiceURL;
@@ -828,5 +831,25 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         scopeList.add(new Scope("internal_user_mgt_update", "Update Users", "description4"));
         scopeList.add(new Scope("internal_list_tenants", "List Tenant", "description5"));
         return scopeList;
+    }
+
+    @Test
+    public void testIsExternalizedConsentPageEnabledForSP() throws Exception {
+
+        assertTrue(EndpointUtil.isExternalizedConsentPageEnabledForSP(getServiceProvider()));
+    }
+
+    private ServiceProvider getServiceProvider() {
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        serviceProvider.setApplicationName("testApp");
+        ExternalizedConsentPageConfig externalizedConsentPageConfig = new ExternalizedConsentPageConfig();
+        externalizedConsentPageConfig.setEnabled(true);
+        externalizedConsentPageConfig.setConsentPageUrl("https://localhost:9443/consent");
+        LocalAndOutboundAuthenticationConfig localAndOutboundAuthenticationConfig = new
+                LocalAndOutboundAuthenticationConfig();
+        localAndOutboundAuthenticationConfig.setExternalizedConsentPageConfig(externalizedConsentPageConfig);
+        serviceProvider.setLocalAndOutBoundAuthenticationConfig(localAndOutboundAuthenticationConfig);
+        return serviceProvider;
     }
 }
