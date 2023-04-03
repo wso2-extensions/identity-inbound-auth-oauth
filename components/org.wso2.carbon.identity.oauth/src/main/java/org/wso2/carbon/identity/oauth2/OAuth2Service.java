@@ -37,11 +37,11 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
 import org.wso2.carbon.identity.oauth2.authz.validators.DefaultResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
-import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -456,13 +456,12 @@ public class OAuth2Service extends AbstractAdmin {
                     StringUtils.isNotEmpty(revokeRequestDTO.getToken())) {
 
                 boolean refreshTokenFirst = false;
-                if (isRefreshTokenType(revokeRequestDTO)) {
+                if (getRevocationProcessor().isRefreshTokenType(revokeRequestDTO)) {
                     refreshTokenFirst = true;
                 }
 
                 if (refreshTokenFirst) {
-                    refreshTokenDO = OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
-                            .validateRefreshToken(revokeRequestDTO.getConsumerKey(), revokeRequestDTO.getToken());
+                    refreshTokenDO = getRevocationProcessor().getRevocableRefreshToken(revokeRequestDTO);
 
                     if (refreshTokenDO == null ||
                             StringUtils.isEmpty(refreshTokenDO.getRefreshTokenState()) ||
@@ -471,19 +470,16 @@ public class OAuth2Service extends AbstractAdmin {
                                     OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED
                                             .equals(refreshTokenDO.getRefreshTokenState()))) {
 
-                        accessTokenDO = OAuthTokenPersistenceFactory.getInstance()
-                                .getAccessTokenDAO().getAccessToken(revokeRequestDTO.getToken(), true);
+                        accessTokenDO = getRevocationProcessor().getRevocableAccessToken(revokeRequestDTO);
                         refreshTokenDO = null;
                     }
 
                 } else {
 
-                    accessTokenDO = OAuth2Util.findAccessToken(revokeRequestDTO.getToken(), true);
+                    accessTokenDO = getRevocationProcessor().getRevocableAccessToken(revokeRequestDTO);
                     if (accessTokenDO == null) {
 
-                        refreshTokenDO = OAuthTokenPersistenceFactory.getInstance()
-                                .getTokenManagementDAO().validateRefreshToken(revokeRequestDTO.getConsumerKey(),
-                                        revokeRequestDTO.getToken());
+                        refreshTokenDO = getRevocationProcessor().getRevocableRefreshToken(revokeRequestDTO);
 
                         if (refreshTokenDO == null ||
                                 StringUtils.isEmpty(refreshTokenDO.getRefreshTokenState()) ||
@@ -555,8 +551,7 @@ public class OAuth2Service extends AbstractAdmin {
                             OAuth2Util.buildScopeString(refreshTokenDO.getScope()));
                     OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), refreshTokenDO.getAuthorizedUser());
                     OAuthUtil.clearOAuthCache(refreshTokenDO.getAccessToken());
-                    OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                            .revokeAccessTokens(new String[] { refreshTokenDO.getAccessToken() });
+                    getRevocationProcessor().revokeRefreshToken(revokeRequestDTO, refreshTokenDO);
                     addRevokeResponseHeaders(revokeResponseDTO,
                             refreshTokenDO.getAccessToken(),
                             revokeRequestDTO.getToken(),
@@ -602,8 +597,7 @@ public class OAuth2Service extends AbstractAdmin {
                         String userId = accessTokenDO.getAuthzUser().getUserId();
                         synchronized ((revokeRequestDTO.getConsumerKey() + ":" + userId + ":" + scope + ":"
                                 + tokenBindingReference).intern()) {
-                            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                                    .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()});
+                            getRevocationProcessor().revokeAccessToken(revokeRequestDTO, accessTokenDO);
                         }
                         addRevokeResponseHeaders(revokeResponseDTO,
                                 revokeRequestDTO.getToken(),
@@ -682,6 +676,10 @@ public class OAuth2Service extends AbstractAdmin {
             invokePostRevocationListeners(revokeRequestDTO, revokeResponseDTO, accessTokenDO, refreshTokenDO);
             return revokeRespDTO;
         }
+    }
+
+    private OAuth2RevocationProcessor getRevocationProcessor() {
+        return OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor();
     }
 
     private boolean isRefreshTokenType(OAuthRevocationRequestDTO revokeRequestDTO) {

@@ -25,6 +25,8 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
@@ -70,6 +72,7 @@ public class OAuth2ServiceComponentHolder {
     private List<ScopeDTO> oidcScopesClaims = new ArrayList<>();
     private List<Scope> oauthScopeBinding = new ArrayList<>();
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
+    private OAuth2RevocationProcessor revocationProcessor;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -378,5 +381,16 @@ public class OAuth2ServiceComponentHolder {
             OrganizationUserResidentResolverService organizationUserResidentResolverService) {
 
         OAuth2ServiceComponentHolder.organizationUserResidentResolverService = organizationUserResidentResolverService;
+    }
+
+    public OAuth2RevocationProcessor getRevocationProcessor() {
+        if (revocationProcessor == null) {
+            revocationProcessor = new DefaultOAuth2RevocationProcessor();
+        }
+        return revocationProcessor;
+    }
+
+    public void setRevocationProcessor(OAuth2RevocationProcessor revocationProcessor) {
+        this.revocationProcessor = revocationProcessor;
     }
 }
