@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
@@ -653,7 +654,7 @@ public class OAuth2ServiceComponent {
         }
         OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(null);
     }
-    
+
     @Reference(
             name = "refreshtoken.grant.processor",
             service = RefreshTokenGrantProcessor.class,
@@ -722,6 +723,31 @@ public class OAuth2ServiceComponent {
         }
         OAuthComponentServiceHolder.getInstance().setTokenManagementDAOService(null);
     }
+
+
+    @Reference(
+            name = "oauth2.revocation.processor",
+            service = OAuth2RevocationProcessor.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOAuth2RevocationProcessor"
+    )
+    protected void setOAuth2RevocationProcessor(OAuth2RevocationProcessor oAuth2RevocationProcessor) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting Oauth2 revocation processor.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setRevocationProcessor(oAuth2RevocationProcessor);
+    }
+
+    protected void unsetOAuth2RevocationProcessor(OAuth2RevocationProcessor oAuth2RevocationProcessor) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unset Oauth2 revocation processor.");
+        }
+        OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(null);
+    }
+
     private static void loadScopeConfigFile() {
 
         List<ScopeDTO> listOIDCScopesClaims = new ArrayList<>();
