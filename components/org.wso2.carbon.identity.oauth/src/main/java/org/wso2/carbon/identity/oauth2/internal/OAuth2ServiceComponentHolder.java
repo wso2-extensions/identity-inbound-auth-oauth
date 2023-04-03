@@ -25,15 +25,14 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
-<<<<<<< HEAD
-import org.wso2.carbon.identity.oauth2.ExternalTokenService;
-=======
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
->>>>>>> pers-refr-grant-processor
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
+import org.wso2.carbon.identity.oauth2.ExternalTokenService;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
@@ -76,11 +75,9 @@ public class OAuth2ServiceComponentHolder {
     private List<ScopeDTO> oidcScopesClaims = new ArrayList<>();
     private List<Scope> oauthScopeBinding = new ArrayList<>();
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
-<<<<<<< HEAD
     private ExternalTokenService externalTokenService;
-=======
     private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
->>>>>>> pers-refr-grant-processor
+    private OAuth2RevocationProcessor revocationProcessor;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -390,7 +387,6 @@ public class OAuth2ServiceComponentHolder {
 
         OAuth2ServiceComponentHolder.organizationUserResidentResolverService = organizationUserResidentResolverService;
     }
-<<<<<<< HEAD
     
     /**
      * Get external token service instance
@@ -408,7 +404,7 @@ public class OAuth2ServiceComponentHolder {
      */
     public void setExternalTokenService(ExternalTokenService externalTokenService) {
         this.externalTokenService = externalTokenService;
-=======
+    }
 
     public RefreshTokenGrantProcessor getRefreshTokenGrantProcessor() {
         if (refreshTokenGrantProcessor == null) {
@@ -419,6 +415,16 @@ public class OAuth2ServiceComponentHolder {
 
     public void setRefreshTokenGrantProcessor(RefreshTokenGrantProcessor refreshTokenGrantProcessor) {
         this.refreshTokenGrantProcessor = refreshTokenGrantProcessor;
->>>>>>> pers-refr-grant-processor
+    }
+
+    public OAuth2RevocationProcessor getRevocationProcessor() {
+        if (revocationProcessor == null) {
+            revocationProcessor = new DefaultOAuth2RevocationProcessor();
+        }
+        return revocationProcessor;
+    }
+
+    public void setRevocationProcessor(OAuth2RevocationProcessor revocationProcessor) {
+        this.revocationProcessor = revocationProcessor;
     }
 }
