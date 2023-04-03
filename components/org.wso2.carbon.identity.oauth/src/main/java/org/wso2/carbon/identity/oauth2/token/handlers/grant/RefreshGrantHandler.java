@@ -149,13 +149,14 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             if (ArrayUtils.isEmpty(grantedScopes) && ArrayUtils.isEmpty(grantedInternalScopes)) {
                 return false;
             }
-            List<String> grantedScopeList = Stream
-                    .concat(grantedScopes == null
-                            ? Stream.empty()
-                            : Arrays.stream(grantedScopes), grantedInternalScopes == null
-                            ? Stream.empty()
-                            : Arrays.stream(grantedInternalScopes))
-                    .collect(Collectors.toList());
+            if (ArrayUtils.isEmpty(grantedScopes)) {
+                grantedScopes = new String[0];
+            }
+            if (ArrayUtils.isEmpty(grantedInternalScopes)) {
+                grantedInternalScopes = new String[0];
+            }
+            List<String> grantedScopeList = Stream.concat(Arrays.stream(grantedScopes),
+                    Arrays.stream(grantedInternalScopes)).collect(Collectors.toList());
             for (String scope : requestedScopes) {
                 if (!grantedScopeList.contains(scope)) {
                     if (log.isDebugEnabled()) {

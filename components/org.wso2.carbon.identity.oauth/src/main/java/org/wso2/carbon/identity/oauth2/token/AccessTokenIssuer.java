@@ -505,7 +505,18 @@ public class AccessTokenIssuer {
             return true;
         }
         if (GrantType.REFRESH_TOKEN.toString().equals(grantType)) {
+            /*
+             In the refresh token flow, we have already completed scope validation during the initial token call and
+             issued the token with authorized scopes. Therefore, during the refresh flow we don't need to do the
+             internal scope validation again. But we need to call the grant type specific scope validation handler to
+             issue the token with only the authorized scopes.
+            */
             AuthorizationGrantHandler authzGrantHandler = authzGrantHandlers.get(grantType);
+            if (log.isDebugEnabled()) {
+                log.debug("Calling grant type specific scope validation handler for the refresh token grant and " +
+                        "omitting internal scope validation as internal scope validation already done " +
+                        "during the token issuance.");
+            }
             boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
             if (isValidScope) {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
