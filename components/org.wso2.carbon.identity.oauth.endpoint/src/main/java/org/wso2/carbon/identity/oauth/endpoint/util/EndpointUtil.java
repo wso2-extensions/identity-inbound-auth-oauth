@@ -912,6 +912,7 @@ public class EndpointUtil {
             throw new OAuthSystemException("External consent management is enabled for the service provider: " +
                     sp.getApplicationName() + " but the external consent url is not configured.");
         }
+    }
 
     private static String getScopeMetadataQueryParam(Set<String> scopes, String tenantDomain) {
 
@@ -932,7 +933,6 @@ public class EndpointUtil {
             log.warn("Error while retrieving scope metadata for scopes: " + scopes, e);
         }
         return null;
-
     }
 
     private static String filterQueryParamsFromConsentPageUrl(Map<String, Serializable> endpointParams,
