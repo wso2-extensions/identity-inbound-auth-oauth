@@ -17,7 +17,9 @@
 */
 package org.wso2.carbon.identity.oauth.dao;
 
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.model.InboundConfigurationProtocol;
 
 import java.io.Serializable;
 
@@ -31,9 +33,10 @@ import javax.xml.bind.annotation.XmlTransient;
 /**
  * OAuth application data object.
  */
-@XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
-public class OAuthAppDO implements Serializable {
+@XmlRootElement(name = "oAuthAppDO")
+@JsonTypeName("oAuthAppDO")
+public class OAuthAppDO extends InboundConfigurationProtocol implements Serializable {
 
     private static final long serialVersionUID = -6453843721358989519L;
 
