@@ -23,9 +23,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.identity.application.authentication.framework.ApplicationRolesResolver;
-import org.wso2.carbon.identity.application.authentication.framework.exception.ApplicationRolesException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
+import org.wso2.carbon.identity.application.authentication.framework.handler.approles.ApplicationRolesResolver;
+import org.wso2.carbon.identity.application.authentication.framework.handler.approles.exception.ApplicationRolesException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -67,6 +67,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -612,13 +613,15 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                                                   String applicationId) throws ApplicationRolesException {
 
         ApplicationRolesResolver appRolesResolver =
-                OpenIDConnectServiceComponentHolder.getInstance().getApplicationRolesResolver();
-        if (appRolesResolver != null) {
-            String[] appRoles = appRolesResolver.getRoles(authenticatedUser, applicationId);
-            if (ArrayUtils.isNotEmpty(appRoles)) {
-                userClaims.put(FrameworkConstants.APP_ROLES_CLAIM,
-                        String.join(FrameworkUtils.getMultiAttributeSeparator(), appRoles));
-            }
+                OpenIDConnectServiceComponentHolder.getInstance().getHighestPriorityApplicationRolesResolver();
+        if (appRolesResolver == null) {
+            log.debug("No application roles resolver found. So not adding application roles claim to the id_token.");
+            return;
+        }
+        String[] appRoles = appRolesResolver.getRoles(authenticatedUser, applicationId);
+        if (ArrayUtils.isNotEmpty(appRoles)) {
+            userClaims.put(FrameworkConstants.APP_ROLES_CLAIM,
+                    String.join(FrameworkUtils.getMultiAttributeSeparator(), appRoles));
         }
     }
 
