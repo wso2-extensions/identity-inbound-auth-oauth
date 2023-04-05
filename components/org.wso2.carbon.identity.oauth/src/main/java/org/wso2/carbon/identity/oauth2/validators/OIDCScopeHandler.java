@@ -51,22 +51,18 @@ public class OIDCScopeHandler extends OAuth2ScopeHandler {
             // if id_token is allowed for requested grant type.
             return true;
         } else {
+            //Remove OIDC scopes from the token message context
 
-            // Remove openid scope from the token message context.
-            String[] scopes = (String[]) ArrayUtils.removeElement(tokReqMsgCtx.getScope(), OAuthConstants.Scope.OPENID);
-
-            //Get all the registered oidc scopes of a tenant
+            String[] scopes = tokReqMsgCtx.getScope();
             List<String> oidcScopes = OAuth2Util.getOIDCScopes(tokReqMsgCtx.getOauth2AccessTokenReqDTO()
                     .getTenantDomain());
 
-            //Check whether the is there any oidc scope in the request
-            for (String scope : scopes) {
-                if (oidcScopes.contains(scope)) {
-                    scopes = (String[]) ArrayUtils.removeElement(scopes, scope);
-                }
-            }
+            List<String> filteredScopes = Arrays.stream(scopes)
+                    .filter(scope -> !OAuthConstants.Scope.OPENID.equals(scope))
+                    .filter(scope -> !oidcScopes.contains(scope))
+                    .collect(Collectors.toList());
 
-            tokReqMsgCtx.setScope(scopes);
+            tokReqMsgCtx.setScope(filteredScopes.toArray(new String[0]));
 
             if (log.isDebugEnabled()) {
                 log.debug("id_token is not allowed for requested grant type: " + grantType + ". Removing 'openid' " +
