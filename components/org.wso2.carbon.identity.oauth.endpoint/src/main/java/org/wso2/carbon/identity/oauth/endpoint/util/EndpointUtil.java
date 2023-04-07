@@ -797,6 +797,10 @@ public class EndpointUtil {
             }
 
             ServiceProvider sp = getServiceProvider(params);
+            if (sp == null) {
+                throw new OAuthSystemException("Error while retrieving Service Provider for client_id: "
+                        + params.getClientId());
+            }
 
             if (isExternalizedConsentPageEnabledForSP(sp)) {
                 consentPageUrl = getExternalConsentUrlForSP(sp);
@@ -873,9 +877,6 @@ public class EndpointUtil {
 
     private static boolean isExternalizedConsentPageEnabledForSP(ServiceProvider sp) {
 
-        if (sp == null) {
-            throw new IllegalArgumentException("A null reference received for service provider.");
-        }
         boolean isEnabled = false;
         LocalAndOutboundAuthenticationConfig config = sp.getLocalAndOutBoundAuthenticationConfig();
         if (config != null && config.getExternalizedConsentPageConfig() != null) {
@@ -892,9 +893,6 @@ public class EndpointUtil {
 
     private static String getExternalConsentUrlForSP(ServiceProvider sp) throws OAuthSystemException {
 
-        if (sp == null) {
-            throw new IllegalArgumentException("A null reference received for service provider.");
-        }
         String externalConsentUrl = "";
         LocalAndOutboundAuthenticationConfig config = sp.getLocalAndOutBoundAuthenticationConfig();
         if (config != null && config.getExternalizedConsentPageConfig() != null) {
