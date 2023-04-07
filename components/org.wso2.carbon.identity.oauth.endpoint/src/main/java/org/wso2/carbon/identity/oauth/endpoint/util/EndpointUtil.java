@@ -768,6 +768,7 @@ public class EndpointUtil {
             throws OAuthSystemException {
 
         String queryString = "";
+        String clientId = "";
         if (log.isDebugEnabled()) {
             log.debug("Received Session Data Key is: " + sessionDataKey);
             if (params == null) {
@@ -778,6 +779,7 @@ public class EndpointUtil {
         boolean isOIDC = false;
         if (params != null) {
             isOIDC = OAuth2Util.isOIDCAuthzRequest(params.getScopes());
+            clientId = params.getClientId();
         }
 
         SessionDataCache sessionDataCache = SessionDataCache.getInstance();
@@ -798,8 +800,7 @@ public class EndpointUtil {
 
             ServiceProvider sp = getServiceProvider(params);
             if (sp == null) {
-                throw new OAuthSystemException("Error while retrieving Service Provider for client_id: "
-                        + params.getClientId());
+                throw new OAuthSystemException("Unable to find a service provider with client_id: " + clientId);
             }
 
             if (isExternalizedConsentPageEnabledForSP(sp)) {
@@ -818,7 +819,7 @@ public class EndpointUtil {
                 } else {
                     consentPageUrl += URLEncoder.encode(params.getApplicationName(), UTF_8);
                 }
-                consentPageUrl += "&tenantDomain=" + getSPTenantDomainFromClientId(params.getClientId());
+                consentPageUrl += "&tenantDomain=" + getSPTenantDomainFromClientId(clientId);
 
                 if (entry != null) {
                     user = entry.getLoggedInUser();
@@ -859,7 +860,7 @@ public class EndpointUtil {
         } catch (UnsupportedEncodingException e) {
             throw new OAuthSystemException("Error while encoding the url", e);
         } catch (IdentityOAuth2Exception e) {
-            throw new OAuthSystemException("Error retrieve Service Provider for clientId:" + params.getClientId() , e);
+            throw new OAuthSystemException("Error retrieve Service Provider for clientId:" + clientId , e);
         }
 
         return consentPageUrl;

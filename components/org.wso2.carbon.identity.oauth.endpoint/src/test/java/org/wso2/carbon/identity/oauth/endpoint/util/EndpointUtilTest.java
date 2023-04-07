@@ -401,11 +401,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
             }
 
         } catch (OAuthSystemException e) {
-            Assert.assertTrue(e.getMessage().contains("Error while retrieving the application name"));
-        } catch (IllegalArgumentException e) {
-            if (parameters == null) {
-                Assert.assertTrue(e.getMessage().contains("A null reference received for service provider."));
-            }
+            Assert.assertTrue(e.getMessage().contains("Error while retrieving the application name") || e.getMessage()
+                    .contains("Unable to find a service provider with client_id:"));
         }
     }
 
