@@ -238,14 +238,22 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         .getInboundAuthenticationRequestConfigs()) {
                     if (OAUTH.equals(authConfig.getInboundAuthType()) ||
                             OAUTH2.equals(authConfig.getInboundAuthType())) {
+
+                        String inboundConfiguration = authConfig.getInboundConfiguration();
+                        User owner = serviceProvider.getOwner();
                         OAuthAppDO oAuthAppDO = (OAuthAppDO) authConfig.getInboundConfigurationProtocol();
+
+                        if (oAuthAppDO == null && StringUtils.isNotBlank(inboundConfiguration)) {
+                            oAuthAppDO = marshelOAuthDO(authConfig.getInboundConfiguration(),
+                                    serviceProvider.getApplicationName(), owner.getTenantDomain());
+                            authConfig.setInboundConfigurationProtocol(oAuthAppDO);
+                        }
                         if (oAuthAppDO == null) {
                             String errorMSg = String.format("No inbound configurations found for oauth in the " +
                                             "imported %s", serviceProvider.getApplicationName());
                             throw new IdentityApplicationManagementException(errorMSg);
                         }
 
-                        User owner = serviceProvider.getOwner();
                         oAuthAppDO.setAppOwner(new AuthenticatedUser(owner));
 
                         OAuthConsumerAppDTO oAuthConsumerAppDTO = OAuthUtil.buildConsumerAppDTO(oAuthAppDO);
@@ -320,6 +328,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         authConfig.setProperties(Arrays.stream(properties).filter(property ->
                                 !"oauthConsumerSecret".equals(property.getName())).toArray(Property[]::new));
 
+                        authConfig.setInboundConfiguration(unmarshelOAuthDO(authApplication));
                         authConfig.setInboundConfigurationProtocol(authApplication);
                         return;
                     }

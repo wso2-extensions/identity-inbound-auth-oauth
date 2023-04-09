@@ -17,6 +17,7 @@
 */
 package org.wso2.carbon.identity.oauth.dao;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.InboundConfigurationProtocol;
@@ -71,6 +72,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String backChannelLogoutUrl;
     private String frontchannelLogoutUrl;
     @XmlTransient
+    @JsonIgnore
     private AuthenticatedUser appOwner;
     private String tokenType;
     private String tokenBindingType;
@@ -90,6 +92,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
      * @deprecated use {@link #getAppOwner()} instead.
      */
     @Deprecated
+    @JsonIgnore
     public AuthenticatedUser getUser() {
         return this.getAppOwner();
     }
@@ -98,6 +101,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
      * @deprecated use {@link #setAppOwner(AuthenticatedUser)} instead.
      */
     @Deprecated
+    @JsonIgnore
     public void setUser(AuthenticatedUser user) {
         this.setAppOwner(user);
     }
