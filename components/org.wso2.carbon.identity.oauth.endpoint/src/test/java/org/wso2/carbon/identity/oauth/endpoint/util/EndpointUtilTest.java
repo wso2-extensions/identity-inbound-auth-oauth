@@ -301,6 +301,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.isOIDCAuthzRequest(any(Set.class))).thenReturn(isOIDC);
+        when(OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
 
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOIDCConsentPageUrl()).thenReturn(OIDC_CONSENT_PAGE_URL);
@@ -402,9 +403,9 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
             }
 
         } catch (OAuthSystemException e) {
-            Assert.assertTrue(e.getMessage().contains("Error while retrieving the application name"));
+            Assert.assertTrue(e.getMessage().contains("Error while retrieving the application name") || e.getMessage()
+                    .contains("Unable to find a service provider with client_id:"));
         }
-
     }
 
     @DataProvider(name = "provideScopeData")

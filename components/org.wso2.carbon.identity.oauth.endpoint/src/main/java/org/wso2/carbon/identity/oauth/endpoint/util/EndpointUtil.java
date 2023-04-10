@@ -768,6 +768,7 @@ public class EndpointUtil {
             throws OAuthSystemException {
 
         String queryString = "";
+        String clientId = "";
         if (log.isDebugEnabled()) {
             log.debug("Received Session Data Key is: " + sessionDataKey);
             if (params == null) {
@@ -778,6 +779,7 @@ public class EndpointUtil {
         boolean isOIDC = false;
         if (params != null) {
             isOIDC = OAuth2Util.isOIDCAuthzRequest(params.getScopes());
+            clientId = params.getClientId();
         }
 
         SessionDataCache sessionDataCache = SessionDataCache.getInstance();
@@ -796,7 +798,14 @@ public class EndpointUtil {
                 queryString = getQueryString(params, entry);
             }
 
-            if (isOIDC) {
+            ServiceProvider sp = getServiceProvider(params);
+            if (sp == null) {
+                throw new OAuthSystemException("Unable to find a service provider with client_id: " + clientId);
+            }
+
+            if (isExternalizedConsentPageEnabledForSP(sp)) {
+                consentPageUrl = getExternalConsentUrlForSP(sp);
+            } else if (isOIDC) {
                 consentPageUrl = OAuth2Util.OAuthURL.getOIDCConsentPageUrl();
             } else {
                 consentPageUrl = OAuth2Util.OAuthURL.getOAuth2ConsentPageUrl();
@@ -810,7 +819,7 @@ public class EndpointUtil {
                 } else {
                     consentPageUrl += URLEncoder.encode(params.getApplicationName(), UTF_8);
                 }
-                consentPageUrl += "&tenantDomain=" + getSPTenantDomainFromClientId(params.getClientId());
+                consentPageUrl += "&tenantDomain=" + getSPTenantDomainFromClientId(clientId);
 
                 if (entry != null) {
                     user = entry.getLoggedInUser();
@@ -850,9 +859,58 @@ public class EndpointUtil {
             }
         } catch (UnsupportedEncodingException e) {
             throw new OAuthSystemException("Error while encoding the url", e);
+        } catch (IdentityOAuth2Exception e) {
+            throw new OAuthSystemException("Error retrieve Service Provider for clientId:" + clientId , e);
         }
 
         return consentPageUrl;
+    }
+
+
+    private static ServiceProvider getServiceProvider(OAuth2Parameters params) throws IdentityOAuth2Exception {
+
+        ServiceProvider sp = null;
+        if (params != null) {
+            sp = OAuth2Util.getServiceProvider(params.getClientId());
+        }
+        return sp;
+    }
+
+    private static boolean isExternalizedConsentPageEnabledForSP(ServiceProvider sp) {
+
+        boolean isEnabled = false;
+        LocalAndOutboundAuthenticationConfig config = sp.getLocalAndOutBoundAuthenticationConfig();
+        if (config != null && config.getExternalizedConsentPageConfig() != null) {
+            isEnabled = config.getExternalizedConsentPageConfig().isEnabled();
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("externalConsentManagement: " + isEnabled + " for application: " +
+                    sp.getApplicationName() + " with id: " + sp.getApplicationID());
+        }
+
+        return isEnabled;
+    }
+
+    private static String getExternalConsentUrlForSP(ServiceProvider sp) throws OAuthSystemException {
+
+        String externalConsentUrl = "";
+        LocalAndOutboundAuthenticationConfig config = sp.getLocalAndOutBoundAuthenticationConfig();
+        if (config != null && config.getExternalizedConsentPageConfig() != null) {
+            externalConsentUrl = config.getExternalizedConsentPageConfig().getConsentPageUrl();
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("externalConsentUrl: " + externalConsentUrl + " for application: " +
+                    sp.getApplicationName() + " with id: " + sp.getApplicationID());
+        }
+
+        if (StringUtils.isNotBlank(externalConsentUrl)) {
+            return externalConsentUrl;
+        } else {
+            throw new OAuthSystemException("External consent management is enabled for the service provider: " +
+                    sp.getApplicationName() + " but the external consent url is not configured.");
+        }
     }
 
     private static String getScopeMetadataQueryParam(Set<String> scopes, String tenantDomain) {
@@ -871,7 +929,9 @@ public class EndpointUtil {
             String scopeMetadata = new Gson().toJson(scopesMetaData);
             return "scopeMetadata=" + URLEncoder.encode(scopeMetadata, UTF_8);
         } catch (Exception e) {
-            log.warn("Error while retrieving scope metadata for scopes: " + scopes, e);
+            if (log.isDebugEnabled()) {
+                log.debug("Error while retrieving scope metadata for scopes: " + scopes, e);
+            }
         }
         return null;
     }
