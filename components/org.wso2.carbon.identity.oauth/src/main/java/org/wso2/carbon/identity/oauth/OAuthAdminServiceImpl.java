@@ -16,6 +16,7 @@
 
 package org.wso2.carbon.identity.oauth;
 
+import com.google.gson.Gson;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -61,6 +62,10 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
+import org.wso2.carbon.identity.xds.client.mgt.util.XDSCUtils;
+import org.wso2.carbon.identity.xds.common.constant.OperationType;
+import org.wso2.carbon.identity.xds.common.constant.XDSConstants;
+import org.wso2.carbon.identity.xds.common.constant.XDSWrapper;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
@@ -129,6 +134,17 @@ public class OAuthAdminServiceImpl {
         String tenantUser = MultitenantUtils.getTenantAwareUsername(loggedInUser);
         int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
         String userDomain = IdentityUtil.extractDomainFromName(loggedInUser);
+
+        if (isControlPlane()) {
+            OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
+                    .setUsername(loggedInUser)
+                    .setTenantId(tenantId)
+                    .build();
+            publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
+                    applicationXDSWrapper, XDSConstants.EventType.OAUTH,
+                    XDSConstants.OauthOperationType.REGISTER_OAUTH_CONSUMER);
+        }
+
         OAuthAppDAO dao = new OAuthAppDAO();
         return dao.addOAuthConsumer(UserCoreUtil.removeDomainFromName(tenantUser), tenantId, userDomain);
     }
@@ -282,6 +298,17 @@ public class OAuthAdminServiceImpl {
                         }
                     }
 
+                    if (isControlPlane()) {
+                        OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
+                                .setOAuthConsumerAppDTO(application)
+                                .setConsumerKey(app.getOauthConsumerKey())
+                                .setSecretKey(app.getOauthConsumerSecret())
+                                .setUsername(tenantAwareLoggedInUsername)
+                                .build();
+                        publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
+                                applicationXDSWrapper, XDSConstants.EventType.OAUTH,
+                                XDSConstants.OauthOperationType.REGISTER_AND_RETRIEVE_OAUTH_APPLICATION_DATA);
+                    }
                     AuthenticatedUser appOwner = getAppOwner(application, defaultAppOwner);
                     app.setAppOwner(appOwner);
 
@@ -468,6 +495,15 @@ public class OAuthAdminServiceImpl {
 
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
+        if (isControlPlane()) {
+            OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
+                    .setOAuthConsumerAppDTO(consumerAppDTO)
+                    .build();
+            publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
+                    applicationXDSWrapper, XDSConstants.EventType.OAUTH,
+                    XDSConstants.OauthOperationType.UPDATE_CONSUMER_APPLICATION);
+        }
+
         OAuthAppDAO dao = new OAuthAppDAO();
         OAuthAppDO oauthappdo;
         try {
@@ -569,9 +605,22 @@ public class OAuthAdminServiceImpl {
     public void addScope(String scope, String[] claims) throws IdentityOAuthAdminException {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+
         try {
             if (StringUtils.isNotEmpty(scope)) {
                 validateRegex(scope);
+
+                if (isControlPlane()) {
+                    OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
+                            .setScope(scope)
+                            .setClaims(claims)
+                            .setTenantId(tenantId)
+                            .build();
+                    publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
+                            applicationXDSWrapper, XDSConstants.EventType.OAUTH,
+                            XDSConstants.OauthOperationType.ADD_SCOPE);
+                }
+
                 OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(tenantId, scope, claims);
             } else {
                 throw handleClientError(INVALID_REQUEST, "The scope can not be empty.");
@@ -593,6 +642,15 @@ public class OAuthAdminServiceImpl {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
+            if (isControlPlane()) {
+                OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
+                        .setScopeDTO(scope)
+                        .setTenantId(tenantId)
+                        .build();
+                publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
+                        applicationXDSWrapper, XDSConstants.EventType.OAUTH,
+                        XDSConstants.OauthOperationType.ADD_SCOPE_DTO);
+            }
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(scope, tenantId);
         } catch (IdentityOAuth2Exception e) {
             throw handleErrorWithExceptionType(String.format("Error while inserting OIDC scope: %s, %s",
@@ -667,6 +725,15 @@ public class OAuthAdminServiceImpl {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
+            if (isControlPlane()) {
+                OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
+                        .setScope(scope)
+                        .setTenantId(tenantId)
+                        .build();
+                publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
+                        applicationXDSWrapper, XDSConstants.EventType.OAUTH,
+                        XDSConstants.OauthOperationType.DELETE_SCOPE);
+            }
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().deleteScope(scope, tenantId);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Scope: " + scope + " is deleted from the database.");
@@ -742,6 +809,17 @@ public class OAuthAdminServiceImpl {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
+            if (isControlPlane()) {
+                OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
+                        .setClaims(addClaims)
+                        .setDeleteClaims(deleteClaims)
+                        .setScope(scope)
+                        .setTenantId(tenantId)
+                        .build();
+                publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
+                        applicationXDSWrapper, XDSConstants.EventType.OAUTH,
+                        XDSConstants.OauthOperationType.UPDATE_SCOPE);
+            }
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
                     updateScope(scope, tenantId, Arrays.asList(addClaims), Arrays.asList(deleteClaims));
         } catch (IdentityOAuth2Exception e) {
@@ -764,6 +842,15 @@ public class OAuthAdminServiceImpl {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
+            if (isControlPlane()) {
+                OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
+                        .setScopeDTO(updatedScope)
+                        .setTenantId(tenantId)
+                        .build();
+                publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
+                        applicationXDSWrapper, XDSConstants.EventType.OAUTH,
+                        XDSConstants.OauthOperationType.UPDATE_SCOPE_DTO);
+            }
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
                     updateScope(updatedScope, tenantId);
         } catch (IdentityOAuth2Exception e) {
@@ -810,6 +897,16 @@ public class OAuthAdminServiceImpl {
             properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, newState);
             properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REVOKE);
 
+            if (isControlPlane()) {
+                OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
+                        .setConsumerKey(consumerKey)
+                        .setState(newState)
+                        .build();
+                publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
+                        applicationXDSWrapper, XDSConstants.EventType.OAUTH,
+                        XDSConstants.OauthOperationType.UPDATE_CONSUMER_APP_STATE);
+            }
+
             AppInfoCache.getInstance().clearCacheEntry(consumerKey);
             updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
 
@@ -846,9 +943,31 @@ public class OAuthAdminServiceImpl {
      */
     public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
+        return updateAndRetrieveOauthSecretKey(consumerKey, OAuthUtil.getRandomNumber());
+
+    }
+
+    /**
+     * Regenerate consumer secret for the application and retrieve application details.
+     *
+     * @param consumerKey Consumer key for the application.
+     * @return OAuthConsumerAppDTO OAuth application details.
+     * @throws IdentityOAuthAdminException Error while regenerating the consumer secret.
+     */
+    public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey, String secretKey)
+            throws IdentityOAuthAdminException {
+
+        if (isControlPlane()) {
+            OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
+                    .setConsumerKey(consumerKey)
+                    .setSecretKey(secretKey)
+                    .build();
+            publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
+                    applicationXDSWrapper, XDSConstants.EventType.OAUTH,
+                    XDSConstants.OauthOperationType.UPDATE_AND_RETRIEVE_OAUTH_SECRET_KEY);
+        }
         Properties properties = new Properties();
-        String newSecret = OAuthUtil.getRandomNumber();
-        properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, newSecret);
+        properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, secretKey);
         properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REGENERATE);
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_ACTIVE);
 
@@ -859,7 +978,7 @@ public class OAuthAdminServiceImpl {
         }
 
         OAuthConsumerAppDTO updatedApplication = getOAuthApplicationData(consumerKey);
-        updatedApplication.setOauthConsumerSecret(newSecret);
+        updatedApplication.setOauthConsumerSecret(secretKey);
 
         return updatedApplication;
 
@@ -944,6 +1063,15 @@ public class OAuthAdminServiceImpl {
 
         OAuthAppDAO dao = new OAuthAppDAO();
         try {
+            if (isControlPlane()) {
+                OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
+                        .setConsumerKey(consumerKey)
+                        .build();
+                publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
+                        applicationXDSWrapper, XDSConstants.EventType.OAUTH,
+                        XDSConstants.OauthOperationType.REMOVE_OAUTH_APPLICATION_DATA);
+            }
+
             dao.removeConsumerApplication(consumerKey);
         } catch (IdentityOAuthAdminException e) {
             /*
@@ -990,6 +1118,15 @@ public class OAuthAdminServiceImpl {
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("Deleting all OAuth Application data of the tenant: " + tenantId);
+        }
+
+        if (isControlPlane()) {
+            OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
+                    .setTenantId(tenantId)
+                    .build();
+            publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
+                    applicationXDSWrapper, XDSConstants.EventType.OAUTH,
+                    XDSConstants.OauthOperationType.REMOVE_ALL_OAUTH_APPLICATION_DATA);
         }
 
         OAuthAppDAO dao = new OAuthAppDAO();
@@ -1101,6 +1238,7 @@ public class OAuthAdminServiceImpl {
             OAuthRevocationRequestDTO revokeRequestDTO) throws IdentityOAuthAdminException {
 
         triggerPreRevokeListeners(revokeRequestDTO);
+
         if (revokeRequestDTO.getApps() != null && revokeRequestDTO.getApps().length > 0) {
             String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
             String tenantAwareLoggedInUserName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
@@ -1127,6 +1265,15 @@ public class OAuthAdminServiceImpl {
                 }
             }
             OAuthConsumerAppDTO[] appDTOs = getAppsAuthorizedByUser();
+            if (isControlPlane()) {
+                OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
+                        .setOAuthRevocationRequestDTO(revokeRequestDTO)
+                        .setUsername(tenantAwareLoggedInUserName)
+                        .build();
+                publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
+                        applicationXDSWrapper, XDSConstants.EventType.OAUTH,
+                        XDSConstants.OauthOperationType.REVOKE_AUTHZ_FOR_APPS_BY_RESOURCE_OWNER);
+            }
             for (String appName : revokeRequestDTO.getApps()) {
                 for (OAuthConsumerAppDTO appDTO : appDTOs) {
                     if (appDTO.getApplicationName().equals(appName)) {
@@ -1232,6 +1379,14 @@ public class OAuthAdminServiceImpl {
         OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
         String consumerKey = application.getConsumerKey();
 
+        if (isControlPlane()) {
+            OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
+                    .setOAuthAppRevocationRequestDTO(application)
+                    .build();
+            publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
+                    applicationXDSWrapper, XDSConstants.EventType.OAUTH,
+                    XDSConstants.OauthOperationType.REVOKE_ISSUED_TOKENS_BY_APPLICATION);
+        }
         if (StringUtils.isBlank(consumerKey)) {
             revokeRespDTO.setError(true);
             revokeRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_REQUEST);
@@ -1279,6 +1434,18 @@ public class OAuthAdminServiceImpl {
         String tenantAwareUserName = null;
         try {
             tenantAwareUserName = OAuthUtil.getUsername(tenantDomain);
+
+            if (isControlPlane()) {
+                OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
+                        .setAppName(appName)
+                        .setState(state)
+                        .setUsername(tenantAwareUserName)
+                        .build();
+                publishData(tenantDomain,
+                        applicationXDSWrapper, XDSConstants.EventType.OAUTH,
+                        XDSConstants.OauthOperationType.UPDATE_APPROVE_ALWAYS_FOR_APP_CONSENT_BY_RESOURCE_OWNER);
+            }
+
             OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
                     .updateApproveAlwaysForAppConsentByResourceOwner(tenantAwareUserName,
                             tenantDomain, appName, state);
@@ -1904,5 +2071,24 @@ public class OAuthAdminServiceImpl {
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error while loading OIDC scopes of tenant: " + tenantDomain, e);
         }
+    }
+
+    private String buildJson(OauthXDSWrapper oauthXDSWrapper) {
+
+        Gson gson = new Gson();
+        return gson.toJson(oauthXDSWrapper);
+    }
+
+    private boolean isControlPlane() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty("Server.ControlPlane"));
+    }
+
+    private void publishData(String tenantDomain, XDSWrapper xdsWrapper, XDSConstants.EventType eventType,
+                             OperationType operationType) {
+
+        String json = buildJson((OauthXDSWrapper) xdsWrapper);
+        String username = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+        XDSCUtils.publishData(tenantDomain, username, json, eventType, operationType);
     }
 }
