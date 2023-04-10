@@ -876,22 +876,6 @@ public class EndpointUtil {
         return sp;
     }
 
-    private static boolean isExternalizedConsentPageEnabledForSP(ServiceProvider sp) {
-
-        boolean isEnabled = false;
-        LocalAndOutboundAuthenticationConfig config = sp.getLocalAndOutBoundAuthenticationConfig();
-        if (config != null && config.getExternalizedConsentPageConfig() != null) {
-            isEnabled = config.getExternalizedConsentPageConfig().isEnabled();
-        }
-
-        if (log.isDebugEnabled()) {
-            log.debug("externalConsentManagement: " + isEnabled + " for application: " +
-                    sp.getApplicationName() + " with id: " + sp.getApplicationID());
-        }
-
-        return isEnabled;
-    }
-
     private static String getExternalConsentUrlForSP(ServiceProvider sp) throws OAuthSystemException {
 
         String externalConsentUrl = "";
