@@ -531,25 +531,28 @@ public class AccessTokenIssuer {
             }
             return isValidScope;
         }
-        List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
-        List<String> requestedAllowedScopes = new ArrayList<>();
-        String[] requestedScopes = tokReqMsgCtx.getScope();
-        List<String> scopesToBeValidated = new ArrayList<>();
-
-        if (requestedScopes != null) {
-            for (String scope : requestedScopes) {
-                if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
-                    requestedAllowedScopes.add(scope);
-                } else {
-                    scopesToBeValidated.add(scope);
-                }
-            }
-            tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
-        }
-
-        String[] authorizedInternalScopes = new String[0];
         boolean isManagementApp = getServiceProvider(tokenReqDTO).isManagementApp();
-        if (isManagementApp) {
+        List<String> requestedAllowedScopes = new ArrayList<>();
+        String[] authorizedInternalScopes = new String[0];
+        if (GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) && !isManagementApp) {
+            log.debug("Skipping the internal scope validation as the application is not" +
+                    " configured as Management App or the grant type is not client credentials.");
+        } else {
+            List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
+            String[] requestedScopes = tokReqMsgCtx.getScope();
+            List<String> scopesToBeValidated = new ArrayList<>();
+
+            if (requestedScopes != null) {
+                for (String scope : requestedScopes) {
+                    if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
+                        requestedAllowedScopes.add(scope);
+                    } else {
+                        scopesToBeValidated.add(scope);
+                    }
+                }
+                tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
+            }
+
             if (log.isDebugEnabled()) {
                 log.debug("Handling the internal scope validation.");
             }
@@ -562,11 +565,6 @@ public class AccessTokenIssuer {
                 String[] roleBasedInternalConsoleScopes = roleBasedInternalScopeValidator.validateScope(tokReqMsgCtx);
                 authorizedInternalScopes = (String[]) ArrayUtils
                         .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
-            }
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Skipping the internal scope validation as the application is not" +
-                        " configured as Management App");
             }
         }
 
