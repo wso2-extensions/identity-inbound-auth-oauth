@@ -98,6 +98,7 @@ import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabled;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkConsentedTokenColumnAvailable;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getJWTRenewWithoutRevokeAllowedGrantTypes;
 
 /**
  * OAuth 2 OSGi service component.
@@ -212,6 +213,10 @@ public class OAuth2ServiceComponent {
                             " registered as the default Key ID Provider implementation.");
                 }
             }
+
+            // Read and store the allowed grant types for JWT renew without revoke in OAuth2ServiceComponentHolder.
+            OAuth2ServiceComponentHolder.setJwtRenewWithoutRevokeAllowedGrantTypes(
+                    getJWTRenewWithoutRevokeAllowedGrantTypes());
 
             ServiceRegistration tenantMgtListenerSR = bundleContext.registerService(TenantMgtListener.class.getName(),
                     new OAuthTenantMgtListenerImpl(), null);
