@@ -929,7 +929,9 @@ public class EndpointUtil {
             String scopeMetadata = new Gson().toJson(scopesMetaData);
             return "scopeMetadata=" + URLEncoder.encode(scopeMetadata, UTF_8);
         } catch (Exception e) {
-            log.warn("Error while retrieving scope metadata for scopes: " + scopes, e);
+            if (log.isDebugEnabled()) {
+                log.debug("Error while retrieving scope metadata for scopes: " + scopes, e);
+            }
         }
         return null;
     }
