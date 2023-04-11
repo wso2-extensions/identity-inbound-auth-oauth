@@ -176,7 +176,6 @@ public class AuthorizationHandlerManager {
                     .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
         }
 
-
         // Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
         // Those scopes should not send to the other scopes validators.
         // Thus remove the scopes from the authzReqMsgCtx. Will be added to the response after executing
