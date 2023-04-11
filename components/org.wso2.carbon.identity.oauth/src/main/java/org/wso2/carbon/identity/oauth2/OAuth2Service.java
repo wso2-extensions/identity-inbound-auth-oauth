@@ -609,7 +609,9 @@ public class OAuth2Service extends AbstractAdmin {
                     OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), refreshTokenDO.getAuthorizedUser(),
                             OAuth2Util.buildScopeString(refreshTokenDO.getScope()));
                     OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(), refreshTokenDO.getAuthorizedUser());
-                    OAuthUtil.clearOAuthCache(refreshTokenDO.getAccessToken());
+                    if (refreshTokenDO.getAccessToken() != null) {
+                        OAuthUtil.clearOAuthCache(refreshTokenDO.getAccessToken());
+                    }
                     getRevocationProcessor().revokeRefreshToken(revokeRequestDTO, refreshTokenDO);
                     addRevokeResponseHeaders(revokeResponseDTO,
                             refreshTokenDO.getAccessToken(),
