@@ -43,6 +43,8 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.DiagnosticLog;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -501,7 +503,23 @@ public class TokenValidationHandler {
                         = OAuthServerConfiguration.getInstance().isCrossTenantTokenIntrospectionAllowed();
                 if (!isCrossTenantTokenIntrospectionAllowed && accessTokenDO != null &&
                         !tenantDomain.equalsIgnoreCase(accessTokenDO.getAuthzUser().getTenantDomain())) {
-                    throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
+                    /*
+                    If isOrganizationManagementEnable is true, validate whether client's tenant relationship with
+                    authorized user tenant.
+                     */
+                    if (!OAuth2ServiceComponentHolder.getInstance().isOrganizationManagementEnabled()) {
+                        throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
+                    }
+                    String authorizedUserTenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
+                    String authorizedUserOrganizationId =
+                            getOrganizationManager().resolveOrganizationId(authorizedUserTenantDomain);
+                    String organizationIdOfClient = getOrganizationManager().resolveOrganizationId(tenantDomain);
+                    // Get ancestors of the authorized user tenant.
+                    List<String> authorizedUserTenantAncestors =
+                            getOrganizationManager().getAncestorOrganizationIds(authorizedUserOrganizationId);
+                    if (!authorizedUserTenantAncestors.contains(organizationIdOfClient)) {
+                        throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
+                    }
                 }
                 List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
                 String[] requestedScopes = accessTokenDO.getScope();
@@ -516,7 +534,7 @@ public class TokenValidationHandler {
                     }
                     accessTokenDO.setScope(scopesToBeValidated.toArray(new String[0]));
                 }
-            } catch (IllegalArgumentException e) {
+            } catch (IllegalArgumentException | OrganizationManagementException e) {
                 // access token not found in the system.
                 if (diagnosticLogBuilder != null) {
                     // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
@@ -848,5 +866,10 @@ public class TokenValidationHandler {
         String[] validatedScopes = accessTokenDO.getScope();
         String[] scopesToReturn = (String[]) ArrayUtils.addAll(validatedScopes, requestedAllowedScopes);
         introResp.setScope(OAuth2Util.buildScopeString((scopesToReturn)));
+    }
+
+    private static OrganizationManager getOrganizationManager() {
+
+        return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager();
     }
 }
