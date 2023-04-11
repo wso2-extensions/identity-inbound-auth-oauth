@@ -542,6 +542,10 @@ public class AccessTokenIssuer {
         } else {
             if (GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
                     ArrayUtils.contains(requestedScopes, INTERNAL_LOGIN_SCOPE)) {
+                /*
+                Remove the internal_login scope from the requested scopes as we need to stop issuing self-service
+                related scopes for client credentials grant.
+                */
                 requestedScopes = (String[]) ArrayUtils.removeElement(requestedScopes, INTERNAL_LOGIN_SCOPE);
                 tokReqMsgCtx.setScope(requestedScopes);
             }
