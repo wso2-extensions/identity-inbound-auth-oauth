@@ -239,21 +239,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                     if (OAUTH.equals(authConfig.getInboundAuthType()) ||
                             OAUTH2.equals(authConfig.getInboundAuthType())) {
 
-                        String inboundConfiguration = authConfig.getInboundConfiguration();
+                        OAuthAppDO oAuthAppDO = getOAuthAppDO(authConfig, serviceProvider);
                         User owner = serviceProvider.getOwner();
-                        OAuthAppDO oAuthAppDO = (OAuthAppDO) authConfig.getInboundConfigurationProtocol();
-
-                        if (oAuthAppDO == null && StringUtils.isNotBlank(inboundConfiguration)) {
-                            oAuthAppDO = marshelOAuthDO(authConfig.getInboundConfiguration(),
-                                    serviceProvider.getApplicationName(), owner.getTenantDomain());
-                            authConfig.setInboundConfigurationProtocol(oAuthAppDO);
-                        }
-                        if (oAuthAppDO == null) {
-                            String errorMSg = String.format("No inbound configurations found for oauth in the " +
-                                            "imported %s", serviceProvider.getApplicationName());
-                            throw new IdentityApplicationManagementException(errorMSg);
-                        }
-
                         oAuthAppDO.setAppOwner(new AuthenticatedUser(owner));
 
                         OAuthConsumerAppDTO oAuthConsumerAppDTO = OAuthUtil.buildConsumerAppDTO(oAuthAppDO);
@@ -289,6 +276,26 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         } catch (IdentityOAuthAdminException | IdentityOAuth2Exception e) {
             String message = "Error occurred when importing OAuth inbound.";
             throw handleException(message, e);
+        }
+    }
+
+    private OAuthAppDO getOAuthAppDO(InboundAuthenticationRequestConfig authConfig, ServiceProvider serviceProvider)
+            throws IdentityApplicationManagementException {
+
+        OAuthAppDO oAuthAppDO = (OAuthAppDO) authConfig.getInboundConfigurationProtocol();
+        String inboundConfiguration = authConfig.getInboundConfiguration();
+
+        if (oAuthAppDO != null) {
+            return oAuthAppDO;
+        } else if (StringUtils.isNotBlank(inboundConfiguration)) {
+            oAuthAppDO = marshelOAuthDO(inboundConfiguration, serviceProvider.getApplicationName(),
+                                        serviceProvider.getOwner().getTenantDomain());
+            authConfig.setInboundConfigurationProtocol(oAuthAppDO);
+            return oAuthAppDO;
+        } else {
+            String errorMsg = String.format("No inbound configurations found for oauth in the" +
+                    " imported %s", serviceProvider.getApplicationName());
+            throw new IdentityApplicationManagementException(errorMsg);
         }
     }
 
