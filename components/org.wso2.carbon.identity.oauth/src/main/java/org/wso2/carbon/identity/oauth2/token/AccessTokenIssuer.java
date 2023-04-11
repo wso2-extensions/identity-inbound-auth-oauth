@@ -537,8 +537,8 @@ public class AccessTokenIssuer {
         String[] authorizedInternalScopes = new String[0];
         String[] requestedScopes = tokReqMsgCtx.getScope();
         if (GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) && !isManagementApp) {
-            log.debug("Skipping the internal scope validation as the application is not" +
-                    " configured as Management App or the grant type is not client credentials.");
+            log.debug("Application is not configured as Management App and the grant type is client credentials. " +
+                    "Hence skipping internal scope validation to stop issuing internal scopes.");
         } else {
             if (GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
                     ArrayUtils.contains(requestedScopes, INTERNAL_LOGIN_SCOPE)) {
