@@ -550,11 +550,8 @@ public class AccessTokenIssuer {
 
             if (requestedScopes != null) {
                 for (String scope : requestedScopes) {
-                    if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
-                        requestedAllowedScopes.add(scope);
-                    } else {
-                        scopesToBeValidated.add(scope);
-                    }
+                    (OAuth2Util.isAllowedScope(allowedScopes, scope)) 
+                    ? requestedAllowedScopes.add(scope) : scopesToBeValidated.add(scope);
                 }
                 tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
             }
