@@ -211,7 +211,8 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     validationDataDO.setAuthorizedUser(user);
 
                 } else {
-                    if (!scopes.contains(resultSet.getString(5))) {
+                    if (!scopes.contains(resultSet.getString(5)) &&
+                            !validationDataDO.getScope()[0].equals(resultSet.getString(5))) {
                         scopes.add(resultSet.getString(5));
                     }
                     if (isAccessTokenExtendedTableExist() && resultSet.getString(16) != null &&
