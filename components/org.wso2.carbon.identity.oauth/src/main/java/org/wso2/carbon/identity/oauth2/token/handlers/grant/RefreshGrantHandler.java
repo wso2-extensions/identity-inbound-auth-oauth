@@ -296,9 +296,11 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, accessTokenBean.getAuthzUser().getTenantDomain());
 
             // Remove old access token from the AccessTokenCache
-            OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(oldAccessToken.getAccessToken());
-            OAuthCache.getInstance().clearCacheEntry(accessTokenCacheKey,
-                    oldAccessToken.getAuthorizedUser().getTenantDomain());
+            if (oldAccessToken.getAccessToken() != null) {
+                OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(oldAccessToken.getAccessToken());
+                OAuthCache.getInstance().clearCacheEntry(accessTokenCacheKey,
+                        oldAccessToken.getAuthorizedUser().getTenantDomain());
+            }
             AccessTokenDO tokenToCache = AccessTokenDO.clone(accessTokenBean);
             OauthTokenIssuer oauthTokenIssuer;
             try {
