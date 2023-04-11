@@ -316,7 +316,7 @@ public class OAuth2Util {
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private static final Log log = LogFactory.getLog(OAuth2Util.class);
     private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
-    private static final String INTERNAL_LOGIN_SCOPE = "internal_login";
+    public static final String INTERNAL_LOGIN_SCOPE = "internal_login";
     public static final String JWT = "JWT";
     private static long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
     private static ThreadLocal<Integer> clientTenantId = new ThreadLocal<>();

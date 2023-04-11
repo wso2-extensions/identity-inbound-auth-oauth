@@ -87,6 +87,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppState
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 
 /**
@@ -534,12 +535,17 @@ public class AccessTokenIssuer {
         boolean isManagementApp = getServiceProvider(tokenReqDTO).isManagementApp();
         List<String> requestedAllowedScopes = new ArrayList<>();
         String[] authorizedInternalScopes = new String[0];
+        String[] requestedScopes = tokReqMsgCtx.getScope();
         if (GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) && !isManagementApp) {
             log.debug("Skipping the internal scope validation as the application is not" +
                     " configured as Management App or the grant type is not client credentials.");
         } else {
+            if (GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
+                    ArrayUtils.contains(requestedScopes, INTERNAL_LOGIN_SCOPE)) {
+                requestedScopes = (String[]) ArrayUtils.removeElement(requestedScopes, INTERNAL_LOGIN_SCOPE);
+                tokReqMsgCtx.setScope(requestedScopes);
+            }
             List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
-            String[] requestedScopes = tokReqMsgCtx.getScope();
             List<String> scopesToBeValidated = new ArrayList<>();
 
             if (requestedScopes != null) {
