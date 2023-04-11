@@ -363,6 +363,7 @@ public class OAuth2Util {
     public static final String IS_EXTENDED_TOKEN = "isExtendedToken";
     public static final String DYNAMIC_TOKEN_DATA_FUNCTION = "dynamicTokenData";
     public static final String ACCESS_TOKEN_JS_OBJECT = "access_token";
+    public static final int EXTENDED_REFRESH_TOKEN_DEFAULT_TIME = -2;
 
     private OAuth2Util() {
 

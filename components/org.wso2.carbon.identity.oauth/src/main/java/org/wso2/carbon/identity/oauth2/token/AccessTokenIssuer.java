@@ -87,6 +87,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppState
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 
 /**
@@ -162,8 +163,11 @@ public class AccessTokenIssuer {
                     AuthorizationGrantCache.getInstance().getValueFromCacheByCode(cacheKey);
             if (authorizationGrantCacheEntry != null &&
                     authorizationGrantCacheEntry.getAccessTokenExtensionDO() != null) {
-                tokReqMsgCtx.setRefreshTokenvalidityPeriod(
-                        authorizationGrantCacheEntry.getAccessTokenExtensionDO().getRefreshTokenValidityPeriod());
+                if (authorizationGrantCacheEntry.getAccessTokenExtensionDO().getRefreshTokenValidityPeriod() >
+                        EXTENDED_REFRESH_TOKEN_DEFAULT_TIME) {
+                    tokReqMsgCtx.setRefreshTokenvalidityPeriod(
+                            authorizationGrantCacheEntry.getAccessTokenExtensionDO().getRefreshTokenValidityPeriod());
+                }
                 tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
                         authorizationGrantCacheEntry.getAccessTokenExtensionDO());
             }

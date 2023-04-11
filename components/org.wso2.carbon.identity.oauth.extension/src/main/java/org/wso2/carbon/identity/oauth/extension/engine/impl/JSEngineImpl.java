@@ -107,8 +107,7 @@ public class JSEngineImpl implements JSEngine {
             invocable.invokeFunction(functionName, args);
             return JS_ENGINE_INSTANCE;
         }
-
-        log.warn("Function is not defined in the script.");
+        log.warn(String.format("Function %s is not defined in the script.", functionName));
         return JS_ENGINE_INSTANCE;
     }
 
@@ -124,12 +123,21 @@ public class JSEngineImpl implements JSEngine {
         return jsObjects;
     }
 
+    /**
+     * This method returns the current thread's class loader.
+     * @return Returns NashornScriptEngineFactory class to evaluate the javascript if classLoader is null.
+     */
     private ClassLoader getClassLoader() {
 
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         return classLoader == null ? NashornScriptEngineFactory.class.getClassLoader() : classLoader;
     }
 
+    /**
+     * This is used by the Nashorn engine to determine which Java classes should be exposed to JavaScript code. In this
+     * implementation, the exposeToScripts() method always returns false, which means that no classes will be exposed
+     * to JavaScript code. Use for security purposes.
+     */
     private static class RestrictedClassFilter implements ClassFilter {
 
         @Override

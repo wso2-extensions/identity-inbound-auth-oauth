@@ -17,7 +17,8 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.authz;
 
-import com.hazelcast.com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
@@ -1496,14 +1497,15 @@ public class OAuth2AuthzEndpoint {
                     serviceProvider.getLocalAndOutBoundAuthenticationConfig().getAuthenticationScriptConfig() == null) {
                 return null;
             }
+            Gson gson = new Gson();
             JSEngine jsEngine = EngineUtils.getEngineFromConfig();
             JsLogger jsLogger = new JsLogger();
             Map<String, Object> bindings = new HashMap<>();
             bindings.put(FrameworkConstants.JSAttributes.JS_LOG, jsLogger);
             List<String> accessTokenJSObject = new ArrayList<>();
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> parameterMap =
-                    mapper.convertValue(oAuthMessage.getRequest().getParameterMap(), Map.class);
+            Map<String, Object> parameterMap = gson.fromJson(gson.toJson(oAuthMessage.getRequest().getParameterMap()),
+                    new TypeToken<Map<String, Object>>() {
+                    }.getType());
             accessTokenJSObject.add(ACCESS_TOKEN_JS_OBJECT);
             Map<String, Object> result = jsEngine
                     .createEngine()
@@ -1513,10 +1515,8 @@ public class OAuth2AuthzEndpoint {
                                     .getContent())
                     .invokeFunction(DYNAMIC_TOKEN_DATA_FUNCTION, parameterMap)
                     .getJSObjects(accessTokenJSObject);
-            ObjectMapper objectMapper = new ObjectMapper();
-            String json = objectMapper.writeValueAsString(result.get(ACCESS_TOKEN_JS_OBJECT));
-            AccessTokenExtendedAttributes
-                    accessTokenExtendedAttributes = objectMapper.readValue(json, AccessTokenExtendedAttributes.class);
+            AccessTokenExtendedAttributes accessTokenExtendedAttributes =
+                    gson.fromJson(gson.toJson(result.get(ACCESS_TOKEN_JS_OBJECT)), AccessTokenExtendedAttributes.class);
             if (accessTokenExtendedAttributes != null) {
                 accessTokenExtendedAttributes.setExtendedToken(true);
             }

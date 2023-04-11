@@ -24,17 +24,51 @@ import java.util.Map;
 import javax.script.ScriptException;
 
 /**
- * This interface is used to evaluate the javascripts.
+ * An interface representing a JavaScript engine that can execute and evaluate JavaScript code.
  */
 public interface JSEngine {
 
+    /**
+     * Creates a new instance of the JavaScript engine.
+     *
+     * @return The new JavaScript engine instance.
+     * @throws ScriptException If an error occurs while creating the engine.
+     */
     JSEngine createEngine() throws ScriptException;
 
+    /**
+     * Adds the specified bindings to the JavaScript engine.
+     *
+     * @param bindings A map of key-value pairs representing the bindings to add.
+     * @return This JavaScript engine instance, with the specified bindings added.
+     */
     JSEngine addBindings(Map<String, Object> bindings);
 
+    /**
+     * Evaluates the specified JavaScript code in the JavaScript engine.
+     *
+     * @param script The JavaScript code to evaluate.
+     * @return This JavaScript engine instance, after evaluating the code.
+     * @throws ScriptException If an error occurs while evaluating the code.
+     */
     JSEngine evalScript(String script) throws ScriptException;
 
+    /**
+     * Invokes the specified function in the JavaScript engine with the specified arguments.
+     *
+     * @param functionName The name of the function to invoke.
+     * @param args         The arguments to pass to the function.
+     * @return This JavaScript engine instance, after invoking the function.
+     * @throws NoSuchMethodException If the specified function does not exist.
+     * @throws ScriptException       If an error occurs while invoking the function.
+     */
     JSEngine invokeFunction(String functionName, Object... args) throws NoSuchMethodException, ScriptException;
 
+    /**
+     * Returns a map of JavaScript objects from the specified list of bindings.
+     *
+     * @param bindings A list of binding names to retrieve.
+     * @return A map of key-value pairs representing the JavaScript objects from the specified bindings.
+     */
     Map<String, Object> getJSObjects(List<String> bindings);
 }

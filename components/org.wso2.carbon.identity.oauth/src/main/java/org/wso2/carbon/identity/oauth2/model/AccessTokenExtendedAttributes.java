@@ -33,7 +33,8 @@ public class AccessTokenExtendedAttributes implements Serializable {
     private static final long serialVersionUID = -3043225645166013281L;
     @JsonIgnore
     private boolean isExtendedToken;
-    private int refreshTokenValidityPeriod;
+    //Initial value set to -2 to identity that script hasn't changed the refresh token validity time.
+    private int refreshTokenValidityPeriod = -2;
     private Map<String, String> parameters;
 
     public AccessTokenExtendedAttributes() {}
