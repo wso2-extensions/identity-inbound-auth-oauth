@@ -292,11 +292,10 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                                         serviceProvider.getOwner().getTenantDomain());
             authConfig.setInboundConfigurationProtocol(oAuthAppDO);
             return oAuthAppDO;
-        } else {
-            String errorMsg = String.format("No inbound configurations found for oauth in the" +
-                    " imported %s", serviceProvider.getApplicationName());
-            throw new IdentityApplicationManagementException(errorMsg);
         }
+        String errorMsg = String.format("No inbound configurations found for oauth in the imported %s",
+                                        serviceProvider.getApplicationName());
+        throw new IdentityApplicationManagementException(errorMsg);
     }
 
     private IdentityApplicationManagementException handleException(String message, Exception ex) {
