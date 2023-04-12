@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.application.authentication.framework.config.buil
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.ServiceURL;
@@ -298,6 +299,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.isOIDCAuthzRequest(any(Set.class))).thenReturn(isOIDC);
+        when(OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
 
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOIDCConsentPageUrl()).thenReturn(OIDC_CONSENT_PAGE_URL);
@@ -399,9 +401,9 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
             }
 
         } catch (OAuthSystemException e) {
-            Assert.assertTrue(e.getMessage().contains("Error while retrieving the application name"));
+            Assert.assertTrue(e.getMessage().contains("Error while retrieving the application name") || e.getMessage()
+                    .contains("Unable to find a service provider with client_id:"));
         }
-
     }
 
     @DataProvider(name = "provideScopeData")

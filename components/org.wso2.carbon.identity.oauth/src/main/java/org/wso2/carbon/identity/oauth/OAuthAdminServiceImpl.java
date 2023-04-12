@@ -1866,7 +1866,8 @@ public class OAuthAdminServiceImpl {
      */
     private void validateDescription(String description) throws IdentityOAuthClientException {
 
-        if (description.length() > Oauth2ScopeConstants.MAX_LENGTH_OF_SCOPE_DESCRIPTION) {
+        if (StringUtils.isNotBlank(description) &&
+                description.length() > Oauth2ScopeConstants.MAX_LENGTH_OF_SCOPE_DESCRIPTION) {
             throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
                     ERROR_CODE_BAD_REQUEST_SCOPE_DESCRIPTION_TOO_LONG.getMessage(), description));
         }
