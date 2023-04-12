@@ -23,6 +23,9 @@ public class Oauth2ScopeConstants {
 
     public static final int MAX_FILTER_COUNT = 30;
     public static final int INVALID_SCOPE_ID = -1;
+    public static final int MAX_LENGTH_OF_SCOPE_NAME = 255;
+    public static final int MAX_LENGTH_OF_SCOPE_DISPLAY_NAME = 255;
+    public static final int MAX_LENGTH_OF_SCOPE_DESCRIPTION = 512;
     public static final String SCOPE_ID = "SCOPE_ID";
     public static final String DEFAULT_SCOPE_BINDING = "DEFAULT";
     public static final String PERMISSIONS_BINDING_TYPE = "PERMISSION";
@@ -55,6 +58,12 @@ public class Oauth2ScopeConstants {
                 "contain special characters ?,#,/,( or )"),
         ERROR_CODE_INTERNAL_SCOPE_MANAGED_AT_SYSTEM_LEVEL("41012", "The internal scopes are managed at " +
                 "system level"),
+        ERROR_CODE_BAD_REQUEST_SCOPE_NAME_TOO_LONG("41013", "Scope name: %s is too long. The maximum " +
+                "allowed length is 255 characters."),
+        ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_TOO_LONG("41014", "Scope display name: %s is too long. " +
+                "The maximum allowed length is 255 characters."),
+        ERROR_CODE_BAD_REQUEST_SCOPE_DESCRIPTION_TOO_LONG("41015", "Scope description: %s is too " +
+                "long. The maximum allowed length is 512 characters."),
         ERROR_CODE_FAILED_TO_REGISTER_SCOPE("51001", "Error occurred while registering scope %s."),
         ERROR_CODE_FAILED_TO_GET_ALL_SCOPES("51002", "Error occurred while retrieving all available scopes."),
         ERROR_CODE_FAILED_TO_GET_SCOPE_BY_NAME("51003", "Error occurred while retrieving scope %s."),
