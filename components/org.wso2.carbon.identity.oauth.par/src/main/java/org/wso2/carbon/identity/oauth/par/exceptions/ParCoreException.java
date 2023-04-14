@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oauth.par.exceptions;
 import org.wso2.carbon.identity.base.IdentityException;
 
 /**
- * Exception from ciba core component.
+ * Exception from PAR core component.
  */
 public class ParCoreException extends IdentityException {
 

@@ -31,7 +31,7 @@ import org.apache.oltu.oauth2.common.validators.OAuthValidator;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.endpoint.par.OAuthParRequestWrapper;
+import org.wso2.carbon.identity.oauth.par.model.OAuthParRequestWrapper;
 
 import java.util.HashMap;
 import java.util.Map;

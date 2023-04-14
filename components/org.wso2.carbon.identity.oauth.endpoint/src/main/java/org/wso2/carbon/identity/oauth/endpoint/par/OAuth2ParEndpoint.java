@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -18,40 +18,31 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.par;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import net.minidev.json.JSONValue;
-import netscape.javascript.JSObject;
 import org.apache.catalina.util.ParameterMap;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
-import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
-import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.json.JSONObject;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ParErrorDTO;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
+import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthCodeResponse;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.*;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
-
-import java.io.FileOutputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.*;
-
-import static net.minidev.json.JSONValue.toJSONString;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TimeZone;
 
 /**
  * Rest implementation for OAuth2 PAR endpoint.
@@ -72,17 +63,9 @@ public class OAuth2ParEndpoint {
                         MultivaluedMap<String, String> paramMap) throws ParErrorDTO, Exception {
 
         long requestMadeAt = Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis();
-        //LocalTime requestMadeAt = java.time.LocalTime.now();
 
         OAuth2Service oAuth2Service = new OAuth2Service();
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.validateClientInfo(request);
-
-        DataRecordWriter dataRecordWriter = new DataRecordWriter();
-
-
-        //build ParReqyestObject.oAuthrequest
-//        oAuthAuthzRequest = new ParRequestBuilder(request);
-
 
         if (!oAuth2ClientValidationResponseDTO.isValidClient()) {
 
@@ -92,17 +75,12 @@ public class OAuth2ParEndpoint {
             return getErrorResponse(rejectRequestWithRequestUri()); // passes par error object to obtain error response
         }
 
-
-        System.out.println("Param map at PAR Endpoint");
         HashMap<String, String> parameters = new HashMap<>();
         for (ParameterMap.Entry<String, String[]> entry: request.getParameterMap().entrySet()) {
             String key = entry.getKey();
             String value = entry.getValue()[0];
             parameters.put(key, value);
-            System.out.println(key + " : " + value);
         }
-
-        System.out.println("end");
 
         // get response
         Response resp = getAuthResponse(response, parAuthCodeResponse);
@@ -112,7 +90,8 @@ public class OAuth2ParEndpoint {
         String json = objectMapper.writeValueAsString(parameters);
 
         // Store values to Database
-        DataRecordWriter.writeObject(parAuthCodeResponse.getRequestUri(), json, requestMadeAt);
+        ParDAOFactory.getInstance().getParAuthMgtDAO().persistParRequest(parAuthCodeResponse.getRequestUri(), json, requestMadeAt);
+        //DataRecordWriter.writeObject(parAuthCodeResponse.getRequestUri(), json, requestMadeAt);
 
         return resp;
     }
@@ -156,6 +135,11 @@ public class OAuth2ParEndpoint {
         return parameters.containsKey("request_uri");
     }
 
+    /**
+     * Creates PAR invalid request Error Response.
+     *
+     * @return response PAR Bad request Error Responses for AuthenticationRequest.
+     */
     private ParErrorDTO rejectRequestWithRequestUri() {
 
         ParErrorDTO parErrorDTO = new ParErrorDTO();
@@ -163,9 +147,5 @@ public class OAuth2ParEndpoint {
         parErrorDTO.setErrorCode(HttpServletResponse.SC_BAD_REQUEST);
         parErrorDTO.setErrorMsg("requestUri_provided");
         return parErrorDTO;
-    }
-
-    public static OAuthAuthzRequest getOAuthAuthzRequest() {
-        return oAuthAuthzRequest;
     }
 }

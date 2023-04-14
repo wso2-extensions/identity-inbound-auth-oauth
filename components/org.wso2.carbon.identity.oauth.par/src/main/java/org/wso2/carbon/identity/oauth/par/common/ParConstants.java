@@ -21,11 +21,10 @@ package org.wso2.carbon.identity.oauth.par.common;
 /**
  * Contains the required constants for PAR feature.
  */
-
 public class ParConstants {
     // Parameters required for authentication  requests and responses.
     public static final long INTERVAL_INCREMENT_VALUE_IN_SEC = 3;
-    public static final long EXPIRES_IN_DEFAULT_VALUE_IN_SEC = 600; //according to PAR spec (60 seconds)
+    public static final long EXPIRES_IN_DEFAULT_VALUE_IN_SEC = 60; //according to PAR spec (60 seconds)
 //    public static final String uuid = java.util.UUID.randomUUID().toString();
     public static final long INTERVAL_DEFAULT_VALUE_IN_SEC = 2;
     public static final long MAXIMUM_REQUESTED_EXPIRY_IN_SEC = 600; //according to PSR spec
