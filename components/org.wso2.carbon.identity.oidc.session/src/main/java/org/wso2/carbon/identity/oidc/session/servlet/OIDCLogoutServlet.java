@@ -356,7 +356,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             setSPAttributeToRequest(request, spName, appTenantDomain);
 
             if (!validatePostLogoutUri(postLogoutRedirectUri, oAuthAppDO.getCallbackUrl())) {
-                String msg = "Post logout URI does not match with registered callback URI.";
+                String msg = "post.logout.uri.not.match";
                 redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
                 return getRedirectURL(redirectURL, request);
             }
