@@ -161,7 +161,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(accessTokenDO.getAuthzUser());
         PreparedStatement insertTokenPrepStmt = null;
         PreparedStatement addScopePrepStmt = null;
-        PreparedStatement insertTokenExtendedAttribute = null;
+        PreparedStatement insertTokenExtendedAttributePrepStmt = null;
 
         if (log.isDebugEnabled()) {
             String username;
@@ -290,22 +290,22 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
 
             if (doInsertTokenExtendedAttributes) {
-                insertTokenExtendedAttribute = connection.prepareStatement(sqlInsertTokenExtendedAttribute);
-                insertTokenExtendedAttribute.setString(1, IS_EXTENDED_TOKEN);
-                insertTokenExtendedAttribute.setString(2, "true");
-                insertTokenExtendedAttribute.setString(3, accessTokenId);
-                insertTokenExtendedAttribute.addBatch();
+                insertTokenExtendedAttributePrepStmt = connection.prepareStatement(sqlInsertTokenExtendedAttribute);
+                insertTokenExtendedAttributePrepStmt.setString(1, IS_EXTENDED_TOKEN);
+                insertTokenExtendedAttributePrepStmt.setString(2, "true");
+                insertTokenExtendedAttributePrepStmt.setString(3, accessTokenId);
+                insertTokenExtendedAttributePrepStmt.addBatch();
                 if (accessTokenDO.getAccessTokenExtendedAttributes().getParameters() != null) {
                     for (Map.Entry<String, String> entry : accessTokenDO.getAccessTokenExtendedAttributes()
                             .getParameters()
                             .entrySet()) {
-                        insertTokenExtendedAttribute.setString(1, entry.getKey());
-                        insertTokenExtendedAttribute.setString(2, entry.getValue());
-                        insertTokenExtendedAttribute.setString(3, accessTokenId);
-                        insertTokenExtendedAttribute.addBatch();
+                        insertTokenExtendedAttributePrepStmt.setString(1, entry.getKey());
+                        insertTokenExtendedAttributePrepStmt.setString(2, entry.getValue());
+                        insertTokenExtendedAttributePrepStmt.setString(3, accessTokenId);
+                        insertTokenExtendedAttributePrepStmt.addBatch();
                     }
                 }
-                insertTokenExtendedAttribute.executeBatch();
+                insertTokenExtendedAttributePrepStmt.executeBatch();
             }
 
             if (retryAttemptCounter > 0) {
@@ -374,7 +374,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         } finally {
             IdentityDatabaseUtil.closeStatement(addScopePrepStmt);
             if (doInsertTokenExtendedAttributes) {
-                IdentityDatabaseUtil.closeStatement(insertTokenExtendedAttribute);
+                IdentityDatabaseUtil.closeStatement(insertTokenExtendedAttributePrepStmt);
             }
             IdentityDatabaseUtil.closeStatement(insertTokenPrepStmt);
         }

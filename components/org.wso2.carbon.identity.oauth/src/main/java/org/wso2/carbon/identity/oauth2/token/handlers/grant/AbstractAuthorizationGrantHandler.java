@@ -71,6 +71,7 @@ import java.util.UUID;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
 
 /**
  * Abstract authorization grant handler.
@@ -492,10 +493,13 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             OAuth2AccessTokenReqDTO tokenReq, AccessTokenDO newTokenBean, OauthTokenIssuer oauthTokenIssuer)
             throws IdentityOAuth2Exception {
 
+        boolean isExtendedToken = newTokenBean.getAccessTokenExtendedAttributes() != null &&
+                newTokenBean.getAccessTokenExtendedAttributes().getRefreshTokenValidityPeriod() >
+                        EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
         /* Check whether the token renewal per request configuration is configured and the validation of the refresh
         token. If the token renewal per request configuration is enabled, renew the refresh token as well. */
         if (!isTokenRenewalPerRequestConfigured() && isRefreshTokenValid(existingTokenBean, validityPeriodInMillis,
-                tokenReq.getClientId())) {
+                tokenReq.getClientId()) && !isExtendedToken) {
             setRefreshTokenDetailsFromExistingToken(existingTokenBean, newTokenBean);
         } else {
             // no valid refresh token found in existing Token
