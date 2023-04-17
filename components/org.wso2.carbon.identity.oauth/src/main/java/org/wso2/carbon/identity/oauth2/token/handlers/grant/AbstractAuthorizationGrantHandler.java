@@ -872,7 +872,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         if (existingToken == null) {
             existingToken = getExistingTokenFromDB(tokenMsgCtx, tokenReq, scope, cacheKey);
         }
-        return existingToken;
+//        return existingToken;
+        return null;
     }
 
     private AccessTokenDO getExistingTokenFromDB(OAuthTokenReqMessageContext tokenMsgCtx,
