@@ -136,10 +136,6 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
 
-        if (!super.validateScope(tokReqMsgCtx)) {
-            return false;
-        }
-
         /*
           The requested scope MUST NOT include any scope
           not originally granted by the resource owner, and if omitted is
@@ -153,9 +149,14 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             if (ArrayUtils.isEmpty(grantedScopes) && ArrayUtils.isEmpty(grantedInternalScopes)) {
                 return false;
             }
-            List<String> grantedScopeList = Stream
-                    .concat(Arrays.stream(grantedScopes), Arrays.stream(grantedInternalScopes))
-                    .collect(Collectors.toList());
+            if (ArrayUtils.isEmpty(grantedScopes)) {
+                grantedScopes = new String[0];
+            }
+            if (ArrayUtils.isEmpty(grantedInternalScopes)) {
+                grantedInternalScopes = new String[0];
+            }
+            List<String> grantedScopeList = Stream.concat(Arrays.stream(grantedScopes),
+                    Arrays.stream(grantedInternalScopes)).collect(Collectors.toList());
             for (String scope : requestedScopes) {
                 if (!grantedScopeList.contains(scope)) {
                     if (log.isDebugEnabled()) {
