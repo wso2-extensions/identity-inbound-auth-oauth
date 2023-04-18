@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth2.*;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
@@ -70,6 +71,7 @@ public class OAuth2ServiceComponentHolder {
     private List<ScopeDTO> oidcScopesClaims = new ArrayList<>();
     private List<Scope> oauthScopeBinding = new ArrayList<>();
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
+    private InternalRevocationEventService internalTokenRevocationService;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -378,5 +380,23 @@ public class OAuth2ServiceComponentHolder {
             OrganizationUserResidentResolverService organizationUserResidentResolverService) {
 
         OAuth2ServiceComponentHolder.organizationUserResidentResolverService = organizationUserResidentResolverService;
+    }
+
+    /**
+     * Get internal token revocation service instance.
+     *
+     * @return InternalTokenRevocationService
+     */
+    public InternalRevocationEventService getInternalTokenRevocationService() {
+        return internalTokenRevocationService;
+    }
+
+    /**
+     * Set internal token revocation service instance.
+     *
+     * @param internalTokenRevocationService
+     */
+    public void setInternalTokenRevocationService(InternalRevocationEventService internalTokenRevocationService) {
+        this.internalTokenRevocationService = internalTokenRevocationService;
     }
 }
