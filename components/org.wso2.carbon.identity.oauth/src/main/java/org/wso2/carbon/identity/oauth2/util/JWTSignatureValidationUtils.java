@@ -61,8 +61,8 @@ public class JWTSignatureValidationUtils {
      * @param signedJWT signed JWT whose signature is to be verified.
      * @param idp       Identity provider who issued the signed JWT.
      * @return whether signature is valid, true if valid else false.
-     * @throws JOSEException
-     * @throws IdentityOAuth2Exception
+     * @throws JOSEException         Error when verifying the signature.
+     * @throws IdentityOAuth2Exception Error when getting the JWKS endpoint.
      */
     public static boolean validateSignature(SignedJWT signedJWT, IdentityProvider idp)
             throws JOSEException, IdentityOAuth2Exception {
