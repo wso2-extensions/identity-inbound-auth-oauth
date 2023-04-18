@@ -45,6 +45,8 @@ import org.wso2.carbon.identity.application.authentication.framework.config.buil
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.common.model.ExternalizedConsentPageConfig;
+import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
@@ -201,7 +203,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
     private static final String REQUESTED_OIDC_SCOPES_KEY = "requested_oidc_scopes=";
     private static final String REQUESTED_OIDC_SCOPES_VALUES = "openid+profile";
-
+    private static final String EXTERNAL_CONSENTED_APP_NAME = "testApp";
+    private static final String EXTERNAL_CONSENT_URL = "https://localhost:9443/consent";
     private String username;
     private String password;
     private String sessionDataKey;
@@ -269,6 +272,12 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         paramsOIDC.setScopes(
                 new HashSet<String>(Arrays.asList("openid", "profile", "scope1", "scope2", "internal_login")));
 
+        OAuth2Parameters paramsExternalConsentUrl = new OAuth2Parameters();
+        paramsExternalConsentUrl.setApplicationName(EXTERNAL_CONSENTED_APP_NAME);
+        paramsExternalConsentUrl.setClientId("testClientId");
+        paramsExternalConsentUrl.setTenantDomain("testTenantDomain");
+        paramsExternalConsentUrl.setScopes(new HashSet<String>(Arrays.asList("scope1", "scope2", "internal_login")));
+
         return new Object[][]{
                 {params, true, true, false, "QueryString", true, false},
                 {null, true, true, false, "QueryString", true, false},
@@ -278,6 +287,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 {params, true, true, false, null, true, true},
                 {params, true, true, true, "QueryString", true, false},
                 {paramsOIDC, true, true, true, "QueryString", true, false},
+                {paramsExternalConsentUrl, false, true, true, "QueryString", true, false},
         };
     }
 
@@ -299,7 +309,11 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.isOIDCAuthzRequest(any(Set.class))).thenReturn(isOIDC);
-        when(OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
+        if (parameters != null && parameters.getApplicationName().equals(EXTERNAL_CONSENTED_APP_NAME)) {
+            when(OAuth2Util.getServiceProvider(anyString())).thenReturn(getServiceProvider());
+        } else {
+            when(OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
+        }
 
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOIDCConsentPageUrl()).thenReturn(OIDC_CONSENT_PAGE_URL);
@@ -352,7 +366,13 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
             if (isOIDC) {
                 Assert.assertTrue(consentUrl.contains(OIDC_CONSENT_PAGE_URL), "Incorrect consent page url for OIDC");
             } else {
-                Assert.assertTrue(consentUrl.contains(OAUTH2_CONSENT_PAGE_URL), "Incorrect consent page url for OAuth");
+                if (parameters != null && parameters.getApplicationName().equals(EXTERNAL_CONSENTED_APP_NAME)) {
+                    Assert.assertTrue(consentUrl.contains(EXTERNAL_CONSENT_URL),
+                            "Incorrect consent page url for OIDC");
+                } else {
+                    Assert.assertTrue(consentUrl.contains(OAUTH2_CONSENT_PAGE_URL),
+                            "Incorrect consent page url for OAuth");
+                }
             }
 
             if (isConfigAvailable) {
@@ -830,5 +850,25 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         scopeList.add(new Scope("internal_user_mgt_update", "Update Users", "description4"));
         scopeList.add(new Scope("internal_list_tenants", "List Tenant", "description5"));
         return scopeList;
+    }
+
+    @Test
+    public void testIsExternalizedConsentPageEnabledForSP() throws Exception {
+
+        assertTrue(EndpointUtil.isExternalizedConsentPageEnabledForSP(getServiceProvider()));
+    }
+
+    private ServiceProvider getServiceProvider() {
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        serviceProvider.setApplicationName(EXTERNAL_CONSENTED_APP_NAME);
+        ExternalizedConsentPageConfig externalizedConsentPageConfig = new ExternalizedConsentPageConfig();
+        externalizedConsentPageConfig.setEnabled(true);
+        externalizedConsentPageConfig.setConsentPageUrl(EXTERNAL_CONSENT_URL);
+        LocalAndOutboundAuthenticationConfig localAndOutboundAuthenticationConfig = new
+                LocalAndOutboundAuthenticationConfig();
+        localAndOutboundAuthenticationConfig.setExternalizedConsentPageConfig(externalizedConsentPageConfig);
+        serviceProvider.setLocalAndOutBoundAuthenticationConfig(localAndOutboundAuthenticationConfig);
+        return serviceProvider;
     }
 }

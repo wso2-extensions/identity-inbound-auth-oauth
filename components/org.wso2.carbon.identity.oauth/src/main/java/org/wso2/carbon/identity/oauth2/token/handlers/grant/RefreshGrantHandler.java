@@ -176,6 +176,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         tokReqMsgCtx.setAuthorizedUser(validationBean.getAuthorizedUser());
         tokReqMsgCtx.setScope(validationBean.getScope());
+        tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
+                validationBean.getAccessTokenExtendedAttributes());
         if (StringUtils.isNotBlank(validationBean.getTokenBindingReference()) && !NONE
                 .equals(validationBean.getTokenBindingReference())) {
             Optional<TokenBinding> tokenBindingOptional = OAuthTokenPersistenceFactory.getInstance()
@@ -596,7 +598,10 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 tokReqMsgCtx.setConsentedToken(true);
             }
         }
-
+        if (tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes() != null) {
+            accessTokenDO.setAccessTokenExtendedAttributes(
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes());
+        }
         // sets accessToken, refreshToken and validity data
         setTokenData(accessTokenDO, tokReqMsgCtx, validationBean, tokenReq, timestamp);
         return accessTokenDO;
@@ -636,6 +641,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         } else if (!OAuthServerConfiguration.getInstance().isExtendRenewedTokenExpiryTimeEnabled()) {
             // If refresh token renewal enabled and extend token expiry disabled, set the old token issued and validity.
             refreshTokenIssuedTime = validationBean.getIssuedTime();
+            refreshTokenValidityPeriod = validationBean.getValidityPeriodInMillis();
+        } else if (tokenReq.getAccessTokenExtendedAttributes() != null &&
+                tokenReq.getAccessTokenExtendedAttributes().isExtendedToken()) {
             refreshTokenValidityPeriod = validationBean.getValidityPeriodInMillis();
         }
         if (refreshTokenIssuedTime == null) {

@@ -876,22 +876,6 @@ public class EndpointUtil {
         return sp;
     }
 
-    private static boolean isExternalizedConsentPageEnabledForSP(ServiceProvider sp) {
-
-        boolean isEnabled = false;
-        LocalAndOutboundAuthenticationConfig config = sp.getLocalAndOutBoundAuthenticationConfig();
-        if (config != null && config.getExternalizedConsentPageConfig() != null) {
-            isEnabled = config.getExternalizedConsentPageConfig().isEnabled();
-        }
-
-        if (log.isDebugEnabled()) {
-            log.debug("externalConsentManagement: " + isEnabled + " for application: " +
-                    sp.getApplicationName() + " with id: " + sp.getApplicationID());
-        }
-
-        return isEnabled;
-    }
-
     private static String getExternalConsentUrlForSP(ServiceProvider sp) throws OAuthSystemException {
 
         String externalConsentUrl = "";
@@ -1784,4 +1768,26 @@ public class EndpointUtil {
                 .getValue();
     }
 
+    /**
+     * Used to check whether the externalized consent is enabled in service provider.
+     *
+     * @param serviceProvider Service Provider.
+     * @return True if the externalized consent is enabled.
+     */
+    public static boolean isExternalizedConsentPageEnabledForSP(ServiceProvider serviceProvider) {
+
+        boolean isEnabled = false;
+        if (serviceProvider == null) {
+            return isEnabled;
+        }
+        LocalAndOutboundAuthenticationConfig config = serviceProvider.getLocalAndOutBoundAuthenticationConfig();
+        if (config != null && config.getExternalizedConsentPageConfig() != null) {
+            isEnabled = config.getExternalizedConsentPageConfig().isEnabled();
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("externalConsentManagement: " + isEnabled + " for application: " +
+                    serviceProvider.getApplicationName() + " with id: " + serviceProvider.getApplicationID());
+        }
+        return isEnabled;
+    }
 }
