@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantPro
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.ExternalTokenService;
+import org.wso2.carbon.identity.oauth2.*;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
@@ -78,6 +79,7 @@ public class OAuth2ServiceComponentHolder {
     private ExternalTokenService externalTokenService;
     private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
     private OAuth2RevocationProcessor revocationProcessor;
+    private InternalRevocationEventService internalTokenRevocationService;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -426,5 +428,23 @@ public class OAuth2ServiceComponentHolder {
 
     public void setRevocationProcessor(OAuth2RevocationProcessor revocationProcessor) {
         this.revocationProcessor = revocationProcessor;
+    }
+
+    /**
+     * Get internal token revocation service instance.
+     *
+     * @return InternalTokenRevocationService
+     */
+    public InternalRevocationEventService getInternalTokenRevocationService() {
+        return internalTokenRevocationService;
+    }
+
+    /**
+     * Set internal token revocation service instance.
+     *
+     * @param internalTokenRevocationService
+     */
+    public void setInternalTokenRevocationService(InternalRevocationEventService internalTokenRevocationService) {
+        this.internalTokenRevocationService = internalTokenRevocationService;
     }
 }
