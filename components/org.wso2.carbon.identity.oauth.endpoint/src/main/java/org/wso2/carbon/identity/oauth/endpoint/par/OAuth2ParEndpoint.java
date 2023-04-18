@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.oauth.par.model.ParAuthCodeResponse;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 
+import java.util.Calendar;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -39,7 +40,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
@@ -76,7 +76,7 @@ public class OAuth2ParEndpoint {
         }
 
         HashMap<String, String> parameters = new HashMap<>();
-        for (ParameterMap.Entry<String, String[]> entry: request.getParameterMap().entrySet()) {
+        for (ParameterMap.Entry<String, String[]> entry : request.getParameterMap().entrySet()) {
             String key = entry.getKey();
             String value = entry.getValue()[0];
             parameters.put(key, value);
@@ -90,7 +90,8 @@ public class OAuth2ParEndpoint {
         String json = objectMapper.writeValueAsString(parameters);
 
         // Store values to Database
-        ParDAOFactory.getInstance().getParAuthMgtDAO().persistParRequest(parAuthCodeResponse.getRequestUri(), json, requestMadeAt);
+        ParDAOFactory.getInstance().getParAuthMgtDAO()
+                .persistParRequest(parAuthCodeResponse.getRequestUri(), json, requestMadeAt);
         //DataRecordWriter.writeObject(parAuthCodeResponse.getRequestUri(), json, requestMadeAt);
 
         return resp;
@@ -99,7 +100,7 @@ public class OAuth2ParEndpoint {
     /**
      * Creates PAR AuthenticationResponse.
      *
-     * @param response             Authentication response object.
+     * @param response            Authentication response object.
      * @param parAuthCodeResponse PAR Authentication Request Data Transfer Object.
      * @return Response for AuthenticationRequest.
      */

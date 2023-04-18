@@ -62,9 +62,6 @@ public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
 
     protected OAuthValidator<HttpServletRequest> initValidator() throws OAuthProblemException, OAuthSystemException {
 
-        // TODO: Skip response_type check if request is PAR. (chithara)
-        // If request contains request_uri param, skip this check
-
         String responseTypeValue = getParam(OAuth.OAUTH_RESPONSE_TYPE);
         if (OAuthUtils.isEmpty(responseTypeValue)) {
             throw OAuthUtils.handleOAuthProblemException("Missing response_type parameter value");

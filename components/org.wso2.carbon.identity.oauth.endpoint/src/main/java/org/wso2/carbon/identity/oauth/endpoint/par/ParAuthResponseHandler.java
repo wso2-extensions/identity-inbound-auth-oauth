@@ -51,7 +51,7 @@ public class ParAuthResponseHandler {
      */
     public Response createAuthResponse(@Context HttpServletResponse response, ParAuthCodeResponse parAuthCodeResponse) {
 
-        String request_uri = "urn:ietf:params:wso2is:request_uri:" + UUID.randomUUID();
+        String requestUri = "urn:ietf:params:wso2is:request_uri:" + UUID.randomUUID();
 
         if (log.isDebugEnabled()) {
             log.debug("Setting ExpiryTime for the response to the  request made by client with clientID : " +
@@ -61,7 +61,7 @@ public class ParAuthResponseHandler {
         response.setContentType(MediaType.APPLICATION_JSON);
 
         JSONObject parAuthResponse = new JSONObject();
-        parAuthResponse.put(ParConstants.REQUEST_URI, request_uri);
+        parAuthResponse.put(ParConstants.REQUEST_URI, requestUri);
         parAuthResponse.put(ParConstants.EXPIRES_IN, ParConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC);
 
         if (log.isDebugEnabled()) {
@@ -75,7 +75,7 @@ public class ParAuthResponseHandler {
                     parAuthCodeResponse.getClientId() + ".");
         }
 
-        parAuthCodeResponse.setRequestUri(request_uri);
+        parAuthCodeResponse.setRequestUri(requestUri);
         return responseBuilder.entity(parAuthResponse.toString()).build();
     }
 
