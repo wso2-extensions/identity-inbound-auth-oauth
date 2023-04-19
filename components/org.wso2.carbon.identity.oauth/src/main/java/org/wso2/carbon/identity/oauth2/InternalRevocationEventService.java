@@ -31,14 +31,22 @@ public interface InternalRevocationEventService {
      * @param tenantId          tenantId
      * @return
      */
-    boolean addEvent(String clientId, String authorizedUser, String tenantId);
+    boolean addEvent(String clientId, String authorizedUser, String tenantId) throws IdentityOAuth2Exception ;
 
     /**
      * Check whether a specific token is revoked or not
      */
-    boolean isTokenValid(String clientId,  String clientSecret, String grantType);
+    boolean isTokenValid(String clientId,  String clientSecret, String grantType) throws IdentityOAuth2Exception ;
 
-    boolean cleanEventsByUser(String clientId, String timestamp);
+    /**
+     * clean events when a user gets deleted.
+     *
+     * @param user  username
+     * @param timestamp timestamp of the user deletion.
+     * @param tenantId tenantId of the user deletion.
+     * @return
+     */
+    boolean cleanEventsByUser(String user, String timestamp, String tenantId) throws IdentityOAuth2Exception ;
 
     /**
      * Clean events by tenant.
@@ -46,5 +54,5 @@ public interface InternalRevocationEventService {
      * @param tenantId  tenant Id
      * @return
      */
-    boolean cleanEventsByTenant(String tenantId);
+    boolean cleanEventsByTenant(String tenantId) throws IdentityOAuth2Exception ;
 }
