@@ -451,6 +451,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         List<AuthzCodeDO> authorizationCodes = new ArrayList<>();
         String authzUser = authenticatedUser.getUserName();
         String tenantDomain = authenticatedUser.getTenantDomain();
+        int tenantId = OAuth2Util.getTenantId(tenantDomain);
         String userStoreDomain = authenticatedUser.getUserStoreDomain();
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authenticatedUser.toString());
         try {
@@ -464,7 +465,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             } else {
                 ps.setString(1, authzUser.toLowerCase());
             }
-            ps.setInt(2, OAuth2Util.getTenantId(tenantDomain));
+            ps.setInt(2, tenantId);
             ps.setString(3, userStoreDomain);
             ps.setString(4, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             rs = ps.executeQuery();
@@ -490,6 +491,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     // Authorization codes that are in ACTIVE state and not expired should be removed from the cache.
                     if (OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodInMillis) > 0) {
                         if (isHashDisabled) {
+                            List<String> authorizationCodeScopes =
+                                    getAuthorizationCodeScopes(connection, authzCodeId, tenantId);
+                            scope = authorizationCodeScopes.toArray(new String[0]);
+
                             authorizationCodes
                                     .add(new AuthzCodeDO(user, scope, timeCreated, validityPeriodInMillis, callbackUrl,
                                             consumerKey, authorizationCode, authzCodeId));
