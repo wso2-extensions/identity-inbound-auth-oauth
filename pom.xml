@@ -247,6 +247,11 @@
                 <artifactId>org.wso2.carbon.identity.organization.management.role.management.service</artifactId>
                 <version>${carbon.identity.organization.management.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.configuration.mgt.core</artifactId>
+                <version>${carbon.identity.framework.version}</version>
+            </dependency>
 
             <!--SAML Common Util dependency-->
             <dependency>

@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
@@ -815,5 +816,35 @@ public class OAuth2ServiceComponent {
             log.debug("IdentityEventService unset in OAuth2ServiceComponent bundle");
         }
         OAuth2ServiceComponentHolder.setIdentityEventService(null);
+    }
+
+    @Reference(
+            name = "resource.configuration.manager",
+            service = ConfigurationManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetConfigurationManager"
+    )
+
+    /**
+     * This method is used to set the Configuration manager Service.
+     *
+     * @param configurationManager The Realm Service which needs to be set.
+     */
+    protected void setConfigurationManager(ConfigurationManager configurationManager) {
+
+        OAuth2ServiceComponentHolder.getInstance().setConfigurationManager(configurationManager);
+        log.debug("Setting the ConfigurationManager.");
+    }
+
+    /**
+     * This method is used to unset the Configuration manager Service.
+     *
+     * @param configurationManager The Configuration manager Service which needs to unset.
+     */
+    protected void unsetConfigurationManager(ConfigurationManager configurationManager) {
+
+        OAuth2ServiceComponentHolder.getInstance().setConfigurationManager(null);
+        log.debug("Unsetting the ConfigurationManager.");
     }
 }
