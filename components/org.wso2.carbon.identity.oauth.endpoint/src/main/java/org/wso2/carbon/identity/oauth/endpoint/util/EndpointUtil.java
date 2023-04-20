@@ -55,6 +55,9 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
+import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
+import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -161,6 +164,7 @@ public class EndpointUtil {
     private static RequestObjectService requestObjectService;
     private static CibaAuthServiceImpl cibaAuthService;
     private static IdpManager idpManager;
+    private static ConfigurationManager configurationManager;
     private static final String ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL = "OAuth.AllowAdditionalParamsFromErrorUrl";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
 
@@ -197,6 +201,11 @@ public class EndpointUtil {
     public static void setRequestObjectService(RequestObjectService requestObjectService) {
 
         EndpointUtil.requestObjectService = requestObjectService;
+    }
+
+    public static void setConfigurationManager(ConfigurationManager configurationManager) {
+
+        EndpointUtil.configurationManager = configurationManager;
     }
 
     public static ScopeMetadataService getScopeMetadataService() {
@@ -804,7 +813,7 @@ public class EndpointUtil {
             }
 
             if (isExternalizedConsentPageEnabledForSP(sp)) {
-                consentPageUrl = getExternalConsentUrlForSP(sp);
+                consentPageUrl = resolveConsentUrl(sp.getTenantDomain());
             } else if (isOIDC) {
                 consentPageUrl = OAuth2Util.OAuthURL.getOIDCConsentPageUrl();
             } else {
@@ -1789,5 +1798,19 @@ public class EndpointUtil {
                     serviceProvider.getApplicationName() + " with id: " + serviceProvider.getApplicationID());
         }
         return isEnabled;
+    }
+
+    private static String resolveConsentUrl(String tenantDomain) throws OAuthSystemException {
+
+        String consentUrl = null;
+        try {
+            Attribute attribute = configurationManager.getAttribute("external_consent_management",
+                    "external_consent_page_url", "consent_page_url");
+            consentUrl = attribute.getValue();
+
+        } catch (ConfigurationManagementException e) {
+            throw new OAuthSystemException("Error while retrieving user id from user session store.", e);
+        }
+        return consentUrl;
     }
 }
