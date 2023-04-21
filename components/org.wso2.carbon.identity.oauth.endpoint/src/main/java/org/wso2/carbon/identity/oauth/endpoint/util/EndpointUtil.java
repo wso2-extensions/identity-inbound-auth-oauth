@@ -803,8 +803,8 @@ public class EndpointUtil {
                 throw new OAuthSystemException("Unable to find a service provider with client_id: " + clientId);
             }
 
-            if (isExternalizedConsentPageEnabledForSP(sp)) {
-                consentPageUrl = OAuth2Util.resolveExternalConsentPage(sp.getTenantDomain());
+            if (isExternalConsentPageEnabledForSP(sp)) {
+                consentPageUrl = OAuth2Util.resolveExternalConsentPageUrl(sp);
             } else if (isOIDC) {
                 consentPageUrl = OAuth2Util.OAuthURL.getOIDCConsentPageUrl();
             } else {
@@ -1769,23 +1769,24 @@ public class EndpointUtil {
     }
 
     /**
-     * Used to check whether the externalized consent is enabled in service provider.
+     * Used to check whether the external consent page is enabled in service provider.
      *
      * @param serviceProvider Service Provider.
-     * @return True if the externalized consent is enabled.
+     * @return True if the external consent page is enabled.
      */
-    public static boolean isExternalizedConsentPageEnabledForSP(ServiceProvider serviceProvider) {
+    public static boolean isExternalConsentPageEnabledForSP(ServiceProvider serviceProvider) {
 
         boolean isEnabled = false;
         if (serviceProvider == null) {
             return isEnabled;
         }
         LocalAndOutboundAuthenticationConfig config = serviceProvider.getLocalAndOutBoundAuthenticationConfig();
-        if (config != null && config.getExternalizedConsentPageConfig() != null) {
-            isEnabled = config.getExternalizedConsentPageConfig().isEnabled();
+
+        if (config != null) {
+            isEnabled = config.isUseExternalConsentPage();
         }
         if (log.isDebugEnabled()) {
-            log.debug("externalConsentManagement: " + isEnabled + " for application: " +
+            log.debug("External consent page: " + isEnabled + " for application: " +
                     serviceProvider.getApplicationName() + " with id: " + serviceProvider.getApplicationID());
         }
         return isEnabled;

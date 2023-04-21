@@ -855,7 +855,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     @Test
     public void testIsExternalizedConsentPageEnabledForSP() throws Exception {
 
-        assertTrue(EndpointUtil.isExternalizedConsentPageEnabledForSP(getServiceProvider()));
+        assertTrue(EndpointUtil.isExternalConsentPageEnabledForSP(getServiceProvider()));
     }
 
     private ServiceProvider getServiceProvider() {

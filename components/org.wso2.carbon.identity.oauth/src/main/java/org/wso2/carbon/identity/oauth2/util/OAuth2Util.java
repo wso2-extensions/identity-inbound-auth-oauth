@@ -367,6 +367,10 @@ public class OAuth2Util {
     public static final String ACCESS_TOKEN_JS_OBJECT = "access_token";
     public static final int EXTENDED_REFRESH_TOKEN_DEFAULT_TIME = -2;
 
+    private static final String EXTERNAL_CONSENT_MANAGEMENT = "external_consent_management";
+    private static final String EXTERNAL_CONSENT_PAGE = "external_consent_page";
+    private static final String EXTERNAL_CONSENT_PAGE_URL = "external_consent_page_url";
+
     private OAuth2Util() {
 
     }
@@ -4660,19 +4664,30 @@ public class OAuth2Util {
         return allowedGrantTypes;
     }
 
-    public static String resolveExternalConsentPage (String tenantDomain) throws IdentityOAuth2Exception {
+    public static String resolveExternalConsentPageUrl(ServiceProvider sp) throws IdentityOAuth2Exception {
 
-        String consentUrl = "";
+        String externalConsentPageUrl = "";
         try {
             Attribute consentPageAttribute = OAuth2ServiceComponentHolder.getInstance().getConfigurationManager().
-                    getAttribute("external_consent_management", "external_consent_page_url",
-                            "consent_page_url");
-            consentUrl = consentPageAttribute.getValue();
+                    getAttribute(EXTERNAL_CONSENT_MANAGEMENT, EXTERNAL_CONSENT_PAGE, EXTERNAL_CONSENT_PAGE_URL);
+
+            if (consentPageAttribute != null) {
+                externalConsentPageUrl = consentPageAttribute.getValue();
+            }
+            if (externalConsentPageUrl.isEmpty()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("External consent page url is not configured for tenant domain : " +
+                            sp.getTenantDomain());
+                }
+                throw new IdentityOAuth2Exception("External consent page is enabled for application " +
+                        sp.getApplicationName() + " with id : " + sp.getApplicationID() +
+                        "but External consent page url is not configured for tenant domain : " + sp.getTenantDomain());
+            }
         } catch (ConfigurationManagementException e) {
             throw new IdentityOAuth2Exception("Error while retrieving external consent page url from the " +
-                    "configuration store.", e);
+                    "configuration store for tenant domain : " + sp.getTenantDomain(), e);
         }
 
-        return consentUrl;
+        return externalConsentPageUrl;
     }
 }
