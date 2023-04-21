@@ -1868,10 +1868,9 @@ public class OAuthAdminServiceImpl {
 
     private void handleinternalTokenRevocation(String consumerKey, Properties properties) throws IdentityOAuthAdminException {
 
-        OAuthApplicationMgtListener oAuthApplicationMgtListener = OAuthComponentServiceHolder.getInstance()
-                .getOAuthApplicationMgtListener();
-        if (oAuthApplicationMgtListener != null) {
-            oAuthApplicationMgtListener.doPostRevokeOAuthSecret(consumerKey, properties);
+        for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
+                .getOAuthApplicationMgtListeners()) {
+                oAuthApplicationMgtListener.doPostRevokeOAuthSecret(consumerKey, properties);
             LOG.info("OAuthApplicationMgtListener is triggered after revoking the OAuth secret.");
         }
     }
