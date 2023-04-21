@@ -4664,6 +4664,13 @@ public class OAuth2Util {
         return allowedGrantTypes;
     }
 
+    /**
+     * Get the external consent page url configured for the tenant domain.
+     *
+     * @param sp Service Provider.
+     * @return External consent page url.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
     public static String resolveExternalConsentPageUrl(ServiceProvider sp) throws IdentityOAuth2Exception {
 
         String externalConsentPageUrl = "";
