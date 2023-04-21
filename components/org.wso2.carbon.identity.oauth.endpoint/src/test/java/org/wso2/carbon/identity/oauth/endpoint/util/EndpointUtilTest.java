@@ -45,7 +45,6 @@ import org.wso2.carbon.identity.application.authentication.framework.config.buil
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
-import org.wso2.carbon.identity.application.common.model.ExternalizedConsentPageConfig;
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -862,12 +861,9 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
         ServiceProvider serviceProvider = new ServiceProvider();
         serviceProvider.setApplicationName(EXTERNAL_CONSENTED_APP_NAME);
-        ExternalizedConsentPageConfig externalizedConsentPageConfig = new ExternalizedConsentPageConfig();
-        externalizedConsentPageConfig.setEnabled(true);
-        externalizedConsentPageConfig.setConsentPageUrl(EXTERNAL_CONSENT_URL);
         LocalAndOutboundAuthenticationConfig localAndOutboundAuthenticationConfig = new
                 LocalAndOutboundAuthenticationConfig();
-        localAndOutboundAuthenticationConfig.setExternalizedConsentPageConfig(externalizedConsentPageConfig);
+        localAndOutboundAuthenticationConfig.setUseExternalConsentPage(true);
         serviceProvider.setLocalAndOutBoundAuthenticationConfig(localAndOutboundAuthenticationConfig);
         return serviceProvider;
     }
