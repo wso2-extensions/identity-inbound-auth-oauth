@@ -367,7 +367,7 @@ public class OAuth2Util {
     public static final String ACCESS_TOKEN_JS_OBJECT = "access_token";
     public static final int EXTENDED_REFRESH_TOKEN_DEFAULT_TIME = -2;
 
-    private static final String EXTERNAL_CONSENT_MANAGEMENT = "external_consent_management";
+    private static final String EXTERNAL_CONSENT_PAGE_CONFIGURATIONS = "external_consent_page_configurations";
     private static final String EXTERNAL_CONSENT_PAGE = "external_consent_page";
     private static final String EXTERNAL_CONSENT_PAGE_URL = "external_consent_page_url";
 
@@ -4676,7 +4676,8 @@ public class OAuth2Util {
         String externalConsentPageUrl = "";
         try {
             Attribute consentPageAttribute = OAuth2ServiceComponentHolder.getConfigurationManager().
-                    getAttribute(EXTERNAL_CONSENT_MANAGEMENT, EXTERNAL_CONSENT_PAGE, EXTERNAL_CONSENT_PAGE_URL);
+                    getAttribute(EXTERNAL_CONSENT_PAGE_CONFIGURATIONS, EXTERNAL_CONSENT_PAGE,
+                            EXTERNAL_CONSENT_PAGE_URL);
 
             if (consentPageAttribute != null) {
                 externalConsentPageUrl = consentPageAttribute.getValue();
