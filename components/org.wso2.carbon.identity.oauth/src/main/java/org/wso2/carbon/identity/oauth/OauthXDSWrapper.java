@@ -15,8 +15,6 @@ public class OauthXDSWrapper implements XDSWrapper {
     private String secretKey;
     private OAuthConsumerAppDTO oAuthConsumerAppDTO;
     private String username;
-    private int tenantId;
-
     private String scope;
     private String[] claims;
     private ScopeDTO scopeDTO;
@@ -25,13 +23,13 @@ public class OauthXDSWrapper implements XDSWrapper {
     private OAuthAppRevocationRequestDTO oAuthAppRevocationRequestDTO;
     private String appName;
     private OAuthRevocationRequestDTO oAuthRevocationRequestDTO;
+    private String timestamp;
 
     public OauthXDSWrapper(OauthXDSWrapperBuilder builder) {
         this.consumerKey = builder.consumerKey;
         this.secretKey = builder.secretKey;
         this.oAuthConsumerAppDTO = builder.oAuthConsumerAppDTO;
         this.username = builder.username;
-        this.tenantId = builder.tenantId;
         this.scope = builder.scope;
         this.claims = builder.claims;
         this.scopeDTO = builder.scopeDTO;
@@ -40,6 +38,7 @@ public class OauthXDSWrapper implements XDSWrapper {
         this.oAuthAppRevocationRequestDTO = builder.oAuthAppRevocationRequestDTO;
         this.appName = builder.appName;
         this.oAuthRevocationRequestDTO = builder.oAuthRevocationRequestDTO;
+        this.timestamp = builder.timestamp;
     }
 
     public String getConsumerKey() {
@@ -56,10 +55,6 @@ public class OauthXDSWrapper implements XDSWrapper {
 
     public String getUsername() {
         return username;
-    }
-
-    public int getTenantId() {
-        return tenantId;
     }
 
     public String getScope() {
@@ -104,13 +99,13 @@ public class OauthXDSWrapper implements XDSWrapper {
         private String username;
         private String scope;
         private String[] claims;
-        private int tenantId;
         private ScopeDTO scopeDTO;
         private String[] deleteClaims;
         private String state;
         private String appName;
         private OAuthAppRevocationRequestDTO oAuthAppRevocationRequestDTO;
         private OAuthRevocationRequestDTO oAuthRevocationRequestDTO;
+        private String timestamp;
 
         public OauthXDSWrapperBuilder setConsumerKey(String consumerKey) {
             this.consumerKey = consumerKey;
@@ -129,11 +124,6 @@ public class OauthXDSWrapper implements XDSWrapper {
 
         public OauthXDSWrapperBuilder setUsername(String username) {
             this.username = username;
-            return this;
-        }
-
-        public OauthXDSWrapperBuilder setTenantId(int tenantId) {
-            this.tenantId = tenantId;
             return this;
         }
 
@@ -180,6 +170,8 @@ public class OauthXDSWrapper implements XDSWrapper {
         }
 
         public OauthXDSWrapper build() {
+
+            this.timestamp = String.valueOf(System.currentTimeMillis());
             return new OauthXDSWrapper(this);
         }
     }

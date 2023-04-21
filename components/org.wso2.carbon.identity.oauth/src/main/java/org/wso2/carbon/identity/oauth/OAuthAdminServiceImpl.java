@@ -62,9 +62,9 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
-import org.wso2.carbon.identity.xds.client.mgt.util.XDSCUtils;
-import org.wso2.carbon.identity.xds.common.constant.OperationType;
+import org.wso2.carbon.identity.xds.client.mgt.util.XDSUtils;
 import org.wso2.carbon.identity.xds.common.constant.XDSConstants;
+import org.wso2.carbon.identity.xds.common.constant.XDSOperationType;
 import org.wso2.carbon.identity.xds.common.constant.XDSWrapper;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -138,11 +138,10 @@ public class OAuthAdminServiceImpl {
         if (isControlPlane()) {
             OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
                     .setUsername(loggedInUser)
-                    .setTenantId(tenantId)
                     .build();
             publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
                     applicationXDSWrapper, XDSConstants.EventType.OAUTH,
-                    XDSConstants.OauthOperationType.REGISTER_OAUTH_CONSUMER);
+                    OAuthXDSOperationType.REGISTER_OAUTH_CONSUMER);
         }
 
         OAuthAppDAO dao = new OAuthAppDAO();
@@ -307,7 +306,7 @@ public class OAuthAdminServiceImpl {
                                 .build();
                         publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
                                 applicationXDSWrapper, XDSConstants.EventType.OAUTH,
-                                XDSConstants.OauthOperationType.REGISTER_AND_RETRIEVE_OAUTH_APPLICATION_DATA);
+                                OAuthXDSOperationType.REGISTER_AND_RETRIEVE_OAUTH_APPLICATION_DATA);
                     }
                     AuthenticatedUser appOwner = getAppOwner(application, defaultAppOwner);
                     app.setAppOwner(appOwner);
@@ -501,7 +500,7 @@ public class OAuthAdminServiceImpl {
                     .build();
             publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
                     applicationXDSWrapper, XDSConstants.EventType.OAUTH,
-                    XDSConstants.OauthOperationType.UPDATE_CONSUMER_APPLICATION);
+                    OAuthXDSOperationType.UPDATE_CONSUMER_APPLICATION);
         }
 
         OAuthAppDAO dao = new OAuthAppDAO();
@@ -614,11 +613,10 @@ public class OAuthAdminServiceImpl {
                     OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
                             .setScope(scope)
                             .setClaims(claims)
-                            .setTenantId(tenantId)
                             .build();
                     publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
                             applicationXDSWrapper, XDSConstants.EventType.OAUTH,
-                            XDSConstants.OauthOperationType.ADD_SCOPE);
+                            OAuthXDSOperationType.ADD_SCOPE);
                 }
 
                 OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(tenantId, scope, claims);
@@ -645,11 +643,10 @@ public class OAuthAdminServiceImpl {
             if (isControlPlane()) {
                 OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
                         .setScopeDTO(scope)
-                        .setTenantId(tenantId)
                         .build();
                 publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
                         applicationXDSWrapper, XDSConstants.EventType.OAUTH,
-                        XDSConstants.OauthOperationType.ADD_SCOPE_DTO);
+                        OAuthXDSOperationType.ADD_SCOPE_DTO);
             }
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(scope, tenantId);
         } catch (IdentityOAuth2Exception e) {
@@ -728,11 +725,10 @@ public class OAuthAdminServiceImpl {
             if (isControlPlane()) {
                 OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
                         .setScope(scope)
-                        .setTenantId(tenantId)
                         .build();
                 publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
                         applicationXDSWrapper, XDSConstants.EventType.OAUTH,
-                        XDSConstants.OauthOperationType.DELETE_SCOPE);
+                        OAuthXDSOperationType.DELETE_SCOPE);
             }
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().deleteScope(scope, tenantId);
             if (LOG.isDebugEnabled()) {
@@ -814,11 +810,10 @@ public class OAuthAdminServiceImpl {
                         .setClaims(addClaims)
                         .setDeleteClaims(deleteClaims)
                         .setScope(scope)
-                        .setTenantId(tenantId)
                         .build();
                 publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
                         applicationXDSWrapper, XDSConstants.EventType.OAUTH,
-                        XDSConstants.OauthOperationType.UPDATE_SCOPE);
+                        OAuthXDSOperationType.UPDATE_SCOPE);
             }
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
                     updateScope(scope, tenantId, Arrays.asList(addClaims), Arrays.asList(deleteClaims));
@@ -845,11 +840,10 @@ public class OAuthAdminServiceImpl {
             if (isControlPlane()) {
                 OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
                         .setScopeDTO(updatedScope)
-                        .setTenantId(tenantId)
                         .build();
                 publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
                         applicationXDSWrapper, XDSConstants.EventType.OAUTH,
-                        XDSConstants.OauthOperationType.UPDATE_SCOPE_DTO);
+                        OAuthXDSOperationType.UPDATE_SCOPE_DTO);
             }
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
                     updateScope(updatedScope, tenantId);
@@ -904,7 +898,7 @@ public class OAuthAdminServiceImpl {
                         .build();
                 publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
                         applicationXDSWrapper, XDSConstants.EventType.OAUTH,
-                        XDSConstants.OauthOperationType.UPDATE_CONSUMER_APP_STATE);
+                        OAuthXDSOperationType.UPDATE_CONSUMER_APP_STATE);
             }
 
             AppInfoCache.getInstance().clearCacheEntry(consumerKey);
@@ -964,7 +958,7 @@ public class OAuthAdminServiceImpl {
                     .build();
             publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
                     applicationXDSWrapper, XDSConstants.EventType.OAUTH,
-                    XDSConstants.OauthOperationType.UPDATE_AND_RETRIEVE_OAUTH_SECRET_KEY);
+                    OAuthXDSOperationType.UPDATE_AND_RETRIEVE_OAUTH_SECRET_KEY);
         }
         Properties properties = new Properties();
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, secretKey);
@@ -1069,7 +1063,7 @@ public class OAuthAdminServiceImpl {
                         .build();
                 publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
                         applicationXDSWrapper, XDSConstants.EventType.OAUTH,
-                        XDSConstants.OauthOperationType.REMOVE_OAUTH_APPLICATION_DATA);
+                        OAuthXDSOperationType.REMOVE_OAUTH_APPLICATION_DATA);
             }
 
             dao.removeConsumerApplication(consumerKey);
@@ -1122,11 +1116,10 @@ public class OAuthAdminServiceImpl {
 
         if (isControlPlane()) {
             OauthXDSWrapper applicationXDSWrapper = new OauthXDSWrapper.OauthXDSWrapperBuilder()
-                    .setTenantId(tenantId)
                     .build();
             publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
                     applicationXDSWrapper, XDSConstants.EventType.OAUTH,
-                    XDSConstants.OauthOperationType.REMOVE_ALL_OAUTH_APPLICATION_DATA);
+                    OAuthXDSOperationType.REMOVE_ALL_OAUTH_APPLICATION_DATA);
         }
 
         OAuthAppDAO dao = new OAuthAppDAO();
@@ -1272,7 +1265,7 @@ public class OAuthAdminServiceImpl {
                         .build();
                 publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
                         applicationXDSWrapper, XDSConstants.EventType.OAUTH,
-                        XDSConstants.OauthOperationType.REVOKE_AUTHZ_FOR_APPS_BY_RESOURCE_OWNER);
+                        OAuthXDSOperationType.REVOKE_AUTHZ_FOR_APPS_BY_RESOURCE_OWNER);
             }
             for (String appName : revokeRequestDTO.getApps()) {
                 for (OAuthConsumerAppDTO appDTO : appDTOs) {
@@ -1385,7 +1378,7 @@ public class OAuthAdminServiceImpl {
                     .build();
             publishData(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(),
                     applicationXDSWrapper, XDSConstants.EventType.OAUTH,
-                    XDSConstants.OauthOperationType.REVOKE_ISSUED_TOKENS_BY_APPLICATION);
+                    OAuthXDSOperationType.REVOKE_ISSUED_TOKENS_BY_APPLICATION);
         }
         if (StringUtils.isBlank(consumerKey)) {
             revokeRespDTO.setError(true);
@@ -1443,7 +1436,7 @@ public class OAuthAdminServiceImpl {
                         .build();
                 publishData(tenantDomain,
                         applicationXDSWrapper, XDSConstants.EventType.OAUTH,
-                        XDSConstants.OauthOperationType.UPDATE_APPROVE_ALWAYS_FOR_APP_CONSENT_BY_RESOURCE_OWNER);
+                        OAuthXDSOperationType.UPDATE_APPROVE_ALWAYS_FOR_APP_CONSENT_BY_RESOURCE_OWNER);
             }
 
             OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
@@ -2085,10 +2078,10 @@ public class OAuthAdminServiceImpl {
     }
 
     private void publishData(String tenantDomain, XDSWrapper xdsWrapper, XDSConstants.EventType eventType,
-                             OperationType operationType) {
+                             XDSOperationType operationType) {
 
         String json = buildJson((OauthXDSWrapper) xdsWrapper);
         String username = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
-        XDSCUtils.publishData(tenantDomain, username, json, eventType, operationType);
+        XDSUtils.publishData(tenantDomain, username, json, eventType, operationType);
     }
 }
