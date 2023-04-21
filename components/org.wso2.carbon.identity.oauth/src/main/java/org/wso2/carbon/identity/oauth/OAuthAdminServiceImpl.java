@@ -810,7 +810,7 @@ public class OAuthAdminServiceImpl {
             properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REVOKE);
 
             AppInfoCache.getInstance().clearCacheEntry(consumerKey);
-            handleinternalTokenRevocation(consumerKey, properties);
+            handleInternalTokenRevocation(consumerKey, properties);
             updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
 
             if (LOG.isDebugEnabled()) {
@@ -853,7 +853,7 @@ public class OAuthAdminServiceImpl {
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_ACTIVE);
 
         AppInfoCache.getInstance().clearCacheEntry(consumerKey);
-        handleinternalTokenRevocation(consumerKey, properties);
+        handleInternalTokenRevocation(consumerKey, properties);
         updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Client Secret for OAuth app with consumerKey: " + consumerKey + " updated in OAuthCache.");
@@ -1866,7 +1866,7 @@ public class OAuthAdminServiceImpl {
         }
     }
 
-    private void handleinternalTokenRevocation(String consumerKey, Properties properties) throws IdentityOAuthAdminException {
+    private void handleInternalTokenRevocation(String consumerKey, Properties properties) throws IdentityOAuthAdminException {
 
         for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
                 .getOAuthApplicationMgtListeners()) {
