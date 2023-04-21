@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.listener;
 
+import java.util.Properties;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 
@@ -64,4 +65,16 @@ public interface OAuthApplicationMgtListener {
      * @throws IdentityOAuthAdminException in case of failure.
      */
     void doPreRemoveOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException;
+
+    /**
+     *
+     * @throws IdentityOAuthAdminException
+     */
+    void doPostRevokeOAuthSecret(String consumerKey, Properties properties) throws IdentityOAuthAdminException;
+
+    /**
+     * 
+     * @throws IdentityOAuthAdminException
+     */
+    void doPostRegenerateOAuthSecret(String consumerKey, Properties properties) throws IdentityOAuthAdminException;
 }
