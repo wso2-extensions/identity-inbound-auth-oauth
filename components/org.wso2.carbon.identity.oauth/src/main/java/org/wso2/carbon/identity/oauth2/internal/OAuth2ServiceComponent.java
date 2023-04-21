@@ -829,11 +829,11 @@ public class OAuth2ServiceComponent {
     /**
      * This method is used to set the Configuration manager Service.
      *
-     * @param configurationManager The Realm Service which needs to be set.
+     * @param configurationManager The Configuration manager Service which needs to be set.
      */
     protected void setConfigurationManager(ConfigurationManager configurationManager) {
 
-        OAuth2ServiceComponentHolder.getInstance().setConfigurationManager(configurationManager);
+        OAuth2ServiceComponentHolder.setConfigurationManager(configurationManager);
         log.debug("Setting the ConfigurationManager.");
     }
 
@@ -844,7 +844,7 @@ public class OAuth2ServiceComponent {
      */
     protected void unsetConfigurationManager(ConfigurationManager configurationManager) {
 
-        OAuth2ServiceComponentHolder.getInstance().setConfigurationManager(null);
+        OAuth2ServiceComponentHolder.setConfigurationManager(null);
         log.debug("Unsetting the ConfigurationManager.");
     }
 }

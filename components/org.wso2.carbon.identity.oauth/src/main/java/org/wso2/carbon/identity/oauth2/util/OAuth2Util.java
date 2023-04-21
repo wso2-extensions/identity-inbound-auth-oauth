@@ -4668,7 +4668,7 @@ public class OAuth2Util {
 
         String externalConsentPageUrl = "";
         try {
-            Attribute consentPageAttribute = OAuth2ServiceComponentHolder.getInstance().getConfigurationManager().
+            Attribute consentPageAttribute = OAuth2ServiceComponentHolder.getConfigurationManager().
                     getAttribute(EXTERNAL_CONSENT_MANAGEMENT, EXTERNAL_CONSENT_PAGE, EXTERNAL_CONSENT_PAGE_URL);
 
             if (consentPageAttribute != null) {

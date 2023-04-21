@@ -75,7 +75,7 @@ public class OAuth2ServiceComponentHolder {
     private List<Scope> oauthScopeBinding = new ArrayList<>();
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
     private static List<String> jwtRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
-    private ConfigurationManager configurationManager;
+    private static ConfigurationManager configurationManager;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -432,9 +432,9 @@ public class OAuth2ServiceComponentHolder {
      *
      * @return ConfigurationManager.
      */
-    public ConfigurationManager getConfigurationManager() {
+    public static ConfigurationManager getConfigurationManager() {
 
-        return configurationManager;
+        return OAuth2ServiceComponentHolder.configurationManager;
     }
 
     /**
@@ -442,8 +442,8 @@ public class OAuth2ServiceComponentHolder {
      *
      * @param configurationManager Configuration Manager.
      */
-    public void setConfigurationManager(ConfigurationManager configurationManager) {
+    public static void setConfigurationManager(ConfigurationManager configurationManager) {
 
-        this.configurationManager = configurationManager;
+        OAuth2ServiceComponentHolder.configurationManager = configurationManager;
     }
 }
