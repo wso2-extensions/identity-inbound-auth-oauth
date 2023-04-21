@@ -283,12 +283,4 @@ public class OAuthComponentServiceHolder {
     public void setTokenManagementDAOService(TokenManagementDAO tokenManagementDAOService) {
         this.tokenManagementDAOService = tokenManagementDAOService;
     }
-
-    public OAuthApplicationMgtListener getOAuthApplicationMgtListener() {
-        return oAuthApplicationMgtListener;
-    }
-
-    public void setOAuthApplicationMgtListener(OAuthApplicationMgtListener oAuthApplicationMgtListener) {
-        this.oAuthApplicationMgtListener = oAuthApplicationMgtListener;
-    }
 }
