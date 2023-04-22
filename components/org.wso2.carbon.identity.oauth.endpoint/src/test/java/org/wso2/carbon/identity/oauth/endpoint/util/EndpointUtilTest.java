@@ -308,7 +308,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.isOIDCAuthzRequest(any(Set.class))).thenReturn(isOIDC);
-        when(OAuth2Util.resolveExternalConsentPageUrl(any(ServiceProvider.class))).thenReturn(EXTERNAL_CONSENT_URL);
+        when(OAuth2Util.resolveExternalConsentPageUrl(anyString())).thenReturn(EXTERNAL_CONSENT_URL);
         if (parameters != null && parameters.getApplicationName().equals(EXTERNAL_CONSENTED_APP_NAME)) {
             when(OAuth2Util.getServiceProvider(anyString())).thenReturn(getServiceProvider());
         } else {

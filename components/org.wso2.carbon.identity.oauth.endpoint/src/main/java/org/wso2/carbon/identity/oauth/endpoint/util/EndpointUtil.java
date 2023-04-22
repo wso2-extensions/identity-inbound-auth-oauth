@@ -804,7 +804,7 @@ public class EndpointUtil {
             }
 
             if (isExternalConsentPageEnabledForSP(sp)) {
-                consentPageUrl = OAuth2Util.resolveExternalConsentPageUrl(sp);
+                consentPageUrl = OAuth2Util.resolveExternalConsentPageUrl(sp.getTenantDomain());
             } else if (isOIDC) {
                 consentPageUrl = OAuth2Util.OAuthURL.getOIDCConsentPageUrl();
             } else {

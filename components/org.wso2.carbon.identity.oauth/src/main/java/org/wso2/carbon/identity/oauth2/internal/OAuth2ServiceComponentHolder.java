@@ -22,7 +22,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
-import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
+import org.wso2.carbon.identity.consent.mgt.server.configs.services.ConsentManagementServerConfigsService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -75,7 +75,7 @@ public class OAuth2ServiceComponentHolder {
     private List<Scope> oauthScopeBinding = new ArrayList<>();
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
     private static List<String> jwtRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
-    private static ConfigurationManager configurationManager;
+    private static ConsentManagementServerConfigsService consentManagementServerConfigsService;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -428,22 +428,23 @@ public class OAuth2ServiceComponentHolder {
     }
 
     /**
-     * Get Configuration Manager.
+     * Get Consent Management Server Configs Service.
      *
-     * @return ConfigurationManager.
+     * @return Consent Management Server Configs Service.
      */
-    public static ConfigurationManager getConfigurationManager() {
+    public static ConsentManagementServerConfigsService getConsentManagementServerConfigsService() {
 
-        return OAuth2ServiceComponentHolder.configurationManager;
+        return OAuth2ServiceComponentHolder.consentManagementServerConfigsService;
     }
 
     /**
-     * Set Configuration manager.
+     * Set Consent Management Server Configs Service.
      *
-     * @param configurationManager Configuration Manager.
+     * @param consentManagementServerConfigsService Consent Management Server Configs Service.
      */
-    public static void setConfigurationManager(ConfigurationManager configurationManager) {
+    public static void setConsentManagementServerConfigsService(ConsentManagementServerConfigsService
+                                                                        consentManagementServerConfigsService) {
 
-        OAuth2ServiceComponentHolder.configurationManager = configurationManager;
+        OAuth2ServiceComponentHolder.consentManagementServerConfigsService = consentManagementServerConfigsService;
     }
 }

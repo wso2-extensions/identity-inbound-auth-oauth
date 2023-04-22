@@ -80,8 +80,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
-import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
-import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
+import org.wso2.carbon.identity.consent.mgt.server.configs.exceptions.ConsentMgtServerConfigsException;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
@@ -4667,33 +4666,20 @@ public class OAuth2Util {
     /**
      * Get the external consent page url configured for the tenant domain.
      *
-     * @param sp Service Provider.
+     * @param tenantDomain Tenant Domain.
      * @return External consent page url.
      * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
      */
-    public static String resolveExternalConsentPageUrl(ServiceProvider sp) throws IdentityOAuth2Exception {
+    public static String resolveExternalConsentPageUrl(String tenantDomain) throws IdentityOAuth2Exception {
 
         String externalConsentPageUrl = "";
         try {
-            Attribute consentPageAttribute = OAuth2ServiceComponentHolder.getConfigurationManager().
-                    getAttribute(EXTERNAL_CONSENT_PAGE_CONFIGURATIONS, EXTERNAL_CONSENT_PAGE,
-                            EXTERNAL_CONSENT_PAGE_URL);
+            externalConsentPageUrl = OAuth2ServiceComponentHolder.getConsentManagementServerConfigsService()
+                    .getExternalConsentPageUrl(tenantDomain);
 
-            if (consentPageAttribute != null) {
-                externalConsentPageUrl = consentPageAttribute.getValue();
-            }
-            if (externalConsentPageUrl.isEmpty()) {
-                if (log.isDebugEnabled()) {
-                    log.debug("External consent page url is not configured for tenant domain : " +
-                            sp.getTenantDomain());
-                }
-                throw new IdentityOAuth2Exception("External consent page is enabled for application " +
-                        sp.getApplicationName() + " with id : " + sp.getApplicationID() +
-                        "but External consent page url is not configured for tenant domain : " + sp.getTenantDomain());
-            }
-        } catch (ConfigurationManagementException e) {
+        } catch (ConsentMgtServerConfigsException e) {
             throw new IdentityOAuth2Exception("Error while retrieving external consent page url from the " +
-                    "configuration store for tenant domain : " + sp.getTenantDomain(), e);
+                    "configuration store for tenant domain : " + tenantDomain, e);
         }
 
         return externalConsentPageUrl;

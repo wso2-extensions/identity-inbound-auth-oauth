@@ -36,7 +36,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
-import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
+import org.wso2.carbon.identity.consent.mgt.server.configs.services.ConsentManagementServerConfigsService;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
@@ -819,32 +819,34 @@ public class OAuth2ServiceComponent {
     }
 
     @Reference(
-            name = "resource.configuration.manager",
-            service = ConfigurationManager.class,
+            name = "resource.consent.mgt.server.configs.service",
+            service = ConsentManagementServerConfigsService.class,
             cardinality = ReferenceCardinality.MANDATORY,
             policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetConfigurationManager"
+            unbind = "unsetConsentManagementServerConfigsService"
     )
 
     /**
-     * This method is used to set the Configuration manager Service.
+     * This method is used to set the Consent Management Server Configs Service.
      *
-     * @param configurationManager The Configuration manager Service which needs to be set.
+     * @param consentManagementServerConfigsService The Consent Management Server Configs Service which needs to be set.
      */
-    protected void setConfigurationManager(ConfigurationManager configurationManager) {
+    protected void setConsentManagementServerConfigsService(ConsentManagementServerConfigsService
+                                                                        consentManagementServerConfigsService) {
 
-        OAuth2ServiceComponentHolder.setConfigurationManager(configurationManager);
-        log.debug("Setting the ConfigurationManager.");
+        OAuth2ServiceComponentHolder.setConsentManagementServerConfigsService(consentManagementServerConfigsService);
+        log.debug("Setting the Consent Management Server Configs.");
     }
 
     /**
-     * This method is used to unset the Configuration manager Service.
+     * This method is used to unset the Consent Management Server Configs Service.
      *
-     * @param configurationManager The Configuration manager Service which needs to unset.
+     * @param consentManagementServerConfigsService The Consent Management Server Configs Service which needs to unset.
      */
-    protected void unsetConfigurationManager(ConfigurationManager configurationManager) {
+    protected void unsetConsentManagementServerConfigsService(ConsentManagementServerConfigsService
+                                                     consentManagementServerConfigsService) {
 
-        OAuth2ServiceComponentHolder.setConfigurationManager(null);
-        log.debug("Unsetting the ConfigurationManager.");
+        OAuth2ServiceComponentHolder.setConsentManagementServerConfigsService(null);
+        log.debug("Unsetting the Consent Management Server Configs.");
     }
 }

@@ -253,6 +253,12 @@
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.consent.mgt.server.configs</artifactId>
+                <version>${carbon.identity.framework.version}</version>
+            </dependency>
+
             <!--SAML Common Util dependency-->
             <dependency>
                 <groupId>org.wso2.carbon.identity.saml.common</groupId>
