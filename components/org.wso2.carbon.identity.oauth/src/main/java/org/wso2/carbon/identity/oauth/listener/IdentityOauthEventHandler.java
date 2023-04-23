@@ -231,7 +231,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
 
         if (UserCoreConstants.ErrorCode.USER_IS_LOCKED.equalsIgnoreCase(errorCode)) {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("User %s is locked. Hence revoking user's access tokens.", userName));
+                log.debug(String.format("User %s is locked. Hence revoking user's authorization codes.", userName));
             }
             OAuthUtil.revokeAuthzCodes(userName, userStoreManager);
         }
