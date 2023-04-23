@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
@@ -46,6 +47,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
@@ -71,6 +74,7 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_TOKEN_IDENTIFIER;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.Config.PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserId;
 
 /**
  * OAuth utility functionality.
@@ -511,6 +515,41 @@ public final class OAuthUtil {
         if (cacheKey != null) {
             claimCache.clearCacheEntry(cacheKey, userStoreManager.getTenantId());
         }
+        return true;
+    }
+
+    /**
+     * This method will revoke the authorization codes of user.
+     * @param username          username.
+     * @param userStoreManager  userStoreManager.
+     * @return true if revocation is successfull. Else return false
+     * @throws UserStoreException If an error occurred when revoking codes.
+     */
+    public static boolean revokeAuthzCodes(String username, UserStoreManager userStoreManager) throws UserStoreException {
+
+        String userStoreDomain = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserStoreDomain(userStoreDomain);
+        authenticatedUser.setTenantDomain(tenantDomain);
+        authenticatedUser.setUserName(username);
+
+        List<AuthzCodeDO> authorizationCodes;
+        try {
+            authorizationCodes = OAuthTokenPersistenceFactory.getInstance()
+                    .getAuthorizationCodeDAO().getAuthorizationCodesDataByUser(authenticatedUser);
+            for (AuthzCodeDO authorizationCode : authorizationCodes) {
+                OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(
+                        OAuth2Util.buildCacheKeyStringForAuthzCode(authorizationCode.getConsumerKey(),
+                                authorizationCode.getAuthorizationCode())));
+                OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
+                        .updateAuthorizationCodeState(authorizationCode.getAuthorizationCode(),
+                                OAuthConstants.AuthorizationCodeState.REVOKED);
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw new RuntimeException(e);
+        }
+
         return true;
     }
 

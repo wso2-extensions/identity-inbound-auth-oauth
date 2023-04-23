@@ -566,7 +566,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         }
         if (cacheEnabled) {
             // remove the authorization code from the cache
-            OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(
+            OAuthCache.getInstance().getValueFromCache(new OAuthCacheKey(
                     OAuth2Util.buildCacheKeyStringForAuthzCode(authzCodeBean.getConsumerKey(),
                             authzCodeBean.getAuthorizationCode())));
             if (log.isDebugEnabled()) {
