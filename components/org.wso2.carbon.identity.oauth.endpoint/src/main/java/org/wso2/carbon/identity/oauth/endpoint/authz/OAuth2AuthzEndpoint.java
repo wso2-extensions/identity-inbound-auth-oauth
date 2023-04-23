@@ -17,6 +17,8 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.authz;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
@@ -40,6 +42,7 @@ import org.owasp.encoder.Encode;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.JsLogger;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthHistory;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
@@ -85,6 +88,8 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
+import org.wso2.carbon.identity.oauth.extension.engine.JSEngine;
+import org.wso2.carbon.identity.oauth.extension.utils.EngineUtils;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -95,6 +100,7 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
@@ -175,6 +181,8 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSSOConsentService;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.retrieveStateForErrorURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.ACCESS_TOKEN_JS_OBJECT;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.DYNAMIC_TOKEN_DATA_FUNCTION;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.DISPLAY;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.ID_TOKEN_HINT;
@@ -1371,7 +1379,7 @@ public class OAuth2AuthzEndpoint {
                             "generate-token-binding-value", configs);
                 }
             }
-            setAuthorizationCode(oAuthMessage, authzRespDTO, builder, tokenBindingValue);
+            setAuthorizationCode(oAuthMessage, authzRespDTO, builder, tokenBindingValue, oauth2Params);
         }
         if (isResponseTypeNotIdTokenOrNone(responseType, authzRespDTO)) {
             setAccessToken(authzRespDTO, builder);
@@ -1467,11 +1475,62 @@ public class OAuth2AuthzEndpoint {
 
     private void setAuthorizationCode(OAuthMessage oAuthMessage, OAuth2AuthorizeRespDTO authzRespDTO,
                                       OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
-                                      String tokenBindingValue) throws OAuthSystemException {
+                                      String tokenBindingValue, OAuth2Parameters oauth2Params)
+            throws OAuthSystemException {
 
         builder.setCode(authzRespDTO.getAuthorizationCode());
+        AccessTokenExtendedAttributes tokenExtendedAttributes = null;
+        if (isConsentResponseFromUser(oAuthMessage)) {
+            tokenExtendedAttributes = getExtendedTokenAttributes(oAuthMessage, oauth2Params);
+        }
         addUserAttributesToOAuthMessage(oAuthMessage, authzRespDTO.getAuthorizationCode(), authzRespDTO.getCodeId(),
-                tokenBindingValue);
+                tokenBindingValue, tokenExtendedAttributes);
+    }
+
+    private AccessTokenExtendedAttributes getExtendedTokenAttributes(OAuthMessage oAuthMessage,
+                                                                     OAuth2Parameters oauth2Params) {
+
+        try {
+            ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
+            // TODO: Improve to read the script separately instead of reading from adaptive script.
+            if (!EndpointUtil.isExternalizedConsentPageEnabledForSP(serviceProvider) ||
+                    serviceProvider.getLocalAndOutBoundAuthenticationConfig().getAuthenticationScriptConfig() == null) {
+                return null;
+            }
+            Gson gson = new Gson();
+            JSEngine jsEngine = EngineUtils.getEngineFromConfig();
+            JsLogger jsLogger = new JsLogger();
+            Map<String, Object> bindings = new HashMap<>();
+            bindings.put(FrameworkConstants.JSAttributes.JS_LOG, jsLogger);
+            List<String> accessTokenJSObject = new ArrayList<>();
+            Map<String, Object> parameterMap = gson.fromJson(gson.toJson(oAuthMessage.getRequest().getParameterMap()),
+                    new TypeToken<Map<String, Object>>() {
+                    }.getType());
+            accessTokenJSObject.add(ACCESS_TOKEN_JS_OBJECT);
+            Map<String, Object> result = jsEngine
+                    .createEngine()
+                    .addBindings(bindings)
+                    .evalScript(
+                            serviceProvider.getLocalAndOutBoundAuthenticationConfig().getAuthenticationScriptConfig()
+                                    .getContent())
+                    .invokeFunction(DYNAMIC_TOKEN_DATA_FUNCTION, parameterMap)
+                    .getJSObjects(accessTokenJSObject);
+            AccessTokenExtendedAttributes accessTokenExtendedAttributes =
+                    gson.fromJson(gson.toJson(result.get(ACCESS_TOKEN_JS_OBJECT)), AccessTokenExtendedAttributes.class);
+            if (accessTokenExtendedAttributes != null) {
+                accessTokenExtendedAttributes.setExtendedToken(true);
+            }
+            return accessTokenExtendedAttributes;
+        } catch (Exception e) {
+            String msg = "Error occurred when processing consent response request from tenant: " +
+                    oauth2Params.getTenantDomain() + " application: " + oauth2Params.getClientId() + "after consent.";
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                        OAuthConstants.LogConstants.FAILED, msg, "authorize-client", null);
+            }
+            log.warn(msg, e);
+        }
+        return null;
     }
 
     private void setAccessToken(OAuth2AuthorizeRespDTO authzRespDTO,
@@ -1493,7 +1552,9 @@ public class OAuth2AuthzEndpoint {
     }
 
     private void addUserAttributesToOAuthMessage(OAuthMessage oAuthMessage, String code, String codeId,
-                                                 String tokenBindingValue) throws OAuthSystemException {
+                                                 String tokenBindingValue,
+                                                 AccessTokenExtendedAttributes tokenExtendedAttributes)
+            throws OAuthSystemException {
 
         SessionDataCacheEntry sessionDataCacheEntry = oAuthMessage.getSessionDataCacheEntry();
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry = new AuthorizationGrantCacheEntry(
@@ -1539,6 +1600,8 @@ public class OAuth2AuthzEndpoint {
         authorizationGrantCacheEntry.setMaxAge(sessionDataCacheEntry.getoAuth2Parameters().getMaxAge());
         authorizationGrantCacheEntry.setTokenBindingValue(tokenBindingValue);
         authorizationGrantCacheEntry.setSessionContextIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
+        authorizationGrantCacheEntry.setAccessTokenExtensionDO(tokenExtendedAttributes);
+
         String[] sessionIds = sessionDataCacheEntry.getParamMap().get(FrameworkConstants.SESSION_DATA_KEY);
         if (ArrayUtils.isNotEmpty(sessionIds)) {
             String commonAuthSessionId = sessionIds[0];

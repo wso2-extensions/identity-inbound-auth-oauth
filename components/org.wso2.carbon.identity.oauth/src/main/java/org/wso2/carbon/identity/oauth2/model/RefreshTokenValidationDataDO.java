@@ -48,6 +48,7 @@ public class RefreshTokenValidationDataDO {
     private Timestamp accessTokenIssuedTime;
 
     private long accessTokenValidityInMillis;
+    private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
 
     public String getAccessToken() {
         return accessToken;
@@ -137,5 +138,16 @@ public class RefreshTokenValidationDataDO {
 
     public void setAccessTokenValidityInMillis(long accessTokenValidityInMillis) {
         this.accessTokenValidityInMillis = accessTokenValidityInMillis;
+    }
+
+    public AccessTokenExtendedAttributes getAccessTokenExtendedAttributes() {
+
+        return accessTokenExtendedAttributes;
+    }
+
+    public void setAccessTokenExtendedAttributes(
+            AccessTokenExtendedAttributes accessTokenExtendedAttributes) {
+
+        this.accessTokenExtendedAttributes = accessTokenExtendedAttributes;
     }
 }

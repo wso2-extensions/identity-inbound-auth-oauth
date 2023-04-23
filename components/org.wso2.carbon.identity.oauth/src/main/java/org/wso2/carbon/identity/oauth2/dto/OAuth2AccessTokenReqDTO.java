@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.dto;
 
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 
@@ -56,6 +57,8 @@ public class OAuth2AccessTokenReqDTO {
 
     // This field can be used to pass additional data through the context.
     private Map<String, String> parameters;
+
+    private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
 
     public String getClientId() {
         return clientId;
@@ -227,5 +230,16 @@ public class OAuth2AccessTokenReqDTO {
     public void setParameters(Map<String, String> parameters) {
 
         this.parameters = parameters;
+    }
+
+    public AccessTokenExtendedAttributes getAccessTokenExtendedAttributes() {
+
+        return accessTokenExtendedAttributes;
+    }
+
+    public void setAccessTokenExtendedAttributes(
+            AccessTokenExtendedAttributes accessTokenExtendedAttributes) {
+
+        this.accessTokenExtendedAttributes = accessTokenExtendedAttributes;
     }
 }
