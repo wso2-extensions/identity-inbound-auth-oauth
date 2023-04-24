@@ -48,8 +48,11 @@ public interface AuthorizationCodeDAO {
 
     Set<String> getAuthorizationCodesByUser(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception;
 
-    List<AuthzCodeDO> getAuthorizationCodesDataByUser(AuthenticatedUser authenticatedUser)
-            throws IdentityOAuth2Exception;
+    default List<AuthzCodeDO> getAuthorizationCodesDataByUser(AuthenticatedUser authenticatedUser)
+            throws IdentityOAuth2Exception {
+
+        return null;
+    }
 
     default List<AuthzCodeDO> getAuthorizationCodesByUserForOpenidScope(AuthenticatedUser authenticatedUser) throws
             IdentityOAuth2Exception {
