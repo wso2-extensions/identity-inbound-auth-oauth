@@ -70,11 +70,5 @@ public interface OAuthApplicationMgtListener {
      *
      * @throws IdentityOAuthAdminException
      */
-    void doPostRevokeOAuthSecret(String consumerKey, Properties properties) throws IdentityOAuthAdminException;
-
-    /**
-     * 
-     * @throws IdentityOAuthAdminException
-     */
-    void doPostRegenerateOAuthSecret(String consumerKey, Properties properties) throws IdentityOAuthAdminException;
+    void doPostRevokeRegenerateOAuthSecret(String consumerKey, Properties properties) throws IdentityOAuthAdminException;
 }
