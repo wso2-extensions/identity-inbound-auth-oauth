@@ -341,6 +341,7 @@ public class AuthorizationHandlerManager {
      * @return - allowed scopes list
      */
     private List<String> getAllowedScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx) {
+
         List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
         String[] requestedScopes = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
         List<String> requestedAllowedScopes = new ArrayList<>();
@@ -362,6 +363,7 @@ public class AuthorizationHandlerManager {
      */
     private String[] getAuthorizedInternalScopes(OAuthAuthzReqMessageContext authzReqMsgCtx)
             throws IdentityOAuth2Exception {
+
         String[] authorizedInternalScopes;
         JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
         authorizedInternalScopes = scopeValidator.validateScope(authzReqMsgCtx);
