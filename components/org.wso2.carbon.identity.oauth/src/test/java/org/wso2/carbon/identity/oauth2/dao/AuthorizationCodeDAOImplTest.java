@@ -51,6 +51,7 @@ import org.wso2.carbon.user.core.service.RealmService;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -160,6 +161,7 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
                                                  String status) throws Exception {
 
         createApplication(consumerKey, UUID.randomUUID().toString(), DEFAULT_TENANT_ID);
+        getApplication(consumerKey, DEFAULT_TENANT_ID);
         AuthzCodeDO authzCodeDO = new AuthzCodeDO(authenticatedUser, scopes, new Timestamp(System.currentTimeMillis()),
                 3600000L, CALLBACK, consumerKey, authzCode, authzCodeId, status, null, null);
         mockStatic(OAuth2Util.class);
@@ -174,6 +176,8 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedTenantUserRealm);
         when(mockedTenantUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
         authorizationCodeDAO.insertAuthorizationCode(authzCode, consumerKey, CALLBACK, authzCodeDO);
+        getAuthorizationCode();
+        getAuthCode(authenticatedUser.getUserName(), DEFAULT_TENANT_ID, authenticatedUser.getUserStoreDomain());
         return authzCodeDO;
     }
 
@@ -457,12 +461,99 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         }
     }
 
+    @Test
+    public void testGetAuthorizationCodesDoByUserAfterRevoking() throws Exception {
+
+        String consumerKey = UUID.randomUUID().toString();
+        String authzCodeID = UUID.randomUUID().toString();
+        String authzCode = UUID.randomUUID().toString();
+        AuthenticatedUser dummyAuthenticatedUser = new AuthenticatedUser();
+        dummyAuthenticatedUser.setTenantDomain("super.wso2");
+        dummyAuthenticatedUser.setUserName("MockedUser");
+        dummyAuthenticatedUser.setUserStoreDomain(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
+        when(OAuth2Util.getUserStoreDomain(any())).thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+        AuthzCodeDO authzCodeDO = persistAuthorizationCode(consumerKey, authzCodeID, authzCode,
+                OAuthConstants.AuthorizationCodeState.ACTIVE);
+        mockStatic(OAuth2Util.class);
+        mockStatic(IdentityUtil.class);
+        when(OAuth2Util.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
+        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
+        when(OAuth2Util.isHashDisabled()).thenReturn(true);
+        // Allow the method to pass the validation without wanting to traverse internally.
+        when(OAuth2Util.getTimeToExpire(anyLong(), anyLong())).thenReturn(2000L);
+
+        Assert.assertTrue((authorizationCodeDAO.getAuthorizationCodesDataByUser(authenticatedUser).size() > 0));
+        Assert.assertTrue(authorizationCodeDAO.getAuthorizationCodesByUser(dummyAuthenticatedUser).isEmpty());
+
+        // Revoke token.
+        authorizationCodeDAO.updateAuthorizationCodeState(authzCodeDO.getAuthorizationCode(),
+                OAuthConstants.AuthorizationCodeState.REVOKED);
+        Assert.assertTrue((authorizationCodeDAO.getAuthorizationCodesDataByUser(authenticatedUser).isEmpty()));
+
+    }
+
     private void storeIDP() throws Exception {
 
         try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
             String sql = "INSERT INTO IDP (TENANT_ID, NAME, UUID) VALUES (1234, 'LOCAL', 5678)";
             try (PreparedStatement prepStmt = connection.prepareStatement(sql)) {
                 prepStmt.execute();
+            }
+        }
+    }
+
+    private void getApplication(String consumerKey, int tenantId) throws Exception {
+
+        try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
+            String sql = "SELECT * FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY = ? AND TENANT_ID = ?";
+            ResultSet rs = null;
+            try (PreparedStatement prepStmt = connection.prepareStatement(sql)) {
+                prepStmt.setString(1, consumerKey);
+                prepStmt.setInt(2, tenantId);
+                rs = prepStmt.executeQuery();
+                while (rs.next()) {
+                    String appId = rs.getString(1);
+                }
+            }
+        }
+    }
+
+    private void getAuthorizationCode() throws Exception {
+        try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
+            String sql = "SELECT CONSUMER_KEY_ID, AUTHZ_USER, TENANT_ID, USER_DOMAIN, TIME_CREATED, VALIDITY_PERIOD, " +
+                    "STATE, TOKEN_ID, CALLBACK_URL FROM IDN_OAUTH2_AUTHORIZATION_CODE";
+            ResultSet rs = null;
+            try (PreparedStatement prepStmt = connection.prepareStatement(sql)) {
+                rs = prepStmt.executeQuery();
+                while (rs.next()) {
+                    String appId = rs.getString(1);
+                    String authzUser = rs.getString(2);
+                }
+            }
+        }
+    }
+
+    private void getAuthCode(String authzUser, int tenantId, String userstore) throws Exception {
+        try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
+            String sql = "SELECT DISTINCT AUTHORIZATION_CODE, " +
+                    "TIME_CREATED, VALIDITY_PERIOD, CODE_ID, SCOPE,  IDN_OAUTH2_AUTHORIZATION_CODE.CALLBACK_URL, " +
+                    "CONSUMER_KEY FROM IDN_OAUTH2_AUTHORIZATION_CODE JOIN IDN_OAUTH_CONSUMER_APPS ON " +
+                    "IDN_OAUTH2_AUTHORIZATION_CODE.CONSUMER_KEY_ID=IDN_OAUTH_CONSUMER_APPS.ID " +
+                    "WHERE AUTHZ_USER=? AND IDN_OAUTH2_AUTHORIZATION_CODE.TENANT_ID=? " +
+                    "AND IDN_OAUTH2_AUTHORIZATION_CODE.USER_DOMAIN=? AND STATE=?";
+            ResultSet rs = null;
+            try (PreparedStatement prepStmt = connection.prepareStatement(sql)) {
+                prepStmt.setString(1, authzUser);
+                prepStmt.setInt(2, tenantId);
+                prepStmt.setString(3, userstore);
+                prepStmt.setString(4, "ACTIVE");
+                rs = prepStmt.executeQuery();
+                while (rs.next()) {
+                    String authcode = rs.getString(1);
+                    String timeCreated = rs.getString(2);
+                }
             }
         }
     }

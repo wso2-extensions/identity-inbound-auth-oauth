@@ -550,18 +550,14 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 String[] scope = OAuth2Util.buildScopeArray(rs.getString(5));
                 String callbackUrl = rs.getString(6);
                 String consumerKey = rs.getString(7);
-                String idpName = rs.getString(8);
-
-                AuthenticatedUser user = OAuth2Util
-                        .createAuthenticatedUser(authzUser, userStoreDomain, tenantDomain, idpName);
 
 
                 // Authorization codes that are in ACTIVE state and not expired should be removed from the cache.
                 if (OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodInMillis) > 0) {
                     if (isHashDisabled) {
                         authorizationCodes
-                                .add(new AuthzCodeDO(user, scope, timeCreated, validityPeriodInMillis, callbackUrl,
-                                        consumerKey, authorizationCode, authzCodeId));
+                                .add(new AuthzCodeDO(authenticatedUser, scope, timeCreated, validityPeriodInMillis,
+                                        callbackUrl, consumerKey, authorizationCode, authzCodeId));
                     }
                 }
             }
