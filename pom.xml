@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>6.11.40-SNAPSHOT</version>
+    <version>6.11.53-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -42,6 +42,7 @@
     <modules>
         <module>service-stubs/org.wso2.carbon.claim.metadata.mgt.stub</module>
         <module>test-utils/org.wso2.carbon.identity.oauth.common.testng</module>
+        <module>components/org.wso2.carbon.identity.oauth.extension</module>
         <module>components/org.wso2.carbon.identity.oauth.common</module>
         <module>components/org.wso2.carbon.identity.oauth</module>
         <module>components/org.wso2.carbon.identity.oauth.endpoint</module>
@@ -502,6 +503,11 @@
                 <version>${project.version}</version>
                 <type>war</type>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                <artifactId>org.wso2.carbon.identity.oauth.extension</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <!--Swagger Dependencies-->
             <dependency>
@@ -635,6 +641,13 @@
                 <groupId>org.ops4j.pax.logging</groupId>
                 <artifactId>pax-logging-api</artifactId>
                 <version>${pax.logging.api.version}</version>
+            </dependency>
+
+            <!-- For Nashorn -->
+            <dependency>
+                <groupId>org.openjdk.nashorn</groupId>
+                <artifactId>nashorn-core</artifactId>
+                <version>${openjdk.nashorn.version}</version>
             </dependency>
 
             <!-- Findbugs annotations-->
@@ -839,8 +852,8 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.25.92</carbon.identity.framework.version>
-        <carbon.identity.framework.imp.pkg.version.range>[5.17.5, 6.0.0)
+        <carbon.identity.framework.version>5.25.157</carbon.identity.framework.version>
+        <carbon.identity.framework.imp.pkg.version.range>[5.17.5, 7.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
         <carbon.identity.organization.management.version>1.1.14
@@ -961,6 +974,8 @@
 
         <!-- Pax Logging Version -->
         <pax.logging.api.version>1.10.1</pax.logging.api.version>
+
+        <openjdk.nashorn.version>15.3</openjdk.nashorn.version>
 
         <!-- Log4j -->
         <log4j.api.version>2.17.1</log4j.api.version>

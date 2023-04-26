@@ -70,6 +70,8 @@ public class AccessTokenDO extends CacheEntry {
 
     private TokenBinding tokenBinding;
 
+    private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
+
     public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope, Timestamp issuedTime,
                          Timestamp refreshTokenIssuedTime, long validityPeriodInMillis,
                          long refreshTokenValidityPeriodInMillis, String tokenType) {
@@ -302,5 +304,15 @@ public class AccessTokenDO extends CacheEntry {
     public void setTokenBinding(TokenBinding tokenBinding) {
 
         this.tokenBinding = tokenBinding;
+    }
+
+    public AccessTokenExtendedAttributes getAccessTokenExtendedAttributes() {
+
+        return accessTokenExtendedAttributes;
+    }
+
+    public void setAccessTokenExtendedAttributes(AccessTokenExtendedAttributes accessTokenExtendedAttributes) {
+
+        this.accessTokenExtendedAttributes = accessTokenExtendedAttributes;
     }
 }

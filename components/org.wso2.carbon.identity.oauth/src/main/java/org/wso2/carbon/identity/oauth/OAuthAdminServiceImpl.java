@@ -1774,6 +1774,7 @@ public class OAuthAdminServiceImpl {
         validateScopeName(scope.getName());
         validateRegex(scope.getName());
         validateDisplayName(scope.getDisplayName());
+        validateDescription(scope.getDescription());
     }
 
     /**
@@ -1789,7 +1790,7 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Check whether scope name is provided or not.
+     * Check whether scope name is empty, contains white spaces and whether the scope name is too long.
      *
      * @param scopeName Scope name.
      * @throws IdentityOAuth2ScopeClientException
@@ -1802,6 +1803,10 @@ public class OAuthAdminServiceImpl {
                     ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED.getMessage());
         }
         validateWhiteSpaces(scopeName);
+        if (scopeName.length() > Oauth2ScopeConstants.MAX_LENGTH_OF_SCOPE_NAME) {
+            throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_TOO_LONG.getMessage(), scopeName));
+        }
     }
 
     private void validateRegex(String scopeName) throws IdentityOAuthClientException {
@@ -1834,7 +1839,7 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Check whether display name is provided or empty.
+     * Check whether the display name is provided or empty and whether the display name is too long.
      *
      * @param displayName Display name.
      * @throws IdentityOAuth2ScopeClientException
@@ -1846,6 +1851,25 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(INVALID_REQUEST,
                     Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED
                             .getMessage());
+        }
+        if (displayName.length() > Oauth2ScopeConstants.MAX_LENGTH_OF_SCOPE_DISPLAY_NAME) {
+            throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_TOO_LONG.getMessage(), displayName));
+        }
+    }
+
+    /**
+     * Check whether the description is too long.
+     *
+     * @param description Description.
+     * @throws IdentityOAuth2ScopeClientException
+     */
+    private void validateDescription(String description) throws IdentityOAuthClientException {
+
+        if (StringUtils.isNotBlank(description) &&
+                description.length() > Oauth2ScopeConstants.MAX_LENGTH_OF_SCOPE_DESCRIPTION) {
+            throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_DESCRIPTION_TOO_LONG.getMessage(), description));
         }
     }
 
