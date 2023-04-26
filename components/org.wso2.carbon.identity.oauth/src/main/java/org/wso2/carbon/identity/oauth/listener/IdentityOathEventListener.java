@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.listener;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -30,6 +31,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCache;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheEntry;
@@ -353,6 +355,10 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
 
         if (CollectionUtils.isNotEmpty(accessTokenDOSet)) {
             for (AccessTokenDO accessTokenDO : accessTokenDOSet) {
+                if (StringUtils.equalsIgnoreCase(OAuthConstants.GrantTypes.PASSWORD,
+                                accessTokenDO.getGrantType())) {
+                    continue;
+                }
                 String accessToken = accessTokenDO.getAccessToken();
                 String tokenId = accessTokenDO.getTokenId();
                 AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);

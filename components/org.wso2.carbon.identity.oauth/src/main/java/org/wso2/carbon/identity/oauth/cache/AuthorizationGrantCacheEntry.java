@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth.cache;
 
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 import java.util.ArrayList;
@@ -77,6 +78,7 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     private String oidcSessionId;
 
     private boolean isRequestObjectFlow;
+    private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
 
     public String getSubjectClaim() {
         return subjectClaim;
@@ -313,5 +315,15 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     public void setRequestObjectFlow(boolean isRequestObjectFlow) {
 
         this.isRequestObjectFlow = isRequestObjectFlow;
+    }
+
+    public AccessTokenExtendedAttributes getAccessTokenExtensionDO() {
+
+        return accessTokenExtendedAttributes;
+    }
+
+    public void setAccessTokenExtensionDO(AccessTokenExtendedAttributes accessTokenExtendedAttributes) {
+
+        this.accessTokenExtendedAttributes = accessTokenExtendedAttributes;
     }
 }

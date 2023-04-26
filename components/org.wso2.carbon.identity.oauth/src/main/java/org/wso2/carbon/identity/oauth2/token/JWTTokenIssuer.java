@@ -482,6 +482,18 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         } else {
             jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
         }
+
+        if (tokenReqMessageContext != null && tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
+                tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes() != null) {
+            Map<String, String> customClaims =
+                    tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes()
+                            .getParameters();
+            if (customClaims != null && !customClaims.isEmpty()) {
+                for (Map.Entry<String, String> entry : customClaims.entrySet()) {
+                    jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
+                }
+            }
+        }
         // Include token binding.
         jwtClaimsSet = handleTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
 

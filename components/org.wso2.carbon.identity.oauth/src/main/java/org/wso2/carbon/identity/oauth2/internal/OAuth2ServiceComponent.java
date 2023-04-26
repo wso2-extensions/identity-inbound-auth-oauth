@@ -61,6 +61,7 @@ import org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeReq
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
+import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.handlers.TokenBindingExpiryEventHandler;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
@@ -100,6 +101,7 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabl
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkConsentedTokenColumnAvailable;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getJWTRenewWithoutRevokeAllowedGrantTypes;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isAccessTokenExtendedTableExist;
 
 /**
  * OAuth 2 OSGi service component.
@@ -277,8 +279,11 @@ public class OAuth2ServiceComponent {
 
             // Registering OAuth2Service as a OSGIService
             bundleContext.registerService(OAuth2Service.class.getName(), new OAuth2Service(), null);
+            OAuth2ScopeService oAuth2ScopeService = new OAuth2ScopeService();
             // Registering OAuth2ScopeService as a OSGIService
-            bundleContext.registerService(OAuth2ScopeService.class.getName(), new OAuth2ScopeService(), null);
+            bundleContext.registerService(OAuth2ScopeService.class.getName(), oAuth2ScopeService, null);
+            // Registering OAuth2ScopeService under ScopeService interface as the default service.
+            bundleContext.registerService(ScopeMetadataService.class, oAuth2ScopeService, null);
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
 
@@ -310,6 +315,12 @@ public class OAuth2ServiceComponent {
                         "Setting isIDPIdColumnEnabled to false.");
             }
             OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(false);
+        }
+
+        if (isAccessTokenExtendedTableExist()) {
+            log.debug("IDN_OAUTH2_ACCESS_TOKEN_EXTENDED table is available Setting " +
+                    "isAccessTokenExtendedTableExist to true.");
+            OAuth2ServiceComponentHolder.setTokenExtendedTableExist(true);
         }
 
         boolean isConsentedTokenColumnAvailable = checkConsentedTokenColumnAvailable();
