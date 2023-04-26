@@ -876,27 +876,6 @@ public class EndpointUtil {
         return sp;
     }
 
-    private static String getExternalConsentUrlForSP(ServiceProvider sp) throws OAuthSystemException {
-
-        String externalConsentUrl = "";
-        LocalAndOutboundAuthenticationConfig config = sp.getLocalAndOutBoundAuthenticationConfig();
-        if (config != null && config.getExternalizedConsentPageConfig() != null) {
-            externalConsentUrl = config.getExternalizedConsentPageConfig().getConsentPageUrl();
-        }
-
-        if (log.isDebugEnabled()) {
-            log.debug("externalConsentUrl: " + externalConsentUrl + " for application: " +
-                    sp.getApplicationName() + " with id: " + sp.getApplicationID());
-        }
-
-        if (StringUtils.isNotBlank(externalConsentUrl)) {
-            return externalConsentUrl;
-        } else {
-            throw new OAuthSystemException("External consent management is enabled for the service provider: " +
-                    sp.getApplicationName() + " but the external consent url is not configured.");
-        }
-    }
-
     private static String getScopeMetadataQueryParam(Set<String> scopes, String tenantDomain) {
 
         try {
