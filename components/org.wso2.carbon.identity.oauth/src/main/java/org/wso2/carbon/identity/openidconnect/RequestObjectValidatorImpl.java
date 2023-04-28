@@ -353,7 +353,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         String redirectUriInReqObj = requestObject.getClaimValue(Constants.REDIRECT_URI);
         String redirectURI = oAuth2Parameters.getRedirectURI();
 
-        if (redirectURI.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+        if (StringUtils.isNotEmpty(redirectURI) && redirectURI.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
             String regex = redirectURI.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
             isValid = Pattern.matches(regex, redirectUriInReqObj);
         } else {
