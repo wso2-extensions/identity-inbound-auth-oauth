@@ -35,7 +35,9 @@ import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.*;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.USER_CONSENT_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 
 /**

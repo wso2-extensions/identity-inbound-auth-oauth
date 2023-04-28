@@ -28,11 +28,13 @@ import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthCodeResponse;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 
-import javax.servlet.http.HttpServletResponse;
+import java.util.UUID;
+
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.UUID;
+
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * Handles creation of authentication and error response.
@@ -82,7 +84,7 @@ public class ParAuthResponseHandler {
     /**
      * Creates PAR Authentication Error Response.
      *
-     * @param oAuth2ClientValidationResponseDTO Ciba Authentication Failed Exception.
+     * @param oAuth2ClientValidationResponseDTO PAR Authentication Failed Exception.
      * @return response Authentication Error Responses for AuthenticationRequest.
      */
     public Response createErrorResponse(OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO) {

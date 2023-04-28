@@ -18,10 +18,8 @@
 package org.wso2.carbon.identity.oauth.par.model;
 
 
-import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
-import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
 
 import java.util.HashMap;
 
@@ -32,25 +30,17 @@ import javax.servlet.http.HttpServletRequestWrapper;
  * Wrap class to handle PAR request.
  */
 public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
-
     HashMap<String, String> params = new HashMap<>();
 
-    public OAuthParRequestWrapper(HttpServletRequest request) throws Exception {
+    public OAuthParRequestWrapper(HttpServletRequest request) throws OAuthProblemException {
         super(request);
 
         // Get request data from PAR and add to params
         String requestUri = request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI);
         String uuid = requestUri.substring(requestUri.length() - 36);
 
-        //get data from Database
-        if (!uuid.isEmpty()) {
-            ParDataRecord record = ParDAOFactory.getInstance().getParAuthMgtDAO().getParRequestRecord(uuid);
-            params = record.getParamMap();
-        } else {
-            throw new InvalidOAuthRequestException("Request URI is empty in the authorization request",
-                    OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST_URI);
-        }
-
+        params = ParRetrieveHandler.
+                retrieveParamMap(uuid, request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
     }
 
     @Override

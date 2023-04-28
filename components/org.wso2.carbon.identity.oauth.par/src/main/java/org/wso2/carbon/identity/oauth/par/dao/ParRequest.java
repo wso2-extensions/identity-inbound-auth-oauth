@@ -1,0 +1,90 @@
+/**
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.wso2.carbon.identity.oauth.par.dao;
+
+import org.wso2.carbon.identity.core.cache.CacheEntry;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+
+import java.util.HashMap;
+
+/**
+ * PAR request with all attributes for caching.
+ */
+public class ParRequest extends CacheEntry {
+
+    private String requestUri;
+    private HashMap<String, String> parameterMap;
+    private long expiresIn;
+    private String clientId;
+    private String requestObject;
+
+    public ParRequest(String requestUri, HashMap<String, String> parameterMap, long expiresIn) {
+        this.requestUri = requestUri;
+        this.parameterMap = parameterMap;
+        this.expiresIn = expiresIn;
+        this.clientId = parameterMap.get(OAuthConstants.OAuth20Params.CLIENT_ID);
+    }
+
+    public ParRequest(HashMap<String, String> parameterMap, long expiresIn, String requestObject) {
+        this.requestObject = requestObject;
+        this.parameterMap = parameterMap;
+        this.expiresIn = expiresIn;
+        this.clientId = parameterMap.get(OAuthConstants.OAuth20Params.CLIENT_ID);
+    }
+
+    public String getRequestUri() {
+        return requestUri;
+    }
+
+    public HashMap<String, String> getParameterMap() {
+        return parameterMap;
+    }
+
+    public long getExpiresIn() {
+        return expiresIn;
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public String getRequestObject() {
+        return requestObject;
+    }
+
+    public void setRequestUri(String requestUri) {
+        this.requestUri = requestUri;
+    }
+
+    public void setParameterMap(HashMap<String, String> parameterMap) {
+        this.parameterMap = parameterMap;
+    }
+
+    public void setExpiresIn(long expiresIn) {
+        this.expiresIn = expiresIn;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
+    }
+
+    public void setRequestObject(String requestObject) {
+        this.requestObject = requestObject;
+    }
+}

@@ -16,21 +16,26 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.par.exceptions;
+package org.wso2.carbon.identity.oauth.par.dao;
 
-import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+import org.wso2.carbon.identity.core.cache.BaseCache;
 
 /**
- * Client exception from par core component.
+ * Cache implementation for PAR requests.
  */
-public class ParClientException extends OAuthProblemException {
+public class ParCache extends BaseCache<String, ParRequest> {
 
+    private static final ParCache instance = new ParCache();
+    private static final String CACHE_NAME = "ParClaimCache";
 
-    public ParClientException(String error) {
-        super(error);
+    public ParCache() {
+        super(CACHE_NAME);
     }
 
-    public ParClientException(String error, String description) {
-        super(error, description);
+    public static ParCache getInstance() {
+
+        return instance;
     }
+
+
 }

@@ -28,7 +28,7 @@ import java.util.Map;
  */
 public class ParRequestData {
 
-    private static Map<String, Map<String,String[]>> requests = new HashMap<>();
+    private static Map<String, Map<String, String[]>> requests = new HashMap<>();
     private static Map<String, Long> requestTimes = new HashMap<>();
     private static Map<String, OAuthAuthzRequest> oauthRequests = new HashMap<>();
 

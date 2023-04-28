@@ -32,11 +32,33 @@ public class SQLQueries {
      */
 
     public static class ParSQLQueries {
-        public static final String STORE_PAR_REQUEST = "INSERT INTO IDN_OAUTH_PAR " +
-                "(REQ_URI_UUID, PARAM_MAP, REQ_TIME) VALUES (?,?,?)";
+//        public static final String STORE_PAR_REQUEST = "INSERT INTO IDN_OAUTH_PAR " +
+//                "(REQ_URI_UUID, PARAM_MAP, REQ_TIME) VALUES (?,?,?)";
 
         public static final String RETRIEVE_PAR_REQUEST_DATA =
                 "SELECT PARAM_MAP, REQ_TIME FROM IDN_OAUTH_PAR " +
                         " WHERE REQ_URI_UUID = ? ";
+
+
+        //New Table
+
+        //Storing Data
+        public static final String STORE_PAR_REQUEST = "INSERT INTO IDN_OAUTH_PAR_REQUEST " +
+                "(REQ_URI_UUID, CLIENT_ID, EXPIRES_IN) VALUES (?, ?, ?);";
+
+        public static final String STORE_PAR_REQUEST_PARAMS = "INSERT INTO IDN_OAUTH_PAR_REQUEST_PARAMS " +
+                "(REQ_URI_UUID, PARAM_KEY, PARAM_VALUE) VALUES (?, ?, ?);";
+
+
+        //Retrieve data
+        public static final String RETRIEVE_PAR_CLIENT_ID =
+                "SELECT CLIENT_ID FROM IDN_OAUTH_PAR_REQUEST " +
+                        " WHERE REQ_URI_UUID = ? ";
+
+        public static final String RETRIEVE_PAR_PARAMS =
+                "SELECT PARAM_KEY, PARAM_VALUE FROM IDN_OAUTH_PAR_REQUEST_PARAMS WHERE REQ_URI_UUID = ?";
+
+        public static final String RETRIEVE_REQUEST_EXPIRES_IN =
+                "SELECT EXPIRES_IN FROM IDN_OAUTH_PAR_REQUEST WHERE REQ_URI_UUID = ?";
     }
 }

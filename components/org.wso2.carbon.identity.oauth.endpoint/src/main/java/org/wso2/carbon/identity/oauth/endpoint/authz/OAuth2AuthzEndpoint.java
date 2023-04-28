@@ -66,7 +66,12 @@ import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
-import org.wso2.carbon.identity.oauth.cache.*;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
+import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -80,7 +85,12 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
-import org.wso2.carbon.identity.oauth2.*;
+import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
+import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -99,15 +109,6 @@ import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.utils.CarbonUtils;
 
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.*;
-import javax.ws.rs.core.*;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
@@ -119,19 +120,68 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.ParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.StringJoiner;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.*;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
+
+import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.MANDATORY_CLAIMS;
+import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.REQUESTED_CLAIMS;
+import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.USER_CLAIMS_CONSENT_ONLY;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TENANT_DOMAIN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
-import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.*;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.*;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.*;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.USER_CONSENT_RESPONSE;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getErrorPageURL;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getLoginPageURL;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthServerConfiguration;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSSOConsentService;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.retrieveStateForErrorURL;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.DISPLAY;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.ID_TOKEN_HINT;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.LOGIN_HINT;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.MAX_AGE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.NONCE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.PROMPT;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
 
 /**
  * Rest implementation of OAuth2 authorize endpoint.
@@ -241,10 +291,6 @@ public class OAuth2AuthzEndpoint {
         } catch (OAuthSystemException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
             return handleOAuthSystemException(oAuthMessage, e);
-        } catch (RequestObjectException e) {
-            throw new RuntimeException(e);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         } finally {
             handleCachePersistence(oAuthMessage);
             if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
@@ -919,8 +965,7 @@ public class OAuth2AuthzEndpoint {
         OAuth2Parameters oAuth2Parameters = getOAuth2ParamsFromOAuthMessage(oAuthMessage);
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
                 getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
-                                .OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
-                                "Invalid authorization request", appName,
+                                .OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request", appName,
                         oAuth2Parameters)
         )).build();
     }
@@ -948,8 +993,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private void addToAuthenticationResultDetailsToOAuthMessage(OAuthMessage oAuthMessage,
-                                                                AuthenticationResult authnResult,
-                                                                AuthenticatedUser authenticatedUser) {
+                                                                AuthenticationResult authnResult, AuthenticatedUser authenticatedUser) {
 
         oAuthMessage.getSessionDataCacheEntry().setLoggedInUser(authenticatedUser);
         oAuthMessage.getSessionDataCacheEntry().setAuthenticatedIdPs(authnResult.getAuthenticatedIdPs());
@@ -981,7 +1025,8 @@ public class OAuth2AuthzEndpoint {
         return RESPONSE_MODE_FORM_POST.equals(oauth2Params.getResponseMode()) && isJSON(redirectURL);
     }
 
-    private Response handleInitialAuthorizationRequest(OAuthMessage oAuthMessage) throws Exception {
+    private Response handleInitialAuthorizationRequest(OAuthMessage oAuthMessage) throws OAuthSystemException,
+            OAuthProblemException, URISyntaxException, InvalidRequestParentException {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             Map<String, Object> params = new HashMap<>();
@@ -1484,7 +1529,7 @@ public class OAuth2AuthzEndpoint {
      * @throws OAuthProblemException OAuthProblemException
      */
     private String handleOAuthAuthorizationRequest(OAuthMessage oAuthMessage)
-            throws Exception {
+            throws OAuthSystemException, OAuthProblemException, InvalidRequestException {
 
         OAuth2ClientValidationResponseDTO validationResponse = validateClient(oAuthMessage);
 
@@ -1505,12 +1550,22 @@ public class OAuth2AuthzEndpoint {
             setSPAttributeToRequest(oAuthMessage.getRequest(), validationResponse.getApplicationName(), tenantDomain);
         }
 
-        OAuthAuthzRequest oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
-
+        //
+        OAuthAuthzRequest oauthRequest = null;
+        try {
+            oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
+        } catch (OAuthProblemException e) {
+            if (e instanceof ParClientException) {
+                throw new InvalidRequestException(e.getError(),
+                        OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST_URI);
+            }
+        }
 
         OAuth2Parameters params = new OAuth2Parameters();
         String sessionDataKey = UUIDGenerator.generateUUID();
         params.setSessionDataKey(sessionDataKey);
+
+
         String redirectURI = populateOauthParameters(params, oAuthMessage, validationResponse, oauthRequest);
         if (redirectURI != null) {
             return redirectURI;
@@ -1601,12 +1656,11 @@ public class OAuth2AuthzEndpoint {
      * @throws OAuthSystemException  thrown when initializing the OAuthAuthzRequestClass instance.
      */
     private OAuthAuthzRequest getOAuthAuthzRequest(HttpServletRequest request)
-            throws Exception {
+            throws OAuthProblemException, OAuthSystemException {
 
         OAuthAuthzRequest oAuthAuthzRequest;
 
         if (isDefaultOAuthAuthzRequestClassConfigured()) {
-
             oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
         } else {
             try {
@@ -1841,13 +1895,11 @@ public class OAuth2AuthzEndpoint {
                     Map<String, Object> configs = new HashMap<>();
                     configs.put("isPkceMandatory", Boolean.toString(validationResponse.isPkceMandatory()));
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "Unsupported PKCE Challenge Method.",
-                            "validate-pkce",
+                            OAuthConstants.LogConstants.FAILED, "Unsupported PKCE Challenge Method.", "validate-pkce",
                             configs);
                 }
                 return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
-                                .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE,
-                        "Unsupported PKCE Challenge Method", null,
+                                .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE, "Unsupported PKCE Challenge Method", null,
                         oAuth2Parameters);
             }
         }
@@ -1921,16 +1973,14 @@ public class OAuth2AuthzEndpoint {
     private String populateOauthParameters(OAuth2Parameters params, OAuthMessage oAuthMessage,
                                            OAuth2ClientValidationResponseDTO validationResponse,
                                            OAuthAuthzRequest oauthRequest)
-            throws Exception {
+            throws OAuthSystemException, InvalidRequestException {
 
         String clientId = oAuthMessage.getClientId();
-
         params.setClientId(clientId);
         params.setRedirectURI(validationResponse.getCallbackURL());
         params.setResponseType(oauthRequest.getResponseType());
         params.setResponseMode(oauthRequest.getParam(RESPONSE_MODE));
         params.setScopes(oauthRequest.getScopes());
-
         if (params.getScopes() == null) { // to avoid null pointers
             Set<String> scopeSet = new HashSet<String>();
             scopeSet.add("");
@@ -1970,8 +2020,6 @@ public class OAuth2AuthzEndpoint {
 
         handleMaxAgeParameter(oauthRequest, params);
 
-
-
         /*
             OIDC Request object will supersede parameters sent in the OAuth Authorization request. So handling the
             OIDC Request object needs to done after processing all request parameters.
@@ -1985,11 +2033,11 @@ public class OAuth2AuthzEndpoint {
                             + clientId + " of tenantDomain: " + params.getTenantDomain(), e);
                 }
                 if (StringUtils.isNotBlank(oAuthMessage.getRequest().getParameter(REQUEST_URI))) {
-                    return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes
+                    return EndpointUtil.getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes
                                     .OAuth2SubErrorCodes.INVALID_REQUEST_URI,
                             e.getErrorCode(), e.getErrorMessage(), null, params);
                 } else {
-                    return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes
+                    return EndpointUtil.getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes
                                     .OAuth2SubErrorCodes.INVALID_REQUEST_OBJECT, e.getErrorCode(), e.getErrorMessage(),
                             null, params);
                 }
@@ -2072,8 +2120,7 @@ public class OAuth2AuthzEndpoint {
         String requestObjValue = null;
         if (isRequestUri(oauthRequest)) {
             requestObjValue = oauthRequest.getParam(REQUEST_URI);
-        } else
-            if (isRequestParameter(oauthRequest)) {
+        } else if (isRequestParameter(oauthRequest)) {
             requestObjValue = oauthRequest.getParam(REQUEST);
         }
 
@@ -2117,9 +2164,6 @@ public class OAuth2AuthzEndpoint {
               When the request parameter is used, the OpenID Connect request parameter values contained in the JWT
               supersede those passed using the OAuth 2.0 request syntax
              */
-
-        //--->
-
         overrideAuthzParameters(oAuthMessage, parameters, oauthRequest.getParam(REQUEST),
                 oauthRequest.getParam(REQUEST_URI), requestObject);
 
