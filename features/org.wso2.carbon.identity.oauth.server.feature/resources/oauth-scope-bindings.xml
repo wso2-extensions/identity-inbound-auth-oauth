@@ -36,6 +36,11 @@
       <Permission>/permission/protected/server-admin/homepage</Permission>
    </Permissions>
 </Scope>
+<Scope name="internal_organization_admin" displayName="Organization Admin">
+    <Permissions>
+      <Permissions>/permission/admin</Permissions>
+    </Permissions>
+</Scope>
 <Scope name="internal_monitor_metrics" displayName="Monitor internal_monitor_metrics">
     <Permissions>
       <Permission>/permission/admin/monitor/metrics</Permission>
