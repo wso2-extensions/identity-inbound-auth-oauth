@@ -22,6 +22,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -74,6 +75,7 @@ public class OAuth2ServiceComponentHolder {
     private List<Scope> oauthScopeBinding = new ArrayList<>();
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
     private static List<String> jwtRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
+    private static ConsentServerConfigsManagementService consentServerConfigsManagementService;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -423,5 +425,26 @@ public class OAuth2ServiceComponentHolder {
 
     public static void setIdentityEventService(IdentityEventService identityEventService) {
         OAuth2ServiceComponentHolder.identityEventService = identityEventService;
+    }
+
+    /**
+     * Get Consent Server Configs Management Service.
+     *
+     * @return Consent Server Configs Management Service.
+     */
+    public static ConsentServerConfigsManagementService getConsentServerConfigsManagementService() {
+
+        return OAuth2ServiceComponentHolder.consentServerConfigsManagementService;
+    }
+
+    /**
+     * Set Consent Server Configs Management Service.
+     *
+     * @param consentServerConfigsManagementService Consent Server Configs Management Service.
+     */
+    public static void setConsentServerConfigsManagementService(ConsentServerConfigsManagementService
+                                                                        consentServerConfigsManagementService) {
+
+        OAuth2ServiceComponentHolder.consentServerConfigsManagementService = consentServerConfigsManagementService;
     }
 }

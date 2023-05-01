@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
+import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
@@ -815,5 +816,37 @@ public class OAuth2ServiceComponent {
             log.debug("IdentityEventService unset in OAuth2ServiceComponent bundle");
         }
         OAuth2ServiceComponentHolder.setIdentityEventService(null);
+    }
+
+    @Reference(
+            name = "consent.server.configs.mgt.service",
+            service = ConsentServerConfigsManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetConsentServerConfigsManagementService"
+    )
+
+    /**
+     * This method is used to set the Consent Server Configs Management Service.
+     *
+     * @param consentServerConfigsManagementService The Consent Server Configs Management Service which needs to be set.
+     */
+    protected void setConsentServerConfigsManagementService(ConsentServerConfigsManagementService
+                                                                        consentServerConfigsManagementService) {
+
+        OAuth2ServiceComponentHolder.setConsentServerConfigsManagementService(consentServerConfigsManagementService);
+        log.debug("Setting the Consent Server Management Configs.");
+    }
+
+    /**
+     * This method is used to unset the Consent Server Configs Management Service.
+     *
+     * @param consentServerConfigsManagementService The Consent Server Configs Management Service which needs to unset.
+     */
+    protected void unsetConsentServerConfigsManagementService(ConsentServerConfigsManagementService
+                                                     consentServerConfigsManagementService) {
+
+        OAuth2ServiceComponentHolder.setConsentServerConfigsManagementService(null);
+        log.debug("Unsetting the Consent Server Configs Management.");
     }
 }

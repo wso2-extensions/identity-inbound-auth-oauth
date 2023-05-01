@@ -80,6 +80,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.consent.server.configs.mgt.exceptions.ConsentServerConfigsMgtException;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
@@ -364,6 +365,10 @@ public class OAuth2Util {
     public static final String DYNAMIC_TOKEN_DATA_FUNCTION = "dynamicTokenData";
     public static final String ACCESS_TOKEN_JS_OBJECT = "access_token";
     public static final int EXTENDED_REFRESH_TOKEN_DEFAULT_TIME = -2;
+
+    private static final String EXTERNAL_CONSENT_PAGE_CONFIGURATIONS = "external_consent_page_configurations";
+    private static final String EXTERNAL_CONSENT_PAGE = "external_consent_page";
+    private static final String EXTERNAL_CONSENT_PAGE_URL = "external_consent_page_url";
 
     private OAuth2Util() {
 
@@ -4656,5 +4661,27 @@ public class OAuth2Util {
         }
 
         return allowedGrantTypes;
+    }
+
+    /**
+     * Get the external consent page url configured for the tenant domain.
+     *
+     * @param tenantDomain Tenant Domain.
+     * @return External consent page url.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static String resolveExternalConsentPageUrl(String tenantDomain) throws IdentityOAuth2Exception {
+
+        String externalConsentPageUrl = "";
+        try {
+            externalConsentPageUrl = OAuth2ServiceComponentHolder.getConsentServerConfigsManagementService()
+                    .getExternalConsentPageUrl(tenantDomain);
+
+        } catch (ConsentServerConfigsMgtException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving external consent page url from the " +
+                    "configuration store for tenant domain : " + tenantDomain, e);
+        }
+
+        return externalConsentPageUrl;
     }
 }
