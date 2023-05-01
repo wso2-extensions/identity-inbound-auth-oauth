@@ -233,7 +233,7 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
-            <artifactId>org.wso2.carbon.identity.consent.mgt.server.configs</artifactId>
+            <artifactId>org.wso2.carbon.identity.consent.server.configs.mgt</artifactId>
         </dependency>
 
         <dependency>

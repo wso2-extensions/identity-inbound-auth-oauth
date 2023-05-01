@@ -308,12 +308,12 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.isOIDCAuthzRequest(any(Set.class))).thenReturn(isOIDC);
-        when(OAuth2Util.resolveExternalConsentPageUrl(anyString())).thenReturn(EXTERNAL_CONSENT_URL);
         if (parameters != null && parameters.getApplicationName().equals(EXTERNAL_CONSENTED_APP_NAME)) {
             when(OAuth2Util.getServiceProvider(anyString())).thenReturn(getServiceProvider());
         } else {
             when(OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
         }
+        when(OAuth2Util.resolveExternalConsentPageUrl(anyString())).thenReturn(EXTERNAL_CONSENT_URL);
 
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOIDCConsentPageUrl()).thenReturn(OIDC_CONSENT_PAGE_URL);
@@ -862,6 +862,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
         ServiceProvider serviceProvider = new ServiceProvider();
         serviceProvider.setApplicationName(EXTERNAL_CONSENTED_APP_NAME);
+        serviceProvider.setTenantDomain("testTenantDomain");
         LocalAndOutboundAuthenticationConfig localAndOutboundAuthenticationConfig = new
                 LocalAndOutboundAuthenticationConfig();
         localAndOutboundAuthenticationConfig.setUseExternalConsentPage(true);

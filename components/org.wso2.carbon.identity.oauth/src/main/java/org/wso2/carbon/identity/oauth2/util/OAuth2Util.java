@@ -80,7 +80,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
-import org.wso2.carbon.identity.consent.mgt.server.configs.exceptions.ConsentMgtServerConfigsException;
+import org.wso2.carbon.identity.consent.server.configs.mgt.exceptions.ConsentServerConfigsMgtException;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
@@ -4674,10 +4674,10 @@ public class OAuth2Util {
 
         String externalConsentPageUrl = "";
         try {
-            externalConsentPageUrl = OAuth2ServiceComponentHolder.getConsentManagementServerConfigsService()
+            externalConsentPageUrl = OAuth2ServiceComponentHolder.getConsentServerConfigsManagementService()
                     .getExternalConsentPageUrl(tenantDomain);
 
-        } catch (ConsentMgtServerConfigsException e) {
+        } catch (ConsentServerConfigsMgtException e) {
             throw new IdentityOAuth2Exception("Error while retrieving external consent page url from the " +
                     "configuration store for tenant domain : " + tenantDomain, e);
         }
