@@ -757,7 +757,7 @@ public final class OAuthUtil {
                 Tenant tenant = OAuthComponentServiceHolder.getInstance().getRealmService()
                         .getTenantManager().getTenant(tenantID);
                 String accessedOrganizationId = tenant.getAssociatedOrganizationUUID();
-                if (accessedOrganizationId == null) {
+                if (StringUtils.isEmpty(accessedOrganizationId)) {
                     user = getUserFromTenant(username, userId, tenantID);
                 } else {
                     Optional<org.wso2.carbon.user.core.common.User> resolvedUser =
@@ -792,9 +792,9 @@ public final class OAuthUtil {
             AbstractUserStoreManager userStoreManager =
                     (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance()
                             .getRealmService().getTenantUserRealm(tenantId).getUserStoreManager();
-            if (username != null && userStoreManager.isExistingUser(username)) {
+            if (StringUtils.isNotEmpty(username) && userStoreManager.isExistingUser(username)) {
                 user = getApplicationUser(userStoreManager.getUser(null, username));
-            } else if (userId != null && userStoreManager.isExistingUserWithID(userId)) {
+            } else if (StringUtils.isNotEmpty(userId) && userStoreManager.isExistingUserWithID(userId)) {
                 user = getApplicationUser(userStoreManager.getUser(userId, null));
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
