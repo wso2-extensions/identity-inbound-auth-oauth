@@ -85,6 +85,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
+import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -1554,6 +1555,7 @@ public class OAuth2AuthzEndpoint {
         OAuthAuthzRequest oauthRequest = null;
         try {
             oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
+            oauthRequest.getParam(OAuthConstants.OAuth20Params.REQUEST_URI);
         } catch (OAuthProblemException e) {
             if (e instanceof ParClientException) {
                 throw new InvalidRequestException(e.getError(),
@@ -2116,7 +2118,11 @@ public class OAuth2AuthzEndpoint {
                                          OAuth2Parameters parameters)
             throws RequestObjectException, InvalidRequestException {
 
-        validateRequestObjectParams(oauthRequest);
+        // if not par request do validation
+        if (!(oauthRequest.getParam(ParConstants.IS_PAR_REQUEST).equals("true"))) {
+            validateRequestObjectParams(oauthRequest);
+        }
+
         String requestObjValue = null;
         if (isRequestUri(oauthRequest)) {
             requestObjValue = oauthRequest.getParam(REQUEST_URI);

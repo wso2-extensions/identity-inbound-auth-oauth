@@ -30,15 +30,12 @@ import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.model.OAuthParRequestWrapper;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
-
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * OAuth 2 authorization request.
@@ -57,6 +54,7 @@ public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
 
         // if request_uri is there consider as par request
         if (request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI) != null) {
+
             return new OAuthParRequestWrapper(request);
         } else {
             return request;

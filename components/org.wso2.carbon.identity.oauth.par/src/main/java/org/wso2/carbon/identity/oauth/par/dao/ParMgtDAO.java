@@ -46,12 +46,19 @@ public interface ParMgtDAO {
      */
     void persistParRequestParams(String reqUUID, String paramKey, String paramValue) throws ParCoreException;
 
+    /**
+     * Persists the request object parameter.
+     *
+     * @param reqUUID Authentication request identifier.
+     * @throws ParCoreException Exception thrown from PAR Core Component.
+     */
+    void persistRequestObject(String reqUUID, String request_object) throws ParCoreException;
+
     String getParClientId(String reqUUID) throws ParClientException;
 
     HashMap<String, String> getParParamMap(String reqUUID) throws ParClientException;
 
+    String getRequestObject(String uuid) throws ParClientException;
+
     long getExpiresIn(String reqUUID) throws ParClientException;
-
-
-
 }

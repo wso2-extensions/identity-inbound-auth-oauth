@@ -32,19 +32,14 @@ public class ParRequest extends CacheEntry {
     private HashMap<String, String> parameterMap;
     private long expiresIn;
     private String clientId;
-    private String requestObject;
+    private String requestObject = null;
 
-    public ParRequest(String requestUri, HashMap<String, String> parameterMap, long expiresIn) {
+
+    public ParRequest(String requestUri, HashMap<String, String> parameterMap, long expiresIn, String requestObject) {
         this.requestUri = requestUri;
         this.parameterMap = parameterMap;
         this.expiresIn = expiresIn;
-        this.clientId = parameterMap.get(OAuthConstants.OAuth20Params.CLIENT_ID);
-    }
-
-    public ParRequest(HashMap<String, String> parameterMap, long expiresIn, String requestObject) {
         this.requestObject = requestObject;
-        this.parameterMap = parameterMap;
-        this.expiresIn = expiresIn;
         this.clientId = parameterMap.get(OAuthConstants.OAuth20Params.CLIENT_ID);
     }
 

@@ -1,13 +1,13 @@
 /**
  * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
- *
+ * <p>
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.par;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.catalina.util.ParameterMap;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
@@ -70,6 +69,8 @@ public class OAuth2ParEndpoint {
 
         long expiresIn = Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis();
 
+        CacheBackedParDAO cacheBackedParDAO = new CacheBackedParDAO();
+
         OAuth2Service oAuth2Service = new OAuth2Service();
         OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.validateClientInfo(request);
 
@@ -92,31 +93,35 @@ public class OAuth2ParEndpoint {
         Response resp = getAuthResponse(response, parAuthCodeResponse);
 
         try {
-            // serialize parameter to JSON String
-            ObjectMapper objectMapper = new ObjectMapper();
-            String json = objectMapper.writeValueAsString(parameters);
-
             // Store values to Database
+            ParRequest parRequest;
+            String requestObject = null;
             String reqUUID = parAuthCodeResponse.getRequestUri();
             String uuid = reqUUID.substring(reqUUID.length() - 36);
+            int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+
             ParDAOFactory.getInstance().getParAuthMgtDAO()
                     .persistParRequestData(uuid, parameters.get(OAuthConstants.OAuth20Params.CLIENT_ID), expiresIn);
+
+            if (parameters.containsKey(OAuthConstants.OAuth20Params.REQUEST)) {
+                ParDAOFactory.getInstance().getParAuthMgtDAO().
+                        persistRequestObject(uuid, parameters.get(OAuthConstants.OAuth20Params.REQUEST));
+                requestObject = parameters.get(OAuthConstants.OAuth20Params.REQUEST);
+                parameters.remove(OAuthConstants.OAuth20Params.REQUEST);
+            }
 
             // Store request parameters as key value pairs
             for (Map.Entry<String, String> entry : parameters.entrySet()) {
                 String key = entry.getKey();
                 String value = entry.getValue();
+
                 ParDAOFactory.getInstance().getParAuthMgtDAO()
                         .persistParRequestParams(uuid, key, value);
             }
 
             // Add data to cache
-            CacheBackedParDAO cacheBackedParDAO = new CacheBackedParDAO();
-            ParRequest parRequest = new ParRequest(reqUUID, parameters, expiresIn);
-            int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
-            cacheBackedParDAO.addParClaim(uuid, parRequest, tenantId);
-//            System.out.println("CacheBackedParClaimDAO: " + ParCache.getInstance().getValueFromCache(uuid, tenantId));
-
+            parRequest = new ParRequest(uuid, parameters, expiresIn, requestObject);
+            cacheBackedParDAO.addParRequest(uuid, parRequest, tenantId);
         } catch (ParCoreException e) {
             throw new IdentityOAuth2Exception("Error occurred in persisting PAR request", e);
         }

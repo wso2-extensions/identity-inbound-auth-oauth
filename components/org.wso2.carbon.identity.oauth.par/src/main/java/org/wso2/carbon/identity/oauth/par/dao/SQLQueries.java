@@ -32,14 +32,6 @@ public class SQLQueries {
      */
 
     public static class ParSQLQueries {
-//        public static final String STORE_PAR_REQUEST = "INSERT INTO IDN_OAUTH_PAR " +
-//                "(REQ_URI_UUID, PARAM_MAP, REQ_TIME) VALUES (?,?,?)";
-
-        public static final String RETRIEVE_PAR_REQUEST_DATA =
-                "SELECT PARAM_MAP, REQ_TIME FROM IDN_OAUTH_PAR " +
-                        " WHERE REQ_URI_UUID = ? ";
-
-
         //New Table
 
         //Storing Data
@@ -48,6 +40,9 @@ public class SQLQueries {
 
         public static final String STORE_PAR_REQUEST_PARAMS = "INSERT INTO IDN_OAUTH_PAR_REQUEST_PARAMS " +
                 "(REQ_URI_UUID, PARAM_KEY, PARAM_VALUE) VALUES (?, ?, ?);";
+
+        public static final String STORE_PAR_REQUEST_OBJECT = "INSERT INTO IDN_OAUTH_PAR_REQUEST_OBJ " +
+                "(REQ_URI_UUID, REQUEST_OBJ) VALUES (?, ?);";
 
 
         //Retrieve data

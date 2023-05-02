@@ -24,9 +24,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.dao.CacheBackedParDAO;
-import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 
 import java.util.Calendar;
@@ -47,6 +47,9 @@ public class ParRetrieveHandler {
     public static HashMap<String, String> retrieveParamMap(String uuid, String oauthClientId)
             throws OAuthProblemException {
 
+        HashMap<String, String> paramMap;
+        String requestObject;
+
         try {
             if (StringUtils.isBlank(uuid)) {
                 if (log.isDebugEnabled()) {
@@ -58,7 +61,15 @@ public class ParRetrieveHandler {
 
             isRequestUriExpired(cacheBackedParDAO.fetchExpiryTime(uuid, tenantId)); //checks if request expired
             isClientIdValid(oauthClientId, cacheBackedParDAO.fetchClientId(uuid, tenantId));
-            return cacheBackedParDAO.fetchParamMap(uuid, tenantId);
+
+            paramMap =  cacheBackedParDAO.fetchParamMap(uuid, tenantId);
+            requestObject = cacheBackedParDAO.fetchRequestObj(uuid, tenantId);
+
+            if (requestObject != null) {
+                paramMap.put(OAuthConstants.OAuth20Params.REQUEST, requestObject);
+            }
+
+            return paramMap;
         } catch (ParClientException e) {
             throw new ParClientException(e.getError(), OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST_URI);
         }
@@ -82,24 +93,5 @@ public class ParRetrieveHandler {
         if (!parClientId.equals(oauthClientId)) {
             throw new ParClientException("client_ids does not match");
         }
-    }
-
-    public static String retrieveParClientId(String uuid) throws OAuthProblemException {
-
-        return ParDAOFactory.getInstance().
-                getParAuthMgtDAO().getParClientId(uuid);
-    }
-
-
-    public static HashMap<String, String> retrieveParParameters(String uuid) throws OAuthProblemException {
-
-        return ParDAOFactory.getInstance().
-                getParAuthMgtDAO().getParParamMap(uuid);
-    }
-
-    public static long retrieveExpiresIn(String uuid) throws OAuthProblemException {
-
-        return ParDAOFactory.getInstance().
-                getParAuthMgtDAO().getExpiresIn(uuid);
     }
 }

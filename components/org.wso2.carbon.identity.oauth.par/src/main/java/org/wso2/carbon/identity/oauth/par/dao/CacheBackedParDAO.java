@@ -36,7 +36,7 @@ public class CacheBackedParDAO {
     ParMgtDAO parMgtDAO = ParDAOFactory.getInstance().getParAuthMgtDAO();
 
 
-    public void addParClaim(String uuid, ParRequest parRequest, int tenantId) {
+    public void addParRequest(String uuid, ParRequest parRequest, int tenantId) {
 
         parCache.addToCache(uuid, parRequest, tenantId);
     }
@@ -58,7 +58,6 @@ public class CacheBackedParDAO {
             }
 
             //if request not in cache, fetch paramMap data from database
-            //paramMap =  ParRetrieveHandler.retrieveParParameters(uuid);
             paramMap = parMgtDAO.getParParamMap(uuid);
             System.out.println("ParamMap from DB: " + paramMap);
 
@@ -118,7 +117,6 @@ public class CacheBackedParDAO {
             }
 
             // if request not in cache, fetch paramMap data from database
-            //parClientId =  ParRetrieveHandler.retrieveParClientId(uuid);
             parClientId = parMgtDAO.getParClientId(uuid);
             System.out.println("ClientID from DB: " + parClientId);
 
@@ -132,5 +130,34 @@ public class CacheBackedParDAO {
             System.out.println("ClientID from cache: " + parClientId);
         }
         return parClientId;
+    }
+
+    public String fetchRequestObj (String uuid, int tenantId) throws OAuthProblemException {
+
+        /**
+         * What to have as key instead of request_uri?
+         */
+        ParRequest parCacheRequest = parCache.getValueFromCache(uuid, tenantId);
+        String requestObject;
+        if (parCacheRequest == null) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Cache miss for expiry time of local uuid:%s for tenant:%s ",
+                        uuid, tenantId));
+            }
+
+            // if request not in cache, fetch paramMap data from database
+            requestObject = parMgtDAO.getRequestObject(uuid);
+            System.out.println("ClientID from DB: " + requestObject);
+
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Cache hit for expiry time of uuid:%s for tenant:%s ",
+                        uuid, tenantId));
+            }
+            // get expiry from cache
+            requestObject = parCache.getValueFromCache(uuid, tenantId).getRequestObject();
+            System.out.println("ClientID from cache: " + requestObject);
+        }
+        return requestObject;
     }
 }
