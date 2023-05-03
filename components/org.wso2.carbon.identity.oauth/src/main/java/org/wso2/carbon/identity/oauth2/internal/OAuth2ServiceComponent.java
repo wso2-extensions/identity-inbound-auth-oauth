@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
+import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
@@ -101,6 +102,7 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabl
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkConsentedTokenColumnAvailable;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getJWTRenewWithoutRevokeAllowedGrantTypes;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isAccessTokenExtendedTableExist;
 
 /**
  * OAuth 2 OSGi service component.
@@ -320,6 +322,12 @@ public class OAuth2ServiceComponent {
                         "Setting isIDPIdColumnEnabled to false.");
             }
             OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(false);
+        }
+
+        if (isAccessTokenExtendedTableExist()) {
+            log.debug("IDN_OAUTH2_ACCESS_TOKEN_EXTENDED table is available Setting " +
+                    "isAccessTokenExtendedTableExist to true.");
+            OAuth2ServiceComponentHolder.setTokenExtendedTableExist(true);
         }
 
         boolean isConsentedTokenColumnAvailable = checkConsentedTokenColumnAvailable();
@@ -814,5 +822,37 @@ public class OAuth2ServiceComponent {
             log.debug("IdentityEventService unset in OAuth2ServiceComponent bundle");
         }
         OAuth2ServiceComponentHolder.setIdentityEventService(null);
+    }
+
+    @Reference(
+            name = "consent.server.configs.mgt.service",
+            service = ConsentServerConfigsManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetConsentServerConfigsManagementService"
+    )
+
+    /**
+     * This method is used to set the Consent Server Configs Management Service.
+     *
+     * @param consentServerConfigsManagementService The Consent Server Configs Management Service which needs to be set.
+     */
+    protected void setConsentServerConfigsManagementService(ConsentServerConfigsManagementService
+                                                                        consentServerConfigsManagementService) {
+
+        OAuth2ServiceComponentHolder.setConsentServerConfigsManagementService(consentServerConfigsManagementService);
+        log.debug("Setting the Consent Server Management Configs.");
+    }
+
+    /**
+     * This method is used to unset the Consent Server Configs Management Service.
+     *
+     * @param consentServerConfigsManagementService The Consent Server Configs Management Service which needs to unset.
+     */
+    protected void unsetConsentServerConfigsManagementService(ConsentServerConfigsManagementService
+                                                     consentServerConfigsManagementService) {
+
+        OAuth2ServiceComponentHolder.setConsentServerConfigsManagementService(null);
+        log.debug("Unsetting the Consent Server Configs Management.");
     }
 }

@@ -87,6 +87,7 @@ public final class OAuthConstants {
     public static final String OAUTH_SAML2_ASSERTION = "SAML2Assertion";
     public static final long UNASSIGNED_VALIDITY_PERIOD = -1L;
     public static final String ACCESS_TOKEN_STORE_TABLE = "IDN_OAUTH2_ACCESS_TOKEN";
+    public static final String ACCESS_TOKEN_STORE_ATTRIBUTES_TABLE = "IDN_OAUTH2_ACCESS_TOKEN_ATTRIBUTES";
     public static final int OAUTH_AUTHZ_CB_HANDLER_DEFAULT_PRIORITY = 1;
     public static final String DEFAULT_KEY_ALIAS = "Security.KeyStore.KeyAlias";
 

@@ -98,6 +98,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                             .get(IdentityEventConstants.EventProperty.USER_STORE_MANAGER);
             try {
                 revokeTokensOfLockedUser(username, userStoreManager);
+                revokeCodesOfLockedUser(username, userStoreManager);
                 revokeTokensOfDisabledUser(username, userStoreManager);
                 OAuthUtil.removeUserClaimsFromCache(username, userStoreManager);
             } catch (UserStoreException e) {
@@ -219,6 +220,20 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 log.debug(String.format("User %s is locked. Hence revoking user's access tokens.", userName));
             }
             OAuthUtil.revokeTokens(userName, userStoreManager);
+        }
+    }
+
+    private void revokeCodesOfLockedUser(String userName, UserStoreManager userStoreManager)
+            throws UserStoreException {
+
+        String errorCode =
+                (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
+
+        if (UserCoreConstants.ErrorCode.USER_IS_LOCKED.equalsIgnoreCase(errorCode)) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("User %s is locked. Hence revoking user's authorization codes.", userName));
+            }
+            OAuthUtil.revokeAuthzCodes(userName, userStoreManager);
         }
     }
 

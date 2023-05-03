@@ -22,6 +22,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -63,6 +64,7 @@ public class OAuth2ServiceComponentHolder {
     private static ResponseModeProvider defaultResponseModeProvider;
     private static boolean consentedTokenColumnEnabled = false;
     private static IdentityEventService identityEventService;
+    private static boolean tokenExtendedTableExist = false;
     private List<TokenBinder> tokenBinders = new ArrayList<>();
     private Map<String, ResponseTypeRequestValidator> responseTypeRequestValidators = new HashMap<>();
     private OAuthAdminServiceImpl oauthAdminService;
@@ -76,6 +78,7 @@ public class OAuth2ServiceComponentHolder {
     private List<Scope> oauthScopeBinding = new ArrayList<>();
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
     private static List<String> jwtRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
+    private static ConsentServerConfigsManagementService consentServerConfigsManagementService;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -208,6 +211,16 @@ public class OAuth2ServiceComponentHolder {
         claimProviders.remove(claimProvider);
     }
 
+    public static boolean isTokenExtendedTableExist() {
+
+        return tokenExtendedTableExist;
+    }
+
+    public static void setTokenExtendedTableExist(boolean tokenExtendedTableExist) {
+
+        OAuth2ServiceComponentHolder.tokenExtendedTableExist = tokenExtendedTableExist;
+    }
+
     public List<TokenBinder> getTokenBinders() {
 
         return tokenBinders;
@@ -313,7 +326,7 @@ public class OAuth2ServiceComponentHolder {
 
         return idpManager;
     }
-
+    
     /**
     * Set UserSessionManagementService Instance.
     *
@@ -415,6 +428,27 @@ public class OAuth2ServiceComponentHolder {
 
     public static void setIdentityEventService(IdentityEventService identityEventService) {
         OAuth2ServiceComponentHolder.identityEventService = identityEventService;
+    }
+
+    /**
+     * Get Consent Server Configs Management Service.
+     *
+     * @return Consent Server Configs Management Service.
+     */
+    public static ConsentServerConfigsManagementService getConsentServerConfigsManagementService() {
+
+        return OAuth2ServiceComponentHolder.consentServerConfigsManagementService;
+    }
+
+    /**
+     * Set Consent Server Configs Management Service.
+     *
+     * @param consentServerConfigsManagementService Consent Server Configs Management Service.
+     */
+    public static void setConsentServerConfigsManagementService(ConsentServerConfigsManagementService
+                                                                        consentServerConfigsManagementService) {
+
+        OAuth2ServiceComponentHolder.consentServerConfigsManagementService = consentServerConfigsManagementService;
     }
 
     /**
