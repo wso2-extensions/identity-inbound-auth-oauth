@@ -41,6 +41,7 @@ public class SessionDataCacheEntry extends CacheEntry {
     private String authenticatedIdPs;
     private String essentialClaims;
     private String sessionContextIdentifier;
+    private boolean removeOnConsume = false;
 
     private String queryString = null;
 
@@ -135,5 +136,25 @@ public class SessionDataCacheEntry extends CacheEntry {
     public void setSessionContextIdentifier(String sessionContextIdentifier) {
 
         this.sessionContextIdentifier = sessionContextIdentifier;
+    }
+
+    /**
+     * Get removeOnConsume.
+     *
+     * @return removeOnConsume.
+     */
+    public boolean isRemoveOnConsume() {
+
+        return removeOnConsume;
+    }
+
+    /**
+     * Set removeOnConsume.
+     *
+     * @param removeOnConsume removeOnConsume.
+     */
+    public void setRemoveOnConsume(boolean removeOnConsume) {
+
+        this.removeOnConsume = removeOnConsume;
     }
 }
