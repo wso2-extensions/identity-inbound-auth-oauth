@@ -100,8 +100,8 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
-import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
@@ -1526,7 +1526,8 @@ public class OAuth2AuthzEndpoint {
                             "generate-token-binding-value", configs);
                 }
             }
-            setAuthorizationCode(oAuthMessage, authzRespDTO, builder, tokenBindingValue, oauth2Params, authorizationResponseDTO);
+            setAuthorizationCode(oAuthMessage, authzRespDTO, builder, tokenBindingValue, oauth2Params,
+                    authorizationResponseDTO);
         }
         if (isResponseTypeNotIdTokenOrNone(responseType, authzRespDTO)) {
             setAccessToken(authzRespDTO, builder, authorizationResponseDTO);
@@ -1629,7 +1630,7 @@ public class OAuth2AuthzEndpoint {
     private void setAuthorizationCode(OAuthMessage oAuthMessage, OAuth2AuthorizeRespDTO authzRespDTO,
                                       OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
                                       String tokenBindingValue, OAuth2Parameters oauth2Params, AuthorizationResponseDTO
-                                      authorizationResponseDTO)
+                                              authorizationResponseDTO)
             throws OAuthSystemException {
 
         String authorizationCode = authzRespDTO.getAuthorizationCode();
