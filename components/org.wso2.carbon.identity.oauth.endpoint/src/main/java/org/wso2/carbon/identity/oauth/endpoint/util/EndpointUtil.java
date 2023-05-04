@@ -847,6 +847,9 @@ public class EndpointUtil {
                     // Filter the query parameters from the consent page url.
                     consentPageUrl = filterQueryParamsFromConsentPageUrl(entry.getEndpointParams(), consentPageUrl,
                             sessionDataKeyConsent);
+                    if (isExternalConsentPageEnabledForSP(sp)) {
+                        entry.setRemoveOnConsume(true);
+                    }
                     entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
                     sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
                 } else {
