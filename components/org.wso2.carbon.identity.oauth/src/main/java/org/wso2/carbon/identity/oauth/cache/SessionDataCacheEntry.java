@@ -41,6 +41,8 @@ public class SessionDataCacheEntry extends CacheEntry {
     private String authenticatedIdPs;
     private String essentialClaims;
     private String sessionContextIdentifier;
+
+    /* This is used to clear the cache entry once the data is consumed from the context data API */
     private boolean removeOnConsume = false;
 
     private String queryString = null;
