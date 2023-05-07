@@ -106,8 +106,6 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
     private String clientId = "dummyClientId";
     private String authorizationCode = "testAuthorizationCode";
     private String tokenType = "testTokenType";
-    @Mock
-    private OrganizationManager organizationManager;
     private AuthenticatedUser authzUser;
     private Timestamp issuedTime;
     private Timestamp refreshTokenIssuedTime;
@@ -129,6 +127,8 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
     protected OAuthServerConfiguration oAuthServerConfiguration;
     @Mock
     private RealmService realmService;
+    @Mock
+    private OrganizationManager organizationManager;
     @Mock
     private TenantManager tenantManager;
     @Mock
