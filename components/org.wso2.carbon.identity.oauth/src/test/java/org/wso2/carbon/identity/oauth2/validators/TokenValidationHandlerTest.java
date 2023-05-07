@@ -51,6 +51,7 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -63,6 +64,7 @@ import org.wso2.carbon.identity.openidconnect.util.TestUtils;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementConfigUtil;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
@@ -75,12 +77,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.support.membermodification.MemberMatcher.method;
 import static org.powermock.api.support.membermodification.MemberModifier.stub;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
@@ -93,12 +98,16 @@ import static org.wso2.carbon.identity.organization.management.service.constant.
         IdentityApplicationManagementUtil.class, IdentityProviderManager.class, RealmService.class, LoggerUtils.class,
         FederatedAuthenticatorConfig.class, OAuth2ServiceComponentHolder.class, OAuth2JWTTokenValidator.class,
         OrganizationManagementConfigUtil.class})
+        RealmService.class, LoggerUtils.class, OAuth2Util.class, PrivilegedCarbonContext.class,
+        OAuth2ServiceComponentHolder.class})
 public class TokenValidationHandlerTest extends PowerMockTestCase {
 
     private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
     private String clientId = "dummyClientId";
     private String authorizationCode = "testAuthorizationCode";
     private String tokenType = "testTokenType";
+    @Mock
+    private OrganizationManager organizationManager;
     private AuthenticatedUser authzUser;
     private Timestamp issuedTime;
     private Timestamp refreshTokenIssuedTime;
@@ -362,6 +371,77 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
             assertThrows(IdentityOAuth2Exception.class, () ->
                     oAuth2JWTTokenValidator.validateAccessToken(validationReqDTO));
         }
+    }
+
+    @DataProvider(name = "dataProviderForOrganizationSwitchedTokens")
+    public Object[][] dataProviderForOrganizationSwitchedTokens() {
+
+        return new Object[][]{
+                {"org1", "643525df-db94-45a5-8fad-9ba436799c80", "sub-org1", "d1ebda0e-ecd2-11ed-a05b-0242ac120003",
+                        new ArrayList() {{
+                            add("643525df-db94-45a5-8fad-9ba436799c80");
+                            add("d1ebda0e-ecd2-11ed-a05b-0242ac120003");
+                        }}, true},
+                {"org1", "643525df-db94-45a5-8fad-9ba436799c80", "sub-org2", "e1684cce-ecd2-11ed-a05b-0242ac120003",
+                        new ArrayList() {{
+                            add("1d0ff20e-ecd3-11ed-a05b-0242ac120003");
+                            add("e1684cce-ecd2-11ed-a05b-0242ac120003");
+                        }}, false}
+        };
+    }
+
+    @Test(dataProvider = "dataProviderForOrganizationSwitchedTokens")
+    public void testBuildIntrospectionResponseForOrganizationSwitchedTokens(String clientAppTenantDomain,
+                                                                            String clientAppOrganizationId,
+                                                                            String switchedTokenTenant,
+                                                                            String switchedTokenOrganizationId,
+                                                                            List<String> parentHierarchyFromSwitchedOrg,
+                                                                            boolean introspectResponse)
+            throws Exception {
+
+        mockRequiredObjects();
+
+        // Build access token.
+        OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
+        OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken = oAuth2TokenValidationRequestDTO.new
+                OAuth2AccessToken();
+        String tokenId = "ad11da6f-96f2-30fd-bd26-ae31b385573b";
+        accessToken.setIdentifier(tokenId);
+        accessToken.setTokenType("bearer");
+        authzUser.setTenantDomain(switchedTokenTenant);
+        AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
+                refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
+                authorizationCode);
+        accessTokenDO.setTokenId(tokenId);
+        accessTokenDO.setValidityPeriod(-1);
+        oAuth2TokenValidationRequestDTO.setAccessToken(accessToken);
+        // Mock oauth2 utils.
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenReturn(accessTokenDO);
+        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(new OAuthAppDO());
+
+        // Mock PrivilegedCarbonContext operations.
+        mockStatic(PrivilegedCarbonContext.class);
+        PrivilegedCarbonContext privilegedCarbonContext = Mockito.mock(PrivilegedCarbonContext.class);
+        when(PrivilegedCarbonContext.getThreadLocalCarbonContext()).thenReturn(privilegedCarbonContext);
+        when(privilegedCarbonContext.getTenantDomain()).thenReturn(clientAppTenantDomain);
+
+        // Mock OAuth2ServiceComponentHolder instances.
+        mockStatic(OAuth2ServiceComponentHolder.class);
+        OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
+                Mockito.mock(OAuth2ServiceComponentHolder.class);
+        when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(oAuth2ServiceComponentHolderInstance);
+        when(oAuth2ServiceComponentHolderInstance.isOrganizationManagementEnabled()).thenReturn(true);
+        when(oAuth2ServiceComponentHolderInstance.getOrganizationManager()).thenReturn(organizationManager);
+        when(organizationManager.resolveOrganizationId(clientAppTenantDomain)).thenReturn(clientAppOrganizationId);
+        when(organizationManager.resolveOrganizationId(switchedTokenTenant)).thenReturn(switchedTokenOrganizationId);
+        when(organizationManager.getAncestorOrganizationIds(switchedTokenOrganizationId)).thenReturn(
+                parentHierarchyFromSwitchedOrg);
+
+        // Assert oAuth2IntrospectionResponseDTO.
+        OAuth2IntrospectionResponseDTO oAuth2IntrospectionResponseDTO =
+                tokenValidationHandler.buildIntrospectionResponse(oAuth2TokenValidationRequestDTO);
+        assertEquals(oAuth2IntrospectionResponseDTO.isActive(), introspectResponse);
     }
 
     protected void mockRequiredObjects() throws Exception {
