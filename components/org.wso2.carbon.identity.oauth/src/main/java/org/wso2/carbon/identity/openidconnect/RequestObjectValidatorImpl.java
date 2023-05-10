@@ -45,6 +45,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
@@ -348,9 +349,17 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      */
     protected boolean isValidRedirectUri(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) {
 
+        boolean isValid;
         String redirectUriInReqObj = requestObject.getClaimValue(Constants.REDIRECT_URI);
-        boolean isValid = StringUtils.isBlank(redirectUriInReqObj) || StringUtils.equals(redirectUriInReqObj,
-                oAuth2Parameters.getRedirectURI());
+        String redirectURI = oAuth2Parameters.getRedirectURI();
+
+        if (StringUtils.isNotEmpty(redirectURI) && redirectURI.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+            String regex = redirectURI.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
+            isValid = Pattern.matches(regex, redirectUriInReqObj);
+        } else {
+            isValid = StringUtils.isBlank(redirectUriInReqObj) || StringUtils.equals(redirectUriInReqObj, redirectURI);
+        }
+
         if (!isValid) {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
