@@ -30,15 +30,15 @@ public class ParRequest extends CacheEntry {
 
     private String requestUri;
     private HashMap<String, String> parameterMap;
-    private long expiresIn;
+    private long scheduledExpiryTime;
     private String clientId;
     private String requestObject = null;
 
 
-    public ParRequest(String requestUri, HashMap<String, String> parameterMap, long expiresIn, String requestObject) {
+    public ParRequest(String requestUri, HashMap<String, String> parameterMap, long scheduledExpiryTime, String requestObject) {
         this.requestUri = requestUri;
         this.parameterMap = parameterMap;
-        this.expiresIn = expiresIn;
+        this.scheduledExpiryTime = scheduledExpiryTime;
         this.requestObject = requestObject;
         this.clientId = parameterMap.get(OAuthConstants.OAuth20Params.CLIENT_ID);
     }
@@ -51,8 +51,8 @@ public class ParRequest extends CacheEntry {
         return parameterMap;
     }
 
-    public long getExpiresIn() {
-        return expiresIn;
+    public long getScheduledExpiryTime() {
+        return scheduledExpiryTime;
     }
 
     public String getClientId() {
@@ -71,8 +71,8 @@ public class ParRequest extends CacheEntry {
         this.parameterMap = parameterMap;
     }
 
-    public void setExpiresIn(long expiresIn) {
-        this.expiresIn = expiresIn;
+    public void setScheduledExpiryTime(long scheduledExpiryTime) {
+        this.scheduledExpiryTime = scheduledExpiryTime;
     }
 
     public void setClientId(String clientId) {

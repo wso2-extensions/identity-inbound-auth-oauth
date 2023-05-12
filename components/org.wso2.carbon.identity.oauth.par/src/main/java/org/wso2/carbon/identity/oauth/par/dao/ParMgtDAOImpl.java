@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.par.dao;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
@@ -39,70 +42,34 @@ public class ParMgtDAOImpl implements ParMgtDAO {
     private static final Log log = LogFactory.getLog(ParMgtDAOImpl.class);
 
     @Override
-    public void persistParRequestData(String reqUUID, String clientId, long reqMadeAt) throws ParCoreException {
+    public void persistParRequest(String reqUUID, String clientId, long scheduledExpiryTime,
+                                  HashMap<String, String> parameters) throws ParCoreException {
+
+        ObjectMapper objectMapper = new ObjectMapper();
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
 
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
                     ParSQLQueries.STORE_PAR_REQUEST)) {
 
+                String jsonString = objectMapper.writeValueAsString(parameters);
+
                 prepStmt.setString(1, reqUUID);
                 prepStmt.setString(2, clientId);
-                prepStmt.setLong(3, reqMadeAt);
+                prepStmt.setLong(3, scheduledExpiryTime);
+                prepStmt.setString(4, jsonString);
+
                 prepStmt.execute();
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw new ParCoreException("Error occurred in persisting the successful PAR request with" +
                         " uuid: " + reqUUID, e);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
             }
         } catch (SQLException e) {
-            throw new ParCoreException("Error occurred in persisting the successful PAR request with" +
-                    " uuid: " + reqUUID, e);
-        }
-    }
-
-    @Override
-    public void persistParRequestParams(String reqUUID, String paramKey, String paramValue) throws ParCoreException {
-
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
-
-            try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
-                    ParSQLQueries.STORE_PAR_REQUEST_PARAMS)) {
-
-                prepStmt.setString(1, reqUUID);
-                prepStmt.setString(2, paramKey);
-                prepStmt.setString(3, paramValue);
-                prepStmt.execute();
-            } catch (SQLException e) {
-                IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new ParCoreException("Error occurred in persisting the successful PAR request with" +
-                        " uuid: " + reqUUID, e);
-            }
-        } catch (SQLException e) {
-            throw new ParCoreException("Error occurred in persisting the successful PAR request with" +
-                    " uuid: " + reqUUID, e);
-        }
-    }
-
-    @Override
-    public void persistRequestObject(String reqUUID, String requestObject) throws ParCoreException {
-
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
-
-            try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
-                    ParSQLQueries.STORE_PAR_REQUEST_OBJECT)) {
-
-                prepStmt.setString(1, reqUUID);
-                prepStmt.setString(2, requestObject);
-                prepStmt.execute();
-            } catch (SQLException e) {
-                IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new ParCoreException("Error occurred in persisting request parameter of the successful PAR " +
-                        "request with uuid: " + reqUUID, e);
-            }
-        } catch (SQLException e) {
-            throw new ParCoreException("Error occurred in persisting the successful PAR request with" +
-                    " uuid: " + reqUUID, e);
+            throw new ParCoreException("Error occurred converting PAR request with" +
+                    " uuid: " + reqUUID + " to JSON", e);
         }
     }
 
@@ -144,24 +111,31 @@ public class ParMgtDAOImpl implements ParMgtDAO {
     @Override
     public HashMap<String, String> getParParamMap(String reqUUID) throws ParClientException {
 
-        HashMap<String, String> paramMap = new HashMap<>();
+        ObjectMapper objectMapper = new ObjectMapper();
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
-                     .ParSQLQueries.RETRIEVE_PAR_PARAMS)) {
+                     .ParSQLQueries.RETRIEVE_PAR_JSON_PARAMS)) {
 
             prepStmt.setString(1, reqUUID);
 
             try (ResultSet resultSet = prepStmt.executeQuery()) {
-                while (resultSet.next()) {
-                    String key = resultSet.getString("PARAM_KEY");
-                    String value = resultSet.getString("PARAM_VALUE");
-                    paramMap.put(key, value);
+                if (resultSet.next()) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Successfully obtained client_id of RequestURI with UUID: " + reqUUID);
+                    }
+
+                    String jsonString = resultSet.getString(1);
+                    return objectMapper.readValue(jsonString, new TypeReference<HashMap<String, String>>() {});
+
+                } else {
+                    // Return an empty optional if the UUID is not found in the database
+                    if (log.isDebugEnabled()) {
+                        log.debug("PAR request with UUID " + reqUUID + " does not contain request parameter");
+                    }
+                    return null;
                 }
-
-                return paramMap;
-
-            } catch (SQLException e) {
+            } catch (SQLException | JsonProcessingException e) {
                 throw new ParClientException("Error occurred while retrieving parameters from the database.",
                         OAuth2ErrorCodes.INVALID_REQUEST);
             }
@@ -172,45 +146,11 @@ public class ParMgtDAOImpl implements ParMgtDAO {
     }
 
     @Override
-    public String getRequestObject(String reqUUID) throws ParClientException {
+    public long getScheduledExpiry(String reqUUID) throws ParClientException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
-                     .ParSQLQueries.RETRIEVE_PAR_CLIENT_ID)) {
-
-            prepStmt.setString(1, reqUUID);
-
-            try (ResultSet resultSet = prepStmt.executeQuery()) {
-                if (resultSet.next()) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Successfully obtained client_id of RequestURI with UUID: " + reqUUID);
-                    }
-
-                    return resultSet.getString(1);
-
-                } else {
-                    // Return an empty optional if the UUID is not found in the database
-                    if (log.isDebugEnabled()) {
-                        log.debug("PAR request with UUID " + reqUUID + " does not contain request parameter");
-                    }
-                    return null;
-                }
-            } catch (SQLException e) {
-                throw new ParClientException("Error occurred while retrieving request param from the database.",
-                        OAuth2ErrorCodes.INVALID_REQUEST);
-            }
-        } catch (SQLException e) {
-            throw new ParClientException("Error occurred while retrieving request param from the database.",
-                    OAuth2ErrorCodes.INVALID_REQUEST);
-        }
-    }
-
-    @Override
-    public long getExpiresIn(String reqUUID) throws ParClientException {
-
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
-             PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
-                     .ParSQLQueries.RETRIEVE_REQUEST_EXPIRES_IN)) {
+                     .ParSQLQueries.RETRIEVE_SCHEDULED_EXPIRY)) {
 
             prepStmt.setString(1, reqUUID);
 
@@ -235,7 +175,27 @@ public class ParMgtDAOImpl implements ParMgtDAO {
                         OAuth2ErrorCodes.INVALID_REQUEST);
             }
         } catch (SQLException e) {
-            throw new ParClientException("Error occurred while retrieving expiryTime from the database.",
+            throw new ParClientException("Error occurred while retrieving scheduled expiry time from the database.",
+                    OAuth2ErrorCodes.INVALID_REQUEST);
+        }
+    }
+
+    //TODO:
+    @Override
+    public void deleteParRequestData(String reqUUID) throws ParClientException {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true);
+             PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
+                     .ParSQLQueries.DELETE_IDN_OAUTH_PAR_REQUEST)) {
+
+            prepStmt.setString(1, reqUUID);
+
+            prepStmt.execute();
+            IdentityDatabaseUtil.commitTransaction(connection);
+            //System.out.println("Record deleted from DB!");
+
+        } catch (SQLException e) {
+            throw new ParClientException("Error occurred while deleting PAR request from Database",
                     OAuth2ErrorCodes.INVALID_REQUEST);
         }
     }

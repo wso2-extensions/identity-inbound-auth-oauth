@@ -32,28 +32,26 @@ public class SQLQueries {
      */
 
     public static class ParSQLQueries {
-        //New Table
 
         //Storing Data
-        public static final String STORE_PAR_REQUEST = "INSERT INTO IDN_OAUTH_PAR_REQUEST " +
-                "(REQ_URI_UUID, CLIENT_ID, EXPIRES_IN) VALUES (?, ?, ?);";
-
-        public static final String STORE_PAR_REQUEST_PARAMS = "INSERT INTO IDN_OAUTH_PAR_REQUEST_PARAMS " +
-                "(REQ_URI_UUID, PARAM_KEY, PARAM_VALUE) VALUES (?, ?, ?);";
-
-        public static final String STORE_PAR_REQUEST_OBJECT = "INSERT INTO IDN_OAUTH_PAR_REQUEST_OBJ " +
-                "(REQ_URI_UUID, REQUEST_OBJ) VALUES (?, ?);";
-
+        public static final String STORE_PAR_REQUEST = "INSERT INTO IDN_OAUTH_PAR " +
+                "(REQ_URI_UUID, CLIENT_ID, SCHEDULED_EXPIRY, JSON_PARAMS) VALUES (?, ?, ?, ?);";
 
         //Retrieve data
         public static final String RETRIEVE_PAR_CLIENT_ID =
-                "SELECT CLIENT_ID FROM IDN_OAUTH_PAR_REQUEST " +
+                "SELECT CLIENT_ID FROM IDN_OAUTH_PAR " +
                         " WHERE REQ_URI_UUID = ? ";
 
-        public static final String RETRIEVE_PAR_PARAMS =
-                "SELECT PARAM_KEY, PARAM_VALUE FROM IDN_OAUTH_PAR_REQUEST_PARAMS WHERE REQ_URI_UUID = ?";
+        public static final String RETRIEVE_PAR_JSON_PARAMS =
+                "SELECT JSON_PARAMS FROM IDN_OAUTH_PAR WHERE REQ_URI_UUID = ?";
 
-        public static final String RETRIEVE_REQUEST_EXPIRES_IN =
-                "SELECT EXPIRES_IN FROM IDN_OAUTH_PAR_REQUEST WHERE REQ_URI_UUID = ?";
+        public static final String RETRIEVE_SCHEDULED_EXPIRY =
+                "SELECT SCHEDULED_EXPIRY FROM IDN_OAUTH_PAR WHERE REQ_URI_UUID = ?";
+
+
+        //TODO:
+        //Table deletion scripts
+        public static final String DELETE_IDN_OAUTH_PAR_REQUEST = "DELETE FROM IDN_OAUTH_PAR_REQUEST WHERE " +
+                "REQ_URI_UUID = ? ";
     }
 }

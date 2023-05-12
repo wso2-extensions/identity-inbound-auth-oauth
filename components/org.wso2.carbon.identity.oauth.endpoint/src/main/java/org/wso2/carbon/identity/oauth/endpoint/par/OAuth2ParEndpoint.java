@@ -1,13 +1,10 @@
 /**
  * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
- * <p>
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
- * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -19,18 +16,21 @@
 package org.wso2.carbon.identity.oauth.endpoint.par;
 
 import org.apache.catalina.util.ParameterMap;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
-import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
+import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ParErrorDTO;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.dao.CacheBackedParDAO;
 import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
+import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAO;
 import org.wso2.carbon.identity.oauth.par.dao.ParRequest;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
-import org.wso2.carbon.identity.oauth.par.model.ParAuthCodeResponse;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -50,15 +50,17 @@ import java.util.Map;
 import java.util.TimeZone;
 
 /**
- * Rest implementation for OAuth2 PAR endpoint.
+ * REST implementation for OAuth2 PAR endpoint.
  */
 @Path("/par")
 @InInterceptors(classes = OAuthClientAuthenticatorProxy.class)
 public class OAuth2ParEndpoint {
 
-    private ParAuthResponseHandler parAuthResponseHandler = new ParAuthResponseHandler();
-    private ParAuthCodeResponse parAuthCodeResponse = new ParAuthCodeResponse();
-    private static OAuthAuthzRequest oAuthAuthzRequest;
+    private static final Log log = LogFactory.getLog(OAuth2ParEndpoint.class);
+    private final ParHandler parHandler = new ParHandler();
+    private static long scheduledExpiryTime;
+    private static final String ERROR = "error";
+    private static final String ERROR_DESCRIPRION = "error_description";
 
     @POST
     @Path("/")
@@ -67,19 +69,17 @@ public class OAuth2ParEndpoint {
     public Response par(@Context HttpServletRequest request, @Context HttpServletResponse response,
                         MultivaluedMap<String, String> paramMap) throws ParErrorDTO, Exception {
 
-        long expiresIn = Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis();
+        setScheduledExpiryTime(Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis());
 
-        CacheBackedParDAO cacheBackedParDAO = new CacheBackedParDAO();
-
-        OAuth2Service oAuth2Service = new OAuth2Service();
-        OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.validateClientInfo(request);
+        OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO =
+                ParHandler.getClientValidationResponse(request);
 
         if (!oAuth2ClientValidationResponseDTO.isValidClient()) {
 
-            return getErrorResponse(oAuth2ClientValidationResponseDTO);
+            return createErrorResponse(oAuth2ClientValidationResponseDTO);
         } else if (isRequestUriProvided(request.getParameterMap())) {
 
-            return getErrorResponse(rejectRequestWithRequestUri()); // passes par error object to obtain error response
+            return createErrorResponse(rejectRequestWithRequestUri()); // passes par error object to obtain error response
         }
 
         HashMap<String, String> parameters = new HashMap<>();
@@ -90,83 +90,128 @@ public class OAuth2ParEndpoint {
         }
 
         // get response
-        Response resp = getAuthResponse(response, parAuthCodeResponse);
+        Response parResponse = getAuthResponse(response);
+        String requestUriUUID = ParHandler.getUuid();
 
         try {
             // Store values to Database
             ParRequest parRequest;
             String requestObject = null;
-            String reqUUID = parAuthCodeResponse.getRequestUri();
-            String uuid = reqUUID.substring(reqUUID.length() - 36);
             int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
 
-            ParDAOFactory.getInstance().getParAuthMgtDAO()
-                    .persistParRequestData(uuid, parameters.get(OAuthConstants.OAuth20Params.CLIENT_ID), expiresIn);
 
-            if (parameters.containsKey(OAuthConstants.OAuth20Params.REQUEST)) {
-                ParDAOFactory.getInstance().getParAuthMgtDAO().
-                        persistRequestObject(uuid, parameters.get(OAuthConstants.OAuth20Params.REQUEST));
-                requestObject = parameters.get(OAuthConstants.OAuth20Params.REQUEST);
-                parameters.remove(OAuthConstants.OAuth20Params.REQUEST);
-            }
-
-            // Store request parameters as key value pairs
-            for (Map.Entry<String, String> entry : parameters.entrySet()) {
-                String key = entry.getKey();
-                String value = entry.getValue();
-
-                ParDAOFactory.getInstance().getParAuthMgtDAO()
-                        .persistParRequestParams(uuid, key, value);
-            }
+            ParHandler.getParMgtDAO().persistParRequest(requestUriUUID,
+                    parameters.get(OAuthConstants.OAuth20Params.CLIENT_ID), scheduledExpiryTime, parameters);
 
             // Add data to cache
-            parRequest = new ParRequest(uuid, parameters, expiresIn, requestObject);
-            cacheBackedParDAO.addParRequest(uuid, parRequest, tenantId);
+            parRequest = new ParRequest(requestUriUUID, parameters, scheduledExpiryTime, requestObject);
+            ParHandler.getCacheBackedParDAO().addParRequest(requestUriUUID, parRequest, tenantId);
+
         } catch (ParCoreException e) {
             throw new IdentityOAuth2Exception("Error occurred in persisting PAR request", e);
         }
 
 
-        return resp;
+        return parResponse;
+    }
+
+    /**
+     * Schedules the expity time for the request made.
+     *
+     * @param requestedTime time tht the request was made.
+     */
+    private static void setScheduledExpiryTime(long requestedTime) {
+        long defaultExpiryInSecs = ParConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC * ParConstants.SEC_TO_MILLISEC_FACTOR;
+        scheduledExpiryTime = requestedTime + defaultExpiryInSecs;
     }
 
     /**
      * Creates PAR AuthenticationResponse.
      *
      * @param response            Authentication response object.
-     * @param parAuthCodeResponse PAR Authentication Request Data Transfer Object.
      * @return Response for AuthenticationRequest.
      */
-    private Response getAuthResponse(@Context HttpServletResponse response, ParAuthCodeResponse parAuthCodeResponse) {
+    private Response getAuthResponse(@Context HttpServletResponse response) {
 
-        return parAuthResponseHandler.createAuthResponse(response, parAuthCodeResponse);
+        return parHandler.createAuthResponse(response);
     }
 
+
     /**
-     * Creates Client Authentication Error Response.
+     * Creates PAR Authentication Error Response.
      *
      * @param oAuth2ClientValidationResponseDTO PAR Authentication Failed Exception.
      * @return response Authentication Error Responses for AuthenticationRequest.
      */
-    private Response getErrorResponse(OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO) {
+    private Response createErrorResponse(OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO) {
 
-        return parAuthResponseHandler.createErrorResponse(oAuth2ClientValidationResponseDTO);
+        // Create PAR Authentication Error Response.
+        if (log.isDebugEnabled()) {
+            log.debug("Creating Error Response for PAR Authentication Request.");
+        }
+
+        if (oAuth2ClientValidationResponseDTO.getErrorCode().equals(OAuth2ErrorCodes.SERVER_ERROR)) {
+            return handleServerException(oAuth2ClientValidationResponseDTO);
+        } else {
+            return handleClientException(oAuth2ClientValidationResponseDTO);
+        }
     }
 
     /**
      * Creates PAR Authentication Error Response.
      *
      * @param parErrorDTO PAR Authentication Failed Exception.
-     * @return response PAR Authentication Error Responses for AuthenticationRequest.
+     * @return response Authentication Error Responses for AuthenticationRequest.
      */
-    private Response getErrorResponse(ParErrorDTO parErrorDTO) {
+    private Response createErrorResponse(ParErrorDTO parErrorDTO) {
 
-        return parAuthResponseHandler.createErrorResponse(parErrorDTO);
+        // Create PAR Authentication Error Response.
+        log.debug("Creating Error Response for PAR Authentication Request.");
+
+        if (parErrorDTO.getErrorCode() == parErrorDTO.getErrorCode()) {
+            return handleClientException(parErrorDTO);
+        } else {
+            return null;
+        }
     }
 
-    private boolean isRequestUriProvided(Map<String, String[]> parameters) {
+    /**
+     * Handles client exception.
+     *
+     * @param oAuth2ClientValidationResponseDTO Authentication Failure Exception.
+     * @return Response for AuthenticationRequest.
+     */
+    private Response handleClientException(OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO) {
 
-        return parameters.containsKey("request_uri");
+        String errorCode = oAuth2ClientValidationResponseDTO.getErrorCode();
+        JSONObject parErrorResponse = new JSONObject();
+        parErrorResponse.put(ERROR, oAuth2ClientValidationResponseDTO.getErrorCode());
+        parErrorResponse.put(ERROR_DESCRIPRION, oAuth2ClientValidationResponseDTO.getErrorMsg());
+
+        Response.ResponseBuilder responseBuilder;
+        if (errorCode.equals(OAuth2ErrorCodes.INVALID_CLIENT)) {
+            responseBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED);
+        } else {
+            responseBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
+        }
+        return responseBuilder.entity(parErrorResponse.toString()).build();
+    }
+
+    /**
+     * Handles client exception.
+     *
+     * @param parErrorDTO Authentication Failure Exception.
+     * @return Response for AuthenticationRequest.
+     */
+    private Response handleClientException(ParErrorDTO parErrorDTO) {
+
+        JSONObject parErrorResponse = new JSONObject();
+        parErrorResponse.put(ERROR, parErrorDTO.getErrorMsg());
+        parErrorResponse.put(ERROR_DESCRIPRION, "request.with.request_uri.not.allowed");
+
+        Response.ResponseBuilder responseBuilder;
+        responseBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
+        return responseBuilder.entity(parErrorResponse.toString()).build();
     }
 
     /**
@@ -181,5 +226,27 @@ public class OAuth2ParEndpoint {
         parErrorDTO.setErrorCode(HttpServletResponse.SC_BAD_REQUEST);
         parErrorDTO.setErrorMsg("requestUri_provided");
         return parErrorDTO;
+    }
+
+    /**
+     * Handles server exception.
+     *
+     * @param oAuth2ClientValidationResponseDTO Authentication Failure Exception.
+     * @return Response for AuthenticationRequest.
+     */
+    private Response handleServerException(OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO) {
+
+        return null;
+    }
+
+    /**
+     * Checks if request_uri parameter is provided in the PAR request.
+     *
+     * @param parameters parameter map.
+     * @return Response for AuthenticationRequest.
+     */
+    private boolean isRequestUriProvided(Map<String, String[]> parameters) {
+
+        return parameters.containsKey(OAuthConstants.OAuth20Params.REQUEST_URI);
     }
 }

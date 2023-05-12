@@ -74,13 +74,13 @@ public class CacheBackedParDAO {
         return paramMap;
     }
 
-    public long fetchExpiryTime (String uuid, int tenantId) throws OAuthProblemException {
+    public long fetchScheduledExpiry(String uuid, int tenantId) throws OAuthProblemException {
 
         /**
          * What to have as key instead of request_uri?
          */
         ParRequest parCacheRequest = parCache.getValueFromCache(uuid, tenantId);
-        long expiresIn;
+        long scheduledExpiryTime;
         if (parCacheRequest == null) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Cache miss for expiry time of local uuid:%s for tenant:%s ",
@@ -88,8 +88,8 @@ public class CacheBackedParDAO {
             }
 
             // if request not in cache, fetch paramMap data from database
-            expiresIn = parMgtDAO.getExpiresIn(uuid);
-            System.out.println("Expiry from DB: " + expiresIn);
+            scheduledExpiryTime = parMgtDAO.getScheduledExpiry(uuid);
+            System.out.println("Expiry from DB: " + scheduledExpiryTime);
 
         } else {
             if (log.isDebugEnabled()) {
@@ -97,10 +97,10 @@ public class CacheBackedParDAO {
                         uuid, tenantId));
             }
             // get expiry from cache
-            expiresIn = parCache.getValueFromCache(uuid, tenantId).getExpiresIn();
-            System.out.println("Expiry from cache: " + expiresIn);
+            scheduledExpiryTime = parCache.getValueFromCache(uuid, tenantId).getScheduledExpiryTime();
+            System.out.println("Expiry from cache: " + scheduledExpiryTime);
         }
-        return expiresIn;
+        return scheduledExpiryTime;
     }
 
     public String fetchClientId (String uuid, int tenantId) throws OAuthProblemException {
@@ -132,32 +132,11 @@ public class CacheBackedParDAO {
         return parClientId;
     }
 
-    public String fetchRequestObj (String uuid, int tenantId) throws OAuthProblemException {
+    //TODO: delete records from DB
+    public void deleteRequest (String uuid, int tenantId) throws OAuthProblemException {
 
-        /**
-         * What to have as key instead of request_uri?
-         */
-        ParRequest parCacheRequest = parCache.getValueFromCache(uuid, tenantId);
-        String requestObject;
-        if (parCacheRequest == null) {
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Cache miss for expiry time of local uuid:%s for tenant:%s ",
-                        uuid, tenantId));
-            }
-
-            // if request not in cache, fetch paramMap data from database
-            requestObject = parMgtDAO.getRequestObject(uuid);
-            System.out.println("ClientID from DB: " + requestObject);
-
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Cache hit for expiry time of uuid:%s for tenant:%s ",
-                        uuid, tenantId));
-            }
-            // get expiry from cache
-            requestObject = parCache.getValueFromCache(uuid, tenantId).getRequestObject();
-            System.out.println("ClientID from cache: " + requestObject);
-        }
-        return requestObject;
+        parCache.clearCacheEntry(uuid, tenantId); //delete record from cache
+        //System.out.println("Record deleted from Cache!");
+        parMgtDAO.deleteParRequestData(uuid); // delete record from database
     }
 }

@@ -323,9 +323,9 @@ public class OAuth2AuthzEndpoint {
         // Validate repeated parameters
         if (!validateParams(request, paramMap)) {
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).location(new URI(getErrorPageURL(request,
-                    OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
-                            .INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request with repeated parameters",
-                    null)))
+                            OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
+                                    .INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request with repeated parameters",
+                            null)))
                     .build();
         }
         HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
@@ -1551,11 +1551,9 @@ public class OAuth2AuthzEndpoint {
             setSPAttributeToRequest(oAuthMessage.getRequest(), validationResponse.getApplicationName(), tenantDomain);
         }
 
-        //
         OAuthAuthzRequest oauthRequest = null;
         try {
             oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
-            oauthRequest.getParam(OAuthConstants.OAuth20Params.REQUEST_URI);
         } catch (OAuthProblemException e) {
             if (e instanceof ParClientException) {
                 throw new InvalidRequestException(e.getError(),
@@ -1655,7 +1653,7 @@ public class OAuth2AuthzEndpoint {
      * @param request http servlet request.
      * @return instance of OAuthAuthzRequest.
      * @throws OAuthProblemException thrown when initializing the OAuthAuthzRequestClass instance.
-     * @throws OAuthSystemException  thrown when initializing the OAuthAuthzRequestClass instance.
+     * @throws OAuthSystemException thrown when initializing the OAuthAuthzRequestClass instance.
      */
     private OAuthAuthzRequest getOAuthAuthzRequest(HttpServletRequest request)
             throws OAuthProblemException, OAuthSystemException {
@@ -2691,12 +2689,12 @@ public class OAuth2AuthzEndpoint {
     /**
      * Filter requested claims based on OIDC claims and return the claims which includes in OIDC.
      *
-     * @param claimsForApproval Consent required claims.
-     * @param oauth2Params      OAuth parameters.
-     * @param spTenantDomain    Tenant domain.
-     * @return Requested OIDC claim list.
-     * @throws RequestObjectException If an error occurred while getting essential claims for the session data key.
-     * @throws ClaimMetadataException If an error occurred while getting claim mappings.
+     * @param claimsForApproval         Consent required claims.
+     * @param oauth2Params              OAuth parameters.
+     * @param spTenantDomain            Tenant domain.
+     * @return                          Requested OIDC claim list.
+     * @throws RequestObjectException   If an error occurred while getting essential claims for the session data key.
+     * @throws ClaimMetadataException   If an error occurred while getting claim mappings.
      */
     private List<ClaimMetaData> getRequestedOidcClaimsList(ConsentClaimsData claimsForApproval,
                                                            OAuth2Parameters oauth2Params, String spTenantDomain)
@@ -3279,7 +3277,7 @@ public class OAuth2AuthzEndpoint {
     private String manageOIDCSessionState(OAuthMessage oAuthMessage,
                                           OIDCSessionState sessionStateObj, OAuth2Parameters oAuth2Parameters,
                                           String authenticatedUser, String redirectURL, SessionDataCacheEntry
-                                                  sessionDataCacheEntry) {
+                                                  sessionDataCacheEntry)  {
 
         HttpServletRequest request = oAuthMessage.getRequest();
         HttpServletResponse response = oAuthMessage.getResponse();
@@ -3416,7 +3414,7 @@ public class OAuth2AuthzEndpoint {
     /**
      * Gets the last authenticated value from the commonAuthId cookie
      *
-     * @param cookie            CommonAuthId cookie
+     * @param cookie CommonAuthId cookie
      * @param loginTenantDomain Login tenant domain
      * @return the last authenticated timestamp
      */
@@ -3484,7 +3482,6 @@ public class OAuth2AuthzEndpoint {
 
     /**
      * Store sessionID using the redirect URl.
-     *
      * @param oAuthMessage
      * @param sessionState
      * @param redirectURL
@@ -3592,7 +3589,6 @@ public class OAuth2AuthzEndpoint {
 
     /**
      * Return OAuth2Parameters retrieved from OAuthMessage.
-     *
      * @param oAuthMessage
      * @return OAuth2Parameters
      */

@@ -22,7 +22,6 @@ package org.wso2.carbon.identity.oauth.par.dao;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 
-import java.sql.SQLException;
 import java.util.HashMap;
 
 /**
@@ -36,29 +35,16 @@ public interface ParMgtDAO {
      * @param reqUUID Authentication request identifier.
      * @throws ParCoreException Exception thrown from PAR Core Component.
      */
-    void persistParRequestData(String reqUUID, String clientId, long reqMadeAt) throws ParCoreException, SQLException;
-
-    /**
-     * Persists the ParAuthRequest.
-     *
-     * @param reqUUID Authentication request identifier.
-     * @throws ParCoreException Exception thrown from PAR Core Component.
-     */
-    void persistParRequestParams(String reqUUID, String paramKey, String paramValue) throws ParCoreException;
-
-    /**
-     * Persists the request object parameter.
-     *
-     * @param reqUUID Authentication request identifier.
-     * @throws ParCoreException Exception thrown from PAR Core Component.
-     */
-    void persistRequestObject(String reqUUID, String request_object) throws ParCoreException;
+    // Correct persisting method
+    void persistParRequest(String reqUUID, String clientId, long expiresIn,
+                           HashMap<String, String> parameters) throws ParCoreException;
 
     String getParClientId(String reqUUID) throws ParClientException;
 
+    long getScheduledExpiry(String reqUUID) throws ParClientException;
+
     HashMap<String, String> getParParamMap(String reqUUID) throws ParClientException;
 
-    String getRequestObject(String uuid) throws ParClientException;
 
-    long getExpiresIn(String reqUUID) throws ParClientException;
+    void deleteParRequestData(String reqUUID) throws ParClientException;
 }
