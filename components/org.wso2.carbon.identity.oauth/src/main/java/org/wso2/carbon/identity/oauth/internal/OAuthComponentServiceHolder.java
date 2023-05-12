@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenRespon
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
+import org.wso2.carbon.identity.xds.client.mgt.XDSClientService;
 import org.wso2.carbon.registry.api.RegistryService;
 import org.wso2.carbon.user.core.service.RealmService;
 
@@ -59,6 +60,7 @@ public class OAuthComponentServiceHolder {
     private Map<Integer, OAuthApplicationMgtListener> oAuthApplicationMgtListeners = new TreeMap<>();
     private RoleManagementService roleManagementService;
     private OrganizationUserResidentResolverService organizationUserResidentResolverService;
+    private XDSClientService xdsClientService;
     private List<AccessTokenResponseHandler> accessTokenResponseHandlers = new ArrayList<>();
 
 
@@ -274,5 +276,15 @@ public class OAuthComponentServiceHolder {
     public List<AccessTokenResponseHandler> getAccessTokenResponseHandlers() {
 
         return accessTokenResponseHandlers;
+    }
+
+    public void setXdsClientService(XDSClientService xdsClientService) {
+
+        this.xdsClientService = xdsClientService;
+    }
+
+    public XDSClientService getXdsClientService() {
+
+        return xdsClientService;
     }
 }

@@ -126,7 +126,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     @Override
     public OAuth2AccessTokenRespDTO issue(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
-        String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
+ st        String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
         String consumerKey = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
         String authorizedUserId;
         try {

@@ -62,7 +62,6 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
-import org.wso2.carbon.identity.xds.client.mgt.util.XDSUtils;
 import org.wso2.carbon.identity.xds.common.constant.XDSConstants;
 import org.wso2.carbon.identity.xds.common.constant.XDSOperationType;
 import org.wso2.carbon.identity.xds.common.constant.XDSWrapper;
@@ -2082,6 +2081,7 @@ public class OAuthAdminServiceImpl {
 
         String json = buildJson((OauthXDSWrapper) xdsWrapper);
         String username = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
-        XDSUtils.publishData(tenantDomain, username, json, eventType, operationType);
+        OAuthComponentServiceHolder.getInstance().getXdsClientService()
+                .publishData(tenantDomain, username, json, eventType, operationType);
     }
 }

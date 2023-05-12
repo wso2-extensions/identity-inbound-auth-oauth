@@ -334,7 +334,7 @@ public class AccessTokenIssuer {
         error = "Provided Authorization Grant is invalid";
         String errorCode = OAuthError.TokenResponse.INVALID_GRANT;
         try {
-            isValidGrant = authzGrantHandler.validateGrant(tokReqMsgCtx);
+a            isValidGrant = authzGrantHandler.validateGrant(tokReqMsgCtx);
         } catch (IdentityOAuth2Exception e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while validating grant", e);

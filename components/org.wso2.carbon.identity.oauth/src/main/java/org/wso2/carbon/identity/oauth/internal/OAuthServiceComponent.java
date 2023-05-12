@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
+import org.wso2.carbon.identity.xds.client.mgt.XDSClientService;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -379,5 +380,21 @@ public class OAuthServiceComponent {
             log.debug("Unset organization user resident resolver service.");
         }
         OAuthComponentServiceHolder.getInstance().setOrganizationUserResidentResolverService(null);
+    }
+
+    @Reference(
+            name = "xds.client.service",
+            service = org.wso2.carbon.identity.xds.client.mgt.XDSClientService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetXDSClientService")
+    protected void setXDSClientService(XDSClientService xdsClientService) {
+
+        OAuthComponentServiceHolder.getInstance().setXdsClientService(xdsClientService);
+    }
+
+    protected void unsetXDSClientService(XDSClientService xdsClientService) {
+
+        OAuthComponentServiceHolder.getInstance().setXdsClientService(null);
     }
 }
