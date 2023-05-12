@@ -4342,7 +4342,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Method to extract the SHA-1 JWK thumbprint from certificates.
+     * Method to extract the SHA-256 JWK thumbprint from certificates.
      *
      * @param certificate x509 certificate
      * @return String thumbprint
@@ -4351,13 +4351,21 @@ public class OAuth2Util {
     public static String getJwkThumbPrint(Certificate certificate) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.debug(String.format("Calculating SHA-1 JWK thumb-print for certificate: %s", certificate.toString()));
+            log.debug(String.format("Calculating SHA-256 JWK thumb-print for certificate: %s", certificate.toString()));
         }
         try {
             CertificateFactory cf = CertificateFactory.getInstance(Constants.X509);
             ByteArrayInputStream bais = new ByteArrayInputStream(certificate.getEncoded());
             X509Certificate x509 = (X509Certificate) cf.generateCertificate(bais);
-            Base64URL jwkThumbprint = RSAKey.parse(x509).computeThumbprint(Constants.SHA1);
+            Base64URL jwkThumbprint;
+            // check config to maintain backward compatibility with SHA-1 thumbprint
+            if (!Boolean.parseBoolean(IdentityUtil.getProperty(
+                    IdentityConstants.OAuth.ENABLE_SHA256_JWK_THUMBPRINT))) {
+                jwkThumbprint = RSAKey.parse(x509).computeThumbprint(Constants.SHA256);
+            } else {
+                jwkThumbprint = RSAKey.parse(x509).computeThumbprint(Constants.SHA1);
+            }
+
             String thumbprintString = jwkThumbprint.toString();
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Calculated SHA-1 JWK thumbprint %s from the certificate",
