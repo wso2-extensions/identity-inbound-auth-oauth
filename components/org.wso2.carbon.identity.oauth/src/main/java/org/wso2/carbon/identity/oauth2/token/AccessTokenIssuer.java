@@ -290,7 +290,6 @@ public class AccessTokenIssuer {
         boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser();
 
         if (!isOfTypeApplicationUser) {
-            tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getAppOwner());
             tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
         } else {
             tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
@@ -411,8 +410,13 @@ public class AccessTokenIssuer {
 
             AuthenticatedUser authorizedUser = tokReqMsgCtx.getAuthorizedUser();
             if (authorizedUser.getAuthenticatedSubjectIdentifier() == null) {
-                authorizedUser.setAuthenticatedSubjectIdentifier(
-                        getSubjectClaim(getServiceProvider(tokReqMsgCtx.getOauth2AccessTokenReqDTO()), authorizedUser));
+                if (isOfTypeApplicationUser) {
+                    authorizedUser.setAuthenticatedSubjectIdentifier(
+                            getSubjectClaim(getServiceProvider(tokReqMsgCtx.getOauth2AccessTokenReqDTO()),
+                                    authorizedUser));
+                } else {
+                    authorizedUser.setAuthenticatedSubjectIdentifier(oAuthAppDO.getOauthConsumerKey());
+                }
             }
 
             tokenRespDTO = authzGrantHandler.issue(tokReqMsgCtx);
