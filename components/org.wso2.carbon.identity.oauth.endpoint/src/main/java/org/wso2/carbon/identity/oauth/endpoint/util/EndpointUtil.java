@@ -909,6 +909,9 @@ public class EndpointUtil {
         if (isAuthEndpointRedirectParamsFilterConfigAvailable()) {
             return FrameworkUtils.getRedirectURLWithFilteredParams(consentPageUrl,
                     endpointParams);
+        } else if (isConsentPageRedirectParamsAllowed()) {
+            // Return the consent url without filtering the query params for backward compatibility.
+            return consentPageUrl;
         } else {
             return EndpointUtil.getRedirectURLWithFilteredParams(consentPageUrl,
                     endpointParams, sessionDataKeyConsent);
@@ -1772,5 +1775,9 @@ public class EndpointUtil {
                     serviceProvider.getApplicationName() + " with id: " + serviceProvider.getApplicationID());
         }
         return isEnabled;
+    }
+
+    public static boolean isConsentPageRedirectParamsAllowed() {
+        return FileBasedConfigurationBuilder.getInstance().isConsentPageRedirectParamsAllowed();
     }
 }
