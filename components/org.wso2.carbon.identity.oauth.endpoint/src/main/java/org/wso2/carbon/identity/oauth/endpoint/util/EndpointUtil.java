@@ -74,6 +74,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClien
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
+import org.wso2.carbon.identity.oauth.par.api.ParAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeConsentException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -151,6 +152,7 @@ public class EndpointUtil {
     private static OAuthServerConfiguration oauthServerConfiguration;
     private static RequestObjectService requestObjectService;
     private static CibaAuthServiceImpl cibaAuthService;
+    private static ParAuthServiceImpl parAuthService;
     private static IdpManager idpManager;
     private static final String ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL = "OAuth.AllowAdditionalParamsFromErrorUrl";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
@@ -1451,15 +1453,15 @@ public class EndpointUtil {
         EndpointUtil.cibaAuthService = cibaAuthService;
     }
 
-//    public static ParAuthServiceImpl getParAuthService() {
-//
-//        return parAuthService;
-//    }
-//
-//    public static void setParAuthService(ParAuthServiceImpl parAuthService) {
-//
-//        EndpointUtil.parAuthService = parAuthService;
-//    }
+    public static ParAuthServiceImpl getParAuthService() {
+
+        return parAuthService;
+    }
+
+    public static void setParAuthService(ParAuthServiceImpl parAuthService) {
+
+        EndpointUtil.parAuthService = parAuthService;
+    }
 
     /**
      * This method retrieve the state to append to the error page URL.

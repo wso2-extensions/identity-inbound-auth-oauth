@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticat
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ParErrorDTO;
+import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.dao.CacheBackedParDAO;
 import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
@@ -71,8 +72,8 @@ public class OAuth2ParEndpoint {
 
         setScheduledExpiryTime(Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis());
 
-        OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO =
-                ParHandler.getClientValidationResponse(request);
+        OAuth2Service oAuth2Service = new OAuth2Service();
+        OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.validateClientInfo(request);
 
         if (!oAuth2ClientValidationResponseDTO.isValidClient()) {
 
@@ -134,6 +135,7 @@ public class OAuth2ParEndpoint {
     private Response getAuthResponse(@Context HttpServletResponse response) {
 
         return parHandler.createAuthResponse(response);
+        //return EndpointUtil.getParAuthService().createAuthResponse(response);
     }
 
 

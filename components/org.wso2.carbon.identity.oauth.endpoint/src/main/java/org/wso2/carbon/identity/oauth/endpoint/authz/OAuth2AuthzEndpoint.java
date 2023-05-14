@@ -323,9 +323,9 @@ public class OAuth2AuthzEndpoint {
         // Validate repeated parameters
         if (!validateParams(request, paramMap)) {
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).location(new URI(getErrorPageURL(request,
-                            OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
-                                    .INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request with repeated parameters",
-                            null)))
+                    OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
+                            .INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request with repeated parameters",
+                    null)))
                     .build();
         }
         HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
@@ -341,8 +341,8 @@ public class OAuth2AuthzEndpoint {
         OAuth2Parameters oAuth2Parameters = getOAuth2ParamsFromOAuthMessage(oAuthMessage);
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(getErrorPageURL
                 (oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
-                                .INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request", null,
-                        oAuth2Parameters))).build();
+                        .INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request", null,
+                oAuth2Parameters))).build();
     }
 
     private void handleCachePersistence(OAuthMessage oAuthMessage) {
@@ -966,8 +966,8 @@ public class OAuth2AuthzEndpoint {
         OAuth2Parameters oAuth2Parameters = getOAuth2ParamsFromOAuthMessage(oAuthMessage);
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
                 getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
-                                .OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request", appName,
-                        oAuth2Parameters)
+                        .OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request", appName,
+                oAuth2Parameters)
         )).build();
     }
 
@@ -1432,7 +1432,7 @@ public class OAuth2AuthzEndpoint {
 
         String[] scopes = authzRespDTO.getScope();
         if (scopes != null && scopes.length > 0) {
-            String scopeString = StringUtils.join(scopes, " ");
+            String scopeString =  StringUtils.join(scopes, " ");
             builder.setScope(scopeString.trim());
         }
     }
@@ -1533,7 +1533,6 @@ public class OAuth2AuthzEndpoint {
             throws OAuthSystemException, OAuthProblemException, InvalidRequestException {
 
         OAuth2ClientValidationResponseDTO validationResponse = validateClient(oAuthMessage);
-
         if (!validationResponse.isValidClient()) {
             EndpointUtil.triggerOnRequestValidationFailure(oAuthMessage, validationResponse);
             return getErrorPageURL(oAuthMessage.getRequest(), validationResponse.getErrorCode(), OAuth2ErrorCodes
@@ -1551,15 +1550,7 @@ public class OAuth2AuthzEndpoint {
             setSPAttributeToRequest(oAuthMessage.getRequest(), validationResponse.getApplicationName(), tenantDomain);
         }
 
-        OAuthAuthzRequest oauthRequest = null;
-        try {
-            oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
-        } catch (OAuthProblemException e) {
-            if (e instanceof ParClientException) {
-                throw new InvalidRequestException(e.getError(),
-                        OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST_URI);
-            }
-        }
+        OAuthAuthzRequest oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
 
         OAuth2Parameters params = new OAuth2Parameters();
         String sessionDataKey = UUIDGenerator.generateUUID();

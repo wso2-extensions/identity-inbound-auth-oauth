@@ -88,20 +88,20 @@ public class ParHandler {
     }
 
 
-    private static OAuth2Service getOAuth2Service() {
+//    private static OAuth2Service getOAuth2Service() {
+//
+//        return OAuthComponentServiceHolder.getInstance().getOauth2Service();
+//    }
 
-        return OAuthComponentServiceHolder.getInstance().getOauth2Service();
-    }
-
-    private static OAuth2ClientValidationResponseDTO validateClient(HttpServletRequest request) {
-
-        return getOAuth2Service().validateClientInfo(request);
-    }
-
-    public static OAuth2ClientValidationResponseDTO getClientValidationResponse (HttpServletRequest request) {
-
-        return validateClient(request);
-    }
+//    private static OAuth2ClientValidationResponseDTO validateClient(HttpServletRequest request) {
+//
+//        return getOAuth2Service().validateClientInfo(request);
+//    }
+//
+//    public static OAuth2ClientValidationResponseDTO getClientValidationResponse (HttpServletRequest request) {
+//
+//        return validateClient(request);
+//    }
 
     public static CacheBackedParDAO getCacheBackedParDAO() {
         return new CacheBackedParDAO();

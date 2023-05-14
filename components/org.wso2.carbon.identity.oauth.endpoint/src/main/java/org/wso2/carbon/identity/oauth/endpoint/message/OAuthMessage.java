@@ -129,11 +129,6 @@ public class OAuthMessage {
         return request.getParameter(CLIENT_ID);
     }
 
-    public String getRequest_uri() {
-
-        return request.getParameter(request_uri);
-    }
-
     public String getSessionDataKeyFromLogin() {
 
         return getSessionDataKey(request);
@@ -239,11 +234,6 @@ public class OAuthMessage {
 
         return request.getParameter(CLIENT_ID) != null && getSessionDataKey(request) == null
                 && request.getParameter(OAuthConstants.SESSION_DATA_KEY_CONSENT) == null;
-    }
-
-    public boolean isParRequest() {
-
-        return request.getParameter(request_uri) !=  null;
     }
 
     public Object getFlowStatus() {

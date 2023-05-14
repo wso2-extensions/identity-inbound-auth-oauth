@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+  ~ Copyright (c) 2018, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
   ~
   ~  WSO2 Inc. licenses this file to you under the Apache License,
   ~  Version 2.0 (the "License"); you may not use this file except
@@ -21,30 +21,33 @@
     <parent>
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
+        <version>6.10.16-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.10.16</version>
     </parent>
 
-    <modelVersion>4.0.0</modelVersion>
-    <artifactId>org.wso2.carbon.identity.oauth.stub</artifactId>
-    <packaging>bundle</packaging>
-    <name>WSO2 Carbon - OAuth Stub</name>
-    <url>http://wso2.org</url>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.apache.axis2.wso2</groupId>
-            <artifactId>axis2</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.axis2.wso2</groupId>
-            <artifactId>axis2-client</artifactId>
-        </dependency>
-    </dependencies>
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>org.wso2.carbon.claim.metadata.mgt.stub.dep</artifactId>
+    <packaging>bundle</packaging>
+    <name>WSO2 Carbon - Identity Claim Metadata Management Stub</name>
+    <url>http://wso2.org</url>
 
     <build>
         <plugins>
-
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+                        <Bundle-Name>${project.artifactId}</Bundle-Name>
+                        <Export-Package>
+                            org.wso2.carbon.identity.claim.metadata.mgt.stub.*; version="${project.version}"
+                        </Export-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-antrun-plugin</artifactId>
@@ -64,25 +67,8 @@
                                     <pathelement location="${settings.localRepository}/org/apache/axis2/wso2/axis2/${axis2.wso2.version}/axis2-${axis2.wso2.version}.jar" />
                                 </path>
                                 <java classname="org.apache.axis2.wsdl.WSDL2Java" fork="true">
-                                    <arg line="-uri src/main/resources/OAuthAdminService.wsdl -u -uw -o target/generated-code -p org.wso2.carbon.identity.oauth.stub -ns2p http://oauth.identity.carbon.wso2.org=org.wso2.carbon.identity.oauth.stub,http://dto.oauth.identity.carbon.wso2.org/xsd=org.wso2.carbon.identity.oauth.stub.dto,http://entitlement.oauth.carbon.wso2.org/xsd=org.wso2.carbon.identity.oauth.stub.types,http://org.apache.axis2/xsd=org.wso2.carbon.identity.oauth.stub.types.axis2" />
+                                    <arg line="-uri src/main/resources/ClaimMetadataManagementService.wsdl -u -uw -o target/generated-code -p org.wso2.carbon.identity.claim.metadata.mgt.stub -ns2p http://mgt.metadata.claim.identity.carbon.wso2.org=org.wso2.carbon.identity.claim.metadata.mgt.stub,http://dto.mgt.metadata.claim.identity.carbon.wso2.org/xsd=org.wso2.carbon.identity.claim.metadata.mgt.stub.dto,http://exception.mgt.metadata.claim.identity.carbon.wso2.org/xsd=org.wso2.carbon.identity.claim.metadata.mgt.exception,http://org.apache.axis2/xsd=org.wso2.carbon.identity.claim.metadata.mgt.stub.types.axis2,http://claim.core.user.carbon.wso2.org/xsd=org.wso2.carbon.identity.claim.metada.mgt.stub.types" />
                                     <classpath refid="wsdl2java.classpath" />
-                                    <classpath refid="maven.dependency.classpath" />
-                                    <classpath refid="maven.compile.classpath" />
-                                    <classpath refid="maven.runtime.classpath" />
-                                </java>
-                                <java classname="org.apache.axis2.wsdl.WSDL2Java" fork="true">
-                                    <arg line="-uri src/main/resources/OAuthService.wsdl -u -uw -o target/generated-code -p org.wso2.carbon.identity.oauth.stub -ns2p http://oauth.identity.carbon.wso2.org=org.wso2.carbon.identity.oauth.stub,http://dto.oauth.identity.carbon.wso2.org/xsd=org.wso2.carbon.identity.oauth.stub.dto,http://oauth.identity.carbon.wso2.org/xsd=org.wso2.carbon.identity.oauth.stub.types,http://org.apache.axis2/xsd=org.wso2.carbon.identity.oauth.stub.types.axis2" />
-                                    <classpath refid="wsdl2java.classpath" />
-                                    <classpath refid="maven.dependency.classpath" />
-                                    <classpath refid="maven.compile.classpath" />
-                                    <classpath refid="maven.runtime.classpath" />
-                                </java>
-                                <java classname="org.apache.axis2.wsdl.WSDL2Java" fork="true">
-                                    <arg line="-uri src/main/resources/OAuth2TokenValidationService.wsdl -u -uw -o target/generated-code -p org.wso2.carbon.identity.oauth2.stub -ns2p http://oauth2.identity.carbon.wso2.org=org.wso2.carbon.identity.oauth2.stub,http://dto.oauth2.identity.carbon.wso2.org/xsd=org.wso2.carbon.identity.oauth2.stub.dto,http://oauth2.identity.carbon.wso2.org/xsd=org.wso2.carbon.identity.oauth2.stub.types,http://org.apache.axis2/xsd=org.wso2.carbon.identity.oauth2.stub.types.axis2" />
-                                    <classpath refid="wsdl2java.classpath" />
-                                    <classpath refid="maven.dependency.classpath" />
-                                    <classpath refid="maven.compile.classpath" />
-                                    <classpath refid="maven.runtime.classpath" />
                                 </java>
                             </tasks>
                         </configuration>
@@ -110,21 +96,6 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.artifactId}</Bundle-Name>
-                        <Export-Package>
-                            org.wso2.carbon.identity.oauth.stub.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
-                            org.wso2.carbon.identity.oauth2.stub.*; version="${identity.inbound.auth.oauth.exp.pkg.version}"
-                        </Export-Package>
-                    </instructions>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <configuration>
@@ -140,4 +111,23 @@
             </plugin>
         </plugins>
     </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.axis2.wso2</groupId>
+            <artifactId>axis2</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.axis2.wso2</groupId>
+            <artifactId>axis2-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.ws.commons.axiom.wso2</groupId>
+            <artifactId>axiom</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.orbit.javax.activation</groupId>
+            <artifactId>activation</artifactId>
+        </dependency>
+    </dependencies>
 </project>

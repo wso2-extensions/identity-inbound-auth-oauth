@@ -1,12 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+  ~ Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
   ~
   ~ WSO2 Inc. licenses this file to you under the Apache License,
   ~ Version 2.0 (the "License"); you may not use this file except
   ~ in compliance with the License.
-  ~ you may obtain a copy of the License at
+  ~ You may obtain a copy of the License at
   ~
-  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~ http://www.apache.org/licenses/LICENSE-2.0
   ~
   ~ Unless required by applicable law or agreed to in writing,
   ~ software distributed under the License is distributed on an
@@ -15,104 +16,88 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
+        <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+        <version>6.10.16-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.10.16</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>org.wso2.carbon.identity.oauth.dcr</artifactId>
-    <name>WSO2 Carbon - Dynamic Client Registration Web Service</name>
-    <description>WSO2 Carbon - Dynamic Client Registration Web</description>
+    <artifactId>org.wso2.carbon.identity.oauth.ciba</artifactId>
     <packaging>bundle</packaging>
+    <name>WSO2 Carbon - Identity CIBA Component</name>
+    <description>CIBA Core Component for OpenID Connect</description>
     <url>http://wso2.org</url>
 
     <dependencies>
         <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
+            <groupId>net.minidev</groupId>
+            <artifactId>json-smart</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.ops4j.pax.logging</groupId>
+            <artifactId>pax-logging-api</artifactId>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>org.json.wso2</groupId>
-            <artifactId>json</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.googlecode.json-simple.wso2</groupId>
-            <artifactId>json-simple</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>commons-lang.wso2</groupId>
-            <artifactId>commons-lang</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.wso2.carbon</groupId>
-            <artifactId>org.wso2.carbon.user.core</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.scr.ds-annotations</artifactId>
-            <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.wso2.eclipse.osgi</groupId>
-            <artifactId>org.eclipse.osgi.services</artifactId>
+            <groupId>org.wso2.orbit.org.apache.oltu.oauth2</groupId>
+            <artifactId>oltu</artifactId>
         </dependency>
-
-        <!--Identity dependencies-->
+        <dependency>
+            <groupId>org.wso2.orbit.com.nimbusds</groupId>
+            <artifactId>nimbus-jose-jwt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
             <artifactId>org.wso2.carbon.identity.oauth</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
         </dependency>
+        <!--Test Dependencies-->
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
-            <artifactId>org.wso2.carbon.identity.application.authentication.framework</artifactId>
+            <artifactId>org.wso2.carbon.identity.testutil</artifactId>
+            <version>${carbon.identity.framework.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-api-mockito</artifactId>
+            <version>${powermock.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jacoco</groupId>
-            <artifactId>org.jacoco.agent</artifactId>
-            <classifier>runtime</classifier>
+            <version>${testng.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.powermock</groupId>
             <artifactId>powermock-module-testng</artifactId>
             <scope>test</scope>
+            <version>${powermock.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-api-mockito</artifactId>
+            <groupId>org.jacoco</groupId>
+            <artifactId>org.jacoco.agent</artifactId>
+            <classifier>runtime</classifier>
+            <scope>test</scope>
+            <version>${jacoco.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.wso2.carbon.identity.framework</groupId>
-            <artifactId>org.wso2.carbon.identity.testutil</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.wso2.carbon.identity.framework</groupId>
-            <artifactId>org.wso2.carbon.identity.application.mgt</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-
     </dependencies>
 
     <build>
@@ -125,40 +110,44 @@
                     <instructions>
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
-                        <Bundle-Description>Dynamic Client Registration Bundle</Bundle-Description>
-                        <Private-Package>org.wso2.carbon.identity.oauth.dcr.internal</Private-Package>
+                        <Private-Package>
+                            org.wso2.carbon.identity.oauth.ciba.internal,
+                        </Private-Package>
                         <Import-Package>
+                            javax.servlet.http.*; version ="${imp.pkg.version.javax.servlet}",
+                            javax.servlet.*;version ="${imp.pkg.version.javax.servlet}",
+
+                            org.apache.commons.logging.* ; version="${commons-logging.osgi.version.range}",
+                            org.apache.felix.scr; version = "${apache.felix.scr.ds.annotations.version}",
+                            org.apache.oltu.oauth2.* ; version = "${oltu.package.import.version.range}",
+
+                            net.minidev.json.*; version="${json-smart.version}",
+
+                            com.nimbusds.* ; version ="${nimbusds.osgi.version.range}",
+
                             org.osgi.framework; version="${osgi.framework.imp.pkg.version.range}",
                             org.osgi.service.component; version="${osgi.service.component.imp.pkg.version.range}",
 
-                            org.apache.commons.logging; version="${commons-logging.osgi.version.range}",
-                            org.apache.commons.lang; version="${commons-lang.wso2.osgi.version.range}",
-
-                            org.json,
-                            org.json.simple,
-                            org.json.simple.parser,
-
-                            org.wso2.carbon.context; version="${carbon.kernel.imp.pkg.version.range}",
-                            org.wso2.carbon.utils.multitenancy;version="${carbon.kernel.imp.pkg.version.range}",
-
-                            org.wso2.carbon.registry.api;version="${carbon.kernel.registry.imp.pkg.version.range}",
-                            org.wso2.carbon.registry.core.*;version="${carbon.kernel.registry.imp.pkg.version.range}",
-                            org.wso2.carbon.user.core.*; version="${carbon.kernel.imp.pkg.version.range}",
-
-                            org.wso2.carbon.identity.core.*; version="${carbon.identity.framework.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.base; version="${carbon.identity.framework.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.application.common;version="${carbon.identity.framework.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.application.common.model;version="${carbon.identity.framework.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.application.mgt.*;version="${carbon.identity.framework.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.application.authentication.framework.*;version="${carbon.identity.framework.imp.pkg.version.range}",
-                            javax.servlet.http; version="${imp.pkg.version.javax.servlet}",
-                            org.wso2.carbon.user.api; version="${carbon.user.api.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.oauth.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.oauth2.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.oauth2.*; version
+                            ="${identity.inbound.auth.oauth.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.oauth.* ; version
+                            ="${identity.inbound.auth.oauth.imp.pkg.version.range}",
+                            org.wso2.carbon.registry.core.* ; version ="${carbon.kernel.imp.pkg.version.range}",
+                            org.wso2.carbon.user.core.* ; version ="${carbon.kernel.imp.pkg.version.range}",
+                            org.wso2.carbon.user.api.* ; version ="${carbon.user.api.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.base.* ; version =
+                            "${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.openidconnect.model.* ; version =
+                            "${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.application.authentication.framework.model.* ; version
+                            ="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.core.*; version =
+                            "${carbon.identity.framework.imp.pkg.version.range}",
                         </Import-Package>
                         <Export-Package>
-                            !org.wso2.carbon.identity.oauth.dcr.internal,
-                            org.wso2.carbon.identity.oauth.dcr.*;version="${identity.inbound.auth.oauth.exp.pkg.version}"
+                            !org.wso2.carbon.identity.oauth.ciba.internal,
+                            org.wso2.carbon.identity.oauth.ciba.*;
+                            version="${identity.inbound.auth.oauth.exp.pkg.version}",
                         </Export-Package>
                     </instructions>
                 </configuration>
@@ -174,6 +163,7 @@
                     <systemPropertyVariables>
                         <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
                     </systemPropertyVariables>
+                    <reuseForks>true</reuseForks>
                     <classpathDependencyExcludes>
                         <classpathDependencyExclude>org.ops4j.pax.logging</classpathDependencyExclude>
                         <classpathDependencyExclude>org.wso2.org.ops4j.pax.logging</classpathDependencyExclude>
@@ -223,7 +213,7 @@
                                         <limit implementation="org.jacoco.report.check.Limit">
                                             <counter>COMPLEXITY</counter>
                                             <value>COVEREDRATIO</value>
-                                            <!--<minimum>0.60</minimum>-->
+                                            <minimum>0.17</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
@@ -233,8 +223,34 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-checkstyle-plugin</artifactId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.0.2</version>
+                <executions>
+                    <execution>
+                        <id>copy-resources</id>
+                        <!-- here the phase you need -->
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${basedir}/target/</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/test/resources/</directory>
+                                    <filtering>true</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
@@ -245,5 +261,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>
