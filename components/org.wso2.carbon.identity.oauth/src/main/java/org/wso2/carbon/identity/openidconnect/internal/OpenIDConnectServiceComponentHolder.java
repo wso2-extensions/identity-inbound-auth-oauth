@@ -34,7 +34,7 @@ import java.util.List;
  */
 public class OpenIDConnectServiceComponentHolder {
 
-    private List<ApplicationRolesResolver> applicationRolesResolvers = null;
+    private List<ApplicationRolesResolver> applicationRolesResolvers = new ArrayList<>();
     private static OpenIDConnectServiceComponentHolder instance = new OpenIDConnectServiceComponentHolder();
     private List<OpenIDConnectClaimFilter> openIDConnectClaimFilters = new ArrayList<>();
     private List<ClaimProvider> claimProviders = new ArrayList<>();
