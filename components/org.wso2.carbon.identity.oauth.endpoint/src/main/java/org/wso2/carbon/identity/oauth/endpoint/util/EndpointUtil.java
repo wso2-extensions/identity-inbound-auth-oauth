@@ -803,8 +803,8 @@ public class EndpointUtil {
                 throw new OAuthSystemException("Unable to find a service provider with client_id: " + clientId);
             }
 
-            if (isExternalizedConsentPageEnabledForSP(sp)) {
-                consentPageUrl = getExternalConsentUrlForSP(sp);
+            if (isExternalConsentPageEnabledForSP(sp)) {
+                consentPageUrl = OAuth2Util.resolveExternalConsentPageUrl(sp.getTenantDomain());
             } else if (isOIDC) {
                 consentPageUrl = OAuth2Util.OAuthURL.getOIDCConsentPageUrl();
             } else {
@@ -847,6 +847,9 @@ public class EndpointUtil {
                     // Filter the query parameters from the consent page url.
                     consentPageUrl = filterQueryParamsFromConsentPageUrl(entry.getEndpointParams(), consentPageUrl,
                             sessionDataKeyConsent);
+                    if (isExternalConsentPageEnabledForSP(sp)) {
+                        entry.setRemoveOnConsume(true);
+                    }
                     entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
                     sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
                 } else {
@@ -874,27 +877,6 @@ public class EndpointUtil {
             sp = OAuth2Util.getServiceProvider(params.getClientId());
         }
         return sp;
-    }
-
-    private static String getExternalConsentUrlForSP(ServiceProvider sp) throws OAuthSystemException {
-
-        String externalConsentUrl = "";
-        LocalAndOutboundAuthenticationConfig config = sp.getLocalAndOutBoundAuthenticationConfig();
-        if (config != null && config.getExternalizedConsentPageConfig() != null) {
-            externalConsentUrl = config.getExternalizedConsentPageConfig().getConsentPageUrl();
-        }
-
-        if (log.isDebugEnabled()) {
-            log.debug("externalConsentUrl: " + externalConsentUrl + " for application: " +
-                    sp.getApplicationName() + " with id: " + sp.getApplicationID());
-        }
-
-        if (StringUtils.isNotBlank(externalConsentUrl)) {
-            return externalConsentUrl;
-        } else {
-            throw new OAuthSystemException("External consent management is enabled for the service provider: " +
-                    sp.getApplicationName() + " but the external consent url is not configured.");
-        }
     }
 
     private static String getScopeMetadataQueryParam(Set<String> scopes, String tenantDomain) {
@@ -1769,23 +1751,24 @@ public class EndpointUtil {
     }
 
     /**
-     * Used to check whether the externalized consent is enabled in service provider.
+     * Used to check whether the external consent page is enabled in service provider.
      *
      * @param serviceProvider Service Provider.
-     * @return True if the externalized consent is enabled.
+     * @return True if the external consent page is enabled.
      */
-    public static boolean isExternalizedConsentPageEnabledForSP(ServiceProvider serviceProvider) {
+    public static boolean isExternalConsentPageEnabledForSP(ServiceProvider serviceProvider) {
 
         boolean isEnabled = false;
         if (serviceProvider == null) {
             return isEnabled;
         }
         LocalAndOutboundAuthenticationConfig config = serviceProvider.getLocalAndOutBoundAuthenticationConfig();
-        if (config != null && config.getExternalizedConsentPageConfig() != null) {
-            isEnabled = config.getExternalizedConsentPageConfig().isEnabled();
+
+        if (config != null) {
+            isEnabled = config.isUseExternalConsentPage();
         }
         if (log.isDebugEnabled()) {
-            log.debug("externalConsentManagement: " + isEnabled + " for application: " +
+            log.debug("External consent page: " + isEnabled + " for application: " +
                     serviceProvider.getApplicationName() + " with id: " + serviceProvider.getApplicationID());
         }
         return isEnabled;

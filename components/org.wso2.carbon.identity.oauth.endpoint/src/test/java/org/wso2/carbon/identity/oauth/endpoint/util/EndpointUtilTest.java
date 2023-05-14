@@ -45,7 +45,6 @@ import org.wso2.carbon.identity.application.authentication.framework.config.buil
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
-import org.wso2.carbon.identity.application.common.model.ExternalizedConsentPageConfig;
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -314,6 +313,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         } else {
             when(OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
         }
+        when(OAuth2Util.resolveExternalConsentPageUrl(anyString())).thenReturn(EXTERNAL_CONSENT_URL);
 
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOIDCConsentPageUrl()).thenReturn(OIDC_CONSENT_PAGE_URL);
@@ -855,19 +855,17 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     @Test
     public void testIsExternalizedConsentPageEnabledForSP() throws Exception {
 
-        assertTrue(EndpointUtil.isExternalizedConsentPageEnabledForSP(getServiceProvider()));
+        assertTrue(EndpointUtil.isExternalConsentPageEnabledForSP(getServiceProvider()));
     }
 
     private ServiceProvider getServiceProvider() {
 
         ServiceProvider serviceProvider = new ServiceProvider();
         serviceProvider.setApplicationName(EXTERNAL_CONSENTED_APP_NAME);
-        ExternalizedConsentPageConfig externalizedConsentPageConfig = new ExternalizedConsentPageConfig();
-        externalizedConsentPageConfig.setEnabled(true);
-        externalizedConsentPageConfig.setConsentPageUrl(EXTERNAL_CONSENT_URL);
+        serviceProvider.setTenantDomain("testTenantDomain");
         LocalAndOutboundAuthenticationConfig localAndOutboundAuthenticationConfig = new
                 LocalAndOutboundAuthenticationConfig();
-        localAndOutboundAuthenticationConfig.setExternalizedConsentPageConfig(externalizedConsentPageConfig);
+        localAndOutboundAuthenticationConfig.setUseExternalConsentPage(true);
         serviceProvider.setLocalAndOutBoundAuthenticationConfig(localAndOutboundAuthenticationConfig);
         return serviceProvider;
     }
