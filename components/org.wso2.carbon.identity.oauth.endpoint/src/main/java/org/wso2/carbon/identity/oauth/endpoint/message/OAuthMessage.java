@@ -40,7 +40,6 @@ import javax.servlet.http.HttpServletResponse;
 public class OAuthMessage {
 
     private static final String CLIENT_ID = "client_id";
-    private static final String request_uri = "request_uri";
     protected HttpServletRequest request;
     protected HttpServletResponse response;
     protected Map<String, Object> properties = new HashMap();
