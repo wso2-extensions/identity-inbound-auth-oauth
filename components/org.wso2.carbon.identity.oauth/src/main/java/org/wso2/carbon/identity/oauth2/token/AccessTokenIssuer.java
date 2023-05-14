@@ -596,6 +596,14 @@ public class AccessTokenIssuer {
                 authorizedInternalScopes = (String[]) ArrayUtils
                         .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
             }
+            if (isManagementApp && GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
+                    ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
+                List<String> authorizedInternalScopesList = new ArrayList<>(Arrays.asList(authorizedInternalScopes));
+                if (authorizedInternalScopesList.contains(INTERNAL_LOGIN_SCOPE)) {
+                    authorizedInternalScopesList.remove(INTERNAL_LOGIN_SCOPE);
+                    authorizedInternalScopes = authorizedInternalScopesList.toArray(new String[0]);
+                }
+            }
         }
 
         /*
