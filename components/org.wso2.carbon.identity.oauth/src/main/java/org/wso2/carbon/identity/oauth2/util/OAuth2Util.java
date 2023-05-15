@@ -4359,7 +4359,7 @@ public class OAuth2Util {
             X509Certificate x509 = (X509Certificate) cf.generateCertificate(bais);
             Base64URL jwkThumbprint;
             // check config to maintain backward compatibility with SHA-1 thumbprint
-            if (!Boolean.parseBoolean(IdentityUtil.getProperty(
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(
                     IdentityConstants.OAuth.ENABLE_SHA256_JWK_THUMBPRINT))) {
                 jwkThumbprint = RSAKey.parse(x509).computeThumbprint(Constants.SHA256);
             } else {
