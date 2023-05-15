@@ -558,7 +558,8 @@ public class AccessTokenIssuer {
         String[] requestedScopes = tokReqMsgCtx.getScope();
         if (GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) && !isManagementApp) {
             log.debug("Application is not configured as Management App and the grant type is client credentials. " +
-                    "Hence skipping internal scope validation to stop issuing internal scopes.");
+                    "Hence skipping internal scope validation to stop issuing internal scopes for the client : " +
+                    tokenReqDTO.getClientId());
         } else {
             if (GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
                     ArrayUtils.contains(requestedScopes, INTERNAL_LOGIN_SCOPE)) {
@@ -572,7 +573,7 @@ public class AccessTokenIssuer {
             List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
             List<String> scopesToBeValidated = new ArrayList<>();
 
-            if (requestedScopes != null) {
+            if (ArrayUtils.isNotEmpty(requestedScopes)) {
                 for (String scope : requestedScopes) {
                     if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
                         requestedAllowedScopes.add(scope);
@@ -600,6 +601,10 @@ public class AccessTokenIssuer {
                     ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
                 List<String> authorizedInternalScopesList = new ArrayList<>(Arrays.asList(authorizedInternalScopes));
                 if (authorizedInternalScopesList.contains(INTERNAL_LOGIN_SCOPE)) {
+                    /*
+                    Remove the internal_login scope from the requested scopes as we need to stop issuing self-service
+                    related scopes for client credentials grant.
+                    */
                     authorizedInternalScopesList.remove(INTERNAL_LOGIN_SCOPE);
                     authorizedInternalScopes = authorizedInternalScopesList.toArray(new String[0]);
                 }
