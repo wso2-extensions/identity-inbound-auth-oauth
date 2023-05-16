@@ -797,10 +797,10 @@ public class AccessTokenIssuer {
                                              String[] authorizedInternalScopes) {
 
         String[] scopes = tokReqMsgCtx.getScope();
-        if (ArrayUtils.isEmpty(scopes)) {
+        if (scopes == null) {
             scopes = new String[0];
         }
-        if (ArrayUtils.isEmpty(authorizedInternalScopes)) {
+        if (authorizedInternalScopes == null) {
             authorizedInternalScopes = new String[0];
         }
         tokReqMsgCtx.setScope(Stream.concat(Arrays.stream(scopes), Arrays.stream(authorizedInternalScopes))
