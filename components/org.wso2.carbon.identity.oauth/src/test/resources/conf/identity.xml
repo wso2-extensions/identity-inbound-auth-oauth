@@ -292,6 +292,8 @@
             <PollingInterval>5000</PollingInterval>
             <KeySet>BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789</KeySet>
         </DeviceCodeGrant>
+
+        <UseClientIDAsAuthorizedUserForApplicationTokens>true</UseClientIDAsAuthorizedUserForApplicationTokens>
     </OAuth>
 
     <MultifactorAuthentication>

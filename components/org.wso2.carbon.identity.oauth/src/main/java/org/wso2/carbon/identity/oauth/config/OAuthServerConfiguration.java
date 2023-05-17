@@ -154,6 +154,7 @@ public class OAuthServerConfiguration {
     private boolean accessTokenPartitioningEnabled = false;
     private boolean redirectToRequestedRedirectUriEnabled = true;
     private boolean allowCrossTenantIntrospection = true;
+    private boolean useClientIDAsAuthorizedUserForApplicationTokensEnabled = true;
     private String accessTokenPartitioningDomains = null;
     private TokenPersistenceProcessor persistenceProcessor = null;
     private Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
@@ -465,6 +466,9 @@ public class OAuthServerConfiguration {
 
         // Read config for cross tenant allow.
         parseAllowCrossTenantIntrospection(oauthElem);
+
+        // Read config for using client id as application owner.
+        parseUseClientIDAsAuthorizedUserForApplicationTokens(oauthElem);
 
         // Set the availability of oauth_response.jsp page.
         setOAuthResponseJspPageAvailable();
@@ -3249,6 +3253,31 @@ public class OAuthServerConfiguration {
         return allowCrossTenantIntrospection;
     }
 
+    /**
+     * Parses the UseClientIDAsAuthorizedUserForApplicationTokens configuration that used to make the client id as
+     * the authorized user in access tokens issued for authenticated applications.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseUseClientIDAsAuthorizedUserForApplicationTokens(OMElement oauthConfigElem) {
+
+        OMElement useClientIDAsAuthorizedUserForApplicationTokensElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.USE_CLIENT_ID_AS_AUTHORIZED_USER_FOR_APPLICATION_TOKENS));
+        if (useClientIDAsAuthorizedUserForApplicationTokensElem != null) {
+            useClientIDAsAuthorizedUserForApplicationTokensEnabled =
+                    Boolean.parseBoolean(useClientIDAsAuthorizedUserForApplicationTokensElem.getText());
+        }
+    }
+
+    /**
+     * This method returns the value of the property UseClientIDAsAuthorizedUserForApplicationTokens for the OAuth
+     * configuration in identity.xml.
+     */
+    public boolean isUseClientIDAsAuthorizedUserForApplicationTokensEnabled() {
+
+        return useClientIDAsAuthorizedUserForApplicationTokensEnabled;
+    }
+
     private static void setOAuthResponseJspPageAvailable() {
 
         java.nio.file.Path path = Paths.get(CarbonUtils.getCarbonHome(), "repository", "deployment",
@@ -3503,6 +3532,9 @@ public class OAuthServerConfiguration {
 
         // Allow Cross Tenant Introspection Config.
         private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
+
+        private static final String USE_CLIENT_ID_AS_AUTHORIZED_USER_FOR_APPLICATION_TOKENS =
+                    "UseClientIDAsAuthorizedUserForApplicationTokens";
 
         // FAPI Configurations
         private static final String FAPI = "FAPI";

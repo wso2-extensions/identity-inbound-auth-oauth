@@ -333,6 +333,7 @@
             <KeySet>BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789</KeySet>
         </DeviceCodeGrant>
 
+        <UseClientIDAsAuthorizedUserForApplicationTokens>true</UseClientIDAsAuthorizedUserForApplicationTokens>
         <!-- Configs related to OAuth2 token persistence -->
         <TokenPersistence>
             <Enable>true</Enable>

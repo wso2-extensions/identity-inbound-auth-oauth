@@ -287,10 +287,24 @@ public class AccessTokenIssuer {
 
         tokReqMsgCtx.addProperty(OAUTH_APP_DO, oAuthAppDO);
 
+        ServiceProvider serviceProvider = getServiceProvider(tokReqMsgCtx.getOauth2AccessTokenReqDTO());
+        boolean isManagementApp = serviceProvider.isManagementApp();
+
         boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser();
 
+        boolean useClientIDAsAuthorizedUserForApplicationTokensEnabled = OAuthServerConfiguration.getInstance()
+                .isUseClientIDAsAuthorizedUserForApplicationTokensEnabled();
+
         if (!isOfTypeApplicationUser) {
-            tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getAppOwner());
+            if (isManagementApp || !useClientIDAsAuthorizedUserForApplicationTokensEnabled) {
+                tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getAppOwner());
+            } else {
+                AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+                authenticatedUser.setUserName(tokenReqDTO.getClientId());
+                authenticatedUser.setUserId(tokenReqDTO.getClientId());
+                authenticatedUser.setTenantDomain(tenantDomainOfApp);
+                tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
+            }
             tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
         } else {
             tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
@@ -411,8 +425,13 @@ public class AccessTokenIssuer {
 
             AuthenticatedUser authorizedUser = tokReqMsgCtx.getAuthorizedUser();
             if (authorizedUser.getAuthenticatedSubjectIdentifier() == null) {
-                authorizedUser.setAuthenticatedSubjectIdentifier(
-                        getSubjectClaim(getServiceProvider(tokReqMsgCtx.getOauth2AccessTokenReqDTO()), authorizedUser));
+                if (isOfTypeApplicationUser || !useClientIDAsAuthorizedUserForApplicationTokensEnabled) {
+                    authorizedUser.setAuthenticatedSubjectIdentifier(
+                            getSubjectClaim(getServiceProvider(tokReqMsgCtx.getOauth2AccessTokenReqDTO()),
+                                    authorizedUser));
+                } else {
+                    authorizedUser.setAuthenticatedSubjectIdentifier(oAuthAppDO.getOauthConsumerKey());
+                }
             }
 
             tokenRespDTO = authzGrantHandler.issue(tokReqMsgCtx);
