@@ -22,24 +22,25 @@ package org.wso2.carbon.identity.oauth.endpoint.par;
 import net.minidev.json.JSONObject;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
-import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.par.cache.CacheBackedParDAO;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
-import org.wso2.carbon.identity.oauth.par.dao.CacheBackedParDAO;
 import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
 import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAO;
-import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
+import org.wso2.carbon.identity.oauth.par.model.ParRequest;
+import org.wso2.carbon.identity.oauth.par.model.ParAuthResponseData;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 
-import java.util.UUID;
+import java.util.HashMap;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
-
 import javax.servlet.http.HttpServletResponse;
+
 
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 
@@ -49,10 +50,6 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth
 public class ParHandler {
 
     private static final Log log = LogFactory.getLog(ParHandler.class);
-    private static final String ERROR = "error";
-    private static final String ERROR_DESCRIPRION = "error_description";
-    private static String uuid;
-
     private static final ParMgtDAO parMgtDAO = ParDAOFactory.getInstance().getParAuthMgtDAO();
 
     /**
@@ -60,9 +57,7 @@ public class ParHandler {
      *
      * @return Response for AuthenticationRequest.
      */
-    public Response createAuthResponse(HttpServletResponse response) {
-
-        uuid = String.valueOf(UUID.randomUUID());
+    public Response createAuthResponse(HttpServletResponse response, ParAuthResponseData parAuthResponseData) {
 
         if (log.isDebugEnabled()) {
             log.debug("Setting ExpiryTime for the response to the  request.");
@@ -71,8 +66,8 @@ public class ParHandler {
         response.setContentType(MediaType.APPLICATION_JSON);
 
         JSONObject parAuthResponse = new JSONObject();
-        parAuthResponse.put(ParConstants.REQUEST_URI, ParConstants.REQUEST_URI_HEAD + uuid);
-        parAuthResponse.put(ParConstants.EXPIRES_IN, ParConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC);
+        parAuthResponse.put(ParConstants.REQUEST_URI, ParConstants.REQUEST_URI_HEAD + parAuthResponseData.getUuid());
+        parAuthResponse.put(ParConstants.EXPIRES_IN, parAuthResponseData.getExpityTime());
 
         if (log.isDebugEnabled()) {
             log.debug("Creating PAR Authentication response to the request");
@@ -83,38 +78,40 @@ public class ParHandler {
             log.debug("Returning PAR Authentication Response for the request");
         }
 
-        //OAuth2ParEndpoint.setRequestUriUUID(uuid);
         return responseBuilder.entity(parAuthResponse.toString()).build();
     }
 
+    public static void storeParRecord(String uuid, HashMap<String, String> params, long scheduledExpiryTime)
+            throws IdentityOAuth2Exception {
 
-//    private static OAuth2Service getOAuth2Service() {
-//
-//        return OAuthComponentServiceHolder.getInstance().getOauth2Service();
-//    }
+        try {
+            // Store values to Database
+            ParRequest parRequest;
+            int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
 
-//    private static OAuth2ClientValidationResponseDTO validateClient(HttpServletRequest request) {
-//
-//        return getOAuth2Service().validateClientInfo(request);
-//    }
-//
-//    public static OAuth2ClientValidationResponseDTO getClientValidationResponse (HttpServletRequest request) {
-//
-//        return validateClient(request);
-//    }
 
-    public static CacheBackedParDAO getCacheBackedParDAO() {
+            ParHandler.getParMgtDAO().persistParRequest(uuid,
+                    params.get(OAuthConstants.OAuth20Params.CLIENT_ID), scheduledExpiryTime, params);
+
+            // Add data to cache
+            parRequest = new ParRequest(uuid, params, scheduledExpiryTime);
+            ParHandler.getCacheBackedParDAO().addParRequest(uuid, parRequest, tenantId);
+
+        } catch (ParCoreException e) {
+            throw new IdentityOAuth2Exception("Error occurred in persisting PAR request", e);
+        }
+    }
+
+    private static CacheBackedParDAO getCacheBackedParDAO() {
         return new CacheBackedParDAO();
     }
 
-    public static ParMgtDAO getParMgtDAO() {
+    private static ParMgtDAO getParMgtDAO() {
         return parMgtDAO;
     }
 
-    /**
-     * Sets the UUID for the request_uri.
-     */
-    public static String getUuid() {
-        return uuid;
+    public static OAuth2ClientValidationResponseDTO validateClient(HttpServletRequest request) {
+
+        return getOAuth2Service().validateClientInfo(request);
     }
 }

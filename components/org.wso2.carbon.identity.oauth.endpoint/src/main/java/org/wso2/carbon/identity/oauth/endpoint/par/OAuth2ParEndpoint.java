@@ -20,20 +20,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.json.JSONObject;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ParErrorDTO;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
-import org.wso2.carbon.identity.oauth.par.dao.CacheBackedParDAO;
-import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
-import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAO;
-import org.wso2.carbon.identity.oauth.par.dao.ParRequest;
-import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth.par.model.ParAuthResponseData;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 
 import javax.servlet.http.HttpServletRequest;
@@ -72,15 +65,15 @@ public class OAuth2ParEndpoint {
 
         setScheduledExpiryTime(Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis());
 
-        OAuth2Service oAuth2Service = new OAuth2Service();
-        OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.validateClientInfo(request);
+        OAuth2ClientValidationResponseDTO validationResponse = ParHandler.validateClient(request);
 
-        if (!oAuth2ClientValidationResponseDTO.isValidClient()) {
+        if (!validationResponse.isValidClient()) {
 
-            return createErrorResponse(oAuth2ClientValidationResponseDTO);
+            return createErrorResponse(validationResponse);
         } else if (isRequestUriProvided(request.getParameterMap())) {
 
-            return createErrorResponse(rejectRequestWithRequestUri()); // passes par error object to obtain error response
+            // passes par error object to obtain error response
+            return createErrorResponse(rejectRequestWithRequestUri());
         }
 
         HashMap<String, String> parameters = new HashMap<>();
@@ -91,27 +84,10 @@ public class OAuth2ParEndpoint {
         }
 
         // get response
-        Response parResponse = getAuthResponse(response);
-        String requestUriUUID = ParHandler.getUuid();
+        ParAuthResponseData parAuthResponse = getParAuthResponseData(response, request);
+        Response parResponse = parHandler.createAuthResponse(response, parAuthResponse);
 
-        try {
-            // Store values to Database
-            ParRequest parRequest;
-            String requestObject = null;
-            int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
-
-
-            ParHandler.getParMgtDAO().persistParRequest(requestUriUUID,
-                    parameters.get(OAuthConstants.OAuth20Params.CLIENT_ID), scheduledExpiryTime, parameters);
-
-            // Add data to cache
-            parRequest = new ParRequest(requestUriUUID, parameters, scheduledExpiryTime, requestObject);
-            ParHandler.getCacheBackedParDAO().addParRequest(requestUriUUID, parRequest, tenantId);
-
-        } catch (ParCoreException e) {
-            throw new IdentityOAuth2Exception("Error occurred in persisting PAR request", e);
-        }
-
+        ParHandler.storeParRecord(parAuthResponse.getUuid(), parameters, scheduledExpiryTime);
 
         return parResponse;
     }
@@ -132,10 +108,10 @@ public class OAuth2ParEndpoint {
      * @param response            Authentication response object.
      * @return Response for AuthenticationRequest.
      */
-    private Response getAuthResponse(@Context HttpServletResponse response) {
+    private ParAuthResponseData getParAuthResponseData(@Context HttpServletResponse response,
+                                                       HttpServletRequest request) {
 
-        return parHandler.createAuthResponse(response);
-        //return EndpointUtil.getParAuthService().createAuthResponse(response);
+        return EndpointUtil.getParAuthService().generateParAuthResponse(response, request);
     }
 
 

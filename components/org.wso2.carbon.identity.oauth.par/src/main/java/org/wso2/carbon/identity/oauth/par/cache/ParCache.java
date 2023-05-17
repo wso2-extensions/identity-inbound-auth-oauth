@@ -16,9 +16,10 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.par.dao;
+package org.wso2.carbon.identity.oauth.par.cache;
 
 import org.wso2.carbon.identity.core.cache.BaseCache;
+import org.wso2.carbon.identity.oauth.par.model.ParRequest;
 
 /**
  * Cache implementation for PAR requests.

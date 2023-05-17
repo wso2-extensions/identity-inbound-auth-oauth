@@ -319,6 +319,7 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
             <artifactId>org.wso2.carbon.identity.oauth.par</artifactId>
+<!--            <scope>provided</scope>-->
         </dependency>
         <!--        <dependency>-->
 <!--            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>-->
@@ -422,6 +423,7 @@
                         <Export-Package>
                             !org.wso2.carbon.identity.oauth.internal,
                             !org.wso2.carbon.identity.oauth.common.*,
+                            !org.wso2.carbon.identity.oauth.par.*,
                             org.wso2.carbon.identity.oauth.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
                             org.wso2.carbon.identity.oauth2.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
                             org.wso2.carbon.identity.openidconnect.*;version="${identity.inbound.auth.oauth.exp.pkg.version}",

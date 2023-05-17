@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.par.dao;
+package org.wso2.carbon.identity.oauth.par.model;
 
 import org.wso2.carbon.identity.core.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -35,7 +35,7 @@ public class ParRequest extends CacheEntry {
     private String requestObject = null;
 
 
-    public ParRequest(String requestUri, HashMap<String, String> parameterMap, long scheduledExpiryTime, String requestObject) {
+    public ParRequest(String requestUri, HashMap<String, String> parameterMap, long scheduledExpiryTime) {
         this.requestUri = requestUri;
         this.parameterMap = parameterMap;
         this.scheduledExpiryTime = scheduledExpiryTime;

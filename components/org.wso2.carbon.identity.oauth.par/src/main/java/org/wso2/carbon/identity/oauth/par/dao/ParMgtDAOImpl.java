@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.par.common.SQLQueries;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 
@@ -126,7 +127,7 @@ public class ParMgtDAOImpl implements ParMgtDAO {
                     }
 
                     String jsonString = resultSet.getString(1);
-                    return objectMapper.readValue(jsonString, new TypeReference<HashMap<String, String>>() {});
+                    return objectMapper.readValue(jsonString, new TypeReference<HashMap<String, String>>() { });
 
                 } else {
                     // Return an empty optional if the UUID is not found in the database
@@ -192,7 +193,6 @@ public class ParMgtDAOImpl implements ParMgtDAO {
 
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
-            //System.out.println("Record deleted from DB!");
 
         } catch (SQLException e) {
             throw new ParClientException("Error occurred while deleting PAR request from Database",

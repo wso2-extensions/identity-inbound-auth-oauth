@@ -24,9 +24,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.par.cache.CacheBackedParDAO;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
-import org.wso2.carbon.identity.oauth.par.dao.CacheBackedParDAO;
-import org.wso2.carbon.identity.oauth.par.dao.ParCache;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 
 import java.util.Calendar;

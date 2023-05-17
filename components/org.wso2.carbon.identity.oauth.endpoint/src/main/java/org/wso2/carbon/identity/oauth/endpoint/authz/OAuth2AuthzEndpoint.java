@@ -1557,8 +1557,6 @@ public class OAuth2AuthzEndpoint {
         OAuth2Parameters params = new OAuth2Parameters();
         String sessionDataKey = UUIDGenerator.generateUUID();
         params.setSessionDataKey(sessionDataKey);
-
-
         String redirectURI = populateOauthParameters(params, oAuthMessage, validationResponse, oauthRequest);
         if (redirectURI != null) {
             return redirectURI;

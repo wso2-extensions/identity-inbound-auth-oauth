@@ -68,7 +68,7 @@
         <property name="oauthServerConfiguration"  ref="oauthServerConfigurationFactoryBean"/>
         <property name="requestObjectService"  ref="requestObjectServiceFactoryBean"/>
         <property name="cibaAuthService"  ref="cibaAuthServiceFactoryBean"/>
-<!--        <property name="parAuthService"  ref="parAuthServiceFactoryBean"/>-->
+        <property name="parAuthService"  ref="parAuthServiceFactoryBean"/>
         <property name="idpManager" ref="idpManagerBean"/>
     </bean>
     <bean id="oidcProviderResponseBuilderBean" class="org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.impl.OIDProviderJSONResponseBuilder"/>

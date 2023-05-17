@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.par.dao;
+package org.wso2.carbon.identity.oauth.par.common;
 
 /**
  * SQL queries related to data access layer of PAR.

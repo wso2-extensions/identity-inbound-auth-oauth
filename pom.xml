@@ -471,6 +471,7 @@
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
                 <artifactId>org.wso2.carbon.identity.oauth.par</artifactId>
                 <version>${project.version}</version>
+<!--                <scope>provided</scope>-->
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>

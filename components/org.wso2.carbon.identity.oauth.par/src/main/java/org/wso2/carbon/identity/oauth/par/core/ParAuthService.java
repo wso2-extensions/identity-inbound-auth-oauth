@@ -16,16 +16,18 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.par.api;
+package org.wso2.carbon.identity.oauth.par.core;
 
+import org.wso2.carbon.identity.oauth.par.model.ParAuthResponseData;
+
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.Response;
 
 /**
  * Provides authentication services.
  */
 public interface ParAuthService {
 
-    Response createAuthResponse(HttpServletResponse response);
+    ParAuthResponseData generateParAuthResponse(HttpServletResponse response, HttpServletRequest request);
 
 }

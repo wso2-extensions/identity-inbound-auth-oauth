@@ -48,7 +48,8 @@ public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
         super(buildRequest(request));
     }
 
-    static HttpServletRequest buildRequest(HttpServletRequest request) throws OAuthProblemException {
+
+    private static HttpServletRequest buildRequest(HttpServletRequest request) throws OAuthProblemException {
 
         // If request_uri is there consider as par request
         if (request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI) != null) {

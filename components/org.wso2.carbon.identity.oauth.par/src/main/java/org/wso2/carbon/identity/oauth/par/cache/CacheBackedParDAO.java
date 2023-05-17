@@ -16,11 +16,14 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.par.dao;
+package org.wso2.carbon.identity.oauth.par.cache;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
+import org.wso2.carbon.identity.oauth.par.model.ParRequest;
+import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAO;
 
 import java.util.HashMap;
 
@@ -32,7 +35,6 @@ import java.util.HashMap;
 public class CacheBackedParDAO {
     private static final Log log = LogFactory.getLog(CacheBackedParDAO.class);
     ParCache parCache = ParCache.getInstance();
-
     ParMgtDAO parMgtDAO = ParDAOFactory.getInstance().getParAuthMgtDAO();
 
 
@@ -59,7 +61,6 @@ public class CacheBackedParDAO {
 
             //if request not in cache, fetch paramMap data from database
             paramMap = parMgtDAO.getParParamMap(uuid);
-            System.out.println("ParamMap from DB: " + paramMap);
 
         } else {
             if (log.isDebugEnabled()) {
@@ -69,7 +70,6 @@ public class CacheBackedParDAO {
 
             // get paramMap from cache
             paramMap = parCache.getValueFromCache(uuid, tenantId).getParameterMap();
-            System.out.println("ParamMap from cache: " + paramMap);
         }
         return paramMap;
     }
@@ -89,7 +89,6 @@ public class CacheBackedParDAO {
 
             // if request not in cache, fetch paramMap data from database
             scheduledExpiryTime = parMgtDAO.getScheduledExpiry(uuid);
-            System.out.println("Expiry from DB: " + scheduledExpiryTime);
 
         } else {
             if (log.isDebugEnabled()) {
@@ -98,7 +97,6 @@ public class CacheBackedParDAO {
             }
             // get expiry from cache
             scheduledExpiryTime = parCache.getValueFromCache(uuid, tenantId).getScheduledExpiryTime();
-            System.out.println("Expiry from cache: " + scheduledExpiryTime);
         }
         return scheduledExpiryTime;
     }
@@ -118,7 +116,6 @@ public class CacheBackedParDAO {
 
             // if request not in cache, fetch paramMap data from database
             parClientId = parMgtDAO.getParClientId(uuid);
-            System.out.println("ClientID from DB: " + parClientId);
 
         } else {
             if (log.isDebugEnabled()) {
@@ -127,7 +124,6 @@ public class CacheBackedParDAO {
             }
             // get expiry from cache
             parClientId = parCache.getValueFromCache(uuid, tenantId).getClientId();
-            System.out.println("ClientID from cache: " + parClientId);
         }
         return parClientId;
     }
