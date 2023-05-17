@@ -78,14 +78,14 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings
 public final class OAuthUtil {
 
     public static final Log LOG = LogFactory.getLog(OAuthUtil.class);
-    private static final String ALGORITHM = "HmacSHA1";
+    private static final String ALGORITHM = "HmacSHA256";
 
     private OAuthUtil() {
 
     }
 
     /**
-     * Generates a random number using two UUIDs and HMAC-SHA1
+     * Generates a random number using two UUIDs and HMAC-SHA256
      *
      * @return generated secure random number
      * @throws IdentityOAuthAdminException Invalid Algorithm or Invalid Key
