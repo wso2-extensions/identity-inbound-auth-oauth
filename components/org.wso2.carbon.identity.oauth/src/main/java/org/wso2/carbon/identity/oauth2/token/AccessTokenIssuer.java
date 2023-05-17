@@ -88,6 +88,7 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 
 /**
@@ -551,25 +552,38 @@ public class AccessTokenIssuer {
             }
             return isValidScope;
         }
-        List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
-        List<String> requestedAllowedScopes = new ArrayList<>();
-        String[] requestedScopes = tokReqMsgCtx.getScope();
-        List<String> scopesToBeValidated = new ArrayList<>();
-
-        if (requestedScopes != null) {
-            for (String scope : requestedScopes) {
-                if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
-                    requestedAllowedScopes.add(scope);
-                } else {
-                    scopesToBeValidated.add(scope);
-                }
-            }
-            tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
-        }
-
-        String[] authorizedInternalScopes = new String[0];
         boolean isManagementApp = getServiceProvider(tokenReqDTO).isManagementApp();
-        if (isManagementApp) {
+        List<String> requestedAllowedScopes = new ArrayList<>();
+        String[] authorizedInternalScopes = new String[0];
+        String[] requestedScopes = tokReqMsgCtx.getScope();
+        if (GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) && !isManagementApp) {
+            log.debug("Application is not configured as Management App and the grant type is client credentials. " +
+                    "Hence skipping internal scope validation to stop issuing internal scopes for the client : " +
+                    tokenReqDTO.getClientId());
+        } else {
+            if (GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
+                    ArrayUtils.contains(requestedScopes, INTERNAL_LOGIN_SCOPE)) {
+                /*
+                Remove the internal_login scope from the requested scopes as we need to stop issuing self-service
+                related scopes for client credentials grant.
+                */
+                requestedScopes = (String[]) ArrayUtils.removeElement(requestedScopes, INTERNAL_LOGIN_SCOPE);
+                tokReqMsgCtx.setScope(requestedScopes);
+            }
+            List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
+            List<String> scopesToBeValidated = new ArrayList<>();
+
+            if (ArrayUtils.isNotEmpty(requestedScopes)) {
+                for (String scope : requestedScopes) {
+                    if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
+                        requestedAllowedScopes.add(scope);
+                    } else {
+                        scopesToBeValidated.add(scope);
+                    }
+                }
+                tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
+            }
+
             if (log.isDebugEnabled()) {
                 log.debug("Handling the internal scope validation.");
             }
@@ -583,10 +597,17 @@ public class AccessTokenIssuer {
                 authorizedInternalScopes = (String[]) ArrayUtils
                         .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
             }
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Skipping the internal scope validation as the application is not" +
-                        " configured as Management App");
+            if (isManagementApp && GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
+                    ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
+                List<String> authorizedInternalScopesList = new ArrayList<>(Arrays.asList(authorizedInternalScopes));
+                if (authorizedInternalScopesList.contains(INTERNAL_LOGIN_SCOPE)) {
+                    /*
+                    Remove the internal_login scope from the requested scopes as we need to stop issuing self-service
+                    related scopes for client credentials grant.
+                    */
+                    authorizedInternalScopesList.remove(INTERNAL_LOGIN_SCOPE);
+                    authorizedInternalScopes = authorizedInternalScopesList.toArray(new String[0]);
+                }
             }
         }
 
