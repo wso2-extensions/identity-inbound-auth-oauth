@@ -27,7 +27,6 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.F
 import org.wso2.carbon.identity.application.authentication.framework.handler.approles.ApplicationRolesResolver;
 import org.wso2.carbon.identity.application.authentication.framework.handler.approles.exception.ApplicationRolesException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
@@ -73,6 +72,7 @@ import java.util.regex.Pattern;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.APP_ROLES_CLAIM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
@@ -542,8 +542,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         requestedClaimUris.removeIf(claim -> claim.startsWith("http://wso2.org/claims/runtime/"));
 
         boolean requestedAppRoleClaim = false;
-        if (requestedClaimUris.contains(FrameworkConstants.APP_ROLES_CLAIM)) {
-            requestedClaimUris.remove(FrameworkConstants.APP_ROLES_CLAIM);
+        if (requestedClaimUris.contains(APP_ROLES_CLAIM)) {
+            requestedClaimUris.remove(APP_ROLES_CLAIM);
             requestedAppRoleClaim = true;
         }
         Map<String, String> userClaims = getUserClaimsInLocalDialect(fullQualifiedUsername, realm, requestedClaimUris);
@@ -619,8 +619,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         }
         String[] appRoles = appRolesResolver.getRoles(authenticatedUser, applicationId);
         if (ArrayUtils.isNotEmpty(appRoles)) {
-            userClaims.put(FrameworkConstants.APP_ROLES_CLAIM,
-                    String.join(FrameworkUtils.getMultiAttributeSeparator(), appRoles));
+            userClaims.put(APP_ROLES_CLAIM, String.join(FrameworkUtils.getMultiAttributeSeparator(), appRoles));
         }
     }
 
