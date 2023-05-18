@@ -35,6 +35,30 @@ public class ApplicationDTO  {
   private String clientName = null;
 
   
+  private String extApplicationOwner = null;
+  
+  
+  private Long extApplicationTokenLifetime = null;
+  
+  
+  private Long extUserTokenLifetime = null;
+  
+  
+  private Long extRefreshTokenLifetime = null;
+  
+  
+  private Long extIdTokenLifetime = null;
+  
+  
+  private Boolean pkceMandatory = null;
+  
+  
+  private Boolean pkceSupportPlain = null;
+  
+  
+  private Boolean bypassClientCredentials = null;
+
+  
   /**
    **/
   @ApiModelProperty(value = "")
@@ -107,6 +131,101 @@ public class ApplicationDTO  {
   }
 
   
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_application_owner")
+  public String getExtApplicationOwner() {
+    return extApplicationOwner;
+  }
+  public void setExtApplicationOwner(String extApplicationOwner) {
+    this.extApplicationOwner = extApplicationOwner;
+  }
+
+  
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_application_token_lifetime")
+  public Long getExtApplicationTokenLifetime() {
+    return extApplicationTokenLifetime;
+  }
+  public void setExtApplicationTokenLifetime(Long extApplicationTokenLifetime) {
+    this.extApplicationTokenLifetime = extApplicationTokenLifetime;
+  }
+
+  
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_user_token_lifetime")
+  public Long getExtUserTokenLifetime() {
+    return extUserTokenLifetime;
+  }
+  public void setExtUserTokenLifetime(Long extUserTokenLifetime) {
+    this.extUserTokenLifetime = extUserTokenLifetime;
+  }
+
+  
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_refresh_token_lifetime")
+  public Long getExtRefreshTokenLifetime() {
+    return extRefreshTokenLifetime;
+  }
+  public void setExtRefreshTokenLifetime(Long extRefreshTokenLifetime) {
+    this.extRefreshTokenLifetime = extRefreshTokenLifetime;
+  }
+
+  
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_id_token_lifetime")
+  public Long getExtIdTokenLifetime() {
+    return extIdTokenLifetime;
+  }
+  public void setExtIdTokenLifetime(Long extIdTokenLifetime) {
+    this.extIdTokenLifetime = extIdTokenLifetime;
+  }
+
+  
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("pkce_mandatory")
+  public Boolean getPkceMandatory() {
+    return pkceMandatory;
+  }
+  public void setPkceMandatory(Boolean pkceMandatory) {
+    this.pkceMandatory = pkceMandatory;
+  }
+
+  
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("pkce_support_plain")
+  public Boolean getPkceSupportPlain() {
+    return pkceSupportPlain;
+  }
+  public void setPkceSupportPlain(Boolean pkceSupportPlain) {
+    this.pkceSupportPlain = pkceSupportPlain;
+  }
+
+  
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("bypass_client_credentials")
+  public Boolean getBypassClientCredentials() {
+    return bypassClientCredentials;
+  }
+  public void setBypassClientCredentials(Boolean bypassClientCredentials) {
+    this.bypassClientCredentials = bypassClientCredentials;
+  }
+
 
   @Override
   public String toString()  {
@@ -119,6 +238,14 @@ public class ApplicationDTO  {
     sb.append("  redirect_uris: ").append(redirectUris).append("\n");
     sb.append("  grant_types: ").append(grantTypes).append("\n");
     sb.append("  client_name: ").append(clientName).append("\n");
+    sb.append("  ext_application_owner: ").append(extApplicationOwner).append("\n");
+    sb.append("  ext_application_token_lifetime: ").append(extApplicationTokenLifetime).append("\n");
+    sb.append("  ext_user_token_lifetime: ").append(extUserTokenLifetime).append("\n");
+    sb.append("  ext_refresh_token_lifetime: ").append(extRefreshTokenLifetime).append("\n");
+    sb.append("  ext_id_token_lifetime: ").append(extIdTokenLifetime).append("\n");
+    sb.append("  pkce_mandatory: ").append(pkceMandatory).append("\n");
+    sb.append("  pkce_support_plain: ").append(pkceSupportPlain).append("\n");
+    sb.append("  bypass_client_credentials: ").append(bypassClientCredentials).append("\n");
     sb.append("}\n");
     return sb.toString();
   }

@@ -3,7 +3,7 @@ info:
   version: 1.1.0
   title: WSO2 Identity Server OAuth2 Dynamic Client Registration Endpoint
   description: >
-    This document specifies an **OAuth2 Dyanmic Client Registration Endpoint**
+    This document specifies an **OAuth2 Dynamic Client Registration Endpoint**
     for WSO2 **Identity Server** .
 
 
@@ -276,26 +276,8 @@ definitions:
         type: array
         items:
           type: string
-      application_display_name:
-        type: string
       application_type:
         type: string
-      token_type_extension:
-        type: string
-      ext_application_owner:
-        type: string
-      ext_application_token_lifetime:
-        type: integer
-        format: int64
-      ext_user_token_lifetime:
-        type: integer
-        format: int64
-      ext_refresh_token_lifetime:
-        type: integer
-        format: int64
-      ext_id_token_lifetime:
-        type: integer
-        format: int64
       jwks_uri:
         type: string
       url:
@@ -326,6 +308,24 @@ definitions:
         type: string
       backchannel_logout_session_required:
         type: boolean
+      application_display_name:
+        type: string
+      token_type_extension:
+        type: string
+      ext_application_owner:
+        type: string
+      ext_application_token_lifetime:
+        type: integer
+        format: int64
+      ext_user_token_lifetime:
+        type: integer
+        format: int64
+      ext_refresh_token_lifetime:
+        type: integer
+        format: int64
+      ext_id_token_lifetime:
+        type: integer
+        format: int64
       pkceMandatory:
         type: boolean
       pkceSupportPlain:

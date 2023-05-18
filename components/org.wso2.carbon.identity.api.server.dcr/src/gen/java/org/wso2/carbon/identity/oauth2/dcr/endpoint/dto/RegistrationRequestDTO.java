@@ -31,6 +31,20 @@ public class RegistrationRequestDTO  {
   private String backchannelLogoutUri = null;
   private boolean backchannelLogoutSessionRequired;
   private boolean isManagementApp;
+  private String applicationDisplayName = null;
+  private String tokenTypeExtension = null;
+  private String extApplicationOwner = null;
+  private Long extApplicationTokenLifetime = null;
+  private Long extUserTokenLifetime = null;
+  private Long extRefreshTokenLifetime = null;
+  private Long extIdTokenLifetime = null;
+  private String extParamClientId = null;
+  private String extParamClientSecret = null;
+  private String extParamSpTemplate = null;
+  private Boolean pkceMandatory = null;
+  private Boolean pkceSupportPlain = null;
+  private Boolean bypassClientCredentials = null;
+  
 
   @ApiModelProperty(required = true)
   @JsonProperty("redirect_uris")
@@ -204,6 +218,87 @@ public class RegistrationRequestDTO  {
     this.isManagementApp = isManagementApp;
   }
 
+  @ApiModelProperty
+  @JsonProperty("application_display_name")
+  public String getApplicationDisplayName() {
+    return applicationDisplayName;
+  }
+  public void setApplicationDisplayName(String applicationDisplayName) {
+    this.applicationDisplayName = applicationDisplayName;
+  }
+
+  @ApiModelProperty
+  @JsonProperty("ext_application_owner")
+  public String getExtApplicationOwner() {
+    return extApplicationOwner;
+  }
+  public void setExtApplicationOwner(String extApplicationOwner) {
+    this.extApplicationOwner = extApplicationOwner;
+  }
+
+  @ApiModelProperty
+  @JsonProperty("ext_application_token_lifetime")
+  public Long getExtApplicationTokenLifetime() {
+    return extApplicationTokenLifetime;
+  }
+  public void setExtApplicationTokenLifetime(Long extApplicationTokenLifetime) {
+    this.extApplicationTokenLifetime = extApplicationTokenLifetime;
+  }
+
+  @ApiModelProperty
+  @JsonProperty("ext_user_token_lifetime")
+  public Long getExtUserTokenLifetime() {
+    return extUserTokenLifetime;
+  }
+  public void setExtUserTokenLifetime(Long extUserTokenLifetime) {
+    this.extUserTokenLifetime = extUserTokenLifetime;
+  }
+
+  @ApiModelProperty
+  @JsonProperty("ext_refresh_token_lifetime")
+  public Long getExtRefreshTokenLifetime() {
+    return extRefreshTokenLifetime;
+  }
+  public void setExtRefreshTokenLifetime(Long extRefreshTokenLifetime) {
+    this.extRefreshTokenLifetime = extRefreshTokenLifetime;
+  }
+
+  @ApiModelProperty
+  @JsonProperty("ext_id_token_lifetime")
+  public Long getExtIdTokenLifetime() {
+    return extIdTokenLifetime;
+  }
+  public void setExtIdTokenLifetime(Long extIdTokenLifetime) {
+    this.extIdTokenLifetime = extIdTokenLifetime;
+  }
+
+  @ApiModelProperty
+  @JsonProperty("pkce_mandatory")
+  public Boolean getPkceMandatory() {
+    return pkceMandatory;
+  }
+  public void setPkceMandatory(Boolean pkceMandatory) {
+    this.pkceMandatory = pkceMandatory;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("pkce_support_plain")
+  public Boolean getPkceSupportPlain() {
+    return pkceSupportPlain;
+  }
+  public void setPkceSupportPlain(Boolean pkceSupportPlain) {
+    this.pkceSupportPlain = pkceSupportPlain;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("bypass_client_credentials")
+  public Boolean getBypassClientCredentials() {
+    return bypassClientCredentials;
+  }
+  public void setBypassClientCredentials(Boolean bypassClientCredentials) {
+    this.bypassClientCredentials = bypassClientCredentials;
+  }
+
   @Override
   public String toString()  {
     StringBuilder sb = new StringBuilder();
@@ -226,6 +321,15 @@ public class RegistrationRequestDTO  {
     sb.append("  backchannel_logout_uri: ").append(backchannelLogoutUri).append("\n");
     sb.append("  backchannel_logout_session_required: ").append(backchannelLogoutSessionRequired).append("\n");
     sb.append("  is_management_app: ").append(isManagementApp).append("\n");
+    sb.append("  application_display_name: ").append(applicationDisplayName).append("\n");
+    sb.append("  ext_application_owner: ").append(extApplicationOwner).append("\n");
+    sb.append("  ext_application_token_lifetime: ").append(extApplicationTokenLifetime).append("\n");
+    sb.append("  ext_user_token_lifetime: ").append(extUserTokenLifetime).append("\n");
+    sb.append("  ext_refresh_token_lifetime: ").append(extRefreshTokenLifetime).append("\n");
+    sb.append("  ext_id_token_lifetime: ").append(extIdTokenLifetime).append("\n");
+    sb.append("  pkce_mandatory: ").append(pkceMandatory).append("\n");
+    sb.append("  pkce_support_plain: ").append(pkceSupportPlain).append("\n");
+    sb.append("  bypass_client_credentials: ").append(bypassClientCredentials).append("\n");
     sb.append("}\n");
     return sb.toString();
   }
