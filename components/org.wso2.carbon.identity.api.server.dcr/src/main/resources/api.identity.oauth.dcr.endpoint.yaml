@@ -276,8 +276,26 @@ definitions:
         type: array
         items:
           type: string
+      application_display_name:
+        type: string
       application_type:
         type: string
+      token_type_extension:
+        type: string
+      ext_application_owner:
+        type: string
+      ext_application_token_lifetime:
+        type: integer
+        format: int64
+      ext_user_token_lifetime:
+        type: integer
+        format: int64
+      ext_refresh_token_lifetime:
+        type: integer
+        format: int64
+      ext_id_token_lifetime:
+        type: integer
+        format: int64
       jwks_uri:
         type: string
       url:
@@ -308,6 +326,12 @@ definitions:
         type: string
       backchannel_logout_session_required:
         type: boolean
+      pkceMandatory:
+        type: boolean
+      pkceSupportPlain:
+        type: boolean
+      bypassClientCredentials:
+        type: boolean
 #-----------------------------------------------------
 # The Application Update Request Object
 #-----------------------------------------------------
@@ -332,6 +356,30 @@ definitions:
         type: string
       backchannel_logout_session_required:
         type: boolean
+      application_display_name:
+        type: string
+      token_type_extension:
+        type: string
+      ext_application_owner:
+        type: string
+      ext_application_token_lifetime:
+        type: integer
+        format: int64
+      ext_user_token_lifetime:
+        type: integer
+        format: int64
+      ext_refresh_token_lifetime:
+        type: integer
+        format: int64
+      ext_id_token_lifetime:
+        type: integer
+        format: int64
+      pkceMandatory:
+        type: boolean
+      pkceSupportPlain:
+        type: boolean
+      bypassClientCredentials:
+        type: boolean
 #-----------------------------------------------------
 # The OAuth2 Application Object
 #-----------------------------------------------------
@@ -355,6 +403,26 @@ definitions:
           type: string
       client_name:
         type: string
+      ext_application_owner:
+        type: string
+      ext_application_token_lifetime:
+        type: integer
+        format: int64
+      ext_user_token_lifetime:
+        type: integer
+        format: int64
+      ext_refresh_token_lifetime:
+        type: integer
+        format: int64
+      ext_id_token_lifetime:
+        type: integer
+        format: int64
+      pkceMandatory:
+        type: boolean
+      pkceSupportPlain:
+        type: boolean
+      bypassClientCredentials:
+        type: boolean
 #-----------------------------------------------------
 # The Error Response object
 #-----------------------------------------------------
