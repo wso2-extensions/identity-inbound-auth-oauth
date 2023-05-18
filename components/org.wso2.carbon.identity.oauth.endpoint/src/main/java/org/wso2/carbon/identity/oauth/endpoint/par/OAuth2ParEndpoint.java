@@ -58,6 +58,8 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth
 
 /**
  * REST implementation for OAuth2 PAR endpoint.
+ * The endpoint accepts POST request with the authorization parameters
+ * Returns a request_uri as a reference for the submitted parameters and the expiry time
  */
 @Path("/par")
 @InInterceptors(classes = OAuthClientAuthenticatorProxy.class)

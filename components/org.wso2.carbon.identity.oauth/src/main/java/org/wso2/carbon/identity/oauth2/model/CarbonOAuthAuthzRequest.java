@@ -49,6 +49,12 @@ public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
     }
 
 
+    /*
+        If request_uri parameter is present in the request_uri parameter map, consider request as a PAR request  and
+        use OAuthParRequestWrapper to make the request's parameter map contain the parameter map obtained from
+        the PAR endpoint as parameters such as response_type are only provided in the PAR request, but are needed in the
+        Authorization request for validations.
+     */
     private static HttpServletRequest buildRequest(HttpServletRequest request) throws OAuthProblemException {
 
         // If request_uri is there consider as par request
