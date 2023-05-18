@@ -22,8 +22,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
-import org.wso2.carbon.identity.oauth.par.model.ParRequest;
 import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAO;
+import org.wso2.carbon.identity.oauth.par.model.ParRequest;
 
 import java.util.HashMap;
 

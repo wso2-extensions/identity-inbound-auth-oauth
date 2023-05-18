@@ -23,13 +23,11 @@ package org.wso2.carbon.identity.oauth.par.common;
  */
 public class ParConstants {
     public static final long EXPIRES_IN_DEFAULT_VALUE_IN_SEC = 60; //according to PAR spec (60 seconds)
-    public static final long MAXIMUM_REQUESTED_EXPIRY_IN_SEC = 600; //according to PSR spec
     public static final long SEC_TO_MILLISEC_FACTOR = 1000;
     public static final String REQUEST = "request";
     public static final String UTC = "UTC";
     public static final String REQUEST_URI = "request_uri";
     public static final String EXPIRES_IN = "expires_in";
-    public static final String IS_PAR_REQUEST = "isParRequest";
     public static final String REQUEST_URI_HEAD = "urn:ietf:params:wso2is:request_uri:";
 
 

@@ -66,6 +66,10 @@ public class OIDCRequestObjectUtil {
         RequestObject requestObject;
         RequestObjectBuilder requestObjectBuilder;
         String requestObjType;
+        /*
+            The order should not be changed as there can be instances where both request and request_uri can be present.
+            In such cases request needs to be given precedence
+         */
         if (isRequestParameter(oauthRequest)) {
             requestObjectBuilder = getRequestObjectBuilder(REQUEST_PARAM_VALUE_BUILDER);
             requestObjType = REQUEST;

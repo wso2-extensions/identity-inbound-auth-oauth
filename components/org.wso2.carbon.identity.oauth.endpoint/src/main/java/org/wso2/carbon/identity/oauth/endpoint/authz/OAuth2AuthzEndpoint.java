@@ -86,7 +86,6 @@ import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
-import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -2107,10 +2106,7 @@ public class OAuth2AuthzEndpoint {
                                          OAuth2Parameters parameters)
             throws RequestObjectException, InvalidRequestException {
 
-        // if not par request do validation
-        if (!(oauthRequest.getParam(ParConstants.IS_PAR_REQUEST).equals("true"))) {
-            validateRequestObjectParams(oauthRequest);
-        }
+        validateRequestObjectParams(oauthRequest);
 
         String requestObjValue = null;
         if (isRequestUri(oauthRequest)) {
@@ -2131,18 +2127,20 @@ public class OAuth2AuthzEndpoint {
     private void validateRequestObjectParams(OAuthAuthzRequest oauthRequest) throws RequestObjectException {
 
         // With in the same request it can not be used both request parameter and request_uri parameter.
-        if (StringUtils.isNotEmpty(oauthRequest.getParam(REQUEST)) && StringUtils.isNotEmpty(oauthRequest.getParam
-                (REQUEST_URI))) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("request", oauthRequest.getParam(REQUEST));
-                params.put("request_uri", oauthRequest.getParam(REQUEST_URI));
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "request and request_uri parameters associated with the " +
-                                "same authorization request", "validate-oauth-client", null);
+        if (!(oauthRequest.getParam(OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST).equals("true"))) {
+            if (StringUtils.isNotEmpty(oauthRequest.getParam(REQUEST)) && StringUtils.isNotEmpty(oauthRequest.getParam
+                    (REQUEST_URI))) {
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("request", oauthRequest.getParam(REQUEST));
+                    params.put("request_uri", oauthRequest.getParam(REQUEST_URI));
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.FAILED, "request and request_uri parameters associated with the " +
+                                    "same authorization request", "validate-oauth-client", null);
+                }
+                throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Both request and " +
+                        "request_uri parameters can not be associated with the same authorization request.");
             }
-            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Both request and " +
-                    "request_uri parameters can not be associated with the same authorization request.");
         }
     }
 

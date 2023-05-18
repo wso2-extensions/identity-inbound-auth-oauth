@@ -20,18 +20,18 @@ package org.wso2.carbon.identity.oauth.par.model;
 
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 
 import java.util.HashMap;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 
+
 /**
  * Wrap class to handle PAR request.
  */
 public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
-    HashMap<String, String> params = new HashMap<>();
+    HashMap<String, String> params;
 
     public OAuthParRequestWrapper(HttpServletRequest request) throws OAuthProblemException {
         super(request);
@@ -42,7 +42,7 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
 
         params = ParRetrieveHandler.
                 retrieveParamMap(uuid, request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
-        params.put(ParConstants.IS_PAR_REQUEST, "true");
+        params.put(OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST, "true");
     }
 
     @Override

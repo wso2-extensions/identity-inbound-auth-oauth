@@ -162,6 +162,8 @@ public final class OAuthConstants {
 
     // Context tenant domain passed with request parameters.
     public static final String TENANT_DOMAIN_FROM_CONTEXT = "tenant_domain_from_context";
+    public static final String ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST =
+            "allow_request_uri_and_request_object_in_request";
 
     private OAuthConstants() {
 
