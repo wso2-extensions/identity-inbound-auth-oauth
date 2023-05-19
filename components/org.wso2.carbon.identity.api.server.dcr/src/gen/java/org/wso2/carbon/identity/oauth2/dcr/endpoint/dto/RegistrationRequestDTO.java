@@ -37,9 +37,9 @@ public class RegistrationRequestDTO  {
   private Long extUserTokenLifetime = null;
   private Long extRefreshTokenLifetime = null;
   private Long extIdTokenLifetime = null;
-  private Boolean extPkceMandatory = null;
-  private Boolean extPkceSupportPlain = null;
-  private Boolean extPublicClient = null;
+  private boolean extPkceMandatory;
+  private boolean extPkceSupportPlain;
+  private boolean extPublicClient;
   
 
   @ApiModelProperty(required = true)
@@ -270,28 +270,28 @@ public class RegistrationRequestDTO  {
 
   @ApiModelProperty
   @JsonProperty("pkce_mandatory")
-  public Boolean getExtPkceMandatory() {
+  public boolean getExtPkceMandatory() {
     return extPkceMandatory;
   }
-  public void setExtPkceMandatory(Boolean extPkceMandatory) {
+  public void setExtPkceMandatory(boolean extPkceMandatory) {
     this.extPkceMandatory = extPkceMandatory;
   }
 
   @ApiModelProperty(value = "")
   @JsonProperty("pkce_support_plain")
-  public Boolean getExtPkceSupportPlain() {
+  public boolean getExtPkceSupportPlain() {
     return extPkceSupportPlain;
   }
-  public void setExtPkceSupportPlain(Boolean extPkceSupportPlain) {
+  public void setExtPkceSupportPlain(boolean extPkceSupportPlain) {
     this.extPkceSupportPlain = extPkceSupportPlain;
   }
 
   @ApiModelProperty(value = "")
   @JsonProperty("ext_public_client")
-  public Boolean getExtPublicClient() {
+  public boolean getExtPublicClient() {
     return extPublicClient;
   }
-  public void setExtPublicClient(Boolean extPublicClient) {
+  public void setExtPublicClient(boolean extPublicClient) {
     this.extPublicClient = extPublicClient;
   }
 

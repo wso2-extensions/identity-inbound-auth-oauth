@@ -50,13 +50,13 @@ public class ApplicationDTO  {
   private Long extIdTokenLifetime = null;
   
   
-  private Boolean pkceMandatory = null;
+  private boolean extPkceMandatory;
   
   
-  private Boolean pkceSupportPlain = null;
+  private boolean extPkceSupportPlain;
   
   
-  private Boolean bypassClientCredentials = null;
+  private boolean extPublicClient;
 
   
   /**
@@ -195,11 +195,11 @@ public class ApplicationDTO  {
    **/
   @ApiModelProperty(value = "")
   @JsonProperty("ext_pkce_mandatory")
-  public Boolean getPkceMandatory() {
-    return pkceMandatory;
+  public Boolean getExtPkceMandatory() {
+    return extPkceMandatory;
   }
-  public void setPkceMandatory(Boolean pkceMandatory) {
-    this.pkceMandatory = pkceMandatory;
+  public void setExtPkceMandatory(boolean extPkceMandatory) {
+    this.extPkceMandatory = extPkceMandatory;
   }
 
   
@@ -207,11 +207,11 @@ public class ApplicationDTO  {
    **/
   @ApiModelProperty(value = "")
   @JsonProperty("ext_pkce_support_plain")
-  public Boolean getPkceSupportPlain() {
-    return pkceSupportPlain;
+  public Boolean getExtPkceSupportPlain() {
+    return extPkceSupportPlain;
   }
-  public void setPkceSupportPlain(Boolean pkceSupportPlain) {
-    this.pkceSupportPlain = pkceSupportPlain;
+  public void setExtPkceSupportPlain(boolean extPkceSupportPlain) {
+    this.extPkceSupportPlain = extPkceSupportPlain;
   }
 
   
@@ -219,11 +219,11 @@ public class ApplicationDTO  {
    **/
   @ApiModelProperty(value = "")
   @JsonProperty("ext_public_client")
-  public Boolean getBypassClientCredentials() {
-    return bypassClientCredentials;
+  public Boolean getExtPublicClient() {
+    return extPublicClient;
   }
-  public void setBypassClientCredentials(Boolean bypassClientCredentials) {
-    this.bypassClientCredentials = bypassClientCredentials;
+  public void setExtPublicClient(boolean extPublicClient) {
+    this.extPublicClient = extPublicClient;
   }
 
 
@@ -243,9 +243,9 @@ public class ApplicationDTO  {
     sb.append("  ext_user_token_lifetime: ").append(extUserTokenLifetime).append("\n");
     sb.append("  ext_refresh_token_lifetime: ").append(extRefreshTokenLifetime).append("\n");
     sb.append("  ext_id_token_lifetime: ").append(extIdTokenLifetime).append("\n");
-    sb.append("  ext_pkce_mandatory: ").append(pkceMandatory).append("\n");
-    sb.append("  ext_pkce_support_plain: ").append(pkceSupportPlain).append("\n");
-    sb.append("  ext_public_client: ").append(bypassClientCredentials).append("\n");
+    sb.append("  ext_pkce_mandatory: ").append(extPkceMandatory).append("\n");
+    sb.append("  ext_pkce_support_plain: ").append(extPkceSupportPlain).append("\n");
+    sb.append("  ext_public_client: ").append(extPublicClient).append("\n");
     sb.append("}\n");
     return sb.toString();
   }
