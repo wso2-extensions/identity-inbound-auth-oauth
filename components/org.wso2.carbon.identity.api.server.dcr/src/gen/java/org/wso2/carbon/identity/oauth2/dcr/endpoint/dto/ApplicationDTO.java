@@ -194,7 +194,7 @@ public class ApplicationDTO  {
   /**
    **/
   @ApiModelProperty(value = "")
-  @JsonProperty("pkce_mandatory")
+  @JsonProperty("ext_pkce_mandatory")
   public Boolean getPkceMandatory() {
     return pkceMandatory;
   }
@@ -206,7 +206,7 @@ public class ApplicationDTO  {
   /**
    **/
   @ApiModelProperty(value = "")
-  @JsonProperty("pkce_support_plain")
+  @JsonProperty("ext_pkce_support_plain")
   public Boolean getPkceSupportPlain() {
     return pkceSupportPlain;
   }
@@ -218,7 +218,7 @@ public class ApplicationDTO  {
   /**
    **/
   @ApiModelProperty(value = "")
-  @JsonProperty("bypass_client_credentials")
+  @JsonProperty("ext_public_client")
   public Boolean getBypassClientCredentials() {
     return bypassClientCredentials;
   }
@@ -243,9 +243,9 @@ public class ApplicationDTO  {
     sb.append("  ext_user_token_lifetime: ").append(extUserTokenLifetime).append("\n");
     sb.append("  ext_refresh_token_lifetime: ").append(extRefreshTokenLifetime).append("\n");
     sb.append("  ext_id_token_lifetime: ").append(extIdTokenLifetime).append("\n");
-    sb.append("  pkce_mandatory: ").append(pkceMandatory).append("\n");
-    sb.append("  pkce_support_plain: ").append(pkceSupportPlain).append("\n");
-    sb.append("  bypass_client_credentials: ").append(bypassClientCredentials).append("\n");
+    sb.append("  ext_pkce_mandatory: ").append(pkceMandatory).append("\n");
+    sb.append("  ext_pkce_support_plain: ").append(pkceSupportPlain).append("\n");
+    sb.append("  ext_public_client: ").append(bypassClientCredentials).append("\n");
     sb.append("}\n");
     return sb.toString();
   }

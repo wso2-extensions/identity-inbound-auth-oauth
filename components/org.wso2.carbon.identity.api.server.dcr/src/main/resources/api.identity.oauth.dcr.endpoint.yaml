@@ -308,7 +308,7 @@ definitions:
         type: string
       backchannel_logout_session_required:
         type: boolean
-      application_display_name:
+      ext_application_display_name:
         type: string
       token_type_extension:
         type: string
@@ -326,11 +326,11 @@ definitions:
       ext_id_token_lifetime:
         type: integer
         format: int64
-      pkceMandatory:
+      ext_pkce_mandatory:
         type: boolean
-      pkceSupportPlain:
+      ext_pkce_support_plain:
         type: boolean
-      bypassClientCredentials:
+      ext_public_client:
         type: boolean
 #-----------------------------------------------------
 # The Application Update Request Object
@@ -356,7 +356,7 @@ definitions:
         type: string
       backchannel_logout_session_required:
         type: boolean
-      application_display_name:
+      ext_application_display_name:
         type: string
       token_type_extension:
         type: string
@@ -374,11 +374,11 @@ definitions:
       ext_id_token_lifetime:
         type: integer
         format: int64
-      pkceMandatory:
+      ext_pkce_mandatory:
         type: boolean
-      pkceSupportPlain:
+      ext_pkce_support_plain:
         type: boolean
-      bypassClientCredentials:
+      ext_public_client:
         type: boolean
 #-----------------------------------------------------
 # The OAuth2 Application Object
@@ -417,11 +417,11 @@ definitions:
       ext_id_token_lifetime:
         type: integer
         format: int64
-      pkceMandatory:
+      ext_pkce_mandatory:
         type: boolean
-      pkceSupportPlain:
+      ext_pkce_support_plain:
         type: boolean
-      bypassClientCredentials:
+      ext_public_client:
         type: boolean
 #-----------------------------------------------------
 # The Error Response object

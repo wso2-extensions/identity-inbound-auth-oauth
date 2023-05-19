@@ -219,7 +219,7 @@ public class RegistrationRequestDTO  {
   }
 
   @ApiModelProperty
-  @JsonProperty("application_display_name")
+  @JsonProperty("ext_application_display_name")
   public String getApplicationDisplayName() {
     return applicationDisplayName;
   }
@@ -291,7 +291,7 @@ public class RegistrationRequestDTO  {
   }
 
   @ApiModelProperty(value = "")
-  @JsonProperty("bypass_client_credentials")
+  @JsonProperty("ext_public_client")
   public Boolean getBypassClientCredentials() {
     return bypassClientCredentials;
   }
@@ -321,15 +321,15 @@ public class RegistrationRequestDTO  {
     sb.append("  backchannel_logout_uri: ").append(backchannelLogoutUri).append("\n");
     sb.append("  backchannel_logout_session_required: ").append(backchannelLogoutSessionRequired).append("\n");
     sb.append("  is_management_app: ").append(isManagementApp).append("\n");
-    sb.append("  application_display_name: ").append(applicationDisplayName).append("\n");
+    sb.append("  ext_application_display_name: ").append(applicationDisplayName).append("\n");
     sb.append("  ext_application_owner: ").append(extApplicationOwner).append("\n");
     sb.append("  ext_application_token_lifetime: ").append(extApplicationTokenLifetime).append("\n");
     sb.append("  ext_user_token_lifetime: ").append(extUserTokenLifetime).append("\n");
     sb.append("  ext_refresh_token_lifetime: ").append(extRefreshTokenLifetime).append("\n");
     sb.append("  ext_id_token_lifetime: ").append(extIdTokenLifetime).append("\n");
     sb.append("  pkce_mandatory: ").append(pkceMandatory).append("\n");
-    sb.append("  pkce_support_plain: ").append(pkceSupportPlain).append("\n");
-    sb.append("  bypass_client_credentials: ").append(bypassClientCredentials).append("\n");
+    sb.append("  ext_pkce_support_plain: ").append(pkceSupportPlain).append("\n");
+    sb.append("  ext_public_client: ").append(bypassClientCredentials).append("\n");
     sb.append("}\n");
     return sb.toString();
   }

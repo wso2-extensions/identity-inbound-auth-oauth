@@ -109,7 +109,7 @@ public class UpdateRequestDTO {
     }
 
     @ApiModelProperty
-    @JsonProperty("application_display_name")
+    @JsonProperty("ext_application_display_name")
     public String getApplicationDisplayName() {
         return applicationDisplayName;
     }
@@ -169,7 +169,7 @@ public class UpdateRequestDTO {
     }
 
     @ApiModelProperty
-    @JsonProperty("pkce_mandatory")
+    @JsonProperty("ext_pkce_mandatory")
     public Boolean getPkceMandatory() {
         return pkceMandatory;
     }
@@ -179,7 +179,7 @@ public class UpdateRequestDTO {
     }
 
     @ApiModelProperty
-    @JsonProperty("pkce_support_plain")
+    @JsonProperty("ext_pkce_support_plain")
     public Boolean getPkceSupportPlain() {
         return pkceSupportPlain;
     }
@@ -189,7 +189,7 @@ public class UpdateRequestDTO {
     }
 
     @ApiModelProperty
-    @JsonProperty("bypass_client_credentials")
+    @JsonProperty("ext_public_client")
     public Boolean getBypassClientCredentials() {
         return bypassClientCredentials;
     }
@@ -211,15 +211,15 @@ public class UpdateRequestDTO {
         sb.append("  client_secret: ").append(clientSecret).append("\n");
         sb.append("  backchannel_logout_uri: ").append(backchannelLogoutUri).append("\n");
         sb.append("  backchannel_logout_session_required: ").append(backchannelLogoutSessionRequired).append("\n");
-        sb.append("  application_display_name: ").append(applicationDisplayName).append("\n");
+        sb.append("  ext_application_display_name: ").append(applicationDisplayName).append("\n");
         sb.append("  ext_application_owner: ").append(extApplicationOwner).append("\n");
         sb.append("  ext_application_token_lifetime: ").append(extApplicationTokenLifetime).append("\n");
         sb.append("  ext_user_token_lifetime: ").append(extUserTokenLifetime).append("\n");
         sb.append("  ext_refresh_token_lifetime: ").append(extRefreshTokenLifetime).append("\n");
         sb.append("  ext_id_token_lifetime: ").append(extIdTokenLifetime).append("\n");
-        sb.append("  pkce_mandatory: ").append(pkceMandatory).append("\n");
-        sb.append("  pkce_support_plain: ").append(pkceSupportPlain).append("\n");
-        sb.append("  bypass_client_credentials: ").append(bypassClientCredentials).append("\n");
+        sb.append("  ext_pkce_mandatory: ").append(pkceMandatory).append("\n");
+        sb.append("  ext_pkce_support_plain: ").append(pkceSupportPlain).append("\n");
+        sb.append("  ext_public_client: ").append(bypassClientCredentials).append("\n");
         sb.append("}\n");
         return sb.toString();
     }
