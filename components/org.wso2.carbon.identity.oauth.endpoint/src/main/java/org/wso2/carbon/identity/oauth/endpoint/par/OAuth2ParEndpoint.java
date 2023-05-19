@@ -49,10 +49,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TimeZone;
+import java.util.*;
 
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 
@@ -77,14 +74,8 @@ public class OAuth2ParEndpoint {
 
         OAuth2ClientValidationResponseDTO validationResponse = validateClient(request);
 
-        if (!validationResponse.isValidClient()) {
-
-            return createErrorResponse(validationResponse);
-        }
-        if (isRequestUriProvided(request.getParameterMap())) {
-
-            // passes par error object to obtain error response
-            return createErrorResponse(rejectRequestWithRequestUri());
+        if (handleValidation(validationResponse, request).isPresent()) {
+            return handleValidation(validationResponse, request).get();
         }
 
         setScheduledExpiryTime(Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis());
@@ -111,6 +102,7 @@ public class OAuth2ParEndpoint {
      * @param requestedTime time tht the request was made.
      */
     private static void setScheduledExpiryTime(long requestedTime) {
+
         long defaultExpiryInSecs = ParConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC * ParConstants.SEC_TO_MILLISEC_FACTOR;
         scheduledExpiryTime = requestedTime + defaultExpiryInSecs;
     }
@@ -151,7 +143,7 @@ public class OAuth2ParEndpoint {
     }
 
     /**
-     * Creates PAR Authentication Error Response.
+     * Creates PAR Authentication for common OAuth Client Validation Error Response.
      *
      * @param oAuth2ClientValidationResponseDTO PAR Authentication Failed Exception.
      * @return response Authentication Error Responses for AuthenticationRequest.
@@ -170,7 +162,7 @@ public class OAuth2ParEndpoint {
     }
 
     /**
-     * Creates PAR Authentication Error Response.
+     * Creates PAR Authentication PAR specific Error Response.
      *
      * @param parErrorDTO PAR Authentication Failed Exception.
      * @return response Authentication Error Responses for AuthenticationRequest.
@@ -188,7 +180,7 @@ public class OAuth2ParEndpoint {
     }
 
     /**
-     * Handles client exception.
+     * Handles common OAuth Client Validation exception.
      *
      * @param oAuth2ClientValidationResponseDTO Authentication Failure Exception.
      * @return Response for AuthenticationRequest.
@@ -210,7 +202,7 @@ public class OAuth2ParEndpoint {
     }
 
     /**
-     * Handles client exception.
+     * Handles PAR specific Error Response exception.
      *
      * @param parErrorDTO Authentication Failure Exception.
      * @return Response for AuthenticationRequest.
@@ -224,6 +216,18 @@ public class OAuth2ParEndpoint {
         Response.ResponseBuilder responseBuilder;
         responseBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
         return responseBuilder.entity(parErrorResponse.toString()).build();
+    }
+
+    private Optional<Response> handleValidation(OAuth2ClientValidationResponseDTO validationResponse,
+                                                HttpServletRequest request) throws IdentityOAuth2ServerException {
+        if (!validationResponse.isValidClient()) {
+            return Optional.of(createErrorResponse(validationResponse));
+        }
+        if (isRequestUriProvided(request.getParameterMap())) {
+            return Optional.of(createErrorResponse(rejectRequestWithRequestUri()));
+        }
+
+        return Optional.empty();
     }
 
     /**
@@ -264,6 +268,13 @@ public class OAuth2ParEndpoint {
         throw new IdentityOAuth2ServerException(oAuth2ClientValidationResponseDTO.getErrorMsg());
     }
 
+    /**
+     * Send the request data to be persisted to cache and database.
+     *
+     * @param uuid uuid of the PAR request.
+     * @param params parameter map.
+     * @param scheduledExpiryTime time the request will be expired.
+     */
     public static void persistParRequest(String uuid, HashMap<String, String> params, long scheduledExpiryTime)
             throws IdentityOAuth2Exception {
 
@@ -285,11 +296,23 @@ public class OAuth2ParEndpoint {
         }
     }
 
-    private static CacheBackedParDAO getCacheBackedParDAO() {
+    /**
+     * Getting cache layer.
+     *
+     * @return CacheBackedParDAO
+     */
+    public static CacheBackedParDAO getCacheBackedParDAO() {
+
         return new CacheBackedParDAO();
     }
 
+    /**
+     * Getting ParMgtDAO.
+     *
+     * @return ParMgtDAO
+     */
     private static ParMgtDAO getParMgtDAO() {
+
         return parMgtDAO;
     }
 
