@@ -262,7 +262,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                                 OAuthAppDO app = OAuth2Util.getAppInformationByClientId(oauthConsumerKey);
                                 oAuthConsumerAppDTO.setOauthConsumerSecret(app.getOauthConsumerSecret());
                             } else {
-                                oAuthConsumerAppDTO.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
+                                oAuthConsumerAppDTO.setOauthConsumerSecret(OAuthUtil.getRandomNumberSecure());
                             }
                         }
 
