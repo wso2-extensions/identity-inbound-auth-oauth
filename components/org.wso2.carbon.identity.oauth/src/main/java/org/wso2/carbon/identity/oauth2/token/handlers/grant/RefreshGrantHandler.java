@@ -189,15 +189,15 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     }
 
     private boolean validateRefreshTokenInRequest(OAuth2AccessTokenReqDTO tokenReq,
-                                                  RefreshTokenValidationDataDO validationBean)
-            throws IdentityOAuth2Exception {
+                                                  RefreshTokenValidationDataDO validationBean) throws IdentityOAuth2Exception {
 
-        validateRefreshTokenStatus(validationBean, tokenReq.getClientId());
-        if (isLatestRefreshToken(tokenReq, validationBean)) {
-            return true;
-        } else {
-            throw new IdentityOAuth2Exception("Invalid refresh token value in the request");
-        }
+        return validateRefreshTokenStatus(validationBean, tokenReq.getClientId());
+
+//        if (isLatestRefreshToken(tokenReq, validationBean)) {
+//            return true;
+//        } else {
+//            throw new IdentityOAuth2Exception("Invalid refresh token value in the request");
+//        }
     }
 
     private boolean isLatestRefreshToken(OAuth2AccessTokenReqDTO tokenReq,
