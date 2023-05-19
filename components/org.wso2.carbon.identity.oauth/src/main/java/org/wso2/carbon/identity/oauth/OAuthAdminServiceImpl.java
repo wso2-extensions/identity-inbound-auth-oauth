@@ -273,11 +273,11 @@ public class OAuthAdminServiceImpl {
                     app.setState(APP_STATE_ACTIVE);
                     if (StringUtils.isEmpty(application.getOauthConsumerKey())) {
                         app.setOauthConsumerKey(OAuthUtil.getRandomNumber());
-                        app.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
+                        app.setOauthConsumerSecret(OAuthUtil.getRandomNumberSecure());
                     } else {
                         app.setOauthConsumerKey(application.getOauthConsumerKey());
                         if (StringUtils.isEmpty(application.getOauthConsumerSecret())) {
-                            app.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
+                            app.setOauthConsumerSecret(OAuthUtil.getRandomNumberSecure());
                         } else {
                             app.setOauthConsumerSecret(application.getOauthConsumerSecret());
                         }
@@ -849,7 +849,7 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
         Properties properties = new Properties();
-        String newSecret = OAuthUtil.getRandomNumber();
+        String newSecret = OAuthUtil.getRandomNumberSecure();
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, newSecret);
         properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REGENERATE);
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_ACTIVE);

@@ -196,7 +196,7 @@ public class OAuthAppDAO {
     public String[] addOAuthConsumer(String username, int tenantId, String userDomain) throws
             IdentityOAuthAdminException {
         String consumerKey;
-        String consumerSecret = OAuthUtil.getRandomNumber();
+        String consumerSecret = OAuthUtil.getRandomNumberSecure();
         long userAccessTokenExpireTime = OAuthServerConfiguration.getInstance()
                 .getUserAccessTokenValidityPeriodInSeconds();
         long applicationAccessTokenExpireTime = OAuthServerConfiguration.getInstance()
