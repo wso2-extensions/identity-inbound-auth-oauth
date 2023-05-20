@@ -19,14 +19,10 @@
 package org.wso2.carbon.identity.oauth.par.model;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.par.cache.CacheBackedParDAO;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
-import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
+import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 
 import java.util.Calendar;
 import java.util.HashMap;
@@ -37,56 +33,41 @@ import java.util.TimeZone;
  */
 public class ParRetrieveHandler {
 
-    private static Log log = LogFactory.getLog(ParRetrieveHandler.class);
-
     private static final CacheBackedParDAO cacheBackedParDAO = new CacheBackedParDAO();
-    private static final int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
 
     public static HashMap<String, String> retrieveParamMap(String uuid, String oauthClientId)
-            throws OAuthProblemException {
+            throws ParCoreException {
 
         HashMap<String, String> paramMap;
 
-        try {
-            if (StringUtils.isBlank(uuid)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided uuid : " +
-                            uuid + " is not valid.Or not issued by Identity server.");
-                }
-                throw new ParClientException(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST_URI);
-            }
 
-            isRequestUriExpired(cacheBackedParDAO.fetchScheduledExpiry(uuid, tenantId)); //checks if request expired
-            isClientIdValid(oauthClientId, cacheBackedParDAO.fetchClientId(uuid, tenantId));
-
-            paramMap =  cacheBackedParDAO.fetchParamMap(uuid, tenantId);
-
-            //clear record from store
-            cacheBackedParDAO.deleteRequest(uuid, tenantId);
-
-            return paramMap;
-        } catch (ParClientException e) {
-            throw new ParClientException(e.getError(), OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST_URI);
+        if (StringUtils.isBlank(uuid)) {
+            throw new ParCoreException(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST_URI);
         }
+
+        isRequestUriExpired(cacheBackedParDAO.getScheduledExpiry(uuid)); //checks if request expired
+        isClientIdValid(oauthClientId, cacheBackedParDAO.getParClientId(uuid));
+
+        paramMap = cacheBackedParDAO.getParParamMap(uuid);
+        cacheBackedParDAO.removeParRequestData(uuid);
+
+        return paramMap;
     }
 
-    public static void isRequestUriExpired(long scheduledExpiryTime) throws OAuthProblemException {
+    public static void isRequestUriExpired(long scheduledExpiryTime) throws ParCoreException {
 
         long currentTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis();
 
         if (currentTimeInMillis > scheduledExpiryTime) {
-            if (log.isDebugEnabled()) {
-                log.debug("CIBA auth_req_id is in expired state.Token Request Denied.");
-            }
-            throw new ParClientException("request_uri expired");
+            throw new ParCoreException(OAuth2ErrorCodes.INVALID_REQUEST, "request_uri expired");
         }
     }
 
     public static void isClientIdValid(String oauthClientId, String parClientId) throws
-            OAuthProblemException {
+            ParCoreException {
 
         if (!parClientId.equals(oauthClientId)) {
-            throw new ParClientException("client_ids does not match");
+            throw new ParCoreException(OAuth2ErrorCodes.INVALID_CLIENT, "client_ids does not match");
         }
     }
 }

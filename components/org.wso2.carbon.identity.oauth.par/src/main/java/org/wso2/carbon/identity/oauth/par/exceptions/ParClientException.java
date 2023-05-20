@@ -18,19 +18,14 @@
 
 package org.wso2.carbon.identity.oauth.par.exceptions;
 
-import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
-
 /**
  * Client exception from par core component.
  */
-public class ParClientException extends OAuthProblemException {
 
+public class ParClientException extends ParCoreException {
 
-    public ParClientException(String error) {
-        super(error);
-    }
+    public ParClientException(String errorCode, String message) {
 
-    public ParClientException(String error, String description) {
-        super(error, description);
+        super(errorCode, message);
     }
 }

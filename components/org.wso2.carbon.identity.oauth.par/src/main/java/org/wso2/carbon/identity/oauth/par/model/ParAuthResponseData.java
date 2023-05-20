@@ -24,21 +24,25 @@ package org.wso2.carbon.identity.oauth.par.model;
 public class ParAuthResponseData {
 
     private String uuid;
-    private long expityTime;
+    private long expiryTime;
 
     public String getUuid() {
+
         return uuid;
     }
 
-    public long getExpityTime() {
-        return expityTime;
+    public long getExpiryTime() {
+
+        return expiryTime;
     }
 
     public void setUuid(String uuid) {
+
         this.uuid = uuid;
     }
 
-    public void setExpityTime(long expityTime) {
-        this.expityTime = expityTime;
+    public void setExpiryTime(long expiryTime) {
+
+        this.expiryTime = expiryTime;
     }
 }

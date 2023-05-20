@@ -16,19 +16,21 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.endpoint.exception;
+package org.wso2.carbon.identity.oauth.par.exceptions;
+
+import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 
 /**
  * PAR error DTO.
  */
-public class ParErrorDTO extends Throwable {
-    private boolean isValidClient;
+public class ParAuthFailureException extends OAuthProblemException {
 
     private String errorCode;
     private String errorMsg;
 
-    public ParErrorDTO() {
+    public ParAuthFailureException(String errorMsg) {
 
+        super(errorMsg);
     }
 
     public String getErrorCode() {
@@ -39,11 +41,6 @@ public class ParErrorDTO extends Throwable {
     public String getErrorMsg() {
 
         return errorMsg;
-    }
-
-    public void setValidClient(boolean validClient) {
-
-        isValidClient = validClient;
     }
 
     public void setErrorCode(String errorCode) {

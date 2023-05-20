@@ -23,11 +23,11 @@ import org.wso2.carbon.identity.oauth.par.model.ParAuthResponseData;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+
 /**
  * Provides authentication services.
  */
 public interface ParAuthService {
 
     ParAuthResponseData generateParAuthResponse(HttpServletResponse response, HttpServletRequest request);
-
 }

@@ -25,13 +25,13 @@ import org.wso2.carbon.identity.base.IdentityException;
  */
 public class ParCoreException extends IdentityException {
 
-    public ParCoreException(String errorDescription, Throwable cause) {
+    public ParCoreException(String message) {
 
-        super(errorDescription, cause);
+        super(message);
     }
 
-    public ParCoreException(String errorDescription) {
+    public ParCoreException(String errorCode, String message) {
 
-        super(errorDescription);
+        super(errorCode, message);
     }
 }

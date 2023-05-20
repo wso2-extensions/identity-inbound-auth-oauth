@@ -28,19 +28,16 @@ public class SQLQueries {
     }
 
     /**
-     * SQL queries.
+     * PAR related SQL queries.
      */
-
     public static class ParSQLQueries {
 
-        //Storing Data
         public static final String STORE_PAR_REQUEST = "INSERT INTO IDN_OAUTH_PAR " +
                 "(REQ_URI_UUID, CLIENT_ID, SCHEDULED_EXPIRY, JSON_PARAMS) VALUES (?, ?, ?, ?);";
 
-        //Retrieve data
         public static final String RETRIEVE_PAR_CLIENT_ID =
                 "SELECT CLIENT_ID FROM IDN_OAUTH_PAR " +
-                        " WHERE REQ_URI_UUID = ? ";
+                        " WHERE REQ_URI_UUID = ?";
 
         public static final String RETRIEVE_PAR_JSON_PARAMS =
                 "SELECT JSON_PARAMS FROM IDN_OAUTH_PAR WHERE REQ_URI_UUID = ?";
@@ -48,10 +45,6 @@ public class SQLQueries {
         public static final String RETRIEVE_SCHEDULED_EXPIRY =
                 "SELECT SCHEDULED_EXPIRY FROM IDN_OAUTH_PAR WHERE REQ_URI_UUID = ?";
 
-
-        //TODO:
-        //Table deletion scripts
-        public static final String DELETE_IDN_OAUTH_PAR_REQUEST = "DELETE FROM IDN_OAUTH_PAR_REQUEST WHERE " +
-                "REQ_URI_UUID = ? ";
+        public static final String REMOVE_IDN_OAUTH_PAR_REQUEST = "DELETE FROM IDN_OAUTH_PAR WHERE REQ_URI_UUID = ?";
     }
 }

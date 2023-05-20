@@ -20,29 +20,42 @@ package org.wso2.carbon.identity.oauth.par.model;
 
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.par.common.ParConstants;
+import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
+import org.wso2.carbon.identity.oauth.par.exceptions.ParAuthFailureException;
+import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 
-import java.util.HashMap;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 
 
 /**
- * Wrap class to handle PAR request.
+ * Wrapper class to handle PAR request where the parameters of the request will be replaced
+ * with the parameters obtained from the PAR request at the PAR endpoint by accessing the relevant
+ * set of parameters for the submitted request_uri from the store.
  */
 public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
-    HashMap<String, String> params;
 
-    public OAuthParRequestWrapper(HttpServletRequest request) throws OAuthProblemException {
+    private final Map<String, String> params;
+
+    public OAuthParRequestWrapper(HttpServletRequest request, ParAuthServiceImpl parAuthService)
+            throws OAuthProblemException {
+
         super(request);
 
-        // Get request data from PAR and add to params
-        String requestUri = request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI);
-        String uuid = requestUri.substring(requestUri.length() - 36);
+        //get only uuid from request_uri
+        String uuid = request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI)
+                .replaceFirst(ParConstants.REQUEST_URI_HEAD, "");
 
-        params = ParRetrieveHandler.
-                retrieveParamMap(uuid, request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
-        params.put(OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST, "true");
+        try {
+            params = parAuthService.retrieveParamMap(uuid,
+                    request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
+            params.put(OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST, "true");
+        } catch (ParCoreException e) {
+            throw new ParAuthFailureException(e.getMessage());
+        }
     }
 
     @Override

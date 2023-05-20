@@ -20,119 +20,65 @@ package org.wso2.carbon.identity.oauth.par.cache;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
-import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAO;
-import org.wso2.carbon.identity.oauth.par.model.ParRequest;
+import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAOImpl;
+import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
+import org.wso2.carbon.identity.oauth.par.model.ParRequestCacheEntry;
+import org.wso2.carbon.identity.oauth.par.model.ParRequestDO;
 
-import java.util.HashMap;
+import java.util.Map;
 
 /**
  *
- * Caching wrapper for org.wso2.carbon.identity.claim.metadata.mgt.dao.ExternalClaimDAO.
+ * Caching layer for PAR Requests.
  *
  */
-public class CacheBackedParDAO {
+public class CacheBackedParDAO implements ParMgtDAO {
+
     private static final Log log = LogFactory.getLog(CacheBackedParDAO.class);
-    ParCache parCache = ParCache.getInstance();
-    ParMgtDAO parMgtDAO = ParDAOFactory.getInstance().getParAuthMgtDAO();
+    private final ParCache parCache = ParCache.getInstance();
+    private final ParMgtDAOImpl parMgtDAO = new ParMgtDAOImpl();
 
+    @Override
+    public void persistParRequest(String uuid, String clientId, long scheduledExpiryTime,
+                                  Map<String, String> parameters) throws ParCoreException {
 
-    public void addParRequest(String uuid, ParRequest parRequest, int tenantId) {
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
 
-        parCache.addToCache(uuid, parRequest, tenantId);
+        ParRequestCacheEntry parRequestCacheEntry = new ParRequestCacheEntry(uuid, parameters, scheduledExpiryTime);
+        parMgtDAO.persistParRequest(uuid, clientId, scheduledExpiryTime, parameters);
+        parCache.addToCache(uuid, parRequestCacheEntry, tenantId);
     }
 
+    @Override
+    public ParRequestDO getParRequest(String uuid) throws ParCoreException {
 
-    public HashMap<String, String> fetchParamMap (String uuid, int tenantId) throws OAuthProblemException {
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
 
-        /**
-         * What to have as key instead of request_uri?
-         */
-        //getting request from cache
-        ParRequest parCacheRequest = parCache.getValueFromCache(uuid, tenantId);
-        HashMap<String, String> paramMap;
-
-        if (parCacheRequest == null) {
+        ParRequestCacheEntry parCacheRequest = parCache.getValueFromCache(uuid, tenantId);
+        ParRequestDO parRequestDO;
+        if (parCacheRequest != null) {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("Cache miss for parameter map of local uuid:%s for tenant:%s ",
+                log.debug(String.format("Cache miss for expiry time of local uuid: %s for tenant:%s ",
                         uuid, tenantId));
             }
-
-            //if request not in cache, fetch paramMap data from database
-            paramMap = parMgtDAO.getParParamMap(uuid);
-
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Cache hit for parameter map of uuid:%s for tenant:%s ",
-                        uuid, tenantId));
-            }
-
-            // get paramMap from cache
-            paramMap = parCache.getValueFromCache(uuid, tenantId).getParameterMap();
-        }
-        return paramMap;
-    }
-
-    public long fetchScheduledExpiry(String uuid, int tenantId) throws OAuthProblemException {
-
-        /**
-         * What to have as key instead of request_uri?
-         */
-        ParRequest parCacheRequest = parCache.getValueFromCache(uuid, tenantId);
-        long scheduledExpiryTime;
-        if (parCacheRequest == null) {
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Cache miss for expiry time of local uuid:%s for tenant:%s ",
-                        uuid, tenantId));
-            }
-
-            // if request not in cache, fetch paramMap data from database
-            scheduledExpiryTime = parMgtDAO.getScheduledExpiry(uuid);
-
+            return new ParRequestDO(parCache.getValueFromCache(uuid, tenantId));
         } else {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Cache hit for expiry time of uuid:%s for tenant:%s ",
                         uuid, tenantId));
             }
-            // get expiry from cache
-            scheduledExpiryTime = parCache.getValueFromCache(uuid, tenantId).getScheduledExpiryTime();
+            parRequestDO = parMgtDAO.getParRequest(uuid);
         }
-        return scheduledExpiryTime;
+        return parRequestDO;
     }
 
-    public String fetchClientId (String uuid, int tenantId) throws OAuthProblemException {
+    @Override
+    public void removeParRequestData(String uuid) throws ParCoreException {
 
-        /**
-         * What to have as key instead of request_uri?
-         */
-        ParRequest parCacheRequest = parCache.getValueFromCache(uuid, tenantId);
-        String parClientId;
-        if (parCacheRequest == null) {
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Cache miss for expiry time of local uuid:%s for tenant:%s ",
-                        uuid, tenantId));
-            }
-
-            // if request not in cache, fetch paramMap data from database
-            parClientId = parMgtDAO.getParClientId(uuid);
-
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Cache hit for expiry time of uuid:%s for tenant:%s ",
-                        uuid, tenantId));
-            }
-            // get expiry from cache
-            parClientId = parCache.getValueFromCache(uuid, tenantId).getClientId();
-        }
-        return parClientId;
-    }
-
-    //TODO: delete records from DB
-    public void deleteRequest (String uuid, int tenantId) throws OAuthProblemException {
-
-        parCache.clearCacheEntry(uuid, tenantId); //delete record from cache
-        //System.out.println("Record deleted from Cache!");
-        parMgtDAO.deleteParRequestData(uuid); // delete record from database
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        parCache.clearCacheEntry(uuid, tenantId);
+        parMgtDAO.removeParRequestData(uuid);
     }
 }

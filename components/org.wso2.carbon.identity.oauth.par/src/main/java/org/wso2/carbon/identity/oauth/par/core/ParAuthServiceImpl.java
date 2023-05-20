@@ -18,18 +18,30 @@
 
 package org.wso2.carbon.identity.oauth.par.core;
 
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
+import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
+import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAO;
+import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthResponseData;
+import org.wso2.carbon.identity.oauth.par.model.ParRequestDO;
 
+import java.util.Calendar;
+import java.util.Map;
+import java.util.TimeZone;
 import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+
 /**
  * Provides authentication services.
  */
 public class ParAuthServiceImpl implements ParAuthService {
+
+    ParMgtDAO parMgtDAO = ParDAOFactory.getInstance().getParAuthMgtDAO();
 
     @Override
     public ParAuthResponseData generateParAuthResponse(HttpServletResponse response, HttpServletRequest request) {
@@ -39,19 +51,52 @@ public class ParAuthServiceImpl implements ParAuthService {
 
         ParAuthResponseData parAuthResponse = new ParAuthResponseData();
         parAuthResponse.setUuid(uuid);
-        parAuthResponse.setExpityTime(expiry);
+        parAuthResponse.setExpiryTime(expiry);
 
         return parAuthResponse;
     }
 
-    /**
-     * Returns a unique AuthCodeKey.
-     *
-     * @return String Returns random uuid.
-     */
+    public void persistParRequest(String uuid, Map<String, String> params, long scheduledExpiryTime)
+            throws ParCoreException {
+
+        parMgtDAO.persistParRequest(uuid, params.get(OAuthConstants.OAuth20Params.CLIENT_ID),
+                scheduledExpiryTime, params);
+    }
+
+    private ParRequestDO retrieveParRequest(String uuid) throws ParCoreException {
+
+        return parMgtDAO.getParRequest(uuid);
+    }
+
+    public Map<String, String> retrieveParamMap(String uuid, String clientId) throws ParCoreException {
+
+        ParRequestDO parRequestDO = retrieveParRequest(uuid);
+        isRequestUriExpired(parRequestDO.getScheduledExpiryTime());
+        isClientIdValid(clientId, parRequestDO.getClientId());
+        parMgtDAO.removeParRequestData(uuid);
+
+        return parRequestDO.getParameterMap();
+    }
+
+    private void isRequestUriExpired(long scheduledExpiryTime) throws ParCoreException {
+
+        long currentTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis();
+
+        if (currentTimeInMillis > scheduledExpiryTime) {
+            throw new ParCoreException(OAuth2ErrorCodes.INVALID_REQUEST, "request_uri expired");
+        }
+    }
+
+    private void isClientIdValid(String clientId, String parClientId) throws
+            ParCoreException {
+
+        if (!parClientId.equals(clientId)) {
+            throw new ParCoreException(OAuth2ErrorCodes.INVALID_CLIENT, "client_ids does not match");
+        }
+    }
+
     private String generateParReqUriUUID() {
 
         return UUID.randomUUID().toString();
     }
-
 }

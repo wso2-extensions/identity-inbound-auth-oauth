@@ -85,7 +85,6 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
-import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -109,6 +108,23 @@ import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.utils.CarbonUtils;
 
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
@@ -137,51 +153,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.Response;
-
-import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.MANDATORY_CLAIMS;
-import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.REQUESTED_CLAIMS;
-import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.USER_CLAIMS_CONSENT_ONLY;
+import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.*;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TENANT_DOMAIN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
-import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
-import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
-import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
-import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.USER_CONSENT_RESPONSE;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getErrorPageURL;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getLoginPageURL;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthServerConfiguration;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSSOConsentService;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.retrieveStateForErrorURL;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.DISPLAY;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.ID_TOKEN_HINT;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.LOGIN_HINT;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.MAX_AGE;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.NONCE;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.PROMPT;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.*;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.*;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.*;
 
 /**
  * Rest implementation of OAuth2 authorize endpoint.
@@ -2107,7 +2086,6 @@ public class OAuth2AuthzEndpoint {
             throws RequestObjectException, InvalidRequestException {
 
         validateRequestObjectParams(oauthRequest);
-
         String requestObjValue = null;
         if (isRequestUri(oauthRequest)) {
             requestObjValue = oauthRequest.getParam(REQUEST_URI);

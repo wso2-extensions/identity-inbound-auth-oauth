@@ -18,34 +18,32 @@
 
 package org.wso2.carbon.identity.oauth.par.model;
 
-import org.wso2.carbon.identity.core.cache.CacheEntry;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-
-import java.util.HashMap;
+import java.util.Map;
 
 /**
- * PAR request with all attributes for caching.
+ * Contains PAR attributes that will be retrieved from the database.
  */
-public class ParRequest extends CacheEntry {
+public class ParRequestDO {
 
-    private String requestUri;
-    private HashMap<String, String> parameterMap;
+    private Map<String, String> parameterMap;
     private long scheduledExpiryTime;
     private String clientId;
 
+    public ParRequestDO (ParRequestCacheEntry parRequestCacheEntry) {
 
-    public ParRequest(String requestUri, HashMap<String, String> parameterMap, long scheduledExpiryTime) {
-        this.requestUri = requestUri;
+        this.parameterMap = parRequestCacheEntry.getParameterMap();
+        this.scheduledExpiryTime = parRequestCacheEntry.getScheduledExpiryTime();
+        this.clientId = parRequestCacheEntry.getClientId();
+    }
+
+    public ParRequestDO (Map<String, String> parameterMap, long scheduledExpiryTime, String clientId) {
+
         this.parameterMap = parameterMap;
         this.scheduledExpiryTime = scheduledExpiryTime;
-        this.clientId = parameterMap.get(OAuthConstants.OAuth20Params.CLIENT_ID);
+        this.clientId = clientId;
     }
 
-    public String getRequestUri() {
-        return requestUri;
-    }
-
-    public HashMap<String, String> getParameterMap() {
+    public Map<String, String> getParameterMap() {
         return parameterMap;
     }
 
@@ -57,11 +55,8 @@ public class ParRequest extends CacheEntry {
         return clientId;
     }
 
-    public void setRequestUri(String requestUri) {
-        this.requestUri = requestUri;
-    }
 
-    public void setParameterMap(HashMap<String, String> parameterMap) {
+    public void setParameterMap(Map<String, String> parameterMap) {
         this.parameterMap = parameterMap;
     }
 

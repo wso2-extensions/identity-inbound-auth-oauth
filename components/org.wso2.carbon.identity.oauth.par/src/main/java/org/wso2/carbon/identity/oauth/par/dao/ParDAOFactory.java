@@ -18,21 +18,23 @@
 
 package org.wso2.carbon.identity.oauth.par.dao;
 
+import org.wso2.carbon.identity.oauth.par.cache.CacheBackedParDAO;
+
 /**
- * Creates required CibaDAO.
+ * Creates required ParDAO.
  */
 public class ParDAOFactory {
 
     // Implementation of DAO.
-    private ParMgtDAO parMgtDAOImpl;
+    private final ParMgtDAO parMgtDAOImpl;
 
     private ParDAOFactory() {
 
         // This factory creates instance of PAR DAOImplementation.
-        parMgtDAOImpl = new ParMgtDAOImpl();
+        parMgtDAOImpl = new CacheBackedParDAO();
     }
 
-    private static ParDAOFactory parDAOFactoryInstance = new ParDAOFactory();
+    private static final ParDAOFactory parDAOFactoryInstance = new ParDAOFactory();
 
     public static ParDAOFactory getInstance() {
 

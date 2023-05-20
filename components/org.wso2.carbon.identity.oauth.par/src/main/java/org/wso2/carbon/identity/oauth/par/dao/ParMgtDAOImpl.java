@@ -24,16 +24,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
-import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.par.common.SQLQueries;
-import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
+import org.wso2.carbon.identity.oauth.par.model.ParRequestDO;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Implementation of abstract DAO layer.
@@ -41,162 +40,97 @@ import java.util.HashMap;
 public class ParMgtDAOImpl implements ParMgtDAO {
 
     private static final Log log = LogFactory.getLog(ParMgtDAOImpl.class);
+    ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public void persistParRequest(String reqUUID, String clientId, long scheduledExpiryTime,
-                                  HashMap<String, String> parameters) throws ParCoreException {
-
-        ObjectMapper objectMapper = new ObjectMapper();
+                                  Map<String, String> parameters) throws ParCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
 
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
                     ParSQLQueries.STORE_PAR_REQUEST)) {
 
-                String jsonString = objectMapper.writeValueAsString(parameters);
-
                 prepStmt.setString(1, reqUUID);
                 prepStmt.setString(2, clientId);
                 prepStmt.setLong(3, scheduledExpiryTime);
-                prepStmt.setString(4, jsonString);
+                prepStmt.setString(4, getJsonParams(parameters));
 
                 prepStmt.execute();
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw new ParCoreException("Error occurred in persisting the successful PAR request with" +
-                        " uuid: " + reqUUID, e);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
+                        " uuid: " + reqUUID);
             }
         } catch (SQLException e) {
-            throw new ParCoreException("Error occurred converting PAR request with" +
-                    " uuid: " + reqUUID + " to JSON", e);
+            throw new ParCoreException("Error occurred in persisting the successful PAR request with" +
+                    " uuid: " + reqUUID);
         }
     }
 
     @Override
-    public String getParClientId(String reqUUID) throws ParClientException {
+    public ParRequestDO getParRequest(String uuid) throws ParCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
-                     .ParSQLQueries.RETRIEVE_PAR_CLIENT_ID)) {
+                     .ParSQLQueries.RETRIEVE_PAR_REQUEST)) {
 
-            prepStmt.setString(1, reqUUID);
+            prepStmt.setString(1, uuid);
 
             try (ResultSet resultSet = prepStmt.executeQuery()) {
                 if (resultSet.next()) {
                     if (log.isDebugEnabled()) {
-                        log.debug("Successfully obtained client_id of RequestURI with UUID: " + reqUUID);
+                        log.debug("Successfully obtained client_id of RequestURI with UUID: " + uuid);
                     }
+                    String jsonParams = resultSet.getString("JSON_PARAMS");
+                    long scheduledExpiry = resultSet.getLong("SCHEDULED_EXPIRY");
+                    String clientId = resultSet.getString("CLIENT_ID");
 
-                    return resultSet.getString(1);
+                    return new ParRequestDO(getParamMap(jsonParams), scheduledExpiry, clientId);
 
                 } else {
-                    // Return an empty optional if the UUID is not found in the database
                     if (log.isDebugEnabled()) {
-                        log.debug("PAR request with UUID " + reqUUID + " does not exist");
+                        log.debug("PAR request with UUID " + uuid + " does not exist");
                     }
-                    throw new ParClientException("Error occurred while retrieving client_id from the database.",
-                            OAuth2ErrorCodes.INVALID_REQUEST);
+                    throw new ParCoreException("Error occurred while retrieving client_id from the database.");
                 }
             } catch (SQLException e) {
-                throw new ParClientException("Error occurred while retrieving client_id from the database.",
-                        OAuth2ErrorCodes.INVALID_REQUEST);
+                throw new ParCoreException("Error occurred while retrieving client_id from the database.");
             }
         } catch (SQLException e) {
-            throw new ParClientException("Error occurred while retrieving client_id from the database.",
-                    OAuth2ErrorCodes.INVALID_REQUEST);
+            throw new ParCoreException("Error occurred while retrieving client_id from the database.");
         }
     }
 
     @Override
-    public HashMap<String, String> getParParamMap(String reqUUID) throws ParClientException {
-
-        ObjectMapper objectMapper = new ObjectMapper();
-
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
-             PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
-                     .ParSQLQueries.RETRIEVE_PAR_JSON_PARAMS)) {
-
-            prepStmt.setString(1, reqUUID);
-
-            try (ResultSet resultSet = prepStmt.executeQuery()) {
-                if (resultSet.next()) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Successfully obtained client_id of RequestURI with UUID: " + reqUUID);
-                    }
-
-                    String jsonString = resultSet.getString(1);
-                    return objectMapper.readValue(jsonString, new TypeReference<HashMap<String, String>>() { });
-
-                } else {
-                    // Return an empty optional if the UUID is not found in the database
-                    if (log.isDebugEnabled()) {
-                        log.debug("PAR request with UUID " + reqUUID + " does not contain request parameter");
-                    }
-                    return null;
-                }
-            } catch (SQLException | JsonProcessingException e) {
-                throw new ParClientException("Error occurred while retrieving parameters from the database.",
-                        OAuth2ErrorCodes.INVALID_REQUEST);
-            }
-        } catch (SQLException e) {
-            throw new ParClientException("Error occurred while retrieving parameters from the database.",
-                    OAuth2ErrorCodes.INVALID_REQUEST);
-        }
-    }
-
-    @Override
-    public long getScheduledExpiry(String reqUUID) throws ParClientException {
-
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
-             PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
-                     .ParSQLQueries.RETRIEVE_SCHEDULED_EXPIRY)) {
-
-            prepStmt.setString(1, reqUUID);
-
-            try (ResultSet resultSet = prepStmt.executeQuery()) {
-                if (resultSet.next()) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Successfully obtained expiryTime of RequestURI with UUID: " + reqUUID);
-                    }
-
-                    return resultSet.getLong(1);
-
-                } else {
-                    // Return an empty optional if the UUID is not found in the database
-                    if (log.isDebugEnabled()) {
-                        log.debug("PAR request with UUID " + reqUUID + " does not exist");
-                    }
-                    throw new ParClientException("Request URI does not exist",
-                            OAuth2ErrorCodes.INVALID_REQUEST);
-                }
-            } catch (SQLException e) {
-                throw new ParClientException("Error occurred while retrieving expiryTime from the database.",
-                        OAuth2ErrorCodes.INVALID_REQUEST);
-            }
-        } catch (SQLException e) {
-            throw new ParClientException("Error occurred while retrieving scheduled expiry time from the database.",
-                    OAuth2ErrorCodes.INVALID_REQUEST);
-        }
-    }
-
-    //TODO:
-    @Override
-    public void deleteParRequestData(String reqUUID) throws ParClientException {
+    public void removeParRequestData(String reqUUID) throws ParCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true);
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
-                     .ParSQLQueries.DELETE_IDN_OAUTH_PAR_REQUEST)) {
-
+                     .ParSQLQueries.REMOVE_IDN_OAUTH_PAR_REQUEST)) {
             prepStmt.setString(1, reqUUID);
-
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
-
         } catch (SQLException e) {
-            throw new ParClientException("Error occurred while deleting PAR request from Database",
-                    OAuth2ErrorCodes.INVALID_REQUEST);
+            throw new ParCoreException("Error occurred while removing PAR request from Database");
+        }
+    }
+
+    private String getJsonParams(Map<String, String> paramMap) throws ParCoreException {
+
+        try {
+            return objectMapper.writeValueAsString(paramMap);
+        } catch (JsonProcessingException e) {
+            throw new ParCoreException("Error occurred while serializing parameter map to JSON");
+        }
+    }
+
+    private Map<String, String> getParamMap(String jsonParams) throws ParCoreException {
+
+        try {
+            return objectMapper.readValue(jsonParams, new TypeReference<Map<String, String>>() { });
+        } catch (JsonProcessingException e) {
+            throw new ParCoreException("Error occurred while serializing JSON string map to Map");
         }
     }
 }

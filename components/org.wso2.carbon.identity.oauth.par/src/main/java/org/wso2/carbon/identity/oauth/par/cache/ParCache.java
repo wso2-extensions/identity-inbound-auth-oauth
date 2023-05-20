@@ -19,17 +19,18 @@
 package org.wso2.carbon.identity.oauth.par.cache;
 
 import org.wso2.carbon.identity.core.cache.BaseCache;
-import org.wso2.carbon.identity.oauth.par.model.ParRequest;
+import org.wso2.carbon.identity.oauth.par.model.ParRequestCacheEntry;
 
 /**
  * Cache implementation for PAR requests.
  */
-public class ParCache extends BaseCache<String, ParRequest> {
+public class ParCache extends BaseCache<String, ParRequestCacheEntry> {
 
     private static final ParCache instance = new ParCache();
     private static final String CACHE_NAME = "ParClaimCache";
 
     public ParCache() {
+
         super(CACHE_NAME);
     }
 
@@ -37,6 +38,4 @@ public class ParCache extends BaseCache<String, ParRequest> {
 
         return instance;
     }
-
-
 }
