@@ -34,7 +34,10 @@ public class ApplicationDTO  {
   
   private String clientName = null;
 
-  
+
+  private String extApplicationDisplayName = null;
+
+
   private String extApplicationOwner = null;
   
   
@@ -128,6 +131,18 @@ public class ApplicationDTO  {
   }
   public void setClientName(String clientName) {
     this.clientName = clientName;
+  }
+
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_application_display_name")
+  public String getExtApplicationDisplayName() {
+    return extApplicationDisplayName;
+  }
+  public void setExtApplicationDisplayName(String extApplicationDisplayName) {
+    this.extApplicationDisplayName = extApplicationDisplayName;
   }
 
   
@@ -238,6 +253,7 @@ public class ApplicationDTO  {
     sb.append("  redirect_uris: ").append(redirectUris).append("\n");
     sb.append("  grant_types: ").append(grantTypes).append("\n");
     sb.append("  client_name: ").append(clientName).append("\n");
+    sb.append("  ext_application_display_name: ").append(extApplicationDisplayName).append("\n");
     sb.append("  ext_application_owner: ").append(extApplicationOwner).append("\n");
     sb.append("  ext_application_token_lifetime: ").append(extApplicationTokenLifetime).append("\n");
     sb.append("  ext_user_token_lifetime: ").append(extUserTokenLifetime).append("\n");
