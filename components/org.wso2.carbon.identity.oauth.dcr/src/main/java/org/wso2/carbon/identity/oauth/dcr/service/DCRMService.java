@@ -19,16 +19,14 @@
 package org.wso2.carbon.identity.oauth.dcr.service;
 
 import com.google.gson.Gson;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
-import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
-import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
-import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.application.common.model.*;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
@@ -68,6 +66,7 @@ public class DCRMService {
     private static final String AUTH_TYPE_OAUTH_2 = "oauth2";
     private static final String OAUTH_VERSION = "OAuth-2.0";
     private static final String GRANT_TYPE_SEPARATOR = " ";
+    private static final String APP_DISPLAY_NAME = "DisplayName";
     private static Pattern clientIdRegexPattern = null;
 
     /**
@@ -243,6 +242,34 @@ public class DCRMService {
         return buildResponse(getApplicationById(clientId));
     }
 
+    /**
+     * Update the service provider properties with the application display name.
+     *
+     * @param serviceProvider        Service provider.
+     * @param applicationDisplayName Application display name.
+     */
+    private void updateServiceProviderPropertyList(ServiceProvider serviceProvider, String applicationDisplayName) {
+
+        // Retrieve existing service provider properties.
+        ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
+
+        boolean isDisplayNameSet = Arrays.stream(serviceProviderProperties)
+                .anyMatch(property -> property.getName().equals(APP_DISPLAY_NAME));
+        if (!isDisplayNameSet) {
+            /* Append application display name related property. This property is used when displaying the app name
+            within the consent page.
+             */
+            ServiceProviderProperty serviceProviderProperty = new ServiceProviderProperty();
+            serviceProviderProperty.setName(APP_DISPLAY_NAME);
+            serviceProviderProperty.setValue(applicationDisplayName);
+            serviceProviderProperties = (ServiceProviderProperty[]) ArrayUtils.add(serviceProviderProperties,
+                    serviceProviderProperty);
+
+            // Update service provider property list.
+            serviceProvider.setSpProperties(serviceProviderProperties);
+        }
+    }
+
     private OAuthConsumerAppDTO getApplicationById(String clientId) throws DCRMException {
 
         return getApplicationById(clientId, true);
@@ -280,7 +307,6 @@ public class DCRMService {
     private Application createOAuthApplication(ApplicationRegistrationRequest registrationRequest)
             throws DCRMException {
 
-        // Need to include ext_application_display_name. Currently, it is not supported in the Service Provider object.
         String applicationOwner = StringUtils.isNotBlank(registrationRequest.getExtApplicationOwner()) ?
                 registrationRequest.getExtApplicationOwner() :
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
@@ -322,6 +348,9 @@ public class DCRMService {
             deleteServiceProvider(spName, tenantDomain, applicationOwner);
             throw ex;
         }
+
+        // Update the service provider properties list with the display name property.
+        updateServiceProviderPropertyList(serviceProvider, registrationRequest.getExtApplicationDisplayName());
 
         try {
             updateServiceProviderWithOAuthAppDetails(serviceProvider, createdApp, applicationOwner, tenantDomain);
@@ -403,6 +432,11 @@ public class DCRMService {
                                 clientIdRegex);
             }
         }
+
+        if (registrationRequest.getExtApplicationTokenLifetime() != null) {
+            oAuthConsumerApp.setApplicationAccessTokenExpiryTime(registrationRequest.getExtApplicationTokenLifetime());
+        }
+
 
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerSecret())) {
             oAuthConsumerApp.setOauthConsumerSecret(registrationRequest.getConsumerSecret());
@@ -665,7 +699,7 @@ public class DCRMService {
     }
 
     /**
-     * Method to escape query parameters in the redirect urls
+     * Method to escape query parameters in the redirect urls.
      *
      * @param redirectURI
      * @return
