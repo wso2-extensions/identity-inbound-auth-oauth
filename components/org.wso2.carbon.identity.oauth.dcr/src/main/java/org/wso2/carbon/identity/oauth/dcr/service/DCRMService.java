@@ -26,7 +26,11 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
-import org.wso2.carbon.identity.application.common.model.*;
+import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
+import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
+import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
@@ -178,11 +182,15 @@ public class DCRMService {
         validateRequestTenantDomain(clientId);
         OAuthConsumerAppDTO appDTO = getApplicationById(clientId);
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        String applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+        String applicationOwner = StringUtils.isNotBlank(updateRequest.getExtApplicationOwner()) ?
+                updateRequest.getExtApplicationOwner() :
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String clientName = updateRequest.getClientName();
 
         // Update Service Provider
         ServiceProvider sp = getServiceProvider(appDTO.getApplicationName(), tenantDomain);
+        // Update the service provider properties list with the display name property.
+        updateServiceProviderPropertyList(sp, updateRequest.getExtApplicationDisplayName());
         if (StringUtils.isNotEmpty(clientName)) {
             // Check whether a service provider already exists for the name we are trying
             // to register the OAuth app with.
@@ -233,6 +241,21 @@ public class DCRMService {
                 String backChannelLogoutUri = validateBackchannelLogoutURI(updateRequest.getBackchannelLogoutUri());
                 appDTO.setBackChannelLogoutUrl(backChannelLogoutUri);
             }
+            if (updateRequest.getExtApplicationTokenLifetime() != null) {
+                appDTO.setApplicationAccessTokenExpiryTime(updateRequest.getExtApplicationTokenLifetime());
+            }
+            if (updateRequest.getExtUserTokenLifetime() != null) {
+                appDTO.setUserAccessTokenExpiryTime(updateRequest.getExtUserTokenLifetime());
+            }
+            if (updateRequest.getExtRefreshTokenLifetime() != null) {
+                appDTO.setRefreshTokenExpiryTime(updateRequest.getExtRefreshTokenLifetime());
+            }
+            if (updateRequest.getExtIdTokenLifetime() != null) {
+                appDTO.setIdTokenExpiryTime(updateRequest.getExtIdTokenLifetime());
+            }
+            appDTO.setPkceMandatory(updateRequest.isExtPkceMandatory());
+            appDTO.setPkceSupportPlain(updateRequest.isExtPkceSupportPlain());
+            appDTO.setBypassClientCredentials(updateRequest.isExtPublicClient());
             oAuthAdminService.updateConsumerApplication(appDTO);
         } catch (IdentityOAuthAdminException e) {
             throw DCRMUtils.generateServerException(
@@ -433,14 +456,24 @@ public class DCRMService {
             }
         }
 
-        if (registrationRequest.getExtApplicationTokenLifetime() != null) {
-            oAuthConsumerApp.setApplicationAccessTokenExpiryTime(registrationRequest.getExtApplicationTokenLifetime());
-        }
-
-
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerSecret())) {
             oAuthConsumerApp.setOauthConsumerSecret(registrationRequest.getConsumerSecret());
         }
+        if (registrationRequest.getExtApplicationTokenLifetime() != null) {
+            oAuthConsumerApp.setApplicationAccessTokenExpiryTime(registrationRequest.getExtApplicationTokenLifetime());
+        }
+        if (registrationRequest.getExtUserTokenLifetime() != null) {
+            oAuthConsumerApp.setUserAccessTokenExpiryTime(registrationRequest.getExtUserTokenLifetime());
+        }
+        if (registrationRequest.getExtRefreshTokenLifetime() != null) {
+            oAuthConsumerApp.setRefreshTokenExpiryTime(registrationRequest.getExtRefreshTokenLifetime());
+        }
+        if (registrationRequest.getExtIdTokenLifetime() != null) {
+            oAuthConsumerApp.setIdTokenExpiryTime(registrationRequest.getExtIdTokenLifetime());
+        }
+        oAuthConsumerApp.setPkceMandatory(registrationRequest.isExtPkceMandatory());
+        oAuthConsumerApp.setPkceSupportPlain(registrationRequest.isExtPkceSupportPlain());
+        oAuthConsumerApp.setBypassClientCredentials(registrationRequest.isExtPublicClient());
         if (log.isDebugEnabled()) {
             log.debug("Creating OAuth Application: " + spName + " in tenant: " + tenantDomain);
         }
