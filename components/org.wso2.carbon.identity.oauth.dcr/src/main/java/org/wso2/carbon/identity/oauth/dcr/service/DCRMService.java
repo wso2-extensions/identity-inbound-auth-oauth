@@ -280,7 +280,10 @@ public class DCRMService {
     private Application createOAuthApplication(ApplicationRegistrationRequest registrationRequest)
             throws DCRMException {
 
-        String applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+        // Need to include ext_application_display_name. Currently, it is not supported in the Service Provider object.
+        String applicationOwner = StringUtils.isNotBlank(registrationRequest.getExtApplicationOwner()) ?
+                registrationRequest.getExtApplicationOwner() :
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String spName = registrationRequest.getClientName();
         String templateName = registrationRequest.getSpTemplateName();
@@ -663,6 +666,7 @@ public class DCRMService {
 
     /**
      * Method to escape query parameters in the redirect urls
+     *
      * @param redirectURI
      * @return
      */
