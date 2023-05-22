@@ -34,33 +34,6 @@ public class ApplicationDTO  {
   
   private String clientName = null;
 
-
-  private String extApplicationDisplayName = null;
-
-
-  private String extApplicationOwner = null;
-  
-  
-  private Long extApplicationTokenLifetime = null;
-  
-  
-  private Long extUserTokenLifetime = null;
-  
-  
-  private Long extRefreshTokenLifetime = null;
-  
-  
-  private Long extIdTokenLifetime = null;
-  
-  
-  private boolean extPkceMandatory;
-  
-  
-  private boolean extPkceSupportPlain;
-  
-  
-  private boolean extPublicClient;
-
   
   /**
    **/
@@ -133,6 +106,7 @@ public class ApplicationDTO  {
     this.clientName = clientName;
   }
 
+  
 
   @Override
   public String toString()  {
