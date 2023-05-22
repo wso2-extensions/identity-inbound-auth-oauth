@@ -119,7 +119,7 @@ public class UpdateRequestDTO {
     }
 
     @ApiModelProperty
-    @JsonProperty("extApplicationOwner")
+    @JsonProperty("ext_application_owner")
     public String getExtApplicationOwner() {
         return extApplicationOwner;
     }

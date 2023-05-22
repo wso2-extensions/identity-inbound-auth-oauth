@@ -269,7 +269,7 @@ public class RegistrationRequestDTO  {
   }
 
   @ApiModelProperty
-  @JsonProperty("pkce_mandatory")
+  @JsonProperty("ext_pkce_mandatory")
   public boolean getExtPkceMandatory() {
     return extPkceMandatory;
   }
@@ -278,7 +278,7 @@ public class RegistrationRequestDTO  {
   }
 
   @ApiModelProperty(value = "")
-  @JsonProperty("pkce_support_plain")
+  @JsonProperty("ext_pkce_support_plain")
   public boolean getExtPkceSupportPlain() {
     return extPkceSupportPlain;
   }
@@ -323,7 +323,7 @@ public class RegistrationRequestDTO  {
     sb.append("  ext_user_token_lifetime: ").append(extUserTokenLifetime).append("\n");
     sb.append("  ext_refresh_token_lifetime: ").append(extRefreshTokenLifetime).append("\n");
     sb.append("  ext_id_token_lifetime: ").append(extIdTokenLifetime).append("\n");
-    sb.append("  pkce_mandatory: ").append(extPkceMandatory).append("\n");
+    sb.append("  ext_pkce_mandatory: ").append(extPkceMandatory).append("\n");
     sb.append("  ext_pkce_support_plain: ").append(extPkceSupportPlain).append("\n");
     sb.append("  ext_public_client: ").append(extPublicClient).append("\n");
     sb.append("}\n");
