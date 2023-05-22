@@ -189,8 +189,6 @@ public class DCRMService {
 
         // Update Service Provider
         ServiceProvider sp = getServiceProvider(appDTO.getApplicationName(), tenantDomain);
-        // Update the service provider properties list with the display name property.
-        updateServiceProviderPropertyList(sp, updateRequest.getExtApplicationDisplayName());
         if (StringUtils.isNotEmpty(clientName)) {
             // Check whether a service provider already exists for the name we are trying
             // to register the OAuth app with.
@@ -208,6 +206,9 @@ public class DCRMService {
                 throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.FAILED_TO_GET_SP,
                         appDTO.getApplicationName(), null);
             }
+            // Update the service provider properties list with the display name property.
+            updateServiceProviderPropertyList(sp, updateRequest.getExtApplicationDisplayName());
+
             // Need to create a deep clone, since modifying the fields of the original object,
             // will modify the cached SP object.
             ServiceProvider clonedSP = cloneServiceProvider(sp);
