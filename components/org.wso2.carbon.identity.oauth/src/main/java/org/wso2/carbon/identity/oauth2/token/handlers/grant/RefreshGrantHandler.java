@@ -189,7 +189,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     }
 
     private boolean validateRefreshTokenInRequest(OAuth2AccessTokenReqDTO tokenReq,
-                                                  RefreshTokenValidationDataDO validationBean) throws IdentityOAuth2Exception {
+                                                  RefreshTokenValidationDataDO validationBean)
+            throws IdentityOAuth2Exception {
 
         return validateRefreshTokenStatus(validationBean, tokenReq.getClientId());
 
