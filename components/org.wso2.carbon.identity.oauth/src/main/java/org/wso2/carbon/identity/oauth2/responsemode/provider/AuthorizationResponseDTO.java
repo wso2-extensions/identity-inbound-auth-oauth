@@ -18,6 +18,10 @@
 
 package org.wso2.carbon.identity.oauth2.responsemode.provider;
 
+import org.apache.commons.lang.StringUtils;
+
+import java.util.Set;
+
 import javax.servlet.http.HttpServletResponse;
 
 
@@ -36,6 +40,19 @@ public class AuthorizationResponseDTO {
     private String redirectUrl;
     private String responseMode;
     private String responseType;
+    private String scope;
+
+    public void setScopes(Set<String> scopes) {
+        if (scopes != null && !scopes.isEmpty()) {
+            String scopeString =  StringUtils.join(scopes, " ");
+            this.scope = scopeString.trim();
+        }
+    }
+
+    public String getScope() {
+        return scope;
+    }
+
     private int responseCode = HttpServletResponse.SC_FOUND;
 
     private SuccessResponseDTO successResponseDTO;

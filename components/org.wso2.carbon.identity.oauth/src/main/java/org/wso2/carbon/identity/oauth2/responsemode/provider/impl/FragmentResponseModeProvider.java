@@ -77,6 +77,10 @@ public class FragmentResponseModeProvider extends AbstractResponseModeProvider {
                 queryParams.add(OAuthConstants.STATE + "=" + state);
             }
 
+            if (authorizationResponseDTO.getScope() != null) {
+                queryParams.add(OAuthConstants.SCOPE + "=" + authorizationResponseDTO.getScope());
+            }
+
             redirectUrl = FrameworkUtils.appendQueryParamsStringToUrl(redirectUrl,
                     String.join("&", queryParams));
 

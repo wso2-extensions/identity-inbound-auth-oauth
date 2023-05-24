@@ -128,6 +128,7 @@ public final class OAuthConstants {
     public static final String CODE_IDTOKEN = "code id_token";
     public static final String CODE_IDTOKEN_TOKEN = "code id_token token";
     public static final String IDTOKEN_TOKEN = "id_token token";
+    public static final String SCOPE = "scope";
 
     //Constants used for OAuth/OpenID Connect Configuration UI
     public static final String CALLBACK_URL_REGEXP_PREFIX = "regexp=";

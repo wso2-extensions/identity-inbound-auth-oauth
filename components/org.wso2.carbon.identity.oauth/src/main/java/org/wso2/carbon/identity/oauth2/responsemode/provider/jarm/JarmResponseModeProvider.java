@@ -51,6 +51,7 @@ public abstract class JarmResponseModeProvider extends AbstractResponseModeProvi
     private static final String ACCESS_TOKEN = "access_token";
     private static final String ID_TOKEN = "id_token";
     private static final String STATE = "state";
+    private static final String SCOPE = "scope";
     private static final String SESSION_STATE = "session_state";
     private static final String AUTHENTICATED_IDPS = "AuthenticatedIdPs";
     private static final int TO_MILLISECONDS = 1000;
@@ -98,6 +99,10 @@ public abstract class JarmResponseModeProvider extends AbstractResponseModeProvi
 
         if (authenticatedIdPs != null && !authenticatedIdPs.isEmpty()) {
             jwtClaimsSet.claim(AUTHENTICATED_IDPS, authenticatedIdPs);
+        }
+
+        if (authorizationResponseDTO.getScope() != null) {
+            jwtClaimsSet.claim(STATE, authorizationResponseDTO.getScope());
         }
 
         return jwtClaimsSet.build();

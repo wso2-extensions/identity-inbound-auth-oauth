@@ -504,6 +504,7 @@ public class OAuth2AuthzEndpoint {
         authorizationResponseDTO.setState(oauth2Params.getState());
         authorizationResponseDTO.setResponseMode(oauth2Params.getResponseMode());
         authorizationResponseDTO.setResponseType(oauth2Params.getResponseType());
+        authorizationResponseDTO.setScopes(oauth2Params.getScopes());
 
         return authorizationResponseDTO;
     }
