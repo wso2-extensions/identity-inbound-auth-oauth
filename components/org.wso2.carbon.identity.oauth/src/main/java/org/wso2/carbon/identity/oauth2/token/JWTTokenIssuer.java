@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
@@ -179,6 +180,15 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         if (request.getScope() != null && Arrays.asList((request.getScope())).contains(AUDIENCE)) {
             jwtClaimsSetBuilder.audience(Arrays.asList(request.getScope()));
         }
+
+        List<JWTAccessTokenClaimProvider> claimProviders = getJWTAccessTokenClaimProviders();
+        for (JWTAccessTokenClaimProvider claimProvider : claimProviders) {
+            Map<String, Object> additionalClaims = claimProvider.getAdditionalClaims(request);
+            if (additionalClaims != null) {
+                additionalClaims.forEach(jwtClaimsSetBuilder::claim);
+            }
+        }
+
         jwtClaimsSet = jwtClaimsSetBuilder.build();
         if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
             return new PlainJWT(jwtClaimsSet).serialize();
@@ -204,6 +214,15 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         if (request.getApprovedScope() != null && Arrays.asList((request.getApprovedScope())).contains(AUDIENCE)) {
             jwtClaimsSetBuilder.audience(Arrays.asList(request.getApprovedScope()));
         }
+
+        List<JWTAccessTokenClaimProvider> claimProviders = getJWTAccessTokenClaimProviders();
+        for (JWTAccessTokenClaimProvider claimProvider : claimProviders) {
+            Map<String, Object> additionalClaims = claimProvider.getAdditionalClaims(request);
+            if (additionalClaims != null) {
+                additionalClaims.forEach(jwtClaimsSetBuilder::claim);
+            }
+        }
+
         jwtClaimsSet = jwtClaimsSetBuilder.build();
 
         if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
@@ -213,8 +232,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         return signJWT(jwtClaimsSet, null, request);
     }
 
+    private static List<JWTAccessTokenClaimProvider> getJWTAccessTokenClaimProviders() {
+
+        return OAuth2ServiceComponentHolder.getInstance().getJWTAccessTokenClaimProviders();
+    }
+
     /**
-     * Sign ghe JWT token according to the given signature signing algorithm.
+     * Sign the JWT token according to the given signature signing algorithm.
      *
      * @param jwtClaimsSet         JWT claim set to be signed.
      * @param tokenContext         Token context.
