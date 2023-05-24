@@ -30,7 +30,7 @@ import java.util.Map;
 public interface JWTAccessTokenClaimProvider {
 
     /**
-     * Returns map of additional claims to JWT Access Tokens issued in OAuth2 authorize flow.
+     * Returns map of additional claims to be included in JWT Access Tokens issued in OAuth2 authorize flow.
      *
      * @param context
      * @return
@@ -39,7 +39,7 @@ public interface JWTAccessTokenClaimProvider {
     Map<String, Object> getAdditionalClaims(OAuthAuthzReqMessageContext context) throws IdentityOAuth2Exception;
 
     /**
-     * Returns map of Additional claims to JWT Access Tokens issued in the OAuth2 token flow.
+     * Returns map of Additional claims to be included in JWT Access Tokens issued in the OAuth2 token flow.
      *
      * @param context
      * @return map of id token claims
