@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.organization.management.role.management.service.RoleManager;
@@ -40,6 +41,7 @@ import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +78,7 @@ public class OAuth2ServiceComponentHolder {
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
     private static List<String> jwtRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
     private static ConsentServerConfigsManagementService consentServerConfigsManagementService;
+    private List<JWTAccessTokenClaimProvider> jwtAccessTokenClaimProviders = new ArrayList<>();
 
     private OAuth2ServiceComponentHolder() {
 
@@ -447,4 +450,26 @@ public class OAuth2ServiceComponentHolder {
 
         OAuth2ServiceComponentHolder.consentServerConfigsManagementService = consentServerConfigsManagementService;
     }
+
+    /**
+     * Returns JWT access token additional claim providers.
+     *
+     * @return
+     */
+    public List<JWTAccessTokenClaimProvider> getJWTAccessTokenClaimProviders() {
+
+        return Collections.unmodifiableList(jwtAccessTokenClaimProviders);
+    }
+
+    public void addJWTAccessTokenClaimProvider(JWTAccessTokenClaimProvider accessTokenClaimProvider) {
+
+        jwtAccessTokenClaimProviders.add(accessTokenClaimProvider);
+    }
+
+    public void removeJWTAccessTokenClaimProvider(JWTAccessTokenClaimProvider accessTokenClaimProvider) {
+
+        jwtAccessTokenClaimProviders.add(accessTokenClaimProvider);
+    }
+
+
 }
