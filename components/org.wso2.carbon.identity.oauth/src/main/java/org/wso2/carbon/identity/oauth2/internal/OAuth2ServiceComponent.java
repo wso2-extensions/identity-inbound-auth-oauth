@@ -69,6 +69,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinde
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.scope.RoleBasedScopeIssuer;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
@@ -81,6 +82,7 @@ import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
 import org.wso2.carbon.utils.CarbonUtils;
+import org.wso2.carbon.utils.ConfigurationContextService;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -335,6 +337,13 @@ public class OAuth2ServiceComponent {
                         "setting consentedColumnAvailable to false.");
             }
         }
+        if (OAuthServerConfiguration.getInstance().isRbacGlobalScopeIssuerEnabled()) {
+            bundleContext.registerService(ScopeValidator.class, new RoleBasedScopeIssuer(), null);
+
+        }
+        boolean restrictUnassignedScopes = Boolean.parseBoolean(System.getProperty(
+                OAuthConstants.RESTRICT_UNASSIGNED_SCOPES));
+        OAuth2ServiceComponentHolder.setRestrictUnassignedScopes(restrictUnassignedScopes);
     }
 
     /**
@@ -848,5 +857,24 @@ public class OAuth2ServiceComponent {
 
         OAuth2ServiceComponentHolder.setConsentServerConfigsManagementService(null);
         log.debug("Unsetting the Consent Server Configs Management.");
+    }
+
+    @Reference(
+            name = "configuration.context.service",
+            service = ConfigurationContextService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetConfigurationContextService"
+    )
+    protected void setConfigurationContextService(ConfigurationContextService configurationContextService) {
+
+        OAuth2ServiceComponentHolder.getInstance().setConfigurationContextService(configurationContextService);
+        log.debug("ConfigurationContextService Instance was set.");
+    }
+
+    protected void unsetConfigurationContextService(ConfigurationContextService configurationContextService) {
+
+        OAuth2ServiceComponentHolder.getInstance().setConfigurationContextService(null);
+        log.debug("ConfigurationContextService Instance was unset.");
     }
 }

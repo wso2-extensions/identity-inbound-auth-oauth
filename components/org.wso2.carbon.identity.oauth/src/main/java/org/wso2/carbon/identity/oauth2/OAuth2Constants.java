@@ -33,4 +33,35 @@ public class OAuth2Constants {
 
     }
     public static final String GROUPS = "groups";
+
+
+    /**
+     * Constants for global role based scope issuer.
+     */
+    public static class RoleBasedScope {
+        public static final String GROUPS = "groups";
+
+        public static final String OAUTH2_DEFAULT_SCOPE = "default";
+
+        public static final String CHECK_ROLES_FROM_SAML_ASSERTION = "checkRolesFromSamlAssertion";
+
+        public static final String
+                RETRIEVE_ROLES_FROM_USERSTORE_FOR_SCOPE_VALIDATION = "retrieveRolesFromUserStoreForScopeValidation";
+
+        public static final String SAML2_ASSERTION = "SAML2Assertion";
+
+        public static final String ROLE_CLAIM = "ROLE_CLAIM";
+
+        public static final String OAUTH_ASSERTION = "assertion";
+
+        public static final String ROLE_ATTRIBUTE_NAME = "http://wso2.org/claims/role";
+
+        public static final String SAML2_SSO_AUTHENTICATOR_NAME = "SAML2SSOAuthenticator";
+
+        public static final String ROLE_CLAIM_ATTRIBUTE = "RoleClaimAttribute";
+
+        public static final String ATTRIBUTE_VALUE_SEPERATER = ",";
+
+        public static final String ATTRIBUTE_VALUE_SEPARATOR = "AttributeValueSeparator";
+    }
 }
