@@ -44,7 +44,7 @@ public class AuthorizationResponseDTO {
 
     public void setScopes(Set<String> scopes) {
         if (scopes != null && !scopes.isEmpty()) {
-            String scopeString =  StringUtils.join(scopes, " ");
+            String scopeString =  StringUtils.join(scopes, "+");
             this.scope = scopeString.trim();
         }
     }
