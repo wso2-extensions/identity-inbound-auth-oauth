@@ -146,7 +146,7 @@ public class OAuthServerConfiguration {
     private String tokenCleanupFeatureEnable;
     private OauthTokenIssuer oauthIdentityTokenGenerator;
     private boolean scopeValidationConfigValue = true;
-    private boolean rbacGlobalScopeIssuerEnabled = false;
+    private boolean globalRbacScopeIssuerEnabled = false;
     private boolean cacheEnabled = false;
     private boolean isTokenRenewalPerRequestEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
@@ -364,7 +364,7 @@ public class OAuthServerConfiguration {
         );
 
         if (globalRoleBasedScopeIssuer != null) {
-            setRbacGlobalScopeIssuerEnabled(Boolean.parseBoolean(globalRoleBasedScopeIssuer.getText()));
+            setGlobalRbacScopeIssuerEnabled(Boolean.parseBoolean(globalRoleBasedScopeIssuer.getText()));
         }
 
         // read default timeout periods
@@ -3282,12 +3282,12 @@ public class OAuthServerConfiguration {
         return isFapiSecurity;
     }
 
-    public boolean isRbacGlobalScopeIssuerEnabled() {
-        return rbacGlobalScopeIssuerEnabled;
+    public boolean isGlobalRbacScopeIssuerEnabled() {
+        return globalRbacScopeIssuerEnabled;
     }
 
-    public void setRbacGlobalScopeIssuerEnabled(boolean rbacGlobalScopeIssuerEnabled) {
-        this.rbacGlobalScopeIssuerEnabled = rbacGlobalScopeIssuerEnabled;
+    public void setGlobalRbacScopeIssuerEnabled(boolean globalRbacScopeIssuerEnabled) {
+        this.globalRbacScopeIssuerEnabled = globalRbacScopeIssuerEnabled;
     }
 
     /**

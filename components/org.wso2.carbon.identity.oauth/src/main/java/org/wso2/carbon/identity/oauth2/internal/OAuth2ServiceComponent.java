@@ -337,7 +337,7 @@ public class OAuth2ServiceComponent {
                         "setting consentedColumnAvailable to false.");
             }
         }
-        if (OAuthServerConfiguration.getInstance().isRbacGlobalScopeIssuerEnabled()) {
+        if (OAuthServerConfiguration.getInstance().isGlobalRbacScopeIssuerEnabled()) {
             bundleContext.registerService(ScopeValidator.class, new RoleBasedScopeIssuer(), null);
 
         }
