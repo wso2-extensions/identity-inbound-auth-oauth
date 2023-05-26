@@ -223,7 +223,7 @@ public abstract class AbstractRoleBasedScopeIssuer {
     }
 
     /**
-     * Get the role list from the SAML2 Assertion
+     * Get the role list from the SAML2 Assertion.
      *
      * @param assertion SAML2 assertion
      * @return Role list from the assertion
@@ -292,7 +292,7 @@ public abstract class AbstractRoleBasedScopeIssuer {
     }
 
     /**
-     * Get attribute separator from configuration or from the constants
+     * Get attribute separator from configuration or from the constants.
      *
      * @return Attribute value separator.
      */
@@ -312,7 +312,7 @@ public abstract class AbstractRoleBasedScopeIssuer {
     }
 
     /**
-     * Role claim attribute value from configuration file or from constants
+     * Role claim attribute value from configuration file or from constants.
      *
      * @return role claim name.
      */
@@ -331,7 +331,7 @@ public abstract class AbstractRoleBasedScopeIssuer {
     }
 
     /**
-     * load tenant axis configurations.
+     * Load tenant axis configurations.
      *
      * @param tenantDomain Tenant  domain
      */

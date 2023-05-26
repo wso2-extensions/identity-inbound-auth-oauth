@@ -252,7 +252,7 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
     }
 
     /**
-     * Extract the resource from the access token validation request message
+     * Extract the resource from the access token validation request message.
      *
      * @param messageContext Message context of the token validation request
      * @return resource
@@ -550,7 +550,7 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
 
 
     /**
-     * Add domain to name
+     * Add domain to name.
      *
      * @param username   Username
      * @param domainName domain name
@@ -638,7 +638,7 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
     }
 
     /**
-     * Method to parse the assertion and retrieve the signed JWT
+     * Method to parse the assertion and retrieve the signed JWT.
      *
      * @param tokReqMsgCtx request
      * @return SignedJWT object
@@ -673,7 +673,7 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
     }
 
     /**
-     * Method to retrieve claims from the JWT
+     * Method to retrieve claims from the JWT.
      *
      * @param signedJWT JWT token
      * @return JWTClaimsSet Object
@@ -714,7 +714,7 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
     }
 
     /**
-     * Check the retrieved roles against the role mappings in the IDP and return the updated roles
+     * Check the retrieved roles against the role mappings in the IDP and return the updated roles.
      *
      * @param identityProvider      used to retrieve the role mappings
      * @param currentRoleClaimValue current roles received through the token

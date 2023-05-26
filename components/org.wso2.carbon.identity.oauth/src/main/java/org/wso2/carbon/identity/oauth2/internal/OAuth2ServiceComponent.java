@@ -340,7 +340,6 @@ public class OAuth2ServiceComponent {
         }
         if (OAuthServerConfiguration.getInstance().isGlobalRbacScopeIssuerEnabled()) {
             bundleContext.registerService(ScopeValidator.class, new RoleBasedScopeIssuer(), null);
-
         }
         boolean restrictUnassignedScopes = Boolean.parseBoolean(System.getProperty(
                 OAuthConstants.RESTRICT_UNASSIGNED_SCOPES));
