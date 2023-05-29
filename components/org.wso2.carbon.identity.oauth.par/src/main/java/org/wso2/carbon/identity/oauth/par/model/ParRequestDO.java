@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -25,46 +25,94 @@ import java.util.Map;
  */
 public class ParRequestDO {
 
-    private Map<String, String> parameterMap;
+    private Map<String, String> params;
     private long scheduledExpiryTime;
     private String clientId;
 
+    /**
+     * Constructor with variables obtained from ParRequestCacheEntry object to ParRequestDO.
+     *
+     * @param parRequestCacheEntry cache entry for PAR request.
+     */
     public ParRequestDO (ParRequestCacheEntry parRequestCacheEntry) {
 
-        this.parameterMap = parRequestCacheEntry.getParameterMap();
+        this.params = parRequestCacheEntry.getParams();
         this.scheduledExpiryTime = parRequestCacheEntry.getScheduledExpiryTime();
         this.clientId = parRequestCacheEntry.getClientId();
     }
 
+    /**
+     * Contractor with variables obtained from DAO to ParRequestDO.
+     *
+     * @param parameterMap parameter map
+     * @param scheduledExpiryTime scheduled expiry time
+     * @param clientId client id
+     */
     public ParRequestDO (Map<String, String> parameterMap, long scheduledExpiryTime, String clientId) {
 
-        this.parameterMap = parameterMap;
+        this.params = parameterMap;
         this.scheduledExpiryTime = scheduledExpiryTime;
         this.clientId = clientId;
     }
 
-    public Map<String, String> getParameterMap() {
-        return parameterMap;
+    /**
+     * Get parameter map.
+     *
+     * @return params
+     */
+    public Map<String, String> getParams() {
+
+        return params;
     }
 
+    /**
+     * Get scheduled expiry time.
+     *
+     * @return scheduledExpiryTime
+     */
     public long getScheduledExpiryTime() {
+
         return scheduledExpiryTime;
     }
 
+    /**
+     * Get client id.
+     *
+     * @return clientId
+     */
     public String getClientId() {
+
         return clientId;
     }
 
 
-    public void setParameterMap(Map<String, String> parameterMap) {
-        this.parameterMap = parameterMap;
+    /**
+     * Set parameter map.
+     *
+     * @param params parameter map
+     */
+    public void setParams(Map<String, String> params) {
+
+        this.params = params;
     }
 
+    /**
+     * Set scheduled expiry.
+     *
+     * @param scheduledExpiryTime scheduled expiry
+     */
     public void setScheduledExpiryTime(long scheduledExpiryTime) {
+
         this.scheduledExpiryTime = scheduledExpiryTime;
     }
 
+    /**
+     * Set client id.
+     *
+     * @param clientId client id
+     */
     public void setClientId(String clientId) {
+
         this.clientId = clientId;
     }
 }

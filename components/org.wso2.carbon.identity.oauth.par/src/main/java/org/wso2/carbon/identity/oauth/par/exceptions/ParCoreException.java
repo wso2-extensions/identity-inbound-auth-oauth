@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -25,11 +25,22 @@ import org.wso2.carbon.identity.base.IdentityException;
  */
 public class ParCoreException extends IdentityException {
 
+    /**
+     * Constructor with error message.
+     *
+     * @param message error message
+     */
     public ParCoreException(String message) {
 
         super(message);
     }
 
+    /**
+     * Constructor with error code and error message.
+     *
+     * @param errorCode Error code
+     * @param message error message
+     */
     public ParCoreException(String errorCode, String message) {
 
         super(errorCode, message);

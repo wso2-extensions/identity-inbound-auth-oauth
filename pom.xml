@@ -471,7 +471,6 @@
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
                 <artifactId>org.wso2.carbon.identity.oauth.par</artifactId>
                 <version>${project.version}</version>
-<!--                <scope>provided</scope>-->
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
@@ -929,6 +928,7 @@
         <com.fasterxml.jackson.version>2.13.2</com.fasterxml.jackson.version>
         <spring-web.version>4.3.29.RELEASE</spring-web.version>
         <swagger-jaxrs.version>1.6.2</swagger-jaxrs.version>
+        <com.fasterxml.jackson.databind.version.range>[2.13.0, 2.14.0)</com.fasterxml.jackson.databind.version.range>
 
         <!--Test Dependencies-->
         <junit.version>4.13.1</junit.version>

@@ -29,8 +29,8 @@ import org.apache.oltu.oauth2.common.validators.OAuthValidator;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.par.model.OAuthParRequestWrapper;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
@@ -58,14 +58,11 @@ public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
      */
     private static HttpServletRequest buildRequest(HttpServletRequest request) throws OAuthProblemException {
 
-        ParAuthServiceImpl parAuthService = new ParAuthServiceImpl();
-
         // If request_uri is there consider as par request
         if (request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI) != null) {
-            return new OAuthParRequestWrapper(request, parAuthService);
-        } else {
-            return request;
+            return new OAuthParRequestWrapper(request, OAuth2ServiceComponentHolder.getInstance().getParAuthService());
         }
+        return request;
     }
 
     protected OAuthValidator<HttpServletRequest> initValidator() throws OAuthProblemException, OAuthSystemException {

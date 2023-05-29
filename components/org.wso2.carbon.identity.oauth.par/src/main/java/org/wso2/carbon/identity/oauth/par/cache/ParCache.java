@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -18,22 +18,31 @@
 
 package org.wso2.carbon.identity.oauth.par.cache;
 
-import org.wso2.carbon.identity.core.cache.BaseCache;
+import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationBaseCache;
+import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.model.ParRequestCacheEntry;
 
 /**
  * Cache implementation for PAR requests.
  */
-public class ParCache extends BaseCache<String, ParRequestCacheEntry> {
+public class ParCache extends AuthenticationBaseCache<String, ParRequestCacheEntry> {
 
     private static final ParCache instance = new ParCache();
-    private static final String CACHE_NAME = "ParClaimCache";
 
+
+    /**
+     * Constructor for ParCache.
+     */
     public ParCache() {
 
-        super(CACHE_NAME);
+        super(ParConstants.CACHE_NAME);
     }
 
+    /**
+     * Returns ParCache instance.
+     *
+     * @return instance of ParCache
+     */
     public static ParCache getInstance() {
 
         return instance;

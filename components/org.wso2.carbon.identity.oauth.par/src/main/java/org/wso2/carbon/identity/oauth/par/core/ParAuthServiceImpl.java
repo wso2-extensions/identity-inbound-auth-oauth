@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.par.core;
 
+import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
@@ -32,9 +33,6 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.UUID;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 
 /**
  * Provides authentication services.
@@ -44,38 +42,35 @@ public class ParAuthServiceImpl implements ParAuthService {
     ParMgtDAO parMgtDAO = ParDAOFactory.getInstance().getParAuthMgtDAO();
 
     @Override
-    public ParAuthResponseData generateParAuthResponse(HttpServletResponse response, HttpServletRequest request) {
+    public ParAuthResponseData generateParAuthResponse(Map<String, String> parameters) throws ParCoreException {
 
-        String uuid = generateParReqUriUUID();
+        String uuid = UUID.randomUUID().toString();
         long expiry = ParConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC;
 
         ParAuthResponseData parAuthResponse = new ParAuthResponseData();
-        parAuthResponse.setUuid(uuid);
+        parAuthResponse.setReqUriUUID(uuid);
         parAuthResponse.setExpiryTime(expiry);
+
+        persistParRequest(uuid, parameters, getScheduledExpiry(System.currentTimeMillis()));
 
         return parAuthResponse;
     }
 
-    public void persistParRequest(String uuid, Map<String, String> params, long scheduledExpiryTime)
+    private void persistParRequest(String uuid, Map<String, String> params, long scheduledExpiryTime)
             throws ParCoreException {
 
         parMgtDAO.persistParRequest(uuid, params.get(OAuthConstants.OAuth20Params.CLIENT_ID),
                 scheduledExpiryTime, params);
     }
 
-    private ParRequestDO retrieveParRequest(String uuid) throws ParCoreException {
+    public Map<String, String> retrieveParams(String uuid, String clientId) throws ParCoreException {
 
-        return parMgtDAO.getParRequest(uuid);
-    }
-
-    public Map<String, String> retrieveParamMap(String uuid, String clientId) throws ParCoreException {
-
-        ParRequestDO parRequestDO = retrieveParRequest(uuid);
+        ParRequestDO parRequestDO = parMgtDAO.getParRequest(uuid);
+        parMgtDAO.removeParRequestData(uuid);
         isRequestUriExpired(parRequestDO.getScheduledExpiryTime());
         isClientIdValid(clientId, parRequestDO.getClientId());
-        parMgtDAO.removeParRequestData(uuid);
 
-        return parRequestDO.getParameterMap();
+        return parRequestDO.getParams();
     }
 
     private void isRequestUriExpired(long scheduledExpiryTime) throws ParCoreException {
@@ -90,13 +85,14 @@ public class ParAuthServiceImpl implements ParAuthService {
     private void isClientIdValid(String clientId, String parClientId) throws
             ParCoreException {
 
-        if (!parClientId.equals(clientId)) {
+        if (!StringUtils.equals(parClientId, clientId)) {
             throw new ParCoreException(OAuth2ErrorCodes.INVALID_CLIENT, "client_ids does not match");
         }
     }
 
-    private String generateParReqUriUUID() {
+    private long getScheduledExpiry(long requestedTime) {
 
-        return UUID.randomUUID().toString();
+        long defaultExpiryInSecs = ParConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC * ParConstants.SEC_TO_MILLISEC_FACTOR;
+        return requestedTime + defaultExpiryInSecs;
     }
 }

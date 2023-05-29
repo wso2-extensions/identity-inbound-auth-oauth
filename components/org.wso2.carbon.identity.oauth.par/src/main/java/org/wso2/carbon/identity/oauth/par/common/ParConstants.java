@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -22,14 +22,14 @@ package org.wso2.carbon.identity.oauth.par.common;
  * Contains the required constants for PAR feature.
  */
 public class ParConstants {
-    public static final long EXPIRES_IN_DEFAULT_VALUE_IN_SEC = 60; //according to PAR spec (60 seconds)
+
+    public static final long EXPIRES_IN_DEFAULT_VALUE_IN_SEC = 60;
     public static final long SEC_TO_MILLISEC_FACTOR = 1000;
-    public static final String REQUEST = "request";
     public static final String UTC = "UTC";
-    public static final String REQUEST_URI = "request_uri";
     public static final String EXPIRES_IN = "expires_in";
     public static final String REQUEST_URI_HEAD = "urn:ietf:params:wso2is:request_uri:";
-
+    public static final String REQUEST_URI_IN_REQUEST_BODY_ERROR = "request.with.request_uri.not.allowed";
+    public static final String CACHE_NAME = "ParClaimCache";
 
     private ParConstants() {
 

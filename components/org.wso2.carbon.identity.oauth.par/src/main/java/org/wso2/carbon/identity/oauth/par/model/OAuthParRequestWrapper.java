@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oauth.par.model;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
-import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
+import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParAuthFailureException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 
@@ -40,7 +40,10 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
 
     private final Map<String, String> params;
 
-    public OAuthParRequestWrapper(HttpServletRequest request, ParAuthServiceImpl parAuthService)
+    /**
+     * Wraps the request with parameters obtained from the PAR endpoint.
+     */
+    public OAuthParRequestWrapper(HttpServletRequest request, ParAuthService parAuthService)
             throws OAuthProblemException {
 
         super(request);
@@ -50,7 +53,11 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
                 .replaceFirst(ParConstants.REQUEST_URI_HEAD, "");
 
         try {
-            params = parAuthService.retrieveParamMap(uuid,
+            if (parAuthService == null) {
+                throw new ParAuthFailureException("ParAuthService is not initialized properly");
+            }
+
+            params = parAuthService.retrieveParams(uuid,
                     request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
             params.put(OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST, "true");
         } catch (ParCoreException e) {
@@ -58,6 +65,11 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
         }
     }
 
+    /**
+     * Get parameter.
+     *
+     * @return parameter from either this parameter map or from parameter map of super class
+     */
     @Override
     public String getParameter(String name) {
 

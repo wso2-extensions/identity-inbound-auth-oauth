@@ -108,23 +108,6 @@ import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.utils.CarbonUtils;
 
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
@@ -153,14 +136,51 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.*;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
+
+import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.MANDATORY_CLAIMS;
+import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.REQUESTED_CLAIMS;
+import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.USER_CLAIMS_CONSENT_ONLY;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TENANT_DOMAIN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
-import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.*;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.*;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.*;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
+import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.USER_CONSENT_RESPONSE;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getErrorPageURL;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getLoginPageURL;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthServerConfiguration;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSSOConsentService;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.retrieveStateForErrorURL;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.DISPLAY;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.ID_TOKEN_HINT;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.LOGIN_HINT;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.MAX_AGE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.NONCE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.PROMPT;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
 
 /**
  * Rest implementation of OAuth2 authorize endpoint.
@@ -2105,20 +2125,21 @@ public class OAuth2AuthzEndpoint {
     private void validateRequestObjectParams(OAuthAuthzRequest oauthRequest) throws RequestObjectException {
 
         // With in the same request it can not be used both request parameter and request_uri parameter.
-        if (!(oauthRequest.getParam(OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST).equals("true"))) {
-            if (StringUtils.isNotEmpty(oauthRequest.getParam(REQUEST)) && StringUtils.isNotEmpty(oauthRequest.getParam
-                    (REQUEST_URI))) {
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("request", oauthRequest.getParam(REQUEST));
-                    params.put("request_uri", oauthRequest.getParam(REQUEST_URI));
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "request and request_uri parameters associated with the " +
-                                    "same authorization request", "validate-oauth-client", null);
-                }
-                throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Both request and " +
-                        "request_uri parameters can not be associated with the same authorization request.");
+        if (Boolean.parseBoolean(oauthRequest.getParam(OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST))) {
+            return;
+        }
+        if (StringUtils.isNotEmpty(oauthRequest.getParam(REQUEST)) && StringUtils.isNotEmpty(oauthRequest.getParam
+                (REQUEST_URI))) {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                Map<String, Object> params = new HashMap<>();
+                params.put("request", oauthRequest.getParam(REQUEST));
+                params.put("request_uri", oauthRequest.getParam(REQUEST_URI));
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                        OAuthConstants.LogConstants.FAILED, "request and request_uri parameters associated with the " +
+                                "same authorization request", "validate-oauth-client", null);
             }
+            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Both request and " +
+                    "request_uri parameters can not be associated with the same authorization request.");
         }
     }
 

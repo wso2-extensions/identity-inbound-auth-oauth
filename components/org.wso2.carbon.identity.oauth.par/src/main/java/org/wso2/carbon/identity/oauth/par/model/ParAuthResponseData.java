@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -23,24 +23,44 @@ package org.wso2.carbon.identity.oauth.par.model;
  */
 public class ParAuthResponseData {
 
-    private String uuid;
+    private String reqUriUUID;
     private long expiryTime;
 
-    public String getUuid() {
+    /**
+     * Get request uri's uuid.
+     *
+     * @return reqUriUUID
+     */
+    public String getReqUriUUID() {
 
-        return uuid;
+        return reqUriUUID;
     }
 
+    /**
+     * Get expiry time.
+     *
+     * @return expiryTime
+     */
     public long getExpiryTime() {
 
         return expiryTime;
     }
 
-    public void setUuid(String uuid) {
+    /**
+     * Set uuid of request_uri.
+     *
+     * @param reqUriUUID request uri's uuid
+     */
+    public void setReqUriUUID(String reqUriUUID) {
 
-        this.uuid = uuid;
+        this.reqUriUUID = reqUriUUID;
     }
 
+    /**
+     * Set expiry time.
+     *
+     * @param expiryTime expiry time
+     */
     public void setExpiryTime(long expiryTime) {
 
         this.expiryTime = expiryTime;

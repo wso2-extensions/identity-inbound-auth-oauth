@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth.par.dao;
 
-
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParRequestDO;
 
@@ -32,14 +31,27 @@ public interface ParMgtDAO {
     /**
      * Persists the ParAuthRequest.
      *
-     * @param uuid Authentication request identifier.
+     * @param reqUriUUID PAR request identifier.
      * @throws ParCoreException Exception thrown from PAR Core Component.
      */
-    void persistParRequest(String uuid, String clientId, long scheduledExpiryTime,
+    void persistParRequest(String reqUriUUID, String clientId, long scheduledExpiryTime,
                            Map<String, String> parameters) throws ParCoreException;
 
-    ParRequestDO getParRequest(String uuid) throws ParCoreException;
+    /**
+     * Retrieve the ParAuthRequest.
+     *
+     * @param reqUriUUID PAR request identifier.
+     * @throws ParCoreException Exception thrown from PAR Core Component.
+     */
+    ParRequestDO getParRequest(String reqUriUUID) throws ParCoreException;
 
-    void removeParRequestData(String uuid) throws ParCoreException;
+
+    /**
+     * Remove record from cache and database.
+     *
+     * @param reqUriUUID PAR request identifier.
+     * @throws ParCoreException Exception thrown from PAR Core Component.
+     */
+    void removeParRequestData(String reqUriUUID) throws ParCoreException;
 
 }

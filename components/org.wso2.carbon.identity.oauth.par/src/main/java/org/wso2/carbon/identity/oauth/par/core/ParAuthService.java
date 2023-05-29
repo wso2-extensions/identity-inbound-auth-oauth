@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -18,10 +18,10 @@
 
 package org.wso2.carbon.identity.oauth.par.core;
 
+import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthResponseData;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import java.util.Map;
 
 
 /**
@@ -29,5 +29,17 @@ import javax.servlet.http.HttpServletResponse;
  */
 public interface ParAuthService {
 
-    ParAuthResponseData generateParAuthResponse(HttpServletResponse response, HttpServletRequest request);
+    /**
+     * Creates PAR AuthenticationResponse.
+     *
+     * @return parAuthResponse that contains response data for request.
+     */
+    ParAuthResponseData generateParAuthResponse(Map<String, String> parameters) throws ParCoreException;
+
+    /**
+     * Retrieve parameters from store.
+     *
+     * @return parameter map for request.
+     */
+    Map<String, String> retrieveParams(String uuid, String clientId) throws ParCoreException;
 }

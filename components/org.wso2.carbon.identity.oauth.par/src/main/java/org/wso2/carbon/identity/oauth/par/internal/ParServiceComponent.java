@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -44,9 +44,7 @@ public class ParServiceComponent {
         try {
             context.getBundleContext().registerService(ParAuthService.class.getName(),
                     new ParAuthServiceImpl(), null);
-            if (log.isDebugEnabled()) {
-                log.debug("PAR component bundle is activated.");
-            }
+            log.debug("PAR component bundle is activated.");
         } catch (Throwable e) {
             log.error("Error occurred while activating PAR Component.", e);
         }
@@ -55,8 +53,6 @@ public class ParServiceComponent {
     @Deactivate
     protected void deactivate(ComponentContext context) {
 
-        if (log.isDebugEnabled()) {
-            log.debug("PAR component bundle is deactivated.");
-        }
+        log.debug("PAR component bundle is deactivated.");
     }
 }

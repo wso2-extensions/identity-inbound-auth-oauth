@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth.par.cache;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAO;
 import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAOImpl;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
@@ -30,9 +29,7 @@ import org.wso2.carbon.identity.oauth.par.model.ParRequestDO;
 import java.util.Map;
 
 /**
- *
  * Caching layer for PAR Requests.
- *
  */
 public class CacheBackedParDAO implements ParMgtDAO {
 
@@ -41,44 +38,38 @@ public class CacheBackedParDAO implements ParMgtDAO {
     private final ParMgtDAOImpl parMgtDAO = new ParMgtDAOImpl();
 
     @Override
-    public void persistParRequest(String uuid, String clientId, long scheduledExpiryTime,
+    public void persistParRequest(String reqUriUUID, String clientId, long scheduledExpiryTime,
                                   Map<String, String> parameters) throws ParCoreException {
 
-        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
-
-        ParRequestCacheEntry parRequestCacheEntry = new ParRequestCacheEntry(uuid, parameters, scheduledExpiryTime);
-        parMgtDAO.persistParRequest(uuid, clientId, scheduledExpiryTime, parameters);
-        parCache.addToCache(uuid, parRequestCacheEntry, tenantId);
+        ParRequestCacheEntry parRequestCacheEntry = new ParRequestCacheEntry(reqUriUUID, parameters,
+                scheduledExpiryTime);
+        parMgtDAO.persistParRequest(reqUriUUID, clientId, scheduledExpiryTime, parameters);
+        parCache.addToCache(reqUriUUID, parRequestCacheEntry);
     }
 
     @Override
-    public ParRequestDO getParRequest(String uuid) throws ParCoreException {
+    public ParRequestDO getParRequest(String reqUriUUID) throws ParCoreException {
 
-        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
-
-        ParRequestCacheEntry parCacheRequest = parCache.getValueFromCache(uuid, tenantId);
+        ParRequestCacheEntry parCacheRequest = parCache.getValueFromCache(reqUriUUID);
         ParRequestDO parRequestDO;
         if (parCacheRequest != null) {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("Cache miss for expiry time of local uuid: %s for tenant:%s ",
-                        uuid, tenantId));
+                log.debug("Cache miss for expiry time of local uuid: %s for tenant:%s " + reqUriUUID);
             }
-            return new ParRequestDO(parCache.getValueFromCache(uuid, tenantId));
+            return new ParRequestDO(parCacheRequest);
         } else {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("Cache hit for expiry time of uuid:%s for tenant:%s ",
-                        uuid, tenantId));
+                log.debug("Cache hit for expiry time of uuid:%s for tenant:%s " + reqUriUUID);
             }
-            parRequestDO = parMgtDAO.getParRequest(uuid);
+            parRequestDO = parMgtDAO.getParRequest(reqUriUUID);
         }
         return parRequestDO;
     }
 
     @Override
-    public void removeParRequestData(String uuid) throws ParCoreException {
+    public void removeParRequestData(String reqUriUUID) throws ParCoreException {
 
-        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
-        parCache.clearCacheEntry(uuid, tenantId);
-        parMgtDAO.removeParRequestData(uuid);
+        parCache.clearCacheEntry(reqUriUUID);
+        parMgtDAO.removeParRequestData(reqUriUUID);
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -43,7 +43,7 @@ public class ParMgtDAOImpl implements ParMgtDAO {
     ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public void persistParRequest(String reqUUID, String clientId, long scheduledExpiryTime,
+    public void persistParRequest(String reqUriUUID, String clientId, long scheduledExpiryTime,
                                   Map<String, String> parameters) throws ParCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
@@ -51,7 +51,7 @@ public class ParMgtDAOImpl implements ParMgtDAO {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
                     ParSQLQueries.STORE_PAR_REQUEST)) {
 
-                prepStmt.setString(1, reqUUID);
+                prepStmt.setString(1, reqUriUUID);
                 prepStmt.setString(2, clientId);
                 prepStmt.setLong(3, scheduledExpiryTime);
                 prepStmt.setString(4, getJsonParams(parameters));
@@ -60,11 +60,11 @@ public class ParMgtDAOImpl implements ParMgtDAO {
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw new ParCoreException("Error occurred in persisting the successful PAR request with" +
-                        " uuid: " + reqUUID);
+                        " uuid: " + reqUriUUID);
             }
         } catch (SQLException e) {
             throw new ParCoreException("Error occurred in persisting the successful PAR request with" +
-                    " uuid: " + reqUUID);
+                    " uuid: " + reqUriUUID);
         }
     }
 
@@ -86,13 +86,13 @@ public class ParMgtDAOImpl implements ParMgtDAO {
                     long scheduledExpiry = resultSet.getLong("SCHEDULED_EXPIRY");
                     String clientId = resultSet.getString("CLIENT_ID");
 
-                    return new ParRequestDO(getParamMap(jsonParams), scheduledExpiry, clientId);
+                    return new ParRequestDO(getParams(jsonParams), scheduledExpiry, clientId);
 
                 } else {
                     if (log.isDebugEnabled()) {
                         log.debug("PAR request with UUID " + uuid + " does not exist");
                     }
-                    throw new ParCoreException("Error occurred while retrieving client_id from the database.");
+                    throw new ParCoreException("uuid does not exist");
                 }
             } catch (SQLException e) {
                 throw new ParCoreException("Error occurred while retrieving client_id from the database.");
@@ -116,16 +116,16 @@ public class ParMgtDAOImpl implements ParMgtDAO {
         }
     }
 
-    private String getJsonParams(Map<String, String> paramMap) throws ParCoreException {
+    private String getJsonParams(Map<String, String> params) throws ParCoreException {
 
         try {
-            return objectMapper.writeValueAsString(paramMap);
+            return objectMapper.writeValueAsString(params);
         } catch (JsonProcessingException e) {
             throw new ParCoreException("Error occurred while serializing parameter map to JSON");
         }
     }
 
-    private Map<String, String> getParamMap(String jsonParams) throws ParCoreException {
+    private Map<String, String> getParams(String jsonParams) throws ParCoreException {
 
         try {
             return objectMapper.readValue(jsonParams, new TypeReference<Map<String, String>>() { });

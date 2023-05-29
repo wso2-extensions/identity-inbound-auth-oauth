@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -30,54 +30,101 @@ import java.util.Map;
 public class ParRequestCacheEntry extends CacheEntry {
 
     private String requestUri;
-    private Map<String, String> parameterMap;
+    private Map<String, String> params;
     private long scheduledExpiryTime;
     private String clientId;
 
 
-    public ParRequestCacheEntry(String requestUri, Map<String, String> parameterMap, long scheduledExpiryTime) {
+    /**
+     * Contractor for Cache entry of a PAR request.
+     *
+     * @param requestUri parameter map
+     * @param params scheduled expiry time
+     * @param scheduledExpiryTime client id
+     */
+    public ParRequestCacheEntry(String requestUri, Map<String, String> params, long scheduledExpiryTime) {
 
         this.requestUri = requestUri;
-        this.parameterMap = parameterMap;
+        this.params = params;
         this.scheduledExpiryTime = scheduledExpiryTime;
-        this.clientId = parameterMap.get(OAuthConstants.OAuth20Params.CLIENT_ID);
+        this.clientId = params.get(OAuthConstants.OAuth20Params.CLIENT_ID);
     }
 
+    /**
+     * Get uuid of PAR request's request_uri.
+     *
+     * @return params
+     */
     public String getRequestUri() {
 
         return requestUri;
     }
 
-    public Map<String, String> getParameterMap() {
+    /**
+     * Get parameter map.
+     *
+     * @return params
+     */
+    public Map<String, String> getParams() {
 
-        return parameterMap;
+        return params;
     }
 
+    /**
+     * Get scheduled expiry time.
+     *
+     * @return scheduledExpiryTime
+     */
     public long getScheduledExpiryTime() {
 
         return scheduledExpiryTime;
     }
 
+    /**
+     * Get client id.
+     *
+     * @return clientId
+     */
     public String getClientId() {
 
         return clientId;
     }
 
+    /**
+     * Set uuid of PAR request cache entry.
+     *
+     * @param requestUri request_uri uuid
+     */
     public void setRequestUri(String requestUri) {
 
         this.requestUri = requestUri;
     }
 
-    public void setParameterMap(HashMap<String, String> parameterMap) {
+    /**
+     * Set parameter map.
+     *
+     * @param params parameter map
+     */
+    public void setParams(HashMap<String, String> params) {
 
-        this.parameterMap = parameterMap;
+        this.params = params;
     }
 
+    /**
+     * Set scheduled expiry.
+     *
+     * @param scheduledExpiryTime scheduled expiry
+     */
     public void setScheduledExpiryTime(long scheduledExpiryTime) {
 
         this.scheduledExpiryTime = scheduledExpiryTime;
     }
 
+    /**
+     * Set client id.
+     *
+     * @param clientId client id
+     */
     public void setClientId(String clientId) {
 
         this.clientId = clientId;

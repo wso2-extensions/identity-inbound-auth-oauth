@@ -21,33 +21,32 @@ package org.wso2.carbon.identity.oauth.endpoint.factory;
 import org.springframework.beans.factory.config.AbstractFactoryBean;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
-import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
 
 /**
  * PAR Service Factory.
  */
-public class ParServiceFactory extends AbstractFactoryBean<ParAuthServiceImpl> {
-    private ParAuthServiceImpl parAuthService;
+public class ParServiceFactory extends AbstractFactoryBean<ParAuthService> {
+    private ParAuthService parAuthService;
 
     @Override
-    public Class<ParAuthServiceImpl> getObjectType() {
+    public Class<ParAuthService> getObjectType() {
 
-        return ParAuthServiceImpl.class;
+        return ParAuthService.class;
     }
 
     @Override
-    protected ParAuthServiceImpl createInstance() throws Exception {
+    protected ParAuthService createInstance() throws Exception {
 
         if (parAuthService != null) {
             return parAuthService;
-        } else {
-            ParAuthServiceImpl parAuthService = (ParAuthServiceImpl)
-                    PrivilegedCarbonContext.getThreadLocalCarbonContext().
-                            getOSGiService(ParAuthService.class, null);
-            if (parAuthService != null) {
-                this.parAuthService = parAuthService;
-            }
-            return parAuthService;
         }
+
+        ParAuthService parAuthService = (ParAuthService)
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                        getOSGiService(ParAuthService.class, null);
+        if (parAuthService != null) {
+            this.parAuthService = parAuthService;
+        }
+        return parAuthService;
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -26,16 +26,21 @@ import org.wso2.carbon.identity.oauth.par.cache.CacheBackedParDAO;
 public class ParDAOFactory {
 
     // Implementation of DAO.
-    private final ParMgtDAO parMgtDAOImpl;
+    private final ParMgtDAO parMgtDAO;
 
     private ParDAOFactory() {
 
         // This factory creates instance of PAR DAOImplementation.
-        parMgtDAOImpl = new CacheBackedParDAO();
+        parMgtDAO = new CacheBackedParDAO();
     }
 
     private static final ParDAOFactory parDAOFactoryInstance = new ParDAOFactory();
 
+    /**
+     * Returns parDAOFactory instance.
+     *
+     * @return  instance of parDAOFactory
+     */
     public static ParDAOFactory getInstance() {
 
         return parDAOFactoryInstance;
@@ -46,6 +51,6 @@ public class ParDAOFactory {
      */
     public ParMgtDAO getParAuthMgtDAO() {
 
-        return parMgtDAOImpl;
+        return parMgtDAO;
     }
 }

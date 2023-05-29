@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -35,15 +35,8 @@ public class SQLQueries {
         public static final String STORE_PAR_REQUEST = "INSERT INTO IDN_OAUTH_PAR " +
                 "(REQ_URI_UUID, CLIENT_ID, SCHEDULED_EXPIRY, JSON_PARAMS) VALUES (?, ?, ?, ?);";
 
-        public static final String RETRIEVE_PAR_CLIENT_ID =
-                "SELECT CLIENT_ID FROM IDN_OAUTH_PAR " +
-                        " WHERE REQ_URI_UUID = ?";
-
-        public static final String RETRIEVE_PAR_JSON_PARAMS =
-                "SELECT JSON_PARAMS FROM IDN_OAUTH_PAR WHERE REQ_URI_UUID = ?";
-
-        public static final String RETRIEVE_SCHEDULED_EXPIRY =
-                "SELECT SCHEDULED_EXPIRY FROM IDN_OAUTH_PAR WHERE REQ_URI_UUID = ?";
+        public static final String RETRIEVE_PAR_REQUEST = "SELECT CLIENT_ID, SCHEDULED_EXPIRY, JSON_PARAMS " +
+                "FROM IDN_OAUTH_PAR WHERE REQ_URI_UUID = ?";
 
         public static final String REMOVE_IDN_OAUTH_PAR_REQUEST = "DELETE FROM IDN_OAUTH_PAR WHERE REQ_URI_UUID = ?";
     }
