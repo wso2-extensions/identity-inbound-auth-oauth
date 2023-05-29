@@ -252,7 +252,7 @@ public class OAuthAdminServiceImpl {
         OAuthAppDO app = new OAuthAppDO();
         AuthenticatedUser defaultAppOwner = null;
         try {
-            if (tenantAwareLoggedInUsername != null) {
+            if (StringUtils.isNotEmpty(tenantAwareLoggedInUsername)) {
                 defaultAppOwner = buildAuthenticatedUser(tenantAwareLoggedInUsername, tenantDomain);
             } else {
                 Optional<User> tenantAwareLoggedInUser = OAuthUtil.getUser(tenantDomain, null);
@@ -337,14 +337,12 @@ public class OAuthAdminServiceImpl {
                     AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Oauth Application registration success : " + application.getApplicationName() +
-                                " in " +
-                                "tenant domain: " + tenantDomain);
+                                " in tenant domain: " + tenantDomain);
                     }
                 } else {
                     String message = "No application details in the request. Failed to register OAuth App.";
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug(message);
-                    }
+                    LOG.debug(message);
+
                     throw handleClientError(INVALID_REQUEST, message);
                 }
             } else {
@@ -353,7 +351,7 @@ public class OAuthAdminServiceImpl {
                         LOG.debug("No authenticated user found. Failed to register OAuth App: " +
                                 application.getApplicationName());
                     } else {
-                        LOG.debug("No authenticated user found. Failed to register OAuth App");
+                        LOG.debug("No authenticated user found. Failed to register OAuth App.");
                     }
                 }
                 String message = "No authenticated user found. Failed to register OAuth App.";

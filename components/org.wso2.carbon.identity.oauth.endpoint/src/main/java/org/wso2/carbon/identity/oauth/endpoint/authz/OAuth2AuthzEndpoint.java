@@ -1361,9 +1361,9 @@ public class OAuth2AuthzEndpoint {
         HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
         OAuth2AuthorizeReqDTO authzReqDTO =
                 buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
-        // We have persisted the oAuthAuthzReqMessageContext before the consent after scope validation. Here we
-        // retrieve it from the cache and use it again because it contains  information that was set during the scope
-        // validation process.
+        /* We have persisted the oAuthAuthzReqMessageContext before the consent after scope validation. Here we
+        retrieve it from the cache and use it again because it contains  information that was set during the scope
+        validation process. */
         OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext =
                 oAuthMessage.getSessionDataCacheEntry().getAuthzReqMsgCtx();
         oAuthAuthzReqMessageContext.setAuthorizationReqDTO(authzReqDTO);
@@ -1492,7 +1492,7 @@ public class OAuth2AuthzEndpoint {
         return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), oauthProblemException, oauth2Params);
     }
 
-    private String handleFailureBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
+    private String handleAuthorizationFailureBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
                                               OAuth2AuthorizeRespDTO authzRespDTO) {
 
         String errorMsg = authzRespDTO.getErrorMsg() != null ? authzRespDTO.getErrorMsg()
@@ -2620,8 +2620,8 @@ public class OAuth2AuthzEndpoint {
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
 
-        //Here we validate all scopes before user consent to prevent invalidate scopes prompt for consent in the
-        // consent page.
+        /* Here we validate all scopes before user consent to prevent invalidate scopes prompt for consent in the
+        consent page. */
         HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
         OAuth2AuthorizeReqDTO authzReqDTO =
                 buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
@@ -2637,7 +2637,7 @@ public class OAuth2AuthzEndpoint {
             authorizeRespDTO.setErrorCode(e.getErrorCode());
             authorizeRespDTO.setErrorMsg(e.getMessage());
             authorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
-            return handleFailureBeforeConsent(oAuthMessage, oauth2Params, authorizeRespDTO);
+            return handleAuthorizationFailureBeforeConsent(oAuthMessage, oauth2Params, authorizeRespDTO);
         }
 
         boolean hasUserApproved = isUserAlreadyApproved(oauth2Params, authenticatedUser);
@@ -2691,7 +2691,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     /**
-     * Validate scopes before consent page
+     * Validate scopes before consent page.
      *
      * @param  oAuthMessage oAuthMessage
      * @param oauth2Params oauth2Params
@@ -2715,7 +2715,6 @@ public class OAuth2AuthzEndpoint {
             log.error("Error occurred while validating requested scopes.", e);
             throw new OAuthSystemException("Error occurred while validating requested scopes", e);
         }
-
     }
 
     private OAuth2Parameters getOauth2Params(OAuthMessage oAuthMessage) {

@@ -847,6 +847,9 @@ public class EndpointUtil {
                     // Filter the query parameters from the consent page url.
                     consentPageUrl = filterQueryParamsFromConsentPageUrl(entry.getEndpointParams(), consentPageUrl,
                             sessionDataKeyConsent);
+                    if (isExternalConsentPageEnabledForSP(sp)) {
+                        entry.setRemoveOnConsume(true);
+                    }
                     entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
                     sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
                 } else {
@@ -1137,10 +1140,9 @@ public class EndpointUtil {
         if (CollectionUtils.isNotEmpty(allowedScopes)) {
             try {
                 startTenantFlow(params.getTenantDomain());
-                /* If DropUnregisteredScopes scopes config is enabled
-                 then any unregistered scopes(excluding internal scopes
-                 and allowed scopes) will be dropped. Therefore, they will
-                 not be shown in the user consent screen.*/
+                /* If DropUnregisteredScopes scopes config is enabled then any unregistered scopes(excluding internal
+                 scopes and allowed scopes) will be dropped. Therefore, they will not be shown in the user consent
+                 screen.*/
                 if (oauthServerConfiguration.isDropUnregisteredScopes()) {
                     if (log.isDebugEnabled()) {
                         log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
