@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.validators.scope;
 
-
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -58,7 +57,6 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getAppInformationB
  * This abstract class represents the basic requirements of a scope issuer.
  */
 public abstract class AbstractRoleBasedScopeIssuer {
-
 
     private static final String DEFAULT_SCOPE_NAME = "default";
     private static final Log log = LogFactory.getLog(AbstractRoleBasedScopeIssuer.class);
@@ -109,6 +107,7 @@ public abstract class AbstractRoleBasedScopeIssuer {
      * @return - 'true' if the scope is whitelisted. 'false' if not.
      */
     public boolean isWhiteListedScope(List<String> scopeSkipList, String scope) {
+
         for (String scopeTobeSkipped : scopeSkipList) {
             if (scope.matches(scopeTobeSkipped)) {
                 return true;
@@ -157,7 +156,7 @@ public abstract class AbstractRoleBasedScopeIssuer {
             }
         }
 
-        //Need to get app scopes via IS tables or service
+        // Need to get app scopes via IS tables or service.
         if (scopes != null) {
             appScopes = getAppScopes(scopes);
         }
@@ -165,6 +164,7 @@ public abstract class AbstractRoleBasedScopeIssuer {
     }
 
     private Map<String, String> getAppScopes(Set<Scope> scopes) {
+
         Map<String, String> appScopes = new HashMap<>();
         for (Scope scope : scopes) {
             ScopeBinding scopeBinding = getScopeBinding(scope.getScopeBindings());
@@ -180,6 +180,7 @@ public abstract class AbstractRoleBasedScopeIssuer {
     }
 
     private ScopeBinding getScopeBinding(List<ScopeBinding> scopeBindings) {
+
         for (ScopeBinding scopeBinding : scopeBindings) {
             if (OAuth2Constants.RoleBasedScope.OAUTH2_DEFAULT_SCOPE.equalsIgnoreCase(scopeBinding.getBindingType())) {
                 return scopeBinding;
@@ -213,6 +214,7 @@ public abstract class AbstractRoleBasedScopeIssuer {
      * @return int
      */
     protected int getTenantIdOfUser(String username) {
+
         return IdentityTenantUtil.getTenantIdOfUser(username);
     }
 
@@ -229,6 +231,7 @@ public abstract class AbstractRoleBasedScopeIssuer {
      * @return Role list from the assertion
      */
     public String[] getRolesFromAssertion(Assertion assertion) {
+
         List<String> roles = new ArrayList<>();
         String roleClaim = getRoleClaim();
         List<AttributeStatement> attributeStatementList = assertion.getAttributeStatements();
@@ -272,6 +275,7 @@ public abstract class AbstractRoleBasedScopeIssuer {
 
 
     private String getAttributeValue(XMLObject attributeValue) {
+
         if (attributeValue == null) {
             return null;
         } else if (attributeValue instanceof XSString) {
@@ -284,10 +288,12 @@ public abstract class AbstractRoleBasedScopeIssuer {
     }
 
     private String getStringAttributeValue(XSString attributeValue) {
+
         return attributeValue.getValue();
     }
 
     private String getAnyAttributeValue(XSAnyImpl attributeValue) {
+
         return attributeValue.getTextContent();
     }
 
@@ -297,6 +303,7 @@ public abstract class AbstractRoleBasedScopeIssuer {
      * @return Attribute value separator.
      */
     private String getAttributeSeparator() {
+
         AuthenticatorsConfiguration authenticatorsConfiguration = AuthenticatorsConfiguration.getInstance();
         AuthenticatorsConfiguration.AuthenticatorConfig authenticatorConfig = authenticatorsConfiguration
                 .getAuthenticatorConfig(OAuth2Constants.RoleBasedScope.SAML2_SSO_AUTHENTICATOR_NAME);
@@ -317,6 +324,7 @@ public abstract class AbstractRoleBasedScopeIssuer {
      * @return role claim name.
      */
     private String getRoleClaim() {
+
         AuthenticatorsConfiguration authenticatorsConfiguration = AuthenticatorsConfiguration.getInstance();
         AuthenticatorsConfiguration.AuthenticatorConfig authenticatorConfig = authenticatorsConfiguration
                 .getAuthenticatorConfig(OAuth2Constants.RoleBasedScope.SAML2_SSO_AUTHENTICATOR_NAME);
@@ -333,7 +341,7 @@ public abstract class AbstractRoleBasedScopeIssuer {
     /**
      * Load tenant axis configurations.
      *
-     * @param tenantDomain Tenant  domain
+     * @param tenantDomain Tenant domain
      */
     public static void loadTenantConfigBlockingMode(String tenantDomain) {
 

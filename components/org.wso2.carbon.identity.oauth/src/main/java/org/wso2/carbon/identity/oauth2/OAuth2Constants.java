@@ -39,6 +39,7 @@ public class OAuth2Constants {
      * Constants for global role based scope issuer.
      */
     public static class RoleBasedScope {
+
         public static final String GROUPS = "groups";
 
         public static final String OAUTH2_DEFAULT_SCOPE = "default";

@@ -455,10 +455,12 @@ public class OAuth2ServiceComponentHolder {
     }
 
     public static boolean isRestrictUnassignedScopes() {
+
         return restrictUnassignedScopes;
     }
 
     public static void setRestrictUnassignedScopes(boolean restrictUnassignedScopes) {
+
         OAuth2ServiceComponentHolder.restrictUnassignedScopes = restrictUnassignedScopes;
     }
 

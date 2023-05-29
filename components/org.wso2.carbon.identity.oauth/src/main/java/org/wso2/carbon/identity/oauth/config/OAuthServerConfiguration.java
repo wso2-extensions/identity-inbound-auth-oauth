@@ -3283,10 +3283,12 @@ public class OAuthServerConfiguration {
     }
 
     public boolean isGlobalRbacScopeIssuerEnabled() {
+
         return globalRbacScopeIssuerEnabled;
     }
 
     public void setGlobalRbacScopeIssuerEnabled(boolean globalRbacScopeIssuerEnabled) {
+
         this.globalRbacScopeIssuerEnabled = globalRbacScopeIssuerEnabled;
     }
 
