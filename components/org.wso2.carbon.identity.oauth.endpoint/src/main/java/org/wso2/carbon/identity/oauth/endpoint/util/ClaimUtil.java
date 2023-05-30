@@ -392,8 +392,9 @@ public class ClaimUtil {
      * @return Whether it is multivalued attribute or not.
      */
     public static boolean isMultiValuedAttribute(String claimUri, String claimValue) {
-        // To format the groups claim to always return as an array, we should consider single
-        // group as multi value attribute.
+
+        /* To format the groups claim to always return as an array, we should consider single
+        group as multi value attribute. */
         if (GROUPS.equals(claimUri)) {
             return true;
         }

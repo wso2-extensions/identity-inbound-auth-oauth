@@ -45,6 +45,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
@@ -117,6 +119,10 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     private static final String CLAIM_CLIENT_ID = "client_id";
     private static final String DEFAULT_TYP_HEADER_VALUE = "at+jwt";
     private static final String THUMBPRINT = "Certificate";
+    public static final String AUTHZ_FLOW_CUSTOM_CLAIM = "authz_flow_custom_claim";
+    public static final String AUTHZ_FLOW_CUSTOM_CLAIM_VALUE = "authz_flow_custom_claim_value";
+    public static final String TOKEN_FLOW_CUSTOM_CLAIM = "token_flow_custom_claim";
+    public static final String TOKEN_FLOW_CUSTOM_CLAIM_VALUE = "token_flow_custom_claim_value";
 
     @Mock
     private OAuthServerConfiguration oAuthServerConfiguration;
@@ -163,6 +169,11 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         authenticatedUser.setUserStoreDomain("DUMMY_DOMAIN");
         reqMessageContext.setAuthorizedUser(authenticatedUser);
 
+        OAuth2ServiceComponentHolder.getInstance().addJWTAccessTokenClaimProvider(
+                new DummyTestJWTAccessTokenClaimProvider());
+        OAuth2ServiceComponentHolder.getInstance().addJWTAccessTokenClaimProvider(
+                new DummyErrornousJWTAccessTokenClaimProvider());
+
         prepareForBuildJWTToken();
         JWTTokenIssuer jwtTokenIssuer = getJWTTokenIssuer(NONE);
         String jwtToken = jwtTokenIssuer.buildJWTToken(reqMessageContext);
@@ -171,6 +182,10 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         assertNotNull(plainJWT);
         assertNotNull(plainJWT.getJWTClaimsSet());
         assertEquals(plainJWT.getJWTClaimsSet().getAudience(), expectedJWTAudiences);
+        assertNotNull(plainJWT.getJWTClaimsSet().getClaim(TOKEN_FLOW_CUSTOM_CLAIM),
+                "Custom claim injected by the claim provider not found.");
+        assertEquals(plainJWT.getJWTClaimsSet().getClaim(TOKEN_FLOW_CUSTOM_CLAIM), TOKEN_FLOW_CUSTOM_CLAIM_VALUE,
+                "Custom claim value injected by claim provider value mismatch.");
     }
 
     /**
@@ -191,6 +206,11 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         authorizeReqDTO.setUser(authenticatedUser);
         authorizeReqDTO.setConsumerKey(DUMMY_CONSUMER_KEY);
 
+        OAuth2ServiceComponentHolder.getInstance().addJWTAccessTokenClaimProvider(
+                new DummyTestJWTAccessTokenClaimProvider());
+        OAuth2ServiceComponentHolder.getInstance().addJWTAccessTokenClaimProvider(
+                new DummyErrornousJWTAccessTokenClaimProvider());
+
         prepareForBuildJWTToken();
         JWTTokenIssuer jwtTokenIssuer = getJWTTokenIssuer(NONE);
         String jwtToken = jwtTokenIssuer.buildJWTToken(authzReqMessageContext);
@@ -198,6 +218,10 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         assertNotNull(plainJWT);
         assertNotNull(plainJWT.getJWTClaimsSet());
         assertEquals(plainJWT.getJWTClaimsSet().getAudience(), expectedJWTAudiences);
+        assertNotNull(plainJWT.getJWTClaimsSet().getClaim(AUTHZ_FLOW_CUSTOM_CLAIM),
+                "Custom claim injected by the claim provider not found.");
+        assertEquals(plainJWT.getJWTClaimsSet().getClaim(AUTHZ_FLOW_CUSTOM_CLAIM), AUTHZ_FLOW_CUSTOM_CLAIM_VALUE,
+                "Custom claim value injected by claim provider value mismatch.");
     }
 
     private JWTTokenIssuer getJWTTokenIssuer(String signatureAlgorithm) throws IdentityOAuth2Exception {
@@ -625,5 +649,39 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
         when(OAuth2Util.getTenantDomain(anyInt())).thenReturn("super.wso2");
+    }
+
+    static class DummyTestJWTAccessTokenClaimProvider implements JWTAccessTokenClaimProvider {
+
+        @Override
+        public Map<String, Object> getAdditionalClaims(OAuthAuthzReqMessageContext context)
+                throws IdentityOAuth2Exception {
+
+            return Map.of(AUTHZ_FLOW_CUSTOM_CLAIM, AUTHZ_FLOW_CUSTOM_CLAIM_VALUE);
+        }
+
+        @Override
+        public Map<String, Object> getAdditionalClaims(OAuthTokenReqMessageContext context)
+                throws IdentityOAuth2Exception {
+
+            return Map.of(TOKEN_FLOW_CUSTOM_CLAIM, TOKEN_FLOW_CUSTOM_CLAIM_VALUE);
+        }
+    }
+
+    static class DummyErrornousJWTAccessTokenClaimProvider implements JWTAccessTokenClaimProvider {
+
+        @Override
+        public Map<String, Object> getAdditionalClaims(OAuthAuthzReqMessageContext context)
+                throws IdentityOAuth2Exception {
+
+            return null;
+        }
+
+        @Override
+        public Map<String, Object> getAdditionalClaims(OAuthTokenReqMessageContext context)
+                throws IdentityOAuth2Exception {
+
+            return null;
+        }
     }
 }

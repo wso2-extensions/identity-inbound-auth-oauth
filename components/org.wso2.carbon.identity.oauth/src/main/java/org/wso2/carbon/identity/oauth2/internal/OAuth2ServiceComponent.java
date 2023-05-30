@@ -68,6 +68,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.handlers.TokenBindingExpir
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
@@ -848,5 +849,28 @@ public class OAuth2ServiceComponent {
 
         OAuth2ServiceComponentHolder.setConsentServerConfigsManagementService(null);
         log.debug("Unsetting the Consent Server Configs Management.");
+    }
+
+    @Reference(
+            name = "JWTAccessTokenClaimProvider",
+            service = JWTAccessTokenClaimProvider.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetJWTAccessTokenClaimProvider"
+    )
+    protected void setJWTAccessTokenClaimProvider(JWTAccessTokenClaimProvider claimProvider) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Adding JWT Access Token ClaimProvider: " + claimProvider.getClass().getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().addJWTAccessTokenClaimProvider(claimProvider);
+    }
+
+    protected void unsetJWTAccessTokenClaimProvider(JWTAccessTokenClaimProvider claimProvider) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing JWT Access Token ClaimProvider: " + claimProvider.getClass().getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().removeJWTAccessTokenClaimProvider(claimProvider);
     }
 }
