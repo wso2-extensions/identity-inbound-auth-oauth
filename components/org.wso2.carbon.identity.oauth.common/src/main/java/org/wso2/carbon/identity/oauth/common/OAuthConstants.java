@@ -102,6 +102,8 @@ public final class OAuthConstants {
     public static final String CLIENT_AUTH_CREDENTIAL_VALIDATION = "StrictClientCredentialValidation";
     public static final String ACCESS_TOKEN = "accessToken";
     public static final String ACCESS_TOKEN_RESPONSE_PARAM = "access_token";
+    public static final String EXPIRES_IN = "expires_in";
+    public static final String TOKEN_TYPE = "token_type";
     public static final String ID_TOKEN = "id_token";
     public static final String CODE = "code";
     public static final String USERINFO = "userinfo";

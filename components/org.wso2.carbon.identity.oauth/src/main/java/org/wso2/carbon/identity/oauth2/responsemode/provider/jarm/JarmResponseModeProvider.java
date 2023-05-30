@@ -49,6 +49,8 @@ public abstract class JarmResponseModeProvider extends AbstractResponseModeProvi
     private static final String ERROR_DESCRIPTION = "error_description";
     private static final String ACCESS_CODE = "code";
     private static final String ACCESS_TOKEN = "access_token";
+    private static final String TOKEN_TYPE = "token_type";
+    private static final String EXPIRES_IN = "expires_in";
     private static final String ID_TOKEN = "id_token";
     private static final String STATE = "state";
     private static final String SCOPE = "scope";
@@ -62,9 +64,12 @@ public abstract class JarmResponseModeProvider extends AbstractResponseModeProvi
         String code = authorizationResponseDTO.getSuccessResponseDTO().getAuthorizationCode();
         String idToken = authorizationResponseDTO.getSuccessResponseDTO().getIdToken();
         String accessToken = authorizationResponseDTO.getSuccessResponseDTO().getAccessToken();
+        String tokenType = authorizationResponseDTO.getSuccessResponseDTO().getTokenType();
+        long validityPeriod = authorizationResponseDTO.getSuccessResponseDTO().getValidityPeriod();
         String authenticatedIdPs = authorizationResponseDTO.getAuthenticatedIDPs();
         String sessionState = authorizationResponseDTO.getSessionState();
         String state = authorizationResponseDTO.getState();
+        String scope = authorizationResponseDTO.getSuccessResponseDTO().getScope();
 
         JWTClaimsSet.Builder jwtClaimsSet = new JWTClaimsSet.Builder();
         jwtClaimsSet.claim(ISSUER, getIssuer(authorizationResponseDTO));
@@ -83,6 +88,11 @@ public abstract class JarmResponseModeProvider extends AbstractResponseModeProvi
 
         if (accessToken != null) {
             jwtClaimsSet.claim(ACCESS_TOKEN, accessToken);
+            jwtClaimsSet.claim(EXPIRES_IN, validityPeriod);
+        }
+
+        if (tokenType != null) {
+            jwtClaimsSet.claim(TOKEN_TYPE, tokenType);
         }
 
         if (idToken != null) {
@@ -101,8 +111,8 @@ public abstract class JarmResponseModeProvider extends AbstractResponseModeProvi
             jwtClaimsSet.claim(AUTHENTICATED_IDPS, authenticatedIdPs);
         }
 
-        if (authorizationResponseDTO.getScope() != null) {
-            jwtClaimsSet.claim(STATE, authorizationResponseDTO.getScope());
+        if (scope != null) {
+            jwtClaimsSet.claim(SCOPE, scope);
         }
 
         return jwtClaimsSet.build();

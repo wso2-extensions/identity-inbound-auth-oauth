@@ -18,10 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.responsemode.provider;
 
-import org.apache.commons.lang.StringUtils;
-
-import java.util.Set;
-
 import javax.servlet.http.HttpServletResponse;
 
 
@@ -35,23 +31,10 @@ public class AuthorizationResponseDTO {
     private String clientId;
     private String sessionState;
     private String state;
-    private long validityPeriod;
     private String authenticatedIDPs;
     private String redirectUrl;
     private String responseMode;
     private String responseType;
-    private String scope;
-
-    public void setScopes(Set<String> scopes) {
-        if (scopes != null && !scopes.isEmpty()) {
-            String scopeString =  StringUtils.join(scopes, "+");
-            this.scope = scopeString.trim();
-        }
-    }
-
-    public String getScope() {
-        return scope;
-    }
 
     private int responseCode = HttpServletResponse.SC_FOUND;
 
@@ -141,16 +124,6 @@ public class AuthorizationResponseDTO {
     public void setSessionState(String sessionState) {
 
         this.sessionState = sessionState;
-    }
-
-    public long getValidityPeriod() {
-
-        return validityPeriod;
-    }
-
-    public void setValidityPeriod(long validityPeriod) {
-
-        this.validityPeriod = validityPeriod;
     }
 
     public boolean isError() {

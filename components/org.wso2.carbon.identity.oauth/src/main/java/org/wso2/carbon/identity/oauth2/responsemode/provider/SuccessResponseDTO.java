@@ -17,6 +17,10 @@
  */
 package org.wso2.carbon.identity.oauth2.responsemode.provider;
 
+import org.apache.commons.lang.StringUtils;
+
+import java.util.Set;
+
 /**
  * An instance of this class can contain the authorization params of any success authorization flow.
  * If there is any error, SuccessResponseDTO inside the relevant AuthorizationResponseDTO is null
@@ -26,8 +30,9 @@ public class SuccessResponseDTO {
     private String idToken;
     private String accessToken;
     private String tokenType;
+    private long validityPeriod;
     private String formPostBody;
-    private String[] scope;
+    private Set<String> scope;
 
     public String getAuthorizationCode() {
 
@@ -49,12 +54,21 @@ public class SuccessResponseDTO {
         this.accessToken = accessToken;
     }
 
-    public String[] getScope() {
+    public long getValidityPeriod() {
 
-        return scope;
+        return validityPeriod;
     }
 
-    public void setScope(String[] scope) {
+    public void setValidityPeriod(long validityPeriod) {
+
+        this.validityPeriod = validityPeriod;
+    }
+
+    public String getScope() {
+        return StringUtils.join(scope, "+").trim();
+    }
+
+    public void setScope(Set<String> scope) {
 
         this.scope = scope;
     }

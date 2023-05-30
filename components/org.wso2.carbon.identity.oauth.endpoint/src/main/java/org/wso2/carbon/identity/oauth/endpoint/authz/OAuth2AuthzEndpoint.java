@@ -504,7 +504,7 @@ public class OAuth2AuthzEndpoint {
         authorizationResponseDTO.setState(oauth2Params.getState());
         authorizationResponseDTO.setResponseMode(oauth2Params.getResponseMode());
         authorizationResponseDTO.setResponseType(oauth2Params.getResponseType());
-        authorizationResponseDTO.setScopes(oauth2Params.getScopes());
+        authorizationResponseDTO.getSuccessResponseDTO().setScope(oauth2Params.getScopes());
 
         return authorizationResponseDTO;
     }
@@ -1704,7 +1704,7 @@ public class OAuth2AuthzEndpoint {
         builder.setParam(OAuth.OAUTH_TOKEN_TYPE, BEARER);
         authorizationResponseDTO.getSuccessResponseDTO().setAccessToken(authzRespDTO.getAccessToken());
         authorizationResponseDTO.getSuccessResponseDTO().setTokenType(BEARER);
-        authorizationResponseDTO.setValidityPeriod(authzRespDTO.getValidityPeriod());
+        authorizationResponseDTO.getSuccessResponseDTO().setValidityPeriod(authzRespDTO.getValidityPeriod());
     }
 
     private void setScopes(OAuth2AuthorizeRespDTO authzRespDTO,

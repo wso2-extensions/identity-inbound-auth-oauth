@@ -51,18 +51,26 @@ public class FragmentResponseModeProvider extends AbstractResponseModeProvider {
             String code = authorizationResponseDTO.getSuccessResponseDTO().getAuthorizationCode();
             String idToken = authorizationResponseDTO.getSuccessResponseDTO().getIdToken();
             String accessToken = authorizationResponseDTO.getSuccessResponseDTO().getAccessToken();
+            String tokenType = authorizationResponseDTO.getSuccessResponseDTO().getTokenType();
+            long validityPeriod = authorizationResponseDTO.getSuccessResponseDTO().getValidityPeriod();
+            String scope = authorizationResponseDTO.getSuccessResponseDTO().getScope();
             String authenticatedIdPs = authorizationResponseDTO.getAuthenticatedIDPs();
             List<String> queryParams = new ArrayList<>();
+            if (accessToken != null) {
+                queryParams.add(OAuthConstants.ACCESS_TOKEN_RESPONSE_PARAM + "=" + accessToken);
+                queryParams.add(OAuthConstants.EXPIRES_IN + "=" + validityPeriod);
+            }
+
+            if (tokenType != null) {
+                queryParams.add(OAuthConstants.TOKEN_TYPE + "=" + tokenType);
+            }
+
             if (idToken != null) {
                 queryParams.add(OAuthConstants.ID_TOKEN + "=" + idToken);
             }
 
             if (code != null) {
                 queryParams.add(OAuthConstants.CODE + "=" + code);
-            }
-
-            if (accessToken != null) {
-                queryParams.add(OAuthConstants.ACCESS_TOKEN_RESPONSE_PARAM + "=" + accessToken);
             }
 
             if (authenticatedIdPs != null && !authenticatedIdPs.isEmpty()) {
@@ -77,8 +85,8 @@ public class FragmentResponseModeProvider extends AbstractResponseModeProvider {
                 queryParams.add(OAuthConstants.STATE + "=" + state);
             }
 
-            if (authorizationResponseDTO.getScope() != null) {
-                queryParams.add(OAuthConstants.SCOPE + "=" + authorizationResponseDTO.getScope());
+            if (scope != null) {
+                queryParams.add(OAuthConstants.SCOPE + "=" + scope);
             }
 
             redirectUrl = FrameworkUtils.appendQueryParamsStringToUrl(redirectUrl,
