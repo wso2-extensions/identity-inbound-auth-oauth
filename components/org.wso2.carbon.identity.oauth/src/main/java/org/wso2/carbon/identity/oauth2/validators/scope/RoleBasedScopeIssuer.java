@@ -75,6 +75,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.wso2.carbon.registry.core.jdbc.DumpConstants.RESOURCE;
 
@@ -410,8 +413,9 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
      */
     private boolean checkForProductRestAPIScopes(String scope) {
 
-        return scope.startsWith("apim:") || scope.startsWith("apim_analytics:") ||
-                scope.startsWith("service_catalog:");
+        return scope.startsWith(OAuth2Constants.RoleBasedScope.APIM_SCOPE_PREFIX) ||
+                scope.startsWith(OAuth2Constants.RoleBasedScope.APIM_ANALYTICS_SCOPE_PREFIX) ||
+                scope.startsWith(OAuth2Constants.RoleBasedScope.APIM_SERVICE_CATALOG_PREFIX);
     }
 
     /**
@@ -525,19 +529,28 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
      */
     private String[] getRolesFromUserAttribute(Map<ClaimMapping, String> userAttributes, String roleClaim) {
 
-        for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
-            if (null != entry.getKey().getLocalClaim()) {
-                if (roleClaim.equals(entry.getKey().getLocalClaim().getClaimUri()) && StringUtils
-                        .isNotBlank(entry.getValue())) {
-                    return entry.getValue().replace("\\/", "/").
-                            replace("[", "").replace("]", "").
-                            replace("\"", "").split(FrameworkUtils.getMultiAttributeSeparator());
-                }
-            }
-        }
-        return new String[0];
+        // Iterate through the user attributes and find the role claim.
+        return userAttributes.entrySet().stream()
+                .filter(entry -> entry.getKey().getLocalClaim() != null)
+                .filter(entry -> roleClaim.equals(entry.getKey().getLocalClaim().getClaimUri()))
+                .filter(entry -> StringUtils.isNotBlank(entry.getValue()))
+                .findFirst()
+                .map(entry -> getRolesFromRoleClaim(entry.getValue()))
+                .orElse(new String[0]);
     }
 
+    /**
+     * Extract the roles from the role claim. Eg: "role":["admin","manager"]
+     *
+     * @param roleClaim retrieved from the context
+     * @return roles
+     */
+    private String[] getRolesFromRoleClaim(String roleClaim) {
+
+        return roleClaim.replace("\\/", "/").
+                replace("[", "").replace("]", "").
+                replace("\"", "").split(FrameworkUtils.getMultiAttributeSeparator());
+    }
 
     /**
      * Add domain to name.
@@ -597,21 +610,15 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
         }
         try {
             roles = claimsSet != null ?
-                    claimsSet.getStringArrayClaim(identityProvider.getClaimConfig().getRoleClaimURI()) :
-                    null;
+                    claimsSet.getStringArrayClaim(identityProvider.getClaimConfig().getRoleClaimURI()) : null;
         } catch (ParseException e) {
             log.error("Couldn't retrieve roles:", e);
         }
         List<String> updatedRoles = new ArrayList<>();
         if (roles != null) {
-            for (String role : roles) {
-                String updatedRoleClaimValue = getUpdatedRoleClaimValue(identityProvider, role);
-                if (updatedRoleClaimValue != null) {
-                    updatedRoles.add(updatedRoleClaimValue);
-                } else {
-                    updatedRoles.add(role);
-                }
-            }
+            updatedRoles = Arrays.stream(roles)
+                    .map(role -> Optional.ofNullable(getUpdatedRoleClaimValue(identityProvider, role)).orElse(role))
+                    .collect(Collectors.toList());
         }
         AuthenticatedUser user = tokReqMsgCtx.getAuthorizedUser();
         Map<ClaimMapping, String> userAttributes = user.getUserAttributes();
@@ -638,6 +645,7 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
         RequestParameter[] params = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getRequestParameters();
         String assertion = null;
         SignedJWT signedJWT;
+        // Iterate through the request parameters to find the assertion.
         for (RequestParameter param : params) {
             if (param.getKey().equals(OAuth2Constants.RoleBasedScope.OAUTH_ASSERTION)) {
                 assertion = param.getValue()[0];
@@ -693,8 +701,8 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
         FederatedAuthenticatorConfig oauthAuthenticatorConfig = IdentityApplicationManagementUtil.
                 getFederatedAuthenticator(fedAuthnConfigs, "openidconnect");
         if (oauthAuthenticatorConfig != null) {
-            issuer = IdentityApplicationManagementUtil.getProperty(oauthAuthenticatorConfig.
-                    getProperties(), "IdPEntityId").getValue();
+            issuer = IdentityApplicationManagementUtil.getProperty(oauthAuthenticatorConfig.getProperties(),
+                    "IdPEntityId").getValue();
         }
         return jwtIssuer.equals(issuer) ? residentIdentityProvider : null;
     }
@@ -712,8 +720,7 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
                 identityProvider.getIdentityProviderName())) {
             return currentRoleClaimValue;
         }
-        currentRoleClaimValue = currentRoleClaimValue.replace("\\/", "/")
-                .replace("[", "").replace("]", "")
+        currentRoleClaimValue = currentRoleClaimValue.replace("\\/", "/").replace("[", "").replace("]", "")
                 .replace("\"", "");
         PermissionsAndRoleConfig permissionAndRoleConfig = identityProvider.getPermissionAndRoleConfig();
         if (permissionAndRoleConfig != null && org.apache.commons.lang3.ArrayUtils.isNotEmpty(
@@ -735,24 +742,33 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
                                                           PermissionsAndRoleConfig permissionAndRoleConfig) {
 
         String[] receivedRoles = currentRoleClaimValue.split(FrameworkUtils.getMultiAttributeSeparator());
-        List<String> updatedRoleClaimValues = new ArrayList<>();
-        String updatedLocalRole;
-        loop:
-        for (String receivedRole : receivedRoles) {
-            for (RoleMapping roleMapping : permissionAndRoleConfig.getRoleMappings()) {
-                if (roleMapping.getRemoteRole().equals(receivedRole)) {
-                    updatedLocalRole = StringUtils.isEmpty(roleMapping.getLocalRole().getUserStoreId())
-                            ? roleMapping.getLocalRole().getLocalRoleName()
-                            : roleMapping.getLocalRole().getUserStoreId() + UserCoreConstants.DOMAIN_SEPARATOR
-                            + roleMapping.getLocalRole().getLocalRoleName();
-                    updatedRoleClaimValues.add(updatedLocalRole);
-                    continue loop;
-                }
-            }
-            if (!OAuthServerConfiguration.getInstance().isReturnOnlyMappedLocalRoles()) {
-                updatedRoleClaimValues.add(receivedRole);
-            }
-        }
-        return updatedRoleClaimValues;
+        return Arrays.stream(receivedRoles)
+                .flatMap(receivedRole -> { // For each received role.
+                    // Check whether the received role is mapped to a local role.
+                    RoleMapping matchingRoleMapping = Arrays.stream(permissionAndRoleConfig.getRoleMappings())
+                            .filter(roleMapping -> StringUtils.equals(roleMapping.getRemoteRole(), receivedRole))
+                            .findFirst()
+                            .orElse(null);
+                    // If the role is mapped to a local role, return the local role.
+                    if (matchingRoleMapping != null) {
+                        String updatedLocalRole = StringUtils.isEmpty(matchingRoleMapping.getLocalRole()
+                                .getUserStoreId())
+                                ? matchingRoleMapping.getLocalRole().getLocalRoleName()
+                                : matchingRoleMapping.getLocalRole().getUserStoreId()
+                                + UserCoreConstants.DOMAIN_SEPARATOR
+                                + matchingRoleMapping.getLocalRole().getLocalRoleName();
+                        // Append the updated local role to the updated role claim values list.
+                        return Stream.of(updatedLocalRole);
+                    }
+                    // If the role is not mapped to a local role, check whether to return the role.
+                    if (!OAuthServerConfiguration.getInstance().isReturnOnlyMappedLocalRoles()) {
+                        // Append the updated local role to the updated role claim values list.
+                        return Stream.of(receivedRole);
+                    }
+                    // If the role is not mapped to a local role and not configured to return unmapped roles, return.
+                    return Stream.empty();
+                })
+                .collect(Collectors.toList()); // Collect the updated role claim values to a list.
     }
+
 }

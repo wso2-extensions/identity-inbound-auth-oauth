@@ -64,5 +64,11 @@ public class OAuth2Constants {
         public static final String ATTRIBUTE_VALUE_SEPERATER = ",";
 
         public static final String ATTRIBUTE_VALUE_SEPARATOR = "AttributeValueSeparator";
+
+        public static final String APIM_SCOPE_PREFIX = "apim:";
+
+        public static final String APIM_ANALYTICS_SCOPE_PREFIX = "apim_analytics:";
+
+        public static final String APIM_SERVICE_CATALOG_PREFIX = "service_catalog:";
     }
 }
