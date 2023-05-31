@@ -186,8 +186,11 @@ public final class OAuthUtil {
         try {
             userId = authorizedUser.getUserId();
         } catch (UserIdNotFoundException e) {
-            LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
-            return;
+            userId = resolveUserIdFromUsername(authorizedUser);
+            if (StringUtils.isEmpty(userId)) {
+                LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
+                return;
+            }
         }
         clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, authenticatedIDP);
     }
@@ -239,8 +242,11 @@ public final class OAuthUtil {
         try {
             userId = authorizedUser.getUserId();
         } catch (UserIdNotFoundException e) {
-            LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
-            return;
+            userId = resolveUserIdFromUsername(authorizedUser);
+            if (StringUtils.isEmpty(userId)) {
+                LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
+                return;
+            }
         }
         clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, scope, authenticatedIDP,
                 authorizedUser.getTenantDomain());
@@ -862,5 +868,31 @@ public final class OAuthUtil {
             username = IdentityUtil.addDomainToName(user.getUserName(), user.getUserStoreDomain());
         }
         return username;
+    }
+
+    /**
+     * Resolves user id from username in scenarios where user id is set as the username in organization specific flows.
+     *
+     * @param authorizedUser authorized user.
+     * @return userId  The user id.
+     */
+    private static String resolveUserIdFromUsername(AuthenticatedUser authorizedUser) {
+
+        String userId = null;
+        if (StringUtils.isNotBlank(authorizedUser.getTenantDomain()) &&
+                StringUtils.isNotBlank(authorizedUser.getUserName())) {
+            try {
+                Optional<org.wso2.carbon.user.core.common.User> resolvedUser = OAuthComponentServiceHolder
+                        .getInstance().getOrganizationUserResidentResolverService()
+                        .resolveUserFromResidentOrganization(
+                                null, authorizedUser.getUserName(), authorizedUser.getTenantDomain());
+                if (resolvedUser.isPresent()) {
+                    userId = resolvedUser.get().getUserID();
+                }
+            } catch (OrganizationManagementException e) {
+                LOG.debug("Error while getting user id from username: " + authorizedUser.getUserName(), e);
+            }
+        }
+        return userId;
     }
 }
