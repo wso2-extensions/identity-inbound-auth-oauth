@@ -838,7 +838,7 @@ public final class OAuthUtil {
     }
 
     /**
-     * Resolves user id from username in scenarios where user id is set as the username in organization specific flows
+     * Resolves user id from username in scenarios where user id is set as the username in organization specific flows.
      *
      * @param authorizedUser authorized user.
      * @return userId  The user id.
