@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -353,11 +353,6 @@ public class OAuth2Util {
     private static final String CLIENT_SECRET_BASIC = "client_secret_basic";
     private static final String CLIENT_SECRET_POST = "client_secret_post";
     private static final String PRIVATE_KEY_JWT = "private_key_jwt";
-
-    // Supported Response Modes.
-    private static final String QUERY_RESPONSE_MODE = "query";
-    private static final String FRAGMENT_RESPONSE_MODE = "fragment";
-    private static final String FORM_POST_RESPONSE_MODE = "form_post";
 
     public static final String ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE = "Invalid Access Token. Access token is " +
             "not ACTIVE.";
@@ -3605,12 +3600,7 @@ public class OAuth2Util {
      */
     public static List<String> getSupportedResponseModes() {
 
-        List<String> responseModes = new ArrayList<>();
-        responseModes.add(QUERY_RESPONSE_MODE);
-        responseModes.add(FRAGMENT_RESPONSE_MODE);
-        responseModes.add(FORM_POST_RESPONSE_MODE);
-
-        return responseModes;
+        return OAuthServerConfiguration.getInstance().getSupportedResponseModeNames();
     }
 
     /**
