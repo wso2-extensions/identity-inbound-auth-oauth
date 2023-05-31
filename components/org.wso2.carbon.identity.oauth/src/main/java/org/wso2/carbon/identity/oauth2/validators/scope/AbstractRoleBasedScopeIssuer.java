@@ -25,8 +25,6 @@ import org.opensaml.core.xml.XMLObject;
 import org.opensaml.core.xml.schema.XSString;
 import org.opensaml.core.xml.schema.impl.XSAnyImpl;
 import org.opensaml.saml.saml2.core.Assertion;
-import org.opensaml.saml.saml2.core.Attribute;
-import org.opensaml.saml.saml2.core.AttributeStatement;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.multitenancy.utils.TenantAxisUtils;
 import org.wso2.carbon.core.security.AuthenticatorsConfiguration;
@@ -44,12 +42,14 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getAppInformationByClientId;
 
@@ -196,7 +196,7 @@ public abstract class AbstractRoleBasedScopeIssuer {
      * @param clientId  Client ID of the application
      * @return if the scopes list is empty
      */
-    public Boolean isAppScopesEmpty(Map<String, String> appScopes, String clientId) {
+    public boolean isAppScopesEmpty(Map<String, String> appScopes, String clientId) {
 
         if (appScopes.isEmpty()) {
             if (log.isDebugEnabled()) {
@@ -232,47 +232,36 @@ public abstract class AbstractRoleBasedScopeIssuer {
      */
     public String[] getRolesFromAssertion(Assertion assertion) {
 
-        List<String> roles = new ArrayList<>();
         String roleClaim = getRoleClaim();
-        List<AttributeStatement> attributeStatementList = assertion.getAttributeStatements();
-
-        if (attributeStatementList != null) {
-            for (AttributeStatement statement : attributeStatementList) {
-                List<Attribute> attributesList = statement.getAttributes();
-                for (Attribute attribute : attributesList) {
-                    String attributeName = attribute.getName();
-                    if (roleClaim.equals(attributeName)) {
-                        List<XMLObject> attributeValues = attribute.getAttributeValues();
-                        if (attributeValues != null && attributeValues.size() == 1) {
-                            String attributeValueString = getAttributeValue(attributeValues.get(0));
-                            String multiAttributeSeparator = getAttributeSeparator();
-                            String[] attributeValuesArray = attributeValueString.split(multiAttributeSeparator);
-                            if (log.isDebugEnabled()) {
-                                log.debug("Adding attributes for Assertion: " + assertion + " AttributeName : "
-                                        + attributeName + ", AttributeValue : " + Arrays
-                                        .toString(attributeValuesArray));
-                            }
-                            roles.addAll(Arrays.asList(attributeValuesArray));
-                        } else if (attributeValues != null && attributeValues.size() > 1) {
-                            for (XMLObject attributeValue : attributeValues) {
-                                String attributeValueString = getAttributeValue(attributeValue);
-                                if (log.isDebugEnabled()) {
-                                    log.debug("Adding attributes for Assertion: " + assertion + " AttributeName : "
-                                            + attributeName + ", AttributeValue : " + attributeValue);
-                                }
-                                roles.add(attributeValueString);
-                            }
+        List<String> roles = assertion.getAttributeStatements().stream()
+                .flatMap(statement -> statement.getAttributes().stream())
+                .filter(attribute -> roleClaim.equals(attribute.getName()))
+                .flatMap(attribute -> {
+                    List<XMLObject> attributeValues = attribute.getAttributeValues();
+                    if (attributeValues != null && attributeValues.size() == 1) {
+                        String attributeValueString = getAttributeValue(attributeValues.get(0));
+                        String multiAttributeSeparator = getAttributeSeparator();
+                        String[] attributeValuesArray = attributeValueString.split(multiAttributeSeparator);
+                        if (log.isDebugEnabled()) {
+                            log.debug("Adding attributes for Assertion: " + assertion + " AttributeName : "
+                                    + attribute.getName() + ", AttributeValue : "
+                                    + Arrays.toString(attributeValuesArray));
                         }
+                        return Arrays.stream(attributeValuesArray);
+                    } else if (attributeValues != null && attributeValues.size() > 1) {
+                        return attributeValues.stream()
+                                .map(this::getAttributeValue)
+                                .filter(Objects::nonNull);
+                    } else {
+                        return Stream.empty();
                     }
-                }
-            }
-        }
+                })
+                .collect(Collectors.toList());
         if (log.isDebugEnabled()) {
             log.debug("Role list found for assertion: " + assertion + ", roles: " + roles);
         }
         return roles.toArray(new String[0]);
     }
-
 
     private String getAttributeValue(XMLObject attributeValue) {
 
@@ -282,9 +271,8 @@ public abstract class AbstractRoleBasedScopeIssuer {
             return getStringAttributeValue((XSString) attributeValue);
         } else if (attributeValue instanceof XSAnyImpl) {
             return getAnyAttributeValue((XSAnyImpl) attributeValue);
-        } else {
-            return attributeValue.toString();
         }
+        return attributeValue.toString();
     }
 
     private String getStringAttributeValue(XSString attributeValue) {
