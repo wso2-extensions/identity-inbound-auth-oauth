@@ -81,6 +81,7 @@ public class OAuthAuthzReqMessageContext implements Serializable {
      * @return user requested scope list
      */
     public String[] getRequestedScopes() {
+
         return requestedScopes;
     }
 
@@ -88,6 +89,7 @@ public class OAuthAuthzReqMessageContext implements Serializable {
      * @param requestedScopes user requested scopes list
      */
     public void setRequestedScopes(String[] requestedScopes) {
+
         this.requestedScopes = requestedScopes;
     }
 

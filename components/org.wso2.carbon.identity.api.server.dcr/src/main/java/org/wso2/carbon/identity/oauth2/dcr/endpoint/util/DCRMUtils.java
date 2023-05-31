@@ -69,6 +69,15 @@ public class DCRMUtils {
         appRegistrationRequest.setSpTemplateName(registrationRequestDTO.getSpTemplateName());
         appRegistrationRequest.setBackchannelLogoutUri(registrationRequestDTO.getBackchannelLogoutUri());
         appRegistrationRequest.setIsManagementApp(registrationRequestDTO.isManagementApp());
+        appRegistrationRequest.setExtApplicationDisplayName(registrationRequestDTO.getExtApplicationDisplayName());
+        appRegistrationRequest.setExtApplicationOwner(registrationRequestDTO.getExtApplicationOwner());
+        appRegistrationRequest.setExtApplicationTokenLifetime(registrationRequestDTO.getExtApplicationTokenLifetime());
+        appRegistrationRequest.setExtUserTokenLifetime(registrationRequestDTO.getExtUserTokenLifetime());
+        appRegistrationRequest.setExtRefreshTokenLifetime(registrationRequestDTO.getExtRefreshTokenLifetime());
+        appRegistrationRequest.setExtIdTokenLifetime(registrationRequestDTO.getExtIdTokenLifetime());
+        appRegistrationRequest.setExtPkceMandatory(registrationRequestDTO.getExtPkceMandatory());
+        appRegistrationRequest.setExtPkceSupportPlain(registrationRequestDTO.getExtPkceSupportPlain());
+        appRegistrationRequest.setExtPublicClient(registrationRequestDTO.getExtPublicClient());
         return appRegistrationRequest;
 
     }
@@ -81,6 +90,15 @@ public class DCRMUtils {
         applicationUpdateRequest.setGrantTypes(updateRequestDTO.getGrantTypes());
         applicationUpdateRequest.setTokenType(updateRequestDTO.getTokenType());
         applicationUpdateRequest.setBackchannelLogoutUri(updateRequestDTO.getBackchannelLogoutUri());
+        applicationUpdateRequest.setExtApplicationDisplayName(updateRequestDTO.getExtApplicationDisplayName());
+        applicationUpdateRequest.setExtApplicationOwner(updateRequestDTO.getExtApplicationOwner());
+        applicationUpdateRequest.setExtApplicationTokenLifetime(updateRequestDTO.getExtApplicationTokenLifetime());
+        applicationUpdateRequest.setExtUserTokenLifetime(updateRequestDTO.getExtUserTokenLifetime());
+        applicationUpdateRequest.setExtRefreshTokenLifetime(updateRequestDTO.getExtRefreshTokenLifetime());
+        applicationUpdateRequest.setExtIdTokenLifetime(updateRequestDTO.getExtIdTokenLifetime());
+        applicationUpdateRequest.setExtPkceMandatory(updateRequestDTO.getExtPkceMandatory());
+        applicationUpdateRequest.setExtPkceSupportPlain(updateRequestDTO.getExtPkceSupportPlain());
+        applicationUpdateRequest.setExtPublicClient(updateRequestDTO.getExtPublicClient());
         return applicationUpdateRequest;
 
     }

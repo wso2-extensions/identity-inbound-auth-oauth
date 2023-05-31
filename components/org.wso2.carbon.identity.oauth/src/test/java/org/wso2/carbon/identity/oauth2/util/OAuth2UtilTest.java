@@ -1776,15 +1776,24 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         assertEquals(OAuth2Util.getSupportedCodeChallengeMethods(), codeChallengeMethods);
     }
 
-    @Test
-    public void testGetSupportedResponseModes() {
+    @DataProvider(name = "supportedResponseModes")
+    public Object[][] supportedResponseModes() {
 
-        List<String> responseModes = new ArrayList<>();
-        responseModes.add("query");
-        responseModes.add("fragment");
-        responseModes.add("form_post");
+        List<String> supportedResponseModes = new ArrayList<>();
+        supportedResponseModes.add(OAuthConstants.ResponseModes.QUERY);
+        supportedResponseModes.add(OAuthConstants.ResponseModes.FRAGMENT);
+        supportedResponseModes.add(OAuthConstants.ResponseModes.FORM_POST);
 
-        assertEquals(OAuth2Util.getSupportedResponseModes(), responseModes);
+        return new Object[][] {
+                {supportedResponseModes}
+        };
+    }
+
+    @Test(dataProvider = "supportedResponseModes")
+    public void testGetSupportedResponseModes(List<String> supportedResponseModes) {
+
+        when(oauthServerConfigurationMock.getSupportedResponseModeNames()).thenReturn(supportedResponseModes);
+        assertEquals(OAuth2Util.getSupportedResponseModes(), supportedResponseModes);
     }
 
     @Test
