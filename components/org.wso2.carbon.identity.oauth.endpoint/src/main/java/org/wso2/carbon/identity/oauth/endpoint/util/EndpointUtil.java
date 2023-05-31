@@ -949,6 +949,7 @@ public class EndpointUtil {
     }
 
     private static boolean isAuthEndpointRedirectParamsFilterConfigAvailable() {
+
         return FileBasedConfigurationBuilder.getInstance().isAuthEndpointRedirectParamsConfigAvailable();
     }
 
