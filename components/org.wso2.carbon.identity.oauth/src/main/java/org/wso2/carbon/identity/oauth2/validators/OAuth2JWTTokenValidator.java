@@ -39,8 +39,11 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
@@ -96,7 +99,15 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
                 log.debug("Resolved tenant domain: " + tenantDomain + " to validate the JWT access token.");
             }
 
-            IdentityProvider identityProvider = getResidentIDPForIssuer(claimsSet.getIssuer(), tenantDomain);
+            String resourceResidentOrgId;
+            try {
+                resourceResidentOrgId = claimsSet.getStringClaim("org_id");
+            } catch (ParseException var2) {
+                resourceResidentOrgId = "";
+            }
+
+            IdentityProvider identityProvider = getResidentIDPForIssuer(claimsSet.getIssuer(),
+                    tenantDomain, resourceResidentOrgId);
 
             if (!validateSignature(signedJWT, identityProvider)) {
                 LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
@@ -115,6 +126,11 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
                     OAuthConstants.LogConstants.FAILED, "System error occurred.", "validate-jwt-access-token", null);
             throw new IdentityOAuth2Exception("Error while validating Token.", e);
+        } catch (OrganizationManagementException e) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "Error while retrieving the ancestor organization.",
+                    "validate-jwt-access-token", null);
+            throw new IdentityOAuth2Exception("Error while retrieving the ancestor organization.", e);
         }
         LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
                 OAuthConstants.LogConstants.SUCCESS, "Token validation is successful.", "validate-jwt-access-token",
@@ -160,8 +176,9 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         return claimsSet.getSubject();
     }
 
-    private IdentityProvider getResidentIDPForIssuer(String jwtIssuer, String tenantDomain)
-            throws IdentityOAuth2Exception {
+    private IdentityProvider getResidentIDPForIssuer(String jwtIssuer, String tenantDomain,
+                                                     String resourceResidentOrgId)
+            throws IdentityOAuth2Exception, OrganizationManagementException {
 
         String issuer = StringUtils.EMPTY;
         IdentityProvider residentIdentityProvider;
@@ -181,7 +198,19 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
                     OIDC_IDP_ENTITY_ID).getValue();
         }
 
-        if (!jwtIssuer.equals(issuer)) {
+        String resourceAccessOrgId = getOrganizationManager().resolveOrganizationId(tenantDomain);
+        if (StringUtils.isNotEmpty(resourceResidentOrgId) && !resourceResidentOrgId.equals(resourceAccessOrgId)) {
+            // Check the tenant relationship if the token is not issued for the same tenant.
+            String issuerURLChecker = jwtIssuer.replace("/t/" + tenantDomain + "/",
+                    "/o/" + resourceResidentOrgId + "/");
+            List<String> resourceResidentOrgAncestors = getOrganizationManager().getAncestorOrganizationIds(
+                    resourceResidentOrgId);
+            // TODO: This logic can be improved after adding a config var to detect if the root org is Asgardeo or not.
+            if (!resourceResidentOrgAncestors.contains(resourceAccessOrgId) || !issuerURLChecker.equals(issuer)) {
+                throw new IdentityOAuth2Exception("No Registered IDP found for the token with issuer name : " +
+                        jwtIssuer);
+            }
+        } else if (!jwtIssuer.equals(issuer)) {
             throw new IdentityOAuth2Exception("No Registered IDP found for the token with issuer name : " + jwtIssuer);
         }
         return residentIdentityProvider;
@@ -388,5 +417,10 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         validationReqDTO.addProperty(OAuth2Util.ISS, claimsSet.getIssuer());
         validationReqDTO.addProperty(OAuth2Util.AUD, String.join(",", claimsSet.getAudience()));
         validationReqDTO.addProperty(OAuth2Util.JTI, claimsSet.getJWTID());
+    }
+
+    private static OrganizationManager getOrganizationManager() {
+
+        return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager();
     }
 }

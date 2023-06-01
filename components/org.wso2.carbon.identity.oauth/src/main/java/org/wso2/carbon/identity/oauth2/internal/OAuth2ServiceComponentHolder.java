@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaim
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.organization.management.role.management.service.RoleManager;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
@@ -79,6 +80,7 @@ public class OAuth2ServiceComponentHolder {
     private static List<String> jwtRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
     private static ConsentServerConfigsManagementService consentServerConfigsManagementService;
     private List<JWTAccessTokenClaimProvider> jwtAccessTokenClaimProviders = new ArrayList<>();
+    private OrganizationManager organizationManager;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -471,5 +473,23 @@ public class OAuth2ServiceComponentHolder {
         jwtAccessTokenClaimProviders.add(accessTokenClaimProvider);
     }
 
+    /**
+     * Get the organization manager instance.
+     *
+     * @return OrganizationManager instance.
+     */
+    public OrganizationManager getOrganizationManager() {
 
+        return organizationManager;
+    }
+
+    /**
+     * Set the organization manager instance.
+     *
+     * @param organizationManager OrganizationManager instance.
+     */
+    public void setOrganizationManager(OrganizationManager organizationManager) {
+
+        this.organizationManager = organizationManager;
+    }
 }
