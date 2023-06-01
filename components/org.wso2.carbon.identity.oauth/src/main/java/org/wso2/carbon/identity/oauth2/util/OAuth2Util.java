@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -353,11 +353,6 @@ public class OAuth2Util {
     private static final String CLIENT_SECRET_BASIC = "client_secret_basic";
     private static final String CLIENT_SECRET_POST = "client_secret_post";
     private static final String PRIVATE_KEY_JWT = "private_key_jwt";
-
-    // Supported Response Modes.
-    private static final String QUERY_RESPONSE_MODE = "query";
-    private static final String FRAGMENT_RESPONSE_MODE = "fragment";
-    private static final String FORM_POST_RESPONSE_MODE = "form_post";
 
     public static final String ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE = "Invalid Access Token. Access token is " +
             "not ACTIVE.";
@@ -3605,12 +3600,7 @@ public class OAuth2Util {
      */
     public static List<String> getSupportedResponseModes() {
 
-        List<String> responseModes = new ArrayList<>();
-        responseModes.add(QUERY_RESPONSE_MODE);
-        responseModes.add(FRAGMENT_RESPONSE_MODE);
-        responseModes.add(FORM_POST_RESPONSE_MODE);
-
-        return responseModes;
+        return OAuthServerConfiguration.getInstance().getSupportedResponseModeNames();
     }
 
     /**
@@ -4308,7 +4298,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Method to extract the SHA-1 JWK thumbprint from certificates.
+     * Method to extract the SHA-256 JWK thumbprint from certificates.
      *
      * @param certificate x509 certificate
      * @return String thumbprint
@@ -4317,13 +4307,21 @@ public class OAuth2Util {
     public static String getJwkThumbPrint(Certificate certificate) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.debug(String.format("Calculating SHA-1 JWK thumb-print for certificate: %s", certificate.toString()));
+            log.debug(String.format("Calculating SHA-256 JWK thumb-print for certificate: %s", certificate.toString()));
         }
         try {
             CertificateFactory cf = CertificateFactory.getInstance(Constants.X509);
             ByteArrayInputStream bais = new ByteArrayInputStream(certificate.getEncoded());
             X509Certificate x509 = (X509Certificate) cf.generateCertificate(bais);
-            Base64URL jwkThumbprint = RSAKey.parse(x509).computeThumbprint(Constants.SHA1);
+            Base64URL jwkThumbprint;
+            // check config to maintain backward compatibility with SHA-1 thumbprint
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(
+                    IdentityConstants.OAuth.ENABLE_SHA256_JWK_THUMBPRINT))) {
+                jwkThumbprint = RSAKey.parse(x509).computeThumbprint(Constants.SHA256);
+            } else {
+                jwkThumbprint = RSAKey.parse(x509).computeThumbprint(Constants.SHA1);
+            }
+
             String thumbprintString = jwkThumbprint.toString();
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Calculated SHA-1 JWK thumbprint %s from the certificate",

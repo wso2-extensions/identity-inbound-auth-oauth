@@ -224,6 +224,12 @@ public class OAuth2ServiceComponent {
             OAuth2ServiceComponentHolder.setJwtRenewWithoutRevokeAllowedGrantTypes(
                     getJWTRenewWithoutRevokeAllowedGrantTypes());
 
+            OAuth2ServiceComponentHolder.
+                    setResponseModeProviders(OAuthServerConfiguration.getInstance().getSupportedResponseModes());
+            OAuth2ServiceComponentHolder.
+                    setDefaultResponseModeProvider(OAuthServerConfiguration.getInstance()
+                            .getDefaultResponseModeProvider());
+
             ServiceRegistration tenantMgtListenerSR = bundleContext.registerService(TenantMgtListener.class.getName(),
                     new OAuthTenantMgtListenerImpl(), null);
             if (tenantMgtListenerSR != null) {

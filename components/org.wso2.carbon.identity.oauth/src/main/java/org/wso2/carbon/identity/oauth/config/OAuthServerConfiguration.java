@@ -48,6 +48,11 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.TokenIssuerDO;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.DefaultResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FormPostResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FragmentResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.QueryResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
@@ -132,6 +137,7 @@ public class OAuthServerConfiguration {
     private static boolean isOAuthResponseJspPageAvailable = false;
     private long authorizationCodeValidityPeriodInSeconds = 300;
     private long userAccessTokenValidityPeriodInSeconds = 3600;
+    private long jarmResponseJwtValidityPeriodInSeconds = 3600;
     private long applicationAccessTokenValidityPeriodInSeconds = 3600;
     private long refreshTokenValidityPeriodInSeconds = 24L * 3600;
     private long timeStampSkewInSeconds = 300;
@@ -169,6 +175,10 @@ public class OAuthServerConfiguration {
     private Map<String, String> supportedResponseTypeClassNames = new HashMap<>();
     private Map<String, ResponseTypeHandler> supportedResponseTypes;
     private Map<String, String> supportedResponseTypeValidatorNames = new HashMap<>();
+    private Map<String, String> supportedResponseModeProviderClassNames = new HashMap<>();
+    private Map<String, ResponseModeProvider> supportedResponseModes;
+    private String defaultResponseModeProviderClassName;
+    private ResponseModeProvider defaultResponseModeProvider;
     private Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> supportedResponseTypeValidators;
     private Map<String, TokenIssuerDO> supportedTokenIssuers = new HashMap<>();
     private List<String> supportedTokenTypes = new ArrayList<>();
@@ -385,6 +395,9 @@ public class OAuthServerConfiguration {
 
         // read supported response types
         parseSupportedResponseTypesConfig(oauthElem);
+
+        // read supported response modes
+        parseSupportedResponseModesConfig(oauthElem);
 
         // read supported response types
         parseSupportedClientAuthHandlersConfig(oauthElem.getFirstChildWithName(
@@ -783,6 +796,11 @@ public class OAuthServerConfiguration {
         return userAccessTokenValidityPeriodInSeconds;
     }
 
+    public long getJarmResponseJwtValidityPeriodInSeconds() {
+
+        return jarmResponseJwtValidityPeriodInSeconds;
+    }
+
     public long getApplicationAccessTokenValidityPeriodInSeconds() {
         return applicationAccessTokenValidityPeriodInSeconds;
     }
@@ -997,6 +1015,61 @@ public class OAuthServerConfiguration {
         return supportedResponseTypes;
     }
 
+    /**
+     * This method create ResponseModeProvider instances and add to supportedResponseModes Map and return
+     * supportedResponseModes.
+     * called inside OAuth2ServiceComponentHolder --> setResponseModeProviders()
+     * @return supportedResponseModes Map<String, ResponseModeProvider>
+     */
+    public Map<String, ResponseModeProvider> getSupportedResponseModes() {
+
+        if (supportedResponseModes == null) {
+            synchronized (this) {
+                if (supportedResponseModes == null) {
+                    Map<String, ResponseModeProvider> supportedResponseModesTemp = new Hashtable<>();
+                    for (Map.Entry<String, String> entry : supportedResponseModeProviderClassNames.entrySet()) {
+                        ResponseModeProvider responseModeProvider = null;
+                        try {
+                            responseModeProvider = (ResponseModeProvider) Class.forName(entry.getValue()).newInstance();
+                        } catch (InstantiationException e) {
+                            log.error("Error instantiating " + entry.getValue(), e);
+                            throw new RuntimeException(e);
+                        } catch (IllegalAccessException e) {
+                            log.error("Illegal access to " + entry.getValue(), e);
+                            throw new RuntimeException(e);
+                        } catch (ClassNotFoundException e) {
+                            log.error("Cannot find class: " + entry.getValue(), e);
+                            throw new RuntimeException(e);
+                        }
+                        supportedResponseModesTemp.put(entry.getKey(), responseModeProvider);
+                    }
+                    supportedResponseModes = supportedResponseModesTemp;
+                }
+            }
+        }
+        return supportedResponseModes;
+    }
+
+    public ResponseModeProvider getDefaultResponseModeProvider() {
+
+        String defaultResponseModeProviderClass = defaultResponseModeProviderClassName;
+        try {
+            defaultResponseModeProvider = (ResponseModeProvider) Class.forName
+                    (defaultResponseModeProviderClass).newInstance();
+        } catch (InstantiationException e) {
+            log.error("Error instantiating " + defaultResponseModeProviderClass, e);
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+            log.error("Illegal access to " + defaultResponseModeProviderClass, e);
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
+            log.error("Cannot find class: " + defaultResponseModeProviderClass, e);
+            throw new RuntimeException(e);
+        }
+
+        return defaultResponseModeProvider;
+    }
+
     public String getHashAlgorithm() {
         return hashAlgorithm;
     }
@@ -1150,6 +1223,11 @@ public class OAuthServerConfiguration {
 
     public Set<String> getSupportedResponseTypeNames() {
         return supportedResponseTypeClassNames.keySet();
+    }
+
+    public List<String> getSupportedResponseModeNames() {
+
+        return new ArrayList<>(supportedResponseModeProviderClassNames.keySet());
     }
 
     public String[] getSupportedClaims() {
@@ -1826,6 +1904,13 @@ public class OAuthServerConfiguration {
                 ConfigElements.USER_ACCESS_TOKEN_DEFAULT_VALIDITY_PERIOD));
         if (accessTokTimeoutElem != null) {
             userAccessTokenValidityPeriodInSeconds = Long.parseLong(accessTokTimeoutElem.getText());
+        }
+
+        // set the JARM response jwt validity timeout
+        OMElement jarmResponseJwtTimeoutElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.JARM_RESPONSE_JWT_DEFAULT_VALIDITY_PERIOD));
+        if (jarmResponseJwtTimeoutElem != null) {
+            jarmResponseJwtValidityPeriodInSeconds = Long.parseLong(jarmResponseJwtTimeoutElem.getText());
         }
 
         // set the application access token default timeout
@@ -2526,6 +2611,73 @@ public class OAuthServerConfiguration {
                 String responseTypeName = entry.getKey().toString();
                 String authzHandlerImplClass = entry.getValue().toString();
                 log.debug(responseTypeName + "supported by" + authzHandlerImplClass);
+            }
+        }
+    }
+
+    /**
+     * This method is to read the config file for supported response modes
+     * It gets response_mode_name : response_mode_class_name mapping and saves in
+     * supportedResponseModeClassNames Map <String,String>
+     * @param oauthConfigElem: oauth configs mentioned in identity.xml
+     */
+    private void parseSupportedResponseModesConfig(OMElement oauthConfigElem) {
+
+        OMElement supportedRespModesElem =
+                oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_RESP_MODES));
+        OMElement defaultRespModesElem = oauthConfigElem.getFirstChildWithName
+                (getQNameWithIdentityNS(ConfigElements.DEFAULT_RESP_MODE_PROVIDER_CLASS));
+
+        if (defaultRespModesElem != null) {
+            defaultResponseModeProviderClassName = defaultRespModesElem.getText();
+        } else {
+            defaultResponseModeProviderClassName = DefaultResponseModeProvider.class.getCanonicalName();
+        }
+
+        if (supportedRespModesElem != null) {
+            Iterator<OMElement> iterator = supportedRespModesElem
+                    .getChildrenWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_RESP_MODE));
+            while (iterator.hasNext()) {
+                OMElement supportedResponseModeElement = iterator.next();
+                OMElement responseModeNameElement = supportedResponseModeElement.
+                        getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.RESP_MODE_NAME));
+                String responseModeName = null;
+                if (responseModeNameElement != null) {
+                    responseModeName = responseModeNameElement.getText();
+                }
+                OMElement responseModeProviderClassElement =
+                        supportedResponseModeElement.getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.RESP_MODE_PROVIDER_CLASS));
+                String responseModeProviderClass = null;
+                if (responseModeProviderClassElement != null) {
+                    responseModeProviderClass = responseModeProviderClassElement.getText();
+                }
+                if (responseModeName != null && !"".equals(responseModeName) &&
+                        responseModeProviderClass != null && !"".equals(responseModeProviderClass)) {
+                    supportedResponseModeProviderClassNames.put(responseModeName, responseModeProviderClass);
+
+                }
+            }
+        } else {
+            // if this element is not present, add the default response modes.
+            log.warn("'SupportedResponseModes' element not configured in identity.xml. " +
+                    "Therefore instantiating default response mode providers");
+            Map<String, String> supportedResponseModeClassNamesTemp = new HashMap<>();
+            supportedResponseModeClassNamesTemp.put(OAuthConstants.ResponseModes.QUERY,
+                    QueryResponseModeProvider.class.getCanonicalName());
+            supportedResponseModeClassNamesTemp.put(OAuthConstants.ResponseModes.FRAGMENT,
+                    FragmentResponseModeProvider.class.getCanonicalName());
+            supportedResponseModeClassNamesTemp.put(OAuthConstants.ResponseModes.FORM_POST,
+                    FormPostResponseModeProvider.class.getCanonicalName());
+            supportedResponseModeProviderClassNames.putAll(supportedResponseModeClassNamesTemp);
+        }
+
+        if (log.isDebugEnabled()) {
+            for (Map.Entry entry : supportedResponseModeProviderClassNames.entrySet()) {
+                String responseModeName = entry.getKey().toString();
+                String responseModeProviderClass = entry.getValue().toString();
+                log.debug(responseModeName + " supported by " + responseModeProviderClass);
             }
         }
     }
@@ -3392,6 +3544,9 @@ public class OAuthServerConfiguration {
         private static final String AUTHORIZATION_CODE_DEFAULT_VALIDITY_PERIOD =
                 "AuthorizationCodeDefaultValidityPeriod";
         private static final String USER_ACCESS_TOKEN_DEFAULT_VALIDITY_PERIOD = "UserAccessTokenDefaultValidityPeriod";
+
+        private static final String JARM_RESPONSE_JWT_DEFAULT_VALIDITY_PERIOD =
+                "JARMResponseJwtValidityPeriodInSeconds";
         private static final String APPLICATION_ACCESS_TOKEN_VALIDATION_PERIOD = "AccessTokenDefaultValidityPeriod";
         private static final String REFRESH_TOKEN_VALIDITY_PERIOD = "RefreshTokenValidityPeriod";
         // Enable/Disable cache
@@ -3452,6 +3607,12 @@ public class OAuthServerConfiguration {
         private static final String SUPPORTED_RESP_TYPE = "SupportedResponseType";
         private static final String RESP_TYPE_NAME = "ResponseTypeName";
         private static final String RESP_TYPE_HANDLER_IMPL_CLASS = "ResponseTypeHandlerImplClass";
+        // Supported Response Modes
+        private static final String SUPPORTED_RESP_MODES = "SupportedResponseModes";
+        private static final String SUPPORTED_RESP_MODE = "SupportedResponseMode";
+        private static final String RESP_MODE_NAME = "ResponseModeName";
+        private static final String RESP_MODE_PROVIDER_CLASS = "ResponseModeProviderClass";
+        private static final String DEFAULT_RESP_MODE_PROVIDER_CLASS = "DefaultResponseModeProviderClass";
         // SAML2 assertion profile configurations
         private static final String SAML2_GRANT = "SAML2Grant";
         private static final String SAML2_TOKEN_HANDLER = "SAML2TokenHandler";
