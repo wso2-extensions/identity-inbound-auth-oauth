@@ -80,19 +80,19 @@ public class FormPostResponseModeProvider extends AbstractResponseModeProvider {
                     .append("\"/>\n");
         }
 
-        if (StringUtils.isNotEmpty(authenticatedIdPs) && !jsonObject.has("AuthenticatedIdPs")) {
+        if (StringUtils.isNotEmpty(authenticatedIdPs) && !jsonObject.has(OAuthConstants.AUTHENTICATED_IDPS)) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"AuthenticatedIdPs\" value=\"")
                     .append(authenticatedIdPs)
                     .append("\"/>\n");
         }
 
-        if (StringUtils.isNotEmpty(sessionStateValue) && !jsonObject.has("session_state")) {
+        if (StringUtils.isNotEmpty(sessionStateValue) && !jsonObject.has(OAuthConstants.SESSION_STATE)) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"session_state\" value=\"")
                     .append(sessionStateValue)
                     .append("\"/>\n");
         }
 
-        if (StringUtils.isNotEmpty(state) && !jsonObject.has("state")) {
+        if (StringUtils.isNotEmpty(state) && !jsonObject.has(OAuthConstants.STATE)) {
             paramStringBuilder.append("<input type=\"hidden\" name=\"state\" value=\"")
                     .append(state)
                     .append("\"/>\n");
