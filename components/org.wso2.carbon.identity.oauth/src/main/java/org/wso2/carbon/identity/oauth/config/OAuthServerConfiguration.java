@@ -152,6 +152,7 @@ public class OAuthServerConfiguration {
     private String tokenCleanupFeatureEnable;
     private OauthTokenIssuer oauthIdentityTokenGenerator;
     private boolean scopeValidationConfigValue = true;
+    private boolean globalRbacScopeIssuerEnabled = false;
     private boolean cacheEnabled = false;
     private boolean isTokenRenewalPerRequestEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
@@ -366,6 +367,14 @@ public class OAuthServerConfiguration {
 
         if (scopeHandlersElem != null) {
             parseScopeHandlers(scopeHandlersElem);
+        }
+
+        OMElement globalRoleBasedScopeIssuer = oauthElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.ENABLE_GLOBAL_ROLE_BASED_SCOPE_ISSUER)
+        );
+
+        if (globalRoleBasedScopeIssuer != null) {
+            setGlobalRbacScopeIssuerEnabled(Boolean.parseBoolean(globalRoleBasedScopeIssuer.getText()));
         }
 
         // read default timeout periods
@@ -3425,6 +3434,16 @@ public class OAuthServerConfiguration {
         return isFapiSecurity;
     }
 
+    public boolean isGlobalRbacScopeIssuerEnabled() {
+
+        return globalRbacScopeIssuerEnabled;
+    }
+
+    public void setGlobalRbacScopeIssuerEnabled(boolean globalRbacScopeIssuerEnabled) {
+
+        this.globalRbacScopeIssuerEnabled = globalRbacScopeIssuerEnabled;
+    }
+
     /**
      * Localpart names for the OAuth configuration in identity.xml.
      */
@@ -3525,6 +3544,7 @@ public class OAuthServerConfiguration {
         private static final String SCOPE_HANDLER_CLASS_ATTR = "class";
         private static final String SCOPE_HANDLER_PROPERTY = "Property";
         private static final String SCOPE_HANDLER_PROPERTY_NAME_ATTR = "name";
+        private static final String ENABLE_GLOBAL_ROLE_BASED_SCOPE_ISSUER = "EnableGlobalRBACScopeIssuer";
         private static final String SCOPE_VALIDATOR = "OAuthScopeValidator";
         private static final String SCOPE_VALIDATORS = "ScopeValidators";
         private static final String SCOPE_VALIDATOR_ELEM = "ScopeValidator";

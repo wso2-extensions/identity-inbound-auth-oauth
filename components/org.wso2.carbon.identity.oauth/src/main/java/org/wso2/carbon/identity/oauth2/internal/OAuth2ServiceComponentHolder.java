@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.organization.management.role.management.service.
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
+import org.wso2.carbon.utils.ConfigurationContextService;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -81,6 +82,8 @@ public class OAuth2ServiceComponentHolder {
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
     private static List<String> jwtRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
     private static ConsentServerConfigsManagementService consentServerConfigsManagementService;
+    private static boolean restrictUnassignedScopes;
+    private static ConfigurationContextService configurationContextService;
     private List<JWTAccessTokenClaimProvider> jwtAccessTokenClaimProviders = new ArrayList<>();
 
     private OAuth2ServiceComponentHolder() {
@@ -452,6 +455,26 @@ public class OAuth2ServiceComponentHolder {
                                                                         consentServerConfigsManagementService) {
 
         OAuth2ServiceComponentHolder.consentServerConfigsManagementService = consentServerConfigsManagementService;
+    }
+
+    public static boolean isRestrictUnassignedScopes() {
+
+        return restrictUnassignedScopes;
+    }
+
+    public static void setRestrictUnassignedScopes(boolean restrictUnassignedScopes) {
+
+        OAuth2ServiceComponentHolder.restrictUnassignedScopes = restrictUnassignedScopes;
+    }
+
+    public static ConfigurationContextService getConfigurationContextService() {
+
+        return configurationContextService;
+    }
+
+    public static void setConfigurationContextService(ConfigurationContextService configurationContextService) {
+
+        OAuth2ServiceComponentHolder.configurationContextService = configurationContextService;
     }
 
     /**
