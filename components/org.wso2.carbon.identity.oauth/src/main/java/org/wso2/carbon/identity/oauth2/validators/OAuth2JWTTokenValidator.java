@@ -205,7 +205,8 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
                     "/o/" + resourceResidentOrgId + "/");
             List<String> resourceResidentOrgAncestors = getOrganizationManager().getAncestorOrganizationIds(
                     resourceResidentOrgId);
-            // TODO: This logic can be improved after adding a config var to detect if the root org is Asgardeo or not.
+            // TODO: This logic can be improved after adding a config var to detect whether
+            //  the actual root org's level is 1 or 0.
             if (!resourceResidentOrgAncestors.contains(resourceAccessOrgId) || !issuerURLChecker.equals(issuer)) {
                 throw new IdentityOAuth2Exception("No Registered IDP found for the token with issuer name : " +
                         jwtIssuer);
