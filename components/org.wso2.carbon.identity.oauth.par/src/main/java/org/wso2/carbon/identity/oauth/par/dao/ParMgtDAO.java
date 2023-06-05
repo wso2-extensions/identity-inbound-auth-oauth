@@ -52,6 +52,6 @@ public interface ParMgtDAO {
      * @param reqUriUUID PAR request identifier.
      * @throws ParCoreException Exception thrown from PAR Core Component.
      */
-    void removeParRequestData(String reqUriUUID) throws ParCoreException;
+    void removeParRequest(String reqUriUUID) throws ParCoreException;
 
 }

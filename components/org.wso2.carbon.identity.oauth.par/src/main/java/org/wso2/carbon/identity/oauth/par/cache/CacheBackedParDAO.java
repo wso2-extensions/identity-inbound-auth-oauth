@@ -67,9 +67,9 @@ public class CacheBackedParDAO implements ParMgtDAO {
     }
 
     @Override
-    public void removeParRequestData(String reqUriUUID) throws ParCoreException {
+    public void removeParRequest(String reqUriUUID) throws ParCoreException {
 
         parCache.clearCacheEntry(reqUriUUID);
-        parMgtDAO.removeParRequestData(reqUriUUID);
+        parMgtDAO.removeParRequest(reqUriUUID);
     }
 }

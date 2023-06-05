@@ -38,6 +38,6 @@ public class SQLQueries {
         public static final String RETRIEVE_PAR_REQUEST = "SELECT CLIENT_ID, SCHEDULED_EXPIRY, JSON_PARAMS " +
                 "FROM IDN_OAUTH_PAR WHERE REQ_URI_UUID = ?";
 
-        public static final String REMOVE_IDN_OAUTH_PAR_REQUEST = "DELETE FROM IDN_OAUTH_PAR WHERE REQ_URI_UUID = ?";
+        public static final String REMOVE_PAR_REQUEST = "DELETE FROM IDN_OAUTH_PAR WHERE REQ_URI_UUID = ?";
     }
 }

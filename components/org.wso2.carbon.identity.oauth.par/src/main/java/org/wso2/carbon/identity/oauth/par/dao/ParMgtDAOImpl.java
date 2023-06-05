@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.common.SQLQueries;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParRequestDO;
@@ -69,50 +70,47 @@ public class ParMgtDAOImpl implements ParMgtDAO {
     }
 
     @Override
-    public ParRequestDO getParRequest(String uuid) throws ParCoreException {
+    public ParRequestDO getParRequest(String reqUriUUID) throws ParCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
                      .ParSQLQueries.RETRIEVE_PAR_REQUEST)) {
 
-            prepStmt.setString(1, uuid);
+            prepStmt.setString(1, reqUriUUID);
 
             try (ResultSet resultSet = prepStmt.executeQuery()) {
                 if (resultSet.next()) {
                     if (log.isDebugEnabled()) {
-                        log.debug("Successfully obtained client_id of RequestURI with UUID: " + uuid);
+                        log.debug("Successfully obtained client_id of RequestURI with UUID: " + reqUriUUID);
                     }
-                    String jsonParams = resultSet.getString("JSON_PARAMS");
-                    long scheduledExpiry = resultSet.getLong("SCHEDULED_EXPIRY");
-                    String clientId = resultSet.getString("CLIENT_ID");
+                    String jsonParams = resultSet.getString(ParConstants.COL_LBL_JSON_PARAMS);
+                    long scheduledExpiry = resultSet.getLong(ParConstants.COL_LBL_SCHEDULED_EXPIRY);
+                    String clientId = resultSet.getString(ParConstants.COL_LBL_CLIENT_ID);
 
                     return new ParRequestDO(getParams(jsonParams), scheduledExpiry, clientId);
 
                 } else {
-                    if (log.isDebugEnabled()) {
-                        log.debug("PAR request with UUID " + uuid + " does not exist");
-                    }
-                    throw new ParCoreException("uuid does not exist");
+                    throw new ParCoreException("uuid " + reqUriUUID + " does not exist in the database");
                 }
             } catch (SQLException e) {
-                throw new ParCoreException("Error occurred while retrieving client_id from the database.");
+                throw new ParCoreException("Error occurred while retrieving PAR request from the database.");
             }
         } catch (SQLException e) {
-            throw new ParCoreException("Error occurred while retrieving client_id from the database.");
+            throw new ParCoreException("Error occurred while retrieving PAR request from the database.");
         }
     }
 
     @Override
-    public void removeParRequestData(String reqUUID) throws ParCoreException {
+    public void removeParRequest(String reqUUID) throws ParCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true);
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
-                     .ParSQLQueries.REMOVE_IDN_OAUTH_PAR_REQUEST)) {
+                     .ParSQLQueries.REMOVE_PAR_REQUEST)) {
             prepStmt.setString(1, reqUUID);
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
-            throw new ParCoreException("Error occurred while removing PAR request from Database");
+            throw new ParCoreException("Error occurred while clearing PAR request from Database");
         }
     }
 

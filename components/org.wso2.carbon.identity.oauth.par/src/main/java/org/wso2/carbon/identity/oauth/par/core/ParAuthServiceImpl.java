@@ -66,7 +66,7 @@ public class ParAuthServiceImpl implements ParAuthService {
     public Map<String, String> retrieveParams(String uuid, String clientId) throws ParCoreException {
 
         ParRequestDO parRequestDO = parMgtDAO.getParRequest(uuid);
-        parMgtDAO.removeParRequestData(uuid);
+        parMgtDAO.removeParRequest(uuid);
         isRequestUriExpired(parRequestDO.getScheduledExpiryTime());
         isClientIdValid(clientId, parRequestDO.getClientId());
 

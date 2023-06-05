@@ -29,7 +29,11 @@ public class ParConstants {
     public static final String EXPIRES_IN = "expires_in";
     public static final String REQUEST_URI_HEAD = "urn:ietf:params:wso2is:request_uri:";
     public static final String REQUEST_URI_IN_REQUEST_BODY_ERROR = "request.with.request_uri.not.allowed";
-    public static final String CACHE_NAME = "ParClaimCache";
+    public static final String CACHE_NAME = "ParCache";
+    public static final String COL_LBL_JSON_PARAMS = "JSON_PARAMS";
+    public static final String COL_LBL_SCHEDULED_EXPIRY = "SCHEDULED_EXPIRY";
+    public static final String COL_LBL_CLIENT_ID = "CLIENT_ID";
+
 
     private ParConstants() {
 
