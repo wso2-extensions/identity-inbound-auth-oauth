@@ -508,7 +508,7 @@ public class TokenValidationHandler {
             }
 
             String tokenType = accessTokenDO.getTokenType();
-            boolean removeUsernameFromAppTokenEnabled =OAuthServerConfiguration.getInstance()
+            boolean removeUsernameFromAppTokenEnabled = OAuthServerConfiguration.getInstance()
                     .isRemoveUsernameFromIntrospectionResponseForAppTokensEnabled();
             boolean isAppTokenType = StringUtils.equals(OAuthConstants.UserType.APPLICATION, tokenType);
 
