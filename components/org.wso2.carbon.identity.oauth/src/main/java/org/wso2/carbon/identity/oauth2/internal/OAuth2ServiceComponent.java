@@ -166,7 +166,6 @@ public class OAuth2ServiceComponent {
         OAuth2ServiceComponentHolder.getInstance().setParAuthService(null);
     }
 
-
     protected void activate(ComponentContext context) {
 
         try {

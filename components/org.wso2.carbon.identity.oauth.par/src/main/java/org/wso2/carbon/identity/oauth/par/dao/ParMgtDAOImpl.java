@@ -90,7 +90,7 @@ public class ParMgtDAOImpl implements ParMgtDAO {
                     return new ParRequestDO(getParams(jsonParams), scheduledExpiry, clientId);
 
                 } else {
-                    throw new ParCoreException("uuid " + reqUriUUID + " does not exist in the database");
+                    throw new ParCoreException("uuid does not exist in the database");
                 }
             } catch (SQLException e) {
                 throw new ParCoreException("Error occurred while retrieving PAR request from the database.");
