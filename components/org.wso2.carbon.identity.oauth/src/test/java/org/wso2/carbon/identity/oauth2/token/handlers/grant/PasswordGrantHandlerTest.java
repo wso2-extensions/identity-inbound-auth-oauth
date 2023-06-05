@@ -50,6 +50,7 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
@@ -170,6 +171,8 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(serviceProvider.isSaasApp()).thenReturn(isSaas);
         when(serviceProvider.getLocalAndOutBoundAuthenticationConfig())
                 .thenReturn(localAndOutboundAuthenticationConfig);
+        when(FrameworkUtils.preprocessUsername(anyString(), any(ServiceProvider.class)))
+                .thenReturn("randomUserwso2.com");
 
         when(localAndOutboundAuthenticationConfig.isUseUserstoreDomainInLocalSubjectIdentifier()).thenReturn(true);
         when(localAndOutboundAuthenticationConfig.isUseTenantDomainInLocalSubjectIdentifier()).thenReturn(true);
@@ -255,7 +258,8 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantIdOfUser(anyString())).thenReturn(1);
-
+        when(FrameworkUtils.preprocessUsername(anyString(), any(ServiceProvider.class)))
+                .thenReturn("randomUserwso2.com");
         PasswordGrantHandler passwordGrantHandler = new PasswordGrantHandler();
         passwordGrantHandler.validateGrant(tokReqMsgCtx);
         fail("Password grant validation should fail with the reason " + reasonForError);

@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.authz.handlers;
 
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -47,7 +48,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
         tenantDomain = TestConstants.TENANT_DOMAIN,
         initUserStoreManager = true,
         injectToSingletons = {OAuthComponentServiceHolder.class})
-public class CodeResponseTypeHandlerTest {
+public class CodeResponseTypeHandlerTest extends PowerMockTestCase {
 
     private static final String TEST_CONSUMER_KEY =  "testconsumenrkey";
     private static final String TEST_CALLBACK_URL = "https://localhost:8000/callback";
@@ -57,7 +58,6 @@ public class CodeResponseTypeHandlerTest {
 
     @BeforeMethod
     public void setUp() throws Exception {
-
         authorizationReqDTO = new OAuth2AuthorizeReqDTO();
         authorizationReqDTO.setCallbackUrl(TEST_CALLBACK_URL);
         authorizationReqDTO.setConsumerKey(TEST_CONSUMER_KEY);

@@ -24,6 +24,7 @@ import org.apache.commons.lang.StringUtils;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,6 +44,21 @@ public class DAOUtils {
 
         try (Connection connection = dataSource.getConnection()) {
             connection.createStatement().executeUpdate("RUNSCRIPT FROM '" + scriptPath + "'");
+        }
+        dataSourceMap.put(databaseName, dataSource);
+    }
+    public static void initializeBatchDataSource(String databaseName,
+                                                 String script1Path, String script2path) throws Exception {
+        BasicDataSource dataSource = new BasicDataSource();
+        dataSource.setDriverClassName("org.h2.Driver");
+        dataSource.setUsername("username");
+        dataSource.setPassword("password");
+        dataSource.setUrl("jdbc:h2:mem:test" + databaseName);
+        try (Connection connection = dataSource.getConnection()) {
+            Statement statement = connection.createStatement();
+            statement.addBatch("RUNSCRIPT FROM '" + getFilePath(script1Path) + "'");
+            statement.addBatch("RUNSCRIPT FROM '" + getFilePath(script2path) + "'");
+            statement.executeBatch();
         }
         dataSourceMap.put(databaseName, dataSource);
     }

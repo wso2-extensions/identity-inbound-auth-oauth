@@ -29,6 +29,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.util.JdbcUtils;
@@ -74,6 +75,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.GET_ACCESS_TOKENS_BY_BINDING_REFERENCE;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.STORE_TOKEN_BINDING;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.IS_EXTENDED_TOKEN;
 
 /**
  * Access token related data access object implementation.
@@ -159,6 +161,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(accessTokenDO.getAuthzUser());
         PreparedStatement insertTokenPrepStmt = null;
         PreparedStatement addScopePrepStmt = null;
+        PreparedStatement insertTokenExtendedAttributePrepStmt = null;
 
         if (log.isDebugEnabled()) {
             String username;
@@ -187,7 +190,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         sql = OAuth2Util.getTokenPartitionedSqlByUserStore(sql, userDomain);
         String sqlAddScopes = OAuth2Util.getTokenPartitionedSqlByUserStore(SQLQueries.INSERT_OAUTH2_TOKEN_SCOPE,
                 userDomain);
+        String sqlInsertTokenExtendedAttribute = OAuth2Util.getTokenPartitionedSqlByUserStore(
+                SQLQueries.INSERT_OAUTH2_TOKEN_ATTRIBUTES, userDomain);
 
+        boolean doInsertTokenExtendedAttributes = OAuth2ServiceComponentHolder.isTokenExtendedTableExist() &&
+                accessTokenDO.getAccessTokenExtendedAttributes() != null &&
+                accessTokenDO.getAccessTokenExtendedAttributes().isExtendedToken();
         try {
             insertTokenPrepStmt = connection.prepareStatement(sql);
             insertTokenPrepStmt.setString(1, getPersistenceProcessor().getProcessedAccessTokenIdentifier(
@@ -281,6 +289,25 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
             }
 
+            if (doInsertTokenExtendedAttributes) {
+                insertTokenExtendedAttributePrepStmt = connection.prepareStatement(sqlInsertTokenExtendedAttribute);
+                insertTokenExtendedAttributePrepStmt.setString(1, IS_EXTENDED_TOKEN);
+                insertTokenExtendedAttributePrepStmt.setString(2, "true");
+                insertTokenExtendedAttributePrepStmt.setString(3, accessTokenId);
+                insertTokenExtendedAttributePrepStmt.addBatch();
+                if (accessTokenDO.getAccessTokenExtendedAttributes().getParameters() != null) {
+                    for (Map.Entry<String, String> entry : accessTokenDO.getAccessTokenExtendedAttributes()
+                            .getParameters()
+                            .entrySet()) {
+                        insertTokenExtendedAttributePrepStmt.setString(1, entry.getKey());
+                        insertTokenExtendedAttributePrepStmt.setString(2, entry.getValue());
+                        insertTokenExtendedAttributePrepStmt.setString(3, accessTokenId);
+                        insertTokenExtendedAttributePrepStmt.addBatch();
+                    }
+                }
+                insertTokenExtendedAttributePrepStmt.executeBatch();
+            }
+
             if (retryAttemptCounter > 0) {
                 log.info("Successfully recovered 'CON_APP_KEY' constraint violation with the attempt : " +
                         retryAttemptCounter);
@@ -346,6 +373,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
         } finally {
             IdentityDatabaseUtil.closeStatement(addScopePrepStmt);
+            if (doInsertTokenExtendedAttributes) {
+                IdentityDatabaseUtil.closeStatement(insertTokenExtendedAttributePrepStmt);
+            }
             IdentityDatabaseUtil.closeStatement(insertTokenPrepStmt);
         }
 
@@ -549,7 +579,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
             if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
                 if (connection.getMetaData().getDriverName().contains("MySQL")
-                        || connection.getMetaData().getDriverName().contains("H2")) {
+                        || connection.getMetaData().getDriverName().contains(FrameworkConstants.H2)
+                        || connection.getMetaData().getDriverName().contains(FrameworkConstants.MARIA_DB)) {
                     sql = SQLQueries.
                             GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MYSQL;
                 } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {

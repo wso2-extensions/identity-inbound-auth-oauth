@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
+import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.authz.validators.DefaultResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -96,6 +97,11 @@ public class OAuth2Service extends AbstractAdmin {
      * @return <code>OAuth2AuthorizeRespDTO</code> instance containing the access token/authorization code
      * or an error code.
      */
+    @Deprecated
+    /**
+     * @deprecated Avoid using this, use {@link #authorize(OAuthAuthzReqMessageContext, OAuth2AuthorizeReqDTO)
+     * authorize} method instead.
+     */
     public OAuth2AuthorizeRespDTO authorize(OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO) {
 
         if (log.isDebugEnabled()) {
@@ -123,6 +129,59 @@ public class OAuth2Service extends AbstractAdmin {
             authorizeRespDTO.setCallbackURI(oAuth2AuthorizeReqDTO.getCallbackUrl());
             return authorizeRespDTO;
         }
+    }
+
+    /**
+     * Process the authorization request and issue an authorization code or access token depending
+     * on the Response Type available in the request.
+     *
+     * @param authzReqMsgCtx authzReqMsgCtx.
+     * @return <code>OAuth2AuthorizeRespDTO</code> instance containing the access token/authorization code
+     * or an error code.
+     */
+    public OAuth2AuthorizeRespDTO authorize(OAuthAuthzReqMessageContext authzReqMsgCtx) {
+
+        OAuth2AuthorizeReqDTO authzReqDTO = authzReqMsgCtx.getAuthorizationReqDTO();
+        if (log.isDebugEnabled()) {
+            log.debug("Authorization Request received for user : " + authzReqDTO.getUser() +
+                    ", Client ID : " + authzReqDTO.getConsumerKey() +
+                    ", Authorization Response Type : " + authzReqDTO.getResponseType() +
+                    ", Requested callback URI : " + authzReqDTO.getCallbackUrl() +
+                    ", Requested Scopes : " + OAuth2Util.buildScopeString(authzReqMsgCtx.getApprovedScope()) +
+                    ", Approved Scopes : " + OAuth2Util.buildScopeString(
+                    authzReqDTO.getScopes()));
+        }
+        try {
+            AuthorizationHandlerManager authzHandlerManager = AuthorizationHandlerManager.getInstance();
+            return authzHandlerManager.handleAuthorization(authzReqMsgCtx);
+        } catch (Exception e) {
+            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                    OAuthConstants.LogConstants.FAILED, "Error occurred when processing the authorization request.",
+                    "authorize-client", null);
+            log.error("Error occurred when processing the authorization request. Returning an error back to client.",
+                    e);
+            OAuth2AuthorizeRespDTO authorizeRespDTO = new OAuth2AuthorizeRespDTO();
+            authorizeRespDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
+            authorizeRespDTO.setErrorMsg("Error occurred when processing the authorization " +
+                    "request. Returning an error back to client.");
+            authorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
+            return authorizeRespDTO;
+        }
+    }
+
+    /**
+     * Handle authorization request (validate requested scopes) before the consent page.
+     * We return a OAuthAuthzReqMessageContext object instead of a response object here since we use this context across
+     * the scope validation (before consent) and issuing code.
+     *
+     * @param authzReqDTO OAuth2AuthorizeReqDTO
+     * @return OAuthAuthzReqMessageContext
+     */
+    public OAuthAuthzReqMessageContext validateScopesBeforeConsent(OAuth2AuthorizeReqDTO authzReqDTO)
+            throws IdentityOAuth2Exception, IdentityOAuth2UnauthorizedScopeException, InvalidOAuthClientException {
+
+        AuthorizationHandlerManager authzHandlerManager = AuthorizationHandlerManager.getInstance();
+        return authzHandlerManager.validateScopesBeforeConsent(authzReqDTO);
     }
 
     /**
@@ -241,7 +300,7 @@ public class OAuth2Service extends AbstractAdmin {
                 validationResponseDTO.setPkceSupportPlain(appDO.isPkceSupportPlain());
                 return validationResponseDTO;
             } else {    // Provided callback URL does not match the registered callback url.
-                log.warn("Provided Callback URL does not match with the registered one.");
+                log.warn("Provided Callback URL does not match with the registered URL.");
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     Map<String, Object> params = new HashMap<>();
                     params.put("clientId", clientId);
@@ -251,7 +310,7 @@ public class OAuth2Service extends AbstractAdmin {
                     configurations.put("redirectUri", appDO.getApplicationName());
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                             OAuthConstants.LogConstants.FAILED,
-                            "redirect_uri in request does not match with the registered one.",
+                            "redirect_uri in request does not match with the registered redirect URI.",
                             "validate-input-parameters", configurations);
                 }
                 validationResponseDTO.setValidClient(false);

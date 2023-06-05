@@ -1,13 +1,13 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
- * 
+ * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
+ *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -21,6 +21,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.Charsets;
@@ -28,14 +29,18 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.owasp.encoder.Encode;
+import org.slf4j.MDC;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
+import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -44,6 +49,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
@@ -88,9 +94,9 @@ import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
+import org.wso2.carbon.identity.oauth2.scopeservice.OAuth2Resource;
+import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
-import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
@@ -100,7 +106,9 @@ import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -138,6 +146,7 @@ public class EndpointUtil {
     private static final String PROP_GRANT_TYPE = "response_type";
     private static final String PROP_RESPONSE_TYPE = "response_type";
     private static final String PROP_SCOPE = "scope";
+    private static final String PROP_OIDC_SCOPE = "requested_oidc_scopes";
     private static final String PROP_ERROR = "error";
     private static final String PROP_ERROR_DESCRIPTION = "error_description";
     private static final String PROP_REDIRECT_URI = "redirect_uri";
@@ -147,6 +156,7 @@ public class EndpointUtil {
     private static OAuth2Service oAuth2Service;
     private static OAuth2ScopeService oAuth2ScopeService;
     private static OAuthAdminServiceImpl oAuthAdminService;
+    private static ScopeMetadataService scopeMetadataService;
     private static SSOConsentService ssoConsentService;
     private static OAuthServerConfiguration oauthServerConfiguration;
     private static RequestObjectService requestObjectService;
@@ -189,6 +199,16 @@ public class EndpointUtil {
     public static void setRequestObjectService(RequestObjectService requestObjectService) {
 
         EndpointUtil.requestObjectService = requestObjectService;
+    }
+
+    public static ScopeMetadataService getScopeMetadataService() {
+
+        return scopeMetadataService;
+    }
+
+    public static void setScopeMetadataService(ScopeMetadataService scopeMetadataService) {
+
+        EndpointUtil.scopeMetadataService = scopeMetadataService;
     }
 
     private EndpointUtil() {
@@ -373,6 +393,7 @@ public class EndpointUtil {
     public static String getErrorPageURL(String errorCode, String errorMessage, String appName) {
 
         String errorPageUrl = OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl();
+        String correlationId = MDC.get(OAuthConstants.CORRELATION_ID_MDC);
         try {
 
             if (isNotBlank(errorCode)) {
@@ -383,6 +404,12 @@ public class EndpointUtil {
             if (isNotBlank(errorMessage)) {
                 errorPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(errorPageUrl,
                         OAuthConstants.OAUTH_ERROR_MESSAGE + "=" + URLEncoder.encode(errorMessage, UTF_8));
+            }
+
+            if (isNotBlank(correlationId)) {
+                errorPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(errorPageUrl,
+                        FrameworkConstants.RequestParams.CORRELATION_ID + "=" + URLEncoder.encode(correlationId,
+                                UTF_8));
             }
 
         } catch (UnsupportedEncodingException e) {
@@ -720,17 +747,43 @@ public class EndpointUtil {
      * @param isOIDC            Whether the flow is an OIDC or not.
      * @param oAuthMessage      oAuth Message.
      * @return                  The consent url.
+     * @deprecated use {{@link #getUserConsentURL(OAuth2Parameters, String, String, OAuthMessage, String)}} instead.
      */
+    @Deprecated
     public static String getUserConsentURL(OAuth2Parameters params, String loggedInUser, String sessionDataKey,
                                            boolean isOIDC, OAuthMessage oAuthMessage) throws OAuthSystemException {
 
+        return getUserConsentURL(params, loggedInUser, sessionDataKey, null, StringUtils.EMPTY);
+    }
+
+    /**
+     * Returns the consent page URL.
+     *
+     * @param params                OAuth2 Parameters.
+     * @param loggedInUser          The logged in user
+     * @param oAuthMessage          oAuth Message.
+     * @param additionalQueryParams Additional query params to be appended to the consent page url.
+     * @return                      The consent url.
+     */
+    public static String getUserConsentURL(OAuth2Parameters params, String loggedInUser, String sessionDataKey,
+                                           OAuthMessage oAuthMessage, String additionalQueryParams)
+            throws OAuthSystemException {
+
         String queryString = "";
+        String clientId = "";
         if (log.isDebugEnabled()) {
-            log.debug("Received Session Data Key is :  " + sessionDataKey);
+            log.debug("Received Session Data Key is: " + sessionDataKey);
             if (params == null) {
                 log.debug("Received OAuth2 params are Null for UserConsentURL");
             }
         }
+
+        boolean isOIDC = false;
+        if (params != null) {
+            isOIDC = OAuth2Util.isOIDCAuthzRequest(params.getScopes());
+            clientId = params.getClientId();
+        }
+
         SessionDataCache sessionDataCache = SessionDataCache.getInstance();
         SessionDataCacheEntry entry;
         if (oAuthMessage != null) {
@@ -740,55 +793,65 @@ public class EndpointUtil {
         }
 
         AuthenticatedUser user = null;
-        String consentPage = null;
+        String consentPageUrl = null;
         String sessionDataKeyConsent = UUID.randomUUID().toString();
         try {
             if (entry != null && entry.getQueryString() != null) {
-
-                if (entry.getQueryString().contains(REQUEST_URI) && params != null) {
-                    // When request_uri requests come without redirect_uri, we need to append it to the SPQueryParams
-                    // to be used in storing consent data
-                    entry.setQueryString(entry.getQueryString() +
-                            "&" + PROP_REDIRECT_URI + "=" + URLEncoder.encode(params.getRedirectURI(), UTF_8));
-                }
-                queryString = URLEncoder.encode(entry.getQueryString(), UTF_8);
+                queryString = getQueryString(params, entry);
             }
 
-            if (isOIDC) {
-                consentPage = OAuth2Util.OAuthURL.getOIDCConsentPageUrl();
+            ServiceProvider sp = getServiceProvider(params);
+            if (sp == null) {
+                throw new OAuthSystemException("Unable to find a service provider with client_id: " + clientId);
+            }
+
+            if (isExternalConsentPageEnabledForSP(sp)) {
+                consentPageUrl = OAuth2Util.resolveExternalConsentPageUrl(sp.getTenantDomain());
+            } else if (isOIDC) {
+                consentPageUrl = OAuth2Util.OAuthURL.getOIDCConsentPageUrl();
             } else {
-                consentPage = OAuth2Util.OAuthURL.getOAuth2ConsentPageUrl();
+                consentPageUrl = OAuth2Util.OAuthURL.getOAuth2ConsentPageUrl();
             }
             if (params != null) {
-                consentPage += "?" + OAuthConstants.OIDC_LOGGED_IN_USER + "=" + URLEncoder.encode(loggedInUser,
+                consentPageUrl += "?" + OAuthConstants.OIDC_LOGGED_IN_USER + "=" + URLEncoder.encode(loggedInUser,
                         UTF_8) + "&application=";
 
                 if (StringUtils.isNotEmpty(params.getDisplayName())) {
-                    consentPage += URLEncoder.encode(params.getDisplayName(), UTF_8);
+                    consentPageUrl += URLEncoder.encode(params.getDisplayName(), UTF_8);
                 } else {
-                    consentPage += URLEncoder.encode(params.getApplicationName(), UTF_8);
+                    consentPageUrl += URLEncoder.encode(params.getApplicationName(), UTF_8);
                 }
-                consentPage += "&tenantDomain=" + getSPTenantDomainFromClientId(params.getClientId());
+                consentPageUrl += "&tenantDomain=" + getSPTenantDomainFromClientId(clientId);
 
                 if (entry != null) {
                     user = entry.getLoggedInUser();
                 }
-                setConsentRequiredScopesToOAuthParams(user, params);
-                Set<String> consentRequiredScopesSet = params.getConsentRequiredScopes();
-                String consentRequiredScopes = StringUtils.EMPTY;
-                if (CollectionUtils.isNotEmpty(consentRequiredScopesSet)) {
-                    consentRequiredScopes = String.join(" ", consentRequiredScopesSet).trim();
+                List<String> consentRequiredScopesList = filterConsentRequiredScopes(user, params);
+                params.setConsentRequiredScopes(new HashSet<>(consentRequiredScopesList));
+                String consentRequiredScopes = getConsentRequiredScopesAsString(params.getConsentRequiredScopes());
+
+                consentPageUrl = consentPageUrl + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
+                        (consentRequiredScopes, UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
+                        + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" + "&spQueryParams=" + queryString;
+
+                // Append scope metadata to additionalQueryParams.
+                String scopeMetadataQueryParam = getScopeMetadataQueryParam(params.getConsentRequiredScopes(),
+                        params.getTenantDomain());
+                if (StringUtils.isNotBlank(scopeMetadataQueryParam)) {
+                    additionalQueryParams = StringUtils.isNotBlank(additionalQueryParams) ? additionalQueryParams +
+                            "&" + scopeMetadataQueryParam : scopeMetadataQueryParam;
                 }
 
-                consentPage = consentPage + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
-                        (consentRequiredScopes, UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
-                        + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" +
-                        "&spQueryParams=" + queryString;
+                // Append additional query params to the consent page url.
+                consentPageUrl = FrameworkUtils.appendQueryParamsStringToUrl(consentPageUrl, additionalQueryParams);
 
                 if (entry != null) {
-
-                    consentPage = FrameworkUtils.getRedirectURLWithFilteredParams(consentPage,
-                            entry.getEndpointParams());
+                    // Filter the query parameters from the consent page url.
+                    consentPageUrl = filterQueryParamsFromConsentPageUrl(entry.getEndpointParams(), consentPageUrl,
+                            sessionDataKeyConsent);
+                    if (isExternalConsentPageEnabledForSP(sp)) {
+                        entry.setRemoveOnConsume(true);
+                    }
                     entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
                     sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
                 } else {
@@ -796,15 +859,140 @@ public class EndpointUtil {
                         log.debug("Cache Entry is Null from SessionDataCache.");
                     }
                 }
-
             } else {
                 throw new OAuthSystemException("Error while retrieving the application name");
             }
         } catch (UnsupportedEncodingException e) {
             throw new OAuthSystemException("Error while encoding the url", e);
+        } catch (IdentityOAuth2Exception e) {
+            throw new OAuthSystemException("Error retrieve Service Provider for clientId:" + clientId , e);
         }
 
-        return consentPage;
+        return consentPageUrl;
+    }
+
+
+    private static ServiceProvider getServiceProvider(OAuth2Parameters params) throws IdentityOAuth2Exception {
+
+        ServiceProvider sp = null;
+        if (params != null) {
+            sp = OAuth2Util.getServiceProvider(params.getClientId());
+        }
+        return sp;
+    }
+
+    private static String getScopeMetadataQueryParam(Set<String> scopes, String tenantDomain) {
+
+        try {
+            List<String> oidcScopeList = oAuthAdminService.getRegisteredOIDCScope(tenantDomain);
+            List<String> nonOidcScopeList = new ArrayList<>();
+            oidcScopeList.retainAll(scopes);
+            nonOidcScopeList.addAll(scopes.stream().filter(scope ->
+                    !oidcScopeList.contains(scope)).collect(Collectors.toList()));
+
+            if (nonOidcScopeList.isEmpty()) {
+                return null;
+            }
+            List<OAuth2Resource> scopesMetaData = scopeMetadataService.getMetadata(nonOidcScopeList);
+            String scopeMetadata = new Gson().toJson(scopesMetaData);
+            return "scopeMetadata=" + URLEncoder.encode(scopeMetadata, UTF_8);
+        } catch (Exception e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while retrieving scope metadata for scopes: " + scopes, e);
+            }
+        }
+        return null;
+    }
+
+    private static String filterQueryParamsFromConsentPageUrl(Map<String, Serializable> endpointParams,
+                                                              String consentPageUrl, String sessionDataKeyConsent)
+            throws OAuthSystemException {
+
+        if (isAuthEndpointRedirectParamsFilterConfigAvailable()) {
+            return FrameworkUtils.getRedirectURLWithFilteredParams(consentPageUrl,
+                    endpointParams);
+        } else if (isConsentPageRedirectParamsAllowed()) {
+            // Return the consent url without filtering the query params for backward compatibility.
+            return consentPageUrl;
+        } else {
+            return EndpointUtil.getRedirectURLWithFilteredParams(consentPageUrl,
+                    endpointParams, sessionDataKeyConsent);
+        }
+    }
+
+    private static String getConsentRequiredScopesAsString(Set<String> consentRequiredScopesSet) {
+
+        String consentRequiredScopes = StringUtils.EMPTY;
+        if (CollectionUtils.isNotEmpty(consentRequiredScopesSet)) {
+            consentRequiredScopes = String.join(" ", consentRequiredScopesSet).trim();
+        }
+        return consentRequiredScopes;
+    }
+
+    private static String getQueryString(OAuth2Parameters params, SessionDataCacheEntry entry) throws
+            UnsupportedEncodingException, OAuthSystemException {
+
+        String queryString;
+        queryString = entry.getQueryString();
+        if (queryString.contains(REQUEST_URI) && params != null) {
+            // When request_uri requests come without redirect_uri, we need to append it to the SPQueryParams
+            // to be used in storing consent data
+            queryString = queryString +
+                    "&" + PROP_REDIRECT_URI + "=" + URLEncoder.encode(params.getRedirectURI(), UTF_8);
+        }
+
+        if (params != null) {
+            queryString = queryString + "&" + PROP_OIDC_SCOPE +
+                    "=" + URLEncoder.encode(StringUtils.join(getRequestedOIDCScopes(params), " "), UTF_8);
+        }
+        entry.setQueryString(queryString);
+        queryString = URLEncoder.encode(queryString, UTF_8);
+        return queryString;
+    }
+
+    private static boolean isAuthEndpointRedirectParamsFilterConfigAvailable() {
+
+        return FileBasedConfigurationBuilder.getInstance().isAuthEndpointRedirectParamsConfigAvailable();
+    }
+
+    /**
+     * Returns the consent page URL after filtering the query params.
+     *
+     * @param redirectUrl           The redirect URL.
+     * @param endpointParams        The map for store filtered params.
+     * @param sessionDataKeyConsent The value of sessionDataKeyConsent.
+     * @return redirect URL after filtering the query params except the sessionDataKeyConsent.
+     */
+    private static String getRedirectURLWithFilteredParams(String redirectUrl,
+                                                          Map<String, Serializable> endpointParams, String
+                                                                   sessionDataKeyConsent) throws OAuthSystemException {
+
+        URIBuilder uriBuilder;
+
+        try {
+            uriBuilder = new URIBuilder(redirectUrl);
+        } catch (URISyntaxException e) {
+            log.warn("Unable to filter redirect params for url." + redirectUrl, e);
+            throw new OAuthSystemException("Unable to filter redirect params for url: " + redirectUrl, e);
+        }
+
+        List<NameValuePair> queryParamsList = uriBuilder.getQueryParams();
+        // Store query params in the endpointParams map.
+        if (!queryParamsList.isEmpty()) {
+            endpointParams.putAll(queryParamsList.stream()
+                    .filter(queryParam -> !queryParam.getName().equals(OAuthConstants.SESSION_DATA_KEY_CONSENT))
+                    .collect(Collectors.toMap(NameValuePair::getName, NameValuePair::getValue)));
+        }
+
+        // Remove all the query params from the consent URL
+        uriBuilder.clearParameters();
+        // Set the sessionDataKeyConsent to redirect URL.
+        if (sessionDataKeyConsent != null) {
+            uriBuilder.setParameter(OAuthConstants.SESSION_DATA_KEY_CONSENT, sessionDataKeyConsent);
+        }
+
+        return uriBuilder.toString();
+
     }
 
     /**
@@ -917,52 +1105,79 @@ public class EndpointUtil {
         return Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames()));
     }
 
-    private static List<String> getAllowedOAuthScopes(OAuth2Parameters params) throws OAuthSystemException {
+    /**
+     * Return a list of consent requested OIDC scopes
+     *
+     * @param params OAuth2 parameters.
+     * @return consent requested OIDC scopes in lower case
+     * @throws OAuthSystemException If retrieving OIDC scopes failed.
+     */
+    private static List<String> getRequestedOIDCScopes(OAuth2Parameters params)
+            throws OAuthSystemException {
 
         Set<String> allowedScopes = params.getScopes();
-        List<String> allowedOAuthScopes = new ArrayList<>();
+        List<String> requestedOIDCScopes = new ArrayList<>();
+        try {
+            // Get registered OIDC scopes.
+            List<String> oidcScopeList = oAuthAdminService.getRegisteredOIDCScope(params.getTenantDomain());
+            for (String scope : allowedScopes) {
+                if (oidcScopeList.contains(scope)) {
+                    requestedOIDCScopes.add(scope.toLowerCase());
+                }
+            }
+        } catch (IdentityOAuthAdminException e) {
+            throw new OAuthSystemException("Error while retrieving OIDC scopes.", e);
+        }
+        return requestedOIDCScopes;
+    }
+
+    /**
+     * Drop unregistered scopes from consent required scopes.
+     *
+     * @param params OAuth2 parameters.
+     * @return consent required scopes
+     * @throws OAuthSystemException If dropping unregistered scopes failed.
+     */
+    private static List<String> dropUnregisteredScopesFromConsentRequiredScopes(OAuth2Parameters params)
+            throws OAuthSystemException {
+
+        Set<String> allowedScopes = params.getScopes();
+        List<String> allowedRegisteredScopes = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(allowedScopes)) {
             try {
                 startTenantFlow(params.getTenantDomain());
-
-            /* If DropUnregisteredScopes scopes config is enabled
-             then any unregistered scopes(excluding internal scopes
-             and allowed scopes) is be dropped. Therefore they will
-             not be shown in the user consent screen.*/
+                /* If DropUnregisteredScopes scopes config is enabled then any unregistered scopes(excluding internal
+                 scopes and allowed scopes) will be dropped. Therefore, they will not be shown in the user consent
+                 screen.*/
                 if (oauthServerConfiguration.isDropUnregisteredScopes()) {
                     if (log.isDebugEnabled()) {
                         log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
                     }
                     allowedScopes = dropUnregisteredScopes(params);
                 }
-
-                // Get registered OIDC scopes.
-                String[] oidcScopes = oAuthAdminService.getScopeNames();
-                List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
                 for (String scope : allowedScopes) {
-                    if (!oidcScopeList.contains(scope)) {
-                        allowedOAuthScopes.add(scope);
-                    }
+                    allowedRegisteredScopes.add(scope);
                 }
-            } catch (IdentityOAuthAdminException e) {
-                throw new OAuthSystemException("Error while retrieving OIDC scopes.", e);
+            } catch (OAuthSystemException e) {
+                throw new OAuthSystemException("Error while dropping unregistered scopes.", e);
             } finally {
                 PrivilegedCarbonContext.endTenantFlow();
             }
         }
         if (log.isDebugEnabled()) {
-            log.debug("Allowed OAuth scopes : " + allowedOAuthScopes.stream()
+            log.debug("Allowed registered scopes : " + allowedRegisteredScopes.stream()
                     .collect(Collectors.joining(" ")) + " for client : " + params.getClientId());
         }
-        return allowedOAuthScopes;
+        return allowedRegisteredScopes;
     }
 
-    private static void setConsentRequiredScopesToOAuthParams(AuthenticatedUser user, OAuth2Parameters params)
+    private static List<String> filterConsentRequiredScopes(AuthenticatedUser user, OAuth2Parameters params)
             throws OAuthSystemException {
 
         try {
-            String consentRequiredScopes = StringUtils.EMPTY;
-            List<String> allowedOAuthScopes = getAllowedOAuthScopes(params);
+            //Filter out unregistered scopes to prevent those scopes prompt for consent in the consent page.
+            List<String> consentRequiredScopes = dropUnregisteredScopesFromConsentRequiredScopes(params);
+
             if (user != null && !isPromptContainsConsent(params)) {
                 String userId = getUserIdOfAuthenticatedUser(user);
                 String appId = getAppIdFromClientId(params.getClientId());
@@ -970,36 +1185,16 @@ public class EndpointUtil {
                         userId, appId, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
                 if (existingUserConsent != null) {
                     if (CollectionUtils.isNotEmpty(existingUserConsent.getApprovedScopes())) {
-                        allowedOAuthScopes.removeAll(existingUserConsent.getApprovedScopes());
+                        consentRequiredScopes.removeAll(existingUserConsent.getApprovedScopes());
                     }
                 }
             }
-            if (CollectionUtils.isNotEmpty(allowedOAuthScopes)) {
-                // Filter out internal scopes to be validated.
-                String[] requestedScopes = Oauth2ScopeUtils.getRequestedScopes(
-                        allowedOAuthScopes.toArray(new String[0]));
-                if (ArrayUtils.isNotEmpty(requestedScopes)) {
-                    // Remove the filtered internal scopes from the allowedOAuthScopes list.
-                    allowedOAuthScopes.removeAll(Arrays.asList(requestedScopes));
 
-                    JDBCPermissionBasedInternalScopeValidator scopeValidator =
-                            new JDBCPermissionBasedInternalScopeValidator();
-                    String[] validatedScope = scopeValidator.validateScope(requestedScopes, user, params.getClientId());
-
-                    // Filter out requested scopes from the validated scope array.
-                    for (String scope : requestedScopes) {
-                        if (ArrayUtils.contains(validatedScope, scope)) {
-                            allowedOAuthScopes.add(scope);
-                        }
-                    }
-                }
-                params.setConsentRequiredScopes(new HashSet<>(allowedOAuthScopes));
-                consentRequiredScopes = String.join(" ", allowedOAuthScopes).trim();
-            }
             if (log.isDebugEnabled()) {
-                log.debug("Consent required scopes : " + consentRequiredScopes + " for request from client : " +
-                        params.getClientId());
+                log.debug("Consent required scopes : " + StringUtils.join(consentRequiredScopes, " ")
+                        + " for request from client : " + params.getClientId());
             }
+            return consentRequiredScopes;
         } catch (IdentityOAuth2ScopeException e) {
             throw new OAuthSystemException("Error occurred while retrieving user consents OAuth scopes.");
         }
@@ -1068,8 +1263,8 @@ public class EndpointUtil {
         if (log.isDebugEnabled()) {
             log.debug(String.format("Dropping unregistered scopes(excluding internal and allowed scopes). " +
                             "Requested scopes: %s | Filtered result: %s",
-                            requestedScopes,
-                            StringUtils.join(filteredScopes, " ")));
+                    requestedScopes,
+                    StringUtils.join(filteredScopes, " ")));
         }
 
         return filteredScopes;
@@ -1580,4 +1775,31 @@ public class EndpointUtil {
                 .getValue();
     }
 
+    /**
+     * Used to check whether the external consent page is enabled in service provider.
+     *
+     * @param serviceProvider Service Provider.
+     * @return True if the external consent page is enabled.
+     */
+    public static boolean isExternalConsentPageEnabledForSP(ServiceProvider serviceProvider) {
+
+        boolean isEnabled = false;
+        if (serviceProvider == null) {
+            return isEnabled;
+        }
+        LocalAndOutboundAuthenticationConfig config = serviceProvider.getLocalAndOutBoundAuthenticationConfig();
+
+        if (config != null) {
+            isEnabled = config.isUseExternalConsentPage();
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("External consent page: " + isEnabled + " for application: " +
+                    serviceProvider.getApplicationName() + " with id: " + serviceProvider.getApplicationID());
+        }
+        return isEnabled;
+    }
+
+    public static boolean isConsentPageRedirectParamsAllowed() {
+        return FileBasedConfigurationBuilder.getInstance().isConsentPageRedirectParamsAllowed();
+    }
 }

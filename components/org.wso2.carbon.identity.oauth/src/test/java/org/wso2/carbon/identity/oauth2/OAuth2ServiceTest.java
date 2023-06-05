@@ -19,8 +19,8 @@ package org.wso2.carbon.identity.oauth2;
 
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.mockito.Mock;
-import org.mockito.internal.util.reflection.Whitebox;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.reflect.Whitebox;
 import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -625,8 +625,10 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
                     .onPreTokenRevocationByClient(any(OAuthRevocationRequestDTO.class), anyMap());
         }
         if (throwInvalidOAuthClientException) {
-            when(OAuth2Util.findAccessToken(anyObject(), anyBoolean()))
-                    .thenThrow(InvalidOAuthClientException.class);
+            when(OAuth2Util.findAccessToken(anyObject(), anyBoolean())).
+                    thenAnswer(invocation -> {
+                        throw new InvalidOAuthClientException("InvalidOAuthClientException");
+                    });
         }
         if (failClientAuthentication) {
             when(OAuth2Util.findAccessToken(anyObject(), anyBoolean()))
@@ -654,7 +656,10 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         TokenBinding tokenBinding = new TokenBinding();
         tokenBinding.setBindingReference("dummyReference");
         accessTokenDO.setTokenBinding(tokenBinding);
-        when(OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenThrow(IdentityException.class);
+        when(OAuth2Util.findAccessToken(anyString(), anyBoolean())).
+                thenAnswer(invocation -> {
+                    throw new IdentityException("IdentityException");
+                });
         OAuthRevocationRequestDTO revokeRequestDTO = getOAuthRevocationRequestDTO();
 
         OAuthRevocationResponseDTO oAuthRevocationResponseDTO = oAuth2Service
@@ -804,8 +809,11 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     public void testHandleUserConsentDenialWithException() throws Exception {
 
         OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
-        when(getResponseHander(oAuth2Parameters).handleUserConsentDenial(oAuth2Parameters))
-                .thenThrow(IdentityOAuth2Exception.class);
+        when(getResponseHander(oAuth2Parameters).handleUserConsentDenial(oAuth2Parameters)).
+                thenAnswer(invocation -> {
+                    throw new IdentityOAuth2Exception("IdentityOAuth2Exception");
+                });
+
         assertNull(oAuth2Service.handleUserConsentDenial(oAuth2Parameters));
     }
 
@@ -821,8 +829,11 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     public void testHandleAuthenticationFailureWithException() throws Exception {
 
         OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
-        when(getResponseHander(oAuth2Parameters).handleAuthenticationFailure(oAuth2Parameters))
-                .thenThrow(IdentityOAuth2Exception.class);
+        when(getResponseHander(oAuth2Parameters).handleAuthenticationFailure(oAuth2Parameters)).
+                thenAnswer(invocation -> {
+                    throw new IdentityOAuth2Exception("IdentityOAuth2Exception");
+                });
+
         assertNull(oAuth2Service.handleAuthenticationFailure(oAuth2Parameters));
     }
 

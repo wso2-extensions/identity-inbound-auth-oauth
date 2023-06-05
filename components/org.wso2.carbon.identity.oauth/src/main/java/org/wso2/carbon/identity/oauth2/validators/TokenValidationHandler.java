@@ -319,11 +319,10 @@ public class TokenValidationHandler {
                         OAuthConstants.LogConstants.FAILED, "System error occurred.", "validate-token", null);
                 throw new IdentityOAuth2Exception("Error occurred while validating token.", exception);
             } else {
+                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+                        OAuthConstants.LogConstants.FAILED, "Token validation failed.", "validate-token", null);
                 return buildIntrospectionErrorResponse("Token validation failed");
             }
-        } else {
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.SUCCESS, "Token is successfully validated.", "validate-token", null);
         }
 
         if (introResp.getUsername() != null) {

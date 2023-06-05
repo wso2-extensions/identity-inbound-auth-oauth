@@ -45,10 +45,12 @@ import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.FileInputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyStore;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -82,7 +84,7 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
     private static final String ALG = "RS256";
     private static final String USE = "sig";
     private static final JSONArray X5C_ARRAY = new JSONArray();
-    private static final String X5T = "ZHVtbXlUaHVtYlByaW50VmFsdWU";
+    private static final JSONArray X5T_ARRAY = new JSONArray();
     private JwksEndpoint jwksEndpoint;
     private Object identityUtilObj;
 
@@ -123,6 +125,9 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
                 "EJCSfsvswtLVDZ7GDvTHKojJjQvdVCzRj6XH5Truwefb4BJz9APtnlyJIvjHk1hdozqyOniVZd0QOxLAbcdt946chNdQvCm6aUOp" +
                 "utp8Xogr0KBnEy3U8es2cAfNZaEkPU8Va5bU6Xjny8zGQnXCXxPKp7sMpgO93nPBt/liX1qfyXM7xEotWoxmm6HZx8oWQ8U5aiXj" +
                 "Z5RKDWCCq4ZuXl6wVsUz1iE61suO5yWi8=");
+        X5T_ARRAY.put("vgeji34kzLU_6u8pLs985j8kPBRFtAYnZi_-yQdktYU");
+        X5T_ARRAY.put("UPDtpYmK86EVwsUIGUlW5-EU_iNHQ-nSL3Ca58uAG70");
+
     }
 
     @DataProvider(name = "provideTenantDomain")
@@ -158,9 +163,19 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
         threadLocalProperties.get().put(OAuthConstants.TENANT_NAME_FROM_CONTEXT, tenantDomain);
 
         Field threadLocalPropertiesField = identityUtilObj.getClass().getDeclaredField("threadLocalProperties");
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(threadLocalPropertiesField, threadLocalPropertiesField.getModifiers() & ~Modifier.FINAL);
+        Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
+        getDeclaredFields0.setAccessible(true);
+        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
+        Field modifiers = null;
+        for (Field each : fields) {
+            if ("modifiers".equals(each.getName())) {
+                modifiers = each;
+                break;
+            }
+        }
+        modifiers.setAccessible(true);
+        modifiers.setInt(threadLocalPropertiesField, threadLocalPropertiesField.getModifiers() & ~Modifier.FINAL);
+
         threadLocalPropertiesField.setAccessible(true);
         threadLocalPropertiesField.set(identityUtilObj, threadLocalProperties);
 
@@ -185,7 +200,6 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
         if ("foo.com".equals(tenantDomain)) {
             when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA")).thenReturn(JWSAlgorithm.RS256);
         }
-        when(OAuth2Util.getThumbPrint(any(), anyString())).thenReturn("dummyThumbPrintValue");
         mockStatic(KeyStoreManager.class);
         when(KeyStoreManager.getInstance(anyInt())).thenReturn(keyStoreManager);
         when(keyStoreManager.getKeyStore("foo-com.jks")).thenReturn(getKeyStoreFromFile("foo-com.jks", "foo.com"));
@@ -200,14 +214,19 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
             assertEquals(keyObject.get("alg"), ALG, "Incorrect alg value");
             assertEquals(keyObject.get("use"), USE, "Incorrect use value");
             assertEquals(keyObject.get("kty"), "RSA", "Incorrect kty value");
-            assertEquals(keyObject.get("x5t#S256"), X5T, "Incorrect x5t#S256 value");
             if ("foo.com".equals(tenantDomain)) {
                 assertEquals(objectArray.length(), 2, "Incorrect no of keysets");
                 assertEquals(((JSONArray) keyObject.get("x5c")).get(0), X5C_ARRAY.get(0), "Incorrect x5c value");
+                assertEquals(keyObject.get("x5t#S256"), X5T_ARRAY.get(0), "Incorrect x5t#S256 value");
             } else {
                 assertEquals(objectArray.length(), 3, "Incorrect no of keysets");
                 assertEquals(((JSONArray) keyObject.get("x5c")).get(0), X5C_ARRAY.get(1), "Incorrect x5c value");
+                assertEquals(keyObject.get("x5t#S256"), X5T_ARRAY.get(1), "Incorrect x5t#S256 value");
             }
+            String base64UrlEncodedString = (String) keyObject.get("x5t#S256");
+            byte[] decodedBytes = Base64.getUrlDecoder().decode(base64UrlEncodedString);
+            assertEquals(decodedBytes.length, 32, "Incorrect x5t#S256 size");
+
         } catch (JSONException e) {
             if ("invalid.com".equals(tenantDomain)) {
                 // This is expected. We don't validate for invalid tenants.

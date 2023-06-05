@@ -24,6 +24,8 @@ import org.apache.cxf.jaxrs.impl.MetadataMap;
 import org.apache.cxf.message.Message;
 import org.apache.cxf.phase.AbstractPhaseInterceptor;
 import org.apache.cxf.phase.Phase;
+import org.json.JSONObject;
+import org.wso2.carbon.identity.core.persistence.DBConnectionException;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -34,6 +36,8 @@ import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
 
 /**
  * JAX-RS interceptor which intercepts requests. This interceptor will act as a proxy for OAuth2 Client Authenticators.
@@ -71,13 +75,22 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
 
         Map<String, List> bodyContentParams = getContentParams(message);
         HttpServletRequest request = ((HttpServletRequest) message.get(HTTP_REQUEST));
-        OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService.authenticateClient(request,
-                bodyContentParams);
-        if (!oAuthClientAuthnContext.isPreviousAuthenticatorEngaged()) {
-            oAuthClientAuthnContext.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
-            oAuthClientAuthnContext.setErrorMessage("Unsupported client authentication mechanism");
+        try {
+            OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService.authenticateClient
+                    (request, bodyContentParams);
+            if (!oAuthClientAuthnContext.isPreviousAuthenticatorEngaged()) {
+                oAuthClientAuthnContext.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
+                oAuthClientAuthnContext.setErrorMessage("Unsupported client authentication mechanism");
+            }
+            setContextToRequest(request, oAuthClientAuthnContext);
+        } catch (DBConnectionException e) {
+            log.error("Unable to retrieve a connection to DB while authenticating the client", e);
+            String errorMessage = new JSONObject().put("error_description", "Internal Server Error.")
+                    .put("error", "server_error").toString();
+            Response response = Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(errorMessage)
+                    .build();
+            throw new WebApplicationException(response);
         }
-        setContextToRequest(request, oAuthClientAuthnContext);
     }
 
     /**

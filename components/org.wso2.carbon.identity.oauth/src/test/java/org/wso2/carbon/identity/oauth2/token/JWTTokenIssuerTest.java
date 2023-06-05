@@ -35,6 +35,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -44,6 +45,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
@@ -77,6 +80,7 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 
+@WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
 @PrepareForTest(
         {
                 OAuthServerConfiguration.class,
@@ -105,6 +109,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     private static final String USER_ACCESS_TOKEN_GRANT_TYPE = "userAccessTokenGrantType";
     private static final String APPLICATION_ACCESS_TOKEN_GRANT_TYPE = "applicationAccessTokenGrantType";
     private static final String DUMMY_CLIENT_ID = "dummyClientID";
+    private static final String DUMMY_CONSUMER_KEY = "DUMMY_CONSUMER_KEY";
     private static final String ID_TOKEN_ISSUER = "idTokenIssuer";
     private static final String EXPIRY_TIME_JWT = "EXPIRY_TIME_JWT";
 
@@ -114,6 +119,10 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     private static final String CLAIM_CLIENT_ID = "client_id";
     private static final String DEFAULT_TYP_HEADER_VALUE = "at+jwt";
     private static final String THUMBPRINT = "Certificate";
+    public static final String AUTHZ_FLOW_CUSTOM_CLAIM = "authz_flow_custom_claim";
+    public static final String AUTHZ_FLOW_CUSTOM_CLAIM_VALUE = "authz_flow_custom_claim_value";
+    public static final String TOKEN_FLOW_CUSTOM_CLAIM = "token_flow_custom_claim";
+    public static final String TOKEN_FLOW_CUSTOM_CLAIM_VALUE = "token_flow_custom_claim_value";
 
     @Mock
     private OAuthServerConfiguration oAuthServerConfiguration;
@@ -149,9 +158,23 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
                                                      List<String> expectedJWTAudiences) throws Exception {
 
         OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+        accessTokenReqDTO.setGrantType(USER_ACCESS_TOKEN_GRANT_TYPE);
+        accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
         OAuthTokenReqMessageContext reqMessageContext = new OAuthTokenReqMessageContext(accessTokenReqDTO);
         reqMessageContext.setScope(requestScopes);
 
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserName("DUMMY_USERNAME");
+        authenticatedUser.setTenantDomain("DUMMY_TENANT.COM");
+        authenticatedUser.setUserStoreDomain("DUMMY_DOMAIN");
+        reqMessageContext.setAuthorizedUser(authenticatedUser);
+
+        OAuth2ServiceComponentHolder.getInstance().addJWTAccessTokenClaimProvider(
+                new DummyTestJWTAccessTokenClaimProvider());
+        OAuth2ServiceComponentHolder.getInstance().addJWTAccessTokenClaimProvider(
+                new DummyErrornousJWTAccessTokenClaimProvider());
+
+        prepareForBuildJWTToken();
         JWTTokenIssuer jwtTokenIssuer = getJWTTokenIssuer(NONE);
         String jwtToken = jwtTokenIssuer.buildJWTToken(reqMessageContext);
 
@@ -159,6 +182,10 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         assertNotNull(plainJWT);
         assertNotNull(plainJWT.getJWTClaimsSet());
         assertEquals(plainJWT.getJWTClaimsSet().getAudience(), expectedJWTAudiences);
+        assertNotNull(plainJWT.getJWTClaimsSet().getClaim(TOKEN_FLOW_CUSTOM_CLAIM),
+                "Custom claim injected by the claim provider not found.");
+        assertEquals(plainJWT.getJWTClaimsSet().getClaim(TOKEN_FLOW_CUSTOM_CLAIM), TOKEN_FLOW_CUSTOM_CLAIM_VALUE,
+                "Custom claim value injected by claim provider value mismatch.");
     }
 
     /**
@@ -172,12 +199,29 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         OAuthAuthzReqMessageContext authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
         authzReqMessageContext.setApprovedScope(requestScopes);
 
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserName("DUMMY_USERNAME");
+        authenticatedUser.setTenantDomain("DUMMY_TENANT.COM");
+        authenticatedUser.setUserStoreDomain("DUMMY_DOMAIN");
+        authorizeReqDTO.setUser(authenticatedUser);
+        authorizeReqDTO.setConsumerKey(DUMMY_CONSUMER_KEY);
+
+        OAuth2ServiceComponentHolder.getInstance().addJWTAccessTokenClaimProvider(
+                new DummyTestJWTAccessTokenClaimProvider());
+        OAuth2ServiceComponentHolder.getInstance().addJWTAccessTokenClaimProvider(
+                new DummyErrornousJWTAccessTokenClaimProvider());
+
+        prepareForBuildJWTToken();
         JWTTokenIssuer jwtTokenIssuer = getJWTTokenIssuer(NONE);
         String jwtToken = jwtTokenIssuer.buildJWTToken(authzReqMessageContext);
         PlainJWT plainJWT = PlainJWT.parse(jwtToken);
         assertNotNull(plainJWT);
         assertNotNull(plainJWT.getJWTClaimsSet());
         assertEquals(plainJWT.getJWTClaimsSet().getAudience(), expectedJWTAudiences);
+        assertNotNull(plainJWT.getJWTClaimsSet().getClaim(AUTHZ_FLOW_CUSTOM_CLAIM),
+                "Custom claim injected by the claim provider not found.");
+        assertEquals(plainJWT.getJWTClaimsSet().getClaim(AUTHZ_FLOW_CUSTOM_CLAIM), AUTHZ_FLOW_CUSTOM_CLAIM_VALUE,
+                "Custom claim value injected by claim provider value mismatch.");
     }
 
     private JWTTokenIssuer getJWTTokenIssuer(String signatureAlgorithm) throws IdentityOAuth2Exception {
@@ -200,7 +244,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
     public void testCreateJWTClaimSetForInvalidClient() throws Exception {
         mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getAppInformationByClientId(anyString()))
+        when(OAuth2Util.getAppInformationByClientId(null))
                 .thenThrow(new InvalidOAuthClientException("INVALID_CLIENT"));
         when(oAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_HMAC);
 
@@ -219,12 +263,14 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         authenticatedUser.setAuthenticatedSubjectIdentifier(authenticatedSubjectIdentifier);
 
         OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
+        authorizeReqDTO.setTenantDomain("super.wso2");
         authorizeReqDTO.setUser(authenticatedUser);
         OAuthAuthzReqMessageContext authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
         authzReqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
 
         OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
         tokenReqDTO.setGrantType(APPLICATION_ACCESS_TOKEN_GRANT_TYPE);
+        tokenReqDTO.setTenantDomain("super.wso2");
         OAuthTokenReqMessageContext tokenReqMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
         tokenReqMessageContext.setAuthorizedUser(authenticatedUser);
         Calendar cal = Calendar.getInstance(); // creates calendar
@@ -440,12 +486,11 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
 
         OAuthAppDO appDO = new OAuthAppDO();
         appDO.setUserAccessTokenExpiryTime(userAccessTokenExpiryTime);
-        String consumerKey = "DUMMY_CONSUMER_KEY";
 
         JWTTokenIssuer jwtTokenIssuer = new JWTTokenIssuer();
 
         assertEquals(
-                jwtTokenIssuer.getAccessTokenLifeTimeInMillis(authzReqMessageContext, appDO, consumerKey),
+                jwtTokenIssuer.getAccessTokenLifeTimeInMillis(authzReqMessageContext, appDO, DUMMY_CONSUMER_KEY),
                 expectedAccessTokenLifeTime
         );
     }
@@ -499,7 +544,6 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         OAuthAppDO appDO = new OAuthAppDO();
         appDO.setUserAccessTokenExpiryTime(userAccessTokenExpiryTime);
         appDO.setApplicationAccessTokenExpiryTime(applicationAccessTokenExpiryTime);
-        String consumerKey = "DUMMY_CONSUMER_KEY";
 
         OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
         accessTokenReqDTO.setGrantType(grantType);
@@ -509,7 +553,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
 
         JWTTokenIssuer jwtTokenIssuer = new JWTTokenIssuer();
         assertEquals(
-                jwtTokenIssuer.getAccessTokenLifeTimeInMillis(tokenReqMessageContext, appDO, consumerKey),
+                jwtTokenIssuer.getAccessTokenLifeTimeInMillis(tokenReqMessageContext, appDO, DUMMY_CONSUMER_KEY),
                 expectedAccessTokenLifeTime
         );
     }
@@ -568,7 +612,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         doAnswer(new Answer<JWTClaimsSet>() {
             @Override
             public JWTClaimsSet answer(InvocationOnMock invocationOnMock) throws Throwable {
-                JWTClaimsSet.Builder claimsSetBuilder = invocationOnMock.getArgumentAt(0, JWTClaimsSet.Builder.class);
+                JWTClaimsSet.Builder claimsSetBuilder = invocationOnMock.getArgument(0);
                 claimsSetBuilder.claim("TOKEN_CONTEXT_CLAIM", true);
                 return claimsSetBuilder.build();
             }
@@ -580,7 +624,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         doAnswer(new Answer<JWTClaimsSet>() {
             @Override
             public JWTClaimsSet answer(InvocationOnMock invocationOnMock) throws Throwable {
-                JWTClaimsSet.Builder claimsSetBuilder = invocationOnMock.getArgumentAt(0, JWTClaimsSet.Builder.class);
+                JWTClaimsSet.Builder claimsSetBuilder = invocationOnMock.getArgument(0);
                 claimsSetBuilder.claim("AUTHZ_CONTEXT_CLAIM", true);
                 return claimsSetBuilder.build();
             }
@@ -592,5 +636,52 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(oAuthServerConfiguration.getOpenIDConnectCustomClaimsCallbackHandler()).
                 thenReturn(claimsCallBackHandler);
 
+    }
+
+    private void prepareForBuildJWTToken() throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        System.setProperty(CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());
+
+        OAuthAppDO appDO = spy(new OAuthAppDO());
+        mockGrantHandlers();
+        mockCustomClaimsCallbackHandler();
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
+        when(OAuth2Util.getTenantDomain(anyInt())).thenReturn("super.wso2");
+    }
+
+    static class DummyTestJWTAccessTokenClaimProvider implements JWTAccessTokenClaimProvider {
+
+        @Override
+        public Map<String, Object> getAdditionalClaims(OAuthAuthzReqMessageContext context)
+                throws IdentityOAuth2Exception {
+
+            return Map.of(AUTHZ_FLOW_CUSTOM_CLAIM, AUTHZ_FLOW_CUSTOM_CLAIM_VALUE);
+        }
+
+        @Override
+        public Map<String, Object> getAdditionalClaims(OAuthTokenReqMessageContext context)
+                throws IdentityOAuth2Exception {
+
+            return Map.of(TOKEN_FLOW_CUSTOM_CLAIM, TOKEN_FLOW_CUSTOM_CLAIM_VALUE);
+        }
+    }
+
+    static class DummyErrornousJWTAccessTokenClaimProvider implements JWTAccessTokenClaimProvider {
+
+        @Override
+        public Map<String, Object> getAdditionalClaims(OAuthAuthzReqMessageContext context)
+                throws IdentityOAuth2Exception {
+
+            return null;
+        }
+
+        @Override
+        public Map<String, Object> getAdditionalClaims(OAuthTokenReqMessageContext context)
+                throws IdentityOAuth2Exception {
+
+            return null;
+        }
     }
 }

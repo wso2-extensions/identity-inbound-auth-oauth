@@ -19,9 +19,11 @@ package org.wso2.carbon.identity.oidc.session.servlet;
 
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -42,6 +44,7 @@ import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({OAuthServerConfiguration.class, IdentityDatabaseUtil.class, IdentityTenantUtil.class,
         OIDCSessionManagementUtil.class})
+@WithCarbonHome
 /**
  * Unit test coverage for OIDCSessionIFrameServlet class
  */
@@ -76,10 +79,8 @@ public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
             ".appone/oauth2client";
     private static final String VALID_REGEX_CALLBACK_URL = "regexp=http://localhost:8080/playground2/oauth2client";
 
-    @BeforeTest
-    public void setUp() throws Exception {
-
-        oidcSessionIFrameServlet = new OIDCSessionIFrameServlet();
+    @BeforeClass
+    public void setupBeforeClass() throws Exception {
 
         initiateInMemoryH2();
         createOAuthApp(CLIENT_ID_VALUE, SECRET, USERNAME, APP_NAME, "ACTIVE", CALLBACK_URL);
@@ -89,6 +90,11 @@ public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
                 INVALID_REGEX_CALLBACK_URL);
         createOAuthApp(CLIENT_ID_WITH_VALID_REGEX_CALLBACK_URL, SECRET, USERNAME, APP_NAME, "ACTIVE",
                 VALID_REGEX_CALLBACK_URL);
+    }
+    @BeforeMethod
+    public void setUp() throws Exception {
+
+        oidcSessionIFrameServlet = new OIDCSessionIFrameServlet();
     }
 
     /**
