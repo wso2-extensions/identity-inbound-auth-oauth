@@ -415,12 +415,12 @@ public class AccessTokenIssuer {
 
             AuthenticatedUser authorizedUser = tokReqMsgCtx.getAuthorizedUser();
             if (authorizedUser.getAuthenticatedSubjectIdentifier() == null) {
-                if (isOfTypeApplicationUser || !useClientIdAsSubClaimForAppTokensEnabled) {
+                if (!isOfTypeApplicationUser && useClientIdAsSubClaimForAppTokensEnabled) {
+                    authorizedUser.setAuthenticatedSubjectIdentifier(oAuthAppDO.getOauthConsumerKey());
+                } else {
                     authorizedUser.setAuthenticatedSubjectIdentifier(
                             getSubjectClaim(getServiceProvider(tokReqMsgCtx.getOauth2AccessTokenReqDTO()),
                                     authorizedUser));
-                } else {
-                    authorizedUser.setAuthenticatedSubjectIdentifier(oAuthAppDO.getOauthConsumerKey());
                 }
             }
 

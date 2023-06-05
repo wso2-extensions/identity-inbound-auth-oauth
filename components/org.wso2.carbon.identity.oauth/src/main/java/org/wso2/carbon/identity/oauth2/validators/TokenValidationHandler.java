@@ -508,6 +508,9 @@ public class TokenValidationHandler {
             }
 
             String tokenType = accessTokenDO.getTokenType();
+            boolean removeUsernameFromAppTokenEnabled =OAuthServerConfiguration.getInstance()
+                    .isRemoveUsernameFromIntrospectionResponseForAppTokensEnabled();
+            boolean isAppTokenType = StringUtils.equals(OAuthConstants.UserType.APPLICATION, tokenType);
 
             // should be in seconds
             introResp.setIat(accessTokenDO.getIssuedTime().getTime() / 1000);
@@ -516,8 +519,7 @@ public class TokenValidationHandler {
             // token scopes
             introResp.setScope(OAuth2Util.buildScopeString((accessTokenDO.getScope())));
             // set user-name
-            if (!OAuthServerConfiguration.getInstance().isRemoveUsernameFromIntrospectionResponseForAppTokensEnabled()
-                    || !StringUtils.equals(OAuthConstants.UserType.APPLICATION, tokenType)) {
+            if (!removeUsernameFromAppTokenEnabled || !isAppTokenType) {
                 introResp.setUsername(getAuthzUser(accessTokenDO));
             }
             // add client id
