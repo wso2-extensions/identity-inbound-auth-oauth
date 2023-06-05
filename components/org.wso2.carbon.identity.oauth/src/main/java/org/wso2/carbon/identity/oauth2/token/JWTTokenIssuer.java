@@ -45,9 +45,13 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
+import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 
 import java.security.Key;
 import java.security.interfaces.RSAPrivateKey;
@@ -60,6 +64,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getPrivateKey;
 
 /**
@@ -174,6 +180,15 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         if (request.getScope() != null && Arrays.asList((request.getScope())).contains(AUDIENCE)) {
             jwtClaimsSetBuilder.audience(Arrays.asList(request.getScope()));
         }
+
+        List<JWTAccessTokenClaimProvider> claimProviders = getJWTAccessTokenClaimProviders();
+        for (JWTAccessTokenClaimProvider claimProvider : claimProviders) {
+            Map<String, Object> additionalClaims = claimProvider.getAdditionalClaims(request);
+            if (additionalClaims != null) {
+                additionalClaims.forEach(jwtClaimsSetBuilder::claim);
+            }
+        }
+
         jwtClaimsSet = jwtClaimsSetBuilder.build();
         if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
             return new PlainJWT(jwtClaimsSet).serialize();
@@ -199,6 +214,15 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         if (request.getApprovedScope() != null && Arrays.asList((request.getApprovedScope())).contains(AUDIENCE)) {
             jwtClaimsSetBuilder.audience(Arrays.asList(request.getApprovedScope()));
         }
+
+        List<JWTAccessTokenClaimProvider> claimProviders = getJWTAccessTokenClaimProviders();
+        for (JWTAccessTokenClaimProvider claimProvider : claimProviders) {
+            Map<String, Object> additionalClaims = claimProvider.getAdditionalClaims(request);
+            if (additionalClaims != null) {
+                additionalClaims.forEach(jwtClaimsSetBuilder::claim);
+            }
+        }
+
         jwtClaimsSet = jwtClaimsSetBuilder.build();
 
         if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
@@ -208,8 +232,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         return signJWT(jwtClaimsSet, null, request);
     }
 
+    private static List<JWTAccessTokenClaimProvider> getJWTAccessTokenClaimProviders() {
+
+        return OAuth2ServiceComponentHolder.getInstance().getJWTAccessTokenClaimProviders();
+    }
+
     /**
-     * Sign ghe JWT token according to the given signature signing algorithm.
+     * Sign the JWT token according to the given signature signing algorithm.
      *
      * @param jwtClaimsSet         JWT claim set to be signed.
      * @param tokenContext         Token context.
@@ -477,6 +506,18 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         } else {
             jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
         }
+
+        if (tokenReqMessageContext != null && tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
+                tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes() != null) {
+            Map<String, String> customClaims =
+                    tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes()
+                            .getParameters();
+            if (customClaims != null && !customClaims.isEmpty()) {
+                for (Map.Entry<String, String> entry : customClaims.entrySet()) {
+                    jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
+                }
+            }
+        }
         // Include token binding.
         jwtClaimsSet = handleTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
 
@@ -722,6 +763,39 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
     private JWTClaimsSet handleTokenBinding(JWTClaimsSet.Builder jwtClaimsSetBuilder,
                                             OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        /**
+         * If OAuth.JWT.RenewTokenWithoutRevokingExisting is enabled from configurations, and current token
+         * binding is null,then we will add a new token binding (request binding) to the token binding with
+         * a value of a random UUID.
+         * The purpose of this new token binding type is to add a random value to the token binding so that
+         * "User, Application, Scope, Binding" combination will be unique for each token.
+         * Previously, if a token issue request come for the same combination of "User, Application, Scope, Binding",
+         * the existing JWT token will be revoked and issue a new token. but with this way, we can issue new tokens
+         * without revoking the old ones.
+         *
+         * Add following configuration to deployment.toml file to enable this feature.
+         *     [oauth.jwt.renew_token_without_revoking_existing]
+         *     enable = true
+         *
+         * By default, the allowed grant type for this feature is "client_credentials". If you need to enable for
+         * other grant types, add the following configuration to deployment.toml file.
+         *     [oauth.jwt.renew_token_without_revoking_existing]
+         *     enable = true
+         *     allowed_grant_types = ["client_credentials","password", ...]
+         */
+        boolean renewWithoutRevokingExistingEnabled = Boolean.parseBoolean(IdentityUtil.
+                getProperty(RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG));
+
+        if (renewWithoutRevokingExistingEnabled && tokReqMsgCtx != null && tokReqMsgCtx.getTokenBinding() == null) {
+            if (OAuth2ServiceComponentHolder.getJwtRenewWithoutRevokeAllowedGrantTypes()
+                    .contains(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType())) {
+                String tokenBindingValue = UUIDGenerator.generateUUID();
+                tokReqMsgCtx.setTokenBinding(
+                        new TokenBinding(REQUEST_BINDING_TYPE, OAuth2Util.getTokenBindingReference(tokenBindingValue),
+                                tokenBindingValue));
+            }
+        }
 
         if (tokReqMsgCtx != null && tokReqMsgCtx.getTokenBinding() != null) {
             // Include token binding into the jwt token.

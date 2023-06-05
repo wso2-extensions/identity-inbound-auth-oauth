@@ -39,7 +39,7 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.AfterTest;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
@@ -93,6 +93,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
+import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -100,6 +102,11 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.DefaultResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FormPostResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FragmentResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.QueryResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
@@ -144,6 +151,8 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
@@ -172,7 +181,8 @@ import static org.testng.FileAssert.fail;
         EndpointUtil.class, FrameworkUtils.class, EndpointUtil.class, OpenIDConnectUserRPStore.class, SignedJWT.class,
         IdentityTenantUtil.class, OAuthResponse.class, OIDCSessionManagementUtil.class, ServiceURLBuilder.class,
         CarbonUtils.class, SessionDataCache.class, IdentityUtil.class, OAuth2AuthzEndpoint.class, LoggerUtils.class,
-        ClaimMetadataHandler.class, IdentityEventService.class, CentralLogMgtServiceComponentHolder.class})
+        ClaimMetadataHandler.class, IdentityEventService.class, CentralLogMgtServiceComponentHolder.class,
+        AuthorizationHandlerManager.class})
 public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -257,6 +267,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     RequestDispatcher requestDispatcher;
 
     @Mock
+    AuthorizationHandlerManager authorizationHandlerManager;
+
+    @Mock
     private CentralLogMgtServiceComponentHolder centralLogMgtServiceComponentHolderMock;
 
     private static final String ERROR_PAGE_URL = "https://localhost:9443/authenticationendpoint/oauth2_error.do";
@@ -288,7 +301,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     private OAuth2ScopeConsentResponse oAuth2ScopeConsentResponse;
     private ServiceProvider dummySp;
 
-    @BeforeTest
+    @BeforeClass
     public void setUp() throws Exception {
 
         System.setProperty(
@@ -664,6 +677,26 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
 
+        mockStatic(OAuth2Util.OAuthURL.class);
+        when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
+
+        mockStatic(AuthorizationHandlerManager.class);
+        when(AuthorizationHandlerManager.getInstance()).thenReturn(authorizationHandlerManager);
+
+        OAuth2AuthorizeReqDTO authzReqDTO =  new OAuth2AuthorizeReqDTO();
+        authzReqDTO.setConsumerKey(CLIENT_ID_VALUE);
+        authzReqDTO.setScopes(new String[]{OAuthConstants.Scope.OPENID});
+        authzReqDTO.setCallbackUrl(redirectUri);
+        authzReqDTO.setUser(loginCacheEntry.getLoggedInUser());
+        authzReqDTO.setResponseType("code");
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        authzReqMsgCtx.setApprovedScope(new String[]{OAuthConstants.Scope.OPENID});
+        when(oAuth2Service.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class))).thenReturn(authzReqMsgCtx);
+        when(authorizationHandlerManager.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class)))
+                .thenReturn(authzReqMsgCtx);
+
+        when(loginCacheEntry.getAuthzReqMsgCtx()).thenReturn(authzReqMsgCtx);
+
         spy(FrameworkUtils.class);
         doReturn("sample").when(FrameworkUtils.class, "resolveUserIdFromUsername", anyInt(), anyString(), anyString());
         doNothing().when(FrameworkUtils.class, "startTenantFlow", anyString());
@@ -685,7 +718,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             mockEndpointUtil(false);
             when(oAuth2Service.handleAuthenticationFailure(oAuth2Params)).thenReturn(oAuthErrorDTO);
             when(oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(
-                    anyString(), anyString(), anyInt(), anyList())).thenReturn(true);
+                    anyString(), isNull(), anyInt(), anyList())).thenReturn(true);
 
             mockServiceURLBuilder();
 
@@ -829,6 +862,10 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(consentCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
         when(consentCacheEntry.getLoggedInUser()).thenReturn(new AuthenticatedUser());
 
+        OAuth2AuthorizeReqDTO authorizeReqDTO =  new OAuth2AuthorizeReqDTO();
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authorizeReqDTO);
+        when(consentCacheEntry.getAuthzReqMsgCtx()).thenReturn(authzReqMsgCtx);
+
         mockStatic(OpenIDConnectUserRPStore.class);
         when(OpenIDConnectUserRPStore.getInstance()).thenReturn(openIDConnectUserRPStore);
         doNothing().when(openIDConnectUserRPStore).putUserRPToStore(any(AuthenticatedUser.class),
@@ -854,6 +891,31 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         Response response;
         try {
+            Map<String, ResponseModeProvider> supportedResponseModeProviders = new HashMap<>();
+            ResponseModeProvider defaultResponseModeProvider;
+            Map<String, String> supportedResponseModeClassNames = new HashMap<>();
+            String defaultResponseModeProviderClassName;
+            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.QUERY,
+                    QueryResponseModeProvider.class.getCanonicalName());
+            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FRAGMENT,
+                    FragmentResponseModeProvider.class.getCanonicalName());
+            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FORM_POST,
+                    FormPostResponseModeProvider.class.getCanonicalName());
+            defaultResponseModeProviderClassName = DefaultResponseModeProvider.class.getCanonicalName();
+
+            for (Map.Entry<String, String> entry : supportedResponseModeClassNames.entrySet()) {
+                ResponseModeProvider responseModeProvider = (ResponseModeProvider)
+                        Class.forName(entry.getValue()).newInstance();
+
+                supportedResponseModeProviders.put(entry.getKey(), responseModeProvider);
+            }
+
+            defaultResponseModeProvider = (ResponseModeProvider)
+                    Class.forName(defaultResponseModeProviderClassName).newInstance();
+
+            OAuth2ServiceComponentHolder.setResponseModeProviders(supportedResponseModeProviders);
+            OAuth2ServiceComponentHolder.setDefaultResponseModeProvider(defaultResponseModeProvider);
+
             response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
         } catch (InvalidRequestParentException ire) {
             InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
@@ -1209,7 +1271,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             }
         }
         mockEndpointUtil(false);
-        when(oAuth2Service.authorize(any(OAuth2AuthorizeReqDTO.class))).thenReturn(authzRespDTO);
+        when(oAuth2Service.authorize(any(OAuthAuthzReqMessageContext.class))).thenReturn(authzRespDTO);
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
         mockStatic(OpenIDConnectUserRPStore.class);
         when(OpenIDConnectUserRPStore.getInstance()).thenReturn(openIDConnectUserRPStore);
@@ -1232,8 +1294,37 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
 
+        OAuth2AuthorizeReqDTO authorizeReqDTO =  new OAuth2AuthorizeReqDTO();
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authorizeReqDTO);
+        when(consentCacheEntry.getAuthzReqMsgCtx()).thenReturn(authzReqMsgCtx);
+
         Response response;
         try {
+            Map<String, ResponseModeProvider> supportedResponseModeProviders = new HashMap<>();
+            ResponseModeProvider defaultResponseModeProvider;
+            Map<String, String> supportedResponseModeClassNames = new HashMap<>();
+            String defaultResponseModeProviderClassName;
+            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.QUERY,
+                    QueryResponseModeProvider.class.getCanonicalName());
+            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FRAGMENT,
+                    FragmentResponseModeProvider.class.getCanonicalName());
+            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FORM_POST,
+                    FormPostResponseModeProvider.class.getCanonicalName());
+            defaultResponseModeProviderClassName = DefaultResponseModeProvider.class.getCanonicalName();
+
+            for (Map.Entry<String, String> entry : supportedResponseModeClassNames.entrySet()) {
+                ResponseModeProvider responseModeProvider = (ResponseModeProvider)
+                        Class.forName(entry.getValue()).newInstance();
+
+                supportedResponseModeProviders.put(entry.getKey(), responseModeProvider);
+            }
+
+            defaultResponseModeProvider = (ResponseModeProvider)
+                    Class.forName(defaultResponseModeProviderClassName).newInstance();
+
+            OAuth2ServiceComponentHolder.setResponseModeProviders(supportedResponseModeProviders);
+            OAuth2ServiceComponentHolder.setDefaultResponseModeProvider(defaultResponseModeProvider);
+
             response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
         } catch (InvalidRequestParentException ire) {
             InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
@@ -1350,12 +1441,27 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         mockApplicationManagementService();
 
+        mockStatic(AuthorizationHandlerManager.class);
+        when(AuthorizationHandlerManager.getInstance()).thenReturn(authorizationHandlerManager);
+
+        OAuth2AuthorizeReqDTO authzReqDTO =  new OAuth2AuthorizeReqDTO();
+        authzReqDTO.setConsumerKey(CLIENT_ID_VALUE);
+        authzReqDTO.setScopes(new String[]{OAuthConstants.Scope.OPENID});
+        authzReqDTO.setUser(loginCacheEntry.getLoggedInUser());
+        authzReqDTO.setResponseType("code");
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        authzReqMsgCtx.setApprovedScope(new String[]{OAuthConstants.Scope.OPENID});
+        when(oAuth2Service.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class))).thenReturn(authzReqMsgCtx);
+        when(authorizationHandlerManager.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class)))
+                .thenReturn(authzReqMsgCtx);
+        when(loginCacheEntry.getAuthzReqMsgCtx()).thenReturn(authzReqMsgCtx);
         spy(FrameworkUtils.class);
         doReturn("sample").when(FrameworkUtils.class, "resolveUserIdFromUsername", anyInt(), anyString(), anyString());
         doNothing().when(FrameworkUtils.class, "startTenantFlow", anyString());
         doNothing().when(FrameworkUtils.class, "endTenantFlow");
         spy(IdentityTenantUtil.class);
-        doReturn(MultitenantConstants.SUPER_TENANT_ID).when(IdentityTenantUtil.class, "getTenantId", anyString());
+        doReturn(MultitenantConstants.SUPER_TENANT_ID).when(IdentityTenantUtil.class, "getTenantId",
+                nullable(String.class));
         doReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME).when(IdentityTenantUtil.class, "getTenantDomain",
                 anyInt());
 
@@ -1449,7 +1555,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         OAuth2AuthorizeRespDTO authzRespDTO = new OAuth2AuthorizeRespDTO();
         authzRespDTO.setCallbackURI(callbackUrl);
-        when(oAuth2Service.authorize(any(OAuth2AuthorizeReqDTO.class))).thenReturn(authzRespDTO);
+        when(oAuth2Service.authorize(any(OAuthAuthzReqMessageContext.class))).thenReturn(authzRespDTO);
 
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
@@ -1460,13 +1566,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(OIDCSessionManagementUtil.addOPBrowserStateCookie(any(HttpServletResponse.class)))
                 .thenReturn(newOpBrowserStateCookie);
         when(OIDCSessionManagementUtil.addOPBrowserStateCookie(any(HttpServletResponse.class),
-                any(HttpServletRequest.class), any(String.class), any(String.class)))
+                any(HttpServletRequest.class), nullable(String.class), nullable(String.class)))
                 .thenReturn(newOpBrowserStateCookie);
         when(OIDCSessionManagementUtil.getSessionManager()).thenReturn(oidcSessionManager);
-        when(oidcSessionManager.getOIDCSessionState(anyString(), anyString())).thenReturn(previousSessionState);
+        when(oidcSessionManager.getOIDCSessionState(anyString(), any(String.class))).thenReturn(previousSessionState);
         when(OIDCSessionManagementUtil.getSessionStateParam(anyString(), anyString(), anyString()))
                 .thenReturn("sessionStateValue");
-        when(OIDCSessionManagementUtil.addSessionStateToURL(anyString(), anyString(), anyString()))
+        when(OIDCSessionManagementUtil.addSessionStateToURL(anyString(), anyString(), isNull()))
                 .thenCallRealMethod();
 
         mockStatic(SessionDataCache.class);
@@ -1486,12 +1592,28 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         mockApplicationManagementService();
 
+        mockStatic(AuthorizationHandlerManager.class);
+        when(AuthorizationHandlerManager.getInstance()).thenReturn(authorizationHandlerManager);
+
+        OAuth2AuthorizeReqDTO authzReqDTO =  new OAuth2AuthorizeReqDTO();
+        authzReqDTO.setConsumerKey(CLIENT_ID_VALUE);
+        authzReqDTO.setScopes(new String[]{OAuthConstants.Scope.OPENID});
+        authzReqDTO.setCallbackUrl(callbackUrl);
+        authzReqDTO.setUser(loginCacheEntry.getLoggedInUser());
+        authzReqDTO.setResponseType("code");
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        authzReqMsgCtx.setApprovedScope(new String[]{OAuthConstants.Scope.OPENID});
+        when(oAuth2Service.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class))).thenReturn(authzReqMsgCtx);
+        when(authorizationHandlerManager.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class)))
+                .thenReturn(authzReqMsgCtx);
+        when(loginCacheEntry.getAuthzReqMsgCtx()).thenReturn(authzReqMsgCtx);
         spy(FrameworkUtils.class);
         doReturn("sample").when(FrameworkUtils.class, "resolveUserIdFromUsername", anyInt(), anyString(), anyString());
         doNothing().when(FrameworkUtils.class, "startTenantFlow", anyString());
         doNothing().when(FrameworkUtils.class, "endTenantFlow");
         spy(IdentityTenantUtil.class);
-        doReturn(MultitenantConstants.SUPER_TENANT_ID).when(IdentityTenantUtil.class, "getTenantId", anyString());
+        doReturn(MultitenantConstants.SUPER_TENANT_ID).when(IdentityTenantUtil.class, "getTenantId",
+                nullable(String.class));
         doReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME).when(IdentityTenantUtil.class, "getTenantDomain",
                 anyInt());
 
@@ -1560,10 +1682,19 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         assertEquals((value != null), fileExists, "FormPostRedirectPage value is incorrect");
 
         Field formPostRedirectPage = authzEndpointObject.getClass().getDeclaredField("formPostRedirectPage");
+        Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
+        getDeclaredFields0.setAccessible(true);
+        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
+        Field modifiers = null;
+        for (Field each : fields) {
+            if ("modifiers".equals(each.getName())) {
+                modifiers = each;
+                break;
+            }
+        }
+        modifiers.setAccessible(true);
+        modifiers.setInt(formPostRedirectPage, formPostRedirectPage.getModifiers() & ~Modifier.FINAL);
 
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(formPostRedirectPage, formPostRedirectPage.getModifiers() & ~Modifier.FINAL);
         formPostRedirectPage.setAccessible(true);
         formPostRedirectPage.set(authzEndpointObject, value);
 
@@ -1682,7 +1813,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     }
 
     @Test(dataProvider = "provideAuthenticatedTimeFromCommonAuthData")
-    public void testGetAuthenticatedTimeFromCommonAuthCookie(Object sessionContextObject, Object updatedTimestamp,
+    public void testGetAuthenticatedTimeFromCommonAuthCookieValue(Object sessionContextObject, Object updatedTimestamp,
                                                              Object createdTimeStamp) throws Exception {
 
         SessionContext sessionContext = (SessionContext) sessionContextObject;
@@ -1696,11 +1827,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockStatic(FrameworkUtils.class);
         when(FrameworkUtils.getSessionContextFromCache(anyString(), anyString())).thenReturn(sessionContext);
 
-        Method getAuthenticatedTimeFromCommonAuthCookie = authzEndpointObject.getClass().
-                getDeclaredMethod("getAuthenticatedTimeFromCommonAuthCookie", Cookie.class, String.class);
-        getAuthenticatedTimeFromCommonAuthCookie.setAccessible(true);
-        long timestamp = (long) getAuthenticatedTimeFromCommonAuthCookie.invoke(authzEndpointObject, commonAuthCookie,
-                "abc");
+        Method getAuthenticatedTimeFromCommonAuthCookieValue = authzEndpointObject.getClass().
+                getDeclaredMethod("getAuthenticatedTimeFromCommonAuthCookieValue", String.class, String.class);
+        getAuthenticatedTimeFromCommonAuthCookieValue.setAccessible(true);
+        long timestamp = (long) getAuthenticatedTimeFromCommonAuthCookieValue.invoke(authzEndpointObject,
+                commonAuthCookie.getValue(), "abc");
 
         if (sessionContext == null) {
             assertEquals(timestamp, 0, "Authenticated time should be 0 when session context is null");
@@ -1981,7 +2112,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         doReturn(oAuthServerConfiguration).when(EndpointUtil.class, "getOAuthServerConfiguration");
         doReturn(USER_CONSENT_URL).when(EndpointUtil.class, "getUserConsentURL", any(OAuth2Parameters.class),
-                anyString(), anyString(), anyBoolean(), any(OAuthMessage.class));
+                anyString(), anyString(), any(OAuthMessage.class), anyString());;
         doReturn(LOGIN_PAGE_URL).when(EndpointUtil.class, "getLoginPageURL", anyString(), anyString(), anyBoolean(),
                 anyBoolean(), anySet(), anyMap(), any());
         doReturn(requestObjectService).when(EndpointUtil.class, "getRequestObjectService");
@@ -2266,4 +2397,5 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         String location = String.valueOf(response.getMetadata().get(HTTPConstants.HEADER_LOCATION).get(0));
         assertEquals(location, expectedUrl);
     }
+
 }

@@ -196,7 +196,7 @@ public class OAuthAppDAO {
     public String[] addOAuthConsumer(String username, int tenantId, String userDomain) throws
             IdentityOAuthAdminException {
         String consumerKey;
-        String consumerSecret = OAuthUtil.getRandomNumber();
+        String consumerSecret = OAuthUtil.getRandomNumberSecure();
         long userAccessTokenExpireTime = OAuthServerConfiguration.getInstance()
                 .getUserAccessTokenValidityPeriodInSeconds();
         long applicationAccessTokenExpireTime = OAuthServerConfiguration.getInstance()
@@ -820,15 +820,19 @@ public class OAuthAppDAO {
             throws IdentityApplicationManagementException, IdentityOAuthAdminException {
 
         if (validateUserForOwnerUpdate(serviceProvider)) {
-            try (Connection connection = IdentityDatabaseUtil.getDBConnection(true);
-                 PreparedStatement statement = connection.prepareStatement(
+            try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+                 try (PreparedStatement statement = connection.prepareStatement(
                          SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_CLIENT_WITH_OWNER)) {
-                    statement.setString(1, serviceProvider.getApplicationName());
-                    statement.setString(2, serviceProvider.getOwner().getUserName());
-                    statement.setString(3, serviceProvider.getOwner().getUserStoreDomain());
-                    statement.setString(4, consumerKey);
-                    statement.execute();
-                    IdentityDatabaseUtil.commitTransaction(connection);
+                     statement.setString(1, serviceProvider.getApplicationName());
+                     statement.setString(2, serviceProvider.getOwner().getUserName());
+                     statement.setString(3, serviceProvider.getOwner().getUserStoreDomain());
+                     statement.setString(4, consumerKey);
+                     statement.execute();
+                     IdentityDatabaseUtil.commitTransaction(connection);
+                 } catch (SQLException e1) {
+                     IdentityDatabaseUtil.rollbackTransaction(connection);
+                     throw new IdentityApplicationManagementException("Error while executing the SQL statement.", e1);
+                 }
             } catch (SQLException e) {
                 throw new IdentityApplicationManagementException("Error while executing the SQL statement.", e);
             }

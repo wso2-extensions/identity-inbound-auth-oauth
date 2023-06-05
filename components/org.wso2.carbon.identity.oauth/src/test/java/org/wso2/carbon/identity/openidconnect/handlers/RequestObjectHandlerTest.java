@@ -40,6 +40,7 @@ import java.util.List;
 @WithCarbonHome
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
         files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})
+
 public class RequestObjectHandlerTest {
 
     RequestObjectHandler requestObjectHandler = new RequestObjectHandler();
@@ -71,8 +72,7 @@ public class RequestObjectHandlerTest {
 
     @Test(dataProvider = "requestObjectRevoke")
     public void testHandleEvent(String eventName, List<String> codeList, List<AuthzCodeDO> lstAuthzCode,
-                                String propertyName, String code)
-            throws IdentityEventException {
+                                String propertyName, String code) throws IdentityEventException {
 
         HashMap<String, Object> properties = new HashMap<>();
         if (CollectionUtils.isNotEmpty(codeList)) {

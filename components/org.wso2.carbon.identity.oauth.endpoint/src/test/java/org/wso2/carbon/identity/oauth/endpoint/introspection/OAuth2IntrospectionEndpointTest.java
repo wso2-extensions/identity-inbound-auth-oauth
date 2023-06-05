@@ -7,7 +7,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
@@ -60,7 +60,7 @@ public class OAuth2IntrospectionEndpointTest extends PowerMockIdentityBaseTest {
 
     private OAuth2IntrospectionEndpoint oAuth2IntrospectionEndpoint;
 
-    @BeforeTest
+    @BeforeClass
     public void setUp() {
 
         System.setProperty(

@@ -33,6 +33,7 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
@@ -51,9 +52,10 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -116,7 +118,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
             mockStatic(FrameworkUtils.class);
             when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
                     .thenReturn(authenticatedUser.getUserId());
-
+            when(IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
             userInfoJWTResponse = spy(new UserInfoJWTResponse());
             when(userInfoJWTResponse.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
                     .thenReturn(inputClaims);

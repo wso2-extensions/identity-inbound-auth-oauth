@@ -25,21 +25,23 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.Spy;
 import org.opensaml.core.xml.XMLObject;
 import org.opensaml.saml.saml2.core.Attribute;
 import org.opensaml.saml.saml2.core.impl.AttributeBuilder;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.w3c.dom.Element;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -80,6 +82,8 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -118,22 +122,18 @@ import static org.wso2.carbon.user.core.UserCoreConstants.DOMAIN_SEPARATOR;
 /**
  * Class which tests SAMLAssertionClaimsCallback.
  */
-@PowerMockIgnore({"javax.xml.*", "org.w3c.*"})
+@PowerMockIgnore({"javax.xml.*", "org.w3c.*", "com.sun.org.apache.xerces.*", "org.xml.*" })
 @PrepareForTest({
         AuthorizationGrantCache.class,
         IdentityTenantUtil.class,
         UserCoreUtil.class,
         FrameworkUtils.class,
         JDBCPersistenceManager.class,
-        OAuthServerConfiguration.class
+        OAuthServerConfiguration.class,
+        PrivilegedCarbonContext.class
 })
-public class DefaultOIDCClaimsCallbackHandlerTest {
 
-    @Spy
-    private DefaultOIDCClaimsCallbackHandler defaultOIDCClaimsCallbackHandler;
-
-    @Spy
-    private AuthorizationGrantCache authorizationGrantCache;
+public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
 
     @Mock
     private ApplicationManagementService applicationManagementService;
@@ -175,7 +175,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
     private static final String LOCAL_ADDRESS_CLAIM_URI = "http://wso2.org/claims/addresses";
     private static final String LOCAL_GROUPS_CLAIM_URI = "http://wso2.org/claims/groups";
-
 
     // OIDC Claims
     private static final String EMAIL = "email";
@@ -243,6 +242,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         mockStatic(FrameworkUtils.class);
         when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
 
+
         RequestObjectService requestObjectService = Mockito.mock(RequestObjectService.class);
         List<RequestedClaim> requestedClaims = Collections.emptyList();
         when(requestObjectService.getRequestedClaimsForIDToken(anyString())).
@@ -260,10 +260,15 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters().add(openIDConnectClaimFilter);
 
         OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
-        defaultOIDCClaimsCallbackHandler = new DefaultOIDCClaimsCallbackHandler();
         OAuth2ServiceComponentHolder.getInstance().setScopeClaimMappingDAO(new ScopeClaimMappingDAOImpl());
     }
-
+    @BeforeMethod
+    public void setUpBeforeMethod() throws Exception {
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext privilegedCarbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
+        privilegedCarbonContext.setTenantId(MultitenantConstants.SUPER_TENANT_ID);
+        privilegedCarbonContext.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    }
     public static String getFilePath(String fileName) {
 
         if (StringUtils.isNotBlank(fileName)) {
@@ -462,7 +467,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
                 "Incomplete list of custom claims returned.");
 
         jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
-        jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder, requestMsgCtx);
+        DefaultOIDCClaimsCallbackHandler mockDefaultOIDCClaimsCallbackHandler =
+                spy(new DefaultOIDCClaimsCallbackHandler());
+        jwtClaimsSet = mockDefaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder, requestMsgCtx);
 
         Assert.assertFalse(jwtClaimsSet.getClaims().isEmpty(),
                 "JWT custom claim list is empty. Custom claim handling failed in refresh flow");
@@ -704,7 +711,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         assertNotNull(jwtClaimsSet);
         assertNotNull(jwtClaimsSet.getClaim(GROUPS));
         assertTrue(jwtClaimsSet.getClaim(GROUPS) instanceof JSONArray);
-
     }
 
     private void mockClaimHandler() throws Exception {
@@ -733,14 +739,24 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
     private void setStaticField(Class classname,
                                 String fieldName,
-                                Object value) throws NoSuchFieldException, IllegalAccessException {
+                                Object value)
+            throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
 
         Field declaredField = classname.getDeclaredField(fieldName);
         declaredField.setAccessible(true);
 
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(declaredField, declaredField.getModifiers() & ~Modifier.FINAL);
+        Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
+        getDeclaredFields0.setAccessible(true);
+        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
+        Field modifiers = null;
+        for (Field each : fields) {
+            if ("modifiers".equals(each.getName())) {
+                modifiers = each;
+                break;
+            }
+        }
+        modifiers.setAccessible(true);
+        modifiers.setInt(declaredField, declaredField.getModifiers() & ~Modifier.FINAL);
 
         declaredField.set(null, value);
     }
@@ -840,7 +856,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     private void mockAuthorizationGrantCache(AuthorizationGrantCacheEntry authorizationGrantCacheEntry) {
 
         mockStatic(AuthorizationGrantCache.class);
-        authorizationGrantCache = mock(AuthorizationGrantCache.class);
+        AuthorizationGrantCache authorizationGrantCache = mock(AuthorizationGrantCache.class);
 
         if (authorizationGrantCacheEntry == null) {
             authorizationGrantCacheEntry = mock(AuthorizationGrantCacheEntry.class);
@@ -926,8 +942,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         when(mockOAuthServerConfiguration.getOpenIDConnectSkipeUserConsentConfig()).thenReturn(true);
 
         mockApplicationManagementService(serviceProvider);
-
-        JWTClaimsSet jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+        DefaultOIDCClaimsCallbackHandler mockDefaultOIDCClaimsCallbackHandler =
+                spy(new DefaultOIDCClaimsCallbackHandler());
+        JWTClaimsSet jwtClaimsSet = mockDefaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
                 authzReqMessageContext);
         assertEquals(jwtClaimsSet.getClaims().size(), 0, "Claims are not successfully set.");
     }
@@ -1070,7 +1087,10 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
         Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
         Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
-        jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+
+        DefaultOIDCClaimsCallbackHandler mockDefaultOIDCClaimsCallbackHandler =
+                spy(new DefaultOIDCClaimsCallbackHandler());
+        jwtClaimsSet = mockDefaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
                 requestMsgCtx);
 
         //return jwtClaimsSet;
@@ -1095,7 +1115,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
             Mockito.when(dataSource.getConnection()).thenReturn(connection);
             Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
             Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
-            jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
+            DefaultOIDCClaimsCallbackHandler mockDefaultOIDCClaimsCallbackHandler =
+                    spy(new DefaultOIDCClaimsCallbackHandler());
+            jwtClaimsSet = mockDefaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
                     requestMsgCtx);
 
         } catch (SQLException e) {

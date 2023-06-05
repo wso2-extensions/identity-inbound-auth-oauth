@@ -18,22 +18,34 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.IObjectFactory;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.testng.Assert.assertNotEquals;
 
 @PrepareForTest({CarbonUtils.class})
+@WithCarbonHome
+@PowerMockIgnore({"org.mockito.*", "javax.xml.*", "org.w3c.*", "com.sun.org.apache.xerces.*", "org.xml.*" })
 public class AppInfoCacheTest {
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
         return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
-
+    @BeforeMethod
+    public void setup() throws Exception {
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext privilegedCarbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
+        privilegedCarbonContext.setTenantId(org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_ID);
+        privilegedCarbonContext.setTenantDomain(org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    }
     @Test
     public void testGetInstance() throws Exception {
         mockStatic(CarbonUtils.class);

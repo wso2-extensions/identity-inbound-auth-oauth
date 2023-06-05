@@ -468,7 +468,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
 
                 OAuthTokenReqMessageContext context =
-                        invocationOnMock.getArgumentAt(0, OAuthTokenReqMessageContext.class);
+                        invocationOnMock.getArgument(0);
                 // set some response headers
                 context.addProperty(OAuthConstants.RESPONSE_HEADERS_PROPERTY, responseHeaders);
 
@@ -622,7 +622,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
 
                 OAuthTokenReqMessageContext context =
-                        invocationOnMock.getArgumentAt(0, OAuthTokenReqMessageContext.class);
+                        invocationOnMock.getArgument(0);
                 // set some response headers
                 context.addProperty(OAuthConstants.RESPONSE_HEADERS_PROPERTY, responseHeaders);
 
@@ -723,7 +723,7 @@ public class AccessTokenIssuerTest extends PowerMockIdentityBaseTest {
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
 
                 OAuthTokenReqMessageContext context =
-                        invocationOnMock.getArgumentAt(0, OAuthTokenReqMessageContext.class);
+                        invocationOnMock.getArgument(0);
 
                 // set the scope sent in the request
                 String[] scopeArray = context.getOauth2AccessTokenReqDTO().getScope();

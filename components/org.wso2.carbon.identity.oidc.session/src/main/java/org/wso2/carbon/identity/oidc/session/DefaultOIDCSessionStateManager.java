@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oidc.session;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -43,7 +44,7 @@ import static org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUt
  */
 public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
 
-    private static final String RANDOM_ALG_SHA1 = "SHA1PRNG";
+    private static final String RANDOM_ALG_DRBG = "DRBG";
     private static final String DIGEST_ALG_SHA256 = "SHA-256";
 
     private static final Log log = LogFactory.getLog(OIDCSessionStateManager.class);
@@ -107,7 +108,11 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
             removeOPBrowserStateCookiesInRoot(request, response);
 
             cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
-            cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/");
+            if (isOrganizationQualifiedRequest()) {
+                cookie.setPath(FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX + loginTenantDomain + "/");
+            } else {
+                cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/");
+            }
         } else {
             cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
             cookie.setPath("/");
@@ -164,7 +169,7 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
     private static String generateSaltValue() throws NoSuchAlgorithmException {
 
         byte[] bytes = new byte[16];
-        SecureRandom secureRandom = SecureRandom.getInstance(RANDOM_ALG_SHA1);
+        SecureRandom secureRandom = SecureRandom.getInstance(RANDOM_ALG_DRBG);
         secureRandom.nextBytes(bytes);
         return Base64.encodeBase64URLSafeString(bytes);
     }
@@ -176,5 +181,10 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
             result.append(Integer.toString((byt & 0xff) + 0x100, 16).substring(1));
         }
         return result.toString();
+    }
+
+    private static boolean isOrganizationQualifiedRequest() {
+
+        return PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId() != null;
     }
 }

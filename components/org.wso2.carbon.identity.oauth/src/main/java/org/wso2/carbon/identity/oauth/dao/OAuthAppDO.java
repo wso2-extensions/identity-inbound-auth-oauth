@@ -17,7 +17,10 @@
 */
 package org.wso2.carbon.identity.oauth.dao;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.model.InboundConfigurationProtocol;
 
 import java.io.Serializable;
 
@@ -31,9 +34,10 @@ import javax.xml.bind.annotation.XmlTransient;
 /**
  * OAuth application data object.
  */
-@XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
-public class OAuthAppDO implements Serializable {
+@XmlRootElement(name = "oAuthAppDO")
+@JsonTypeName("oAuthAppDO")
+public class OAuthAppDO extends InboundConfigurationProtocol implements Serializable {
 
     private static final long serialVersionUID = -6453843721358989519L;
 
@@ -68,6 +72,7 @@ public class OAuthAppDO implements Serializable {
     private String backChannelLogoutUrl;
     private String frontchannelLogoutUrl;
     @XmlTransient
+    @JsonIgnore
     private AuthenticatedUser appOwner;
     private String tokenType;
     private String tokenBindingType;
@@ -87,6 +92,7 @@ public class OAuthAppDO implements Serializable {
      * @deprecated use {@link #getAppOwner()} instead.
      */
     @Deprecated
+    @JsonIgnore
     public AuthenticatedUser getUser() {
         return this.getAppOwner();
     }
@@ -95,6 +101,7 @@ public class OAuthAppDO implements Serializable {
      * @deprecated use {@link #setAppOwner(AuthenticatedUser)} instead.
      */
     @Deprecated
+    @JsonIgnore
     public void setUser(AuthenticatedUser user) {
         this.setAppOwner(user);
     }

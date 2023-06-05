@@ -19,11 +19,19 @@
 package org.wso2.carbon.identity.oauth2.validators;
 
 import org.apache.commons.lang.StringUtils;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.base.ServerConfiguration;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
@@ -34,7 +42,11 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ResourceScopeCacheEntry;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
+import org.wso2.carbon.utils.CarbonUtils;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 
 /**
@@ -43,16 +55,27 @@ import static org.testng.Assert.assertEquals;
 @WithCarbonHome
 @WithH2Database(files = {"dbScripts/scope.sql"})
 @WithRealmService(tenantId = MultitenantConstants.SUPER_TENANT_ID)
+@PrepareForTest({FrameworkUtils.class, CarbonUtils.class, PrivilegedCarbonContext.class, IdentityTenantUtil.class})
 public class JDBCScopeValidatorTest extends IdentityBaseTest {
 
     private JDBCScopeValidator validator;
 
-    @BeforeMethod
-    public void setUp() {
+    @Mock
+    ServerConfiguration serverConfiguration;
 
+    @BeforeMethod
+    public void setUp() throws Exception {
+        mockStatic(FrameworkUtils.class);
+        when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(",");
         validator = new JDBCScopeValidator();
+
+
     }
 
+    @ObjectFactory
+    public IObjectFactory getObjectFactory() {
+        return new org.powermock.modules.testng.PowerMockObjectFactory();
+    }
     @DataProvider(name = "ValidateScopeData")
     public Object[][] validateScopeData() {
         String[] scopeArray1 = new String[]{"scope1", "scope2", "scope3"};
@@ -89,6 +112,13 @@ public class JDBCScopeValidatorTest extends IdentityBaseTest {
         } else {
             oAuthCacheKey = new OAuthCacheKey("testResource");
         }
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+        mockStatic(PrivilegedCarbonContext.class);
+        PrivilegedCarbonContext privilegedCarbonContext = Mockito.mock(PrivilegedCarbonContext.class);
+        when(PrivilegedCarbonContext.getThreadLocalCarbonContext()).thenReturn(privilegedCarbonContext);
+
         oAuthCache.addToCache(oAuthCacheKey, result);
 
         assertEquals(validator.validateScope(accessTokenDO, resource), expectedResult);

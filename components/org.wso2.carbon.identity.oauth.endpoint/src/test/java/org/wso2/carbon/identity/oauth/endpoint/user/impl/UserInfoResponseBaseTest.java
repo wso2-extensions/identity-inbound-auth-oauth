@@ -51,6 +51,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
@@ -376,7 +377,7 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         startTenantFlow(SUPER_TENANT_DOMAIN_NAME);
         mockOAuthServerConfiguration();
         mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+        when(IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
 
         spy(OAuth2Util.class);
 

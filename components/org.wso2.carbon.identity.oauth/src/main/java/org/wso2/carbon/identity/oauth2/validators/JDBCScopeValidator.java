@@ -63,6 +63,7 @@ import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
@@ -326,8 +327,11 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
         if (CollectionUtils.isNotEmpty(valuesOfGroups)) {
             for (RoleMapping roleMapping : identityProvider.getPermissionAndRoleConfig().getRoleMappings()) {
                 if (roleMapping != null && roleMapping.getLocalRole() != null) {
-                    if (valuesOfGroups.contains(roleMapping.getLocalRole().getLocalRoleName())) {
-                        userRolesList.add(roleMapping.getLocalRole().getLocalRoleName());
+
+                    String domainAppendedRole = UserCoreUtil.addDomainToName(roleMapping.getLocalRole()
+                            .getLocalRoleName(), roleMapping.getLocalRole().getUserStoreId());
+                    if (valuesOfGroups.contains(domainAppendedRole)) {
+                        userRolesList.add(domainAppendedRole);
                     }
                 }
             }
