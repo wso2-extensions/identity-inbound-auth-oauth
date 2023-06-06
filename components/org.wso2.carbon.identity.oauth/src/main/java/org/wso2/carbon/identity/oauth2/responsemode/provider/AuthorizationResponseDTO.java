@@ -40,10 +40,22 @@ public class AuthorizationResponseDTO {
 
     private SuccessResponseDTO successResponseDTO;
     private ErrorResponseDTO errorResponseDTO;
+    private boolean isConsentRedirect;
 
     public AuthorizationResponseDTO() {
 
         this.successResponseDTO = new SuccessResponseDTO();
+        this.isConsentRedirect = false;
+    }
+
+    public boolean getIsConsentRedirect() {
+
+        return isConsentRedirect;
+    }
+
+    public void setIsConsentRedirect(boolean isConsentRedirect) {
+
+        this.isConsentRedirect = isConsentRedirect;
     }
 
     public String getState() {

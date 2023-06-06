@@ -1076,13 +1076,15 @@ public class OAuth2AuthzEndpoint {
         addToAuthenticationResultDetailsToOAuthMessage(oAuthMessage, authenticationResult, authenticatedUser);
 
         OIDCSessionState sessionState = new OIDCSessionState();
+        String redirectURL;
         try {
-            doUserAuthorization(oAuthMessage, oAuthMessage.getSessionDataKeyFromLogin(), sessionState,
+            redirectURL = doUserAuthorization(oAuthMessage, oAuthMessage.getSessionDataKeyFromLogin(), sessionState,
                     authorizationResponseDTO);
         } catch (OAuthProblemException ex) {
             if (isFormPostOrFormPostJWTResponseMode(oauth2Params.getResponseMode())) {
                 return handleFailedState(oAuthMessage, oauth2Params, ex, authorizationResponseDTO);
             } else {
+                redirectURL = EndpointUtil.getErrorRedirectURL(ex, oauth2Params);
                 authorizationResponseDTO.setError(HttpServletResponse.SC_FOUND, ex.getMessage(), ex.getError());
             }
         }
@@ -1106,7 +1108,12 @@ public class OAuth2AuthzEndpoint {
             String sessionStateParam = manageOIDCSessionState(oAuthMessage,
                     sessionState, oauth2Params, authenticatedUser.getAuthenticatedSubjectIdentifier(),
                     oAuthMessage.getSessionDataCacheEntry(), authorizationResponseDTO);
+            redirectURL = OIDCSessionManagementUtil.addSessionStateToURL(redirectURL, sessionStateParam,
+                    oauth2Params.getResponseType());
             authorizationResponseDTO.setSessionState(sessionStateParam);
+        }
+        if (authorizationResponseDTO.getIsConsentRedirect()) {
+            return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
         }
         return Response.status(HttpServletResponse.SC_FOUND).location(
                 new URI(responseModeProvider.getAuthResponseRedirectUrl(authorizationResponseDTO))).build();
@@ -2696,7 +2703,8 @@ public class OAuth2AuthzEndpoint {
                         + " are revoked and user will be prompted to give consent again.");
             }
             // Need to prompt for consent and get user consent for claims as well.
-            return promptUserForConsent(sessionDataKeyFromLogin, oauth2Params, authenticatedUser, true, oAuthMessage);
+            return promptUserForConsent(sessionDataKeyFromLogin, oauth2Params, authenticatedUser, true,
+                    oAuthMessage, authorizationResponseDTO);
         } else if (isPromptNone(oauth2Params)) {
             return handlePromptNone(oAuthMessage, sessionState, oauth2Params, authenticatedUser, hasUserApproved,
                     authorizationResponseDTO);
@@ -2766,7 +2774,8 @@ public class OAuth2AuthzEndpoint {
             return handleApproveAlwaysWithPromptForNewConsent(oAuthMessage, sessionState, oauth2Params,
                     authorizationResponseDTO);
         } else {
-            return promptUserForConsent(sessionDataKey, oauth2Params, authenticatedUser, false, oAuthMessage);
+            return promptUserForConsent(sessionDataKey, oauth2Params, authenticatedUser, false,
+                    oAuthMessage, authorizationResponseDTO);
         }
     }
 
@@ -2782,9 +2791,10 @@ public class OAuth2AuthzEndpoint {
 
     private String promptUserForConsent(String sessionDataKey, OAuth2Parameters oauth2Params,
                                         AuthenticatedUser user, boolean ignoreExistingConsents,
-                                        OAuthMessage oAuthMessage)
+                                        OAuthMessage oAuthMessage, AuthorizationResponseDTO authorizationResponseDTO)
             throws ConsentHandlingFailedException, OAuthSystemException {
 
+        authorizationResponseDTO.setIsConsentRedirect(true);
         String clientId = oauth2Params.getClientId();
         String tenantDomain = oauth2Params.getTenantDomain();
 
@@ -3310,7 +3320,7 @@ public class OAuth2AuthzEndpoint {
         if (isConsentFromUserRequired(preConsent)) {
             String sessionDataKeyFromLogin = getSessionDataKeyFromLogin(oAuthMessage);
             preConsent = buildQueryParamString(preConsent, USER_CLAIMS_CONSENT_ONLY + "=true");
-
+            authorizationResponseDTO.setIsConsentRedirect(true);
             return getUserConsentURL(sessionDataKeyFromLogin, oauth2Params,
                     authenticatedUser, preConsent, oAuthMessage);
         } else {
