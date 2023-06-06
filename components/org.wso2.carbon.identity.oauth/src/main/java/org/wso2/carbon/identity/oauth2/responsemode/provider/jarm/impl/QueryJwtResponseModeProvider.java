@@ -22,11 +22,15 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.jarm.JarmResponseModeProvider;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This class is used when response_mode = query.jwt
@@ -81,7 +85,10 @@ public class QueryJwtResponseModeProvider extends JarmResponseModeProvider {
                 jwtClaimsSet = getJWTClaimsSet(authorizationResponseDTO);
             }
             jwtToken = getJWTToken(authorizationResponseDTO, jwtClaimsSet);
-            redirectUrl += "?response=" + jwtToken;
+            List<String> queryParams = new ArrayList<>();
+            queryParams.add("response" + "=" + jwtToken);
+            redirectUrl = FrameworkUtils.appendQueryParamsStringToUrl(redirectUrl,
+                    String.join("&", queryParams));
         } catch (OAuthSystemException e) {
             LOG.error("Error occurred when getting JWT token ", e);
             redirectUrl += "#error=" + authorizationResponseDTO.getErrorResponseDTO().getError() +
