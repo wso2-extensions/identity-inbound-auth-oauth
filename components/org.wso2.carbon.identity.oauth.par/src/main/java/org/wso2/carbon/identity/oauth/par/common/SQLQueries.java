@@ -33,11 +33,11 @@ public class SQLQueries {
     public static class ParSQLQueries {
 
         public static final String STORE_PAR_REQUEST = "INSERT INTO IDN_OAUTH_PAR " +
-                "(REQ_URI_UUID, CLIENT_ID, SCHEDULED_EXPIRY, JSON_PARAMS) VALUES (?, ?, ?, ?);";
+                "(REQ_URI_REF, CLIENT_ID, SCHEDULED_EXPIRY, PARAMETERS) VALUES (?, ?, ?, ?);";
 
-        public static final String RETRIEVE_PAR_REQUEST = "SELECT CLIENT_ID, SCHEDULED_EXPIRY, JSON_PARAMS " +
-                "FROM IDN_OAUTH_PAR WHERE REQ_URI_UUID = ?";
+        public static final String RETRIEVE_PAR_REQUEST = "SELECT CLIENT_ID, SCHEDULED_EXPIRY, PARAMETERS " +
+                "FROM IDN_OAUTH_PAR WHERE REQ_URI_REF = ?";
 
-        public static final String REMOVE_PAR_REQUEST = "DELETE FROM IDN_OAUTH_PAR WHERE REQ_URI_UUID = ?";
+        public static final String REMOVE_PAR_REQUEST = "DELETE FROM IDN_OAUTH_PAR WHERE REQ_URI_REF = ?";
     }
 }
