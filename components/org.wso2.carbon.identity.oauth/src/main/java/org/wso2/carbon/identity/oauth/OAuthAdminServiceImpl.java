@@ -810,6 +810,7 @@ public class OAuthAdminServiceImpl {
             properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REVOKE);
 
             AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+            handleInternalTokenRevocation(consumerKey, properties);
             updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
 
             if (LOG.isDebugEnabled()) {
@@ -852,6 +853,7 @@ public class OAuthAdminServiceImpl {
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_ACTIVE);
 
         AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+        handleInternalTokenRevocation(consumerKey, properties);
         updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Client Secret for OAuth app with consumerKey: " + consumerKey + " updated in OAuthCache.");
@@ -1861,6 +1863,17 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_FOUND_SCOPE,
                     String.format(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_FOUND_SCOPE.getMessage(),
                             scopeName));
+        }
+    }
+
+    private void handleInternalTokenRevocation(String consumerKey, Properties properties) throws IdentityOAuthAdminException {
+
+        for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
+                .getOAuthApplicationMgtListeners()) {
+                oAuthApplicationMgtListener.doPostRevokeRegenerateOAuthSecret(consumerKey, properties);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("OAuthApplicationMgtListener is triggered after revoking the OAuth secret.");
+            }
         }
     }
 }
