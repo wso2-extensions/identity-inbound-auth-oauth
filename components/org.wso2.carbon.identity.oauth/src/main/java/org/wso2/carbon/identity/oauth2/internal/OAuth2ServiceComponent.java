@@ -43,7 +43,6 @@ import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
-import org.wso2.carbon.identity.oauth2.*;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
@@ -635,30 +634,6 @@ public class OAuth2ServiceComponent {
         }
         OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(null);
     }
-
-    @Reference(
-            name = "internal.token.revocation.service",
-            service = InternalRevocationEventService.class,
-            cardinality = ReferenceCardinality.OPTIONAL,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetInternalTokenRevocationService"
-    )
-    protected void setInternalTokenRevocationService(InternalRevocationEventService internalTokenRevocationService) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Setting InternalTokenRevocationService service.");
-        }
-        OAuth2ServiceComponentHolder.getInstance().setInternalTokenRevocationService(internalTokenRevocationService);
-    }
-
-    protected void unsetInternalTokenRevocationService(InternalRevocationEventService internalTokenRevocationService) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Unset InternalTokenRevocationService service.");
-        }
-        OAuth2ServiceComponentHolder.getInstance().setInternalTokenRevocationService(null);
-    }
-
     private static void loadScopeConfigFile() {
 
         List<ScopeDTO> listOIDCScopesClaims = new ArrayList<>();
