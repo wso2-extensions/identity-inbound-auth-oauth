@@ -74,7 +74,7 @@ public interface OAuthApplicationMgtListener {
      * @param properties properties.
      * @throws IdentityOAuthAdminException in case of failure.
      */
-    default void doPostRevokeRegenerateOAuthSecret(String consumerKey, Properties properties)
+    default void doPostRegenerateClientSecret(String consumerKey, Properties properties)
             throws IdentityOAuthAdminException {
         // Default method implementation.
     }

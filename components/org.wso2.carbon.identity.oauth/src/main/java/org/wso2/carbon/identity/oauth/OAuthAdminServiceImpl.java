@@ -1910,7 +1910,7 @@ public class OAuthAdminServiceImpl {
             throws IdentityOAuthAdminException {
         for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
                 .getOAuthApplicationMgtListeners()) {
-            oAuthApplicationMgtListener.doPostRevokeRegenerateOAuthSecret(consumerKey, properties);
+            oAuthApplicationMgtListener.doPostRegenerateClientSecret(consumerKey, properties);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("OAuthApplicationMgtListener is triggered after revoking the OAuth secret.");
             }
