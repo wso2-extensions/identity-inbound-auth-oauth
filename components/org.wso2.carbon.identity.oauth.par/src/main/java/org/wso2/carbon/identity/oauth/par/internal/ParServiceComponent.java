@@ -21,9 +21,7 @@ package org.wso2.carbon.identity.oauth.par.internal;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.service.component.ComponentContext;
-import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Deactivate;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
 
@@ -38,7 +36,6 @@ public class ParServiceComponent {
 
     private static final Log log = LogFactory.getLog(ParServiceComponent.class);
 
-    @Activate
     protected void activate(ComponentContext context) {
 
         try {
@@ -50,7 +47,6 @@ public class ParServiceComponent {
         }
     }
 
-    @Deactivate
     protected void deactivate(ComponentContext context) {
 
         log.debug("PAR component bundle is deactivated.");
