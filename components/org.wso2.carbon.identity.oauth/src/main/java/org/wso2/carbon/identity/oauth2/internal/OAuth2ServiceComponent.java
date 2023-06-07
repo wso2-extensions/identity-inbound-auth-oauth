@@ -634,6 +634,7 @@ public class OAuth2ServiceComponent {
         }
         OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(null);
     }
+    
     private static void loadScopeConfigFile() {
 
         List<ScopeDTO> listOIDCScopesClaims = new ArrayList<>();
