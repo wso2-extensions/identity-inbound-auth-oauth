@@ -986,7 +986,7 @@
             <Permission>/permission/admin/manage/identity/idvp/delete</Permission>
         </Permissions>
     </Scope>
-    <Scope name="internal_idvp_create" displayName="Add IDVP">
+    <Scope name="internal_idvp_add" displayName="Add IDVP">
         <Permissions>
             <Permission>/permission/admin/manage/identity/idvp/add</Permission>
         </Permissions>
