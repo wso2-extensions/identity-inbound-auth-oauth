@@ -364,7 +364,7 @@ public class OAuth2AuthzEndpoint {
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(getErrorPageURL
                 (oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
                         .INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request", null,
-                        oAuth2Parameters))).build();
+                oAuth2Parameters))).build();
     }
 
     private void handleCachePersistence(OAuthMessage oAuthMessage) {
@@ -1167,7 +1167,7 @@ public class OAuth2AuthzEndpoint {
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
                 getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
                         .OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request", appName,
-                        oAuth2Parameters)
+                oAuth2Parameters)
         )).build();
     }
 
@@ -1196,7 +1196,8 @@ public class OAuth2AuthzEndpoint {
     }
 
     private void addToAuthenticationResultDetailsToOAuthMessage(OAuthMessage oAuthMessage,
-                AuthenticationResult authnResult, AuthenticatedUser authenticatedUser) {
+                                                                AuthenticationResult authnResult,
+                                                                AuthenticatedUser authenticatedUser) {
 
         oAuthMessage.getSessionDataCacheEntry().setLoggedInUser(authenticatedUser);
         oAuthMessage.getSessionDataCacheEntry().setAuthenticatedIdPs(authnResult.getAuthenticatedIdPs());
@@ -1985,7 +1986,7 @@ public class OAuth2AuthzEndpoint {
                     oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
                 }
             } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
-                    NoSuchMethodException e) {
+                     NoSuchMethodException e) {
                 log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
                         "Hence initiating the default implementation");
                 oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
@@ -2200,12 +2201,13 @@ public class OAuth2AuthzEndpoint {
                     Map<String, Object> configs = new HashMap<>();
                     configs.put("isPkceMandatory", Boolean.toString(validationResponse.isPkceMandatory()));
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "Unsupported PKCE Challenge Method.", "validate-pkce",
+                            OAuthConstants.LogConstants.FAILED,
+                            "Unsupported PKCE Challenge Method.", "validate-pkce",
                             configs);
                 }
                 return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
-                        .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE, "Unsupported PKCE Challenge Method", null,
-                        oAuth2Parameters);
+                                .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE,
+                        "Unsupported PKCE Challenge Method", null, oAuth2Parameters);
             }
         }
 
@@ -2441,6 +2443,10 @@ public class OAuth2AuthzEndpoint {
     private void validateRequestObjectParams(OAuthAuthzRequest oauthRequest) throws RequestObjectException {
 
         // With in the same request it can not be used both request parameter and request_uri parameter.
+        if (Boolean.parseBoolean(oauthRequest.getParam(
+                OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST))) {
+            return;
+        }
         if (StringUtils.isNotEmpty(oauthRequest.getParam(REQUEST)) && StringUtils.isNotEmpty(oauthRequest.getParam
                 (REQUEST_URI))) {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
