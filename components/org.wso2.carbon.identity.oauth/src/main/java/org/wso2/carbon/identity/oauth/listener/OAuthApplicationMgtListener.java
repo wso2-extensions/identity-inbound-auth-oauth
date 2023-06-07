@@ -64,11 +64,14 @@ public interface OAuthApplicationMgtListener {
      * @param consumerKey consumer key.
      * @throws IdentityOAuthAdminException in case of failure.
      */
-    void doPreRemoveOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException;
+    default void doPreRemoveOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException {
+        //Default method implementation.
+    }
 
     /**
-     *
      * @throws IdentityOAuthAdminException
      */
-    void doPostRevokeRegenerateOAuthSecret(String consumerKey, Properties properties) throws IdentityOAuthAdminException;
+    default void doPostRevokeRegenerateOAuthSecret(String consumerKey, Properties properties) throws IdentityOAuthAdminException {
+        //Default method implementation.
+    }
 }

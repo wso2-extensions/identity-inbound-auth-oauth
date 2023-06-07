@@ -58,7 +58,6 @@ public class OAuthComponentServiceHolder {
     private Map<Integer, OAuthApplicationMgtListener> oAuthApplicationMgtListeners = new TreeMap<>();
     private RoleManagementService roleManagementService;
     private OrganizationUserResidentResolverService organizationUserResidentResolverService;
-    private OAuthApplicationMgtListener oAuthApplicationMgtListener;
 
     /**
      * Get the list of scope validator implementations available.
@@ -242,22 +241,5 @@ public class OAuthComponentServiceHolder {
             OrganizationUserResidentResolverService organizationUserResidentResolverService) {
 
         this.organizationUserResidentResolverService = organizationUserResidentResolverService;
-    }
-
-    /**
-     * Get Oath2 application management listner
-     *
-     * @return
-     */
-    public OAuthApplicationMgtListener getOAuthApplicationMgtListener() {
-        return oAuthApplicationMgtListener;
-    }
-
-    /**
-     * Get oauth2 mgt listner
-     * @param oAuthApplicationMgtListener
-     */
-    public void setOAuthApplicationMgtListener(OAuthApplicationMgtListener oAuthApplicationMgtListener) {
-        this.oAuthApplicationMgtListener = oAuthApplicationMgtListener;
     }
 }
