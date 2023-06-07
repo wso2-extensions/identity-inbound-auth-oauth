@@ -176,7 +176,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
     private static final String LOCAL_ADDRESS_CLAIM_URI = "http://wso2.org/claims/addresses";
     private static final String LOCAL_GROUPS_CLAIM_URI = "http://wso2.org/claims/groups";
 
-
     // OIDC Claims
     private static final String EMAIL = "email";
     private static final String USERNAME = "username";
@@ -712,7 +711,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         assertNotNull(jwtClaimsSet);
         assertNotNull(jwtClaimsSet.getClaim(GROUPS));
         assertTrue(jwtClaimsSet.getClaim(GROUPS) instanceof JSONArray);
-
     }
 
     private void mockClaimHandler() throws Exception {

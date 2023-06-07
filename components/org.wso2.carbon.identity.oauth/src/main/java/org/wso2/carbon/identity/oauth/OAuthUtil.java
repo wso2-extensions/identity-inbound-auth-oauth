@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -80,7 +81,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings
 public final class OAuthUtil {
 
     public static final Log LOG = LogFactory.getLog(OAuthUtil.class);
-    private static final String ALGORITHM = "HmacSHA1";
+    private static final String ALGORITHM_SHA1 = "HmacSHA1";
+    private static final String ALGORITHM_SHA256 = "HmacSHA256";
 
     private OAuthUtil() {
 
@@ -96,9 +98,40 @@ public final class OAuthUtil {
         try {
             String secretKey = UUIDGenerator.generateUUID();
             String baseString = UUIDGenerator.generateUUID();
+            SecretKeySpec key = new SecretKeySpec(secretKey.getBytes(Charsets.UTF_8), ALGORITHM_SHA1);
+            Mac mac = Mac.getInstance(ALGORITHM_SHA1);
+            mac.init(key);
+            byte[] rawHmac = mac.doFinal(baseString.getBytes(Charsets.UTF_8));
+            String random = Base64.encode(rawHmac);
+            // Registry doesn't have support for these character.
+            random = random.replace("/", "_");
+            random = random.replace("=", "a");
+            random = random.replace("+", "f");
+            return random;
+        } catch (Exception e) {
+            throw new IdentityOAuthAdminException("Error when generating a random number.", e);
+        }
+    }
 
-            SecretKeySpec key = new SecretKeySpec(secretKey.getBytes(Charsets.UTF_8), ALGORITHM);
-            Mac mac = Mac.getInstance(ALGORITHM);
+    /**
+     * Generates a securer random number using two UUIDs and HMAC-SHA256
+     *
+     * @return generated secure random number
+     * @throws IdentityOAuthAdminException Invalid Algorithm or Invalid Key
+     */
+    public static String getRandomNumberSecure() throws IdentityOAuthAdminException {
+        try {
+            String secretKey = UUIDGenerator.generateUUID();
+            String baseString = UUIDGenerator.generateUUID();
+
+            String hmacAlgorithm;
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(IdentityConstants.OAuth.ENABLE_SHA256_PARAMS))) {
+                hmacAlgorithm = ALGORITHM_SHA256;
+            } else {
+                hmacAlgorithm = ALGORITHM_SHA1;
+            }
+            SecretKeySpec key = new SecretKeySpec(secretKey.getBytes(Charsets.UTF_8), hmacAlgorithm);
+            Mac mac = Mac.getInstance(hmacAlgorithm);
             mac.init(key);
             byte[] rawHmac = mac.doFinal(baseString.getBytes(Charsets.UTF_8));
             String random = Base64.encode(rawHmac);
@@ -153,8 +186,11 @@ public final class OAuthUtil {
         try {
             userId = authorizedUser.getUserId();
         } catch (UserIdNotFoundException e) {
-            LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
-            return;
+            userId = resolveUserIdFromUsername(authorizedUser);
+            if (StringUtils.isEmpty(userId)) {
+                LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
+                return;
+            }
         }
         clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, authenticatedIDP);
     }
@@ -206,8 +242,11 @@ public final class OAuthUtil {
         try {
             userId = authorizedUser.getUserId();
         } catch (UserIdNotFoundException e) {
-            LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
-            return;
+            userId = resolveUserIdFromUsername(authorizedUser);
+            if (StringUtils.isEmpty(userId)) {
+                LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
+                return;
+            }
         }
         clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, scope, authenticatedIDP,
                 authorizedUser.getTenantDomain());
@@ -829,5 +868,31 @@ public final class OAuthUtil {
             username = IdentityUtil.addDomainToName(user.getUserName(), user.getUserStoreDomain());
         }
         return username;
+    }
+
+    /**
+     * Resolves user id from username in scenarios where user id is set as the username in organization specific flows.
+     *
+     * @param authorizedUser authorized user.
+     * @return userId  The user id.
+     */
+    private static String resolveUserIdFromUsername(AuthenticatedUser authorizedUser) {
+
+        String userId = null;
+        if (StringUtils.isNotBlank(authorizedUser.getTenantDomain()) &&
+                StringUtils.isNotBlank(authorizedUser.getUserName())) {
+            try {
+                Optional<org.wso2.carbon.user.core.common.User> resolvedUser = OAuthComponentServiceHolder
+                        .getInstance().getOrganizationUserResidentResolverService()
+                        .resolveUserFromResidentOrganization(
+                                null, authorizedUser.getUserName(), authorizedUser.getTenantDomain());
+                if (resolvedUser.isPresent()) {
+                    userId = resolvedUser.get().getUserID();
+                }
+            } catch (OrganizationManagementException e) {
+                LOG.debug("Error while getting user id from username: " + authorizedUser.getUserName(), e);
+            }
+        }
+        return userId;
     }
 }

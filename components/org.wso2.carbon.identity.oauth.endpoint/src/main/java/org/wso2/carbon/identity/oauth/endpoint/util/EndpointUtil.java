@@ -909,6 +909,9 @@ public class EndpointUtil {
         if (isAuthEndpointRedirectParamsFilterConfigAvailable()) {
             return FrameworkUtils.getRedirectURLWithFilteredParams(consentPageUrl,
                     endpointParams);
+        } else if (isConsentPageRedirectParamsAllowed()) {
+            // Return the consent url without filtering the query params for backward compatibility.
+            return consentPageUrl;
         } else {
             return EndpointUtil.getRedirectURLWithFilteredParams(consentPageUrl,
                     endpointParams, sessionDataKeyConsent);
@@ -946,6 +949,7 @@ public class EndpointUtil {
     }
 
     private static boolean isAuthEndpointRedirectParamsFilterConfigAvailable() {
+
         return FileBasedConfigurationBuilder.getInstance().isAuthEndpointRedirectParamsConfigAvailable();
     }
 
@@ -1140,10 +1144,9 @@ public class EndpointUtil {
         if (CollectionUtils.isNotEmpty(allowedScopes)) {
             try {
                 startTenantFlow(params.getTenantDomain());
-                /* If DropUnregisteredScopes scopes config is enabled
-                 then any unregistered scopes(excluding internal scopes
-                 and allowed scopes) will be dropped. Therefore, they will
-                 not be shown in the user consent screen.*/
+                /* If DropUnregisteredScopes scopes config is enabled then any unregistered scopes(excluding internal
+                 scopes and allowed scopes) will be dropped. Therefore, they will not be shown in the user consent
+                 screen.*/
                 if (oauthServerConfiguration.isDropUnregisteredScopes()) {
                     if (log.isDebugEnabled()) {
                         log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
@@ -1772,5 +1775,9 @@ public class EndpointUtil {
                     serviceProvider.getApplicationName() + " with id: " + serviceProvider.getApplicationID());
         }
         return isEnabled;
+    }
+
+    public static boolean isConsentPageRedirectParamsAllowed() {
+        return FileBasedConfigurationBuilder.getInstance().isConsentPageRedirectParamsAllowed();
     }
 }

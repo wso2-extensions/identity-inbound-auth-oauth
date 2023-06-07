@@ -24,6 +24,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
+import org.wso2.carbon.identity.application.authentication.framework.handler.approles.ApplicationRolesResolver;
+import org.wso2.carbon.identity.application.authentication.framework.handler.approles.exception.ApplicationRolesException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -70,6 +72,7 @@ import java.util.regex.Pattern;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.APP_ROLES_CLAIM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
@@ -537,9 +540,16 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         List<String> requestedClaimUris = getRequestedClaimUris(requestClaimMappings);
         // Improve runtime claim value storage in cache through https://github.com/wso2/product-is/issues/15056
         requestedClaimUris.removeIf(claim -> claim.startsWith("http://wso2.org/claims/runtime/"));
-        Map<String, String> userClaims =
-                getUserClaimsInLocalDialect(fullQualifiedUsername, realm, requestedClaimUris);
 
+        boolean requestedAppRoleClaim = false;
+        if (requestedClaimUris.contains(APP_ROLES_CLAIM)) {
+            requestedClaimUris.remove(APP_ROLES_CLAIM);
+            requestedAppRoleClaim = true;
+        }
+        Map<String, String> userClaims = getUserClaimsInLocalDialect(fullQualifiedUsername, realm, requestedClaimUris);
+        if (requestedAppRoleClaim) {
+            handleAppRoleClaimInLocalDialect(userClaims, authenticatedUser, serviceProvider.getApplicationResourceId());
+        }
         if (isEmpty(userClaims)) {
             // User claims can be empty if user does not exist in user stores. Probably a federated user.
             if (log.isDebugEnabled()) {
@@ -590,8 +600,30 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                         null);
     }
 
-    private void handleServiceProviderRoleMappings(ServiceProvider serviceProvider,
-                                                   String claimSeparator,
+    /**
+     * Adds the application roles claim for local user.
+     *
+     * @param userClaims User claims in local dialect.
+     * @param authenticatedUser Authenticated user.
+     * @param applicationId Application ID.
+     * @throws ApplicationRolesException Error while getting application roles.
+     */
+    private void handleAppRoleClaimInLocalDialect(Map<String, String> userClaims, AuthenticatedUser authenticatedUser,
+                                                  String applicationId) throws ApplicationRolesException {
+
+        ApplicationRolesResolver appRolesResolver =
+                OpenIDConnectServiceComponentHolder.getInstance().getHighestPriorityApplicationRolesResolver();
+        if (appRolesResolver == null) {
+            log.debug("No application roles resolver found. So not adding application roles claim to the id_token.");
+            return;
+        }
+        String[] appRoles = appRolesResolver.getRoles(authenticatedUser, applicationId);
+        if (ArrayUtils.isNotEmpty(appRoles)) {
+            userClaims.put(APP_ROLES_CLAIM, String.join(FrameworkUtils.getMultiAttributeSeparator(), appRoles));
+        }
+    }
+
+    private void handleServiceProviderRoleMappings(ServiceProvider serviceProvider, String claimSeparator,
                                                    Map<String, String> userClaims) throws FrameworkException {
         for (String roleGroupClaimURI : IdentityUtil.getRoleGroupClaims()) {
             handleSPRoleMapping(serviceProvider, claimSeparator, userClaims, roleGroupClaimURI);

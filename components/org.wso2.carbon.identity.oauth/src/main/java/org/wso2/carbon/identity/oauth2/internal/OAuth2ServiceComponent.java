@@ -72,7 +72,9 @@ import org.wso2.carbon.identity.oauth2.token.bindings.handlers.TokenBindingExpir
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.scope.RoleBasedScopeIssuer;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
@@ -85,6 +87,7 @@ import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
 import org.wso2.carbon.utils.CarbonUtils;
+import org.wso2.carbon.utils.ConfigurationContextService;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -226,6 +229,12 @@ public class OAuth2ServiceComponent {
             OAuth2ServiceComponentHolder.setJwtRenewWithoutRevokeAllowedGrantTypes(
                     getJWTRenewWithoutRevokeAllowedGrantTypes());
 
+            OAuth2ServiceComponentHolder.
+                    setResponseModeProviders(OAuthServerConfiguration.getInstance().getSupportedResponseModes());
+            OAuth2ServiceComponentHolder.
+                    setDefaultResponseModeProvider(OAuthServerConfiguration.getInstance()
+                            .getDefaultResponseModeProvider());
+
             ServiceRegistration tenantMgtListenerSR = bundleContext.registerService(TenantMgtListener.class.getName(),
                     new OAuthTenantMgtListenerImpl(), null);
             if (tenantMgtListenerSR != null) {
@@ -339,6 +348,12 @@ public class OAuth2ServiceComponent {
                         "setting consentedColumnAvailable to false.");
             }
         }
+        if (OAuthServerConfiguration.getInstance().isGlobalRbacScopeIssuerEnabled()) {
+            bundleContext.registerService(ScopeValidator.class, new RoleBasedScopeIssuer(), null);
+        }
+        boolean restrictUnassignedScopes = Boolean.parseBoolean(System.getProperty(
+                OAuthConstants.RESTRICT_UNASSIGNED_SCOPES));
+        OAuth2ServiceComponentHolder.setRestrictUnassignedScopes(restrictUnassignedScopes);
     }
 
     /**
@@ -945,5 +960,47 @@ public class OAuth2ServiceComponent {
 
         OAuth2ServiceComponentHolder.setConsentServerConfigsManagementService(null);
         log.debug("Unsetting the Consent Server Configs Management.");
+    }
+
+    @Reference(
+            name = "configuration.context.service",
+            service = ConfigurationContextService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetConfigurationContextService"
+    )
+    protected void setConfigurationContextService(ConfigurationContextService configurationContextService) {
+
+        OAuth2ServiceComponentHolder.getInstance().setConfigurationContextService(configurationContextService);
+        log.debug("ConfigurationContextService Instance was set.");
+    }
+
+    protected void unsetConfigurationContextService(ConfigurationContextService configurationContextService) {
+
+        OAuth2ServiceComponentHolder.getInstance().setConfigurationContextService(null);
+        log.debug("ConfigurationContextService Instance was unset.");
+    }
+
+    @Reference(
+            name = "JWTAccessTokenClaimProvider",
+            service = JWTAccessTokenClaimProvider.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetJWTAccessTokenClaimProvider"
+    )
+    protected void setJWTAccessTokenClaimProvider(JWTAccessTokenClaimProvider claimProvider) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Adding JWT Access Token ClaimProvider: " + claimProvider.getClass().getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().addJWTAccessTokenClaimProvider(claimProvider);
+    }
+
+    protected void unsetJWTAccessTokenClaimProvider(JWTAccessTokenClaimProvider claimProvider) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing JWT Access Token ClaimProvider: " + claimProvider.getClass().getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().removeJWTAccessTokenClaimProvider(claimProvider);
     }
 }
