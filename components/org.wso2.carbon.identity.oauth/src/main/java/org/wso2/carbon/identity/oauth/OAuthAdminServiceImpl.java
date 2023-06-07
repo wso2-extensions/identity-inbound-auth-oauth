@@ -1871,7 +1871,9 @@ public class OAuthAdminServiceImpl {
         for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
                 .getOAuthApplicationMgtListeners()) {
                 oAuthApplicationMgtListener.doPostRevokeRegenerateOAuthSecret(consumerKey, properties);
-            LOG.info("OAuthApplicationMgtListener is triggered after revoking the OAuth secret.");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("OAuthApplicationMgtListener is triggered after revoking the OAuth secret.");
+            }
         }
     }
 }

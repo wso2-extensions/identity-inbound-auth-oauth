@@ -64,14 +64,16 @@ public interface OAuthApplicationMgtListener {
      * @param consumerKey consumer key.
      * @throws IdentityOAuthAdminException in case of failure.
      */
-    default void doPreRemoveOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException {
-        //Default method implementation.
-    }
+    void doPreRemoveOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException;
 
     /**
+     * Pre-listener to handle  the JWT token revocation.
+     *
+     * @param consumerKey consumer key.
+     * @param properties properties.
      * @throws IdentityOAuthAdminException
      */
     default void doPostRevokeRegenerateOAuthSecret(String consumerKey, Properties properties) throws IdentityOAuthAdminException {
-        //Default method implementation.
+        // Default method implementation.
     }
 }
