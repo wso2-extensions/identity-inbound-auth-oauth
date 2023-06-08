@@ -273,7 +273,7 @@ public class AuthorizationHandlerManager {
         // Get scopes that specified in the allowed scopes list.
         List<String> requestedAllowedScopes = getAllowedScopesFromRequestedScopes(authzReqMsgCtx);
         // Remove the allowed scopes from requested scopes for further validation.
-        removedAllowedScopesFromRequestedScopes(authzReqMsgCtx, requestedAllowedScopes);
+        removeAllowedScopesFromRequestedScopes(authzReqMsgCtx, requestedAllowedScopes);
         // If it is management app, we validate internal scopes in the requested scopes.
         String[] authorizedInternalScopes = new String[0];
         log.debug("Handling the internal scope validation.");
@@ -383,7 +383,7 @@ public class AuthorizationHandlerManager {
      * @param authzReqMsgCtx         authzReqMsgCtx
      * @param requestedAllowedScopes Requested allowed scopes
      */
-    private void removedAllowedScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
+    private void removeAllowedScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
                                                          List<String> requestedAllowedScopes) {
         if (authzReqMsgCtx.getAuthorizationReqDTO().getScopes() == null) {
             return;
