@@ -1089,18 +1089,23 @@ public class OAuth2AuthzEndpoint {
             }
         }
 
-        if (isFormPostWithoutErrors(oAuthMessage, authorizationResponseDTO)) {
-            handleFormPostResponseMode(oAuthMessage, sessionState, authorizationResponseDTO);
-            return Response.ok(responseModeProvider.getAuthResponseBuilderEntity(authorizationResponseDTO)).build();
-        } else {
-            if (isFormPostWithErrors(authorizationResponseDTO, responseModeProvider)) {
+        if (!authorizationResponseDTO.getIsConsentRedirect()) {
+            if (isFormPostWithoutErrors(oAuthMessage, authorizationResponseDTO)) {
+                if (authorizationResponseDTO.getIsConsentRedirect()) {
+                    return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
+                }
+                handleFormPostResponseMode(oAuthMessage, sessionState, authorizationResponseDTO);
+                return Response.ok(responseModeProvider.getAuthResponseBuilderEntity(authorizationResponseDTO)).build();
+            } else {
+                if (isFormPostWithErrors(authorizationResponseDTO, responseModeProvider)) {
 
-                /* Error message is added as query parameters to the redirect URL if response mode is form post
-                 * or form post jwt but redirect url is not a json object.
-                 */
-                return Response.status(authorizationResponseDTO.getResponseCode())
-                        .location(new URI((getQueryResponseModeProvider())
-                                .getAuthResponseRedirectUrl(authorizationResponseDTO))).build();
+                    /* Error message is added as query parameters to the redirect URL if response mode is form post
+                     * or form post jwt but redirect url is not a json object.
+                     */
+                    return Response.status(authorizationResponseDTO.getResponseCode())
+                            .location(new URI((getQueryResponseModeProvider())
+                                    .getAuthResponseRedirectUrl(authorizationResponseDTO))).build();
+                }
             }
         }
 
