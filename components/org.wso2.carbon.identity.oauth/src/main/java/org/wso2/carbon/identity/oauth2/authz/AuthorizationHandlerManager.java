@@ -270,9 +270,9 @@ public class AuthorizationHandlerManager {
                                          ResponseTypeHandler authzHandler) throws IdentityOAuth2Exception,
             IdentityOAuth2UnauthorizedScopeException {
 
-        // Get scopes that specified in the allowed scopes list.
+        // Get allowed scopes that specified in the server level.
         List<String> requestedAllowedScopes = getAllowedScopesFromRequestedScopes(authzReqMsgCtx);
-        // Remove the allowed scopes from requested scopes for further validation.
+        // Remove the system level allowed scopes from requested scopes for further validation.
         removeAllowedScopesFromRequestedScopes(authzReqMsgCtx, requestedAllowedScopes);
         // If it is management app, we validate internal scopes in the requested scopes.
         String[] authorizedInternalScopes = new String[0];
@@ -378,13 +378,13 @@ public class AuthorizationHandlerManager {
     }
 
     /**
-     * Remove allowed scopes from requested scopes.
+     * Remove the system level allowed scopes from requested scopes.
      *
      * @param authzReqMsgCtx         authzReqMsgCtx
      * @param requestedAllowedScopes Requested allowed scopes
      */
-    private void removeAllowedScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
-                                                         List<String> requestedAllowedScopes) {
+    private void removeAllowedScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx, List<String>
+            requestedAllowedScopes) {
         if (authzReqMsgCtx.getAuthorizationReqDTO().getScopes() == null) {
             return;
         }
