@@ -671,6 +671,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     }
 
     private RefreshTokenGrantProcessor getRefreshTokenGrantProcessor() {
+
         return OAuth2ServiceComponentHolder.getInstance().getRefreshTokenGrantProcessor();
     }
 }

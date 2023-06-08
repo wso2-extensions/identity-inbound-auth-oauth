@@ -28,55 +28,54 @@ import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
  * Abstraction layer between OAuth2Service and persistence layer to handle
  * revocation logic during token persistence and non-persistence scenarios.
  */
-
 public interface OAuth2RevocationProcessor {
 
     /**
-     * Revoke access token
-     * 
+     * Revoke access token.
+     *
      * @param revokeRequestDTO Metadata containing revoke token request.
-     * @param accessTokenDO
-     * @throws IdentityOAuth2Exception
-     * @throws UserIdNotFoundException
+     * @param accessTokenDO    {@link AccessTokenDO} instance.
+     * @throws IdentityOAuth2Exception If an error occurs while revoking the access token.
+     * @throws UserIdNotFoundException If the user id is not found.
      */
-    public void revokeAccessToken(OAuthRevocationRequestDTO revokeRequestDTO, AccessTokenDO accessTokenDO)
+    void revokeAccessToken(OAuthRevocationRequestDTO revokeRequestDTO, AccessTokenDO accessTokenDO)
             throws IdentityOAuth2Exception, UserIdNotFoundException;
 
     /**
-     * Revoke refresh token
-     * 
+     * Revoke refresh token.
+     *
      * @param revokeRequestDTO Metadata containing revoke token request.
-     * @param refreshTokenDO
-     * @throws IdentityOAuth2Exception
+     * @param refreshTokenDO   {@link RefreshTokenValidationDataDO} instance.
+     * @throws IdentityOAuth2Exception If an error occurs while revoking the refresh token.
      */
-    public void revokeRefreshToken(OAuthRevocationRequestDTO revokeRequestDTO,
-            RefreshTokenValidationDataDO refreshTokenDO) throws IdentityOAuth2Exception;
+    void revokeRefreshToken(OAuthRevocationRequestDTO revokeRequestDTO,
+                            RefreshTokenValidationDataDO refreshTokenDO) throws IdentityOAuth2Exception;
 
     /**
-     * Validate and return the the refresh token metadata.
-     * 
-     * @param revokeRequestDTO  Metadata containing revoke token request.
-     * @return RefreshTokenValidationDataDO
-     * @throws IdentityOAuth2Exception
+     * Validate and return the refresh token metadata.
+     *
+     * @param revokeRequestDTO Metadata containing revoke token request.
+     * @return RefreshTokenValidationDataDO {@link RefreshTokenValidationDataDO} instance.
+     * @throws IdentityOAuth2Exception If an error occurs while validating the refresh token.
      */
-    public RefreshTokenValidationDataDO getRevocableRefreshToken(OAuthRevocationRequestDTO revokeRequestDTO)
+    RefreshTokenValidationDataDO getRevocableRefreshToken(OAuthRevocationRequestDTO revokeRequestDTO)
             throws IdentityOAuth2Exception;
 
     /**
-     * Validate and return the the aceess token metadata.
-     * 
+     * Validate and return the access token metadata.
+     *
      * @param revokeRequestDTO Metadata containing revoke token request.
-     * @param refreshTokenDO
-     * @throws IdentityOAuth2Exception
+     * @return AccessTokenDO    {@link AccessTokenDO} instance.
+     * @throws IdentityOAuth2Exception If an error occurs while validating the access token.
      */
-    
-    public AccessTokenDO getRevocableAccessToken(OAuthRevocationRequestDTO revokeRequestDTO)
+    AccessTokenDO getRevocableAccessToken(OAuthRevocationRequestDTO revokeRequestDTO)
             throws IdentityOAuth2Exception;
-    
+
     /**
-     * Check whether revoke request is related to access token or revoke token
+     * Check whether revoke request is related to access token or revoke token.
+     *
      * @param revokeRequestDTO Metadata containing revoke token request.
      * @return boolean whether it is a refresh token request or not
      */
-    public boolean isRefreshTokenType(OAuthRevocationRequestDTO revokeRequestDTO);
+    boolean isRefreshTokenType(OAuthRevocationRequestDTO revokeRequestDTO);
 }

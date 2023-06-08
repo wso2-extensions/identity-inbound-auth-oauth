@@ -43,7 +43,6 @@ import java.util.UUID;
 /**
  * Default implementation of @RefreshTokenProcessor responsible for handling refresh token persistence logic.
  */
-
 public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProcessor {
 
     private static final Log log = LogFactory.getLog(DefaultRefreshTokenGrantProcessor.class);
@@ -53,6 +52,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
     @Override
     public RefreshTokenValidationDataDO validateRefreshToken(OAuthTokenReqMessageContext tokenReqMessageContext)
             throws IdentityOAuth2Exception {
+
         OAuth2AccessTokenReqDTO tokenReq = tokenReqMessageContext.getOauth2AccessTokenReqDTO();
         RefreshTokenValidationDataDO validationBean = OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
                 .validateRefreshToken(tokenReq.getClientId(), tokenReq.getRefreshToken());
@@ -62,7 +62,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
 
     @Override
     public void persistNewToken(OAuthTokenReqMessageContext tokenReqMessageContext, AccessTokenDO accessTokenBean,
-            String userStoreDomain, String clientId) throws IdentityOAuth2Exception {
+                                String userStoreDomain, String clientId) throws IdentityOAuth2Exception {
 
         RefreshTokenValidationDataDO oldAccessToken =
                 (RefreshTokenValidationDataDO) tokenReqMessageContext.getProperty(PREV_ACCESS_TOKEN);
@@ -80,7 +80,8 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
 
     @Override
     public AccessTokenDO createAccessTokenBean(OAuthTokenReqMessageContext tokReqMsgCtx,
-            OAuth2AccessTokenReqDTO tokenReq, RefreshTokenValidationDataDO validationBean, String tokenType)
+                                               OAuth2AccessTokenReqDTO tokenReq,
+                                               RefreshTokenValidationDataDO validationBean, String tokenType)
             throws IdentityOAuth2Exception {
 
         Timestamp timestamp = new Timestamp(new Date().getTime());
@@ -117,7 +118,6 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                 tokReqMsgCtx.setConsentedToken(true);
             }
         }
-
         return accessTokenDO;
     }
 
@@ -135,7 +135,8 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
 
     @Override
     public boolean isLatestRefreshToken(OAuth2AccessTokenReqDTO tokenReq, RefreshTokenValidationDataDO validationBean,
-            String userStoreDomain) throws IdentityOAuth2Exception {
+                                        String userStoreDomain) throws IdentityOAuth2Exception {
+
         if (log.isDebugEnabled()) {
             log.debug("Evaluating refresh token. Token value: " + tokenReq.getRefreshToken() + ", Token state: " +
                     validationBean.getRefreshTokenState());
@@ -160,7 +161,8 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
     }
 
     private List<AccessTokenDO> getAccessTokenBeans(OAuth2AccessTokenReqDTO tokenReq,
-            RefreshTokenValidationDataDO validationBean, String userStoreDomain) throws IdentityOAuth2Exception {
+                                                    RefreshTokenValidationDataDO validationBean, String userStoreDomain)
+            throws IdentityOAuth2Exception {
 
         List<AccessTokenDO> accessTokenBeans = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .getLatestAccessTokens(tokenReq.getClientId(), validationBean.getAuthorizedUser(), userStoreDomain,

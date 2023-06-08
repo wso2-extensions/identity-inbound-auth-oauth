@@ -463,25 +463,49 @@ public class OAuth2ServiceComponentHolder {
         OAuth2ServiceComponentHolder.consentServerConfigsManagementService = consentServerConfigsManagementService;
     }
 
+    /**
+     * Get Refresh Token Grant Processor.
+     *
+     * @return RefreshTokenGrantProcessor  Refresh Token Grant Processor.
+     */
     public RefreshTokenGrantProcessor getRefreshTokenGrantProcessor() {
+
         if (refreshTokenGrantProcessor == null) {
             refreshTokenGrantProcessor = new DefaultRefreshTokenGrantProcessor();
         }
         return refreshTokenGrantProcessor;
     }
 
+    /**
+     * Set Refresh Token Grant Processor.
+     *
+     * @param refreshTokenGrantProcessor Refresh Token Grant Processor.
+     */
     public void setRefreshTokenGrantProcessor(RefreshTokenGrantProcessor refreshTokenGrantProcessor) {
+
         this.refreshTokenGrantProcessor = refreshTokenGrantProcessor;
     }
 
+    /**
+     * Get Revocation Processor.
+     *
+     * @return Revocation Processor.
+     */
     public OAuth2RevocationProcessor getRevocationProcessor() {
+
         if (revocationProcessor == null) {
             revocationProcessor = new DefaultOAuth2RevocationProcessor();
         }
         return revocationProcessor;
     }
 
+    /**
+     * Set Revocation Processor.
+     *
+     * @param revocationProcessor Revocation Processor.
+     */
     public void setRevocationProcessor(OAuth2RevocationProcessor revocationProcessor) {
+
         this.revocationProcessor = revocationProcessor;
     }
 

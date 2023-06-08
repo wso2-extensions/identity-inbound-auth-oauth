@@ -280,38 +280,42 @@ public class OAuthComponentServiceHolder {
     }
     
     /**
-     * Get AccessTokenDAO instance
+     * Get AccessTokenDAO instance.
      * 
-     * @return AccessTokenDAO
+     * @return AccessTokenDAO {@link AccessTokenDAO} instance.
      */
     public AccessTokenDAO getAccessTokenDAOService() {
+
         return accessTokenDAOService;
     }
 
     /**
-     * Set AccessTokenDAO instance
+     * Set AccessTokenDAO instance.
      * 
-     * @param accessTokenDAOService
+     * @param accessTokenDAOService {@link AccessTokenDAO} instance.
      */
     public void setAccessTokenDAOService(AccessTokenDAO accessTokenDAOService) {
+
         this.accessTokenDAOService = accessTokenDAOService;
     }
 
     /**
-     * Get TokenManagementDAO instance
+     * Get TokenManagementDAO instance.
      * 
-     * @return
+     * @return  TokenManagementDAO  {@link TokenManagementDAO} instance.
      */
     public TokenManagementDAO getTokenManagementDAOService() {
+
         return tokenManagementDAOService;
     }
 
     /**
-     * Set TokenManagementDAO instance
+     * Set TokenManagementDAO instance.
      * 
-     * @param tokenManagementDAOService
+     * @param tokenManagementDAOService {@link TokenManagementDAO} instance.
      */
     public void setTokenManagementDAOService(TokenManagementDAO tokenManagementDAOService) {
+
         this.tokenManagementDAOService = tokenManagementDAOService;
     }
 }

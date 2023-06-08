@@ -25,23 +25,20 @@ import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
 /**
- * 
  * Intermediate processor for handling refresh token persistence logic.
- *
  */
-
 public interface RefreshTokenGrantProcessor {
 
     RefreshTokenValidationDataDO validateRefreshToken(OAuthTokenReqMessageContext tokenReqMessageContext)
             throws IdentityOAuth2Exception;
 
     void persistNewToken(OAuthTokenReqMessageContext tokenReqMessageContext, AccessTokenDO accessTokenBean,
-            String userStoreDomain, String clientId) throws IdentityOAuth2Exception;
+                         String userStoreDomain, String clientId) throws IdentityOAuth2Exception;
 
     AccessTokenDO createAccessTokenBean(OAuthTokenReqMessageContext tokReqMsgCtx, OAuth2AccessTokenReqDTO tokenReq,
-            RefreshTokenValidationDataDO validationBean, String tokenType) throws IdentityOAuth2Exception;
+                                        RefreshTokenValidationDataDO validationBean, String tokenType)
+            throws IdentityOAuth2Exception;
 
     boolean isLatestRefreshToken(OAuth2AccessTokenReqDTO tokenReq, RefreshTokenValidationDataDO validationBean,
-            String userStoreDomain) throws IdentityOAuth2Exception;
-
+                                 String userStoreDomain) throws IdentityOAuth2Exception;
 }
