@@ -272,6 +272,8 @@ public class AuthorizationHandlerManager {
 
         // Get scopes that specified in the allowed scopes list.
         List<String> requestedAllowedScopes = getAllowedScopesFromRequestedScopes(authzReqMsgCtx);
+        // Remove the allowed scopes from requested scopes for further validation.
+        removedAllowedScopesFromRequestedScopes(authzReqMsgCtx, requestedAllowedScopes);
         // If it is management app, we validate internal scopes in the requested scopes.
         String[] authorizedInternalScopes = new String[0];
         log.debug("Handling the internal scope validation.");
@@ -369,6 +371,26 @@ public class AuthorizationHandlerManager {
         for (String scope : authzReqMsgCtx.getAuthorizationReqDTO().getScopes()) {
             if (!scope.startsWith(INTERNAL_SCOPE_PREFIX) && !scope.startsWith(CONSOLE_SCOPE_PREFIX) && !scope
                     .equalsIgnoreCase(SYSTEM_SCOPE)) {
+                scopes.add(scope);
+            }
+        }
+        authzReqMsgCtx.getAuthorizationReqDTO().setScopes(scopes.toArray(new String[0]));
+    }
+
+    /**
+     * Remove allowed scopes from requested scopes.
+     *
+     * @param authzReqMsgCtx         authzReqMsgCtx
+     * @param requestedAllowedScopes Requested allowed scopes
+     */
+    private void removedAllowedScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
+                                                         List<String> requestedAllowedScopes) {
+        if (authzReqMsgCtx.getAuthorizationReqDTO().getScopes() == null) {
+            return;
+        }
+        List<String> scopes = new ArrayList<>();
+        for (String scope : authzReqMsgCtx.getAuthorizationReqDTO().getScopes()) {
+            if (!requestedAllowedScopes.contains(scope)) {
                 scopes.add(scope);
             }
         }
