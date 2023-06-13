@@ -201,71 +201,71 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 //        }
     }
 
-    private boolean isLatestRefreshToken(OAuth2AccessTokenReqDTO tokenReq,
-                                         RefreshTokenValidationDataDO validationBean)
-            throws IdentityOAuth2Exception {
+//    private boolean isLatestRefreshToken(OAuth2AccessTokenReqDTO tokenReq,
+//                                         RefreshTokenValidationDataDO validationBean)
+//            throws IdentityOAuth2Exception {
+//
+//        if (log.isDebugEnabled()) {
+//            log.debug("Evaluating refresh token. Token value: " + tokenReq.getRefreshToken() + ", Token state: " +
+//                    validationBean.getRefreshTokenState());
+//        }
+//        if (!OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(validationBean.getRefreshTokenState())) {
+//            // if refresh token is not in active state, check whether there is an access token
+//            // issued with the same refresh token
+//            List<AccessTokenDO> accessTokenBeans = getAccessTokenBeans(tokenReq, validationBean,
+//                    getUserStoreDomain(validationBean.getAuthorizedUser()));
+//            for (AccessTokenDO token : accessTokenBeans) {
+//                if (tokenReq.getRefreshToken().equals(token.getRefreshToken())
+//                        && (OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(token.getTokenState())
+//                        || OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED.equals(token.getTokenState()))) {
+//                    return true;
+//                }
+//            }
+//            if (log.isDebugEnabled()) {
+//                log.debug("Refresh token: " + tokenReq.getRefreshToken() + " is not the latest");
+//            }
+//            removeIfCached(tokenReq, validationBean);
+//            return false;
+//        }
+//        return true;
+//    }
 
-        if (log.isDebugEnabled()) {
-            log.debug("Evaluating refresh token. Token value: " + tokenReq.getRefreshToken() + ", Token state: " +
-                    validationBean.getRefreshTokenState());
-        }
-        if (!OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(validationBean.getRefreshTokenState())) {
-            // if refresh token is not in active state, check whether there is an access token
-            // issued with the same refresh token
-            List<AccessTokenDO> accessTokenBeans = getAccessTokenBeans(tokenReq, validationBean,
-                    getUserStoreDomain(validationBean.getAuthorizedUser()));
-            for (AccessTokenDO token : accessTokenBeans) {
-                if (tokenReq.getRefreshToken().equals(token.getRefreshToken())
-                        && (OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(token.getTokenState())
-                        || OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED.equals(token.getTokenState()))) {
-                    return true;
-                }
-            }
-            if (log.isDebugEnabled()) {
-                log.debug("Refresh token: " + tokenReq.getRefreshToken() + " is not the latest");
-            }
-            removeIfCached(tokenReq, validationBean);
-            return false;
-        }
-        return true;
-    }
+//    private void removeIfCached(OAuth2AccessTokenReqDTO tokenReq, RefreshTokenValidationDataDO validationBean)
+//            throws IdentityOAuth2Exception {
+//
+//        if (cacheEnabled) {
+//            String userId;
+//            try {
+//                userId = validationBean.getAuthorizedUser().getUserId();
+//            } catch (UserIdNotFoundException e) {
+//                throw new IdentityOAuth2Exception("User id not found for user:"
+//                        + validationBean.getAuthorizedUser().getLoggableUserId(), e);
+//            }
+//            clearCache(tokenReq.getClientId(), userId,
+//                    validationBean.getScope(), validationBean.getAccessToken(),
+//                    validationBean.getAuthorizedUser().getFederatedIdPName(),
+//                    validationBean.getTokenBindingReference(), validationBean.getAuthorizedUser().getTenantDomain());
+//        }
+//    }
 
-    private void removeIfCached(OAuth2AccessTokenReqDTO tokenReq, RefreshTokenValidationDataDO validationBean)
-            throws IdentityOAuth2Exception {
-
-        if (cacheEnabled) {
-            String userId;
-            try {
-                userId = validationBean.getAuthorizedUser().getUserId();
-            } catch (UserIdNotFoundException e) {
-                throw new IdentityOAuth2Exception("User id not found for user:"
-                        + validationBean.getAuthorizedUser().getLoggableUserId(), e);
-            }
-            clearCache(tokenReq.getClientId(), userId,
-                    validationBean.getScope(), validationBean.getAccessToken(),
-                    validationBean.getAuthorizedUser().getFederatedIdPName(),
-                    validationBean.getTokenBindingReference(), validationBean.getAuthorizedUser().getTenantDomain());
-        }
-    }
-
-    private List<AccessTokenDO> getAccessTokenBeans(OAuth2AccessTokenReqDTO tokenReq,
-                                                    RefreshTokenValidationDataDO validationBean,
-                                                    String userStoreDomain) throws IdentityOAuth2Exception {
-
-        List<AccessTokenDO> accessTokenBeans = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                .getLatestAccessTokens(tokenReq.getClientId(), validationBean.getAuthorizedUser(), userStoreDomain,
-                        OAuth2Util.buildScopeString(validationBean.getScope()),
-                        validationBean.getTokenBindingReference(), true, LAST_ACCESS_TOKEN_RETRIEVAL_LIMIT);
-        if (accessTokenBeans == null || accessTokenBeans.isEmpty()) {
-            if (log.isDebugEnabled()) {
-                log.debug("No previous access tokens found. User: " + validationBean.getAuthorizedUser() +
-                        ", client: " + tokenReq.getClientId() + ", scope: " +
-                        OAuth2Util.buildScopeString(validationBean.getScope()));
-            }
-            throw new IdentityOAuth2Exception("No previous access tokens found");
-        }
-        return accessTokenBeans;
-    }
+//    private List<AccessTokenDO> getAccessTokenBeans(OAuth2AccessTokenReqDTO tokenReq,
+//                                                    RefreshTokenValidationDataDO validationBean,
+//                                                    String userStoreDomain) throws IdentityOAuth2Exception {
+//
+//        List<AccessTokenDO> accessTokenBeans = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+//                .getLatestAccessTokens(tokenReq.getClientId(), validationBean.getAuthorizedUser(), userStoreDomain,
+//                        OAuth2Util.buildScopeString(validationBean.getScope()),
+//                        validationBean.getTokenBindingReference(), true, LAST_ACCESS_TOKEN_RETRIEVAL_LIMIT);
+//        if (accessTokenBeans == null || accessTokenBeans.isEmpty()) {
+//            if (log.isDebugEnabled()) {
+//                log.debug("No previous access tokens found. User: " + validationBean.getAuthorizedUser() +
+//                        ", client: " + tokenReq.getClientId() + ", scope: " +
+//                        OAuth2Util.buildScopeString(validationBean.getScope()));
+//            }
+//            throw new IdentityOAuth2Exception("No previous access tokens found");
+//        }
+//        return accessTokenBeans;
+//    }
 
     private boolean validateRefreshTokenStatus(RefreshTokenValidationDataDO validationBean, String clientId)
             throws IdentityOAuth2Exception {
