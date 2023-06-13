@@ -619,10 +619,6 @@ public final class OAuthUtil {
                     accessTokens.add(accessTokenDO);
                 }
 
-//                if (!tokenBindingEnabled && OAuth2Util.isHashDisabled()) {
-//                    revokeLatestTokensWithScopes(scopes, clientId, authenticatedUser);
-//                } else {
-
                     // If the hashed token is enabled, there can be multiple active tokens with a user with same scope.
                     // Also, if token binding is enabled, there can be multiple active tokens for the same user, scope
                     // and client combination.
@@ -661,38 +657,6 @@ public final class OAuthUtil {
             }
         }
     }
-
-//    private static void revokeLatestTokensWithScopes(Set<String> scopes, String clientId,
-//                                                        AuthenticatedUser authenticatedUser) throws
-//            UserStoreException {
-//
-//        for (String scope : scopes) {
-//            AccessTokenDO scopedToken = null;
-//            try {
-//                // Retrieve latest access token for particular client, user and scope combination
-//                // if its ACTIVE or EXPIRED.
-//                scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-//                        .getLatestAccessToken(clientId, authenticatedUser, authenticatedUser.getUserStoreDomain(),
-//                                scope, true);
-//            } catch (IdentityOAuth2Exception e) {
-//                String errorMsg = "Error occurred while retrieving latest access token issued for Client ID : " +
-//                        clientId + ", User ID : " + authenticatedUser + " and Scope : " + scope;
-//                LOG.error(errorMsg, e);
-//                throw new UserStoreException(e);
-//            }
-//            if (scopedToken != null) {
-//                try {
-//                    // Revoking token from database
-//                    revokeTokens(Collections.singletonList(scopedToken));
-//                } catch (IdentityOAuth2Exception e) {
-//                    String errorMsg = "Error occurred while revoking " + "Access Token : "
-//                            + scopedToken.getAccessToken() + " for user " + authenticatedUser;
-//                    LOG.error(errorMsg, e);
-//                    throw new UserStoreException(e);
-//                }
-//            }
-//        }
-//    }
 
     /**
      * Resolve user.

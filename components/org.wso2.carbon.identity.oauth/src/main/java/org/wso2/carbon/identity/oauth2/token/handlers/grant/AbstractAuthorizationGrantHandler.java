@@ -858,53 +858,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
     private AccessTokenDO getExistingToken(OAuthTokenReqMessageContext tokenMsgCtx, OAuthCacheKey cacheKey)
             throws IdentityOAuth2Exception {
-//        AccessTokenDO existingToken = null;
-//        OAuth2AccessTokenReqDTO tokenReq = tokenMsgCtx.getOauth2AccessTokenReqDTO();
-//        String scope = OAuth2Util.buildScopeString(tokenMsgCtx.getScope());
-//        String tokenBindingReference = getTokenBindingReference(tokenMsgCtx);
-//
-//        if (cacheEnabled) {
-//            existingToken = getExistingTokenFromCache(cacheKey, tokenReq.getClientId(),
-//                    tokenMsgCtx.getAuthorizedUser().getLoggableUserId(), scope, tokenBindingReference,
-//                    tokenMsgCtx.getAuthorizedUser().getTenantDomain());
-//        }
-//
-//        if (existingToken == null) {
-//            existingToken = getExistingTokenFromDB(tokenMsgCtx, tokenReq, scope, cacheKey);
-//        }
-//        return existingToken;
+
         return null;
     }
 
-//    private AccessTokenDO getExistingTokenFromDB(OAuthTokenReqMessageContext tokenMsgCtx,
-//                                                 OAuth2AccessTokenReqDTO tokenReq, String scope, OAuthCacheKey cacheKey)
-//            throws IdentityOAuth2Exception {
-//
-//        AccessTokenDO existingToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-//                .getLatestAccessToken(tokenReq.getClientId(), tokenMsgCtx.getAuthorizedUser(),
-//                        getUserStoreDomain(tokenMsgCtx.getAuthorizedUser()), scope,
-//                        getTokenBindingReference(tokenMsgCtx), false);
-//        if (existingToken != null) {
-//            if (log.isDebugEnabled()) {
-//                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-//                    log.debug("Retrieved latest access token(hashed): " + DigestUtils.sha256Hex
-//                            (existingToken.getAccessToken()) + " in the state: " + existingToken.getTokenState() +
-//                            " for client Id: " + tokenReq.getClientId() + " user: " + tokenMsgCtx.getAuthorizedUser() +
-//                            " and scope: " + scope + " from db");
-//                } else {
-//                    log.debug("Retrieved latest access token for client Id: " + tokenReq.getClientId() + " user: " +
-//                            tokenMsgCtx.getAuthorizedUser() + " and scope: " + scope + " from db");
-//                }
-//            }
-//            long expireTime = getAccessTokenExpiryTimeMillis(existingToken);
-//            if (TOKEN_STATE_ACTIVE.equals(existingToken.getTokenState()) &&
-//                    expireTime != 0) {
-//                // Active token retrieved from db, adding to cache if cacheEnabled
-//                addTokenToCache(cacheKey, existingToken);
-//            }
-//        }
-//        return existingToken;
-//    }
 
     private AccessTokenDO getExistingTokenFromCache(OAuthCacheKey cacheKey, String consumerKey, String loggableUserId,
                                                     String scope, String tokenBindingReference, String tenantDomain)
