@@ -118,7 +118,7 @@
     OAuthConsumerAppDTO consumerApp = null;
 
     try {
-        if (OAuthUIUtil.isValidURI(callback) || callback.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+        if (callback.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX) || OAuthUIUtil.isValidURI(callback)) {
             String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
             String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
             ConfigurationContext configContext =

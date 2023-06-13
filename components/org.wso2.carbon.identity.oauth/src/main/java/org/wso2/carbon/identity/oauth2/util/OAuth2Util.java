@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -80,10 +80,12 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.consent.server.configs.mgt.exceptions.ConsentServerConfigsMgtException;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
+import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
@@ -200,6 +202,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoi
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_USER_INFO_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_CONSENT_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_WEB_FINGER_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ALLOWED_GRANT_TYPES_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgorithms.PREVIOUS_KID_HASHING_ALGORITHM;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
@@ -239,6 +242,7 @@ public class OAuth2Util {
      * described in Section 3.3 of OAuth 2.0
      */
     public static final String SCOPE = "scope";
+    public static final String INTERNAL_LOGIN_SCOPE = "internal_login";
 
     /*
      * OPTIONAL. Client identifier for the OAuth 2.0 client that requested this token.
@@ -318,7 +322,6 @@ public class OAuth2Util {
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private static final Log log = LogFactory.getLog(OAuth2Util.class);
     private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
-    private static final String INTERNAL_LOGIN_SCOPE = "internal_login";
     public static final String JWT = "JWT";
     private static long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
     private static ThreadLocal<Integer> clientTenantId = new ThreadLocal<>();
@@ -354,13 +357,16 @@ public class OAuth2Util {
     private static final String CLIENT_SECRET_POST = "client_secret_post";
     private static final String PRIVATE_KEY_JWT = "private_key_jwt";
 
-    // Supported Response Modes.
-    private static final String QUERY_RESPONSE_MODE = "query";
-    private static final String FRAGMENT_RESPONSE_MODE = "fragment";
-    private static final String FORM_POST_RESPONSE_MODE = "form_post";
-
     public static final String ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE = "Invalid Access Token. Access token is " +
             "not ACTIVE.";
+    public static final String IS_EXTENDED_TOKEN = "isExtendedToken";
+    public static final String DYNAMIC_TOKEN_DATA_FUNCTION = "dynamicTokenData";
+    public static final String ACCESS_TOKEN_JS_OBJECT = "access_token";
+    public static final int EXTENDED_REFRESH_TOKEN_DEFAULT_TIME = -2;
+
+    private static final String EXTERNAL_CONSENT_PAGE_CONFIGURATIONS = "external_consent_page_configurations";
+    private static final String EXTERNAL_CONSENT_PAGE = "external_consent_page";
+    private static final String EXTERNAL_CONSENT_PAGE_URL = "external_consent_page_url";
 
     private OAuth2Util() {
 
@@ -936,7 +942,9 @@ public class OAuth2Util {
                     + wordBoundaryRegex, partitionedAccessTokenTable);
             partitionedSql = partitionedSql.replaceAll(wordBoundaryRegex + accessTokenScopeTable + wordBoundaryRegex,
                     partitionedAccessTokenScopeTable);
-
+            partitionedSql = partitionedSql.replaceAll(
+                    wordBoundaryRegex + OAuthConstants.ACCESS_TOKEN_STORE_ATTRIBUTES_TABLE + wordBoundaryRegex,
+                    partitionedAccessTokenTable);
             if (log.isDebugEnabled()) {
                 log.debug("Original SQL: " + sql);
                 log.debug("Partitioned SQL: " + partitionedSql);
@@ -3746,12 +3754,7 @@ public class OAuth2Util {
      */
     public static List<String> getSupportedResponseModes() {
 
-        List<String> responseModes = new ArrayList<>();
-        responseModes.add(QUERY_RESPONSE_MODE);
-        responseModes.add(FRAGMENT_RESPONSE_MODE);
-        responseModes.add(FORM_POST_RESPONSE_MODE);
-
-        return responseModes;
+        return OAuthServerConfiguration.getInstance().getSupportedResponseModeNames();
     }
 
     /**
@@ -4295,6 +4298,11 @@ public class OAuth2Util {
         return isIdpIdAvailableInAuthzCodeTable && isIdpIdAvailableInTokenTable && isIdpIdAvailableInTokenAuditTable;
     }
 
+    public static boolean isAccessTokenExtendedTableExist() {
+
+        return IdentityDatabaseUtil.isTableExists(OAuthConstants.ACCESS_TOKEN_STORE_ATTRIBUTES_TABLE);
+    }
+
     /**
      * Check whether the CONSENTED_TOKEN column is available in IDN_OAUTH2_ACCESS_TOKEN table.
      *
@@ -4444,7 +4452,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Method to extract the SHA-1 JWK thumbprint from certificates.
+     * Method to extract the SHA-256 JWK thumbprint from certificates.
      *
      * @param certificate x509 certificate
      * @return String thumbprint
@@ -4453,13 +4461,21 @@ public class OAuth2Util {
     public static String getJwkThumbPrint(Certificate certificate) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.debug(String.format("Calculating SHA-1 JWK thumb-print for certificate: %s", certificate.toString()));
+            log.debug(String.format("Calculating SHA-256 JWK thumb-print for certificate: %s", certificate.toString()));
         }
         try {
             CertificateFactory cf = CertificateFactory.getInstance(Constants.X509);
             ByteArrayInputStream bais = new ByteArrayInputStream(certificate.getEncoded());
             X509Certificate x509 = (X509Certificate) cf.generateCertificate(bais);
-            Base64URL jwkThumbprint = RSAKey.parse(x509).computeThumbprint(Constants.SHA1);
+            Base64URL jwkThumbprint;
+            // check config to maintain backward compatibility with SHA-1 thumbprint
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(
+                    IdentityConstants.OAuth.ENABLE_SHA256_JWK_THUMBPRINT))) {
+                jwkThumbprint = RSAKey.parse(x509).computeThumbprint(Constants.SHA256);
+            } else {
+                jwkThumbprint = RSAKey.parse(x509).computeThumbprint(Constants.SHA1);
+            }
+
             String thumbprintString = jwkThumbprint.toString();
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Calculated SHA-1 JWK thumbprint %s from the certificate",
@@ -4773,5 +4789,51 @@ public class OAuth2Util {
             }
         }
         return isFederatedRoleBasedAuthzEnabled;
+    }
+
+    /**
+     * Get allowed grant type list for renewing token without revoking existing token.
+     *
+     * @return Allowed grant type list.
+     */
+    public static ArrayList<String> getJWTRenewWithoutRevokeAllowedGrantTypes() {
+
+        ArrayList<String> allowedGrantTypes;
+        Object value = IdentityConfigParser.getInstance().getConfiguration()
+                .get(RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ALLOWED_GRANT_TYPES_CONFIG);
+        if (value == null) {
+            allowedGrantTypes = new ArrayList<>(Arrays.asList(OAuthConstants.GrantTypes.CLIENT_CREDENTIALS));
+        } else if (value instanceof ArrayList) {
+            allowedGrantTypes = (ArrayList) value;
+        } else {
+            allowedGrantTypes = new ArrayList<>(Collections.singletonList((String) value));
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Allowed grant types for renewing token without revoking existing token: " + allowedGrantTypes);
+        }
+
+        return allowedGrantTypes;
+    }
+
+    /**
+     * Get the external consent page url configured for the tenant domain.
+     *
+     * @param tenantDomain Tenant Domain.
+     * @return External consent page url.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static String resolveExternalConsentPageUrl(String tenantDomain) throws IdentityOAuth2Exception {
+
+        String externalConsentPageUrl = "";
+        try {
+            externalConsentPageUrl = OAuth2ServiceComponentHolder.getConsentServerConfigsManagementService()
+                    .getExternalConsentPageUrl(tenantDomain);
+
+        } catch (ConsentServerConfigsMgtException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving external consent page url from the " +
+                    "configuration store for tenant domain : " + tenantDomain, e);
+        }
+
+        return externalConsentPageUrl;
     }
 }

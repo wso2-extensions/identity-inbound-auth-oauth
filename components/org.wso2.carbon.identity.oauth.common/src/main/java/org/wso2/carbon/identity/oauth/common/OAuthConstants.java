@@ -87,6 +87,7 @@ public final class OAuthConstants {
     public static final String OAUTH_SAML2_ASSERTION = "SAML2Assertion";
     public static final long UNASSIGNED_VALIDITY_PERIOD = -1L;
     public static final String ACCESS_TOKEN_STORE_TABLE = "IDN_OAUTH2_ACCESS_TOKEN";
+    public static final String ACCESS_TOKEN_STORE_ATTRIBUTES_TABLE = "IDN_OAUTH2_ACCESS_TOKEN_ATTRIBUTES";
     public static final int OAUTH_AUTHZ_CB_HANDLER_DEFAULT_PRIORITY = 1;
     public static final String DEFAULT_KEY_ALIAS = "Security.KeyStore.KeyAlias";
 
@@ -100,8 +101,15 @@ public final class OAuthConstants {
     // OAuth client authenticator properties
     public static final String CLIENT_AUTH_CREDENTIAL_VALIDATION = "StrictClientCredentialValidation";
     public static final String ACCESS_TOKEN = "accessToken";
+    public static final String ACCESS_TOKEN_RESPONSE_PARAM = "access_token";
+    public static final String EXPIRES_IN = "expires_in";
+    public static final String TOKEN_TYPE = "token_type";
     public static final String ID_TOKEN = "id_token";
+    public static final String CODE = "code";
     public static final String USERINFO = "userinfo";
+    public static final String AUTHENTICATED_IDPS = "AuthenticatedIdPs";
+    public static final String SESSION_STATE = "session_state";
+    public static final String STATE = "state";
     public static final String AUTHZ_CODE = "AuthorizationCode";
 
     //Constants for reading EndpointConfig.properties
@@ -122,6 +130,7 @@ public final class OAuthConstants {
     public static final String CODE_IDTOKEN = "code id_token";
     public static final String CODE_IDTOKEN_TOKEN = "code id_token token";
     public static final String IDTOKEN_TOKEN = "id_token token";
+    public static final String SCOPE = "scope";
 
     //Constants used for OAuth/OpenID Connect Configuration UI
     public static final String CALLBACK_URL_REGEXP_PREFIX = "regexp=";
@@ -150,6 +159,8 @@ public final class OAuthConstants {
     public static final String OAUTH_SCOPE_BINDING_PATH = "oauth-scope-bindings.xml";
     public static final String SCOPE_RESOURCE_PATH = "/oidc";
 
+    public static final String RESTRICT_UNASSIGNED_SCOPES = "restrict.unassigned.scopes";
+
     public static final String TENANT_NAME_FROM_CONTEXT = "TenantNameFromContext";
 
     //Oauth2 sp expire time configuration.
@@ -163,6 +174,14 @@ public final class OAuthConstants {
 
     // Context tenant domain passed with request parameters.
     public static final String TENANT_DOMAIN_FROM_CONTEXT = "tenant_domain_from_context";
+    public static final String ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST =
+            "allow_request_uri_and_request_object_in_request";
+
+    public static final String RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ALLOWED_GRANT_TYPES_CONFIG =
+            "OAuth.JWT.RenewTokenWithoutRevokingExisting.AllowedGrantTypes.AllowedGrantType";
+    public static final String RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG =
+            "OAuth.JWT.RenewTokenWithoutRevokingExisting.Enable";
+    public static final String REQUEST_BINDING_TYPE = "request";
 
     private OAuthConstants() {
 
@@ -526,4 +545,20 @@ public final class OAuthConstants {
         public static final String CLIENT_ID = "client id";
         public static final String TENANT_DOMAIN = "tenant domain";
     }
+
+    /**
+     * Response Mode constants.
+     */
+    public static class ResponseModes {
+
+        public static final String DEFAULT = "default";
+        public static final String QUERY = "query";
+        public static final String FRAGMENT = "fragment";
+        public static final String FORM_POST = "form_post";
+        public static final String JWT = "jwt";
+        public static final String QUERY_JWT = "query.jwt";
+        public static final String FRAGMENT_JWT = "fragment.jwt";
+        public static final String FORM_POST_JWT = "form_post.jwt";
+    }
+
 }

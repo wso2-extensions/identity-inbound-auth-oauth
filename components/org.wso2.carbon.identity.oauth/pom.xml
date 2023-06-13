@@ -23,7 +23,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.11.14-SNAPSHOT</version>
+        <version>6.11.81-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -138,6 +138,10 @@
             <artifactId>org.wso2.carbon.identity.oauth.common</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+            <artifactId>org.wso2.carbon.identity.oauth.par</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.idp.mgt</artifactId>
         </dependency>
@@ -230,6 +234,10 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.organization.management</groupId>
             <artifactId>org.wso2.carbon.identity.organization.management.role.management.service</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.consent.server.configs.mgt</artifactId>
         </dependency>
 
         <dependency>
@@ -418,6 +426,7 @@
                         <Export-Package>
                             !org.wso2.carbon.identity.oauth.internal,
                             !org.wso2.carbon.identity.oauth.common.*,
+                            !org.wso2.carbon.identity.oauth.par.*,
                             org.wso2.carbon.identity.oauth.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
                             org.wso2.carbon.identity.oauth2.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
                             org.wso2.carbon.identity.openidconnect.*;version="${identity.inbound.auth.oauth.exp.pkg.version}",

@@ -36,8 +36,10 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
+import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -60,12 +62,15 @@ import org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeReq
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
+import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.handlers.TokenBindingExpiryEventHandler;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.scope.RoleBasedScopeIssuer;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
@@ -78,6 +83,7 @@ import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
 import org.wso2.carbon.utils.CarbonUtils;
+import org.wso2.carbon.utils.ConfigurationContextService;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -99,6 +105,8 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabl
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkConsentedTokenColumnAvailable;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkLegacyAudiencesEnabled;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getJWTRenewWithoutRevokeAllowedGrantTypes;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isAccessTokenExtendedTableExist;
 
 /**
  * OAuth 2 OSGi service component.
@@ -214,6 +222,16 @@ public class OAuth2ServiceComponent {
                 }
             }
 
+            // Read and store the allowed grant types for JWT renew without revoke in OAuth2ServiceComponentHolder.
+            OAuth2ServiceComponentHolder.setJwtRenewWithoutRevokeAllowedGrantTypes(
+                    getJWTRenewWithoutRevokeAllowedGrantTypes());
+
+            OAuth2ServiceComponentHolder.
+                    setResponseModeProviders(OAuthServerConfiguration.getInstance().getSupportedResponseModes());
+            OAuth2ServiceComponentHolder.
+                    setDefaultResponseModeProvider(OAuthServerConfiguration.getInstance()
+                            .getDefaultResponseModeProvider());
+
             ServiceRegistration tenantMgtListenerSR = bundleContext.registerService(TenantMgtListener.class.getName(),
                     new OAuthTenantMgtListenerImpl(), null);
             if (tenantMgtListenerSR != null) {
@@ -272,8 +290,11 @@ public class OAuth2ServiceComponent {
 
             // Registering OAuth2Service as a OSGIService
             bundleContext.registerService(OAuth2Service.class.getName(), new OAuth2Service(), null);
+            OAuth2ScopeService oAuth2ScopeService = new OAuth2ScopeService();
             // Registering OAuth2ScopeService as a OSGIService
-            bundleContext.registerService(OAuth2ScopeService.class.getName(), new OAuth2ScopeService(), null);
+            bundleContext.registerService(OAuth2ScopeService.class.getName(), oAuth2ScopeService, null);
+            // Registering OAuth2ScopeService under ScopeService interface as the default service.
+            bundleContext.registerService(ScopeMetadataService.class, oAuth2ScopeService, null);
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
 
@@ -310,6 +331,12 @@ public class OAuth2ServiceComponent {
             OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(false);
         }
 
+        if (isAccessTokenExtendedTableExist()) {
+            log.debug("IDN_OAUTH2_ACCESS_TOKEN_EXTENDED table is available Setting " +
+                    "isAccessTokenExtendedTableExist to true.");
+            OAuth2ServiceComponentHolder.setTokenExtendedTableExist(true);
+        }
+
         boolean isConsentedTokenColumnAvailable = checkConsentedTokenColumnAvailable();
         OAuth2ServiceComponentHolder.setConsentedTokenColumnEnabled(isConsentedTokenColumnAvailable);
         if (log.isDebugEnabled()) {
@@ -321,6 +348,12 @@ public class OAuth2ServiceComponent {
                         "setting consentedColumnAvailable to false.");
             }
         }
+        if (OAuthServerConfiguration.getInstance().isGlobalRbacScopeIssuerEnabled()) {
+            bundleContext.registerService(ScopeValidator.class, new RoleBasedScopeIssuer(), null);
+        }
+        boolean restrictUnassignedScopes = Boolean.parseBoolean(System.getProperty(
+                OAuthConstants.RESTRICT_UNASSIGNED_SCOPES));
+        OAuth2ServiceComponentHolder.setRestrictUnassignedScopes(restrictUnassignedScopes);
     }
 
     /**
@@ -779,5 +812,102 @@ public class OAuth2ServiceComponent {
             }
         }
         return permissions;
+    }
+
+    @Reference(
+            name = "org.wso2.carbon.identity.event.services.IdentityEventService",
+            service = IdentityEventService.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIdentityEventService"
+    )
+    protected void setIdentityEventService(IdentityEventService identityEventService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("IdentityEventService set in OAuth2ServiceComponent bundle");
+        }
+        OAuth2ServiceComponentHolder.setIdentityEventService(identityEventService);
+    }
+
+    protected void unsetIdentityEventService(IdentityEventService identityEventService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("IdentityEventService unset in OAuth2ServiceComponent bundle");
+        }
+        OAuth2ServiceComponentHolder.setIdentityEventService(null);
+    }
+
+    @Reference(
+            name = "consent.server.configs.mgt.service",
+            service = ConsentServerConfigsManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetConsentServerConfigsManagementService"
+    )
+
+    /**
+     * This method is used to set the Consent Server Configs Management Service.
+     *
+     * @param consentServerConfigsManagementService The Consent Server Configs Management Service which needs to be set.
+     */
+    protected void setConsentServerConfigsManagementService(ConsentServerConfigsManagementService
+                                                                        consentServerConfigsManagementService) {
+
+        OAuth2ServiceComponentHolder.setConsentServerConfigsManagementService(consentServerConfigsManagementService);
+        log.debug("Setting the Consent Server Management Configs.");
+    }
+
+    /**
+     * This method is used to unset the Consent Server Configs Management Service.
+     *
+     * @param consentServerConfigsManagementService The Consent Server Configs Management Service which needs to unset.
+     */
+    protected void unsetConsentServerConfigsManagementService(ConsentServerConfigsManagementService
+                                                     consentServerConfigsManagementService) {
+
+        OAuth2ServiceComponentHolder.setConsentServerConfigsManagementService(null);
+        log.debug("Unsetting the Consent Server Configs Management.");
+    }
+
+    @Reference(
+            name = "configuration.context.service",
+            service = ConfigurationContextService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetConfigurationContextService"
+    )
+    protected void setConfigurationContextService(ConfigurationContextService configurationContextService) {
+
+        OAuth2ServiceComponentHolder.getInstance().setConfigurationContextService(configurationContextService);
+        log.debug("ConfigurationContextService Instance was set.");
+    }
+
+    protected void unsetConfigurationContextService(ConfigurationContextService configurationContextService) {
+
+        OAuth2ServiceComponentHolder.getInstance().setConfigurationContextService(null);
+        log.debug("ConfigurationContextService Instance was unset.");
+    }
+
+    @Reference(
+            name = "JWTAccessTokenClaimProvider",
+            service = JWTAccessTokenClaimProvider.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetJWTAccessTokenClaimProvider"
+    )
+    protected void setJWTAccessTokenClaimProvider(JWTAccessTokenClaimProvider claimProvider) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Adding JWT Access Token ClaimProvider: " + claimProvider.getClass().getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().addJWTAccessTokenClaimProvider(claimProvider);
+    }
+
+    protected void unsetJWTAccessTokenClaimProvider(JWTAccessTokenClaimProvider claimProvider) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing JWT Access Token ClaimProvider: " + claimProvider.getClass().getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().removeJWTAccessTokenClaimProvider(claimProvider);
     }
 }

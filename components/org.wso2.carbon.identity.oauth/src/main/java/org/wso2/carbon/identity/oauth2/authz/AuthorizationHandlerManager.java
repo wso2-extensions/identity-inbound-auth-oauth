@@ -23,8 +23,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
-import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
-import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
@@ -40,7 +38,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2UnauthorizedScopeException;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
@@ -168,25 +165,15 @@ public class AuthorizationHandlerManager {
 
         // Execute Internal SCOPE Validation.
         String[] authorizedInternalScopes = new String[0];
-        boolean isManagementApp = isManagementApp(authzReqDTO);
-        if (isManagementApp) {
-            if (log.isDebugEnabled()) {
-                log.debug("Handling the internal scope validation.");
-            }
-            JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
-            authorizedInternalScopes = scopeValidator.validateScope(authzReqMsgCtx);
-            // Execute internal console scopes validation.
-            if (IdentityUtil.isSystemRolesEnabled()) {
-                RoleBasedInternalScopeValidator roleBasedInternalScopeValidator = new RoleBasedInternalScopeValidator();
-                String[] roleBasedInternalConsoleScopes = roleBasedInternalScopeValidator.validateScope(authzReqMsgCtx);
-                authorizedInternalScopes = (String[]) ArrayUtils
-                        .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
-            }
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Skipping the internal scope validation as the application is not" +
-                        " configured as Management App");
-            }
+        log.debug("Handling the internal scope validation.");
+        JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
+        authorizedInternalScopes = scopeValidator.validateScope(authzReqMsgCtx);
+        // Execute internal console scopes validation.
+        if (IdentityUtil.isSystemRolesEnabled()) {
+            RoleBasedInternalScopeValidator roleBasedInternalScopeValidator = new RoleBasedInternalScopeValidator();
+            String[] roleBasedInternalConsoleScopes = roleBasedInternalScopeValidator.validateScope(authzReqMsgCtx);
+            authorizedInternalScopes = (String[]) ArrayUtils
+                    .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
         }
 
         // Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
@@ -287,18 +274,9 @@ public class AuthorizationHandlerManager {
         List<String> requestedAllowedScopes = getAllowedScopesFromRequestedScopes(authzReqMsgCtx);
         // If it is management app, we validate internal scopes in the requested scopes.
         String[] authorizedInternalScopes = new String[0];
-        boolean isManagementApp = isManagementApp(authzReqMsgCtx.getAuthorizationReqDTO());
-        if (isManagementApp) {
-            if (log.isDebugEnabled()) {
-                log.debug("Handling the internal scope validation.");
-            }
-            authorizedInternalScopes = getAuthorizedInternalScopes(authzReqMsgCtx);
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Skipping the internal scope validation as the application is not" +
-                        " configured as Management App");
-            }
-        }
+        log.debug("Handling the internal scope validation.");
+        authorizedInternalScopes = getAuthorizedInternalScopes(authzReqMsgCtx);
+
         // Remove the internal scopes from requested scopes for further validation.
         removeInternalScopesFromRequestedScopes(authzReqMsgCtx);
         // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
@@ -341,6 +319,7 @@ public class AuthorizationHandlerManager {
      * @return - allowed scopes list
      */
     private List<String> getAllowedScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx) {
+
         List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
         String[] requestedScopes = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
         List<String> requestedAllowedScopes = new ArrayList<>();
@@ -362,6 +341,7 @@ public class AuthorizationHandlerManager {
      */
     private String[] getAuthorizedInternalScopes(OAuthAuthzReqMessageContext authzReqMsgCtx)
             throws IdentityOAuth2Exception {
+
         String[] authorizedInternalScopes;
         JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
         authorizedInternalScopes = scopeValidator.validateScope(authzReqMsgCtx);
@@ -405,19 +385,6 @@ public class AuthorizationHandlerManager {
         String[] filteredScopes = OAuth2Util.dropUnregisteredScopes(authzReqMsgCtx.getAuthorizationReqDTO().getScopes(),
                 authzReqMsgCtx.getAuthorizationReqDTO().getTenantDomain());
         authzReqMsgCtx.getAuthorizationReqDTO().setScopes(filteredScopes);
-    }
-
-    private boolean isManagementApp(OAuth2AuthorizeReqDTO authzReqDTO) throws IdentityOAuth2Exception {
-
-        try {
-            ServiceProvider application = OAuth2ServiceComponentHolder.getApplicationMgtService()
-                    .getServiceProviderByClientId(authzReqDTO.getConsumerKey(), OAuthConstants.Scope.OAUTH2,
-                            authzReqDTO.getTenantDomain());
-            return application.isManagementApp();
-        } catch (IdentityApplicationManagementException e) {
-            throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for " +
-                    "client id " + authzReqDTO.getConsumerKey(), e);
-        }
     }
 
     private void addAuthorizedInternalScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,

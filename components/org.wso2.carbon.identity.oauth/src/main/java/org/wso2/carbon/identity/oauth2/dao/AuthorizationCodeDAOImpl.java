@@ -510,6 +510,69 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     }
 
     @Override
+    public List<AuthzCodeDO> getAuthorizationCodesDataByUser(AuthenticatedUser authenticatedUser) throws
+            IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving authorization codes of user: " + authenticatedUser.toString());
+        }
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement ps = null;
+        ResultSet rs;
+        List<AuthzCodeDO> authorizationCodes = new ArrayList<>();
+        String authzUser = authenticatedUser.getUserName();
+        String tenantDomain = authenticatedUser.getTenantDomain();
+        String userStoreDomain = authenticatedUser.getUserStoreDomain();
+        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authenticatedUser.toString());
+        try {
+            String sqlQuery = SQLQueries.GET_AUTHORIZATION_CODE_DATA_BY_AUTHZUSER;
+            if (!isUsernameCaseSensitive) {
+                sqlQuery = sqlQuery.replace(AUTHZ_USER, LOWER_AUTHZ_USER);
+            }
+            ps = connection.prepareStatement(sqlQuery);
+            if (isUsernameCaseSensitive) {
+                ps.setString(1, authzUser);
+            } else {
+                ps.setString(1, authzUser.toLowerCase());
+            }
+            ps.setInt(2, OAuth2Util.getTenantId(tenantDomain));
+            ps.setString(3, userStoreDomain);
+            ps.setString(4, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+            rs = ps.executeQuery();
+
+            while (rs.next()) {
+                long validityPeriodInMillis = rs.getLong(3);
+                Timestamp timeCreated = rs.getTimestamp(2, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                long issuedTimeInMillis = timeCreated.getTime();
+                String authorizationCode = getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1));
+                String authzCodeId = rs.getString(4);
+                String[] scope = OAuth2Util.buildScopeArray(rs.getString(5));
+                String callbackUrl = rs.getString(6);
+                String consumerKey = rs.getString(7);
+
+
+                // Authorization codes that are in ACTIVE state and not expired should be removed from the cache.
+                if (OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodInMillis) > 0) {
+                    if (isHashDisabled) {
+                        authorizationCodes
+                                .add(new AuthzCodeDO(authenticatedUser, scope, timeCreated, validityPeriodInMillis,
+                                        callbackUrl, consumerKey, authorizationCode, authzCodeId));
+                    }
+                }
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
+            throw new IdentityOAuth2Exception("Error occurred while revoking authorization code with username : " +
+                    authenticatedUser.getUserName() + " tenant ID : " + OAuth2Util.getTenantId(authenticatedUser
+                    .getTenantDomain()), e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+        }
+        return authorizationCodes;
+    }
+    @Override
     public Set<String> getAuthorizationCodesByConsumerKey(String consumerKey) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
