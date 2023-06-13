@@ -4028,6 +4028,6 @@ public class OAuth2AuthzEndpoint {
 
     private boolean isPromptSelectAccount(OAuth2Parameters oauth2Params) {
 
-        return (OAuthConstants.Prompt.SELECT_ACCOUNT).equals(oauth2Params.getPrompt());
+        return OAuthConstants.Prompt.SELECT_ACCOUNT.equals(oauth2Params.getPrompt());
     }
 }
