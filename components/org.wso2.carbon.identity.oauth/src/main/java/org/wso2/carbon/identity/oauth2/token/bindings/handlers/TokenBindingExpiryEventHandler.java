@@ -324,8 +324,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                             && StringUtils.equalsIgnoreCase(user.getUserName(), authenticatedUser.getUserName())) {
                         revokeFederatedTokens(consumerKey, user, accessTokenDO, tokenBindingReference);
                     } else if (StringUtils.equalsIgnoreCase(userId, authenticatedUser.getAuthenticatedSubjectIdentifier().split("@")[0])) {
-                        accessTokenDO.getAuthzUser().setUserId(userId);
-                        revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
+                        revokeFederatedTokens(consumerKey, user, accessTokenDO, tokenBindingReference);
                     }
                     else if (StringUtils.equalsIgnoreCase(userId, authenticatedUser.getUserId())) {
                         revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
