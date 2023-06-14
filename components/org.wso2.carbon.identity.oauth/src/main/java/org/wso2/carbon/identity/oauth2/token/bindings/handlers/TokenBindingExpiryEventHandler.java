@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2020, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2020-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -322,6 +322,10 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                             && StringUtils.equalsIgnoreCase(
                                     user.getFederatedIdPName(), authenticatedUser.getFederatedIdPName())
                             && StringUtils.equalsIgnoreCase(user.getUserName(), authenticatedUser.getUserName())) {
+                        revokeFederatedTokens(consumerKey, user, accessTokenDO, tokenBindingReference);
+                    } else if (authenticatedUser.getAuthenticatedSubjectIdentifier() != null &&
+                            StringUtils.equals(userId, authenticatedUser.getAuthenticatedSubjectIdentifier()
+                                    .split("@")[0])) {
                         revokeFederatedTokens(consumerKey, user, accessTokenDO, tokenBindingReference);
                     } else if (StringUtils.equalsIgnoreCase(userId, authenticatedUser.getUserId())) {
                         revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);

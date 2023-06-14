@@ -2933,6 +2933,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             accessTokenDO.setValidityPeriod(validityPeriodInMillis);
                             accessTokenDO.setRefreshTokenValidityPeriod(refreshTokenValidityPeriodMillis);
                             accessTokenDO.setTokenType(tokenType);
+                            OAuth2Util.setUserIdIfNotExist(accessTokenDO.getAuthzUser(), subjectIdentifier);
                             tokenMap.put(token, accessTokenDO);
                         }
                         return Collections.emptySet();

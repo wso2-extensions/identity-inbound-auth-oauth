@@ -131,16 +131,19 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
 import org.wso2.carbon.user.api.RealmConfiguration;
+import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -566,6 +569,30 @@ public class OAuth2Util {
         }
     }
 
+    public static void setUserIdIfNotExist(AuthenticatedUser authenticatedUser, String authenticatedSubjectIdentifier) {
+
+        try {
+            authenticatedUser.getUserId();
+        } catch (UserIdNotFoundException e) {
+            if (authenticatedUser.getAuthenticatedSubjectIdentifier() == null) {
+                return;
+            }
+            String userId = authenticatedSubjectIdentifier.split("@")[0];
+            int tenantID = IdentityTenantUtil.getTenantId(authenticatedUser.getTenantDomain());
+            try {
+                Tenant tenant = OAuthComponentServiceHolder.getInstance().getRealmService()
+                            .getTenantManager().getTenant(tenantID);
+                String accessedOrganizationId = tenant.getAssociatedOrganizationUUID();
+                if (accessedOrganizationId != null) {
+                    Optional<User> optionalUser = OAuthComponentServiceHolder.getInstance().getOrganizationUserResidentResolverService()
+                            .resolveUserFromResidentOrganization(null, userId, accessedOrganizationId);
+                    optionalUser.ifPresent(user -> authenticatedUser.setUserId(user.getUserID()));
+                }
+            } catch (UserStoreException | OrganizationManagementException ex) {
+                return;
+            }
+        }
+    }
     public static TokenPersistenceProcessor getPersistenceProcessor() {
 
         TokenPersistenceProcessor persistenceProcessor;
