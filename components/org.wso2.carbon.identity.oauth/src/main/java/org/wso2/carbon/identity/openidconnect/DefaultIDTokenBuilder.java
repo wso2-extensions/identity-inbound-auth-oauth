@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
@@ -193,6 +194,13 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
         if (idpSessionKey != null) {
             jwtClaimsSetBuilder.claim(IDP_SESSION_KEY, idpSessionKey);
+        }
+        AccessTokenExtendedAttributes accessTokenExtendedAttributes =
+                tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes();
+        if (accessTokenExtendedAttributes != null && accessTokenExtendedAttributes.getParameters() != null) {
+            for (Map.Entry<String, String> entry : accessTokenExtendedAttributes.getParameters().entrySet()) {
+                jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
+            }
         }
         setUserRealm(authorizedUser, jwtClaimsSetBuilder);
         setAdditionalClaims(tokenReqMsgCtxt, tokenRespDTO, jwtClaimsSetBuilder);

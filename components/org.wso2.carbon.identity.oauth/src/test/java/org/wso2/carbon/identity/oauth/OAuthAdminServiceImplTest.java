@@ -560,7 +560,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     public void testUpdateOauthSecretKey() throws Exception {
 
         mockStatic(OAuthUtil.class);
-        when(OAuthUtil.getRandomNumber()).thenReturn(UPDATED_CONSUMER_SECRET);
+        when(OAuthUtil.getRandomNumberSecure()).thenReturn(UPDATED_CONSUMER_SECRET);
         when(OAuthUtil.buildConsumerAppDTO(any())).thenCallRealMethod();
 
         OAuthAdminServiceImpl oAuthAdminServiceImpl = spy(new OAuthAdminServiceImpl());
@@ -589,7 +589,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     public void testUpdateOauthSecretKeyWithException() throws Exception {
 
         mockStatic(OAuthUtil.class);
-        when(OAuthUtil.getRandomNumber()).thenReturn(UPDATED_CONSUMER_SECRET);
+        when(OAuthUtil.getRandomNumberSecure()).thenReturn(UPDATED_CONSUMER_SECRET);
         OAuthAdminServiceImpl oAuthAdminServiceImpl = spy(new OAuthAdminServiceImpl());
         doThrow(new IdentityOAuthAdminException("Error while regenerating consumer secret")).when(oAuthAdminServiceImpl,
                 "updateAppAndRevokeTokensAndAuthzCodes", anyString(), Matchers.any(Properties.class));

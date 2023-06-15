@@ -58,6 +58,7 @@ public class OIDCRequestObjectUtil {
      */
     public static RequestObject buildRequestObject(OAuthAuthzRequest oauthRequest, OAuth2Parameters oAuth2Parameters)
             throws RequestObjectException {
+
         /*
           So that the request is a valid OAuth 2.0 Authorization Request, values for the response_type and client_id
           parameters MUST be included using the OAuth 2.0 request syntax, since they are REQUIRED by OAuth 2.0.
@@ -66,6 +67,10 @@ public class OIDCRequestObjectUtil {
         RequestObject requestObject;
         RequestObjectBuilder requestObjectBuilder;
         String requestObjType;
+        /*
+            The order should not be changed as there can be instances where both request and request_uri can be present.
+            In such cases request parameter needs to be given precedence.
+         */
         if (isRequestParameter(oauthRequest)) {
             requestObjectBuilder = getRequestObjectBuilder(REQUEST_PARAM_VALUE_BUILDER);
             requestObjType = REQUEST;

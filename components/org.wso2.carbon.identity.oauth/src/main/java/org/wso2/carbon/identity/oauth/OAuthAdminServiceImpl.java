@@ -252,7 +252,7 @@ public class OAuthAdminServiceImpl {
         OAuthAppDO app = new OAuthAppDO();
         AuthenticatedUser defaultAppOwner = null;
         try {
-            if (tenantAwareLoggedInUsername != null) {
+            if (StringUtils.isNotEmpty(tenantAwareLoggedInUsername)) {
                 defaultAppOwner = buildAuthenticatedUser(tenantAwareLoggedInUsername, tenantDomain);
             } else {
                 Optional<User> tenantAwareLoggedInUser = OAuthUtil.getUser(tenantDomain, null);
@@ -272,11 +272,11 @@ public class OAuthAdminServiceImpl {
                     app.setState(APP_STATE_ACTIVE);
                     if (StringUtils.isEmpty(application.getOauthConsumerKey())) {
                         app.setOauthConsumerKey(OAuthUtil.getRandomNumber());
-                        app.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
+                        app.setOauthConsumerSecret(OAuthUtil.getRandomNumberSecure());
                     } else {
                         app.setOauthConsumerKey(application.getOauthConsumerKey());
                         if (StringUtils.isEmpty(application.getOauthConsumerSecret())) {
-                            app.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
+                            app.setOauthConsumerSecret(OAuthUtil.getRandomNumberSecure());
                         } else {
                             app.setOauthConsumerSecret(application.getOauthConsumerSecret());
                         }
@@ -337,14 +337,12 @@ public class OAuthAdminServiceImpl {
                     AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Oauth Application registration success : " + application.getApplicationName() +
-                                " in " +
-                                "tenant domain: " + tenantDomain);
+                                " in tenant domain: " + tenantDomain);
                     }
                 } else {
                     String message = "No application details in the request. Failed to register OAuth App.";
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug(message);
-                    }
+                    LOG.debug(message);
+
                     throw handleClientError(INVALID_REQUEST, message);
                 }
             } else {
@@ -353,7 +351,7 @@ public class OAuthAdminServiceImpl {
                         LOG.debug("No authenticated user found. Failed to register OAuth App: " +
                                 application.getApplicationName());
                     } else {
-                        LOG.debug("No authenticated user found. Failed to register OAuth App");
+                        LOG.debug("No authenticated user found. Failed to register OAuth App.");
                     }
                 }
                 String message = "No authenticated user found. Failed to register OAuth App.";
@@ -812,6 +810,7 @@ public class OAuthAdminServiceImpl {
 
             AppInfoCache.getInstance().clearCacheEntry(consumerKey);
             updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
+            handleInternalTokenRevocation(consumerKey, properties);
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug("App state is updated to:" + newState + " in the AppInfoCache for OAuth App with " +
@@ -847,13 +846,14 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
         Properties properties = new Properties();
-        String newSecret = OAuthUtil.getRandomNumber();
+        String newSecret = OAuthUtil.getRandomNumberSecure();
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, newSecret);
         properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REGENERATE);
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_ACTIVE);
 
         AppInfoCache.getInstance().clearCacheEntry(consumerKey);
         updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
+        handleInternalTokenRevocation(consumerKey, properties);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Client Secret for OAuth app with consumerKey: " + consumerKey + " updated in OAuthCache.");
         }
@@ -1774,6 +1774,7 @@ public class OAuthAdminServiceImpl {
         validateScopeName(scope.getName());
         validateRegex(scope.getName());
         validateDisplayName(scope.getDisplayName());
+        validateDescription(scope.getDescription());
     }
 
     /**
@@ -1789,7 +1790,7 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Check whether scope name is provided or not.
+     * Check whether scope name is empty, contains white spaces and whether the scope name is too long.
      *
      * @param scopeName Scope name.
      * @throws IdentityOAuth2ScopeClientException
@@ -1802,6 +1803,10 @@ public class OAuthAdminServiceImpl {
                     ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED.getMessage());
         }
         validateWhiteSpaces(scopeName);
+        if (scopeName.length() > Oauth2ScopeConstants.MAX_LENGTH_OF_SCOPE_NAME) {
+            throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_TOO_LONG.getMessage(), scopeName));
+        }
     }
 
     private void validateRegex(String scopeName) throws IdentityOAuthClientException {
@@ -1834,7 +1839,7 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Check whether display name is provided or empty.
+     * Check whether the display name is provided or empty and whether the display name is too long.
      *
      * @param displayName Display name.
      * @throws IdentityOAuth2ScopeClientException
@@ -1846,6 +1851,25 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(INVALID_REQUEST,
                     Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED
                             .getMessage());
+        }
+        if (displayName.length() > Oauth2ScopeConstants.MAX_LENGTH_OF_SCOPE_DISPLAY_NAME) {
+            throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_TOO_LONG.getMessage(), displayName));
+        }
+    }
+
+    /**
+     * Check whether the description is too long.
+     *
+     * @param description Description.
+     * @throws IdentityOAuth2ScopeClientException
+     */
+    private void validateDescription(String description) throws IdentityOAuthClientException {
+
+        if (StringUtils.isNotBlank(description) &&
+                description.length() > Oauth2ScopeConstants.MAX_LENGTH_OF_SCOPE_DESCRIPTION) {
+            throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_DESCRIPTION_TOO_LONG.getMessage(), description));
         }
     }
 
@@ -1879,6 +1903,17 @@ public class OAuthAdminServiceImpl {
             return  OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().getScopeNames(tenantId);
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error while loading OIDC scopes of tenant: " + tenantDomain, e);
+        }
+    }
+
+    private void handleInternalTokenRevocation(String consumerKey, Properties properties)
+            throws IdentityOAuthAdminException {
+        for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
+                .getOAuthApplicationMgtListeners()) {
+            oAuthApplicationMgtListener.doPostRegenerateClientSecret(consumerKey, properties);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("OAuthApplicationMgtListener is triggered after revoking the OAuth secret.");
+            }
         }
     }
 }

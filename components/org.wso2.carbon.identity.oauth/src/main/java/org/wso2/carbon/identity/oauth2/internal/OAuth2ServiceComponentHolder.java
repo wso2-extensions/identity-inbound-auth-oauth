@@ -22,6 +22,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -30,15 +31,19 @@ import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValid
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.organization.management.role.management.service.RoleManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
+import org.wso2.carbon.utils.ConfigurationContextService;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,8 +63,11 @@ public class OAuth2ServiceComponentHolder {
     private static List<OAuthClientAuthenticator> authenticationHandlers = new ArrayList<>();
     private static List<ClaimProvider> claimProviders = new ArrayList<>();
     private static boolean idpIdColumnEnabled = false;
+    private static Map<String, ResponseModeProvider> responseModeProviders;
+    private static ResponseModeProvider defaultResponseModeProvider;
     private static boolean consentedTokenColumnEnabled = false;
     private static IdentityEventService identityEventService;
+    private static boolean tokenExtendedTableExist = false;
     private List<TokenBinder> tokenBinders = new ArrayList<>();
     private Map<String, ResponseTypeRequestValidator> responseTypeRequestValidators = new HashMap<>();
     private OAuthAdminServiceImpl oauthAdminService;
@@ -73,6 +81,10 @@ public class OAuth2ServiceComponentHolder {
     private List<Scope> oauthScopeBinding = new ArrayList<>();
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
     private static List<String> jwtRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
+    private static ConsentServerConfigsManagementService consentServerConfigsManagementService;
+    private static boolean restrictUnassignedScopes;
+    private static ConfigurationContextService configurationContextService;
+    private List<JWTAccessTokenClaimProvider> jwtAccessTokenClaimProviders = new ArrayList<>();
 
     private OAuth2ServiceComponentHolder() {
 
@@ -203,6 +215,16 @@ public class OAuth2ServiceComponentHolder {
     public static void unregisterClaimProvider(ClaimProvider claimProvider) {
 
         claimProviders.remove(claimProvider);
+    }
+
+    public static boolean isTokenExtendedTableExist() {
+
+        return tokenExtendedTableExist;
+    }
+
+    public static void setTokenExtendedTableExist(boolean tokenExtendedTableExist) {
+
+        OAuth2ServiceComponentHolder.tokenExtendedTableExist = tokenExtendedTableExist;
     }
 
     public List<TokenBinder> getTokenBinders() {
@@ -412,5 +434,119 @@ public class OAuth2ServiceComponentHolder {
 
     public static void setIdentityEventService(IdentityEventService identityEventService) {
         OAuth2ServiceComponentHolder.identityEventService = identityEventService;
+    }
+
+    /**
+     * Get Consent Server Configs Management Service.
+     *
+     * @return Consent Server Configs Management Service.
+     */
+    public static ConsentServerConfigsManagementService getConsentServerConfigsManagementService() {
+
+        return OAuth2ServiceComponentHolder.consentServerConfigsManagementService;
+    }
+
+    /**
+     * Set Consent Server Configs Management Service.
+     *
+     * @param consentServerConfigsManagementService Consent Server Configs Management Service.
+     */
+    public static void setConsentServerConfigsManagementService(ConsentServerConfigsManagementService
+                                                                        consentServerConfigsManagementService) {
+
+        OAuth2ServiceComponentHolder.consentServerConfigsManagementService = consentServerConfigsManagementService;
+    }
+
+    public static boolean isRestrictUnassignedScopes() {
+
+        return restrictUnassignedScopes;
+    }
+
+    public static void setRestrictUnassignedScopes(boolean restrictUnassignedScopes) {
+
+        OAuth2ServiceComponentHolder.restrictUnassignedScopes = restrictUnassignedScopes;
+    }
+
+    public static ConfigurationContextService getConfigurationContextService() {
+
+        return configurationContextService;
+    }
+
+    public static void setConfigurationContextService(ConfigurationContextService configurationContextService) {
+
+        OAuth2ServiceComponentHolder.configurationContextService = configurationContextService;
+    }
+
+    /**
+     * Returns JWT access token additional claim providers.
+     *
+     * @return
+     */
+    public List<JWTAccessTokenClaimProvider> getJWTAccessTokenClaimProviders() {
+
+        return Collections.unmodifiableList(jwtAccessTokenClaimProviders);
+    }
+
+    public void addJWTAccessTokenClaimProvider(JWTAccessTokenClaimProvider accessTokenClaimProvider) {
+
+        jwtAccessTokenClaimProviders.add(accessTokenClaimProvider);
+    }
+
+    public void removeJWTAccessTokenClaimProvider(JWTAccessTokenClaimProvider accessTokenClaimProvider) {
+
+        jwtAccessTokenClaimProviders.add(accessTokenClaimProvider);
+    }
+
+
+
+    /**
+     * set ResponseModeProvider map
+     */
+    public static void setResponseModeProviders(Map<String, ResponseModeProvider> responseModeProvidersMap) {
+
+        responseModeProviders = responseModeProvidersMap;
+    }
+
+    /**
+     * set DefaultResponseModeProvider
+     */
+    public static void setDefaultResponseModeProvider(ResponseModeProvider responseModeProvider) {
+
+        defaultResponseModeProvider = responseModeProvider;
+    }
+
+    /**
+     * get DefaultResponseModeProvider
+     */
+    public static ResponseModeProvider getDefaultResponseModeProvider() {
+
+        return defaultResponseModeProvider;
+    }
+
+    /**
+     * This returns responseModeProviders map with all supported (configured) response modes and their providers
+     * @return Map<String, ResponseModeProvider>
+     */
+    public static Map<String, ResponseModeProvider> getResponseModeProviders() {
+        return responseModeProviders;
+    }
+
+    /**
+     * Method to get the configured ResponseModeProvider implementation.
+     *
+     * @return the configured response mode provider for the Authorization response.
+     */
+    public static ResponseModeProvider getResponseModeProvider(String responseMode) {
+
+        if (responseMode == null) {
+            // if response mode is not provided, the DefaultResponseModeProvider is used
+            return getDefaultResponseModeProvider();
+        }
+        ResponseModeProvider responseModeProvider = responseModeProviders.get(responseMode);
+        if (responseModeProvider == null) {
+            // if response mode is not in the configured response modes, the DefaultResponseModeProvider is used
+            return getDefaultResponseModeProvider();
+        }
+        return responseModeProvider;
     }
 }

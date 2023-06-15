@@ -42,6 +42,9 @@ public class SessionDataCacheEntry extends CacheEntry {
     private String essentialClaims;
     private String sessionContextIdentifier;
 
+   // Flag to indicate whether the entry needs to be removed once consumed.
+    private boolean removeOnConsume = false;
+
     private String queryString = null;
 
     private ConcurrentMap<String, String[]> paramMap = new ConcurrentHashMap<String, String[]>();
@@ -135,5 +138,25 @@ public class SessionDataCacheEntry extends CacheEntry {
     public void setSessionContextIdentifier(String sessionContextIdentifier) {
 
         this.sessionContextIdentifier = sessionContextIdentifier;
+    }
+
+    /**
+     * Get removeOnConsume.
+     *
+     * @return removeOnConsume.
+     */
+    public boolean isRemoveOnConsume() {
+
+        return removeOnConsume;
+    }
+
+    /**
+     * Set removeOnConsume.
+     *
+     * @param removeOnConsume removeOnConsume.
+     */
+    public void setRemoveOnConsume(boolean removeOnConsume) {
+
+        this.removeOnConsume = removeOnConsume;
     }
 }

@@ -87,6 +87,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppState
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 
 /**
@@ -153,6 +155,25 @@ public class AccessTokenIssuer {
 
         OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
         boolean isRefreshRequest = GrantType.REFRESH_TOKEN.toString().equals(grantType);
+        boolean isCodeRequest = GrantType.AUTHORIZATION_CODE.toString().equals(grantType);
+
+        if (isCodeRequest) {
+
+            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(getAuthorizationCode(tokenReqDTO));
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
+                    AuthorizationGrantCache.getInstance().getValueFromCacheByCode(cacheKey);
+            if (authorizationGrantCacheEntry != null &&
+                    authorizationGrantCacheEntry.getAccessTokenExtensionDO() != null) {
+                if (authorizationGrantCacheEntry.getAccessTokenExtensionDO().getRefreshTokenValidityPeriod() >
+                        EXTENDED_REFRESH_TOKEN_DEFAULT_TIME) {
+                    tokReqMsgCtx.setRefreshTokenvalidityPeriod(
+                            authorizationGrantCacheEntry.getAccessTokenExtensionDO().getRefreshTokenValidityPeriod());
+                }
+                tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
+                        authorizationGrantCacheEntry.getAccessTokenExtensionDO());
+            }
+        }
+
 
         triggerPreListeners(tokenReqDTO, tokReqMsgCtx, isRefreshRequest);
 
@@ -268,6 +289,9 @@ public class AccessTokenIssuer {
         tokReqMsgCtx.addProperty(OAUTH_APP_DO, oAuthAppDO);
 
         boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser();
+
+        boolean useClientIdAsSubClaimForAppTokensEnabled = OAuthServerConfiguration.getInstance()
+                .isUseClientIdAsSubClaimForAppTokensEnabled();
 
         if (!isOfTypeApplicationUser) {
             tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getAppOwner());
@@ -391,8 +415,13 @@ public class AccessTokenIssuer {
 
             AuthenticatedUser authorizedUser = tokReqMsgCtx.getAuthorizedUser();
             if (authorizedUser.getAuthenticatedSubjectIdentifier() == null) {
-                authorizedUser.setAuthenticatedSubjectIdentifier(
-                        getSubjectClaim(getServiceProvider(tokReqMsgCtx.getOauth2AccessTokenReqDTO()), authorizedUser));
+                if (!isOfTypeApplicationUser && useClientIdAsSubClaimForAppTokensEnabled) {
+                    authorizedUser.setAuthenticatedSubjectIdentifier(oAuthAppDO.getOauthConsumerKey());
+                } else {
+                    authorizedUser.setAuthenticatedSubjectIdentifier(
+                            getSubjectClaim(getServiceProvider(tokReqMsgCtx.getOauth2AccessTokenReqDTO()),
+                                    authorizedUser));
+                }
             }
 
             tokenRespDTO = authzGrantHandler.issue(tokReqMsgCtx);
@@ -504,26 +533,65 @@ public class AccessTokenIssuer {
             }
             return true;
         }
-
-        List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
-        List<String> requestedAllowedScopes = new ArrayList<>();
-        String[] requestedScopes = tokReqMsgCtx.getScope();
-        List<String> scopesToBeValidated = new ArrayList<>();
-
-        if (requestedScopes != null) {
-            for (String scope : requestedScopes) {
-                if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
-                    requestedAllowedScopes.add(scope);
-                } else {
-                    scopesToBeValidated.add(scope);
+        if (GrantType.REFRESH_TOKEN.toString().equals(grantType)) {
+            /*
+             In the refresh token flow, we have already completed scope validation during the initial token call and
+             issued the token with authorized scopes. Therefore, during the refresh flow we don't need to do the
+             internal scope validation again. But we need to call the grant type specific scope validation handler to
+             issue the token with only the authorized scopes.
+            */
+            AuthorizationGrantHandler authzGrantHandler = authzGrantHandlers.get(grantType);
+            if (log.isDebugEnabled()) {
+                log.debug("Calling grant type specific scope validation handler for the refresh token grant and " +
+                        "omitting internal scope validation as internal scope validation already done " +
+                        "during the token issuance.");
+            }
+            boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
+            if (isValidScope) {
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("clientId", tokenReqDTO.getClientId());
+                    params.put("requestedScopes", getScopeList(tokenReqDTO.getScope()));
+                    params.put("authorizedScopes", getScopeList(tokReqMsgCtx.getScope()));
+                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
+                            OAuthConstants.LogConstants.SUCCESS, "OAuth scope validation is successful.",
+                            "validate-scope", null);
                 }
             }
-            tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
+            return isValidScope;
         }
-
-        String[] authorizedInternalScopes = new String[0];
         boolean isManagementApp = getServiceProvider(tokenReqDTO).isManagementApp();
-        if (isManagementApp) {
+        List<String> requestedAllowedScopes = new ArrayList<>();
+        String[] authorizedInternalScopes = new String[0];
+        String[] requestedScopes = tokReqMsgCtx.getScope();
+        if (GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) && !isManagementApp) {
+            log.debug("Application is not configured as Management App and the grant type is client credentials. " +
+                    "Hence skipping internal scope validation to stop issuing internal scopes for the client : " +
+                    tokenReqDTO.getClientId());
+        } else {
+            if (GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
+                    ArrayUtils.contains(requestedScopes, INTERNAL_LOGIN_SCOPE)) {
+                /*
+                Remove the internal_login scope from the requested scopes as we need to stop issuing self-service
+                related scopes for client credentials grant.
+                */
+                requestedScopes = (String[]) ArrayUtils.removeElement(requestedScopes, INTERNAL_LOGIN_SCOPE);
+                tokReqMsgCtx.setScope(requestedScopes);
+            }
+            List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
+            List<String> scopesToBeValidated = new ArrayList<>();
+
+            if (ArrayUtils.isNotEmpty(requestedScopes)) {
+                for (String scope : requestedScopes) {
+                    if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
+                        requestedAllowedScopes.add(scope);
+                    } else {
+                        scopesToBeValidated.add(scope);
+                    }
+                }
+                tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
+            }
+
             if (log.isDebugEnabled()) {
                 log.debug("Handling the internal scope validation.");
             }
@@ -537,10 +605,17 @@ public class AccessTokenIssuer {
                 authorizedInternalScopes = (String[]) ArrayUtils
                         .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
             }
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Skipping the internal scope validation as the application is not" +
-                        " configured as Management App");
+            if (isManagementApp && GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
+                    ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
+                List<String> authorizedInternalScopesList = new ArrayList<>(Arrays.asList(authorizedInternalScopes));
+                if (authorizedInternalScopesList.contains(INTERNAL_LOGIN_SCOPE)) {
+                    /*
+                    Remove the internal_login scope from the requested scopes as we need to stop issuing self-service
+                    related scopes for client credentials grant.
+                    */
+                    authorizedInternalScopesList.remove(INTERNAL_LOGIN_SCOPE);
+                    authorizedInternalScopes = authorizedInternalScopesList.toArray(new String[0]);
+                }
             }
         }
 
@@ -751,12 +826,19 @@ public class AccessTokenIssuer {
                                              String[] authorizedInternalScopes) {
 
         String[] scopes = tokReqMsgCtx.getScope();
+        if (scopes == null) {
+            scopes = new String[0];
+        }
+        if (authorizedInternalScopes == null) {
+            authorizedInternalScopes = new String[0];
+        }
         tokReqMsgCtx.setScope(Stream.concat(Arrays.stream(scopes), Arrays.stream(authorizedInternalScopes))
                 .distinct().toArray(String[]::new));
     }
 
     private void addRequestedOIDCScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
                                              String[] requestedOIDCScopes) {
+
         if (tokReqMsgCtx.getScope() == null) {
             tokReqMsgCtx.setScope(new String[0]);
         }
@@ -764,8 +846,8 @@ public class AccessTokenIssuer {
         scopesToReturn.addAll(Arrays.asList(requestedOIDCScopes));
         String[] scopes = scopesToReturn.toArray(new String[0]);
         tokReqMsgCtx.setScope(scopes);
-
     }
+
     private void addAllowedScopes(OAuthTokenReqMessageContext tokReqMsgCtx, String[] allowedScopes) {
 
         String[] scopes = tokReqMsgCtx.getScope();

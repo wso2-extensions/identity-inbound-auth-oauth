@@ -472,7 +472,7 @@ public class OIDCSessionManagementUtil {
         if (StringUtils.isNotBlank(isAllowAdditionalParamsFromPostLogoutRedirectURIEnabled)) {
             return Boolean.parseBoolean(isAllowAdditionalParamsFromPostLogoutRedirectURIEnabled);
         } else {
-            return true;
+            return false;
         }
     }
 
