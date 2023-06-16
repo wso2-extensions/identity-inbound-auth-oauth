@@ -569,6 +569,12 @@ public class OAuth2Util {
         }
     }
 
+    /**
+     * Resolve the user from the ancestor organizations if the authenticated user id is not populated.
+     *
+     * @param authenticatedUser The authenticated user object.
+     * @param authenticatedSubjectIdentifier The authenticated subject identifier.
+     */
     public static void setUserIdIfNotExist(AuthenticatedUser authenticatedUser, String authenticatedSubjectIdentifier) {
 
         try {
@@ -584,12 +590,13 @@ public class OAuth2Util {
                             .getTenantManager().getTenant(tenantID);
                 String accessedOrganizationId = tenant.getAssociatedOrganizationUUID();
                 if (accessedOrganizationId != null) {
-                    Optional<User> optionalUser = OAuthComponentServiceHolder.getInstance().getOrganizationUserResidentResolverService()
+                    Optional<User> optionalUser = OAuthComponentServiceHolder.getInstance()
+                            .getOrganizationUserResidentResolverService()
                             .resolveUserFromResidentOrganization(null, userId, accessedOrganizationId);
                     optionalUser.ifPresent(user -> authenticatedUser.setUserId(user.getUserID()));
                 }
             } catch (UserStoreException | OrganizationManagementException ex) {
-                return;
+                log.debug("User could not resolved from the organization hierarchy");
             }
         }
     }
