@@ -214,12 +214,17 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         if (request.getApprovedScope() != null && Arrays.asList((request.getApprovedScope())).contains(AUDIENCE)) {
             jwtClaimsSetBuilder.audience(Arrays.asList(request.getApprovedScope()));
         }
+        List<JWTAccessTokenClaimProvider> claimProviders = getJWTAccessTokenClaimProviders();
+        for (JWTAccessTokenClaimProvider claimProvider : claimProviders) {
+            Map<String, Object> additionalClaims = claimProvider.getAdditionalClaims(request);
+            if (additionalClaims != null) {
+                additionalClaims.forEach(jwtClaimsSetBuilder::claim);
+            }
+        }
         jwtClaimsSet = jwtClaimsSetBuilder.build();
-
         if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
-
         return signJWT(jwtClaimsSet, null, request);
     }
 
@@ -239,6 +244,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         if (request.getScope() != null && Arrays.asList((request.getScope())).contains(AUDIENCE)) {
             jwtClaimsSetBuilder.audience(Arrays.asList(request.getScope()));
+        }
+        List<JWTAccessTokenClaimProvider> claimProviders = getJWTAccessTokenClaimProviders();
+        for (JWTAccessTokenClaimProvider claimProvider : claimProviders) {
+            Map<String, Object> additionalClaims = claimProvider.getAdditionalClaims(request);
+            if (additionalClaims != null) {
+                additionalClaims.forEach(jwtClaimsSetBuilder::claim);
+            }
         }
         jwtClaimsSet = jwtClaimsSetBuilder.build();
         if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
@@ -651,17 +663,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
         }
 
-        if (tokenReqMessageContext != null && tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
-                tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes() != null) {
-            Map<String, String> customClaims =
-                    tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes()
-                            .getParameters();
-            if (customClaims != null && !customClaims.isEmpty()) {
-                for (Map.Entry<String, String> entry : customClaims.entrySet()) {
-                    jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
-                }
-            }
-        }
         // Include token binding.
         jwtClaimsSet = handleTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
 
