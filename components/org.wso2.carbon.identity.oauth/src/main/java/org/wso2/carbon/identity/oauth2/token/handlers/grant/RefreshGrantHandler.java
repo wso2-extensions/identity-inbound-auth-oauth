@@ -344,6 +344,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             // Remove old access token from the OAuthCache
             String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
             String userId;
+            OAuth2Util.setUserIdIfNotExist(tokReqMsgCtx.getAuthorizedUser(),
+                    tokReqMsgCtx.getAuthorizedUser().getAuthenticatedSubjectIdentifier());
             try {
                 userId = tokReqMsgCtx.getAuthorizedUser().getUserId();
             } catch (UserIdNotFoundException e) {
