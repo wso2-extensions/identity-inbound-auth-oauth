@@ -1421,19 +1421,6 @@ public class EndpointUtil {
     }
 
     /**
-     * This method will start a tenant flow.
-     */
-    public static void startTenantFlow() {
-
-        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
-        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        PrivilegedCarbonContext.startTenantFlow();
-        PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
-        carbonContext.setTenantId(tenantId);
-        carbonContext.setTenantDomain(tenantDomain);
-    }
-
-    /**
      * This API validate the oauth application. Check whether an application exits for given cosumerKey and check
      * it's status
      *

@@ -66,7 +66,6 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.parseJsonTokenRequest;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.triggerOnTokenExceptionListeners;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateOauthApplication;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
@@ -91,9 +90,8 @@ public class OAuth2TokenEndpoint {
 
         Map<String, List<String>> paramMap;
         try {
-            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-                startTenantFlow();
-            } else {
+            // Start super tenant flow only if tenant qualified URLs are disabled.
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
                 startSuperTenantFlow();
             }
             paramMap = parseJsonTokenRequest(payload);
@@ -110,7 +108,9 @@ public class OAuth2TokenEndpoint {
             triggerOnTokenExceptionListeners(e, request, null);
             throw e;
         } finally {
-            PrivilegedCarbonContext.endTenantFlow();
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                PrivilegedCarbonContext.endTenantFlow();
+            }
         }
         return issueAccessToken(request, paramMap);
     }
@@ -139,9 +139,8 @@ public class OAuth2TokenEndpoint {
             OAuthSystemException, InvalidRequestParentException {
 
         try {
-            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-                startTenantFlow();
-            } else {
+            // Start super tenant flow only if tenant qualified URLs are disabled.
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
                 startSuperTenantFlow();
             }
             validateRepeatedParams(request, paramMap);
@@ -167,7 +166,9 @@ public class OAuth2TokenEndpoint {
             throw e;
 
         } finally {
-            PrivilegedCarbonContext.endTenantFlow();
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                PrivilegedCarbonContext.endTenantFlow();
+            }
         }
     }
 
