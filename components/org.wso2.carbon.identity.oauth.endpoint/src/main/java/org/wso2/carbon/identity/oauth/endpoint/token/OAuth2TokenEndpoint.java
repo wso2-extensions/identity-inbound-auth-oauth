@@ -31,6 +31,7 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -65,6 +66,7 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.parseJsonTokenRequest;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.triggerOnTokenExceptionListeners;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateOauthApplication;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
@@ -89,7 +91,11 @@ public class OAuth2TokenEndpoint {
 
         Map<String, List<String>> paramMap;
         try {
-            startSuperTenantFlow();
+            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                startTenantFlow();
+            } else {
+                startSuperTenantFlow();
+            }
             paramMap = parseJsonTokenRequest(payload);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
@@ -133,7 +139,11 @@ public class OAuth2TokenEndpoint {
             OAuthSystemException, InvalidRequestParentException {
 
         try {
-            startSuperTenantFlow();
+            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                startTenantFlow();
+            } else {
+                startSuperTenantFlow();
+            }
             validateRepeatedParams(request, paramMap);
             HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
             CarbonOAuthTokenRequest oauthRequest = buildCarbonOAuthTokenRequest(httpRequest);
