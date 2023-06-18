@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -570,16 +570,14 @@ public class OAuth2Util {
     }
 
     /**
-     * Resolve the user from the ancestor organizations if the authenticated user id is not populated.
+     * Resolve the user from ancestor organizations and set the user ID if the authenticated user id is not populated.
      *
-     * @param authenticatedUser The authenticated user object.
+     * @param authenticatedUser              The authenticated user object.
      * @param authenticatedSubjectIdentifier The authenticated subject identifier.
      */
     public static void setUserIdIfNotExist(AuthenticatedUser authenticatedUser, String authenticatedSubjectIdentifier) {
 
-        try {
-            authenticatedUser.getUserId();
-        } catch (UserIdNotFoundException e) {
+        if (StringUtils.equals(authenticatedUser.getLoggableUserId(), authenticatedUser.toFullQualifiedUsername())) {
             if (authenticatedUser.getAuthenticatedSubjectIdentifier() == null) {
                 return;
             }
@@ -587,7 +585,7 @@ public class OAuth2Util {
             int tenantID = IdentityTenantUtil.getTenantId(authenticatedUser.getTenantDomain());
             try {
                 Tenant tenant = OAuthComponentServiceHolder.getInstance().getRealmService()
-                            .getTenantManager().getTenant(tenantID);
+                        .getTenantManager().getTenant(tenantID);
                 String accessedOrganizationId = tenant.getAssociatedOrganizationUUID();
                 if (accessedOrganizationId != null) {
                     Optional<User> optionalUser = OAuthComponentServiceHolder.getInstance()
@@ -600,6 +598,7 @@ public class OAuth2Util {
             }
         }
     }
+
     public static TokenPersistenceProcessor getPersistenceProcessor() {
 
         TokenPersistenceProcessor persistenceProcessor;
