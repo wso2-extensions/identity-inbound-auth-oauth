@@ -31,6 +31,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -905,5 +906,24 @@ public class OAuth2ServiceComponent {
             log.debug("Removing JWT Access Token ClaimProvider: " + claimProvider.getClass().getName());
         }
         OAuth2ServiceComponentHolder.getInstance().removeJWTAccessTokenClaimProvider(claimProvider);
+    }
+
+    @Reference(
+            name = "identity.application.authentication.framework",
+            service = ApplicationAuthenticationService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetApplicationAuthenticationService"
+    )
+    protected void setApplicationAuthenticationService(
+            ApplicationAuthenticationService applicationAuthenticationService) {
+        /* reference ApplicationAuthenticationService service to guarantee that this component will wait until
+        authentication framework is started */
+    }
+
+    protected void unsetApplicationAuthenticationService(
+            ApplicationAuthenticationService applicationAuthenticationService) {
+        /* reference ApplicationAuthenticationService service to guarantee that this component will wait until
+        authentication framework is started */
     }
 }
