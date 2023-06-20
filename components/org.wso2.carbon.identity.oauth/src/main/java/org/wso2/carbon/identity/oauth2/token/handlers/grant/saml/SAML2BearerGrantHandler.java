@@ -58,7 +58,6 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
-import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
 import org.wso2.carbon.identity.core.model.SAMLSSOServiceProviderDO;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -1011,7 +1010,8 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             privilegedCarbonContext.setTenantDomain(tenantDomain);
 
             IdentityTenantUtil.initializeRegistry(tenantId, tenantDomain);
-            return SAMLSSOServiceProviderManager.getInstance().getServiceProvider(issuerName, tenantId);
+            return OAuth2ServiceComponentHolder.getInstance().getSamlSSOServiceProviderManager()
+                    .getServiceProvider(issuerName, tenantId);
         } catch (IdentityException e) {
             throw new IdentityOAuth2Exception("Error occurred while validating existence of SAML service provider " +
                     "'" + issuerName + "' that issued the assertion in the tenant domain '" + tenantDomain + "'");

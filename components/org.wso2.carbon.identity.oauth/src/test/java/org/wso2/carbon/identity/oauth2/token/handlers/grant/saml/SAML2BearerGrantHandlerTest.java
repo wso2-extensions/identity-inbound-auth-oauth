@@ -130,6 +130,8 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
     @Mock
     private OAuthComponentServiceHolder oAuthComponentServiceHolder;
     @Mock
+    private OAuth2ServiceComponentHolder oAuth2ServiceComponentHolder;
+    @Mock
     private RealmService realmService;
     @Mock
     private TenantManager tenantManager;
@@ -418,6 +420,7 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(oAuthComponentServiceHolder.getRealmService()).thenReturn(realmService);
         mockStatic(OAuth2ServiceComponentHolder.class);
         when(OAuth2ServiceComponentHolder.getApplicationMgtService()).thenReturn(applicationManagementService);
+        when(OAuth2ServiceComponentHolder.getSamlSSOServiceProviderManager()).thenReturn(samlSSOServiceProviderManager);
         when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
                 .thenReturn(serviceProvider);
     }
@@ -524,8 +527,7 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
 
         when(samlSSOServiceProviderManager.getServiceProvider(anyString(), anyInt()))
                 .thenReturn(samlssoServiceProviderDO);
-        mockStatic(SAMLSSOServiceProviderManager.class);
-        when(SAMLSSOServiceProviderManager.getInstance()).thenReturn(samlSSOServiceProviderManager);
+
         when(samlSSOServiceProviderManager.isServiceProviderExists(anyString(), anyInt())).thenReturn(true);
 
         mockStatic(SSOServiceProviderConfigManager.class);
