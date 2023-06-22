@@ -23,6 +23,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
+import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -75,6 +76,7 @@ public class OAuth2ServiceComponentHolder {
     private static KeyIDProvider keyIDProvider = null;
     private IdpManager idpManager;
     private static UserSessionManagementService userSessionManagementService;
+    private static SAMLSSOServiceProviderManager samlSSOServiceProviderManager;
     private static RoleManager roleManager;
     private static OrganizationUserResidentResolverService organizationUserResidentResolverService;
     private List<ScopeDTO> oidcScopesClaims = new ArrayList<>();
@@ -475,6 +477,26 @@ public class OAuth2ServiceComponentHolder {
     public static void setConfigurationContextService(ConfigurationContextService configurationContextService) {
 
         OAuth2ServiceComponentHolder.configurationContextService = configurationContextService;
+    }
+
+    /**
+     * Get the OAuth2ScopeClaimMappingDAO instance.
+     *
+     * @param samlSSOServiceProviderManager SAMLSSOServiceProviderManager instance.
+     */
+    public static void setSamlSSOServiceProviderManager(SAMLSSOServiceProviderManager samlSSOServiceProviderManager) {
+
+        OAuth2ServiceComponentHolder.samlSSOServiceProviderManager = samlSSOServiceProviderManager;
+    }
+
+    /**
+     * Get the SAMLSSOServiceProviderManager instance.
+     *
+     * @return SAMLSSOServiceProviderManager instance.
+     */
+    public static SAMLSSOServiceProviderManager getSamlSSOServiceProviderManager() {
+
+        return samlSSOServiceProviderManager;
     }
 
     /**
