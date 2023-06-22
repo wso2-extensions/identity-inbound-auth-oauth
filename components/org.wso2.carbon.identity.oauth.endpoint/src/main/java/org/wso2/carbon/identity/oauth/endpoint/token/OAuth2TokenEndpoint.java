@@ -31,6 +31,7 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -89,7 +90,10 @@ public class OAuth2TokenEndpoint {
 
         Map<String, List<String>> paramMap;
         try {
-            startSuperTenantFlow();
+            // Start super tenant flow only if tenant qualified URLs are disabled.
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                startSuperTenantFlow();
+            }
             paramMap = parseJsonTokenRequest(payload);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 Map<String, Object> params = new HashMap<>();
@@ -104,7 +108,9 @@ public class OAuth2TokenEndpoint {
             triggerOnTokenExceptionListeners(e, request, null);
             throw e;
         } finally {
-            PrivilegedCarbonContext.endTenantFlow();
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                PrivilegedCarbonContext.endTenantFlow();
+            }
         }
         return issueAccessToken(request, paramMap);
     }
@@ -133,7 +139,10 @@ public class OAuth2TokenEndpoint {
             OAuthSystemException, InvalidRequestParentException {
 
         try {
-            startSuperTenantFlow();
+            // Start super tenant flow only if tenant qualified URLs are disabled.
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                startSuperTenantFlow();
+            }
             validateRepeatedParams(request, paramMap);
             HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
             CarbonOAuthTokenRequest oauthRequest = buildCarbonOAuthTokenRequest(httpRequest);
@@ -157,7 +166,9 @@ public class OAuth2TokenEndpoint {
             throw e;
 
         } finally {
-            PrivilegedCarbonContext.endTenantFlow();
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                PrivilegedCarbonContext.endTenantFlow();
+            }
         }
     }
 
