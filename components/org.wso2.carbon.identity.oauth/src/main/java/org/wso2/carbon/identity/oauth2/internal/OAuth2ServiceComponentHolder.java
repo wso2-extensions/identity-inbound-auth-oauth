@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaim
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.organization.management.role.management.service.RoleManager;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManagementInitialize;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.idp.mgt.IdpManager;
@@ -89,6 +90,7 @@ public class OAuth2ServiceComponentHolder {
     private static boolean restrictUnassignedScopes;
     private static ConfigurationContextService configurationContextService;
     private List<JWTAccessTokenClaimProvider> jwtAccessTokenClaimProviders = new ArrayList<>();
+    private boolean isOrganizationManagementEnable = false;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -582,5 +584,28 @@ public class OAuth2ServiceComponentHolder {
             return getDefaultResponseModeProvider();
         }
         return responseModeProvider;
+    }
+
+    /**
+     * Get is organization management enabled.
+     *
+     * @return True if organization management is enabled.
+     */
+    public boolean isOrganizationManagementEnabled() {
+
+        return isOrganizationManagementEnable;
+    }
+
+    /**
+     * Set organization management enable/disable state.
+     *
+     * @param organizationManagementInitializeService OrganizationManagementInitializeInstance.
+     */
+    public void setOrganizationManagementEnable(
+            OrganizationManagementInitialize organizationManagementInitializeService) {
+
+        if (organizationManagementInitializeService != null) {
+            isOrganizationManagementEnable = organizationManagementInitializeService.isOrganizationManagementEnabled();
+        }
     }
 }

@@ -66,7 +66,6 @@ import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalSco
 import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
-import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -786,36 +785,12 @@ public class AccessTokenIssuer {
         AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager) IdentityTenantUtil
                 .getRealm(authenticatedUser.getTenantDomain(), authenticatedUser.toFullQualifiedUsername())
                 .getUserStoreManager();
-        if (userStoreManager.isExistingUserWithID(authenticatedUser.getUserId())) {
-            return userStoreManager
-                    .getUserClaimValueWithID(authenticatedUser.getUserId(), subjectClaimUri, null);
+        if (!userStoreManager.isExistingUserWithID(authenticatedUser.getUserId()) && OAuth2ServiceComponentHolder
+                .getInstance().isOrganizationManagementEnabled()) {
+            userStoreManager = getUserStoreManagerFromUserResideOrganization(authenticatedUser.getTenantDomain(),
+                    authenticatedUser.getUserId()).orElse(userStoreManager);
         }
-
-        /*
-            If the user is not in the user store, check if the user can be resolved from ancestor organizations and
-            resolve the subject claim.
-        */
-        try {
-            String organizationId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
-                    .resolveOrganizationId(authenticatedUser.getTenantDomain());
-            Optional<String> userResideOrgId = OAuth2ServiceComponentHolder.getOrganizationUserResidentResolverService()
-                    .resolveResidentOrganization(authenticatedUser.getUserId(), organizationId);
-            if (!userResideOrgId.isPresent()) {
-                throw new org.wso2.carbon.user.core.UserStoreException("Could not resolve the user reside " +
-                        "organization.");
-            }
-            String tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
-                    .resolveTenantDomain(userResideOrgId.get());
-            int tenantId = OAuth2ServiceComponentHolder.getInstance().getRealmService().getTenantManager()
-                    .getTenantId(tenantDomain);
-            RealmService realmService = OAuth2ServiceComponentHolder.getInstance().getRealmService();
-            UserRealm tenantUserRealm = realmService.getTenantUserRealm(tenantId);
-            return ((AbstractUserStoreManager) tenantUserRealm.getUserStoreManager())
-                    .getUserClaimValueWithID(authenticatedUser.getUserId(), subjectClaimUri, null);
-        } catch (OrganizationManagementException | UserStoreException e) {
-            throw new org.wso2.carbon.user.core.UserStoreException("Error occurred while resolving the user reside " +
-                    "organization.", e);
-        }
+        return userStoreManager.getUserClaimValueWithID(authenticatedUser.getUserId(), subjectClaimUri, null);
     }
 
     private String getSubjectClaimUriInLocalDialect(ServiceProvider serviceProvider) {
@@ -868,7 +843,7 @@ public class AccessTokenIssuer {
     }
 
     private void addRequestedOIDCScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
-                                             String[] requestedOIDCScopes) {
+                                        String[] requestedOIDCScopes) {
 
         if (tokReqMsgCtx.getScope() == null) {
             tokReqMsgCtx.setScope(new String[0]);
@@ -1127,5 +1102,36 @@ public class AccessTokenIssuer {
     private static boolean isNotActiveState(String appState) {
 
         return !APP_STATE_ACTIVE.equalsIgnoreCase(appState);
+    }
+
+    /**
+     * If the user is not found in the given tenant domain, check the user existence from ancestor organizations and
+     * provide the correct user store manager.
+     *
+     * @param tenantDomain The tenant domain of the authenticated user.
+     * @param userId The ID of the authenticated user.
+     * @return User store manager of the user reside organization.
+     */
+    private Optional<AbstractUserStoreManager> getUserStoreManagerFromUserResideOrganization(String tenantDomain,
+                                                                                             String userId) {
+
+        try {
+            String organizationId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+            Optional<String> userResideOrgId = OAuth2ServiceComponentHolder.getOrganizationUserResidentResolverService()
+                    .resolveResidentOrganization(userId, organizationId);
+            if (!userResideOrgId.isPresent()) {
+                return Optional.empty();
+            }
+            String userResideTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(userResideOrgId.get());
+            int tenantId = OAuth2ServiceComponentHolder.getInstance().getRealmService().getTenantManager()
+                    .getTenantId(userResideTenantDomain);
+            RealmService realmService = OAuth2ServiceComponentHolder.getInstance().getRealmService();
+            return Optional.of(
+                    (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager());
+        } catch (OrganizationManagementException | UserStoreException e) {
+            return Optional.empty();
+        }
     }
 }
