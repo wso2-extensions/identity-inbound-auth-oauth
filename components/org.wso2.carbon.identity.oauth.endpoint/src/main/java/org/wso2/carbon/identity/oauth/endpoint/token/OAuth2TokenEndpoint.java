@@ -46,8 +46,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthTokenRequest;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.OAuth2TokenResponse;
+import org.wso2.carbon.utils.DiagnosticLog;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -95,15 +95,14 @@ public class OAuth2TokenEndpoint {
                 startSuperTenantFlow();
             }
             paramMap = parseJsonTokenRequest(payload);
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                if (MapUtils.isNotEmpty(paramMap)) {
-                    paramMap.forEach(params::put);
-                }
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                        OAuthConstants.LogConstants.SUCCESS, "Successfully received token request.",
-                        "receive-token-request", null);
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "receive-token-request");
+            if (MapUtils.isNotEmpty(paramMap) && paramMap.containsKey("client_id")) {
+                diagnosticLogBuilder.putParams("clientId", paramMap.get("client_id"));
             }
+            diagnosticLogBuilder.resultMessage("Successfully received token request.")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         } catch (TokenEndpointBadRequestException e) {
             triggerOnTokenExceptionListeners(e, request, null);
             throw e;
@@ -124,13 +123,14 @@ public class OAuth2TokenEndpoint {
             throws OAuthSystemException, InvalidRequestParentException {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            Map<String, Object> params = new HashMap<>();
-            if (MapUtils.isNotEmpty(paramMap)) {
-                paramMap.forEach(params::put);
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "receive-token-request");
+            if (MapUtils.isNotEmpty(paramMap) && paramMap.containsKey("client_id")) {
+                diagnosticLogBuilder.putParams("clientId", paramMap.getFirst("client_id"));
             }
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.SUCCESS, "Successfully received token request.",
-                    "receive-token-request", null);
+            diagnosticLogBuilder.resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .resultMessage("Successfully received token request.");
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
         return issueAccessToken(request, (Map<String, List<String>>) paramMap);
     }
