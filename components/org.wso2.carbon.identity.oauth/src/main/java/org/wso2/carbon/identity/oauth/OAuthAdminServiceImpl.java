@@ -16,11 +16,16 @@
 
 package org.wso2.carbon.identity.oauth;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.json.JSONObject;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
@@ -28,6 +33,10 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
+import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -62,6 +71,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.utils.AuditLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
@@ -76,6 +86,9 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.LogConstants.TARGET_APPLICATION;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.LogConstants.USER;
+import static org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils.triggerAuditLogEvent;
 import static org.wso2.carbon.identity.oauth.Error.AUTHENTICATED_USER_NOT_FOUND;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
@@ -339,6 +352,19 @@ public class OAuthAdminServiceImpl {
                         LOG.debug("Oauth Application registration success : " + application.getApplicationName() +
                                 " in tenant domain: " + tenantDomain);
                     }
+                    if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+                        Optional<String> initiatorId = getInitiatorId();
+                        if (initiatorId.isPresent()) {
+                            AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                                    initiatorId.get(), USER,
+                                    app.getOauthConsumerKey(), TARGET_APPLICATION,
+                                    OAuthConstants.LogConstants.CREATE_OAUTH_APPLICATION)
+                                    .data(buildSPData(app));
+                            triggerAuditLogEvent(auditLogBuilder, true);
+                        } else {
+                            LOG.error("Error getting the logged in userId");
+                        }
+                    }
                 } else {
                     String message = "No application details in the request. Failed to register OAuth App.";
                     LOG.debug(message);
@@ -362,6 +388,65 @@ public class OAuthAdminServiceImpl {
                     "Error resolving user. Failed to register OAuth App", e);
         }
         return OAuthUtil.buildConsumerAppDTO(app);
+    }
+
+
+    private Optional<AuthenticatedUser> getLoggedInUser(String tenantDomain) {
+
+        String tenantAwareLoggedInUsername = CarbonContext.getThreadLocalCarbonContext().getUsername();
+        return Optional.ofNullable(tenantAwareLoggedInUsername)
+                .filter(StringUtils::isNotEmpty)
+                .map(username -> buildAuthenticatedUser(username, tenantDomain));
+
+    }
+
+    private static Map<String, Object> buildSPData(OAuthAppDO app) {
+
+        if (app == null) {
+            return new HashMap<>();
+        }
+        Gson gson = new Gson();
+        String oauthApp = maskSPData(app);
+        return gson.fromJson(oauthApp, new TypeToken<Map<String, Object>>() {
+        }.getType());
+    }
+
+    private static String maskSPData(OAuthAppDO oAuthAppDO) {
+
+        if (oAuthAppDO == null) {
+            return StringUtils.EMPTY;
+        }
+        try {
+            JSONObject oauthAppJSONObject =
+                    new JSONObject(new ObjectMapper().writeValueAsString(oAuthAppDO));
+            maskClientSecret(oauthAppJSONObject);
+            maskAppOwnerUsername(oauthAppJSONObject);
+            return oauthAppJSONObject.toString();
+        } catch (JsonProcessingException | IdentityException e) {
+            LOG.error("Error while converting service provider object to json.");
+        }
+        return StringUtils.EMPTY;
+    }
+
+    private static void maskAppOwnerUsername(JSONObject oauthAppJSONObject) throws IdentityException {
+
+        JSONObject appOwner = oauthAppJSONObject.optJSONObject("appOwner");
+        if (!LoggerUtils.isLogMaskingEnable || appOwner == null) {
+            return;
+        }
+        String username = (String) appOwner.get("userName");
+        if (StringUtils.isNotBlank(username)) {
+            appOwner.put("userName", LoggerUtils.getMaskedContent(username));
+        }
+    }
+
+    private static void maskClientSecret(JSONObject oauthApp) {
+
+        if (oauthApp.get("oauthConsumerSecret") == null) {
+            return;
+        }
+        String secret = oauthApp.get("oauthConsumerSecret").toString();
+        oauthApp.put("oauthConsumerSecret", LoggerUtils.getMaskedContent(secret));
     }
 
     private void validateAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
@@ -545,6 +630,33 @@ public class OAuthAdminServiceImpl {
             LOG.debug("Oauth Application update success : " + consumerAppDTO.getApplicationName() + " in " +
                     "tenant domain: " + tenantDomain);
         }
+        if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+            Optional<String> initiatorId = getInitiatorId();
+            if (initiatorId.isPresent()) {
+                AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                        initiatorId.get(), USER, oauthConsumerKey,
+                        TARGET_APPLICATION, OAuthConstants.LogConstants.UPDATE_OAUTH_APPLICATION)
+                        .data(buildSPData(oauthappdo));
+                triggerAuditLogEvent(auditLogBuilder, true);
+            } else {
+                LOG.error("Error getting the logged in userId");
+            }
+        }
+    }
+
+    private Optional<String> getInitiatorId() {
+
+        String loggedInUserId = CarbonContext.getThreadLocalCarbonContext().getUserId();
+        if (StringUtils.isNotBlank(loggedInUserId)) {
+            return Optional.of(loggedInUserId);
+        } else {
+            String tenantDomain = getLoggedInTenant();
+            Optional<AuthenticatedUser> loggedInUser = getLoggedInUser(tenantDomain);
+            if (loggedInUser.isPresent()) {
+                return Optional.ofNullable(IdentityUtil.getInitiatorId(loggedInUser.get().getUserName(), tenantDomain));
+            }
+        }
+        return Optional.empty();
     }
 
     /**
@@ -817,6 +929,19 @@ public class OAuthAdminServiceImpl {
                         "consumerKey: " + consumerKey);
             }
 
+            if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+                Optional<String> initiatorId = getInitiatorId();
+                if (initiatorId.isPresent()) {
+                    AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                            initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
+                            OAuthConstants.LogConstants.UPDATE_APP_STATE)
+                            .data(Map.of("state", newState));
+                    triggerAuditLogEvent(auditLogBuilder, true);
+                } else {
+                    LOG.error("Error getting the logged in userId");
+                }
+            }
+
         } catch (InvalidOAuthClientException e) {
             String msg = "Error while updating state of OAuth app with consumerKey: " + consumerKey;
             throw handleClientError(INVALID_OAUTH_CLIENT, msg, e);
@@ -836,6 +961,15 @@ public class OAuthAdminServiceImpl {
         updateAndRetrieveOauthSecretKey(consumerKey);
     }
 
+    private String getLoggedInTenant() {
+
+        String tenantDomain = IdentityTenantUtil.getTenantDomainFromContext();
+        if (StringUtils.isBlank(tenantDomain)) {
+            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        }
+        return tenantDomain;
+    }
+
     /**
      * Regenerate consumer secret for the application and retrieve application details.
      *
@@ -847,6 +981,11 @@ public class OAuthAdminServiceImpl {
 
         Properties properties = new Properties();
         String newSecret = OAuthUtil.getRandomNumberSecure();
+        OAuthConsumerAppDTO oldAppDTO = null;
+
+        if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+            oldAppDTO = getOAuthApplicationData(consumerKey);
+        }
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, newSecret);
         properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REGENERATE);
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_ACTIVE);
@@ -860,9 +999,26 @@ public class OAuthAdminServiceImpl {
 
         OAuthConsumerAppDTO updatedApplication = getOAuthApplicationData(consumerKey);
         updatedApplication.setOauthConsumerSecret(newSecret);
-
+        if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+            // This API is invoked when regenerating client secret and when activating the app.
+            Optional<String> initiatorId = getInitiatorId();
+            if (initiatorId.isPresent()) {
+                if (!StringUtils.equalsIgnoreCase(oldAppDTO.getState(), APP_STATE_ACTIVE)) {
+                    AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                            initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
+                            OAuthConstants.LogConstants.UPDATE_APP_STATE)
+                            .data(Map.of("state", APP_STATE_ACTIVE));
+                    triggerAuditLogEvent(auditLogBuilder, true);
+                }
+                AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                        initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
+                        OAuthConstants.LogConstants.REGENERATE_CLIENT_SECRET);
+                triggerAuditLogEvent(auditLogBuilder, true);
+            } else {
+                LOG.error("Error getting the logged in userId");
+            }
+        }
         return updatedApplication;
-
     }
 
     void updateAppAndRevokeTokensAndAuthzCodes(String consumerKey,
@@ -977,7 +1133,17 @@ public class OAuthAdminServiceImpl {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Client credentials are removed from the cache for OAuth App with consumerKey: " + consumerKey);
         }
-
+        if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+            Optional<String> initiatorId = getInitiatorId();
+            if (initiatorId.isPresent()) {
+                AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                        initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
+                        OAuthConstants.LogConstants.DELETE_OAUTH_APPLICATION);
+                triggerAuditLogEvent(auditLogBuilder, true);
+            } else {
+                LOG.error("Error getting the logged in userId");
+            }
+        }
     }
 
     /**
@@ -1240,7 +1406,7 @@ public class OAuthAdminServiceImpl {
             return revokeRespDTO;
         }
 
-        String tenantDomain = getTenantDomain(consumerKey);
+        String tenantDomain = getLoggedInTenant(consumerKey);
         String applicationName = getApplicationName(consumerKey, tenantDomain);
         List<AccessTokenDO> accessTokenDOs = getActiveAccessTokensByConsumerKey(consumerKey);
         if (accessTokenDOs.size() > 0) {
@@ -1388,7 +1554,7 @@ public class OAuthAdminServiceImpl {
         }
     }
 
-    private String getTenantDomain(String consumerKey) throws IdentityOAuthAdminException {
+    private String getLoggedInTenant(String consumerKey) throws IdentityOAuthAdminException {
 
         String tenantDomain;
         try {
