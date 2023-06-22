@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -113,7 +114,29 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
             if (log.isDebugEnabled()) {
                 log.debug("Engaging global scope validator in token issuer flow : " + validator.getName());
             }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "scope-validation");
+                diagnosticLogBuilder.putParams("clientId", oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
+                        .putParams("ScopeValidator", validator.getName())
+                        .putParams("Scopes (Before Validation)", oauthAuthzMsgCtx.getApprovedScope())
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                        .resultMessage("Before validating scopes")
+                        .logLevel(DiagnosticLog.LogLevel.ADVANCED);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
             boolean isGlobalValidScope = validator.validateScope(oauthAuthzMsgCtx);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "scope-validation");
+                diagnosticLogBuilder.putParams("clientId", oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
+                        .putParams("ScopeValidator", validator.getName())
+                        .putParams("Scopes (After Validation)", oauthAuthzMsgCtx.getApprovedScope())
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                        .resultMessage("After validating scopes.")
+                        .logLevel(DiagnosticLog.LogLevel.ADVANCED);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
             if (log.isDebugEnabled()) {
                 log.debug("Scope Validation was" + isGlobalValidScope + "at the global level by : "
                         + validator.getName());

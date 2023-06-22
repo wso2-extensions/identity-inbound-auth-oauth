@@ -68,6 +68,7 @@ import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -455,11 +456,21 @@ public class AccessTokenIssuer {
                     tokReqMsgCtx.getAuthorizedUser() + " and scopes: " + tokenRespDTO.getAuthorizedScopes());
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            Map<String, Object> params = new HashMap<>();
-            params.put("clientId", tokenReqDTO.getClientId());
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                    OAuthConstants.LogConstants.SUCCESS, "Access token issued for the application.",
-                    "issue-access-token", null);
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "issue-access-token");
+            diagnosticLogBuilder.putParams("clientId", tokenReqDTO.getClientId())
+                    .putParams("authorizedScopes", tokenRespDTO.getAuthorizedScopes())
+                    .putParams("grantType", grantType)
+                    .putParams("tokenExpiryTime (s)", tokenRespDTO.getExpiresIn())
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .resultMessage("Access token issued for the application.");
+            if (tokReqMsgCtx.getAuthorizedUser() != null) {
+                diagnosticLogBuilder.putParams("userId", tokReqMsgCtx.getAuthorizedUser().getUserId());
+                String username = tokReqMsgCtx.getAuthorizedUser().getUserName();
+                diagnosticLogBuilder.putParams("username", LoggerUtils.isLogMaskingEnable ?
+                        LoggerUtils.getMaskedContent(username) : username);
+            }
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
 
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
@@ -551,7 +562,6 @@ public class AccessTokenIssuer {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     Map<String, Object> params = new HashMap<>();
                     params.put("clientId", tokenReqDTO.getClientId());
-                    params.put("requestedScopes", getScopeList(tokenReqDTO.getScope()));
                     params.put("authorizedScopes", getScopeList(tokReqMsgCtx.getScope()));
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                             OAuthConstants.LogConstants.SUCCESS, "OAuth scope validation is successful.",
