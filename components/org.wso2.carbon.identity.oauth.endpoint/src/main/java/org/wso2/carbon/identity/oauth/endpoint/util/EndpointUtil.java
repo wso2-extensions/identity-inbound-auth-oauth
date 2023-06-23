@@ -103,6 +103,7 @@ import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.idp.mgt.IdpManager;
+import org.wso2.carbon.utils.DiagnosticLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.io.IOException;
@@ -1075,17 +1076,16 @@ public class EndpointUtil {
                     }
                 }
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> consentParams = new HashMap<>();
-                    consentParams.put("clientId", params.getClientId());
-                    consentParams.put("approvedScopes", userApprovedScopes);
-                    consentParams.put("user", userId);
-
-                    Map<String, Object> configs = new HashMap<>();
-                    configs.put("overrideExistingConsent", String.valueOf(overrideExistingConsent));
-                    LoggerUtils
-                            .triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, consentParams,
-                                    OAuthConstants.LogConstants.SUCCESS, "Successfully persisted oauth scopes.",
-                                    "persist-oauth-scope-consent", configs);
+                    DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "persist-oauth-scope-consent");
+                    diagnosticLogBuilder.putParams("clientId", params.getClientId())
+                            .putParams("approvedScopes", userApprovedScopes)
+                            .putParams("user", userId)
+                            .putParams("overrideExistingConsent", overrideExistingConsent)
+                            .resultMessage("Successfully persisted oauth scopes.")
+                            .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                            .logLevel(DiagnosticLog.LogLevel.ADVANCED);
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
             }
         } catch (IdentityOAuthAdminException e) {

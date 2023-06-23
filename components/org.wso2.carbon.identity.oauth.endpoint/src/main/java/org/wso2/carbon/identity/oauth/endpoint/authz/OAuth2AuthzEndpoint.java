@@ -570,18 +570,19 @@ public class OAuth2AuthzEndpoint {
             URISyntaxException, ConsentHandlingFailedException {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            Map<String, Object> params = new HashMap<>();
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "receive-consent-response");
             if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
                 oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
                     if (ArrayUtils.isNotEmpty(value)) {
-                        params.put(key, Arrays.asList(value));
+                        diagnosticLogBuilder.putParams(key, Arrays.asList(value));
                     }
                 });
             }
-            LoggerUtils
-                    .triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.SUCCESS, "Successfully received consent response",
-                            "receive-consent-response", null);
+            diagnosticLogBuilder.resultMessage("Successfully received consent response.")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .logLevel(DiagnosticLog.LogLevel.ADVANCED);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
 
         updateAuthTimeInSessionDataCacheEntry(oAuthMessage);

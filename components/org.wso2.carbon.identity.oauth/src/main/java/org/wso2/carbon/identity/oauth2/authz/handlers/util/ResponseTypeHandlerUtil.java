@@ -58,6 +58,7 @@ import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.sql.Timestamp;
 import java.util.Date;
@@ -303,27 +304,27 @@ public class ResponseTypeHandlerUtil {
                     ", validity period : " + validityPeriod);
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            Map<String, Object> params = new HashMap<>();
-            params.put("clientId", authorizationReqDTO.getConsumerKey());
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "issue-authz-code");
+            diagnosticLogBuilder.putParams("clientId", authorizationReqDTO.getConsumerKey())
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .resultMessage("Authorization Code issued successfully.")
+                    .putParams("requestedScopes", OAuth2Util.buildScopeString(authorizationReqDTO.getScopes()))
+                    .putParams("redirectUri", authorizationReqDTO.getCallbackUrl())
+                    .putParams("authzCodeValidityPeriod (ms)", String.valueOf(validityPeriod));
             if (authorizationReqDTO.getUser() != null) {
                 try {
-                    params.put("user", authorizationReqDTO.getUser().getUserId());
+                    diagnosticLogBuilder.putParams("user", authorizationReqDTO.getUser().getUserId());
                 } catch (UserIdNotFoundException e) {
                     if (StringUtils.isNotBlank(authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier())) {
-                        params.put("user", LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(
-                                authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier()) :
+
+                        diagnosticLogBuilder.putParams("user", LoggerUtils.isLogMaskingEnable ? LoggerUtils
+                                .getMaskedContent(authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier()) :
                                 authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier());
                     }
                 }
             }
-            params.put("requestedScopes", OAuth2Util.buildScopeString(authorizationReqDTO.getScopes()));
-            params.put("redirectUri", authorizationReqDTO.getCallbackUrl());
-
-            Map<String, Object> configs = new HashMap<>();
-            configs.put("authzCodeValidityPeriod", String.valueOf(validityPeriod));
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                    OAuthConstants.LogConstants.SUCCESS, "Issued Authorization Code to user.", "issue-authz-code",
-                    configs);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
         return authzCodeDO;
     }
