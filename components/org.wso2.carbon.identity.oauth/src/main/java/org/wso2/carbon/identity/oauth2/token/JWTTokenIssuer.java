@@ -483,11 +483,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis));
         jwtClaimsSetBuilder.claim(CLIENT_ID, consumerKey);
 
-        String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
-        if (StringUtils.isNotEmpty(scope)) {
-            jwtClaimsSetBuilder.claim(SCOPE, scope);
-        }
-
         jwtClaimsSetBuilder.claim(OAuthConstants.AUTHORIZED_USER_TYPE,
                 getAuthorizedUserType(authAuthzReqMessageContext, tokenReqMessageContext));
 
@@ -518,6 +513,15 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 }
             }
         }
+
+        String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
+        if (StringUtils.isNotEmpty(scope)) {
+            jwtClaimsSetBuilder.claim(SCOPE, scope);
+        } else {
+            // To prevent scope claim being added through user attributes.
+            jwtClaimsSetBuilder.claim(SCOPE, null);
+        }
+
         // Include token binding.
         jwtClaimsSet = handleTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
 
