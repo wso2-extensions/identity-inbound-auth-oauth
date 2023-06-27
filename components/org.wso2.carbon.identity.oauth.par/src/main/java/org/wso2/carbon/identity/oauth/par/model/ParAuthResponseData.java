@@ -23,7 +23,7 @@ package org.wso2.carbon.identity.oauth.par.model;
  */
 public class ParAuthResponseData {
 
-    private String reqUriUUID;
+    private String reqUriRef;
     private long expiryTime;
 
     /**
@@ -31,9 +31,9 @@ public class ParAuthResponseData {
      *
      * @return reqUriUUID
      */
-    public String getReqUriUUID() {
+    public String getReqUriRef() {
 
-        return reqUriUUID;
+        return reqUriRef;
     }
 
     /**
@@ -49,11 +49,11 @@ public class ParAuthResponseData {
     /**
      * Set uuid of request_uri.
      *
-     * @param reqUriUUID request uri's uuid
+     * @param reqUriRef request uri's uuid
      */
-    public void setReqUriUUID(String reqUriUUID) {
+    public void setReqUriRef(String reqUriRef) {
 
-        this.reqUriUUID = reqUriUUID;
+        this.reqUriRef = reqUriRef;
     }
 
     /**

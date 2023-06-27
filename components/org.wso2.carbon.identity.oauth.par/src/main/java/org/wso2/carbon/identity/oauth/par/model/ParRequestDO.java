@@ -26,32 +26,32 @@ import java.util.Map;
 public class ParRequestDO {
 
     private Map<String, String> params;
-    private long scheduledExpiryTime;
+    private long expiresIn;
     private String clientId;
 
     /**
      * Constructor with variables obtained from ParRequestCacheEntry object to ParRequestDO.
      *
-     * @param parRequestCacheEntry cache entry for PAR request.
+     * @param parRequestCacheEntry Cache entry for PAR request.
      */
     public ParRequestDO (ParRequestCacheEntry parRequestCacheEntry) {
 
         this.params = parRequestCacheEntry.getParams();
-        this.scheduledExpiryTime = parRequestCacheEntry.getScheduledExpiryTime();
+        this.expiresIn = parRequestCacheEntry.getExpiresIn();
         this.clientId = parRequestCacheEntry.getClientId();
     }
 
     /**
-     * Contractor with variables obtained from DAO to ParRequestDO.
+     * Constructor with variables obtained from DAO to ParRequestDO.
      *
-     * @param parameterMap parameter map
-     * @param scheduledExpiryTime scheduled expiry time
-     * @param clientId client id
+     * @param parameterMap Parameter map
+     * @param expiresIn Scheduled expiry time
+     * @param clientId Client id
      */
-    public ParRequestDO (Map<String, String> parameterMap, long scheduledExpiryTime, String clientId) {
+    public ParRequestDO (Map<String, String> parameterMap, long expiresIn, String clientId) {
 
         this.params = parameterMap;
-        this.scheduledExpiryTime = scheduledExpiryTime;
+        this.expiresIn = expiresIn;
         this.clientId = clientId;
     }
 
@@ -68,11 +68,11 @@ public class ParRequestDO {
     /**
      * Get scheduled expiry time.
      *
-     * @return scheduledExpiryTime
+     * @return expiresIn
      */
-    public long getScheduledExpiryTime() {
+    public long getExpiresIn() {
 
-        return scheduledExpiryTime;
+        return expiresIn;
     }
 
     /**
@@ -89,7 +89,7 @@ public class ParRequestDO {
     /**
      * Set parameter map.
      *
-     * @param params parameter map
+     * @param params Parameter map.
      */
     public void setParams(Map<String, String> params) {
 
@@ -99,17 +99,17 @@ public class ParRequestDO {
     /**
      * Set scheduled expiry.
      *
-     * @param scheduledExpiryTime scheduled expiry
+     * @param expiresIn Scheduled expiry
      */
-    public void setScheduledExpiryTime(long scheduledExpiryTime) {
+    public void setExpiresIn(long expiresIn) {
 
-        this.scheduledExpiryTime = scheduledExpiryTime;
+        this.expiresIn = expiresIn;
     }
 
     /**
      * Set client id.
      *
-     * @param clientId client id
+     * @param clientId Client id
      */
     public void setClientId(String clientId) {
 

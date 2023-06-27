@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.par.model.OAuthParRequestWrapper;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -52,16 +53,16 @@ public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
     }
 
     /*
-        If request_uri parameter is present in the parameter map, consider request as a PAR request  and
+        If request_uri parameter is present in the parameter map, consider request as a PAR request and
         use OAuthParRequestWrapper to make the request's parameter map contain the parameter map obtained from
         the PAR endpoint as parameters such as response_type are only provided in the PAR request,
         but are needed in the Authorization request for validations.
      */
     private static HttpServletRequest buildRequest(HttpServletRequest request) throws OAuthProblemException {
 
-        // If request_uri is there consider as par request
+        // If request_uri is there consider as par request.
         if (request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI) != null) {
-            return new OAuthParRequestWrapper(request, new ParAuthServiceImpl());
+            return new OAuthParRequestWrapper(request, OAuth2ServiceComponentHolder.getParAuthService());
         }
         return request;
     }

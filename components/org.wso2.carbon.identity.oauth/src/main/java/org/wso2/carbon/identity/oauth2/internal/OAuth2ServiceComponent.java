@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -137,6 +138,23 @@ public class OAuth2ServiceComponent {
             AuthenticationMethodNameTranslator authenticationMethodNameTranslator) {
 
         OAuth2ServiceComponentHolder.setAuthenticationMethodNameTranslator(authenticationMethodNameTranslator);
+    }
+
+    @Reference(
+            name = "identity.oauth.par.service.component",
+            service = ParAuthService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetParService"
+    )
+    protected void setParService(ParAuthService parAuthService) {
+
+        log.debug("Setting ParAuthService Service.");
+        OAuth2ServiceComponentHolder.setParAuthService(parAuthService);
+    }
+
+    protected void unsetParService(ParAuthService parAuthService) {
+        OAuth2ServiceComponentHolder.setParAuthService(null);
     }
 
     protected void unsetAuthenticationMethodNameTranslator(

@@ -35,20 +35,20 @@ import java.util.UUID;
 
 
 /**
- * Provides authentication services.
+ * Provides PAR services.
  */
 public class ParAuthServiceImpl implements ParAuthService {
 
     ParMgtDAO parMgtDAO = ParDAOFactory.getInstance().getParAuthMgtDAO();
 
     @Override
-    public ParAuthResponseData generateParAuthResponse(Map<String, String> parameters) throws ParCoreException {
+    public ParAuthResponseData handleParAuthRequest(Map<String, String> parameters) throws ParCoreException {
 
         String uuid = UUID.randomUUID().toString();
         long expiry = ParConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC;
 
         ParAuthResponseData parAuthResponse = new ParAuthResponseData();
-        parAuthResponse.setReqUriUUID(uuid);
+        parAuthResponse.setReqUriRef(uuid);
         parAuthResponse.setExpiryTime(expiry);
 
         persistParRequest(uuid, parameters, getScheduledExpiry(System.currentTimeMillis()));
@@ -56,37 +56,38 @@ public class ParAuthServiceImpl implements ParAuthService {
         return parAuthResponse;
     }
 
-    private void persistParRequest(String uuid, Map<String, String> params, long scheduledExpiryTime)
+    private void persistParRequest(String uuid, Map<String, String> params, long expiresIn)
             throws ParCoreException {
 
-        parMgtDAO.persistParRequest(uuid, params.get(OAuthConstants.OAuth20Params.CLIENT_ID),
-                scheduledExpiryTime, params);
+        parMgtDAO.persistRequestData(uuid, params.get(OAuthConstants.OAuth20Params.CLIENT_ID),
+                expiresIn, params);
     }
 
+    @Override
     public Map<String, String> retrieveParams(String uuid, String clientId) throws ParCoreException {
 
-        ParRequestDO parRequestDO = parMgtDAO.getParRequest(uuid);
-        parMgtDAO.removeParRequest(uuid);
-        isRequestUriExpired(parRequestDO.getScheduledExpiryTime());
-        isClientIdValid(clientId, parRequestDO.getClientId());
+        ParRequestDO parRequestDO = parMgtDAO.getRequestData(uuid);
+        parMgtDAO.removeRequestData(uuid);
+        validateRequestURI(parRequestDO.getExpiresIn());
+        validateClientID(clientId, parRequestDO.getClientId());
 
         return parRequestDO.getParams();
     }
 
-    private void isRequestUriExpired(long scheduledExpiryTime) throws ParCoreException {
+    private void validateRequestURI(long expiresIn) throws ParCoreException {
 
         long currentTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis();
 
-        if (currentTimeInMillis > scheduledExpiryTime) {
+        if (currentTimeInMillis > expiresIn) {
             throw new ParCoreException(OAuth2ErrorCodes.INVALID_REQUEST, "request_uri expired");
         }
     }
 
-    private void isClientIdValid(String clientId, String parClientId) throws
+    private void validateClientID(String clientId, String parClientId) throws
             ParCoreException {
 
         if (!StringUtils.equals(parClientId, clientId)) {
-            throw new ParCoreException(OAuth2ErrorCodes.INVALID_CLIENT, "client_ids does not match");
+            throw new ParCoreException(OAuth2ErrorCodes.INVALID_CLIENT, "client_ids do not match.");
         }
     }
 

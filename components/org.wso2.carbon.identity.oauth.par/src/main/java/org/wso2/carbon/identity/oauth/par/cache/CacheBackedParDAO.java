@@ -38,38 +38,38 @@ public class CacheBackedParDAO implements ParMgtDAO {
     private final ParMgtDAOImpl parMgtDAO = new ParMgtDAOImpl();
 
     @Override
-    public void persistParRequest(String reqUriUUID, String clientId, long scheduledExpiryTime,
-                                  Map<String, String> parameters) throws ParCoreException {
+    public void persistRequestData(String reqUriRef, String clientId, long expiresIn,
+                                   Map<String, String> parameters) throws ParCoreException {
 
-        ParRequestCacheEntry parRequestCacheEntry = new ParRequestCacheEntry(reqUriUUID, parameters,
-                scheduledExpiryTime);
-        parMgtDAO.persistParRequest(reqUriUUID, clientId, scheduledExpiryTime, parameters);
-        parCache.addToCache(reqUriUUID, parRequestCacheEntry);
+        ParRequestCacheEntry parRequestCacheEntry = new ParRequestCacheEntry(reqUriRef, parameters,
+                expiresIn, clientId);
+        parMgtDAO.persistRequestData(reqUriRef, clientId, expiresIn, parameters);
+        parCache.addToCache(reqUriRef, parRequestCacheEntry);
     }
 
     @Override
-    public ParRequestDO getParRequest(String reqUriUUID) throws ParCoreException {
+    public ParRequestDO getRequestData(String reqUriRef) throws ParCoreException {
 
-        ParRequestCacheEntry parCacheRequest = parCache.getValueFromCache(reqUriUUID);
+        ParRequestCacheEntry parCacheRequest = parCache.getValueFromCache(reqUriRef);
         ParRequestDO parRequestDO;
         if (parCacheRequest != null) {
             if (log.isDebugEnabled()) {
-                log.debug("Cache miss for expiry time of local uuid: %s for tenant:%s " + reqUriUUID);
+                log.debug("Cache miss for expiry time of local uuid: %s for tenant:%s " + reqUriRef);
             }
-            return new ParRequestDO(parCacheRequest);
+            parRequestDO = new ParRequestDO(parCacheRequest);
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("Cache hit for expiry time of uuid:%s for tenant:%s " + reqUriUUID);
+                log.debug("Cache hit for expiry time of uuid:%s for tenant:%s " + reqUriRef);
             }
-            parRequestDO = parMgtDAO.getParRequest(reqUriUUID);
+            parRequestDO = parMgtDAO.getRequestData(reqUriRef);
         }
         return parRequestDO;
     }
 
     @Override
-    public void removeParRequest(String reqUriUUID) throws ParCoreException {
+    public void removeRequestData(String reqUriRef) throws ParCoreException {
 
-        parCache.clearCacheEntry(reqUriUUID);
-        parMgtDAO.removeParRequest(reqUriUUID);
+        //parCache.clearCacheEntry(reqUriRef);
+        parMgtDAO.removeRequestData(reqUriRef);
     }
 }

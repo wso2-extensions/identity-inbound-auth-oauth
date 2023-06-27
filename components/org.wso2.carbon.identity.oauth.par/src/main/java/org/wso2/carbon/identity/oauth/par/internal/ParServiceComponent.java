@@ -43,7 +43,7 @@ public class ParServiceComponent {
                     new ParAuthServiceImpl(), null);
             log.debug("PAR component bundle is activated.");
         } catch (Throwable e) {
-            log.error("Error occurred while activating PAR Component.", e);
+            log.error("Error occurred while activating PAR component.", e);
         }
     }
 

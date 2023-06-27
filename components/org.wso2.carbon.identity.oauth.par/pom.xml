@@ -23,7 +23,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.11.81-SNAPSHOT</version>
+        <version>6.11.80</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -104,23 +104,27 @@
                             org.wso2.carbon.identity.oauth.par.internal,
                         </Private-Package>
                         <Import-Package>
-                            com.fasterxml.jackson.core; version="${com.fasterxml.jackson.version}"
-                            com.fasterxml.jackson.core.type; version="${com.fasterxml.jackson.version}",
+                            com.fasterxml.jackson.core.*; version="${com.fasterxml.jackson.version}"
                             com.fasterxml.jackson.databind; version="${com.fasterxml.jackson.databind.version.range}",
                             org.apache.commons.logging; version="${commons-logging.osgi.version.range}",
+                            org.apache.commons.lang; version="${commons-lang.wso2.osgi.version.range}",
+                            org.wso2.carbon.identity.oauth.common.*;version="${identity.inbound.auth.oauth.exp.pkg.version}"
+                            org.apache.oltu.oauth2.common.*; version="${oltu.package.import.version.range}",
                             org.osgi.framework; version="${osgi.framework.imp.pkg.version.range}",
                             org.osgi.service.component; version="${osgi.service.component.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework.cache; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.base; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.core.*; version="${carbon.identity.framework.imp.pkg.version.range}",
-                            javax.servlet; version="${imp.pkg.version.javax.servlet}",
+                            javax.servlet.*; version="${imp.pkg.version.javax.servlet}",
+
+                            com.fasterxml.jackson.databind; version="${com.fasterxml.jackson.databind.version.range}",
+                            org.apache.oltu.oauth2.common.*; version="${oltu.package.import.version.range}",
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.oauth.par.internal,
                             org.wso2.carbon.identity.oauth.par.*;
                             version="${identity.inbound.auth.oauth.exp.pkg.version}",
                         </Export-Package>
-                        <DynamicImport-Package>*</DynamicImport-Package>
                     </instructions>
                 </configuration>
             </plugin>
