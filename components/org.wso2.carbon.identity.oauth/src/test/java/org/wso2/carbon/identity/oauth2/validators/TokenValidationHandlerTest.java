@@ -365,7 +365,7 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         stub(method(OAuth2JWTTokenValidator.class, "checkExpirationTime", Date.class))
                 .toReturn(true);
 
-        // Assert oAuth2IntrospectionResponseDTO.validateAccessToken() response
+        // Assert response of the validateAccessToken() in OAuth2JWTTokenValidator class.
         if (expectedValidatorResponse) {
             assertTrue(oAuth2JWTTokenValidator.validateAccessToken(validationReqDTO));
         } else {
