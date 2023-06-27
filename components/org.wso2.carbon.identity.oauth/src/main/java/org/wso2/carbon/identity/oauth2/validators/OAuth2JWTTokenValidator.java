@@ -132,9 +132,9 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             throw new IdentityOAuth2Exception("Error while validating Token.", e);
         } catch (OrganizationManagementException e) {
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "Error while retrieving the ancestor organization.",
+                    OAuthConstants.LogConstants.FAILED, "Error while retrieving the organization hierarchy.",
                     "validate-jwt-access-token", null);
-            throw new IdentityOAuth2Exception("Error while retrieving the ancestor organization.", e);
+            throw new IdentityOAuth2Exception("Error while retrieving the organization hierarchy.", e);
         }
         LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
                 OAuthConstants.LogConstants.SUCCESS, "Token validation is successful.", "validate-jwt-access-token",
