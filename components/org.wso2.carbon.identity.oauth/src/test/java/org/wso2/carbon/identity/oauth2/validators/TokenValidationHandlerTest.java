@@ -61,6 +61,7 @@ import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.util.TestUtils;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementConfigUtil;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -83,13 +84,15 @@ import static org.powermock.api.support.membermodification.MemberModifier.stub;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.SUB_ORG_START_LEVEL;
 
 @WithCarbonHome
 @WithAxisConfiguration
 @PowerMockIgnore({"javax.xml.*", "org.xml.sax.*", "org.w3c.dom.*"})
 @PrepareForTest({OAuthServerConfiguration.class, JDBCPersistenceManager.class, IdentityDatabaseUtil.class,
         IdentityApplicationManagementUtil.class, IdentityProviderManager.class, RealmService.class, LoggerUtils.class,
-        FederatedAuthenticatorConfig.class, OAuth2ServiceComponentHolder.class, OAuth2JWTTokenValidator.class})
+        FederatedAuthenticatorConfig.class, OAuth2ServiceComponentHolder.class, OAuth2JWTTokenValidator.class,
+        OrganizationManagementConfigUtil.class})
 public class TokenValidationHandlerTest extends PowerMockTestCase {
 
     private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
@@ -265,20 +268,27 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
                             add("10084a8d-113f-4211-a0d5-efe36b082211");
                             add("3b47f496-660b-4536-b780-b1924f5c4951");
                             add("355b611f-82bf-421e-93f3-4f989243ab57");
-                        }}, true},
+                        }}, "2", true},
+                {"rootorg", "3b47f496-660b-4536-b780-b1924f5c4951", "355b611f-82bf-421e-93f3-4f989243ab57",
+                        jwtToken,
+                        new ArrayList() {{
+                            add("3b47f496-660b-4536-b780-b1924f5c4951");
+                            add("355b611f-82bf-421e-93f3-4f989243ab57");
+                        }}, "1", true},
                 {"rootorg", "3b47f496-660b-4536-b780-b1924f5c4951", "355b611f-82bf-421e-93f3-4f989243ab57",
                         jwtToken,
                         new ArrayList() {{
                             add("10084a8d-113f-4211-a0d5-efe36b082211");
                             add("8a027d53-8a4d-4a6d-8ade-6428b5e76feb");
                             add("355b611f-82bf-421e-93f3-4f989243ab57");
-                        }}, false},
-                {"rootorg", "3b47f496-660b-4536-b780-b1924f5c4951", "3b47f496-660b-4536-b780-b1924f5c4951",
+                        }}, "2", false},
+                {"rootorg", "3b47f496-660b-4536-b780-b1924f5c4951", "355b611f-82bf-421e-93f3-4f989243ab57",
                         jwtToken,
                         new ArrayList() {{
                             add("10084a8d-113f-4211-a0d5-efe36b082211");
                             add("3b47f496-660b-4536-b780-b1924f5c4951");
-                        }}, false},
+                            add("355b611f-82bf-421e-93f3-4f989243ab57");
+                        }}, "1", false}
         };
     }
 
@@ -288,6 +298,7 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
                                                 String switchedOrganizationId,
                                                 String jwtToken,
                                                 List<String> parentHierarchyFromSwitchedOrg,
+                                                String subOrgStartLevel,
                                                 boolean expectedValidatorResponse)
             throws Exception {
 
@@ -345,6 +356,9 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         when(organizationManager.resolveOrganizationId(clientAppTenantDomain)).thenReturn(clientAppOrganizationId);
         when(organizationManager.getAncestorOrganizationIds(switchedOrganizationId)).thenReturn(
                 parentHierarchyFromSwitchedOrg);
+
+        mockStatic(OrganizationManagementConfigUtil.class);
+        when(OrganizationManagementConfigUtil.getProperty(SUB_ORG_START_LEVEL)).thenReturn(subOrgStartLevel);
 
         stub(method(OAuth2JWTTokenValidator.class, "validateSignature", SignedJWT.class, IdentityProvider.class))
                 .toReturn(true);
