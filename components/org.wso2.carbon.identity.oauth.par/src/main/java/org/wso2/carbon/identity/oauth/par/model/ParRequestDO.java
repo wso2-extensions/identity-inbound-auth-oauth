@@ -30,18 +30,6 @@ public class ParRequestDO {
     private String clientId;
 
     /**
-     * Constructor with variables obtained from ParRequestCacheEntry object to ParRequestDO.
-     *
-     * @param parRequestCacheEntry Cache entry for PAR request.
-     */
-    public ParRequestDO (ParRequestCacheEntry parRequestCacheEntry) {
-
-        this.params = parRequestCacheEntry.getParams();
-        this.expiresIn = parRequestCacheEntry.getExpiresIn();
-        this.clientId = parRequestCacheEntry.getClientId();
-    }
-
-    /**
      * Constructor with variables obtained from DAO to ParRequestDO.
      *
      * @param parameterMap Parameter map

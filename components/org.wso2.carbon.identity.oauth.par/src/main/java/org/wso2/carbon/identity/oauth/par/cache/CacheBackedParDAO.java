@@ -56,7 +56,8 @@ public class CacheBackedParDAO implements ParMgtDAO {
             if (log.isDebugEnabled()) {
                 log.debug("Cache miss for expiry time of local uuid: %s for tenant:%s " + reqUriRef);
             }
-            parRequestDO = new ParRequestDO(parCacheRequest);
+            parRequestDO = new ParRequestDO(parCacheRequest.getParams(), parCacheRequest.getExpiresIn(),
+                    parCacheRequest.getClientId());
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Cache hit for expiry time of uuid:%s for tenant:%s " + reqUriRef);
