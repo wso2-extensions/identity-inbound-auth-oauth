@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementConfigUtil;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
@@ -57,6 +58,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.DEFAULT_SUB_ORG_LEVEL;
+import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.SUB_ORG_START_LEVEL;
 
 /**
  * JWT Access token validator
@@ -101,9 +105,9 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
 
             String resourceResidentOrgId;
             try {
-                resourceResidentOrgId = claimsSet.getStringClaim("org_id");
-            } catch (ParseException var2) {
-                resourceResidentOrgId = "";
+                resourceResidentOrgId = claimsSet.getStringClaim(OAuthConstants.ORG_ID);
+            } catch (ParseException e) {
+                resourceResidentOrgId = StringUtils.EMPTY;
             }
 
             IdentityProvider identityProvider = getResidentIDPForIssuer(claimsSet.getIssuer(),
@@ -201,13 +205,11 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         String resourceAccessOrgId = getOrganizationManager().resolveOrganizationId(tenantDomain);
         if (StringUtils.isNotEmpty(resourceResidentOrgId) && !resourceResidentOrgId.equals(resourceAccessOrgId)) {
             // Check the tenant relationship if the token is not issued for the same tenant.
-            String issuerURLChecker = jwtIssuer.replace("/t/" + tenantDomain + "/",
-                    "/o/" + resourceResidentOrgId + "/");
             List<String> resourceResidentOrgAncestors = getOrganizationManager().getAncestorOrganizationIds(
                     resourceResidentOrgId);
-            // TODO: This logic can be improved after adding a config var to detect whether
-            //  the actual root org's level is 1 or 0.
-            if (!resourceResidentOrgAncestors.contains(resourceAccessOrgId) || !issuerURLChecker.equals(issuer)) {
+            int depthOfRootOrg = getSubOrgStartLevel() - 1;
+
+            if (!resourceAccessOrgId.equals(resourceResidentOrgAncestors.get(depthOfRootOrg))) {
                 throw new IdentityOAuth2Exception("No Registered IDP found for the token with issuer name : " +
                         jwtIssuer);
             }
@@ -423,5 +425,14 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
     private static OrganizationManager getOrganizationManager() {
 
         return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager();
+    }
+
+    private static int getSubOrgStartLevel() {
+
+        String subOrgStartLevel = OrganizationManagementConfigUtil.getProperty(SUB_ORG_START_LEVEL);
+        if (StringUtils.isNotEmpty(subOrgStartLevel)) {
+            return Integer.parseInt(subOrgStartLevel);
+        }
+        return DEFAULT_SUB_ORG_LEVEL;
     }
 }
