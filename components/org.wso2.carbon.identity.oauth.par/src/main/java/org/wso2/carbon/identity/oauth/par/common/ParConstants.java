@@ -18,12 +18,16 @@
 
 package org.wso2.carbon.identity.oauth.par.common;
 
+import org.apache.axiom.om.OMElement;
+import org.wso2.carbon.identity.core.util.IdentityConfigParser;
+import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
+
+import javax.xml.namespace.QName;
+
 /**
  * Contains the required constants for PAR feature.
  */
 public class ParConstants {
-
-    public static final long EXPIRES_IN_DEFAULT_VALUE_IN_SEC = 60;
     public static final long SEC_TO_MILLISEC_FACTOR = 1000;
     public static final String UTC = "UTC";
     public static final String EXPIRES_IN = "expires_in";

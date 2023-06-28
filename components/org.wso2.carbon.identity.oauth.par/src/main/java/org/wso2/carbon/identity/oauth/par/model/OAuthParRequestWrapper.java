@@ -61,7 +61,7 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
                     request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
             params.put(OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST, "true");
         } catch (ParCoreException e) {
-            throw new ParAuthFailureException("Error occurred while retrieving params from PAR request");
+            throw new ParAuthFailureException(e.getMessage());
         }
     }
 

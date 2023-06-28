@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.par.core;
 import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.par.common.ParConfigResolver;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
 import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAO;
@@ -45,7 +46,7 @@ public class ParAuthServiceImpl implements ParAuthService {
     public ParAuthResponseData handleParAuthRequest(Map<String, String> parameters) throws ParCoreException {
 
         String uuid = UUID.randomUUID().toString();
-        long expiry = ParConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC;
+        long expiry = ParConfigResolver.getExpiresInValue();
 
         ParAuthResponseData parAuthResponse = new ParAuthResponseData();
         parAuthResponse.setReqUriRef(uuid);
@@ -93,7 +94,7 @@ public class ParAuthServiceImpl implements ParAuthService {
 
     private long getScheduledExpiry(long requestedTime) {
 
-        long defaultExpiryInSecs = ParConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC * ParConstants.SEC_TO_MILLISEC_FACTOR;
+        long defaultExpiryInSecs = ParConfigResolver.getExpiresInValue() * ParConstants.SEC_TO_MILLISEC_FACTOR;
         return requestedTime + defaultExpiryInSecs;
     }
 }
