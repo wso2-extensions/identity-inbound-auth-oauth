@@ -3708,11 +3708,15 @@ public class OAuth2AuthzEndpoint {
             }
         }
 
-        return OIDCSessionManagementUtil.getSessionStateParam(oAuth2Parameters.getClientId(),
-                oAuth2Parameters.getRedirectURI(),
-                opBrowserStateCookie == null ?
-                        null :
-                        opBrowserStateCookie.getValue());
+        String sessionStateParam = null;
+        if (sessionStateObj.isAddSessionState() && StringUtils.isNotEmpty(oAuth2Parameters.getRedirectURI())) {
+            sessionStateParam = OIDCSessionManagementUtil.getSessionStateParam(oAuth2Parameters.getClientId(),
+                    oAuth2Parameters.getRedirectURI(),
+                    opBrowserStateCookie == null ?
+                            null :
+                            opBrowserStateCookie.getValue());
+        }
+        return sessionStateParam;
     }
 
     private String appendAuthenticatedIDPs(SessionDataCacheEntry sessionDataCacheEntry, String redirectURL,
