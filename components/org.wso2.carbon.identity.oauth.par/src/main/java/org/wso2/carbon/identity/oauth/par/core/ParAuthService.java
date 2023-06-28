@@ -25,19 +25,19 @@ import java.util.Map;
 
 
 /**
- * Provides authentication services.
+ * Provides the PAR services.
  */
 public interface ParAuthService {
 
     /**
-     * Creates PAR AuthenticationResponse.
+     * Creates PAR AuthenticationResponse by setting the values for the response to be generated from PAR endpoint.
      *
      * @return parAuthResponse that contains response data for request.
      */
-    ParAuthResponseData generateParAuthResponse(Map<String, String> parameters) throws ParCoreException;
+    ParAuthResponseData handleParAuthRequest(Map<String, String> parameters) throws ParCoreException;
 
     /**
-     * Retrieve parameters from store.
+     * Retrieves the parameter map relevant to the provided request_uri from store after validating.
      *
      * @return parameter map for request.
      */

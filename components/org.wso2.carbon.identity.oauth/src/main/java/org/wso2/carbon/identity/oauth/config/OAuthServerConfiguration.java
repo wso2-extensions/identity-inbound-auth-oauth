@@ -306,6 +306,7 @@ public class OAuthServerConfiguration {
     private int deviceCodePollingInterval = 5000;
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     private String deviceAuthzEPUrl = null;
+    private long parExpiryTime = 60;
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -455,6 +456,9 @@ public class OAuthServerConfiguration {
 
         // Parse values of DeviceCodeGrant config.
         parseOAuthDeviceCodeGrantConfig(oauthElem);
+
+        // Parse values of DeviceCodeGrant config.
+        parseOAuthPARConfig(oauthElem);
 
         // Read the value of UseSPTenantDomain config.
         parseUseSPTenantDomainConfig(oauthElem);
@@ -1644,6 +1648,11 @@ public class OAuthServerConfiguration {
     public long getDeviceCodeExpiryTime() {
 
         return deviceCodeExpiryTime;
+    }
+
+    public long getParExpiryTime() {
+
+        return parExpiryTime;
     }
 
     public int getDeviceCodePollingInterval() {
@@ -2934,6 +2943,25 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseOAuthPARConfig(OMElement oauthElem) {
+
+        OMElement oauthPARElement = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.PAR));
+
+        if (oauthPARElement != null && oauthPARElement
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.PAR_EXPIRY_TIME)) != null) {
+            try {
+                parExpiryTime = Long.parseLong(oauthPARElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.PAR_EXPIRY_TIME)).getText()
+                        .trim());
+            } catch (NumberFormatException e) {
+                log.error("Error while converting par expiry " + oauthPARElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.PAR_EXPIRY_TIME)).getText()
+                        .trim() + " to long. Falling back to the default value.", e);
+            }
+        }
+    }
+
     private void parseOpenIDConnectConfig(OMElement oauthConfigElem) {
 
         OMElement openIDConnectConfigElem =
@@ -3738,6 +3766,8 @@ public class OAuthServerConfiguration {
         private static final String DEVICE_CODE_KEY_LENGTH = "KeyLength";
         private static final String DEVICE_CODE_EXPIRY_TIME = "ExpiryTime";
         private static final String DEVICE_CODE_POLLING_INTERVAL = "PollingInterval";
+        private static final String PAR = "PAR";
+        private static final String PAR_EXPIRY_TIME = "ExpiryTime";
         private static final String DEVICE_CODE_KEY_SET = "KeySet";
 
         // Allow Cross Tenant Introspection Config.

@@ -41,94 +41,91 @@ import java.util.Map;
 public class ParMgtDAOImpl implements ParMgtDAO {
 
     private static final Log log = LogFactory.getLog(ParMgtDAOImpl.class);
-    ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public void persistParRequest(String reqUriUUID, String clientId, long scheduledExpiryTime,
-                                  Map<String, String> parameters) throws ParCoreException {
+    public void persistRequestData(String reqUriRef, String clientId, long expiresIn,
+                                   Map<String, String> parameters) throws ParCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
 
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
                     ParSQLQueries.STORE_PAR_REQUEST)) {
 
-                prepStmt.setString(1, reqUriUUID);
+                prepStmt.setString(1, reqUriRef);
                 prepStmt.setString(2, clientId);
-                prepStmt.setLong(3, scheduledExpiryTime);
-                prepStmt.setString(4, getJsonParams(parameters));
+                prepStmt.setLong(3, expiresIn);
+                prepStmt.setString(4, getSerializedParams(parameters));
 
                 prepStmt.execute();
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new ParCoreException("Error occurred in persisting the successful PAR request with" +
-                        " uuid: " + reqUriUUID);
+                throw new ParCoreException("Error occurred in persisting PAR request.", e);
             }
         } catch (SQLException e) {
-            throw new ParCoreException("Error occurred in persisting the successful PAR request with" +
-                    " uuid: " + reqUriUUID);
+            throw new ParCoreException("Error occurred in persisting PAR request.", e);
         }
     }
 
     @Override
-    public ParRequestDO getParRequest(String reqUriUUID) throws ParCoreException {
+    public ParRequestDO getRequestData(String reqUriRef) throws ParCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
                      .ParSQLQueries.RETRIEVE_PAR_REQUEST)) {
 
-            prepStmt.setString(1, reqUriUUID);
+            prepStmt.setString(1, reqUriRef);
 
             try (ResultSet resultSet = prepStmt.executeQuery()) {
                 if (resultSet.next()) {
                     if (log.isDebugEnabled()) {
-                        log.debug("Successfully obtained client_id of RequestURI with UUID: " + reqUriUUID);
+                        log.debug("Successfully obtained client_id of RequestURI with UUID: " + reqUriRef);
                     }
-                    String jsonParams = resultSet.getString(ParConstants.COL_LBL_JSON_PARAMS);
+                    String jsonParams = resultSet.getString(ParConstants.COL_LBL_PARAMETERS);
                     long scheduledExpiry = resultSet.getLong(ParConstants.COL_LBL_SCHEDULED_EXPIRY);
                     String clientId = resultSet.getString(ParConstants.COL_LBL_CLIENT_ID);
 
-                    return new ParRequestDO(getParams(jsonParams), scheduledExpiry, clientId);
+                    return new ParRequestDO(getDeserializedParams(jsonParams), scheduledExpiry, clientId);
 
                 } else {
                     throw new ParCoreException("uuid does not exist in the database");
                 }
             } catch (SQLException e) {
-                throw new ParCoreException("Error occurred while retrieving PAR request from the database.");
+                throw new ParCoreException("Error occurred while retrieving PAR request from the database.", e);
             }
         } catch (SQLException e) {
-            throw new ParCoreException("Error occurred while retrieving PAR request from the database.");
+            throw new ParCoreException("Error occurred while retrieving PAR request from the database.", e);
         }
     }
 
     @Override
-    public void removeParRequest(String reqUUID) throws ParCoreException {
+    public void removeRequestData(String reqUriRef) throws ParCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true);
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
                      .ParSQLQueries.REMOVE_PAR_REQUEST)) {
-            prepStmt.setString(1, reqUUID);
+            prepStmt.setString(1, reqUriRef);
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
-            throw new ParCoreException("Error occurred while clearing PAR request from Database");
+            throw new ParCoreException("Error occurred while clearing PAR request from Database", e);
         }
     }
 
-    private String getJsonParams(Map<String, String> params) throws ParCoreException {
+    private String getSerializedParams(Map<String, String> params) throws ParCoreException {
 
         try {
-            return objectMapper.writeValueAsString(params);
+            return new ObjectMapper().writeValueAsString(params);
         } catch (JsonProcessingException e) {
-            throw new ParCoreException("Error occurred while serializing parameter map to JSON");
+            throw new ParCoreException("Error occurred while serializing parameter map to JSON", e);
         }
     }
 
-    private Map<String, String> getParams(String jsonParams) throws ParCoreException {
+    private Map<String, String> getDeserializedParams(String jsonParams) throws ParCoreException {
 
         try {
-            return objectMapper.readValue(jsonParams, new TypeReference<Map<String, String>>() { });
+            return new ObjectMapper().readValue(jsonParams, new TypeReference<Map<String, String>>() { });
         } catch (JsonProcessingException e) {
-            throw new ParCoreException("Error occurred while serializing JSON string map to Map");
+            throw new ParCoreException("Error occurred while serializing JSON string map to Map", e);
         }
     }
 }

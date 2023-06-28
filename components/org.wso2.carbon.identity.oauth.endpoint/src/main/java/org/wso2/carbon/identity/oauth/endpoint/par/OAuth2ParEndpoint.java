@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.par;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.json.JSONObject;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
@@ -56,6 +58,8 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth
 @InInterceptors(classes = OAuthClientAuthenticatorProxy.class)
 public class OAuth2ParEndpoint {
 
+    private static final Log log = LogFactory.getLog(OAuth2ParEndpoint.class);
+
     @POST
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
@@ -67,7 +71,7 @@ public class OAuth2ParEndpoint {
             handleValidation(request, params);
             Map<String, String> parameters = transformParams(params);
             ParAuthResponseData parAuthResponseData =
-                    EndpointUtil.getParAuthService().generateParAuthResponse(parameters);
+                    EndpointUtil.getParAuthService().handleParAuthRequest(parameters);
             return createAuthResponse(response, parAuthResponseData);
         } catch (ParClientException e) {
             return handleParClientException(e);
@@ -94,9 +98,9 @@ public class OAuth2ParEndpoint {
     private Response createAuthResponse(HttpServletResponse response, ParAuthResponseData parAuthResponseData) {
 
         response.setContentType(MediaType.APPLICATION_JSON);
-        net.minidev.json.JSONObject parAuthResponse = new net.minidev.json.JSONObject();
+        org.json.JSONObject parAuthResponse = new org.json.JSONObject();
         parAuthResponse.put(OAuthConstants.OAuth20Params.REQUEST_URI,
-                ParConstants.REQUEST_URI_HEAD + parAuthResponseData.getReqUriUUID());
+                ParConstants.REQUEST_URI_PREFIX + parAuthResponseData.getReqUriRef());
         parAuthResponse.put(ParConstants.EXPIRES_IN, parAuthResponseData.getExpiryTime());
         Response.ResponseBuilder responseBuilder = Response.status(HttpServletResponse.SC_CREATED);
         return responseBuilder.entity(parAuthResponse.toString()).build();
@@ -115,6 +119,7 @@ public class OAuth2ParEndpoint {
         } else {
             responseBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
         }
+        log.error("PAR client Exception: ", exception.fillInStackTrace());
         return responseBuilder.entity(parErrorResponse.toString()).build();
     }
 
@@ -125,6 +130,7 @@ public class OAuth2ParEndpoint {
         parErrorResponse.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, parCoreException.getMessage());
 
         Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        log.error("PAR Server Exception: ", parCoreException.fillInStackTrace());
         return respBuilder.entity(parErrorResponse.toString()).build();
     }
 
@@ -144,6 +150,9 @@ public class OAuth2ParEndpoint {
 
     private boolean isRequestUriProvided(MultivaluedMap<String, String> params) {
 
-        return params.containsKey(OAuthConstants.OAuth20Params.REQUEST_URI);
+        if (params.containsKey(OAuthConstants.OAuth20Params.REQUEST_URI)) {
+            return !(params.get(OAuthConstants.OAuth20Params.REQUEST_URI).isEmpty());
+        }
+        return false;
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  * <p>
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -31,27 +31,30 @@ public interface ParMgtDAO {
     /**
      * Persists the ParAuthRequest.
      *
-     * @param reqUriUUID PAR request identifier.
+     * @param reqUriRef PAR request identifier.
+     * @param clientId Client ID of request.
+     * @param expiresIn Time request will expire.
+     * @param parameters Parameters in request.
      * @throws ParCoreException Exception thrown from PAR Core Component.
      */
-    void persistParRequest(String reqUriUUID, String clientId, long scheduledExpiryTime,
-                           Map<String, String> parameters) throws ParCoreException;
+    void persistRequestData(String reqUriRef, String clientId, long expiresIn,
+                            Map<String, String> parameters) throws ParCoreException;
 
     /**
      * Retrieve the ParAuthRequest.
      *
-     * @param reqUriUUID PAR request identifier.
+     * @param reqUriRef PAR request identifier.
      * @throws ParCoreException Exception thrown from PAR Core Component.
      */
-    ParRequestDO getParRequest(String reqUriUUID) throws ParCoreException;
+    ParRequestDO getRequestData(String reqUriRef) throws ParCoreException;
 
 
     /**
      * Remove record from cache and database.
      *
-     * @param reqUriUUID PAR request identifier.
+     * @param reqUriRef PAR request identifier.
      * @throws ParCoreException Exception thrown from PAR Core Component.
      */
-    void removeParRequest(String reqUriUUID) throws ParCoreException;
+    void removeRequestData(String reqUriRef) throws ParCoreException;
 
 }

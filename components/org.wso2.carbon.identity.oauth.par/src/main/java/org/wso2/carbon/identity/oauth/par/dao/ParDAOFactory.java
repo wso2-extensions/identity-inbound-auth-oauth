@@ -25,12 +25,10 @@ import org.wso2.carbon.identity.oauth.par.cache.CacheBackedParDAO;
  */
 public class ParDAOFactory {
 
-    // Implementation of DAO.
     private final ParMgtDAO parMgtDAO;
 
     private ParDAOFactory() {
 
-        // This factory creates instance of PAR DAOImplementation.
         parMgtDAO = new CacheBackedParDAO();
     }
 
@@ -47,6 +45,8 @@ public class ParDAOFactory {
     }
 
     /**
+     *  Returns instance of ParMgtDAO.
+     *
      * @return  ParMgtDAO.
      */
     public ParMgtDAO getParAuthMgtDAO() {

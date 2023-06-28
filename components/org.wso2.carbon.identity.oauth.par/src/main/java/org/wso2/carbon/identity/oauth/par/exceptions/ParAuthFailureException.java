@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oauth.par.exceptions;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 
 /**
- * PAR error DTO for Authorization Failure.
+ * PAR error DTO for Authorization flow failure.
  */
 public class ParAuthFailureException extends OAuthProblemException {
 
@@ -31,7 +31,7 @@ public class ParAuthFailureException extends OAuthProblemException {
     /**
      * Constructor with error message.
      *
-     * @param errorMsg error message
+     * @param errorMsg Error message
      */
     public ParAuthFailureException(String errorMsg) {
 
@@ -61,7 +61,7 @@ public class ParAuthFailureException extends OAuthProblemException {
     /**
      * Set error code.
      *
-     * @param errorCode error code
+     * @param errorCode Error code
      */
     public void setErrorCode(String errorCode) {
 
@@ -71,9 +71,20 @@ public class ParAuthFailureException extends OAuthProblemException {
     /**
      * Set error message.
      *
-     * @param  errorMsg error message
+     * @param  errorMsg Error message
      */
     public void setErrorMsg(String errorMsg) {
+
+        this.errorMsg = errorMsg;
+    }
+
+    /**
+     * Set error message with throwable.
+     *
+     * @param errorMsg Error message
+     * @param cause    Throwable
+     */
+    public void setErrorMsg(String errorMsg, Throwable cause) {
 
         this.errorMsg = errorMsg;
     }

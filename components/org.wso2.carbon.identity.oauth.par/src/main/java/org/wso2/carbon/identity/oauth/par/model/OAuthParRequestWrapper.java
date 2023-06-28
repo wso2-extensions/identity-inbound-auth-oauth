@@ -49,8 +49,8 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
         super(request);
 
         //get only uuid from request_uri
-        String uuid = request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI)
-                .replaceFirst(ParConstants.REQUEST_URI_HEAD, "");
+        String requestUri = request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI);
+        String uuid = requestUri.replaceFirst(ParConstants.REQUEST_URI_PREFIX, "");
 
         try {
             if (parAuthService == null) {
@@ -68,7 +68,7 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
     /**
      * Get parameter.
      *
-     * @return parameter from either this parameter map or from parameter map of super class
+     * @return parameter from either this parameter map or from parameter map of super class.
      */
     @Override
     public String getParameter(String name) {
