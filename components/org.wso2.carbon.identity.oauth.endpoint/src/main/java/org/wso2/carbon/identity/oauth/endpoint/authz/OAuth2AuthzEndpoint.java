@@ -1409,7 +1409,7 @@ public class OAuth2AuthzEndpoint {
         oAuthAuthzReqMessageContext.setAuthorizationReqDTO(authzReqDTO);
         // authorizing the request
         OAuth2AuthorizeRespDTO authzRespDTO = authorize(oAuthAuthzReqMessageContext);
-        if (authzRespDTO.getCallbackURI() != null) {
+        if (authzRespDTO != null && authzRespDTO.getCallbackURI() != null) {
             authorizationResponseDTO.setRedirectUrl(authzRespDTO.getCallbackURI());
         }
 
