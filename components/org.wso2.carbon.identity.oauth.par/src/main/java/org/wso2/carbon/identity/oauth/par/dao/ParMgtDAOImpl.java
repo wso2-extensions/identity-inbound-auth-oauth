@@ -43,7 +43,7 @@ public class ParMgtDAOImpl implements ParMgtDAO {
     private static final Log log = LogFactory.getLog(ParMgtDAOImpl.class);
 
     @Override
-    public void persistRequestData(String reqUriRef, String clientId, long expiresIn,
+    public void persistRequestData(String requestURIReference, String clientId, long expiresIn,
                                    Map<String, String> parameters) throws ParCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
@@ -51,7 +51,7 @@ public class ParMgtDAOImpl implements ParMgtDAO {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
                     ParSQLQueries.STORE_PAR_REQUEST)) {
 
-                prepStmt.setString(1, reqUriRef);
+                prepStmt.setString(1, requestURIReference);
                 prepStmt.setString(2, clientId);
                 prepStmt.setLong(3, expiresIn);
                 prepStmt.setString(4, getSerializedParams(parameters));
@@ -67,18 +67,18 @@ public class ParMgtDAOImpl implements ParMgtDAO {
     }
 
     @Override
-    public ParRequestDO getRequestData(String reqUriRef) throws ParCoreException {
+    public ParRequestDO getRequestData(String requestURIReference) throws ParCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
                      .ParSQLQueries.RETRIEVE_PAR_REQUEST)) {
 
-            prepStmt.setString(1, reqUriRef);
+            prepStmt.setString(1, requestURIReference);
 
             try (ResultSet resultSet = prepStmt.executeQuery()) {
                 if (resultSet.next()) {
                     if (log.isDebugEnabled()) {
-                        log.debug("Successfully obtained client_id of RequestURI with UUID: " + reqUriRef);
+                        log.debug("Successfully obtained client_id of RequestURI with UUID: " + requestURIReference);
                     }
                     String jsonParams = resultSet.getString(ParConstants.COL_LBL_PARAMETERS);
                     long scheduledExpiry = resultSet.getLong(ParConstants.COL_LBL_SCHEDULED_EXPIRY);
@@ -98,12 +98,12 @@ public class ParMgtDAOImpl implements ParMgtDAO {
     }
 
     @Override
-    public void removeRequestData(String reqUriRef) throws ParCoreException {
+    public void removeRequestData(String requestURIReference) throws ParCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true);
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
                      .ParSQLQueries.REMOVE_PAR_REQUEST)) {
-            prepStmt.setString(1, reqUriRef);
+            prepStmt.setString(1, requestURIReference);
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {

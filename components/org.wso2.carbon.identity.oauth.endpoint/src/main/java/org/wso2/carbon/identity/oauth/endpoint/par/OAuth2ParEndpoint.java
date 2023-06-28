@@ -100,7 +100,7 @@ public class OAuth2ParEndpoint {
         response.setContentType(MediaType.APPLICATION_JSON);
         org.json.JSONObject parAuthResponse = new org.json.JSONObject();
         parAuthResponse.put(OAuthConstants.OAuth20Params.REQUEST_URI,
-                ParConstants.REQUEST_URI_PREFIX + parAuthResponseData.getReqUriRef());
+                ParConstants.REQUEST_URI_PREFIX + parAuthResponseData.getrequestURIReference());
         parAuthResponse.put(ParConstants.EXPIRES_IN, parAuthResponseData.getExpiryTime());
         Response.ResponseBuilder responseBuilder = Response.status(HttpServletResponse.SC_CREATED);
         return responseBuilder.entity(parAuthResponse.toString()).build();
@@ -150,9 +150,7 @@ public class OAuth2ParEndpoint {
 
     private boolean isRequestUriProvided(MultivaluedMap<String, String> params) {
 
-        if (params.containsKey(OAuthConstants.OAuth20Params.REQUEST_URI)) {
-            return !(params.get(OAuthConstants.OAuth20Params.REQUEST_URI).isEmpty());
-        }
-        return false;
+        return params.containsKey(OAuthConstants.OAuth20Params.REQUEST_URI) &&
+                !params.get(OAuthConstants.OAuth20Params.REQUEST_URI).isEmpty();
     }
 }

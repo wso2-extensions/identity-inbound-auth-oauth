@@ -154,6 +154,7 @@ public class OAuth2ServiceComponent {
     }
 
     protected void unsetParService(ParAuthService parAuthService) {
+
         OAuth2ServiceComponentHolder.setParAuthService(null);
     }
 

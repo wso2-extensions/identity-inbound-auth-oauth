@@ -46,11 +46,11 @@ public class ParAuthServiceImpl implements ParAuthService {
     public ParAuthResponseData handleParAuthRequest(Map<String, String> parameters) throws ParCoreException {
 
         String uuid = UUID.randomUUID().toString();
-        long expiry = ParConfigResolver.getExpiresInValue();
+        long expiryTime = ParConfigResolver.getExpiresInValue();
 
         ParAuthResponseData parAuthResponse = new ParAuthResponseData();
-        parAuthResponse.setReqUriRef(uuid);
-        parAuthResponse.setExpiryTime(expiry);
+        parAuthResponse.setrequestURIReference(uuid);
+        parAuthResponse.setExpiryTime(expiryTime);
 
         persistParRequest(uuid, parameters, getScheduledExpiry(System.currentTimeMillis()));
 

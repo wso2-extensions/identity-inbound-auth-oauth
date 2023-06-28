@@ -31,30 +31,30 @@ public interface ParMgtDAO {
     /**
      * Persists the ParAuthRequest.
      *
-     * @param reqUriRef PAR request identifier.
+     * @param requestURIReference PAR request identifier.
      * @param clientId Client ID of request.
      * @param expiresIn Time request will expire.
      * @param parameters Parameters in request.
      * @throws ParCoreException Exception thrown from PAR Core Component.
      */
-    void persistRequestData(String reqUriRef, String clientId, long expiresIn,
+    void persistRequestData(String requestURIReference, String clientId, long expiresIn,
                             Map<String, String> parameters) throws ParCoreException;
 
     /**
      * Retrieve the ParAuthRequest.
      *
-     * @param reqUriRef PAR request identifier.
+     * @param requestURIReference PAR request identifier.
      * @throws ParCoreException Exception thrown from PAR Core Component.
      */
-    ParRequestDO getRequestData(String reqUriRef) throws ParCoreException;
+    ParRequestDO getRequestData(String requestURIReference) throws ParCoreException;
 
 
     /**
      * Remove record from cache and database.
      *
-     * @param reqUriRef PAR request identifier.
+     * @param requestURIReference PAR request identifier.
      * @throws ParCoreException Exception thrown from PAR Core Component.
      */
-    void removeRequestData(String reqUriRef) throws ParCoreException;
+    void removeRequestData(String requestURIReference) throws ParCoreException;
 
 }

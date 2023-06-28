@@ -28,6 +28,7 @@ import javax.xml.namespace.QName;
  * Contains the required constants for PAR feature.
  */
 public class ParConstants {
+    public static final long EXPIRES_IN_DEFAULT_VALUE = 60;
     public static final long SEC_TO_MILLISEC_FACTOR = 1000;
     public static final String UTC = "UTC";
     public static final String EXPIRES_IN = "expires_in";
