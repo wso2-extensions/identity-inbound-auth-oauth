@@ -18,10 +18,12 @@
 
 package org.wso2.carbon.identity.oauth.par.core;
 
+import org.apache.axiom.om.OMElement;
 import org.apache.commons.lang.StringUtils;
+import org.wso2.carbon.identity.core.util.IdentityConfigParser;
+import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.par.common.ParConfigResolver;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
 import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAO;
@@ -34,6 +36,8 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.UUID;
 
+import javax.xml.namespace.QName;
+
 
 /**
  * Provides PAR services.
@@ -41,16 +45,18 @@ import java.util.UUID;
 public class ParAuthServiceImpl implements ParAuthService {
 
     ParMgtDAO parMgtDAO = ParDAOFactory.getInstance().getParAuthMgtDAO();
+    private static final long expiresIn = getExpiresInValue();
+
 
     @Override
     public ParAuthResponseData handleParAuthRequest(Map<String, String> parameters) throws ParCoreException {
 
         String uuid = UUID.randomUUID().toString();
-        long expiryTime = ParConfigResolver.getExpiresInValue();
+        //long expiryTime = expiresIn;
 
         ParAuthResponseData parAuthResponse = new ParAuthResponseData();
         parAuthResponse.setrequestURIReference(uuid);
-        parAuthResponse.setExpiryTime(expiryTime);
+        parAuthResponse.setExpiryTime(expiresIn);
 
         persistParRequest(uuid, parameters, getScheduledExpiry(System.currentTimeMillis()));
 
@@ -92,9 +98,24 @@ public class ParAuthServiceImpl implements ParAuthService {
         }
     }
 
+    private static long getExpiresInValue() {
+
+        IdentityConfigParser configParser = IdentityConfigParser.getInstance();
+        OMElement oauthElem = configParser.getConfigElement("OAuth");
+        OMElement parConfig = oauthElem.
+                getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, ParConstants.PAR));
+
+        if (parConfig.getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE,
+                ParConstants.EXPIRY_TIME)) != null) {
+            return Long.parseLong(parConfig.getFirstChildWithName(
+                    new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, ParConstants.EXPIRY_TIME)).getText());
+        }
+        return ParConstants.EXPIRES_IN_DEFAULT_VALUE;
+    }
+
     private long getScheduledExpiry(long requestedTime) {
 
-        long defaultExpiryInSecs = ParConfigResolver.getExpiresInValue() * ParConstants.SEC_TO_MILLISEC_FACTOR;
+        long defaultExpiryInSecs = expiresIn * ParConstants.SEC_TO_MILLISEC_FACTOR;
         return requestedTime + defaultExpiryInSecs;
     }
 }

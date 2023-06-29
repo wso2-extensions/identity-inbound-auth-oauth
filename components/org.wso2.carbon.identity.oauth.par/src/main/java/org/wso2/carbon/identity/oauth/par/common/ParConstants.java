@@ -18,12 +18,6 @@
 
 package org.wso2.carbon.identity.oauth.par.common;
 
-import org.apache.axiom.om.OMElement;
-import org.wso2.carbon.identity.core.util.IdentityConfigParser;
-import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
-
-import javax.xml.namespace.QName;
-
 /**
  * Contains the required constants for PAR feature.
  */
@@ -39,6 +33,8 @@ public class ParConstants {
     public static final String COL_LBL_PARAMETERS = "PARAMETERS";
     public static final String COL_LBL_SCHEDULED_EXPIRY = "SCHEDULED_EXPIRY";
     public static final String COL_LBL_CLIENT_ID = "CLIENT_ID";
+    public static final String PAR = "PAR";
+    public static final String EXPIRY_TIME = "ExpiryTime";
 
 
     private ParConstants() {
