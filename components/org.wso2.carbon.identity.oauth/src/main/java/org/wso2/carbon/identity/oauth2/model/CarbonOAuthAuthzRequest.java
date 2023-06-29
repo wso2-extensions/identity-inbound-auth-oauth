@@ -29,14 +29,12 @@ import org.apache.oltu.oauth2.common.validators.OAuthValidator;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.par.model.OAuthParRequestWrapper;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
-
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * OAuth 2 authorization request.
