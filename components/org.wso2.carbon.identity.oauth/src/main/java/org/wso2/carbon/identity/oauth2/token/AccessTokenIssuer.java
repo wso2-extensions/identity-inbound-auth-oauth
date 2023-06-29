@@ -785,8 +785,8 @@ public class AccessTokenIssuer {
         AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager) IdentityTenantUtil
                 .getRealm(authenticatedUser.getTenantDomain(), authenticatedUser.toFullQualifiedUsername())
                 .getUserStoreManager();
-        if (!userStoreManager.isExistingUserWithID(authenticatedUser.getUserId()) && OAuth2ServiceComponentHolder
-                .getInstance().isOrganizationManagementEnabled()) {
+        if (OAuth2ServiceComponentHolder.getInstance().isOrganizationManagementEnabled() &&
+                !userStoreManager.isExistingUserWithID(authenticatedUser.getUserId())) {
             userStoreManager = getUserStoreManagerFromUserResideOrganization(authenticatedUser.getTenantDomain(),
                     authenticatedUser.getUserId()).orElse(userStoreManager);
         }
