@@ -89,6 +89,9 @@ public interface AccessTokenDAO {
 
     AccessTokenDO getAccessToken(String accessTokenIdentifier, boolean includeExpired) throws IdentityOAuth2Exception;
 
+    List<AccessTokenDO> getOldestAccessTokens(String consumerKey, AuthenticatedUser authzUser) throws
+            IdentityOAuth2Exception;
+
     Set<String> getAccessTokensByUser(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception;
 
     default Set<AccessTokenDO> getAccessTokensByUserForOpenidScope(AuthenticatedUser authenticatedUser)

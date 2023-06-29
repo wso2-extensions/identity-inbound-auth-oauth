@@ -2360,6 +2360,64 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         }
     }
 
+    //Get Oldest Access Token for the given user and consumer key
+    public List<AccessTokenDO> getOldestAccessTokens(String consumerKey, AuthenticatedUser authzUser)
+            throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving oldest 5 access tokens for user: " + authzUser.toString() +
+                    " client: " + consumerKey);
+        }
+
+        if (authzUser == null) {
+            throw new IdentityOAuth2Exception("Invalid user information for given consumerKey: " + consumerKey);
+        }
+
+        String tenantDomain = authzUser.getTenantDomain();
+        int tenantId = OAuth2Util.getTenantId(tenantDomain);
+        boolean isUsernameCaseSensitive =
+                IdentityUtil.isUserStoreCaseSensitive(authzUser.getUserStoreDomain(), tenantId);
+        String tenantAwareUsernameWithNoUserDomain = authzUser.getUserName();
+        String userDomain = OAuth2Util.getUserStoreDomain(authzUser);
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+        PreparedStatement prepStmt = null;
+        ResultSet resultSet = null;
+        List<AccessTokenDO> accessTokenDOList = new ArrayList<>();
+
+        try {
+            String sql = SQLQueries.RETRIEVE_OLDEST_LIMIT_ACTIVE_ACCESS_TOKEN_BY_CLIENT_ID_MSSQL;
+
+            prepStmt = connection.prepareStatement(sql);
+            prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
+
+            if (isUsernameCaseSensitive) {
+                prepStmt.setString(2, tenantAwareUsernameWithNoUserDomain);
+            } else {
+                prepStmt.setString(2, tenantAwareUsernameWithNoUserDomain.toLowerCase());
+            }
+
+            prepStmt.setInt(3, tenantId);
+            prepStmt.setString(4, userDomain);
+
+            resultSet = prepStmt.executeQuery();
+
+            while (resultSet.next()) {
+                AccessTokenDO accessTokenDO = new AccessTokenDO();
+                accessTokenDO.setAccessToken(resultSet.getString("ACCESS_TOKEN"));
+                accessTokenDO.setTokenId(resultSet.getString("TOKEN_ID"));
+                accessTokenDOList.add(accessTokenDO);
+            }
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving oldest access tokens", e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
+        }
+
+        return accessTokenDOList;
+    }
+
+
     private boolean isFederatedUser(AccessTokenDO accessTokenDO) {
 
         return !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() &&
