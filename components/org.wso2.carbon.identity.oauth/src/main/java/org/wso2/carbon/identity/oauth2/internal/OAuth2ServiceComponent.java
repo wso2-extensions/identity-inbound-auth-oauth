@@ -993,12 +993,12 @@ public class OAuth2ServiceComponent {
             OrganizationManagementInitialize organizationManagementInitializeService) {
 
         OAuth2ServiceComponentHolder.getInstance()
-                .setOrganizationManagementEnable(organizationManagementInitializeService);
+                .setOrganizationManagementEnabled(organizationManagementInitializeService);
     }
 
     protected void unsetOrganizationManagementEnablingService(
             OrganizationManagementInitialize organizationManagementInitializeInstance) {
 
-        OAuth2ServiceComponentHolder.getInstance().setOrganizationManagementEnable(null);
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManagementEnabled(null);
     }
 }

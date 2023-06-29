@@ -90,7 +90,7 @@ public class OAuth2ServiceComponentHolder {
     private static boolean restrictUnassignedScopes;
     private static ConfigurationContextService configurationContextService;
     private List<JWTAccessTokenClaimProvider> jwtAccessTokenClaimProviders = new ArrayList<>();
-    private boolean isOrganizationManagementEnable = false;
+    private boolean isOrganizationManagementEnabled = false;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -593,7 +593,7 @@ public class OAuth2ServiceComponentHolder {
      */
     public boolean isOrganizationManagementEnabled() {
 
-        return isOrganizationManagementEnable;
+        return isOrganizationManagementEnabled;
     }
 
     /**
@@ -601,11 +601,11 @@ public class OAuth2ServiceComponentHolder {
      *
      * @param organizationManagementInitializeService OrganizationManagementInitializeInstance.
      */
-    public void setOrganizationManagementEnable(
+    public void setOrganizationManagementEnabled(
             OrganizationManagementInitialize organizationManagementInitializeService) {
 
         if (organizationManagementInitializeService != null) {
-            isOrganizationManagementEnable = organizationManagementInitializeService.isOrganizationManagementEnabled();
+            isOrganizationManagementEnabled = organizationManagementInitializeService.isOrganizationManagementEnabled();
         }
     }
 }
