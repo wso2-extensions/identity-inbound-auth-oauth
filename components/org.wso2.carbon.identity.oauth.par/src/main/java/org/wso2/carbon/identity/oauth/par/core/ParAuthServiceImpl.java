@@ -97,21 +97,14 @@ public class ParAuthServiceImpl implements ParAuthService {
 
     private static long getExpiresInValue() throws ParCoreException {
 
-        OMElement parConfig = IdentityConfigParser.getInstance().getConfigElement("OAuth").
-                getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, ParConstants.PAR));
-
         try {
-            if (parConfig.getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE,
-                    ParConstants.EXPIRY_TIME)) != null) {
-
-                long expiryTimeValue = Long.parseLong(parConfig.getFirstChildWithName(
-                        new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE,
-                                ParConstants.EXPIRY_TIME)).getText());
-
-                if (expiryTimeValue < 5 || expiryTimeValue > 600) {
-                    return ParConstants.EXPIRES_IN_DEFAULT_VALUE;
-                }
-                return expiryTimeValue;
+            OMElement parConfig = IdentityConfigParser.getInstance().getConfigElement(ParConstants.CONFIG_ELEM_OAUTH)
+                    .getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE,
+                            ParConstants.PAR));
+            String expiryTimeValue = parConfig.getFirstChildWithName(new QName(
+                    IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, ParConstants.EXPIRY_TIME)).getText();
+            if (StringUtils.isNotBlank(expiryTimeValue)) {
+                return Long.parseLong(expiryTimeValue);
             }
             return ParConstants.EXPIRES_IN_DEFAULT_VALUE;
         } catch (NumberFormatException e) {

@@ -35,7 +35,7 @@ public class ParConstants {
     public static final String COL_LBL_CLIENT_ID = "CLIENT_ID";
     public static final String PAR = "PAR";
     public static final String EXPIRY_TIME = "ExpiryTime";
-
+    public static final String CONFIG_ELEM_OAUTH = "OAuth";
 
     private ParConstants() {
 
