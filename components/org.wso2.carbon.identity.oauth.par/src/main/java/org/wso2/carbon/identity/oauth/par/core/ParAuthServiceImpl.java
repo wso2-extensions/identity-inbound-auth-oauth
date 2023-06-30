@@ -103,9 +103,15 @@ public class ParAuthServiceImpl implements ParAuthService {
         try {
             if (parConfig.getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE,
                     ParConstants.EXPIRY_TIME)) != null) {
-                return Long.parseLong(parConfig.getFirstChildWithName(
+
+                long expiryTimeValue = Long.parseLong(parConfig.getFirstChildWithName(
                         new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE,
                                 ParConstants.EXPIRY_TIME)).getText());
+
+                if (expiryTimeValue < 5 || expiryTimeValue > 600) {
+                    return ParConstants.EXPIRES_IN_DEFAULT_VALUE;
+                }
+                return expiryTimeValue;
             }
             return ParConstants.EXPIRES_IN_DEFAULT_VALUE;
         } catch (NumberFormatException e) {
