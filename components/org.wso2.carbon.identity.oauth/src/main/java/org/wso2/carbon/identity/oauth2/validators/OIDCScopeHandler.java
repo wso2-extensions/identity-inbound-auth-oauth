@@ -65,7 +65,7 @@ public class OIDCScopeHandler extends OAuth2ScopeHandler {
 
             if (log.isDebugEnabled()) {
                 log.debug("id_token is not allowed for requested grant type: " +
-                        grantType + ". Removing all 'OIDC' scopes registered in the tenant " +
+                        grantType + ". Removing all OIDC scopes registered in the tenant " +
                          "from requested scopes.");
             }
             // Returning 'true' since we are dropping openid scope and don't need to prevent issuing the token for
