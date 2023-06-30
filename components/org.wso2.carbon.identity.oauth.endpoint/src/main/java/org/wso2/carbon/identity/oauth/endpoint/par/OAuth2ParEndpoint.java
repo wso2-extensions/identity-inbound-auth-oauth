@@ -119,7 +119,7 @@ public class OAuth2ParEndpoint {
         } else {
             responseBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
         }
-        log.error("PAR client Exception: ", exception.fillInStackTrace());
+        log.error("PAR client Exception: ", exception);
         return responseBuilder.entity(parErrorResponse.toString()).build();
     }
 
@@ -130,7 +130,7 @@ public class OAuth2ParEndpoint {
         parErrorResponse.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, parCoreException.getMessage());
 
         Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        log.error("PAR Server Exception: ", parCoreException.fillInStackTrace());
+        log.error("PAR Server Exception: ", parCoreException);
         return respBuilder.entity(parErrorResponse.toString()).build();
     }
 
