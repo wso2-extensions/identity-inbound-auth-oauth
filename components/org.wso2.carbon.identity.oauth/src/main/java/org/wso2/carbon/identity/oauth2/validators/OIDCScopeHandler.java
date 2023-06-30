@@ -51,7 +51,7 @@ public class OIDCScopeHandler extends OAuth2ScopeHandler {
             // if id_token is allowed for requested grant type.
             return true;
         } else {
-            //Remove OIDC scopes from the token message context
+            // Remove OIDC scopes from the token message context.
             String[] scopes = tokReqMsgCtx.getScope();
             List<String> oidcScopes = OAuth2Util.getOIDCScopes(tokReqMsgCtx.getOauth2AccessTokenReqDTO()
                     .getTenantDomain());
