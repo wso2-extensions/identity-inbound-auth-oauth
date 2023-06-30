@@ -787,7 +787,8 @@ public class AccessTokenIssuer {
                 .getUserStoreManager();
         if (OAuth2ServiceComponentHolder.getInstance().isOrganizationManagementEnabled() &&
                 !userStoreManager.isExistingUserWithID(authenticatedUser.getUserId())) {
-            userStoreManager = getUserStoreManagerFromUserResideOrganization(authenticatedUser.getTenantDomain(),
+            // Fetch the user realm's user store manager corresponds to the tenant domain where the userID exists.
+            userStoreManager = getUserStoreManagerFromRealmOfUserResideOrganization(authenticatedUser.getTenantDomain(),
                     authenticatedUser.getUserId()).orElse(userStoreManager);
         }
         return userStoreManager.getUserClaimValueWithID(authenticatedUser.getUserId(), subjectClaimUri, null);
@@ -1106,14 +1107,14 @@ public class AccessTokenIssuer {
 
     /**
      * If the user is not found in the given tenant domain, check the user existence from ancestor organizations and
-     * provide the correct user store manager.
+     * provide the correct user store manager from the user realm.
      *
      * @param tenantDomain The tenant domain of the authenticated user.
      * @param userId The ID of the authenticated user.
      * @return User store manager of the user reside organization.
      */
-    private Optional<AbstractUserStoreManager> getUserStoreManagerFromUserResideOrganization(String tenantDomain,
-                                                                                             String userId) {
+    private Optional<AbstractUserStoreManager> getUserStoreManagerFromRealmOfUserResideOrganization(String tenantDomain,
+                                                                                                    String userId) {
 
         try {
             String organizationId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
