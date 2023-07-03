@@ -324,7 +324,6 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         OAuth2TokenValidationMessageContext validationReqDTO = new OAuth2TokenValidationMessageContext(
                 oAuth2TokenValidationRequestDTO, oAuth2TokenValidationResponseDTO);
 
-        authzUser.setTenantDomain(clientAppTenantDomain);
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(clientAppTenantDomain);
 
         mockStatic(IdentityProviderManager.class);
@@ -352,6 +351,7 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
                 Mockito.mock(OAuth2ServiceComponentHolder.class);
         when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(oAuth2ServiceComponentHolderInstance);
+        when(oAuth2ServiceComponentHolderInstance.isOrganizationManagementEnabled()).thenReturn(true);
         when(oAuth2ServiceComponentHolderInstance.getOrganizationManager()).thenReturn(organizationManager);
         when(organizationManager.resolveOrganizationId(clientAppTenantDomain)).thenReturn(clientAppOrganizationId);
         when(organizationManager.getAncestorOrganizationIds(switchedOrganizationId)).thenReturn(
