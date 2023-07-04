@@ -148,8 +148,6 @@
 
                             org.wso2.carbon.context; version="${carbon.kernel.imp.pkg.version.range}",
                             org.wso2.carbon.utils.multitenancy;version="${carbon.kernel.imp.pkg.version.range}",
-                            org.wso2.carbon.registry.api;version="${carbon.kernel.registry.imp.pkg.version.range}",
-                            org.wso2.carbon.registry.core.*;version="${carbon.kernel.registry.imp.pkg.version.range}",
 
                             org.wso2.carbon.identity.base; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.common; version="${carbon.identity.framework.imp.pkg.version.range}",
