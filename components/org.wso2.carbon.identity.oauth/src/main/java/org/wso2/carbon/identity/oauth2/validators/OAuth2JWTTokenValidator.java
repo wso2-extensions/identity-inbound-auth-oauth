@@ -103,15 +103,15 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
                 log.debug("Resolved tenant domain: " + tenantDomain + " to validate the JWT access token.");
             }
 
-            String resourceResidentOrgId;
+            String switchedOrgId;
             try {
-                resourceResidentOrgId = claimsSet.getStringClaim(OAuthConstants.ORG_ID);
+                switchedOrgId = claimsSet.getStringClaim(OAuthConstants.ORG_ID);
             } catch (ParseException e) {
-                resourceResidentOrgId = StringUtils.EMPTY;
+                switchedOrgId = StringUtils.EMPTY;
             }
 
             IdentityProvider identityProvider = getResidentIDPForIssuer(claimsSet.getIssuer(),
-                    tenantDomain, resourceResidentOrgId);
+                    tenantDomain, switchedOrgId);
 
             if (!validateSignature(signedJWT, identityProvider)) {
                 LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
@@ -180,11 +180,10 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         return claimsSet.getSubject();
     }
 
-    private IdentityProvider getResidentIDPForIssuer(String jwtIssuer, String tenantDomain,
-                                                     String resourceResidentOrgId)
+    private IdentityProvider getResidentIDPForIssuer(String jwtIssuer, String tenantDomain, String switchedOrgId)
             throws IdentityOAuth2Exception, OrganizationManagementException {
 
-        String issuer = StringUtils.EMPTY;
+        String resourceIssuer = StringUtils.EMPTY;
         IdentityProvider residentIdentityProvider;
         try {
             residentIdentityProvider = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
@@ -198,23 +197,29 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
                 IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
                         IdentityApplicationConstants.Authenticator.OIDC.NAME);
         if (oauthAuthenticatorConfig != null) {
-            issuer = IdentityApplicationManagementUtil.getProperty(oauthAuthenticatorConfig.getProperties(),
+            resourceIssuer = IdentityApplicationManagementUtil.getProperty(oauthAuthenticatorConfig.getProperties(),
                     OIDC_IDP_ENTITY_ID).getValue();
         }
 
-        String resourceAccessOrgId = getOrganizationManager().resolveOrganizationId(tenantDomain);
-        if (StringUtils.isNotEmpty(resourceResidentOrgId) && !resourceResidentOrgId.equals(resourceAccessOrgId)) {
-            // Check the tenant relationship if the token is not issued for the same tenant.
-            List<String> resourceResidentOrgAncestors = getOrganizationManager().getAncestorOrganizationIds(
-                    resourceResidentOrgId);
-            int depthOfRootOrg = getSubOrgStartLevel() - 1;
+        if (!jwtIssuer.equals(resourceIssuer)) {
+            if (OAuth2ServiceComponentHolder.getInstance().isOrganizationManagementEnabled()) {
+                String jwtIssuerOrgId = getOrganizationManager().resolveOrganizationId(tenantDomain);
+                // Check the tenant relationship if the token is not issued for the same tenant.
+                List<String> resourceResidentOrgAncestors = getOrganizationManager()
+                        .getAncestorOrganizationIds(switchedOrgId);
+                int depthOfRootOrg = getSubOrgStartLevel() - 1;
+                String resourceIssuerURLChecker = jwtIssuer.replace("/t/" + tenantDomain + "/",
+                        "/o/" + switchedOrgId + "/");
 
-            if (!resourceAccessOrgId.equals(resourceResidentOrgAncestors.get(depthOfRootOrg))) {
-                throw new IdentityOAuth2Exception("No Registered IDP found for the token with issuer name : " +
+                if (!jwtIssuerOrgId.equals(resourceResidentOrgAncestors.get(depthOfRootOrg)) ||
+                        !resourceIssuer.equals(resourceIssuerURLChecker)) {
+                    throw new IdentityOAuth2Exception("No shared IDP found for the token with switched org : " +
+                                switchedOrgId);
+                }
+            } else {
+                throw new IdentityOAuth2Exception("No registered IDP found for the token with issuer name : " +
                         jwtIssuer);
             }
-        } else if (!jwtIssuer.equals(issuer)) {
-            throw new IdentityOAuth2Exception("No Registered IDP found for the token with issuer name : " + jwtIssuer);
         }
         return residentIdentityProvider;
     }

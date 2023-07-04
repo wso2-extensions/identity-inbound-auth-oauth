@@ -303,28 +303,9 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
             throws Exception {
 
         mockRequiredObjects();
-
-        OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
-        OAuth2TokenValidationRequestDTO.OAuth2AccessToken oAuth2AccessToken = oAuth2TokenValidationRequestDTO.new
-                OAuth2AccessToken();
-        oAuth2AccessToken.setIdentifier(jwtToken);
-        oAuth2AccessToken.setTokenType("bearer");
-        oAuth2TokenValidationRequestDTO.setAccessToken(oAuth2AccessToken);
-
-        OAuth2TokenValidationRequestDTO.TokenValidationContextParam tokenValidationContextParam =
-                mock(OAuth2TokenValidationRequestDTO.TokenValidationContextParam.class);
-        tokenValidationContextParam.setKey("dummy");
-        tokenValidationContextParam.setValue("dummy");
-        OAuth2TokenValidationRequestDTO.TokenValidationContextParam[] tokenValidationContextParams =
-                {tokenValidationContextParam};
-        oAuth2TokenValidationRequestDTO.setContext(tokenValidationContextParams);
-
-        OAuth2TokenValidationResponseDTO oAuth2TokenValidationResponseDTO = new OAuth2TokenValidationResponseDTO();
-
-        OAuth2TokenValidationMessageContext validationReqDTO = new OAuth2TokenValidationMessageContext(
-                oAuth2TokenValidationRequestDTO, oAuth2TokenValidationResponseDTO);
-
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(clientAppTenantDomain);
+        OAuth2TokenValidationMessageContext validationReqDTO = getOAuth2TokenValidationMessageContext(
+                jwtToken, "bearer", "dummyKey", "dummyValue");
 
         mockStatic(IdentityProviderManager.class);
         when(IdentityProviderManager.getInstance()).thenReturn(identityProviderManager);
@@ -407,5 +388,30 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
             conn = dataSource.getConnection();
         }
         return conn;
+    }
+
+    private OAuth2TokenValidationMessageContext getOAuth2TokenValidationMessageContext(
+            String tokenIdentifier, String tokenType, String contextParamKey, String contextParamValue) {
+
+        OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
+        OAuth2TokenValidationRequestDTO.OAuth2AccessToken oAuth2AccessToken = oAuth2TokenValidationRequestDTO.new
+                OAuth2AccessToken();
+        oAuth2AccessToken.setIdentifier(tokenIdentifier);
+        oAuth2AccessToken.setTokenType(tokenType);
+        oAuth2TokenValidationRequestDTO.setAccessToken(oAuth2AccessToken);
+
+        OAuth2TokenValidationRequestDTO.TokenValidationContextParam tokenValidationContextParam =
+                mock(OAuth2TokenValidationRequestDTO.TokenValidationContextParam.class);
+        tokenValidationContextParam.setKey(contextParamKey);
+        tokenValidationContextParam.setValue(contextParamValue);
+        OAuth2TokenValidationRequestDTO.TokenValidationContextParam[] tokenValidationContextParams =
+                {tokenValidationContextParam};
+        oAuth2TokenValidationRequestDTO.setContext(tokenValidationContextParams);
+
+        OAuth2TokenValidationResponseDTO oAuth2TokenValidationResponseDTO = new OAuth2TokenValidationResponseDTO();
+        OAuth2TokenValidationMessageContext validationReqDTO = new OAuth2TokenValidationMessageContext(
+                oAuth2TokenValidationRequestDTO, oAuth2TokenValidationResponseDTO);
+
+        return validationReqDTO;
     }
 }
