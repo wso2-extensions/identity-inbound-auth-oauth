@@ -37,12 +37,12 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequestProfile;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
-import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.util.UUID;
 import java.util.regex.Matcher;
 
 import javax.servlet.http.HttpServletRequest;
@@ -181,7 +181,7 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
         if (objClient != null) {
             registrationRequestProfile.setClientName((String) objClient);
         } else {
-            registrationRequestProfile.setClientName(UUIDGenerator.generateUUID());
+            registrationRequestProfile.setClientName(UUID.randomUUID().toString());
         }
 
         registrationRequestProfile
