@@ -2175,7 +2175,7 @@ public class OAuth2AuthzEndpoint {
         OAuth2Parameters oAuth2Parameters = getOAuth2ParamsFromOAuthMessage(oAuthMessage);
 
         // Check if PKCE is mandatory for the application
-        if (validationResponse.isPkceMandatory()) {
+        if (isPKCEMandatory(oAuthMessage, validationResponse)) {
             if (pkceChallengeCode == null || !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode,
                     pkceChallengeMethod)) {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -2265,6 +2265,12 @@ public class OAuth2AuthzEndpoint {
         LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
                 OAuthConstants.LogConstants.SUCCESS, "PKCE validation is successful.", "validate-pkce", null);
         return null;
+    }
+
+    private boolean isPKCEMandatory(OAuthMessage oAuthMessage,
+                                    OAuth2ClientValidationResponseDTO validationResponse) {
+        return validationResponse.isPkceMandatory() && !(Boolean.FALSE.equals
+                (oAuthMessage.getRequest().getAttribute(OAuthConstants.IS_PKCE_MANDATORY)));
     }
 
     private boolean isPkceSupportEnabled() {
