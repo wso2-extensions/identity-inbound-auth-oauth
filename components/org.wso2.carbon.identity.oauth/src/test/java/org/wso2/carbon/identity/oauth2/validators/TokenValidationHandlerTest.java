@@ -263,31 +263,38 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
 
         return new Object[][]{
                 {"rootorg", "3b47f496-660b-4536-b780-b1924f5c4951", "355b611f-82bf-421e-93f3-4f989243ab57",
-                        jwtToken,
+                        "355b611f-82bf-421e-93f3-4f989243ab57", jwtToken,
                         new ArrayList() {{
                             add("10084a8d-113f-4211-a0d5-efe36b082211");
                             add("3b47f496-660b-4536-b780-b1924f5c4951");
                             add("355b611f-82bf-421e-93f3-4f989243ab57");
                         }}, "2", true},
                 {"rootorg", "3b47f496-660b-4536-b780-b1924f5c4951", "355b611f-82bf-421e-93f3-4f989243ab57",
-                        jwtToken,
+                        "355b611f-82bf-421e-93f3-4f989243ab57", jwtToken,
                         new ArrayList() {{
                             add("3b47f496-660b-4536-b780-b1924f5c4951");
                             add("355b611f-82bf-421e-93f3-4f989243ab57");
                         }}, "1", true},
                 {"rootorg", "3b47f496-660b-4536-b780-b1924f5c4951", "355b611f-82bf-421e-93f3-4f989243ab57",
-                        jwtToken,
+                        "355b611f-82bf-421e-93f3-4f989243ab57", jwtToken,
                         new ArrayList() {{
                             add("10084a8d-113f-4211-a0d5-efe36b082211");
                             add("8a027d53-8a4d-4a6d-8ade-6428b5e76feb");
                             add("355b611f-82bf-421e-93f3-4f989243ab57");
                         }}, "2", false},
                 {"rootorg", "3b47f496-660b-4536-b780-b1924f5c4951", "355b611f-82bf-421e-93f3-4f989243ab57",
-                        jwtToken,
+                        "355b611f-82bf-421e-93f3-4f989243ab57", jwtToken,
                         new ArrayList() {{
                             add("10084a8d-113f-4211-a0d5-efe36b082211");
                             add("3b47f496-660b-4536-b780-b1924f5c4951");
                             add("355b611f-82bf-421e-93f3-4f989243ab57");
+                        }}, "1", false},
+                {"rootorg", "3b47f496-660b-4536-b780-b1924f5c4951", "355b611f-82bf-421e-93f3-4f989243ab57",
+                        "4b084b1f-860f-4536-a0d5-h1924f5c4951", jwtToken,
+                        new ArrayList() {{
+                            add("3b47f496-660b-4536-b780-b1924f5c4951");
+                            add("355b611f-82bf-421e-93f3-4f989243ab57");
+                            add("4b084b1f-860f-4536-a0d5-h1924f5c4951");
                         }}, "1", false}
         };
     }
@@ -296,6 +303,7 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
     public void testValidateOrgSwitchedJWTToken(String clientAppTenantDomain,
                                                 String clientAppOrganizationId,
                                                 String switchedOrganizationId,
+                                                String resourceResidentOrganizationId,
                                                 String jwtToken,
                                                 List<String> parentHierarchyFromSwitchedOrg,
                                                 String subOrgStartLevel,
@@ -304,6 +312,7 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
 
         mockRequiredObjects();
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(clientAppTenantDomain);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setOrganizationId(resourceResidentOrganizationId);
         OAuth2TokenValidationMessageContext validationReqDTO = getOAuth2TokenValidationMessageContext(
                 jwtToken, "bearer", "dummyKey", "dummyValue");
 
