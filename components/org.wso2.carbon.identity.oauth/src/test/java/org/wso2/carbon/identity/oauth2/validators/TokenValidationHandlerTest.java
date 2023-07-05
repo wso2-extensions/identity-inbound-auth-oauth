@@ -247,19 +247,19 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
     @DataProvider(name = "dataProviderForValidateOrgSwitchedJWTToken")
     public Object[][] dataProviderForValidateOrgSwitchedJWTToken() {
 
-        String jwtToken = "eyJ4NXQiOiJNVEJrWXpJNVpERXhOMkV5WldJM056UXdPREk0WlRZNFlqaGtaakUzWXpaa05tSXdNelkwWWpFME1X" +
-                "Wm1NRE5rT0RKbU5UUTFOamN6Wm1Ga1pEa3pOdyIsImtpZCI6Ik1UQmtZekk1WkRFeE4yRXlaV0kzTnpRd09ESTRaVFk0WWpoa1p" +
-                "qRTNZelprTm1Jd016WTBZakUwTVdabU1ETmtPREptTlRRMU5qY3pabUZrWkRrek53X1JTMjU2IiwidHlwIjoiYXQrand0IiwiYW" +
-                "xnIjoiUlMyNTYifQ.eyJzdWIiOiJkNzUxNjk3Mi01Yjg0LTQ2OGMtOGQzNy1hYWVlZjQ4NjU5MjkiLCJhdXQiOiJBUFBMSUNBVE" +
-                "lPTl9VU0VSIiwiaXNzIjoiaHR0cHM6XC9cL2FwaS5hc2cuaW9cL3RcL3Jvb3RvcmdcL29hdXRoMlwvdG9rZW4iLCJjbGllbnRfa" +
-                "WQiOiJNWm9sUTBvX0I5SjhXcHVaZnhDenduVmJSYWthIiwiYXVkIjoiTVpvbFEwb19COUo4V3B1WmZ4Q3p3blZiUmFrYSIsIm5i" +
-                "ZiI6MTY4NzI1NTMwOSwiYXpwIjoiTVpvbFEwb19COUo4V3B1WmZ4Q3p3blZiUmFrYSIsIm9yZ19pZCI6IjM1NWI2MTFmLTgyYmY" +
-                "tNDIxZS05M2YzLTRmOTg5MjQzYWI1NyIsInNjb3BlIjoiaW50ZXJuYWxfdXNlcl9tZ3RfbGlzdCIsImV4cCI6MTY4NzI1ODkwOS" +
-                "wib3JnX25hbWUiOiJzdWItb3JnMSIsImlhdCI6MTY4NzI1NTMwOSwianRpIjoiY2E4NmVmOGItZWVlZC00NzJkLWFkM2UtZDAxZ" +
-                "WYwMGI1NGI1In0.Sof0rXhR61E2mRreIItsL_kxHVc7dvZL1oRgyd0ShFKm5ubp2RlHEJV1E-6oQo4u6pQ5k5jPHP9elqCPvmPN" +
-                "6wyoNXudgRS8a8yLvP3-AuVI9L3qNfZHim0XETL5DLPwvSa_isWG0eA6WGk6ezV8Xp8MICl3r5uS4xHvzbyiU9cRFA-6_-fuA6a" +
-                "FuBBgqmxmG2XyXNZlBf7JSNInGUbwXJhRINmSBDz5PHnoQDQcDAADvJJSiWJKo_DAcMT0qkRd1m8mfyugS571-oEpjQxq6wN-xD" +
-                "9Vp0BoLN8jjNs0mfz6EP_wgxiBpXDxfX8kXFDhI1G4iMzIf88Wm_Ec94Tirg";
+        String jwtToken = "eyJ4NXQiOiJNVEJrWXpJNVpERXhOMkV5WldJM056UXdPREk0WlRZNFlqaGtaakUzWXpaa05tSXdNelkwWWpFME1XW" +
+                "m1NRE5rT0RKbU5UUTFOamN6Wm1Ga1pEa3pOdyIsImtpZCI6Ik1UQmtZekk1WkRFeE4yRXlaV0kzTnpRd09ESTRaVFk0WWpoa1pq" +
+                "RTNZelprTm1Jd016WTBZakUwTVdabU1ETmtPREptTlRRMU5qY3pabUZrWkRrek53X1JTMjU2IiwidHlwIjoiYXQrand0IiwiYWx" +
+                "nIjoiUlMyNTYifQ.eyJzdWIiOiJkNzUxNjk3Mi01Yjg0LTQ2OGMtOGQzNy1hYWVlZjQ4NjU5MjkiLCJhdXQiOiJBUFBMSUNBVEl" +
+                "PTl9VU0VSIiwiaXNzIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6OTQ0My90L3Jvb3Rvcmcvb2F1dGgyL3Rva2VuIiwiY2xpZW50X2lkIj" +
+                "oiTVpvbFEwb19COUo4V3B1WmZ4Q3p3blZiUmFrYSIsImF1ZCI6Ik1ab2xRMG9fQjlKOFdwdVpmeEN6d25WYlJha2EiLCJuYmYiO" +
+                "jE2ODcyNTUzMDksImF6cCI6Ik1ab2xRMG9fQjlKOFdwdVpmeEN6d25WYlJha2EiLCJvcmdfaWQiOiIzNTViNjExZi04MmJmLTQy" +
+                "MWUtOTNmMy00Zjk4OTI0M2FiNTciLCJzY29wZSI6ImludGVybmFsX3VzZXJfbWd0X2xpc3QiLCJleHAiOjE2ODcyNTg5MDksIm9" +
+                "yZ19uYW1lIjoic3ViLW9yZzEiLCJpYXQiOjE2ODcyNTUzMDksImp0aSI6ImNhODZlZjhiLWVlZWQtNDcyZC1hZDNlLWQwMWVmMD" +
+                "BiNTRiNSJ9.MwZiTjdZa-o2n7yIHoEDNuK0k48-3AaOBXEwdhM6Brj04vlW5JfPMrgLrGKbpBkiFQ4s8oI4x2YdIqgxfbqLrsP8" +
+                "uTMtzbk6wU-zdQP4N6-ZqQxgZy0mObLhvEkd5TPcbrrqo_kZTXQ0J6eev5TqrDRFrHByJZTaFIdDrNMNvinUmxCkKbGyVRCDbTS" +
+                "qaVUwWSl24LjvjdhG_Zk5MSSjn2v89JV7XueEPCoq1WJ2S24c8PZhcbovL10V55GXp3a7c9_ZbABR7d0D34pGj6LzUvtIqB-w29" +
+                "ievHKesdZqFVII89-0DKtHQhHoehj0jA8zuz5nAwfVr75cjjLahdlRIA";
 
         return new Object[][]{
                 {"rootorg", "3b47f496-660b-4536-b780-b1924f5c4951", "355b611f-82bf-421e-93f3-4f989243ab57",
@@ -323,7 +323,7 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         Property[] properties = new Property[0];
         Property property = new Property();
         property.setName("IdPEntityId");
-        property.setValue("https://api.asg.io/o/" + switchedOrganizationId + "/oauth2/token");
+        property.setValue("https://localhost:9443/o/" + switchedOrganizationId + "/oauth2/token");
         when(federatedAuthenticatorConfig.getProperties()).thenReturn(properties);
         when(IdentityApplicationManagementUtil.getProperty(properties, "IdPEntityId")).thenReturn(property);
 

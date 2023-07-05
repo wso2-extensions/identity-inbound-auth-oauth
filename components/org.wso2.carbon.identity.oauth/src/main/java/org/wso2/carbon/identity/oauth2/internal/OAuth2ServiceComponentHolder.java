@@ -84,7 +84,7 @@ public class OAuth2ServiceComponentHolder {
     private static List<String> jwtRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
     private static ConsentServerConfigsManagementService consentServerConfigsManagementService;
     private List<JWTAccessTokenClaimProvider> jwtAccessTokenClaimProviders = new ArrayList<>();
-    private boolean isOrganizationManagementEnable;
+    private boolean isOrganizationManagementEnabled;
     private OrganizationManager organizationManager;
 
     private OAuth2ServiceComponentHolder() {
@@ -485,7 +485,7 @@ public class OAuth2ServiceComponentHolder {
      */
     public boolean isOrganizationManagementEnabled() {
 
-        return isOrganizationManagementEnable;
+        return isOrganizationManagementEnabled;
     }
 
     /**
@@ -497,7 +497,7 @@ public class OAuth2ServiceComponentHolder {
             OrganizationManagementInitialize organizationManagementInitializeService) {
 
         if (organizationManagementInitializeService != null) {
-            isOrganizationManagementEnable = organizationManagementInitializeService.isOrganizationManagementEnabled();
+            isOrganizationManagementEnabled = organizationManagementInitializeService.isOrganizationManagementEnabled();
         }
     }
 
