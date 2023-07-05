@@ -152,6 +152,7 @@ public class OAuthServerConfiguration {
     private String tokenCleanupFeatureEnable;
     private OauthTokenIssuer oauthIdentityTokenGenerator;
     private boolean scopeValidationConfigValue = true;
+    private boolean globalRbacScopeIssuerEnabled = false;
     private boolean cacheEnabled = false;
     private boolean isTokenRenewalPerRequestEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
@@ -160,6 +161,8 @@ public class OAuthServerConfiguration {
     private boolean accessTokenPartitioningEnabled = false;
     private boolean redirectToRequestedRedirectUriEnabled = true;
     private boolean allowCrossTenantIntrospection = true;
+    private boolean useClientIdAsSubClaimForAppTokens = true;
+    private boolean removeUsernameFromIntrospectionResponseForAppTokens = true;
     private String accessTokenPartitioningDomains = null;
     private TokenPersistenceProcessor persistenceProcessor = null;
     private Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
@@ -368,6 +371,14 @@ public class OAuthServerConfiguration {
             parseScopeHandlers(scopeHandlersElem);
         }
 
+        OMElement globalRoleBasedScopeIssuer = oauthElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.ENABLE_GLOBAL_ROLE_BASED_SCOPE_ISSUER)
+        );
+
+        if (globalRoleBasedScopeIssuer != null) {
+            setGlobalRbacScopeIssuerEnabled(Boolean.parseBoolean(globalRoleBasedScopeIssuer.getText()));
+        }
+
         // read default timeout periods
         parseDefaultValidityPeriods(oauthElem);
 
@@ -478,6 +489,12 @@ public class OAuthServerConfiguration {
 
         // Read config for cross tenant allow.
         parseAllowCrossTenantIntrospection(oauthElem);
+
+        // Read config for using client id as sub claim for application tokens.
+        parseUseClientIdAsSubClaimForAppTokens(oauthElem);
+
+        // Read config for remove username from introspection response for application tokens.
+        parseRemoveUsernameFromIntrospectionResponseForAppTokens(oauthElem);
 
         // Set the availability of oauth_response.jsp page.
         setOAuthResponseJspPageAvailable();
@@ -3401,6 +3418,56 @@ public class OAuthServerConfiguration {
         return allowCrossTenantIntrospection;
     }
 
+    /**
+     * Parses the UseClientIdAsSubClaimForAppTokens configuration that used to make the client id as the subject claim
+     * in access tokens issued for authenticated applications.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseUseClientIdAsSubClaimForAppTokens(OMElement oauthConfigElem) {
+
+        OMElement useClientIdAsSubClaimForAppTokensElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS));
+        if (useClientIdAsSubClaimForAppTokensElem != null) {
+            useClientIdAsSubClaimForAppTokens =
+                    Boolean.parseBoolean(useClientIdAsSubClaimForAppTokensElem.getText());
+        }
+    }
+
+    /**
+     * This method returns the value of the property UseClientIdAsSubClaimForAppTokens for the OAuth configuration
+     * in identity.xml.
+     */
+    public boolean isUseClientIdAsSubClaimForAppTokensEnabled() {
+
+        return useClientIdAsSubClaimForAppTokens;
+    }
+
+    /**
+     * Parses the RemoveUsernameFromIntrospectionResponseForAppTokens configuration that used to remove username
+     * from access tokens issued for authenticated applications.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseRemoveUsernameFromIntrospectionResponseForAppTokens(OMElement oauthConfigElem) {
+
+        OMElement removeUsernameFromIntrospectionResponseForAppTokensElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.REMOVE_USERNAME_FROM_INTROSPECTION_RESPONSE_FOR_APP_TOKENS));
+        if (removeUsernameFromIntrospectionResponseForAppTokensElem != null) {
+            removeUsernameFromIntrospectionResponseForAppTokens =
+                    Boolean.parseBoolean(removeUsernameFromIntrospectionResponseForAppTokensElem.getText());
+        }
+    }
+
+    /**
+     * This method returns the value of the property RemoveUsernameFromIntrospectionResponseForAppTokens for the OAuth
+     * configuration in identity.xml.
+     */
+    public boolean isRemoveUsernameFromIntrospectionResponseForAppTokensEnabled() {
+
+        return removeUsernameFromIntrospectionResponseForAppTokens;
+    }
+
     private static void setOAuthResponseJspPageAvailable() {
 
         java.nio.file.Path path = Paths.get(CarbonUtils.getCarbonHome(), "repository", "deployment",
@@ -3423,6 +3490,16 @@ public class OAuthServerConfiguration {
      */
     public boolean isFapiSecurity() {
         return isFapiSecurity;
+    }
+
+    public boolean isGlobalRbacScopeIssuerEnabled() {
+
+        return globalRbacScopeIssuerEnabled;
+    }
+
+    public void setGlobalRbacScopeIssuerEnabled(boolean globalRbacScopeIssuerEnabled) {
+
+        this.globalRbacScopeIssuerEnabled = globalRbacScopeIssuerEnabled;
     }
 
     /**
@@ -3525,6 +3602,7 @@ public class OAuthServerConfiguration {
         private static final String SCOPE_HANDLER_CLASS_ATTR = "class";
         private static final String SCOPE_HANDLER_PROPERTY = "Property";
         private static final String SCOPE_HANDLER_PROPERTY_NAME_ATTR = "name";
+        private static final String ENABLE_GLOBAL_ROLE_BASED_SCOPE_ISSUER = "EnableGlobalRBACScopeIssuer";
         private static final String SCOPE_VALIDATOR = "OAuthScopeValidator";
         private static final String SCOPE_VALIDATORS = "ScopeValidators";
         private static final String SCOPE_VALIDATOR_ELEM = "ScopeValidator";
@@ -3664,6 +3742,10 @@ public class OAuthServerConfiguration {
 
         // Allow Cross Tenant Introspection Config.
         private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
+
+        private static final String USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS = "UseClientIdAsSubClaimForAppTokens";
+        private static final String REMOVE_USERNAME_FROM_INTROSPECTION_RESPONSE_FOR_APP_TOKENS =
+                "RemoveUsernameFromIntrospectionResponseForAppTokens";
 
         // FAPI Configurations
         private static final String FAPI = "FAPI";

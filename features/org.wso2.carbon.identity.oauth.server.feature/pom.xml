@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.11.71-SNAPSHOT</version>
+        <version>6.11.86-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -52,6 +52,10 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
             <artifactId>org.wso2.carbon.identity.oauth.ciba</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+            <artifactId>org.wso2.carbon.identity.oauth.par</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.gdata.wso2</groupId>
@@ -216,6 +220,7 @@
                                 <bundleDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oauth</bundleDef>
                                 <bundleDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oidc.session</bundleDef>
                                 <bundleDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oauth.ciba</bundleDef>
+                                <bundleDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oauth.par</bundleDef>
                                 <bundleDef>org.wso2.orbit.com.nimbusds:nimbus-jose-jwt</bundleDef>
                                 <bundleDef>net.minidev:json-smart</bundleDef>
                                 <bundleDef>net.minidev:accessors-smart:${net.minidev.accessors-smart.version}</bundleDef>

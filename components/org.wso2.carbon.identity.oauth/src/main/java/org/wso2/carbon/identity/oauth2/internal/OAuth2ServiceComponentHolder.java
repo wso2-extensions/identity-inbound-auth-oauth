@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2014, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2014-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -23,6 +23,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
+import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -42,6 +43,8 @@ import org.wso2.carbon.identity.organization.management.service.OrganizationMana
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
+import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.utils.ConfigurationContextService;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -72,10 +75,13 @@ public class OAuth2ServiceComponentHolder {
     private List<TokenBinder> tokenBinders = new ArrayList<>();
     private Map<String, ResponseTypeRequestValidator> responseTypeRequestValidators = new HashMap<>();
     private OAuthAdminServiceImpl oauthAdminService;
+    private OrganizationManager organizationManager;
+    private RealmService realmService;
     private static AuthenticationDataPublisher authenticationDataPublisherProxy;
     private static KeyIDProvider keyIDProvider = null;
     private IdpManager idpManager;
     private static UserSessionManagementService userSessionManagementService;
+    private static SAMLSSOServiceProviderManager samlSSOServiceProviderManager;
     private static RoleManager roleManager;
     private static OrganizationUserResidentResolverService organizationUserResidentResolverService;
     private List<ScopeDTO> oidcScopesClaims = new ArrayList<>();
@@ -83,9 +89,10 @@ public class OAuth2ServiceComponentHolder {
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
     private static List<String> jwtRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
     private static ConsentServerConfigsManagementService consentServerConfigsManagementService;
+    private static boolean restrictUnassignedScopes;
+    private static ConfigurationContextService configurationContextService;
     private List<JWTAccessTokenClaimProvider> jwtAccessTokenClaimProviders = new ArrayList<>();
-    private boolean isOrganizationManagementEnabled;
-    private OrganizationManager organizationManager;
+    private boolean isOrganizationManagementEnabled = false;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -273,6 +280,16 @@ public class OAuth2ServiceComponentHolder {
         this.oauthAdminService = oauthAdminService;
     }
 
+    public RealmService getRealmService() {
+
+        return realmService;
+    }
+
+    public void setRealmService(RealmService realmService) {
+
+        this.realmService = realmService;
+    }
+
     /**
      * Set Authentication Data Publisher Proxy instance.
      *
@@ -456,6 +473,46 @@ public class OAuth2ServiceComponentHolder {
                                                                         consentServerConfigsManagementService) {
 
         OAuth2ServiceComponentHolder.consentServerConfigsManagementService = consentServerConfigsManagementService;
+    }
+
+    public static boolean isRestrictUnassignedScopes() {
+
+        return restrictUnassignedScopes;
+    }
+
+    public static void setRestrictUnassignedScopes(boolean restrictUnassignedScopes) {
+
+        OAuth2ServiceComponentHolder.restrictUnassignedScopes = restrictUnassignedScopes;
+    }
+
+    public static ConfigurationContextService getConfigurationContextService() {
+
+        return configurationContextService;
+    }
+
+    public static void setConfigurationContextService(ConfigurationContextService configurationContextService) {
+
+        OAuth2ServiceComponentHolder.configurationContextService = configurationContextService;
+    }
+
+    /**
+     * Get the OAuth2ScopeClaimMappingDAO instance.
+     *
+     * @param samlSSOServiceProviderManager SAMLSSOServiceProviderManager instance.
+     */
+    public static void setSamlSSOServiceProviderManager(SAMLSSOServiceProviderManager samlSSOServiceProviderManager) {
+
+        OAuth2ServiceComponentHolder.samlSSOServiceProviderManager = samlSSOServiceProviderManager;
+    }
+
+    /**
+     * Get the SAMLSSOServiceProviderManager instance.
+     *
+     * @return SAMLSSOServiceProviderManager instance.
+     */
+    public static SAMLSSOServiceProviderManager getSamlSSOServiceProviderManager() {
+
+        return samlSSOServiceProviderManager;
     }
 
     /**

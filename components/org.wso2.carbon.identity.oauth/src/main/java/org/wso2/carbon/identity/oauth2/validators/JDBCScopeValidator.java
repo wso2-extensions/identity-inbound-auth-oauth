@@ -92,7 +92,6 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
             "retrieveRolesFromUserStoreForScopeValidation";
     private static final String SCOPE_VALIDATOR_NAME = "Role based scope validator";
     private static final String OPENID = "openid";
-    private static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
     private static final String PRESERVE_CASE_SENSITIVITY = "preservedCaseSensitive";
 
     private static final Log log = LogFactory.getLog(JDBCScopeValidator.class);
@@ -352,11 +351,12 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
      */
     private List<String> getValuesOfGroupsFromUserAttributes(Map<ClaimMapping, String> userAttributes) {
 
+        String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
         if (MapUtils.isNotEmpty(userAttributes)) {
             for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
                 if (entry.getKey().getRemoteClaim() != null) {
                     if (StringUtils.equals(entry.getKey().getRemoteClaim().getClaimUri(), OAuth2Constants.GROUPS)) {
-                        return Arrays.asList(entry.getValue().split(Pattern.quote(ATTRIBUTE_SEPARATOR)));
+                        return Arrays.asList(entry.getValue().split(Pattern.quote(multiAttributeSeparator)));
                     }
                 }
             }

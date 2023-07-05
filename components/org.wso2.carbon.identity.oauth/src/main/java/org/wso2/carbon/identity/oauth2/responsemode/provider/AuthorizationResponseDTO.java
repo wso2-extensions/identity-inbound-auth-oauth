@@ -40,10 +40,34 @@ public class AuthorizationResponseDTO {
 
     private SuccessResponseDTO successResponseDTO;
     private ErrorResponseDTO errorResponseDTO;
+    private boolean isConsentRedirect;
+    private boolean isForwardToOAuthResponseJSP;
 
     public AuthorizationResponseDTO() {
 
         this.successResponseDTO = new SuccessResponseDTO();
+        this.isConsentRedirect = false;
+        this.isForwardToOAuthResponseJSP = false;
+    }
+
+    public boolean getIsConsentRedirect() {
+
+        return isConsentRedirect;
+    }
+
+    public void setIsConsentRedirect(boolean isConsentRedirect) {
+
+        this.isConsentRedirect = isConsentRedirect;
+    }
+
+    public boolean getIsForwardToOAuthResponseJSP() {
+
+        return isForwardToOAuthResponseJSP;
+    }
+
+    public void setIsForwardToOAuthResponseJSP(boolean isForwardToOAuthResponseJSP) {
+
+        this.isForwardToOAuthResponseJSP = isForwardToOAuthResponseJSP;
     }
 
     public String getState() {

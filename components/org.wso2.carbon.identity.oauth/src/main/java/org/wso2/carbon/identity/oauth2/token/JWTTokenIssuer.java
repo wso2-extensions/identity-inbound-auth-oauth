@@ -143,6 +143,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
     @Override
     public String getAccessTokenHash(String accessToken) throws OAuthSystemException {
+
+        if (StringUtils.isBlank(accessToken)) {
+            throw new OAuthSystemException("Token should not be empty or null.");
+        }
+
         try {
             JWT parsedJwtToken = JWTParser.parse(accessToken);
             String jwtId = parsedJwtToken.getJWTClaimsSet().getJWTID();
