@@ -202,21 +202,18 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         }
 
         if (!jwtIssuer.equals(resourceIssuer)) {
-            if (OAuth2ServiceComponentHolder.getInstance().isOrganizationManagementEnabled()) {
-                String jwtIssuerOrgId = getOrganizationManager().resolveOrganizationId(tenantDomain);
-                // Check the tenant relationship if the token is not issued for the same tenant.
-                List<String> resourceResidentOrgAncestors = getOrganizationManager()
-                        .getAncestorOrganizationIds(switchedOrgId);
-                int depthOfRootOrg = getSubOrgStartLevel() - 1;
-                String resourceIssuerURLChecker = jwtIssuer.replace("/t/" + tenantDomain + "/",
-                        "/o/" + switchedOrgId + "/");
-
-                if (!jwtIssuerOrgId.equals(resourceResidentOrgAncestors.get(depthOfRootOrg)) ||
-                        !resourceIssuer.equals(resourceIssuerURLChecker)) {
-                    throw new IdentityOAuth2Exception("No shared IDP found for the token with switched org : " +
-                                switchedOrgId);
-                }
-            } else {
+            if (!OAuth2ServiceComponentHolder.getInstance().isOrganizationManagementEnabled()) {
+                throw new IdentityOAuth2Exception("No registered IDP found for the token with issuer name : " +
+                        jwtIssuer);
+            }
+            // Check the tenant relationship if the token is not issued for the same tenant.
+            String jwtIssuerOrgId = getOrganizationManager().resolveOrganizationId(tenantDomain);
+            List<String> switchedOrgOrgAncestors = getOrganizationManager()
+                    .getAncestorOrganizationIds(switchedOrgId);
+            int depthOfRootOrg = getSubOrgStartLevel() - 1;
+            String resourceResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
+            if (!jwtIssuerOrgId.equals(switchedOrgOrgAncestors.get(depthOfRootOrg)) ||
+                    !resourceResidentOrgId.equals(switchedOrgId)) {
                 throw new IdentityOAuth2Exception("No registered IDP found for the token with issuer name : " +
                         jwtIssuer);
             }
