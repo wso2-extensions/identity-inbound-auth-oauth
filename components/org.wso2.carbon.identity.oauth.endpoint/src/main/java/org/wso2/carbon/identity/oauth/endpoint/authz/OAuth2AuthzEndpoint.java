@@ -2267,6 +2267,12 @@ public class OAuth2AuthzEndpoint {
         return null;
     }
 
+    /* Check if PKCE is mandatory for the application.
+     *
+     * @param oAuthMessage          OAuthMessage
+     * @param validationResponse    client validation response.
+     * @return boolean Returns whether PKCE is mandatory or not.
+     */
     private boolean isPKCEMandatory(OAuthMessage oAuthMessage,
                                     OAuth2ClientValidationResponseDTO validationResponse) {
         return validationResponse.isPkceMandatory() && !(Boolean.FALSE.equals
