@@ -166,14 +166,14 @@
                 app.setScopeValidators(registeredScopeValidators.toArray(new String[registeredScopeValidators.size()]));
             }
 
-            if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+            if (!OAuth2ServiceComponentHolder.isLegacyAudienceDisabled()) {
                 if (Boolean.parseBoolean(request.getParameter(AUDIENCE_ENABLED))) {
                     String audiencesCountParameter = request.getParameter(AUDIENCE_COUNT);
                     if (IdentityUtil.isNotBlank(audiencesCountParameter)) {
                         int audiencesCount = Integer.parseInt(audiencesCountParameter);
                         String[] audiences = request.getParameterValues(AUDIENCES_PROPERTY);
                         if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
-                            app.setAudiences(audiences);
+                            app.setIdTokenAudiences(audiences);
                         }
                     }
                 }

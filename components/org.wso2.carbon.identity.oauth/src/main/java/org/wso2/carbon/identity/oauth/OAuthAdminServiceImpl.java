@@ -296,15 +296,10 @@ public class OAuthAdminServiceImpl {
 
                         app.setScopeValidators(filterScopeValidators(application));
 
-                        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-                            validateAudiences(application);
-                            app.setAudiences(application.getAudiences());
-                        } else {
-                            validateIdTokenAudiences(application);
-                            validateAccessTokenAudiences(application);
-                            app.setIdTokenAudiences(application.getIdTokenAudiences());
-                            app.setAccessTokenAudiences(application.getAccessTokenAudiences());
-                        }
+                        validateIdTokenAudiences(application);
+                        validateAccessTokenAudiences(application);
+                        app.setIdTokenAudiences(application.getIdTokenAudiences());
+                        app.setAccessTokenAudiences(application.getAccessTokenAudiences());
 
                         app.setPkceMandatory(application.getPkceMandatory());
                         app.setPkceSupportPlain(application.getPkceSupportPlain());
@@ -556,15 +551,10 @@ public class OAuthAdminServiceImpl {
             validateGrantTypes(consumerAppDTO);
             oauthappdo.setGrantTypes(consumerAppDTO.getGrantTypes());
 
-            if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-                validateAudiences(consumerAppDTO);
-                oauthappdo.setAudiences(consumerAppDTO.getAudiences());
-            } else {
-                validateIdTokenAudiences(consumerAppDTO);
-                validateAccessTokenAudiences(consumerAppDTO);
-                oauthappdo.setIdTokenAudiences(consumerAppDTO.getIdTokenAudiences());
-                oauthappdo.setAccessTokenAudiences(consumerAppDTO.getAccessTokenAudiences());
-            }
+            validateIdTokenAudiences(consumerAppDTO);
+            validateAccessTokenAudiences(consumerAppDTO);
+            oauthappdo.setIdTokenAudiences(consumerAppDTO.getIdTokenAudiences());
+            oauthappdo.setAccessTokenAudiences(consumerAppDTO.getAccessTokenAudiences());
             oauthappdo.setScopeValidators(filterScopeValidators(consumerAppDTO));
             oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
                     .isRequestObjectSignatureValidationEnabled());

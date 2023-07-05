@@ -184,8 +184,8 @@
                     grants = "";
                 }
 
-                if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-                    audiences = app.getAudiences();
+                if (!OAuth2ServiceComponentHolder.isLegacyAudienceDisabled()) {
+                    audiences = app.getIdTokenAudiences();
                 } else {
                     idTokenAudiences = app.getIdTokenAudiences();
                     accessTokenAudiences = app.getAccessTokenAudiences();
@@ -373,7 +373,7 @@
                         $(jQuery('#logout_mechanism_row').hide());
                         $(jQuery('#logout_url_row').hide());
 
-                        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                        if (!OAuth2ServiceComponentHolder.isLegacyAudienceDisabled()) {
                             $(jQuery("#audience-enable").hide());
                             $(jQuery("#audience-add").hide());
                             $(jQuery("#audience-table").hide());
@@ -407,7 +407,7 @@
                         $(jQuery('#refreshTokenPlain').show());
                         $(jQuery('#idTokenPlain').show());
 
-                        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                        if (!OAuth2ServiceComponentHolder.isLegacyAudienceDisabled()) {
                             $(jQuery("#audience-enable").show());
                             $(jQuery("#audience-add").show());
                             $(jQuery("#audience-table").show());
@@ -1059,12 +1059,12 @@
                                     </td>
                                 </tr>
                                 <%
-                                    if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                                    if (!OAuth2ServiceComponentHolder.isLegacyAudienceDisabled()) {
                                 %>
                                 <%
-                                    audienceTableStyle = app.getAudiences() != null ? "" :
+                                    audienceTableStyle = app.getIdTokenAudiences() != null ? "" :
                                             "display:none";
-                                    if (OAuthUIUtil.isAudienceNotEmpty(app.getAudiences())) {
+                                    if (OAuthUIUtil.isAudienceNotEmpty(app.getIdTokenAudiences())) {
                                 %>
                                 <tr id="audience-enable">
                                     <td colspan="2">
@@ -1122,7 +1122,7 @@
                                             <tbody id="audienceTableTbody">
                                             <%
                                                 int j = 0;
-                                                if (app.getAudiences() != null) {
+                                                if (app.getIdTokenAudiences() != null) {
 
                                             %>
                                             <%

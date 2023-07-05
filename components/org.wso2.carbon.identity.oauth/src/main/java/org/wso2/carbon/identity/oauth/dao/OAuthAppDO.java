@@ -21,7 +21,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.InboundConfigurationProtocol;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
 import java.io.Serializable;
 
@@ -230,11 +229,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
      */
     @Deprecated
     public String[] getAudiences() {
-        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-            return audiences;
-        } else {
-            return this.getIdTokenAudiences();
-        }
+        return audiences;
     }
 
     /**
@@ -242,11 +237,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
      */
     @Deprecated
     public void setAudiences(String[] audiences) {
-        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-            this.audiences = audiences;
-        } else {
-            this.setIdTokenAudiences(audiences);
-        }
+        this.audiences = audiences;
     }
 
     public String[] getIdTokenAudiences() {

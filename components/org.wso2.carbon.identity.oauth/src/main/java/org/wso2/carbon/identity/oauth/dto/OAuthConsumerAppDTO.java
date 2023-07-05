@@ -18,8 +18,6 @@
 
 package org.wso2.carbon.identity.oauth.dto;
 
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-
 /**
  * OAuth consumer app dto.
  */
@@ -177,11 +175,7 @@ public class OAuthConsumerAppDTO {
      */
     @Deprecated
     public String[] getAudiences() {
-        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-            return audiences;
-        } else {
-            return this.getIdTokenAudiences();
-        }
+        return audiences;
     }
 
     /**
@@ -191,42 +185,18 @@ public class OAuthConsumerAppDTO {
     public void setAudiences(String[] audiences) {
 
         if (audiences != null) {
-            if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-                /*
-                 * This is done to ensure that in case the user does not disable legacy audiences and continues to use
-                 * the previous version, but at a later stage
-                 * */
-                this.audiences = audiences;
-                this.idTokenAudiences = audiences;
-                this.accessTokenAudiences = audiences;
-            } else {
-                this.setIdTokenAudiences(audiences);
-            }
+            this.audiences = audiences;
         }
     }
 
     public String[] getIdTokenAudiences() {
-        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-            return audiences;
-        } else {
-            return idTokenAudiences;
-        }
+        return idTokenAudiences;
     }
 
     public void setIdTokenAudiences(String[] idTokenAudiences) {
 
         if (idTokenAudiences != null) {
-            if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-                /*
-                * This is done to ensure that in case the user does not disable legacy audiences and continues to use
-                * the previous version, but at a later stage
-                * */
-                this.audiences = idTokenAudiences;
-                this.idTokenAudiences = idTokenAudiences;
-                this.accessTokenAudiences = idTokenAudiences;
-            } else {
-                this.idTokenAudiences = idTokenAudiences;
-            }
+            this.idTokenAudiences = idTokenAudiences;
         }
     }
 

@@ -248,7 +248,7 @@
                         $(jQuery('#logout_mechanism_row').hide());
                         $(jQuery('#logout_url_row').hide());
 
-                        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                        if (!OAuth2ServiceComponentHolder.isLegacyAudienceDisabled()) {
                             $(jQuery("#audience_enable").hide());
                             $(jQuery("#add_audience").hide());
                             $(jQuery("#audience_table").hide());
@@ -284,7 +284,7 @@
                         $(jQuery('#refreshTokenPlain').show());
                         $(jQuery('#idTokenPlain').show());
 
-                        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                        if (!OAuth2ServiceComponentHolder.isLegacyAudienceDisabled()) {
                             $(jQuery("#audience_enable").show());
                             $(jQuery("#add_audience").show());
                             $(jQuery("#audience_table").show());
@@ -904,7 +904,7 @@
                                 </tr>
 
                                 <%
-                                    if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                                    if (!OAuth2ServiceComponentHolder.isLegacyAudienceDisabled()) {
                                 %>
                                 <tr id="audience_enable">
                                     <td colspan="2">

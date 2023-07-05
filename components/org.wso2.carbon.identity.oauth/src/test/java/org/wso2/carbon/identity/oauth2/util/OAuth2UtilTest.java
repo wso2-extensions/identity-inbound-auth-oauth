@@ -1937,7 +1937,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
         oAuthAppDO.setIdTokenAudiences(configuredIdTokenAudiences);
         OAuth2ServiceComponentHolder.setAudienceEnabled(true);
-        OAuth2ServiceComponentHolder.setLegacyAudienceEnabled(false);
+        OAuth2ServiceComponentHolder.setLegacyAudienceDisabled(true);
 
         IdentityConfigParser mockConfigParser = mock(IdentityConfigParser.class);
         mockStatic(IdentityConfigParser.class);
@@ -1967,7 +1967,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
         oAuthAppDO.setAccessTokenAudiences(configuredAccessTokenAudiences);
         OAuth2ServiceComponentHolder.setAudienceEnabled(true);
-        OAuth2ServiceComponentHolder.setLegacyAudienceEnabled(false);
+        OAuth2ServiceComponentHolder.setLegacyAudienceDisabled(true);
 
         IdentityConfigParser mockConfigParser = mock(IdentityConfigParser.class);
         mockStatic(IdentityConfigParser.class);

@@ -47,7 +47,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -483,13 +482,8 @@ public final class OAuthUtil {
         dto.setApplicationAccessTokenExpiryTime(appDO.getApplicationAccessTokenExpiryTime());
         dto.setRefreshTokenExpiryTime(appDO.getRefreshTokenExpiryTime());
         dto.setIdTokenExpiryTime(appDO.getIdTokenExpiryTime());
-
-        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-            dto.setAudiences(appDO.getAudiences());
-        } else {
-            dto.setIdTokenAudiences(appDO.getIdTokenAudiences());
-            dto.setAccessTokenAudiences(appDO.getAccessTokenAudiences());
-        }
+        dto.setIdTokenAudiences(appDO.getIdTokenAudiences());
+        dto.setAccessTokenAudiences(appDO.getAccessTokenAudiences());
         dto.setRequestObjectSignatureValidationEnabled(appDO.isRequestObjectSignatureValidationEnabled());
         dto.setIdTokenEncryptionEnabled(appDO.isIdTokenEncryptionEnabled());
         dto.setIdTokenEncryptionAlgorithm(appDO.getIdTokenEncryptionAlgorithm());

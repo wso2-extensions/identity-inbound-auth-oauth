@@ -644,14 +644,10 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         // as well.
 
         List<String> audience;
-        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-            audience = OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO);
+        if (isAccessToken && OAuth2ServiceComponentHolder.isLegacyAudienceDisabled()) {
+            audience = OAuth2Util.getOIDCAccessTokenAudience(issuer, oAuthAppDO);
         } else {
-            if (isAccessToken) {
-                audience = OAuth2Util.getOIDCAccessTokenAudience(issuer, oAuthAppDO);
-            } else {
-                audience = OAuth2Util.getOIDCIdTokenAudience(consumerKey, oAuthAppDO);
-            }
+            audience = OAuth2Util.getOIDCIdTokenAudience(consumerKey, oAuthAppDO);
         }
         jwtClaimsSetBuilder.audience(audience);
         JWTClaimsSet jwtClaimsSet;

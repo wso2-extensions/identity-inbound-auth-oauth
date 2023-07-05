@@ -330,7 +330,8 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
                 appDO.getApplicationAccessTokenExpiryTime());
         Assert.assertEquals(consumerAppDTO.getRefreshTokenExpiryTime(), appDO.getRefreshTokenExpiryTime());
 
-        assertArrayEquals(consumerAppDTO.getAudiences(), appDO.getAudiences());
+        assertArrayEquals(consumerAppDTO.getIdTokenAudiences(), appDO.getIdTokenAudiences());
+        assertArrayEquals(consumerAppDTO.getAccessTokenAudiences(), appDO.getAccessTokenAudiences());
 
         Assert.assertEquals(consumerAppDTO.isRequestObjectSignatureValidationEnabled(),
                 appDO.isRequestObjectSignatureValidationEnabled());
@@ -434,12 +435,8 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
 
         app.setState("ACTIVE");
 
-        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
-            app.setAudiences(new String[]{"audience1", "audience2"});
-        } else {
-            app.setIdTokenAudiences(new String[]{"audience1", "audience2"});
-            app.setAccessTokenAudiences(new String[]{"audience3", "audience4"});
-        }
+        app.setIdTokenAudiences(new String[]{"audience1", "audience2"});
+        app.setAccessTokenAudiences(new String[]{"audience3", "audience4"});
         app.setRequestObjectSignatureValidationEnabled(true);
         app.setIdTokenEncryptionEnabled(true);
         app.setIdTokenEncryptionAlgorithm("RSA-11");
