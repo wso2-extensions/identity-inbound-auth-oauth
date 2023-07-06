@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>6.11.76-SNAPSHOT</version>
+    <version>6.11.87-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -50,6 +50,7 @@
         <module>components/org.wso2.carbon.identity.oauth.stub</module>
         <module>components/org.wso2.carbon.identity.oidc.session</module>
         <module>components/org.wso2.carbon.identity.oauth.dcr</module>
+        <module>components/org.wso2.carbon.identity.oauth.par</module>
         <module>components/org.wso2.carbon.identity.oidc.dcr</module>
         <module>components/org.wso2.carbon.identity.discovery</module>
         <module>components/org.wso2.carbon.identity.api.server.oauth.scope</module>
@@ -474,6 +475,11 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                <artifactId>org.wso2.carbon.identity.oauth.par</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
                 <artifactId>org.wso2.carbon.identity.oidc.dcr</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -857,8 +863,8 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.25.221</carbon.identity.framework.version>
-        <carbon.identity.framework.imp.pkg.version.range>[5.17.5, 7.0.0)
+        <carbon.identity.framework.version>5.25.234</carbon.identity.framework.version>
+        <carbon.identity.framework.imp.pkg.version.range>[5.25.234, 7.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
         <carbon.identity.organization.management.version>1.1.14
@@ -866,7 +872,7 @@
         <carbon.identity.organization.management.version.range>[1.1.14, 2.0.0)
         </carbon.identity.organization.management.version.range>
 
-        <carbon.identity.organization.management.core.version>1.0.17
+        <carbon.identity.organization.management.core.version>1.0.52
         </carbon.identity.organization.management.core.version>
         <carbon.identity.organization.management.core.version.range>[1.0.0, 2.0.0)
         </carbon.identity.organization.management.core.version.range>
@@ -960,6 +966,7 @@
         <com.fasterxml.jackson.version>2.13.2</com.fasterxml.jackson.version>
         <spring-web.version>4.3.29.RELEASE</spring-web.version>
         <swagger-jaxrs.version>1.6.2</swagger-jaxrs.version>
+        <com.fasterxml.jackson.databind.version.range>[2.13.0, 2.14.0)</com.fasterxml.jackson.databind.version.range>
 
         <!--Test Dependencies-->
         <junit.version>4.13.1</junit.version>

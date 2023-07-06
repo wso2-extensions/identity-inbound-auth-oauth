@@ -87,7 +87,6 @@ public class JDBCPermissionBasedInternalScopeValidator {
     private static final String ROOT = "/";
     private static final String ADMIN_PERMISSION_ROOT = "/permission/admin";
     private static final String EVERYONE_PERMISSION = "everyone_permission";
-    private static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
 
     /**
      * Execute Internal scope Validation.
@@ -377,11 +376,12 @@ public class JDBCPermissionBasedInternalScopeValidator {
      */
     private List<String> getValuesOfGroupsFromUserAttributes(Map<ClaimMapping, String> userAttributes) {
 
+        String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
         if (MapUtils.isNotEmpty(userAttributes)) {
             for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
                 if (entry.getKey().getRemoteClaim() != null) {
                     if (StringUtils.equals(entry.getKey().getRemoteClaim().getClaimUri(), OAuth2Constants.GROUPS)) {
-                        return Arrays.asList(entry.getValue().split(Pattern.quote(ATTRIBUTE_SEPARATOR)));
+                        return Arrays.asList(entry.getValue().split(Pattern.quote(multiAttributeSeparator)));
                     }
                 }
             }

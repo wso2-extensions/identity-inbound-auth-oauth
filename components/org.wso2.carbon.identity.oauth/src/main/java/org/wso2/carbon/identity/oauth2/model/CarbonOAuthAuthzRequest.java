@@ -29,6 +29,8 @@ import org.apache.oltu.oauth2.common.validators.OAuthValidator;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
+import org.wso2.carbon.identity.oauth.par.model.OAuthParRequestWrapper;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -42,8 +44,26 @@ public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
 
     private static final Log log = LogFactory.getLog(CarbonOAuthTokenRequest.class);
 
-    public CarbonOAuthAuthzRequest(HttpServletRequest request) throws OAuthSystemException, OAuthProblemException {
-        super(request);
+
+    public CarbonOAuthAuthzRequest(HttpServletRequest request) throws OAuthSystemException,
+            OAuthProblemException {
+
+        super(buildRequest(request));
+    }
+
+    /*
+        If request_uri parameter is present in the parameter map, consider request as a PAR request  and
+        use OAuthParRequestWrapper to make the request's parameter map contain the parameter map obtained from
+        the PAR endpoint as parameters such as response_type are only provided in the PAR request,
+        but are needed in the Authorization request for validations.
+     */
+    private static HttpServletRequest buildRequest(HttpServletRequest request) throws OAuthProblemException {
+
+        // If request_uri is there consider as par request
+        if (request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI) != null) {
+            return new OAuthParRequestWrapper(request, new ParAuthServiceImpl());
+        }
+        return request;
     }
 
     protected OAuthValidator<HttpServletRequest> initValidator() throws OAuthProblemException, OAuthSystemException {

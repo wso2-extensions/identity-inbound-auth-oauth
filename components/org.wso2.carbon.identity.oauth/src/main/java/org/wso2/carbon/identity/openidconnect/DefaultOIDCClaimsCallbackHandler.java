@@ -87,7 +87,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     private static final Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandler.class);
     private static final String OAUTH2 = "oauth2";
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
-    private static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
 
     @Override
     public JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder, OAuthTokenReqMessageContext
@@ -562,7 +561,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                         userClaims.size());
             }
             // Map the local roles to SP defined roles.
-            handleServiceProviderRoleMappings(serviceProvider, ATTRIBUTE_SEPARATOR, userClaims);
+            handleServiceProviderRoleMappings(serviceProvider, FrameworkUtils.getMultiAttributeSeparator(),
+                    userClaims);
 
             // Get the user claims in oidc dialect to be returned in the id_token.
             Map<String, Object> userClaimsInOIDCDialect = getUserClaimsInOIDCDialect(spTenantDomain, userClaims);
@@ -787,12 +787,13 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             userClaimsInOIDCDialect) {
 
         JWTClaimsSet jwtClaimsSet = jwtClaimsSetBuilder.build();
+        String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
         for (Map.Entry<String, Object> claimEntry : userClaimsInOIDCDialect.entrySet()) {
             String claimValue = claimEntry.getValue().toString();
             String claimKey = claimEntry.getKey();
-            if (isMultiValuedAttribute(claimKey, claimValue)) {
+            if (isMultiValuedAttribute(claimKey, claimValue, multiAttributeSeparator)) {
                 JSONArray claimValues = new JSONArray();
-                String[] attributeValues = claimValue.split(Pattern.quote(ATTRIBUTE_SEPARATOR));
+                String[] attributeValues = claimValue.split(Pattern.quote(multiAttributeSeparator));
                 for (String attributeValue : attributeValues) {
                     if (StringUtils.isNotBlank(attributeValue)) {
                         claimValues.add(attributeValue);
@@ -830,7 +831,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         return !authzReqMessageContext.getAuthorizationReqDTO().getUser().isFederatedUser();
     }
 
-    private boolean isMultiValuedAttribute(String claimKey, String claimValue) {
+    private boolean isMultiValuedAttribute(String claimKey, String claimValue, String multiAttributeSeparator) {
 
         // Address claim contains multi attribute separator but its not a multi valued attribute.
         if (claimKey.equals(ADDRESS)) {
@@ -841,6 +842,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         if (claimKey.equals(GROUPS)) {
             return true;
         }
-        return StringUtils.contains(claimValue, ATTRIBUTE_SEPARATOR);
+        return StringUtils.contains(claimValue, multiAttributeSeparator);
     }
 }

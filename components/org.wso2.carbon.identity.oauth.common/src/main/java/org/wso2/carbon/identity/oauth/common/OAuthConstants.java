@@ -174,12 +174,15 @@ public final class OAuthConstants {
 
     // Context tenant domain passed with request parameters.
     public static final String TENANT_DOMAIN_FROM_CONTEXT = "tenant_domain_from_context";
+    public static final String ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST =
+            "allow_request_uri_and_request_object_in_request";
 
     public static final String RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ALLOWED_GRANT_TYPES_CONFIG =
             "OAuth.JWT.RenewTokenWithoutRevokingExisting.AllowedGrantTypes.AllowedGrantType";
     public static final String RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG =
             "OAuth.JWT.RenewTokenWithoutRevokingExisting.Enable";
     public static final String REQUEST_BINDING_TYPE = "request";
+    public static final String ORG_ID = "org_id";
 
     private OAuthConstants() {
 

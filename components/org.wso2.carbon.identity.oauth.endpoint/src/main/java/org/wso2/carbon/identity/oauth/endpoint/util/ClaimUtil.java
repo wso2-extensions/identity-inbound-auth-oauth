@@ -74,7 +74,6 @@ public class ClaimUtil {
 
     private static final String SP_DIALECT = "http://wso2.org/oidc/claim";
     private static final String GROUPS = "groups";
-    private static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
     private static final Log log = LogFactory.getLog(ClaimUtil.class);
 
     private ClaimUtil() {
@@ -381,7 +380,7 @@ public class ClaimUtil {
      */
     public static boolean isMultiValuedAttribute(String claimValue) {
 
-        return StringUtils.contains(claimValue, ATTRIBUTE_SEPARATOR);
+        return StringUtils.contains(claimValue, FrameworkUtils.getMultiAttributeSeparator());
     }
 
     /**
@@ -398,7 +397,7 @@ public class ClaimUtil {
         if (GROUPS.equals(claimUri)) {
             return true;
         }
-        return StringUtils.contains(claimValue, ATTRIBUTE_SEPARATOR);
+        return StringUtils.contains(claimValue, FrameworkUtils.getMultiAttributeSeparator());
     }
 
     /**
@@ -409,6 +408,6 @@ public class ClaimUtil {
      */
     public static String[] processMultiValuedAttribute(String claimValue) {
 
-        return claimValue.split(Pattern.quote(ATTRIBUTE_SEPARATOR));
+        return claimValue.split(Pattern.quote(FrameworkUtils.getMultiAttributeSeparator()));
     }
 }
