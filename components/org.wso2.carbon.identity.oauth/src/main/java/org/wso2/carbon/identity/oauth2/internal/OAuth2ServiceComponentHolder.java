@@ -280,26 +280,6 @@ public class OAuth2ServiceComponentHolder {
         this.oauthAdminService = oauthAdminService;
     }
 
-    /**
-     * Get {@link OrganizationManager}.
-     *
-     * @return organization manager instance {@link OrganizationManager}.
-     */
-    public OrganizationManager getOrganizationManager() {
-
-        return organizationManager;
-    }
-
-    /**
-     * Set {@link OrganizationManager}.
-     *
-     * @param organizationManager Instance of {@link OrganizationManager}.
-     */
-    public void setOrganizationManager(OrganizationManager organizationManager) {
-
-        this.organizationManager = organizationManager;
-    }
-
     public RealmService getRealmService() {
 
         return realmService;
@@ -555,7 +535,48 @@ public class OAuth2ServiceComponentHolder {
         jwtAccessTokenClaimProviders.add(accessTokenClaimProvider);
     }
 
+    /**
+     * Get whether organization management enabled.
+     *
+     * @return True if organization management is enabled.
+     */
+    public boolean isOrganizationManagementEnabled() {
 
+        return isOrganizationManagementEnabled;
+    }
+
+    /**
+     * Set organization management enable/disable state.
+     *
+     * @param organizationManagementInitializeService OrganizationManagementInitializeInstance.
+     */
+    public void setOrganizationManagementEnable(
+            OrganizationManagementInitialize organizationManagementInitializeService) {
+
+        if (organizationManagementInitializeService != null) {
+            isOrganizationManagementEnabled = organizationManagementInitializeService.isOrganizationManagementEnabled();
+        }
+    }
+
+    /**
+     * Get the organization manager instance.
+     *
+     * @return OrganizationManager instance.
+     */
+    public OrganizationManager getOrganizationManager() {
+
+        return organizationManager;
+    }
+
+    /**
+     * Set the organization manager instance.
+     *
+     * @param organizationManager OrganizationManager instance.
+     */
+    public void setOrganizationManager(OrganizationManager organizationManager) {
+
+        this.organizationManager = organizationManager;
+    }
 
     /**
      * set ResponseModeProvider map
@@ -606,28 +627,5 @@ public class OAuth2ServiceComponentHolder {
             return getDefaultResponseModeProvider();
         }
         return responseModeProvider;
-    }
-
-    /**
-     * Get is organization management enabled.
-     *
-     * @return True if organization management is enabled.
-     */
-    public boolean isOrganizationManagementEnabled() {
-
-        return isOrganizationManagementEnabled;
-    }
-
-    /**
-     * Set organization management enable/disable state.
-     *
-     * @param organizationManagementInitializeService OrganizationManagementInitializeInstance.
-     */
-    public void setOrganizationManagementEnabled(
-            OrganizationManagementInitialize organizationManagementInitializeService) {
-
-        if (organizationManagementInitializeService != null) {
-            isOrganizationManagementEnabled = organizationManagementInitializeService.isOrganizationManagementEnabled();
-        }
     }
 }

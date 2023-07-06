@@ -671,6 +671,49 @@ public class OAuth2ServiceComponent {
         OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(null);
     }
 
+    @Reference(
+            name = "organization.mgt.initialize.service",
+            service = OrganizationManagementInitialize.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationManagementEnablingService"
+    )
+    protected void setOrganizationManagementEnablingService(
+            OrganizationManagementInitialize organizationManagementInitializeService) {
+
+        OAuth2ServiceComponentHolder.getInstance()
+                .setOrganizationManagementEnable(organizationManagementInitializeService);
+    }
+
+    protected void unsetOrganizationManagementEnablingService(
+            OrganizationManagementInitialize organizationManagementInitializeInstance) {
+
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManagementEnable(null);
+    }
+
+    @Reference(
+            name = "organization.service",
+            service = OrganizationManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationManager"
+    )
+    protected void setOrganizationManager(OrganizationManager organizationManager) {
+
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManager);
+        if (log.isDebugEnabled()) {
+            log.debug("Set organization management service.");
+        }
+    }
+
+    protected void unsetOrganizationManager(OrganizationManager organizationManager) {
+
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(null);
+        if (log.isDebugEnabled()) {
+            log.debug("Unset organization management service.");
+        }
+    }
+
     private static void loadScopeConfigFile() {
 
         List<ScopeDTO> listOIDCScopesClaims = new ArrayList<>();
@@ -954,31 +997,6 @@ public class OAuth2ServiceComponent {
     }
 
     /**
-     * Set organization management service implementation.
-     *
-     * @param organizationManager OrganizationManager
-     */
-    @Reference(name = "identity.organization.management.component",
-            service = OrganizationManager.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetOrganizationManager")
-    protected void setOrganizationManager(OrganizationManager organizationManager) {
-
-        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManager);
-    }
-
-    /**
-     * Unset organization management service implementation.
-     *
-     * @param organizationManager OrganizationManager
-     */
-    protected void unsetOrganizationManager(OrganizationManager organizationManager) {
-
-        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(null);
-    }
-
-    /**
      * Set realm service implementation.
      *
      * @param realmService RealmService
@@ -1003,25 +1021,5 @@ public class OAuth2ServiceComponent {
     protected void unsetRealmService(RealmService realmService) {
 
         OAuth2ServiceComponentHolder.getInstance().setRealmService(null);
-    }
-
-    @Reference(
-            name = "organization.mgt.initialize.service",
-            service = OrganizationManagementInitialize.class,
-            cardinality = ReferenceCardinality.OPTIONAL,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetOrganizationManagementEnablingService"
-    )
-    protected void setOrganizationManagementEnablingService(
-            OrganizationManagementInitialize organizationManagementInitializeService) {
-
-        OAuth2ServiceComponentHolder.getInstance()
-                .setOrganizationManagementEnabled(organizationManagementInitializeService);
-    }
-
-    protected void unsetOrganizationManagementEnablingService(
-            OrganizationManagementInitialize organizationManagementInitializeInstance) {
-
-        OAuth2ServiceComponentHolder.getInstance().setOrganizationManagementEnabled(null);
     }
 }
