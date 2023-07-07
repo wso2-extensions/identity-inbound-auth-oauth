@@ -1923,8 +1923,13 @@ public class OAuth2AuthzEndpoint {
         String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
         try {
             OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+            if (oAuthMessage.getRequest().getAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW) != null &&
+                    oAuthMessage.getRequest().getAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW).equals(true)) {
+                validationResponse.setPkceMandatory(false);
+            } else {
+                validationResponse.setPkceMandatory(appDO.isPkceMandatory());
+            }
             validationResponse.setApplicationName(appDO.getApplicationName());
-            validationResponse.setPkceMandatory(appDO.isPkceMandatory());
             validationResponse.setPkceSupportPlain(appDO.isPkceSupportPlain());
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
             throw new OAuthSystemException("Error while retrieving app information for client_id : " + clientId, e);
@@ -2175,7 +2180,7 @@ public class OAuth2AuthzEndpoint {
         OAuth2Parameters oAuth2Parameters = getOAuth2ParamsFromOAuthMessage(oAuthMessage);
 
         // Check if PKCE is mandatory for the application
-        if (isPKCEMandatory(oAuthMessage, validationResponse)) {
+        if (validationResponse.isPkceMandatory()) {
             if (pkceChallengeCode == null || !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode,
                     pkceChallengeMethod)) {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -2265,18 +2270,6 @@ public class OAuth2AuthzEndpoint {
         LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
                 OAuthConstants.LogConstants.SUCCESS, "PKCE validation is successful.", "validate-pkce", null);
         return null;
-    }
-
-    /* Check if PKCE is mandatory for the application.
-     *
-     * @param oAuthMessage          OAuthMessage
-     * @param validationResponse    client validation response.
-     * @return boolean Returns whether PKCE is mandatory or not.
-     */
-    private boolean isPKCEMandatory(OAuthMessage oAuthMessage,
-                                    OAuth2ClientValidationResponseDTO validationResponse) {
-        return validationResponse.isPkceMandatory() && !(Boolean.FALSE.equals
-                (oAuthMessage.getRequest().getAttribute(OAuthConstants.IS_PKCE_MANDATORY)));
     }
 
     private boolean isPkceSupportEnabled() {

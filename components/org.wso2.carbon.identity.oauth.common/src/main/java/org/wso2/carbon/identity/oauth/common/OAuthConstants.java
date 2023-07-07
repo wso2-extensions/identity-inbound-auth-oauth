@@ -124,7 +124,7 @@ public final class OAuthConstants {
     public static final String OAUTH_PKCE_S256_CHALLENGE = "S256";
     public static final String OAUTH_PKCE_PLAIN_CHALLENGE = "plain";
     //OAuth PKCE request attribute
-    public static final String IS_PKCE_MANDATORY  = "isPKCEMandatory";
+    public static final String PKCE_UNSUPPORTED_FLOW  = "pkce_unsupported_flow";
     //Response types
     public static final String NONE = "none";
     public static final String TOKEN = "token";

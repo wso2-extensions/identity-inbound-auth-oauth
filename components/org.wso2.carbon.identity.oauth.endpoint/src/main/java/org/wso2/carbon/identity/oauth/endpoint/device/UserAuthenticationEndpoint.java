@@ -97,7 +97,7 @@ public class UserAuthenticationEndpoint {
                 commonAuthRequestWrapper.setParameter(Constants.CLIENT_ID, clientId);
                 commonAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, Constants.RESPONSE_TYPE_DEVICE);
                 commonAuthRequestWrapper.setParameter(Constants.REDIRECTION_URI, deviceFlowDO.getCallbackUri());
-                commonAuthRequestWrapper.setAttribute(OAuthConstants.IS_PKCE_MANDATORY, false);
+                commonAuthRequestWrapper.setAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW, true);
                 List<String> scopes = deviceFlowDODetails.getScopes();
                 if (CollectionUtils.isNotEmpty(scopes)) {
                     String scope = String.join(Constants.SEPARATED_WITH_SPACE, scopes);
