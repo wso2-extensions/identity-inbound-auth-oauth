@@ -2500,13 +2500,12 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     @Test
     public void testPKCEunsupportedflow() throws Exception {
 
-        String clientId = "client_id";
         OAuth2ClientValidationResponseDTO validationResponseDTO = new OAuth2ClientValidationResponseDTO();
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         mockOAuthServerConfiguration();
         mockStatic(OAuth2Util.class);
         when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
-        when(oAuthMessage.getRequest().getParameter(CLIENT_ID)).thenReturn(clientId);
+        when(oAuthMessage.getRequest().getParameter(CLIENT_ID)).thenReturn(CLIENT_ID_VALUE);
         when(oAuthMessage.getRequest().getAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW)).thenReturn(true);
         when(OAuth2Util.getAppInformationByClientId(any())).thenReturn(oAuthAppDO);
         Method method = authzEndpointObject.getClass().getDeclaredMethod(
