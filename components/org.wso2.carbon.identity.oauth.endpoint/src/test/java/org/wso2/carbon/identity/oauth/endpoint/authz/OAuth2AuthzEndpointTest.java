@@ -33,7 +33,6 @@ import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
 import org.mockito.Matchers;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.api.mockito.PowerMockito;
@@ -2498,26 +2497,24 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         String location = String.valueOf(response.getMetadata().get(HTTPConstants.HEADER_LOCATION).get(0));
         assertEquals(location, expectedUrl);
     }
-
     @Test
-    public void testPKCEValidationForDeviceCodeGrantFlow() throws Exception {
+    public void testPKCEunsupportedflow() throws Exception {
+
+        String clientId = "client_id";
         OAuth2ClientValidationResponseDTO validationResponseDTO = new OAuth2ClientValidationResponseDTO();
-        Method method = authzEndpointObject.getClass().getDeclaredMethod("validatePKCEParameters", OAuthMessage.class,
-                OAuth2ClientValidationResponseDTO.class, String.class, String.class);
-        String pkceChallengeCode = null;
-        String pkceChallengeMethod = null;
-        method.setAccessible(true);
-        mockStatic(LoggerUtils.class);
-        validationResponseDTO.setPkceMandatory(true);
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        mockOAuthServerConfiguration();
+        mockStatic(OAuth2Util.class);
         when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
-        when(oAuthMessage.getRequest().getAttribute(OAuthConstants.IS_PKCE_MANDATORY)).thenReturn(false);
-        doNothing().when(LoggerUtils.class, "triggerDiagnosticLogEvent", Mockito.anyString(), Mockito.anyMap(),
-                Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyMap());
-        String pkceValidationResponse = (String) method.invoke
-                (authzEndpointObject, oAuthMessage, validationResponseDTO, pkceChallengeCode, pkceChallengeMethod);
-        // In the device code grant flow we're not sending pkceChallengeCode and pkceChallengeMethod
-        // as the request parameters. Therefore, when PKCE is marked as mandatory validatePKCEParameters method
-        // should return null instead of error URL
-        assertEquals(pkceValidationResponse, null);
+        when(oAuthMessage.getRequest().getParameter(CLIENT_ID)).thenReturn(clientId);
+        when(oAuthMessage.getRequest().getAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW)).thenReturn(true);
+        when(OAuth2Util.getAppInformationByClientId(any())).thenReturn(oAuthAppDO);
+        Method method = authzEndpointObject.getClass().getDeclaredMethod(
+                "populateValidationResponseWithAppDetail", OAuthMessage.class,
+                OAuth2ClientValidationResponseDTO.class);
+        method.setAccessible(true);
+        method.invoke(authzEndpointObject, oAuthMessage, validationResponseDTO);
+        //PKCE mandoatory should be false when we set PKCE_UNSUPPORTED_FLOW attribute
+        assertEquals(validationResponseDTO.isPkceMandatory(), false);
     }
 }
