@@ -2504,6 +2504,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         mockOAuthServerConfiguration();
         mockStatic(OAuth2Util.class);
+        oAuthAppDO.setPkceMandatory(true);
         when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
         when(oAuthMessage.getRequest().getParameter(CLIENT_ID)).thenReturn(CLIENT_ID_VALUE);
         when(oAuthMessage.getRequest().getAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW)).thenReturn(true);
