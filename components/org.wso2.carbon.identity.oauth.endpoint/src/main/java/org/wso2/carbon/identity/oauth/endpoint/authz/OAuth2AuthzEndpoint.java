@@ -1923,8 +1923,12 @@ public class OAuth2AuthzEndpoint {
         String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
         try {
             OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+            if (Boolean.TRUE.equals(oAuthMessage.getRequest().getAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW))) {
+                validationResponse.setPkceMandatory(false);
+            } else {
+                validationResponse.setPkceMandatory(appDO.isPkceMandatory());
+            }
             validationResponse.setApplicationName(appDO.getApplicationName());
-            validationResponse.setPkceMandatory(appDO.isPkceMandatory());
             validationResponse.setPkceSupportPlain(appDO.isPkceSupportPlain());
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
             throw new OAuthSystemException("Error while retrieving app information for client_id : " + clientId, e);
