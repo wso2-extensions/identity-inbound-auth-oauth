@@ -66,7 +66,6 @@ public class OAuth2ServiceComponentHolder {
     private static Map<String, ResponseModeProvider> responseModeProviders;
     private static ResponseModeProvider defaultResponseModeProvider;
     private static boolean consentedTokenColumnEnabled = false;
-    private static boolean legacyAudienceDisabled = false;
     private static IdentityEventService identityEventService;
     private static boolean tokenExtendedTableExist = false;
     private List<TokenBinder> tokenBinders = new ArrayList<>();
@@ -127,24 +126,16 @@ public class OAuth2ServiceComponentHolder {
         OAuth2ServiceComponentHolder.pkceEnabled = pkceEnabled;
     }
 
+    @Deprecated
     public static boolean isAudienceEnabled() {
 
         return audienceEnabled;
     }
 
+    @Deprecated
     public static void setAudienceEnabled(boolean audienceEnabled) {
 
         OAuth2ServiceComponentHolder.audienceEnabled = audienceEnabled;
-    }
-
-    public static boolean isLegacyAudienceDisabled() {
-
-        return legacyAudienceDisabled;
-    }
-
-    public static void setLegacyAudienceDisabled(boolean legacyAudienceDisabled) {
-
-        OAuth2ServiceComponentHolder.legacyAudienceDisabled = legacyAudienceDisabled;
     }
 
     public static boolean isIDPIdColumnEnabled() {

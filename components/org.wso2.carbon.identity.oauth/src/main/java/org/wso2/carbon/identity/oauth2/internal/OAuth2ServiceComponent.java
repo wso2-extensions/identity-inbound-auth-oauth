@@ -101,10 +101,8 @@ import javax.xml.stream.XMLStreamReader;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabled;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkConsentedTokenColumnAvailable;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkLegacyAudiencesDisabled;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getJWTRenewWithoutRevokeAllowedGrantTypes;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isAccessTokenExtendedTableExist;
 
@@ -302,20 +300,6 @@ public class OAuth2ServiceComponent {
             String errMsg = "Error while activating OAuth2ServiceComponent.";
             log.error(errMsg, e);
             throw new RuntimeException(errMsg, e);
-        }
-        if (checkAudienceEnabled()) {
-            log.debug("OAuth Audiences enabled.");
-            OAuth2ServiceComponentHolder.setAudienceEnabled(true);
-        } else {
-            log.debug("OAuth Legacy audiences disabled.");
-            OAuth2ServiceComponentHolder.setAudienceEnabled(false);
-        }
-        if (checkLegacyAudiencesDisabled()) {
-            log.debug("OAuth Legacy audiences enabled.");
-            OAuth2ServiceComponentHolder.setLegacyAudienceDisabled(true);
-        } else {
-            log.debug("OAuth Legacy audiences disabled.");
-            OAuth2ServiceComponentHolder.setLegacyAudienceDisabled(false);
         }
         if (checkIDPIdColumnAvailable()) {
             if (log.isDebugEnabled()) {

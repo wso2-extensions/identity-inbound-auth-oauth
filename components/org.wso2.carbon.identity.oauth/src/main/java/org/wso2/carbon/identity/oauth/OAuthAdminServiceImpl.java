@@ -367,21 +367,6 @@ public class OAuthAdminServiceImpl {
         return OAuthUtil.buildConsumerAppDTO(app);
     }
 
-    private void validateAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
-
-        if (application.getAudiences() != null) {
-            // Filter out any duplicates and empty audiences here.
-            long filteredAudienceSize = Arrays.stream(application.getAudiences()).filter(StringUtils::isNotBlank)
-                    .distinct().count();
-
-            if (filteredAudienceSize != application.getAudiences().length) {
-                // This means we had duplicates and empty strings.
-                throw handleClientError(INVALID_REQUEST,
-                        "Audience values cannot contain duplicates or empty values.");
-            }
-        }
-    }
-
     private void validateIdTokenAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
 
         if (application.getIdTokenAudiences() != null) {

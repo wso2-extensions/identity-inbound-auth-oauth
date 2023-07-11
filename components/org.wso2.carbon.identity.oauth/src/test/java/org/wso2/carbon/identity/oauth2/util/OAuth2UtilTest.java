@@ -1936,9 +1936,6 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         String[] configuredIdTokenAudiences = (String[]) oidcAudienceConfiguredInApp;
 
         oAuthAppDO.setIdTokenAudiences(configuredIdTokenAudiences);
-        OAuth2ServiceComponentHolder.setAudienceEnabled(true);
-        OAuth2ServiceComponentHolder.setLegacyAudienceDisabled(true);
-
         IdentityConfigParser mockConfigParser = mock(IdentityConfigParser.class);
         mockStatic(IdentityConfigParser.class);
         when(IdentityConfigParser.getInstance()).thenReturn(mockConfigParser);
@@ -1966,8 +1963,6 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         String[] configuredAccessTokenAudiences = (String[]) oidcAudienceConfiguredInApp;
 
         oAuthAppDO.setAccessTokenAudiences(configuredAccessTokenAudiences);
-        OAuth2ServiceComponentHolder.setAudienceEnabled(true);
-        OAuth2ServiceComponentHolder.setLegacyAudienceDisabled(true);
 
         IdentityConfigParser mockConfigParser = mock(IdentityConfigParser.class);
         mockStatic(IdentityConfigParser.class);

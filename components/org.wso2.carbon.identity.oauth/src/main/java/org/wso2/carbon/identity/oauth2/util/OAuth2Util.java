@@ -219,7 +219,6 @@ public class OAuth2Util {
     public static final String OAUTH2_VALIDATION_MESSAGE_CONTEXT = "OAuth2TokenValidationMessageContext";
     public static final String CONFIG_ELEM_OAUTH = "OAuth";
     public static final String OPENID_CONNECT = "OpenIDConnect";
-    public static final String OAUTH_LEGACY_AUDIENCES_DISABLED = "DisableLegacyAudiences";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_ID_TOKEN_AUDIENCE = "idTokenAudience";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
@@ -2046,60 +2045,27 @@ public class OAuth2Util {
         return oidcAccessTokenAudiences;
     }
 
-    private static List<String> getDefinedCustomOIDCAudiences(OAuthAppDO oAuthAppDO) {
-
-        List<String> audiences = getAudienceListFromOAuthAppDO(oAuthAppDO);
-
-        // Priority should be given to service provider specific audiences over globally configured ones.
-        if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
-            if (CollectionUtils.isNotEmpty(audiences)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("OIDC Audiences " + audiences + " had been retrieved for the client_id: " +
-                            oAuthAppDO.getOauthConsumerKey());
-                }
-                return audiences;
-            }
-        }
-
-        audiences = getServerwideAudiences(audiences);
-        return audiences;
-    }
-
     private static List<String> getDefinedCustomOIDCIdTokenAudiences(OAuthAppDO oAuthAppDO) {
 
         List<String> idTokenAudiences = getIdTokenAudienceListFromOAuthAppDO(oAuthAppDO);
-        List<String> accessTokenAudiences = getAccessTokenAudienceListFromOAuthAppDO(oAuthAppDO);
-        // Priority should be given to service provider specific audiences over globally configured ones.
-        if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
-            if (CollectionUtils.isNotEmpty(idTokenAudiences) || CollectionUtils.isNotEmpty(accessTokenAudiences)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("OIDC ID Token Audiences " + idTokenAudiences +
-                            " had been retrieved for the client_id: " + oAuthAppDO.getOauthConsumerKey());
-                }
-                return idTokenAudiences;
+        if (CollectionUtils.isNotEmpty(idTokenAudiences)) {
+            if (log.isDebugEnabled()) {
+                log.debug("OIDC ID Token Audiences " + idTokenAudiences +
+                        " had been retrieved for the client_id: " + oAuthAppDO.getOauthConsumerKey());
             }
         }
-
-        idTokenAudiences = getServerwideAudiences(idTokenAudiences);
         return idTokenAudiences;
     }
 
     private static List<String> getDefinedCustomOIDCAccessTokenAudiences(OAuthAppDO oAuthAppDO) {
 
         List<String> accessTokenAudiences = getAccessTokenAudienceListFromOAuthAppDO(oAuthAppDO);
-        List<String> idTokenAudiences = getIdTokenAudienceListFromOAuthAppDO(oAuthAppDO);
-        // Priority should be given to service provider specific audiences over globally configured ones.
-        if (OAuth2ServiceComponentHolder.isAudienceEnabled()) {
-            if (CollectionUtils.isNotEmpty(accessTokenAudiences) || CollectionUtils.isNotEmpty(idTokenAudiences)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("OIDC Access Token Audiences " + accessTokenAudiences +
-                            " had been retrieved for the client_id: " + oAuthAppDO.getOauthConsumerKey());
-                }
-                return accessTokenAudiences;
+        if (CollectionUtils.isNotEmpty(accessTokenAudiences)) {
+            if (log.isDebugEnabled()) {
+                log.debug("OIDC Access Token Audiences " + accessTokenAudiences +
+                        " had been retrieved for the client_id: " + oAuthAppDO.getOauthConsumerKey());
             }
         }
-
-        accessTokenAudiences = getServerwideAudiences(accessTokenAudiences);
         return accessTokenAudiences;
 
     }
@@ -2139,15 +2105,6 @@ public class OAuth2Util {
             }
         }
         return audiences;
-    }
-
-    private static List<String> getAudienceListFromOAuthAppDO(OAuthAppDO oAuthAppDO) {
-
-        if (oAuthAppDO.getAudiences() == null) {
-            return new ArrayList<>();
-        } else {
-            return new ArrayList<>(Arrays.asList(oAuthAppDO.getAudiences()));
-        }
     }
 
     private static List<String> getIdTokenAudienceListFromOAuthAppDO(OAuthAppDO oAuthAppDO) {
@@ -2386,53 +2343,16 @@ public class OAuth2Util {
             throw new IdentityOAuth2Exception("Unsupported Signature Algorithm in identity.xml");
         }
     }
-    /**
-     * Check if Default Legacy Audience behaviour is disabled by reading configuration file at server startup.
-     *
-     * @return
-     */
-    public static boolean checkLegacyAudiencesDisabled() {
-
-        return checkConfigLegacyAudienceStatus(OAUTH_LEGACY_AUDIENCES_DISABLED);
-    }
-
 
     /**
+     * @deprecated  this is not needed for current functionality
      * Check if audiences are enabled by reading configuration file at server startup.
      *
      * @return
      */
+    @Deprecated
     public static boolean checkAudienceEnabled() {
         return checkConfigAudienceStatus(ENABLE_OPENID_CONNECT_AUDIENCES);
-    }
-
-    private static boolean checkConfigLegacyAudienceStatus(String configLegacyAudienceEnabledValue) {
-            boolean isLegacyAudienceDisabled = false;
-        IdentityConfigParser configParser = IdentityConfigParser.getInstance();
-        OMElement oauthElem = configParser.getConfigElement(CONFIG_ELEM_OAUTH);
-
-        if (oauthElem == null) {
-            log.warn("Error in OAuth Configuration. OAuth element is not available.");
-            return isLegacyAudienceDisabled;
-        }
-        OMElement configOpenIDConnect = oauthElem
-                .getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, OPENID_CONNECT));
-
-        if (configOpenIDConnect == null) {
-            log.warn("Error in OAuth Configuration. OpenID element is not available.");
-            return isLegacyAudienceDisabled;
-        }
-        OMElement configLegacyAudiencesEnabled = configOpenIDConnect
-                .getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE,
-                        configLegacyAudienceEnabledValue));
-
-        if (configLegacyAudiencesEnabled != null) {
-            String configLegacyAudienceValue = configLegacyAudiencesEnabled.getText();
-            if (StringUtils.isNotBlank(configLegacyAudienceValue)) {
-                isLegacyAudienceDisabled = Boolean.parseBoolean(configLegacyAudienceValue);
-            }
-        }
-        return isLegacyAudienceDisabled;
     }
 
     private static boolean checkConfigAudienceStatus(String configAudienceEnableValue) {

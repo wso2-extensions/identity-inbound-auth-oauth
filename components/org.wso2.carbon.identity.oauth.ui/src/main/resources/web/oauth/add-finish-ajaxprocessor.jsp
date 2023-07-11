@@ -166,38 +166,24 @@
                 app.setScopeValidators(registeredScopeValidators.toArray(new String[registeredScopeValidators.size()]));
             }
 
-            if (!OAuth2ServiceComponentHolder.isLegacyAudienceDisabled()) {
-                if (Boolean.parseBoolean(request.getParameter(AUDIENCE_ENABLED))) {
-                    String audiencesCountParameter = request.getParameter(AUDIENCE_COUNT);
-                    if (IdentityUtil.isNotBlank(audiencesCountParameter)) {
-                        int audiencesCount = Integer.parseInt(audiencesCountParameter);
-                        String[] audiences = request.getParameterValues(AUDIENCES_PROPERTY);
-                        if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
-                            app.setIdTokenAudiences(audiences);
-                        }
+            if (Boolean.parseBoolean(request.getParameter(ID_TOKEN_AUDIENCE_ENABLED))) {
+                String idTokenAudiencesCountParameter = request.getParameter(ID_TOKEN_AUDIENCE_COUNT);
+                if (IdentityUtil.isNotBlank(idTokenAudiencesCountParameter)) {
+                    int idTokenAudiencesCount = Integer.parseInt(idTokenAudiencesCountParameter);
+                    String[] idTokenAudiences = request.getParameterValues(ID_TOKEN_AUDIENCES_PROPERTY);
+                    if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
+                        app.setIdTokenAudiences(idTokenAudiences);
                     }
                 }
             }
-            else {
-                if (Boolean.parseBoolean(request.getParameter(ID_TOKEN_AUDIENCE_ENABLED))) {
-                    String idTokenAudiencesCountParameter = request.getParameter(ID_TOKEN_AUDIENCE_COUNT);
-                    if (IdentityUtil.isNotBlank(idTokenAudiencesCountParameter)) {
-                        int idTokenAudiencesCount = Integer.parseInt(idTokenAudiencesCountParameter);
-                        String[] idTokenAudiences = request.getParameterValues(ID_TOKEN_AUDIENCES_PROPERTY);
-                        if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
-                            app.setIdTokenAudiences(idTokenAudiences);
-                        }
-                    }
-                }
 
-                if (Boolean.parseBoolean(request.getParameter(ACCESS_TOKEN_AUDIENCE_ENABLED))) {
-                    String accessTokenAudiencesCountParameter = request.getParameter(ACCESS_TOKEN_AUDIENCE_COUNT);
-                    if (IdentityUtil.isNotBlank(accessTokenAudiencesCountParameter)) {
-                        int accessTokenAudiencesCount = Integer.parseInt(accessTokenAudiencesCountParameter);
-                        String[] accessTokenAudiences = request.getParameterValues(ACCESS_TOKEN_AUDIENCES_PROPERTY);
-                        if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
-                            app.setAccessTokenAudiences(accessTokenAudiences);
-                        }
+            if (Boolean.parseBoolean(request.getParameter(ACCESS_TOKEN_AUDIENCE_ENABLED))) {
+                String accessTokenAudiencesCountParameter = request.getParameter(ACCESS_TOKEN_AUDIENCE_COUNT);
+                if (IdentityUtil.isNotBlank(accessTokenAudiencesCountParameter)) {
+                    int accessTokenAudiencesCount = Integer.parseInt(accessTokenAudiencesCountParameter);
+                    String[] accessTokenAudiences = request.getParameterValues(ACCESS_TOKEN_AUDIENCES_PROPERTY);
+                    if (OAuthConstants.OAuthVersions.VERSION_2.equals(oauthVersion)) {
+                        app.setAccessTokenAudiences(accessTokenAudiences);
                     }
                 }
             }

@@ -184,12 +184,9 @@
                     grants = "";
                 }
 
-                if (!OAuth2ServiceComponentHolder.isLegacyAudienceDisabled()) {
-                    audiences = app.getIdTokenAudiences();
-                } else {
-                    idTokenAudiences = app.getIdTokenAudiences();
-                    accessTokenAudiences = app.getAccessTokenAudiences();
-                }
+                idTokenAudiences = app.getIdTokenAudiences();
+                accessTokenAudiences = app.getAccessTokenAudiences();
+
                 String[] val = app.getScopeValidators();
                 if (val != null) {
                     scopeValidators = Arrays.asList(val);
@@ -372,20 +369,12 @@
                         $(jQuery('#idTokenPlain').hide());
                         $(jQuery('#logout_mechanism_row').hide());
                         $(jQuery('#logout_url_row').hide());
-
-                        if (!OAuth2ServiceComponentHolder.isLegacyAudienceDisabled()) {
-                            $(jQuery("#audience-enable").hide());
-                            $(jQuery("#audience-add").hide());
-                            $(jQuery("#audience-table").hide());
-                        } else {
-                            $(jQuery("#id_token_audience_enable").hide());
-                            $(jQuery("#id_token_audience_add").hide());
-                            $(jQuery("#id_token_audience_table").hide());
-                            $(jQuery("#access_token_audience_enable").hide());
-                            $(jQuery("#access_token_audience_add").hide());
-                            $(jQuery("#access_token_audience_table").hide());
-                        }
-
+                        $(jQuery("#id_token_audience_enable").hide());
+                        $(jQuery("#id_token_audience_add").hide());
+                        $(jQuery("#id_token_audience_table").hide());
+                        $(jQuery("#access_token_audience_enable").hide());
+                        $(jQuery("#access_token_audience_add").hide());
+                        $(jQuery("#access_token_audience_table").hide());
                         $(jQuery("#validate_request_object_signature").hide());
                         $(jQuery("#encrypt_id_token").hide());
                         $(jQuery('#encryption_method_row')).hide();
@@ -406,19 +395,12 @@
                         $(jQuery('#applicationAccessTokenPlain').show());
                         $(jQuery('#refreshTokenPlain').show());
                         $(jQuery('#idTokenPlain').show());
-
-                        if (!OAuth2ServiceComponentHolder.isLegacyAudienceDisabled()) {
-                            $(jQuery("#audience-enable").show());
-                            $(jQuery("#audience-add").show());
-                            $(jQuery("#audience-table").show());
-                        } else {
-                            $(jQuery("#id_token_audience_enable").show());
-                            $(jQuery("#id_token_audience_add").show());
-                            $(jQuery("#id_token_audience_table").show());
-                            $(jQuery("#access_token_audience_enable").show());
-                            $(jQuery("#access_token_audience_add").show());
-                            $(jQuery("#access_token_audience_table").show());
-                        }
+                        $(jQuery("#id_token_audience_enable").show());
+                        $(jQuery("#id_token_audience_add").show());
+                        $(jQuery("#id_token_audience_table").show());
+                        $(jQuery("#access_token_audience_enable").show());
+                        $(jQuery("#access_token_audience_add").show());
+                        $(jQuery("#access_token_audience_table").show());
                         $(jQuery("#validate_request_object_signature").show());
                         $(jQuery("#encrypt_id_token").show());
                         $(jQuery('#encryption_method_row')).show();
@@ -1058,88 +1040,87 @@
                                         <fmt:message key='seconds'/>
                                     </td>
                                 </tr>
+                                <!-- EnableAudienceRestriction -->
                                 <%
-                                    if (!OAuth2ServiceComponentHolder.isLegacyAudienceDisabled()) {
-                                %>
-                                <%
-                                    audienceTableStyle = app.getIdTokenAudiences() != null ? "" :
+                                    idTokenAudienceTableStyle = app.getIdTokenAudiences() != null ? "" :
                                             "display:none";
                                     if (OAuthUIUtil.isAudienceNotEmpty(app.getIdTokenAudiences())) {
                                 %>
-                                <tr id="audience-enable">
+                                <tr id="id_token_audience_enable">
                                     <td colspan="2">
-                                        <label title="Enable Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
-                                            <input type="checkbox" name="enableAudienceRestriction"
-                                                   id="enableAudienceRestriction" value="true" checked="checked"
-                                                   onclick="toggleAudienceRestriction(this);"/>
-                                            <fmt:message key="enable.audience.restriction"/>
+                                        <label title="Enable ID Token Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
+                                            <input type="checkbox" name="enableIdTokenAudienceRestriction"
+                                                   id="enableIdTokenAudienceRestriction" value="true" checked="checked"
+                                                   onclick="toggleIdTokenAudienceRestriction(this);"/>
+                                            <fmt:message key="enable.id.token.audience.restriction"/>
                                         </label>
                                 </tr>
-                                <tr id="audience-add">
+                                <tr id="id_token_audience_add">
                                     <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
-                                        <fmt:message key="sp.audience"/>
+                                        <fmt:message key="sp.id.token.audience"/>
                                     </td>
                                     <td>
-                                        <input type="text" id="audience" name="audience"
+                                        <input type="text" id="id_token_audience" name="id_token_audience"
                                                class="text-box-big"/>
-                                        <input id="addAudience" name="addAudience"
+                                        <input id="addIdTokenAudience" name="addIdTokenAudience"
                                                type="button"
-                                               value="<fmt:message key="oauth.add.audience"/>"
-                                               onclick="return addAudienceFunc()"/>
+                                               value="<fmt:message key="oauth.add.id.token.audience"/>"
+                                               onclick="return addIdTokenAudienceFunc()"/>
                                     </td>
                                 </tr>
                                 <% } else {%>
-                                <tr id="audience-enable">
+
+                                <tr id="id_token_audience_enable">
                                     <td colspan="2">
-                                        <label title="Enable Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
-                                            <input type="checkbox" name="enableAudienceRestriction"
-                                                   id="enableAudienceRestriction" value="true"
-                                                   onclick="toggleAudienceRestriction(this);"/>
-                                            <fmt:message key="enable.audience.restriction"/>
+                                        <label title="Enable ID Token Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
+                                            <input type="checkbox" name="enableIdTokenAudienceRestriction"
+                                                   id="enableIdTokenAudienceRestriction" value="true"
+                                                   onclick="toggleIdTokenAudienceRestriction(this);"/>
+                                            <fmt:message key="enable.id.token.audience.restriction"/>
                                         </label>
                                     </td>
                                 </tr>
-                                <tr id="audience-add">
+                                <tr id="id_token_audience_add">
                                     <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
-                                        <fmt:message key="sp.audience"/>
+                                        <fmt:message key="sp.id.token.audience"/>
                                     </td>
                                     <td>
-                                        <input type="text" id="audience" name="audience"
+                                        <input type="text" id="id_token_audience" name="id_token_audience"
                                                class="text-box-big" disabled="disabled"/>
-                                        <input id="addAudience" name="addAudience"
+                                        <input id="addIdTokenAudience" name="addIdTokenAudience"
                                                type="button"
-                                               disabled="disabled" value="<fmt:message key="oauth.add.audience"/>"
-                                               onclick="return addAudienceFunc()"/>
+                                               disabled="disabled" value="<fmt:message key="oauth.add.id.token.audience"/>"
+                                               onclick="return addIdTokenAudienceFunc()"/>
                                     </td>
                                 </tr>
                                 <%} %>
-                                <tr id="audience-table">
+                                <tr id="id_token_audience_table">
                                     <td></td>
                                     <td>
-                                        <table id="audienceTableId"
-                                               style="width: 40%; <%=audienceTableStyle%>"
+                                        <table id="idTokenAudienceTableId"
+                                               style="width: 40%; <%=idTokenAudienceTableStyle%>"
                                                class="styledInner">
-                                            <tbody id="audienceTableTbody">
+                                            <tbody id="idTokenAudienceTableTbody">
                                             <%
                                                 int j = 0;
                                                 if (app.getIdTokenAudiences() != null) {
 
                                             %>
                                             <%
-                                                for (String audience : audiences) {
-                                                    if (audience != null &&
-                                                            !"null".equals(audience)) {
+                                                for (String idTokenAudience : idTokenAudiences) {
+                                                    if (idTokenAudience != null &&
+                                                            !"null".equals(idTokenAudience)) {
                                             %>
-                                            <tr id="audienceRow<%=j%>">
+                                            <tr id="idTokenAudienceRow<%=j%>">
                                                 <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
                                                     <input type="hidden"
-                                                           name="audiencePropertyName"
-                                                           id="audiencePropertyName<%=j%>"
-                                                           value="<%=Encode.forHtmlAttribute(audience)%>"/>
-                                                    <%=Encode.forHtml(audience)%>
+                                                           name="idTokenAudiencePropertyName"
+                                                           id="idTokenAudiencePropertyName<%=j%>"
+                                                           value="<%=Encode.forHtmlAttribute(idTokenAudience)%>"/>
+                                                    <%=Encode.forHtml(idTokenAudience)%>
                                                 </td>
                                                 <td>
-                                                    <a onclick="removeAudience('<%=j%>');return false;"
+                                                    <a onclick="removeIdTokenAudience('<%=j%>');return false;"
                                                        href="#" class="icon-link"
                                                        style="background-image: url(../admin/images/delete.gif)">Delete
                                                     </a>
@@ -1154,223 +1135,115 @@
                                                 }
                                             %>
                                             <input type="hidden"
-                                                   name="audiencePropertyCounter"
-                                                   id="audiencePropertyCounter"
+                                                   name="idTokenAudiencePropertyCounter"
+                                                   id="idTokenAudiencePropertyCounter"
                                                    value="<%=j%>"/>
                                             </tbody>
                                         </table>
                                     </td>
                                 </tr>
+
                                 <%
-                                    } else {
+                                    accessTokenAudienceTableStyle = app.getAccessTokenAudiences() != null ? "" :
+                                            "display:none";
+                                    if (OAuthUIUtil.isAudienceNotEmpty(app.getAccessTokenAudiences())) {
                                 %>
-                                    <!-- EnableAudienceRestriction -->
-                                    <%
-                                        idTokenAudienceTableStyle = app.getIdTokenAudiences() != null ? "" :
-                                                "display:none";
-                                        if (OAuthUIUtil.isAudienceNotEmpty(app.getIdTokenAudiences())) {
-                                    %>
-                                    <tr id="id_token_audience_enable">
-                                        <td colspan="2">
-                                            <label title="Enable ID Token Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
-                                                <input type="checkbox" name="enableIdTokenAudienceRestriction"
-                                                       id="enableIdTokenAudienceRestriction" value="true" checked="checked"
-                                                       onclick="toggleIdTokenAudienceRestriction(this);"/>
-                                                <fmt:message key="enable.id.token.audience.restriction"/>
-                                            </label>
-                                    </tr>
-                                    <tr id="id_token_audience_add">
-                                        <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
-                                            <fmt:message key="sp.id.token.audience"/>
-                                        </td>
-                                        <td>
-                                            <input type="text" id="id_token_audience" name="id_token_audience"
-                                                   class="text-box-big"/>
-                                            <input id="addIdTokenAudience" name="addIdTokenAudience"
-                                                   type="button"
-                                                   value="<fmt:message key="oauth.add.id.token.audience"/>"
-                                                   onclick="return addIdTokenAudienceFunc()"/>
-                                        </td>
-                                    </tr>
-                                    <% } else {%>
+                                <tr id="access_token_audience_enable">
+                                    <td colspan="2">
+                                        <label title="Enable Access Token Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
+                                            <input type="checkbox" name="enableAccessTokenAudienceRestriction"
+                                                   id="enableAccessTokenAudienceRestriction" value="true" checked="checked"
+                                                   onclick="toggleAccessTokenAudienceRestriction(this);"/>
+                                            <fmt:message key="enable.access.token.audience.restriction"/>
+                                        </label>
+                                </tr>
+                                <tr id="access_token_audience_add">
+                                    <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                                        <fmt:message key="sp.access.token.audience"/>
+                                    </td>
+                                    <td>
+                                        <input type="text" id="access_token_audience" name="access_token_audience"
+                                               class="text-box-big"/>
+                                        <input id="addAccessTokenAudience" name="addAccessTokenAudience"
+                                               type="button"
+                                               value="<fmt:message key="oauth.add.access.token.audience"/>"
+                                               onclick="return addAccessTokenAudienceFunc()"/>
+                                    </td>
+                                </tr>
+                                <% } else {%>
 
-                                    <tr id="id_token_audience_enable">
-                                        <td colspan="2">
-                                            <label title="Enable ID Token Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
-                                                <input type="checkbox" name="enableIdTokenAudienceRestriction"
-                                                       id="enableIdTokenAudienceRestriction" value="true"
-                                                       onclick="toggleIdTokenAudienceRestriction(this);"/>
-                                                <fmt:message key="enable.id.token.audience.restriction"/>
-                                            </label>
-                                        </td>
-                                    </tr>
-                                    <tr id="id_token_audience_add">
-                                        <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
-                                            <fmt:message key="sp.id.token.audience"/>
-                                        </td>
-                                        <td>
-                                            <input type="text" id="id_token_audience" name="id_token_audience"
-                                                   class="text-box-big" disabled="disabled"/>
-                                            <input id="addIdTokenAudience" name="addIdTokenAudience"
-                                                   type="button"
-                                                   disabled="disabled" value="<fmt:message key="oauth.add.id.token.audience"/>"
-                                                   onclick="return addIdTokenAudienceFunc()"/>
-                                        </td>
-                                    </tr>
-                                    <%} %>
-                                    <tr id="id_token_audience_table">
-                                        <td></td>
-                                        <td>
-                                            <table id="idTokenAudienceTableId"
-                                                   style="width: 40%; <%=idTokenAudienceTableStyle%>"
-                                                   class="styledInner">
-                                                <tbody id="idTokenAudienceTableTbody">
-                                                <%
-                                                    int j = 0;
-                                                    if (app.getIdTokenAudiences() != null) {
+                                <tr id="access_token_audience_enable">
+                                    <td colspan="2">
+                                        <label title="Enable Access Token Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
+                                            <input type="checkbox" name="enableAccessTokenAudienceRestriction"
+                                                   id="enableAccessTokenAudienceRestriction" value="true"
+                                                   onclick="toggleAccessTokenAudienceRestriction(this);"/>
+                                            <fmt:message key="enable.access.token.audience.restriction"/>
+                                        </label>
+                                    </td>
+                                </tr>
+                                <tr id="access_token_audience_add">
+                                    <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                                        <fmt:message key="sp.access.token.audience"/>
+                                    </td>
+                                    <td>
+                                        <input type="text" id="access_token_audience" name="access_token_audience"
+                                               class="text-box-big" disabled="disabled"/>
+                                        <input id="addAccessTokenAudience" name="addAccessTokenAudience"
+                                               type="button"
+                                               disabled="disabled" value="<fmt:message key="oauth.add.access.token.audience"/>"
+                                               onclick="return addAccessTokenAudienceFunc()"/>
+                                    </td>
+                                </tr>
+                                <%} %>
+                                <tr id="access_token_audience_table">
+                                    <td></td>
+                                    <td>
+                                        <table id="accessTokenAudienceTableId"
+                                               style="width: 40%; <%=accessTokenAudienceTableStyle%>"
+                                               class="styledInner">
+                                            <tbody id="accessTokenAudienceTableTbody">
+                                            <%
+                                                int k = 0;
+                                                if (app.getAccessTokenAudiences() != null) {
 
-                                                %>
-                                                <%
-                                                    for (String idTokenAudience : idTokenAudiences) {
-                                                        if (idTokenAudience != null &&
-                                                                !"null".equals(idTokenAudience)) {
-                                                %>
-                                                <tr id="idTokenAudienceRow<%=j%>">
-                                                    <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
-                                                        <input type="hidden"
-                                                               name="idTokenAudiencePropertyName"
-                                                               id="idTokenAudiencePropertyName<%=j%>"
-                                                               value="<%=Encode.forHtmlAttribute(idTokenAudience)%>"/>
-                                                        <%=Encode.forHtml(idTokenAudience)%>
-                                                    </td>
-                                                    <td>
-                                                        <a onclick="removeIdTokenAudience('<%=j%>');return false;"
-                                                           href="#" class="icon-link"
-                                                           style="background-image: url(../admin/images/delete.gif)">Delete
-                                                        </a>
-                                                    </td>
-                                                </tr>
-                                                <%
-                                                            j++;
-                                                        }
+                                            %>
+                                            <%
+                                                for (String accessTokenAudience : accessTokenAudiences) {
+                                                    if (accessTokenAudience != null &&
+                                                            !"null".equals(accessTokenAudience)) {
+                                            %>
+                                            <tr id="accessTokenAudienceRow<%=k%>">
+                                                <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                                                    <input type="hidden"
+                                                           name="accessTokenAudiencePropertyName"
+                                                           id="accessTokenAudiencePropertyName<%=k%>"
+                                                           value="<%=Encode.forHtmlAttribute(accessTokenAudience)%>"/>
+                                                    <%=Encode.forHtml(accessTokenAudience)%>
+                                                </td>
+                                                <td>
+                                                    <a onclick="removeAccessTokenAudience('<%=k%>');return false;"
+                                                       href="#" class="icon-link"
+                                                       style="background-image: url(../admin/images/delete.gif)">Delete
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            <%
+                                                        k++;
                                                     }
-                                                %>
-                                                <%
-                                                    }
-                                                %>
-                                                <input type="hidden"
-                                                       name="idTokenAudiencePropertyCounter"
-                                                       id="idTokenAudiencePropertyCounter"
-                                                       value="<%=j%>"/>
-                                                </tbody>
-                                            </table>
-                                        </td>
-                                    </tr>
-
-                                    <%
-                                        accessTokenAudienceTableStyle = app.getAccessTokenAudiences() != null ? "" :
-                                                "display:none";
-                                        if (OAuthUIUtil.isAudienceNotEmpty(app.getAccessTokenAudiences())) {
-                                    %>
-                                    <tr id="access_token_audience_enable">
-                                        <td colspan="2">
-                                            <label title="Enable Access Token Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
-                                                <input type="checkbox" name="enableAccessTokenAudienceRestriction"
-                                                       id="enableAccessTokenAudienceRestriction" value="true" checked="checked"
-                                                       onclick="toggleAccessTokenAudienceRestriction(this);"/>
-                                                <fmt:message key="enable.access.token.audience.restriction"/>
-                                            </label>
-                                    </tr>
-                                    <tr id="access_token_audience_add">
-                                        <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
-                                            <fmt:message key="sp.access.token.audience"/>
-                                        </td>
-                                        <td>
-                                            <input type="text" id="access_token_audience" name="access_token_audience"
-                                                   class="text-box-big"/>
-                                            <input id="addAccessTokenAudience" name="addAccessTokenAudience"
-                                                   type="button"
-                                                   value="<fmt:message key="oauth.add.access.token.audience"/>"
-                                                   onclick="return addAccessTokenAudienceFunc()"/>
-                                        </td>
-                                    </tr>
-                                    <% } else {%>
-
-                                    <tr id="access_token_audience_enable">
-                                        <td colspan="2">
-                                            <label title="Enable Access Token Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
-                                                <input type="checkbox" name="enableAccessTokenAudienceRestriction"
-                                                       id="enableAccessTokenAudienceRestriction" value="true"
-                                                       onclick="toggleAccessTokenAudienceRestriction(this);"/>
-                                                <fmt:message key="enable.access.token.audience.restriction"/>
-                                            </label>
-                                        </td>
-                                    </tr>
-                                    <tr id="access_token_audience_add">
-                                        <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
-                                            <fmt:message key="sp.access.token.audience"/>
-                                        </td>
-                                        <td>
-                                            <input type="text" id="access_token_audience" name="access_token_audience"
-                                                   class="text-box-big" disabled="disabled"/>
-                                            <input id="addAccessTokenAudience" name="addAccessTokenAudience"
-                                                   type="button"
-                                                   disabled="disabled" value="<fmt:message key="oauth.add.access.token.audience"/>"
-                                                   onclick="return addAccessTokenAudienceFunc()"/>
-                                        </td>
-                                    </tr>
-                                    <%} %>
-                                    <tr id="access_token_audience_table">
-                                        <td></td>
-                                        <td>
-                                            <table id="accessTokenAudienceTableId"
-                                                   style="width: 40%; <%=accessTokenAudienceTableStyle%>"
-                                                   class="styledInner">
-                                                <tbody id="accessTokenAudienceTableTbody">
-                                                <%
-                                                    int k = 0;
-                                                    if (app.getAccessTokenAudiences() != null) {
-
-                                                %>
-                                                <%
-                                                    for (String accessTokenAudience : accessTokenAudiences) {
-                                                        if (accessTokenAudience != null &&
-                                                                !"null".equals(accessTokenAudience)) {
-                                                %>
-                                                <tr id="accessTokenAudienceRow<%=k%>">
-                                                    <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
-                                                        <input type="hidden"
-                                                               name="accessTokenAudiencePropertyName"
-                                                               id="accessTokenAudiencePropertyName<%=k%>"
-                                                               value="<%=Encode.forHtmlAttribute(accessTokenAudience)%>"/>
-                                                        <%=Encode.forHtml(accessTokenAudience)%>
-                                                    </td>
-                                                    <td>
-                                                        <a onclick="removeAccessTokenAudience('<%=k%>');return false;"
-                                                           href="#" class="icon-link"
-                                                           style="background-image: url(../admin/images/delete.gif)">Delete
-                                                        </a>
-                                                    </td>
-                                                </tr>
-                                                <%
-                                                            k++;
-                                                        }
-                                                    }
-                                                %>
-                                                <%
-                                                    }
-                                                %>
-                                                <input type="hidden"
-                                                       name="accessTokenAudiencePropertyCounter"
-                                                       id="accessTokenAudiencePropertyCounter"
-                                                       value="<%=k%>"/>
-                                                </tbody>
-                                            </table>
-                                        </td>
-                                    </tr>
-                                <%
-                                    }
-                                %>
+                                                }
+                                            %>
+                                            <%
+                                                }
+                                            %>
+                                            <input type="hidden"
+                                                   name="accessTokenAudiencePropertyCounter"
+                                                   id="accessTokenAudiencePropertyCounter"
+                                                   value="<%=k%>"/>
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>
                                 <!-- OIDC related properties -->
                                 <tr id="validate_request_object_signature">
                                     <td colspan="2">
