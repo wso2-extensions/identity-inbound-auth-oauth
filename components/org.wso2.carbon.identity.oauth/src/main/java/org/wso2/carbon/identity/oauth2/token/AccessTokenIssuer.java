@@ -459,16 +459,17 @@ public class AccessTokenIssuer {
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "issue-access-token");
-            diagnosticLogBuilder.putParams("clientId", tokenReqDTO.getClientId())
-                    .putParams("authorizedScopes", tokenRespDTO.getAuthorizedScopes())
-                    .putParams("grantType", grantType)
-                    .putParams("tokenExpiryTime (s)", tokenRespDTO.getExpiresIn())
+            diagnosticLogBuilder.inputParam("clientId", tokenReqDTO.getClientId())
+                    .inputParam("authorized scopes", tokenRespDTO.getAuthorizedScopes())
+                    .inputParam("grant type", grantType)
+                    .inputParam("token expiry time (s)", tokenRespDTO.getExpiresIn())
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                    .resultMessage("Access token issued for the application.");
+                    .resultMessage("Access token issued for the application.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             if (tokReqMsgCtx.getAuthorizedUser() != null) {
-                diagnosticLogBuilder.putParams("userId", tokReqMsgCtx.getAuthorizedUser().getUserId());
+                diagnosticLogBuilder.inputParam("user id", tokReqMsgCtx.getAuthorizedUser().getUserId());
                 String username = tokReqMsgCtx.getAuthorizedUser().getUserName();
-                diagnosticLogBuilder.putParams("username", LoggerUtils.isLogMaskingEnable ?
+                diagnosticLogBuilder.inputParam("username", LoggerUtils.isLogMaskingEnable ?
                         LoggerUtils.getMaskedContent(username) : username);
             }
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
@@ -488,11 +489,12 @@ public class AccessTokenIssuer {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                             OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "issue-id-token");
-                    diagnosticLogBuilder.putParams("clientId", tokenReqDTO.getClientId())
-                            .putParams("Issued claims for ID Token", tokReqMsgCtx.getProperty(
+                    diagnosticLogBuilder.inputParam("clientId", tokenReqDTO.getClientId())
+                            .inputParam("issued claims for id token", tokReqMsgCtx.getProperty(
                                     ID_TOKEN_USER_CLAIMS_PROP_KEY))
                             .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                            .resultMessage("ID token issued for the application.");
+                            .resultMessage("ID token issued for the application.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
                     LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 tokenRespDTO.setIDToken(idToken);

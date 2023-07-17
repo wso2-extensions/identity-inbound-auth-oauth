@@ -180,9 +180,10 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "issue-access-token");
-            diagnosticLogBuilder.putParams("Requested Scopes", requestedScopes)
+            diagnosticLogBuilder.inputParam("requested scopes", requestedScopes)
                     .resultMessage("Get Claims Filtered By OIDC Scopes.")
-                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
         return filteredClaims;

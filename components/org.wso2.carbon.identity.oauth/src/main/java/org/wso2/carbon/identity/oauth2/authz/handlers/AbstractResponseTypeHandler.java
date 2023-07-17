@@ -117,24 +117,24 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "scope-validation");
-                diagnosticLogBuilder.putParams("clientId", oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
-                        .putParams("ScopeValidator", validator.getName())
-                        .putParams("Scopes (Before Validation)", oauthAuthzMsgCtx.getApprovedScope())
+                diagnosticLogBuilder.inputParam("client id", oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
+                        .inputParam("scope validator", validator.getName())
+                        .inputParam("scopes (before validation)", oauthAuthzMsgCtx.getApprovedScope())
                         .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                         .resultMessage("Before validating scopes")
-                        .logLevel(DiagnosticLog.LogLevel.ADVANCED);
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
                 LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             boolean isGlobalValidScope = validator.validateScope(oauthAuthzMsgCtx);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "scope-validation");
-                diagnosticLogBuilder.putParams("clientId", oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
-                        .putParams("ScopeValidator", validator.getName())
-                        .putParams("Scopes (After Validation)", oauthAuthzMsgCtx.getApprovedScope())
+                diagnosticLogBuilder.inputParam("client id", oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
+                        .inputParam("scope validator", validator.getName())
+                        .inputParam("scopes (after validation)", oauthAuthzMsgCtx.getApprovedScope())
                         .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                         .resultMessage("After validating scopes.")
-                        .logLevel(DiagnosticLog.LogLevel.ADVANCED);
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
                 LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             if (log.isDebugEnabled()) {

@@ -1078,13 +1078,13 @@ public class EndpointUtil {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                             OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "persist-oauth-scope-consent");
-                    diagnosticLogBuilder.putParams("clientId", params.getClientId())
-                            .putParams("approvedScopes", userApprovedScopes)
-                            .putParams("user", userId)
-                            .putParams("overrideExistingConsent", overrideExistingConsent)
+                    diagnosticLogBuilder.inputParam("clientId", params.getClientId())
+                            .inputParam("approved scopes", userApprovedScopes)
+                            .inputParam("user", userId)
+                            .inputParam("override existing consent", overrideExistingConsent)
                             .resultMessage("Successfully persisted oauth scopes.")
                             .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                            .logLevel(DiagnosticLog.LogLevel.ADVANCED);
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
                     LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
             }

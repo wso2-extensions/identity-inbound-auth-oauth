@@ -98,10 +98,11 @@ public class OAuth2TokenEndpoint {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "receive-token-request");
             if (MapUtils.isNotEmpty(paramMap) && paramMap.containsKey("client_id")) {
-                diagnosticLogBuilder.putParams("clientId", paramMap.get("client_id"));
+                diagnosticLogBuilder.inputParam("client id", paramMap.get("client_id"));
             }
             diagnosticLogBuilder.resultMessage("Successfully received token request.")
-                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         } catch (TokenEndpointBadRequestException e) {
             triggerOnTokenExceptionListeners(e, request, null);
@@ -126,10 +127,11 @@ public class OAuth2TokenEndpoint {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "receive-token-request");
             if (MapUtils.isNotEmpty(paramMap) && paramMap.containsKey("client_id")) {
-                diagnosticLogBuilder.putParams("clientId", paramMap.getFirst("client_id"));
+                diagnosticLogBuilder.inputParam("client id", paramMap.getFirst("client_id"));
             }
             diagnosticLogBuilder.resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                    .resultMessage("Successfully received token request.");
+                    .resultMessage("Successfully received token request.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
         return issueAccessToken(request, (Map<String, List<String>>) paramMap);

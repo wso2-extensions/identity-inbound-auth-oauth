@@ -306,19 +306,20 @@ public class ResponseTypeHandlerUtil {
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "issue-authz-code");
-            diagnosticLogBuilder.putParams("clientId", authorizationReqDTO.getConsumerKey())
+            diagnosticLogBuilder.inputParam("client id", authorizationReqDTO.getConsumerKey())
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .resultMessage("Authorization Code issued successfully.")
-                    .putParams("requestedScopes", OAuth2Util.buildScopeString(authorizationReqDTO.getScopes()))
-                    .putParams("redirectUri", authorizationReqDTO.getCallbackUrl())
-                    .putParams("authzCodeValidityPeriod (ms)", String.valueOf(validityPeriod));
+                    .inputParam("requested scopes", OAuth2Util.buildScopeString(authorizationReqDTO.getScopes()))
+                    .inputParam("redirect uri", authorizationReqDTO.getCallbackUrl())
+                    .inputParam("authz code validity period (ms)", String.valueOf(validityPeriod))
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             if (authorizationReqDTO.getUser() != null) {
                 try {
-                    diagnosticLogBuilder.putParams("user", authorizationReqDTO.getUser().getUserId());
+                    diagnosticLogBuilder.inputParam("user", authorizationReqDTO.getUser().getUserId());
                 } catch (UserIdNotFoundException e) {
                     if (StringUtils.isNotBlank(authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier())) {
 
-                        diagnosticLogBuilder.putParams("user", LoggerUtils.isLogMaskingEnable ? LoggerUtils
+                        diagnosticLogBuilder.inputParam("user", LoggerUtils.isLogMaskingEnable ? LoggerUtils
                                 .getMaskedContent(authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier()) :
                                 authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier());
                     }

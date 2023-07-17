@@ -378,8 +378,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                 OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "validate-authz-code");
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            diagnosticLogBuilder.putParams("clientId", clientId)
-                    .putParams("authorizationCode", authzCode);
+            diagnosticLogBuilder.inputParam("client id", clientId)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
         }
         if (authzCodeBean == null) {
             // If no auth code details available, cannot proceed with Authorization code grant
@@ -390,7 +390,9 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 diagnosticLogBuilder.resultMessage("Invalid authorization code received. Couldn't find persisted data" +
                                 " for authorization code.")
-                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                        .inputParam("authorization code", authzCode)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
                 LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw new IdentityOAuth2Exception("Invalid authorization code received from token request");
@@ -400,7 +402,9 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             clearTokenCache(authzCodeBean, clientId);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 diagnosticLogBuilder.resultMessage("Inactive authorization code received.")
-                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                        .inputParam("authorization code", authzCode)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
                 LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw new IdentityOAuth2Exception("Inactive authorization code received from token request");
@@ -410,13 +414,17 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             if (isAuthzCodeExpired(authzCodeBean)) {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     diagnosticLogBuilder.resultMessage("Expired authorization code received.")
-                            .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                            .inputParam("authorization code", authzCode)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
                     LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
             } else if (isAuthzCodeRevoked(authzCodeBean)) {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     diagnosticLogBuilder.resultMessage("Revoked authorization code received.")
-                            .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                            .inputParam("authorization code", authzCode)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
                     LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
             }
@@ -424,7 +432,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             diagnosticLogBuilder.resultMessage("Authorization code validation is successful.")
-                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
         return true;
