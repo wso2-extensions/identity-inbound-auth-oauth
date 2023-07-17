@@ -280,6 +280,10 @@ public class OAuthServerConfiguration {
     // Property added to customize the token valued generation method. (IDENTITY-6139)
     private ValueGenerator tokenValueGenerator;
 
+    // property to skip OIDC claims retrieval for client credential grant type.
+    private boolean skipOIDCClaimsForClientCredentialGrant = false;
+
+
     private String tokenValueGeneratorClassName;
     //property to define hashing algorithm when enabling hashing of tokens and authorization codes.
     private String hashAlgorithm = "SHA-256";
@@ -432,6 +436,8 @@ public class OAuthServerConfiguration {
         // read openid connect configurations
         parseOpenIDConnectConfig(oauthElem);
 
+        parseSkipOIDCClaimsForClientCredentialGrantConfig(oauthElem);
+
         // parse OAuth 2.0 token generator
         parseOAuthTokenGeneratorConfig(oauthElem);
 
@@ -498,6 +504,18 @@ public class OAuthServerConfiguration {
 
         // Set the availability of oauth_response.jsp page.
         setOAuthResponseJspPageAvailable();
+    }
+
+
+    private void parseSkipOIDCClaimsForClientCredentialGrantConfig(OMElement oauthElem) {
+
+        OMElement skipOIDCClaimsForClientCredentialGrantElement = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                        .SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT));
+        if (skipOIDCClaimsForClientCredentialGrantElement != null) {
+            skipOIDCClaimsForClientCredentialGrant = Boolean.parseBoolean(
+                    skipOIDCClaimsForClientCredentialGrantElement.getText().trim());
+        }
     }
 
     /**
@@ -603,6 +621,12 @@ public class OAuthServerConfiguration {
 
         return dropUnregisteredScopes;
     }
+
+    public boolean isSkipOIDCClaimsForClientCredentialGrant() {
+
+        return skipOIDCClaimsForClientCredentialGrant;
+    }
+
 
     /**
      * Get the list of alloed scopes.
@@ -3749,6 +3773,9 @@ public class OAuthServerConfiguration {
 
         // FAPI Configurations
         private static final String FAPI = "FAPI";
+
+        private static final String SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT =
+                "SkipOIDCClaimsForClientCredentialGrant";
     }
 
 }
