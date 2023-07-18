@@ -283,7 +283,6 @@ public class OAuthServerConfiguration {
     // property to skip OIDC claims retrieval for client credential grant type.
     private boolean skipOIDCClaimsForClientCredentialGrant = false;
 
-
     private String tokenValueGeneratorClassName;
     //property to define hashing algorithm when enabling hashing of tokens and authorization codes.
     private String hashAlgorithm = "SHA-256";
