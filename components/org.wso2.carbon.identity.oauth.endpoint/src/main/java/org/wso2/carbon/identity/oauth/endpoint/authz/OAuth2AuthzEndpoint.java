@@ -60,6 +60,7 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
@@ -87,6 +88,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedEx
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
+import org.wso2.carbon.identity.oauth.endpoint.util.EndpointConstants;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth.extension.engine.JSEngine;
@@ -179,6 +181,7 @@ import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.USER_CONSENT_RESPONSE;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointConstants.LogConstants.InputKeys.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getErrorPageURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getLoginPageURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
@@ -571,7 +574,8 @@ public class OAuth2AuthzEndpoint {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "receive-consent-response");
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    EndpointConstants.LogConstants.ActionIDs.RECEIVE_CONSENT_RESPONSE);
             if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
                 oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
                     if (ArrayUtils.isNotEmpty(value)) {
@@ -987,7 +991,8 @@ public class OAuth2AuthzEndpoint {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "receive-authn-response");
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    EndpointConstants.LogConstants.ActionIDs.RECEIVE_AUTHENTICATION_RESPONSE);
             if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
                 oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
                     if (ArrayUtils.isNotEmpty(value)) {
@@ -1031,15 +1036,17 @@ public class OAuth2AuthzEndpoint {
                 }
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "validate-authn-status");
-                    diagnosticLogBuilder.inputParam("application name", oauth2Params.getApplicationName())
-                            .inputParam("client id", oAuthMessage.getClientId())
-                            .inputParam("tenant domain", tenantDomain)
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            EndpointConstants.LogConstants.ActionIDs.VALIDATE_AUTHENTICATION_RESPONSE);
+                    diagnosticLogBuilder.inputParam(LogConstants.InputKeys.APPLICATION_NAME,
+                                    oauth2Params.getApplicationName())
+                            .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuthMessage.getClientId())
+                            .inputParam(LogConstants.InputKeys.TENANT_DOMAIN, tenantDomain)
                             .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
                     if (userIdentifier != null) {
-                        diagnosticLogBuilder.inputParam("authenticated user id", userIdentifier);
+                        diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER_ID, userIdentifier);
                         if (LoggerUtils.isLogMaskingEnable) {
-                            diagnosticLogBuilder.inputParam("authenticated user (masked)",
+                            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER,
                                     LoggerUtils.getMaskedContent(authnResult.getSubject().getUserName()));
                         }
                     }
@@ -1268,7 +1275,8 @@ public class OAuth2AuthzEndpoint {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "receive-authz-request");
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    EndpointConstants.LogConstants.ActionIDs.RECEIVE_AUTHORIZATION_RESPONSE);
             if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
                 oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
                     if (ArrayUtils.isNotEmpty(value)) {
@@ -1533,13 +1541,14 @@ public class OAuth2AuthzEndpoint {
         authorizationResponseDTO.setError(HttpServletResponse.SC_FOUND, errorMsg, errorCode);
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "handle-authorization");
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    EndpointConstants.LogConstants.ActionIDs.HANDLE_AUTHORIZATION);
             if (oauth2Params != null) {
-                diagnosticLogBuilder.inputParam("client id", oauth2Params.getClientId())
-                        .inputParam("application name", oauth2Params.getApplicationName())
-                        .inputParam("redirect uri", oauth2Params.getRedirectURI())
-                        .inputParam("scope", oauth2Params.getScopes())
-                        .inputParam("response type", oauth2Params.getResponseType());
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
+                        .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
+                        .inputParam(LogConstants.InputKeys.REDIREDCT_URI, oauth2Params.getRedirectURI())
+                        .inputParam(LogConstants.InputKeys.SCOPE, oauth2Params.getScopes())
+                        .inputParam(RESPONSE_TYPE, oauth2Params.getResponseType());
             }
             diagnosticLogBuilder.resultStatus(DiagnosticLog.ResultStatus.FAILED)
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
@@ -1568,13 +1577,14 @@ public class OAuth2AuthzEndpoint {
                 authzRespDTO.getErrorCode());
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "handle-authorization");
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    EndpointConstants.LogConstants.ActionIDs.HANDLE_AUTHORIZATION);
             if (oauth2Params != null) {
-                diagnosticLogBuilder.inputParam("client id", oauth2Params.getClientId())
-                        .inputParam("application name", oauth2Params.getApplicationName())
-                        .inputParam("redirect uri", oauth2Params.getRedirectURI())
-                        .inputParam("scope", oauth2Params.getScopes())
-                        .inputParam("response type", oauth2Params.getResponseType());
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
+                        .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
+                        .inputParam(LogConstants.InputKeys.REDIREDCT_URI, oauth2Params.getRedirectURI())
+                        .inputParam(LogConstants.InputKeys.SCOPE, oauth2Params.getScopes())
+                        .inputParam(RESPONSE_TYPE, oauth2Params.getResponseType());
             }
             diagnosticLogBuilder.resultStatus(DiagnosticLog.ResultStatus.FAILED)
                     .resultMessage("Error occurred while processing the authorization: " + errorMsg)
@@ -1588,15 +1598,16 @@ public class OAuth2AuthzEndpoint {
                                               OAuth2AuthorizeRespDTO authzRespDTO) {
 
         DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "validate-scopes-before-consent");
+                OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                EndpointConstants.LogConstants.ActionIDs.VALIDATE_SCOPES_BEFORE_CONSENT);
         LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         String errorMsg = authzRespDTO.getErrorMsg() != null ? authzRespDTO.getErrorMsg()
                 : "Error occurred while processing authorization request.";
         OAuthProblemException oauthProblemException = OAuthProblemException.error(
                 authzRespDTO.getErrorCode(), errorMsg);
-        diagnosticLogBuilder.inputParam("client id", oauth2Params.getClientId())
-                .inputParam("application name", oauth2Params.getApplicationName())
-                .inputParam("redirect uri", authzRespDTO.getCallbackURI())
+        diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
+                .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
+                .inputParam(LogConstants.InputKeys.REDIREDCT_URI, authzRespDTO.getCallbackURI())
                 .resultMessage("Error occurred when processing the authorization request before consent. " +
                         authzRespDTO.getErrorMsg())
                 .resultStatus(DiagnosticLog.ResultStatus.FAILED)
@@ -1658,11 +1669,12 @@ public class OAuth2AuthzEndpoint {
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "generate-response");
-            diagnosticLogBuilder.inputParam("client id", oauth2Params.getClientId())
-                    .inputParam("application name", oauth2Params.getApplicationName())
-                    .inputParam("redirect uri", redirectURL)
-                    .inputParam("response mode", oauth2Params.getResponseMode())
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    EndpointConstants.LogConstants.ActionIDs.HANDLE_AUTHORIZATION);
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
+                    .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
+                    .inputParam(LogConstants.InputKeys.REDIREDCT_URI, redirectURL)
+                    .inputParam(RESPONSE_TYPE, oauth2Params.getResponseMode())
                     .inputParam("authorized scopes", authzRespDTO.getScope())
                     .resultMessage("Successfully generated oauth response.")
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
@@ -2739,9 +2751,10 @@ public class OAuth2AuthzEndpoint {
         try {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "validate-scopes-before-consent");
-                diagnosticLogBuilder.inputParam("client id", oauth2Params.getClientId())
-                        .inputParam("application name", oauth2Params.getApplicationName())
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        EndpointConstants.LogConstants.ActionIDs.VALIDATE_SCOPES_BEFORE_CONSENT);
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
+                        .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
                         .inputParam("scopes to be validate", oauth2Params.getScopes())
                         .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                         .resultMessage("Scope validation started.")
@@ -2751,9 +2764,10 @@ public class OAuth2AuthzEndpoint {
             validateScopesBeforeConsent(oAuthMessage, oauth2Params, authzReqDTO);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "validate-scopes-before-consent");
-                diagnosticLogBuilder.inputParam("client id", oauth2Params.getClientId())
-                        .inputParam("application name", oauth2Params.getApplicationName())
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        EndpointConstants.LogConstants.ActionIDs.VALIDATE_SCOPES_BEFORE_CONSENT);
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
+                        .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
                         .inputParam("scopes after validation", oauth2Params.getScopes())
                         .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                         .resultMessage("Scope validation completed.")
@@ -3654,11 +3668,12 @@ public class OAuth2AuthzEndpoint {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "hand-over-to-framework")
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    EndpointConstants.LogConstants.ActionIDs.HAND_OVER_TO_FRAMEWORK)
                     .resultMessage("Forward authorization request to framework for user authentication.")
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                    .inputParam("client id", oAuthMessage.getClientId())
-                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuthMessage.getClientId())
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
         try {

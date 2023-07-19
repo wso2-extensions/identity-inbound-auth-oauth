@@ -71,4 +71,38 @@ public class OAuth2Constants {
 
         public static final String APIM_SERVICE_CATALOG_PREFIX = "service_catalog:";
     }
+
+    /**
+     * Constants related to OAuth2 log management.
+     */
+    public static class LogConstants {
+
+        public static final String OAUTH_INBOUND_SERVICE = "oauth-inbound-service";
+
+        /**
+         * Define action IDs for diagnostic logs.
+         */
+        public static class ActionIDs {
+
+            public static final String SCOPE_VALIDATION = "scope-validation";
+            public static final String ISSUE_ACCESS_TOKEN = "issue-access-token";
+            public static final String ISSUE_ID_TOKEN = "issue-id-token";
+            public static final String VALIDATE_AUTHORIZATION_CODE = "validate-authz-code";
+            public static final String ISSUE_AUTHZ_CODE = "issue-authz-code";
+
+        }
+
+        /**
+         * Define common and reusable Input keys for diagnostic logs.
+         */
+        public static class InputKeys {
+
+            public static final String SCOPE_VALIDATOR = "scope validator";
+            public static final String REQUESTED_SCOPES = "requested scopes";
+            public static final String AUTHORIZED_SCOPES = "authorized scopes";
+            public static final String GRANT_TYPE = "grant type";
+            public static final String AUTHORIZATION_CODE = "authorization code";
+
+        }
+    }
 }

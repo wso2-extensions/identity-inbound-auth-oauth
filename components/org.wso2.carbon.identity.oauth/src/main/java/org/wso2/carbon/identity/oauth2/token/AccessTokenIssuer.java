@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -52,6 +53,7 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -458,18 +460,21 @@ public class AccessTokenIssuer {
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "issue-access-token");
-            diagnosticLogBuilder.inputParam("clientId", tokenReqDTO.getClientId())
-                    .inputParam("authorized scopes", tokenRespDTO.getAuthorizedScopes())
-                    .inputParam("grant type", grantType)
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuth2Constants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN);
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                    .inputParam(OAuth2Constants.LogConstants.InputKeys.AUTHORIZED_SCOPES,
+                            tokenRespDTO.getAuthorizedScopes())
+                    .inputParam(OAuth2Constants.LogConstants.InputKeys.GRANT_TYPE, grantType)
                     .inputParam("token expiry time (s)", tokenRespDTO.getExpiresIn())
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .resultMessage("Access token issued for the application.")
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             if (tokReqMsgCtx.getAuthorizedUser() != null) {
-                diagnosticLogBuilder.inputParam("user id", tokReqMsgCtx.getAuthorizedUser().getUserId());
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER_ID,
+                        tokReqMsgCtx.getAuthorizedUser().getUserId());
                 String username = tokReqMsgCtx.getAuthorizedUser().getUserName();
-                diagnosticLogBuilder.inputParam("username", LoggerUtils.isLogMaskingEnable ?
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER, LoggerUtils.isLogMaskingEnable ?
                         LoggerUtils.getMaskedContent(username) : username);
             }
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
@@ -488,8 +493,9 @@ public class AccessTokenIssuer {
                 String idToken = builder.buildIDToken(tokReqMsgCtx, tokenRespDTO);
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "issue-id-token");
-                    diagnosticLogBuilder.inputParam("clientId", tokenReqDTO.getClientId())
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuth2Constants.LogConstants.ActionIDs.ISSUE_ID_TOKEN);
+                    diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
                             .inputParam("issued claims for id token", tokReqMsgCtx.getProperty(
                                     ID_TOKEN_USER_CLAIMS_PROP_KEY))
                             .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)

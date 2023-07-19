@@ -30,6 +30,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
@@ -39,6 +40,7 @@ import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequestException;
+import org.wso2.carbon.identity.oauth.endpoint.util.EndpointConstants;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -64,6 +66,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.PROP_CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.parseJsonTokenRequest;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.triggerOnTokenExceptionListeners;
@@ -96,11 +99,12 @@ public class OAuth2TokenEndpoint {
             }
             paramMap = parseJsonTokenRequest(payload);
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "receive-token-request");
-            if (MapUtils.isNotEmpty(paramMap) && paramMap.containsKey("client_id")) {
-                diagnosticLogBuilder.inputParam("client id", paramMap.get("client_id"));
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    EndpointConstants.LogConstants.ActionIDs.RECEIVE_TOKEN_REQUEST);
+            if (MapUtils.isNotEmpty(paramMap) && paramMap.containsKey(PROP_CLIENT_ID)) {
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, paramMap.get(PROP_CLIENT_ID));
             }
-            diagnosticLogBuilder.resultMessage("Successfully received token request.")
+            diagnosticLogBuilder.resultMessage("Successfully received the token request.")
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
@@ -125,12 +129,13 @@ public class OAuth2TokenEndpoint {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "receive-token-request");
-            if (MapUtils.isNotEmpty(paramMap) && paramMap.containsKey("client_id")) {
-                diagnosticLogBuilder.inputParam("client id", paramMap.getFirst("client_id"));
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    EndpointConstants.LogConstants.ActionIDs.RECEIVE_TOKEN_REQUEST);
+            if (MapUtils.isNotEmpty(paramMap) && paramMap.containsKey(PROP_CLIENT_ID)) {
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, paramMap.getFirst(PROP_CLIENT_ID));
             }
             diagnosticLogBuilder.resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                    .resultMessage("Successfully received token request.")
+                    .resultMessage("Successfully received the token request.")
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }

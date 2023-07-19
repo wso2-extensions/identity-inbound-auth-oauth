@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallback;
@@ -32,6 +33,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
@@ -45,6 +47,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.LogConstants.InputKeys.SCOPE_VALIDATOR;
 
 /**
  * AbstractResponseTypeHandler contains all the common methods of all three basic handlers.
@@ -116,21 +120,25 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
             }
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "scope-validation");
-                diagnosticLogBuilder.inputParam("client id", oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
-                        .inputParam("scope validator", validator.getName())
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuth2Constants.LogConstants.ActionIDs.SCOPE_VALIDATION);
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID,
+                                oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
+                        .inputParam(SCOPE_VALIDATOR, validator.getName())
                         .inputParam("scopes (before validation)", oauthAuthzMsgCtx.getApprovedScope())
                         .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                        .resultMessage("Before validating scopes")
+                        .resultMessage("Before validating scopes.")
                         .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
                 LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             boolean isGlobalValidScope = validator.validateScope(oauthAuthzMsgCtx);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "scope-validation");
-                diagnosticLogBuilder.inputParam("client id", oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
-                        .inputParam("scope validator", validator.getName())
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuth2Constants.LogConstants.ActionIDs.SCOPE_VALIDATION);
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID,
+                                oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
+                        .inputParam(SCOPE_VALIDATOR, validator.getName())
                         .inputParam("scopes (after validation)", oauthAuthzMsgCtx.getApprovedScope())
                         .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                         .resultMessage("After validating scopes.")

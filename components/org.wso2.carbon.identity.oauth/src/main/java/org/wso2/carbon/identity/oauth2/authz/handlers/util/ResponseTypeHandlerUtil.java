@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.application.common.model.Claim;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -45,6 +46,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -68,6 +70,8 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.LogConstants.ActionIDs.ISSUE_AUTHZ_CODE;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.LogConstants.OAUTH_INBOUND_SERVICE;
 
 /**
  * ResponseTypeHandlerUtil contains all the common methods in tokenResponseTypeHandler and IDTokenResponseTypeHandler.
@@ -305,23 +309,25 @@ public class ResponseTypeHandlerUtil {
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "issue-authz-code");
-            diagnosticLogBuilder.inputParam("client id", authorizationReqDTO.getConsumerKey())
+                    OAUTH_INBOUND_SERVICE, ISSUE_AUTHZ_CODE);
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, authorizationReqDTO.getConsumerKey())
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .resultMessage("Authorization Code issued successfully.")
-                    .inputParam("requested scopes", OAuth2Util.buildScopeString(authorizationReqDTO.getScopes()))
-                    .inputParam("redirect uri", authorizationReqDTO.getCallbackUrl())
+                    .inputParam(OAuth2Constants.LogConstants.InputKeys.REQUESTED_SCOPES,
+                            OAuth2Util.buildScopeString(authorizationReqDTO.getScopes()))
+                    .inputParam(LogConstants.InputKeys.REDIREDCT_URI, authorizationReqDTO.getCallbackUrl())
                     .inputParam("authz code validity period (ms)", String.valueOf(validityPeriod))
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             if (authorizationReqDTO.getUser() != null) {
                 try {
-                    diagnosticLogBuilder.inputParam("user", authorizationReqDTO.getUser().getUserId());
+                    diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER_ID, authorizationReqDTO.getUser()
+                            .getUserId());
                 } catch (UserIdNotFoundException e) {
                     if (StringUtils.isNotBlank(authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier())) {
-
-                        diagnosticLogBuilder.inputParam("user", LoggerUtils.isLogMaskingEnable ? LoggerUtils
-                                .getMaskedContent(authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier()) :
-                                authorizationReqDTO.getUser().getAuthenticatedSubjectIdentifier());
+                        diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER, LoggerUtils.isLogMaskingEnable ?
+                                LoggerUtils.getMaskedContent(authorizationReqDTO.getUser()
+                                        .getAuthenticatedSubjectIdentifier()) : authorizationReqDTO.getUser()
+                                .getAuthenticatedSubjectIdentifier());
                     }
                 }
             }

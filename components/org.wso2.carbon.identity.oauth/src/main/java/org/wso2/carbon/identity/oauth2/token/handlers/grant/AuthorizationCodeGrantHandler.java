@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
@@ -37,6 +38,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeValidationResult;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -376,9 +378,10 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             throws IdentityOAuth2Exception {
 
         DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "validate-authz-code");
+                OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                OAuth2Constants.LogConstants.ActionIDs.VALIDATE_AUTHORIZATION_CODE);
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            diagnosticLogBuilder.inputParam("client id", clientId)
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
         }
         if (authzCodeBean == null) {
@@ -403,8 +406,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 diagnosticLogBuilder.resultMessage("Inactive authorization code received.")
                         .inputParam("authorization code", authzCode)
-                        .resultStatus(DiagnosticLog.ResultStatus.FAILED)
-                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
                 LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw new IdentityOAuth2Exception("Inactive authorization code received from token request");
@@ -415,16 +417,14 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     diagnosticLogBuilder.resultMessage("Expired authorization code received.")
                             .inputParam("authorization code", authzCode)
-                            .resultStatus(DiagnosticLog.ResultStatus.FAILED)
-                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED);
                     LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
             } else if (isAuthzCodeRevoked(authzCodeBean)) {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     diagnosticLogBuilder.resultMessage("Revoked authorization code received.")
-                            .inputParam("authorization code", authzCode)
-                            .resultStatus(DiagnosticLog.ResultStatus.FAILED)
-                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+                            .inputParam(OAuth2Constants.LogConstants.InputKeys.AUTHORIZATION_CODE, authzCode)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED);
                     LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
             }
@@ -432,8 +432,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             diagnosticLogBuilder.resultMessage("Authorization code validation is successful.")
-                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
         return true;
