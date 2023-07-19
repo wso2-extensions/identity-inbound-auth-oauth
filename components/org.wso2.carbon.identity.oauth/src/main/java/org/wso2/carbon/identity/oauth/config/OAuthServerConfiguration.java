@@ -505,7 +505,6 @@ public class OAuthServerConfiguration {
         setOAuthResponseJspPageAvailable();
     }
 
-
     private void parseSkipOIDCClaimsForClientCredentialGrantConfig(OMElement oauthElem) {
 
         OMElement skipOIDCClaimsForClientCredentialGrantElement = oauthElem
@@ -625,7 +624,6 @@ public class OAuthServerConfiguration {
 
         return skipOIDCClaimsForClientCredentialGrant;
     }
-
 
     /**
      * Get the list of alloed scopes.

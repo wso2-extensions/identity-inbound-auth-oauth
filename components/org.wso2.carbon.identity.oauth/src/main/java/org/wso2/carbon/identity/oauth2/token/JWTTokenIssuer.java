@@ -512,7 +512,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
             jwtClaimsSet = jwtClaimsSetBuilder.build();
         } else {
-            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
             // Handle custom claims
             if (authAuthzReqMessageContext != null) {
                 jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, authAuthzReqMessageContext);
