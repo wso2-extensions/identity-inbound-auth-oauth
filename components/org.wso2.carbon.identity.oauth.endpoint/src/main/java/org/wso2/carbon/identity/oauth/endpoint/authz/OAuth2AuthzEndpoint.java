@@ -117,7 +117,6 @@ import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
-import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.IOException;
@@ -1879,7 +1878,7 @@ public class OAuth2AuthzEndpoint {
         OAuthAuthzRequest oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
 
         OAuth2Parameters params = new OAuth2Parameters();
-        String sessionDataKey = UUIDGenerator.generateUUID();
+        String sessionDataKey = UUID.randomUUID().toString();
         params.setSessionDataKey(sessionDataKey);
         String redirectURI = populateOauthParameters(params, oAuthMessage, validationResponse, oauthRequest);
         if (redirectURI != null) {
