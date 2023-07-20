@@ -79,8 +79,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.wso2.carbon.registry.core.jdbc.DumpConstants.RESOURCE;
-
 /**
  * This class implements Scope Validator which represents the functions related to a scope issuer which
  * issues scopes based on user roles.
@@ -88,6 +86,7 @@ import static org.wso2.carbon.registry.core.jdbc.DumpConstants.RESOURCE;
 public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implements ScopeValidator {
 
     private static final Log log = LogFactory.getLog(RoleBasedScopeIssuer.class);
+    private static final String RESOURCE = "resource";
     private static final String DEFAULT_SCOPE_NAME = "default";
     private static final String PRESERVED_CASE_SENSITIVE_VARIABLE = "preservedCaseSensitive";
     private static final String ACCESS_TOKEN_DO = "AccessTokenDO";
