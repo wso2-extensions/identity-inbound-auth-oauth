@@ -119,7 +119,7 @@ public class OAuth2ParEndpoint {
         } else {
             responseBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
         }
-        log.error("PAR client Exception: ", exception);
+        log.debug("PAR client Exception: ", exception);
         return responseBuilder.entity(parErrorResponse.toString()).build();
     }
 
