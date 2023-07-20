@@ -31,7 +31,6 @@ import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenRespon
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
-import org.wso2.carbon.registry.api.RegistryService;
 import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.ArrayList;
@@ -47,7 +46,6 @@ import java.util.TreeMap;
 public class OAuthComponentServiceHolder {
 
     private static OAuthComponentServiceHolder instance = new OAuthComponentServiceHolder();
-    private RegistryService registryService;
     private RealmService realmService;
     private OAuthEventInterceptor oAuthEventInterceptorHandlerProxy;
     private OAuth2Service oauth2Service;
@@ -109,16 +107,6 @@ public class OAuthComponentServiceHolder {
     public static OAuthComponentServiceHolder getInstance() {
 
         return instance;
-    }
-
-    public RegistryService getRegistryService() {
-
-        return registryService;
-    }
-
-    public void setRegistryService(RegistryService registryService) {
-
-        this.registryService = registryService;
     }
 
     public RealmService getRealmService() {

@@ -270,8 +270,10 @@ public class AuthorizationHandlerManager {
                                          ResponseTypeHandler authzHandler) throws IdentityOAuth2Exception,
             IdentityOAuth2UnauthorizedScopeException {
 
-        // Get scopes that specified in the allowed scopes list.
+        // Get allowed scopes that are specified in the server level.
         List<String> requestedAllowedScopes = getAllowedScopesFromRequestedScopes(authzReqMsgCtx);
+        // Remove the system level allowed scopes from requested scopes for further validation.
+        removeAllowedScopesFromRequestedScopes(authzReqMsgCtx, requestedAllowedScopes);
         // If it is management app, we validate internal scopes in the requested scopes.
         String[] authorizedInternalScopes = new String[0];
         log.debug("Handling the internal scope validation.");
@@ -369,6 +371,26 @@ public class AuthorizationHandlerManager {
         for (String scope : authzReqMsgCtx.getAuthorizationReqDTO().getScopes()) {
             if (!scope.startsWith(INTERNAL_SCOPE_PREFIX) && !scope.startsWith(CONSOLE_SCOPE_PREFIX) && !scope
                     .equalsIgnoreCase(SYSTEM_SCOPE)) {
+                scopes.add(scope);
+            }
+        }
+        authzReqMsgCtx.getAuthorizationReqDTO().setScopes(scopes.toArray(new String[0]));
+    }
+
+    /**
+     * Remove the system level allowed scopes from requested scopes.
+     *
+     * @param authzReqMsgCtx         authzReqMsgCtx
+     * @param requestedAllowedScopes Requested allowed scopes
+     */
+    private void removeAllowedScopesFromRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx, List<String>
+            requestedAllowedScopes) {
+        if (authzReqMsgCtx.getAuthorizationReqDTO().getScopes() == null) {
+            return;
+        }
+        List<String> scopes = new ArrayList<>();
+        for (String scope : authzReqMsgCtx.getAuthorizationReqDTO().getScopes()) {
+            if (!requestedAllowedScopes.contains(scope)) {
                 scopes.add(scope);
             }
         }

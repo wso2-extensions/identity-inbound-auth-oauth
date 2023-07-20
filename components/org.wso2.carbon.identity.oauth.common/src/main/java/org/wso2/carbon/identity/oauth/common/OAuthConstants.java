@@ -123,6 +123,8 @@ public final class OAuthConstants {
     public static final String OAUTH_PKCE_CODE_CHALLENGE_METHOD = "code_challenge_method";
     public static final String OAUTH_PKCE_S256_CHALLENGE = "S256";
     public static final String OAUTH_PKCE_PLAIN_CHALLENGE = "plain";
+    //OAuth PKCE request attribute
+    public static final String PKCE_UNSUPPORTED_FLOW  = "pkce_unsupported_flow";
     //Response types
     public static final String NONE = "none";
     public static final String TOKEN = "token";
@@ -182,6 +184,7 @@ public final class OAuthConstants {
     public static final String RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG =
             "OAuth.JWT.RenewTokenWithoutRevokingExisting.Enable";
     public static final String REQUEST_BINDING_TYPE = "request";
+    public static final String ORG_ID = "org_id";
 
     private OAuthConstants() {
 
@@ -307,7 +310,7 @@ public final class OAuthConstants {
         public static final String OAUTH20_AUTHORIZE_TOKEN_URL = "/authorize";
         public static final String OAUTH2_AUTHZ_EP_URL = "oauth2/authorize";
         public static final String OAUTH2_TOKEN_EP_URL = "oauth2/token";
-        public static final String OAUTH2_DCR_EP_URL = "/api/identity/oauth2/dcr/v1.0/register";
+        public static final String OAUTH2_DCR_EP_URL = "/api/identity/oauth2/dcr/v1.1/register";
         public static final String OAUTH2_JWKS_EP_URL = "/oauth2/jwks";
         public static final String  OAUTH2_DISCOVERY_EP_URL = "/oauth2/oidcdiscovery";
         public static final String OAUTH2_USER_INFO_EP_URL = "oauth2/userinfo";

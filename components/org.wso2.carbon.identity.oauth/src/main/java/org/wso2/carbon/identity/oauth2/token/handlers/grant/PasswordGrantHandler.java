@@ -53,7 +53,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreClientException;
@@ -70,6 +69,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Handles the Password Grant Type of the OAuth 2.0 specification. Resource owner sends his
@@ -366,7 +366,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                                                         ServiceProvider serviceProvider) {
 
         AuthenticationContext authenticationContext = new AuthenticationContext();
-        String contextId = UUIDGenerator.generateUUID();
+        String contextId = UUID.randomUUID().toString();
         authenticationContext.setContextIdentifier(contextId);
         authenticationContext.setTenantDomain(authenticatedUser.getTenantDomain());
         authenticationContext.setRequestType(OAUTH2);
