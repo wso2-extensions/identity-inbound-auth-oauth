@@ -504,20 +504,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.audience(audience);
         JWTClaimsSet jwtClaimsSet;
 
-        if (tokenReqMessageContext != null &&
-                tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
-                StringUtils.equals(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType(),
-                        OAuthConstants.GrantTypes.CLIENT_CREDENTIALS) &&
-                OAuthServerConfiguration.getInstance().isSkipOIDCClaimsForClientCredentialGrant()) {
-
-            jwtClaimsSet = jwtClaimsSetBuilder.build();
+        // Handle custom claims
+        if (authAuthzReqMessageContext != null) {
+            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, authAuthzReqMessageContext);
         } else {
-            // Handle custom claims
-            if (authAuthzReqMessageContext != null) {
-                jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, authAuthzReqMessageContext);
-            } else {
-                jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
-            }
+            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
         }
 
         if (tokenReqMessageContext != null && tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
@@ -743,6 +734,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     protected JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
                                               OAuthTokenReqMessageContext tokenReqMessageContext)
             throws IdentityOAuth2Exception {
+
+        if (tokenReqMessageContext != null &&
+                tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
+                StringUtils.equals(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType(),
+                        OAuthConstants.GrantTypes.CLIENT_CREDENTIALS) &&
+                OAuthServerConfiguration.getInstance().isSkipOIDCClaimsForClientCredentialGrant()) {
+
+            // CC grant doesn't involve a user and hence skipping OIDC claims to CC grant type Access token.
+            return jwtClaimsSetBuilder.build();
+        }
 
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();

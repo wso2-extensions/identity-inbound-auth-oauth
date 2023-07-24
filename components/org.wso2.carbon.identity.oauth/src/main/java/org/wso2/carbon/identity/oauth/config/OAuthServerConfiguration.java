@@ -281,7 +281,9 @@ public class OAuthServerConfiguration {
     private ValueGenerator tokenValueGenerator;
 
     // property to skip OIDC claims retrieval for client credential grant type.
-    private boolean skipOIDCClaimsForClientCredentialGrant = false;
+    // By default, this is true because OIDC claims are not required for client credential grant type
+    // and CC grant doesn't involve a user.
+    private boolean skipOIDCClaimsForClientCredentialGrant = true;
 
     private String tokenValueGeneratorClassName;
     //property to define hashing algorithm when enabling hashing of tokens and authorization codes.
