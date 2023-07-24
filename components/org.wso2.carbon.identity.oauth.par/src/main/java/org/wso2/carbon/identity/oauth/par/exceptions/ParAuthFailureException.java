@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oauth.par.exceptions;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 
 /**
- * PAR error DTO for Authorization flow failure.
+ * PAR Authorization flow failure.
  */
 public class ParAuthFailureException extends OAuthProblemException {
 

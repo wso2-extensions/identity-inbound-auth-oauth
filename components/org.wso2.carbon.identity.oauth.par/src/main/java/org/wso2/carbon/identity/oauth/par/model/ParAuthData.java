@@ -19,9 +19,9 @@
 package org.wso2.carbon.identity.oauth.par.model;
 
 /**
- * Captures the values for response given by PAR Endpoint.
+ * Captures the values for response given by PAR auth service.
  */
-public class ParAuthResponseData {
+public class ParAuthData {
 
     private String requestURIReference;
     private long expiryTime;

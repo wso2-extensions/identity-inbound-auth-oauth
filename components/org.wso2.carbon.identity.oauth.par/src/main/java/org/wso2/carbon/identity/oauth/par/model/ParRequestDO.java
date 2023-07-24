@@ -36,7 +36,7 @@ public class ParRequestDO {
      * @param expiresIn Scheduled expiry time
      * @param clientId Client id
      */
-    public ParRequestDO (Map<String, String> parameterMap, long expiresIn, String clientId) {
+    public ParRequestDO(Map<String, String> parameterMap, long expiresIn, String clientId) {
 
         this.params = parameterMap;
         this.expiresIn = expiresIn;
@@ -72,7 +72,6 @@ public class ParRequestDO {
 
         return clientId;
     }
-
 
     /**
      * Set parameter map.

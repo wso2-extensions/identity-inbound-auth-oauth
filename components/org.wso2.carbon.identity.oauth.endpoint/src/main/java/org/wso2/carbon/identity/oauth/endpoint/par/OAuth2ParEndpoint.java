@@ -29,7 +29,7 @@ import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
-import org.wso2.carbon.identity.oauth.par.model.ParAuthResponseData;
+import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 
 import java.util.HashMap;
@@ -70,9 +70,9 @@ public class OAuth2ParEndpoint {
         try {
             handleValidation(request, params);
             Map<String, String> parameters = transformParams(params);
-            ParAuthResponseData parAuthResponseData =
+            ParAuthData parAuthData =
                     EndpointUtil.getParAuthService().handleParAuthRequest(parameters);
-            return createAuthResponse(response, parAuthResponseData);
+            return createAuthResponse(response, parAuthData);
         } catch (ParClientException e) {
             return handleParClientException(e);
         } catch (ParCoreException e) {
@@ -95,13 +95,13 @@ public class OAuth2ParEndpoint {
         return parameters;
     }
 
-    private Response createAuthResponse(HttpServletResponse response, ParAuthResponseData parAuthResponseData) {
+    private Response createAuthResponse(HttpServletResponse response, ParAuthData parAuthData) {
 
         response.setContentType(MediaType.APPLICATION_JSON);
-        org.json.JSONObject parAuthResponse = new org.json.JSONObject();
+        JSONObject parAuthResponse = new JSONObject();
         parAuthResponse.put(OAuthConstants.OAuth20Params.REQUEST_URI,
-                ParConstants.REQUEST_URI_PREFIX + parAuthResponseData.getrequestURIReference());
-        parAuthResponse.put(ParConstants.EXPIRES_IN, parAuthResponseData.getExpiryTime());
+                ParConstants.REQUEST_URI_PREFIX + parAuthData.getrequestURIReference());
+        parAuthResponse.put(ParConstants.EXPIRES_IN, parAuthData.getExpiryTime());
         Response.ResponseBuilder responseBuilder = Response.status(HttpServletResponse.SC_CREATED);
         return responseBuilder.entity(parAuthResponse.toString()).build();
     }
@@ -119,7 +119,7 @@ public class OAuth2ParEndpoint {
         } else {
             responseBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
         }
-        log.debug("PAR client Exception: ", exception);
+        log.error("PAR client Exception: ", exception);
         return responseBuilder.entity(parErrorResponse.toString()).build();
     }
 
@@ -127,10 +127,10 @@ public class OAuth2ParEndpoint {
 
         JSONObject parErrorResponse = new JSONObject();
         parErrorResponse.put(OAuthConstants.OAUTH_ERROR, OAuth2ErrorCodes.SERVER_ERROR);
-        parErrorResponse.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, parCoreException.getMessage());
+        parErrorResponse.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, "Internal Server Error.");
 
         Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        log.debug("PAR Server Exception: ", parCoreException);
+        log.error("PAR Server Exception: ", parCoreException);
         return respBuilder.entity(parErrorResponse.toString()).build();
     }
 

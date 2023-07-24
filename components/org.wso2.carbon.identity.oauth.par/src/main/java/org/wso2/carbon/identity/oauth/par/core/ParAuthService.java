@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth.par.core;
 
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
-import org.wso2.carbon.identity.oauth.par.model.ParAuthResponseData;
+import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
 
 import java.util.Map;
 
@@ -34,7 +34,7 @@ public interface ParAuthService {
      *
      * @return parAuthResponse that contains response data for request.
      */
-    ParAuthResponseData handleParAuthRequest(Map<String, String> parameters) throws ParCoreException;
+    ParAuthData handleParAuthRequest(Map<String, String> parameters) throws ParCoreException;
 
     /**
      * Retrieves the parameter map relevant to the provided request_uri from store after validating.

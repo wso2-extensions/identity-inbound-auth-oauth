@@ -28,7 +28,7 @@ import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
 import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAO;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
-import org.wso2.carbon.identity.oauth.par.model.ParAuthResponseData;
+import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
 import org.wso2.carbon.identity.oauth.par.model.ParRequestDO;
 
 import java.util.Calendar;
@@ -47,11 +47,11 @@ public class ParAuthServiceImpl implements ParAuthService {
     ParMgtDAO parMgtDAO = ParDAOFactory.getInstance().getParAuthMgtDAO();
 
     @Override
-    public ParAuthResponseData handleParAuthRequest(Map<String, String> parameters) throws ParCoreException {
+    public ParAuthData handleParAuthRequest(Map<String, String> parameters) throws ParCoreException {
 
         String uuid = UUID.randomUUID().toString();
 
-        ParAuthResponseData parAuthResponse = new ParAuthResponseData();
+        ParAuthData parAuthResponse = new ParAuthData();
         parAuthResponse.setrequestURIReference(uuid);
         parAuthResponse.setExpiryTime(getExpiresInValue());
 
@@ -101,10 +101,12 @@ public class ParAuthServiceImpl implements ParAuthService {
             OMElement parConfig = IdentityConfigParser.getInstance().getConfigElement(ParConstants.CONFIG_ELEM_OAUTH)
                     .getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE,
                             ParConstants.PAR));
-            String expiryTimeValue = parConfig.getFirstChildWithName(new QName(
-                    IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, ParConstants.EXPIRY_TIME)).getText();
-            if (StringUtils.isNotBlank(expiryTimeValue)) {
-                return Long.parseLong(expiryTimeValue);
+            if (parConfig != null) {
+                String expiryTimeValue = parConfig.getFirstChildWithName(new QName(
+                        IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, ParConstants.EXPIRY_TIME)).getText();
+                if (StringUtils.isNotBlank(expiryTimeValue)) {
+                    return Long.parseLong(expiryTimeValue);
+                }
             }
             return ParConstants.EXPIRES_IN_DEFAULT_VALUE;
         } catch (NumberFormatException e) {

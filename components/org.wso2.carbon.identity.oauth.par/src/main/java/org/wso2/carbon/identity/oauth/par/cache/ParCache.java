@@ -39,7 +39,7 @@ public class ParCache extends AuthenticationBaseCache<String, ParRequestCacheEnt
     }
 
     /**
-     * Returns ParCache instance.
+     * Retrieve ParCache instance.
      *
      * @return instance of ParCache
      */

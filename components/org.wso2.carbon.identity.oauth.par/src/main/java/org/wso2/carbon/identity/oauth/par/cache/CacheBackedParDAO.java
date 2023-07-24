@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.par.cache;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAO;
 import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAOImpl;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
@@ -50,17 +51,21 @@ public class CacheBackedParDAO implements ParMgtDAO {
     @Override
     public ParRequestDO getRequestData(String requestURIReference) throws ParCoreException {
 
-        ParRequestCacheEntry parCacheRequest = parCache.getValueFromCache(requestURIReference);
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        ParRequestCacheEntry parRequest = parCache.getValueFromCache(requestURIReference);
         ParRequestDO parRequestDO;
-        if (parCacheRequest != null) {
+        if (parRequest != null) {
             if (log.isDebugEnabled()) {
-                log.debug("Cache miss for expiry time of local uuid: %s for tenant:%s " + requestURIReference);
+                log.debug(
+                        String.format("Cache hit for expiry time of local uuid: %s for tenant:%s ", requestURIReference,
+                                tenantId));
             }
-            parRequestDO = new ParRequestDO(parCacheRequest.getParams(), parCacheRequest.getExpiresIn(),
-                    parCacheRequest.getClientId());
+            parRequestDO = new ParRequestDO(parRequest.getParams(), parRequest.getExpiresIn(),
+                    parRequest.getClientId());
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("Cache hit for expiry time of uuid:%s for tenant:%s " + requestURIReference);
+                log.debug(String.format("Cache miss for expiry time of uuid:%s for tenant:%s ", requestURIReference,
+                        tenantId));
             }
             parRequestDO = parMgtDAO.getRequestData(requestURIReference);
         }
