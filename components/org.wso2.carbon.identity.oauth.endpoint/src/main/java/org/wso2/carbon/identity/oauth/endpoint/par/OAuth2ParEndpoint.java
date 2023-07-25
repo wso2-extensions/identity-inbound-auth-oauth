@@ -18,9 +18,11 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.par;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
+import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.json.JSONObject;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -30,6 +32,7 @@ import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 
 import java.util.HashMap;
@@ -68,6 +71,7 @@ public class OAuth2ParEndpoint {
                         MultivaluedMap<String, String> params) {
 
         try {
+            checkClientAuthentication(request);
             handleValidation(request, params);
             Map<String, String> parameters = transformParams(params);
             ParAuthData parAuthData =
@@ -152,5 +156,36 @@ public class OAuth2ParEndpoint {
 
         return params.containsKey(OAuthConstants.OAuth20Params.REQUEST_URI) &&
                 !params.get(OAuthConstants.OAuth20Params.REQUEST_URI).isEmpty();
+    }
+
+    private void checkClientAuthentication(HttpServletRequest request) throws ParCoreException, ParClientException {
+        OAuthClientAuthnContext oAuthClientAuthnContext = getClientAuthnContext(request);
+        if (!oAuthClientAuthnContext.isAuthenticated()) {
+            if (StringUtils.isNotBlank(oAuthClientAuthnContext.getErrorCode())) {
+                if (oAuthClientAuthnContext.getErrorCode().equals(OAuth2ErrorCodes.SERVER_ERROR)) {
+                    throw new ParCoreException(oAuthClientAuthnContext.getErrorCode(),
+                            oAuthClientAuthnContext.getErrorMessage());
+                } else {
+                    throw new ParClientException(oAuthClientAuthnContext.getErrorCode(),
+                            oAuthClientAuthnContext.getErrorMessage());
+                }
+            }
+            throw new ParClientException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, "Client authentication required");
+        }
+    }
+
+    private OAuthClientAuthnContext getClientAuthnContext(HttpServletRequest request) {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext;
+        Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
+        if (oauthClientAuthnContextObj instanceof OAuthClientAuthnContext) {
+            oAuthClientAuthnContext = (OAuthClientAuthnContext) oauthClientAuthnContextObj;
+        } else {
+            oAuthClientAuthnContext = new OAuthClientAuthnContext();
+            oAuthClientAuthnContext.setAuthenticated(false);
+            oAuthClientAuthnContext.setErrorMessage("Client Authentication Failed");
+            oAuthClientAuthnContext.setErrorCode(OAuthError.TokenResponse.INVALID_REQUEST);
+        }
+        return oAuthClientAuthnContext;
     }
 }
