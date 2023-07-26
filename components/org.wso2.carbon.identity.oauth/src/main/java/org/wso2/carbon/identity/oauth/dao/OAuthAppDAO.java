@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -1362,12 +1363,25 @@ public class OAuthAppDAO {
                     OPENID_CONNECT_ID_TOKEN_AUDIENCE));
             oauthApp.setIdTokenAudiences(oidcIdTokenAudience.toArray(
                     new String[oidcIdTokenAudience.size()]));
+            if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                oauthApp.setAccessTokenAudiences(oidcIdTokenAudience.toArray(
+                        new String[oidcIdTokenAudience.size()]));
+            }
         }
-        if (CollectionUtils.isNotEmpty(spOIDCProperties.get(OPENID_CONNECT_ACCESS_TOKEN_AUDIENCE))) {
+        if (CollectionUtils.isNotEmpty(spOIDCProperties.get(OPENID_CONNECT_ACCESS_TOKEN_AUDIENCE)) &&
+            !OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
             List<String> oidcAccessTokenAudience =
                     new ArrayList<>(spOIDCProperties.get(OPENID_CONNECT_ACCESS_TOKEN_AUDIENCE));
             oauthApp.setAccessTokenAudiences(oidcAccessTokenAudience
                     .toArray(new String[oidcAccessTokenAudience.size()]));
+        }
+
+        if (CollectionUtils.isEmpty(spOIDCProperties.get(OPENID_CONNECT_ID_TOKEN_AUDIENCE)) &&
+                CollectionUtils.isEmpty(spOIDCProperties.get(OPENID_CONNECT_ACCESS_TOKEN_AUDIENCE)) &&
+                    CollectionUtils.isNotEmpty(spOIDCProperties.get(OPENID_CONNECT_AUDIENCE))) {
+            List<String> oidcAudience = new ArrayList<>(spOIDCProperties.get(OPENID_CONNECT_AUDIENCE));
+            oauthApp.setIdTokenAudiences(oidcAudience.toArray(new String[oidcAudience.size()]));
+            oauthApp.setAccessTokenAudiences(oidcAudience.toArray(new String[oidcAudience.size()]));
         }
 
         // Handle other SP OIDC properties

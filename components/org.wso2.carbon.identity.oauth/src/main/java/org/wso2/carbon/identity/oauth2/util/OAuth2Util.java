@@ -224,6 +224,7 @@ public class OAuth2Util {
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
     public static final String OPENID_CONNECT_ACCESS_TOKEN_AUDIENCE = "accessTokenAudience";
     public static final String OPENID_SCOPE = "openid";
+    public static final String OAUTH_LEGACY_AUDIENCES_ENABLED = "EnableLegacyAudiences";
     /*
      * Maintain a separate parameter "OPENID_CONNECT_AUDIENCE_IDENTITY_CONFIG" to get the audience from the identity.xml
      * when user didn't add any audience in the UI while creating service provider.
@@ -2342,6 +2343,40 @@ public class OAuth2Util {
             log.error("Unsupported Signature Algorithm in identity.xml");
             throw new IdentityOAuth2Exception("Unsupported Signature Algorithm in identity.xml");
         }
+    }
+
+    public static boolean checkLegacyAudiencesEnabled() {
+
+        return checkConfigLegacyAudienceStatus(OAUTH_LEGACY_AUDIENCES_ENABLED);
+    }
+
+    private static boolean checkConfigLegacyAudienceStatus(String configLegacyAudienceEnabledValue) {
+        boolean isLegacyAudienceEnabled = false;
+        IdentityConfigParser configParser = IdentityConfigParser.getInstance();
+        OMElement oauthElem = configParser.getConfigElement(CONFIG_ELEM_OAUTH);
+
+        if (oauthElem == null) {
+            log.warn("Error in OAuth Configuration. OAuth element is not available.");
+            return isLegacyAudienceEnabled;
+        }
+        OMElement configOpenIDConnect = oauthElem
+                .getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, OPENID_CONNECT));
+
+        if (configOpenIDConnect == null) {
+            log.warn("Error in OAuth Configuration. OpenID element is not available.");
+            return isLegacyAudienceEnabled;
+        }
+        OMElement configLegacyAudiencesEnabled = configOpenIDConnect
+                .getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE,
+                        configLegacyAudienceEnabledValue));
+
+        if (configLegacyAudiencesEnabled != null) {
+            String configLegacyAudienceValue = configLegacyAudiencesEnabled.getText();
+            if (StringUtils.isNotBlank(configLegacyAudienceValue)) {
+                isLegacyAudienceEnabled = Boolean.parseBoolean(configLegacyAudienceValue);
+            }
+        }
+        return isLegacyAudienceEnabled;
     }
 
     /**
