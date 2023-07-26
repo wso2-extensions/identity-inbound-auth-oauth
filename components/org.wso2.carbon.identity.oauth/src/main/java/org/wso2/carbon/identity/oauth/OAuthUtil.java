@@ -51,7 +51,6 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
-import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
@@ -66,6 +65,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -96,8 +96,8 @@ public final class OAuthUtil {
      */
     public static String getRandomNumber() throws IdentityOAuthAdminException {
         try {
-            String secretKey = UUIDGenerator.generateUUID();
-            String baseString = UUIDGenerator.generateUUID();
+            String secretKey = UUID.randomUUID().toString();
+            String baseString = UUID.randomUUID().toString();
             SecretKeySpec key = new SecretKeySpec(secretKey.getBytes(Charsets.UTF_8), ALGORITHM_SHA1);
             Mac mac = Mac.getInstance(ALGORITHM_SHA1);
             mac.init(key);
@@ -121,8 +121,8 @@ public final class OAuthUtil {
      */
     public static String getRandomNumberSecure() throws IdentityOAuthAdminException {
         try {
-            String secretKey = UUIDGenerator.generateUUID();
-            String baseString = UUIDGenerator.generateUUID();
+            String secretKey = UUID.randomUUID().toString();
+            String baseString = UUID.randomUUID().toString();
 
             String hmacAlgorithm;
             if (Boolean.parseBoolean(IdentityUtil.getProperty(IdentityConstants.OAuth.ENABLE_SHA256_PARAMS))) {

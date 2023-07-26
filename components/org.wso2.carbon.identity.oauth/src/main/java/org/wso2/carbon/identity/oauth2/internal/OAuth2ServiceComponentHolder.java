@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2014, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2014-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -23,6 +23,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
+import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -37,9 +38,12 @@ import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaim
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.organization.management.role.management.service.RoleManager;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManagementInitialize;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
+import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.utils.ConfigurationContextService;
 
 import java.util.ArrayList;
@@ -71,10 +75,13 @@ public class OAuth2ServiceComponentHolder {
     private List<TokenBinder> tokenBinders = new ArrayList<>();
     private Map<String, ResponseTypeRequestValidator> responseTypeRequestValidators = new HashMap<>();
     private OAuthAdminServiceImpl oauthAdminService;
+    private OrganizationManager organizationManager;
+    private RealmService realmService;
     private static AuthenticationDataPublisher authenticationDataPublisherProxy;
     private static KeyIDProvider keyIDProvider = null;
     private IdpManager idpManager;
     private static UserSessionManagementService userSessionManagementService;
+    private static SAMLSSOServiceProviderManager samlSSOServiceProviderManager;
     private static RoleManager roleManager;
     private static boolean legacyAudienceEnabled = false;
     private static OrganizationUserResidentResolverService organizationUserResidentResolverService;
@@ -86,6 +93,7 @@ public class OAuth2ServiceComponentHolder {
     private static boolean restrictUnassignedScopes;
     private static ConfigurationContextService configurationContextService;
     private List<JWTAccessTokenClaimProvider> jwtAccessTokenClaimProviders = new ArrayList<>();
+    private boolean isOrganizationManagementEnabled = false;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -283,6 +291,16 @@ public class OAuth2ServiceComponentHolder {
     public void setOAuthAdminService(OAuthAdminServiceImpl oauthAdminService) {
 
         this.oauthAdminService = oauthAdminService;
+    }
+
+    public RealmService getRealmService() {
+
+        return realmService;
+    }
+
+    public void setRealmService(RealmService realmService) {
+
+        this.realmService = realmService;
     }
 
     /**
@@ -491,6 +509,26 @@ public class OAuth2ServiceComponentHolder {
     }
 
     /**
+     * Get the OAuth2ScopeClaimMappingDAO instance.
+     *
+     * @param samlSSOServiceProviderManager SAMLSSOServiceProviderManager instance.
+     */
+    public static void setSamlSSOServiceProviderManager(SAMLSSOServiceProviderManager samlSSOServiceProviderManager) {
+
+        OAuth2ServiceComponentHolder.samlSSOServiceProviderManager = samlSSOServiceProviderManager;
+    }
+
+    /**
+     * Get the SAMLSSOServiceProviderManager instance.
+     *
+     * @return SAMLSSOServiceProviderManager instance.
+     */
+    public static SAMLSSOServiceProviderManager getSamlSSOServiceProviderManager() {
+
+        return samlSSOServiceProviderManager;
+    }
+
+    /**
      * Returns JWT access token additional claim providers.
      *
      * @return
@@ -510,7 +548,48 @@ public class OAuth2ServiceComponentHolder {
         jwtAccessTokenClaimProviders.add(accessTokenClaimProvider);
     }
 
+    /**
+     * Get whether organization management enabled.
+     *
+     * @return True if organization management is enabled.
+     */
+    public boolean isOrganizationManagementEnabled() {
 
+        return isOrganizationManagementEnabled;
+    }
+
+    /**
+     * Set organization management enable/disable state.
+     *
+     * @param organizationManagementInitializeService OrganizationManagementInitializeInstance.
+     */
+    public void setOrganizationManagementEnable(
+            OrganizationManagementInitialize organizationManagementInitializeService) {
+
+        if (organizationManagementInitializeService != null) {
+            isOrganizationManagementEnabled = organizationManagementInitializeService.isOrganizationManagementEnabled();
+        }
+    }
+
+    /**
+     * Get the organization manager instance.
+     *
+     * @return OrganizationManager instance.
+     */
+    public OrganizationManager getOrganizationManager() {
+
+        return organizationManager;
+    }
+
+    /**
+     * Set the organization manager instance.
+     *
+     * @param organizationManager OrganizationManager instance.
+     */
+    public void setOrganizationManager(OrganizationManager organizationManager) {
+
+        this.organizationManager = organizationManager;
+    }
 
     /**
      * set ResponseModeProvider map

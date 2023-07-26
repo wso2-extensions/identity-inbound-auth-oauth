@@ -33,7 +33,6 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerDTO;
-import org.wso2.carbon.registry.core.exceptions.RegistryException;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
@@ -353,8 +352,7 @@ public class OAuthService {
     /**
      * @param oauthParams
      * @return
-     * @throws RegistryException
-     * @throws IdentityException
+     * @throws IdentityOAuthAdminException
      */
     private Parameters generateOauthToken(Parameters oauthParams) throws IdentityOAuthAdminException {
 

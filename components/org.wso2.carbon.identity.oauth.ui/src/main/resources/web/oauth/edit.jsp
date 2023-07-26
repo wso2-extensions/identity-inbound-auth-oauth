@@ -184,8 +184,12 @@
                     grants = "";
                 }
 
-                idTokenAudiences = app.getIdTokenAudiences();
-                accessTokenAudiences = app.getAccessTokenAudiences();
+                if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                     audiences = app.getIdTokenAudiences();
+                } else {
+                    idTokenAudiences = app.getIdTokenAudiences();
+                    accessTokenAudiences = app.getAccessTokenAudiences();
+                }
 
                 String[] val = app.getScopeValidators();
                 if (val != null) {
@@ -369,12 +373,20 @@
                         $(jQuery('#idTokenPlain').hide());
                         $(jQuery('#logout_mechanism_row').hide());
                         $(jQuery('#logout_url_row').hide());
-                        $(jQuery("#id_token_audience_enable").hide());
-                        $(jQuery("#id_token_audience_add").hide());
-                        $(jQuery("#id_token_audience_table").hide());
-                        $(jQuery("#access_token_audience_enable").hide());
-                        $(jQuery("#access_token_audience_add").hide());
-                        $(jQuery("#access_token_audience_table").hide());
+
+                        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                            $(jQuery("#audience-enable").hide());
+                            $(jQuery("#audience-add").hide());
+                            $(jQuery("#audience-table").hide());
+                        } else {
+                            $(jQuery("#id_token_audience_enable").hide());
+                            $(jQuery("#id_token_audience_add").hide());
+                            $(jQuery("#id_token_audience_table").hide());
+                            $(jQuery("#access_token_audience_enable").hide());
+                            $(jQuery("#access_token_audience_add").hide());
+                            $(jQuery("#access_token_audience_table").hide());
+                        }
+
                         $(jQuery("#validate_request_object_signature").hide());
                         $(jQuery("#encrypt_id_token").hide());
                         $(jQuery('#encryption_method_row')).hide();
@@ -395,12 +407,20 @@
                         $(jQuery('#applicationAccessTokenPlain').show());
                         $(jQuery('#refreshTokenPlain').show());
                         $(jQuery('#idTokenPlain').show());
-                        $(jQuery("#id_token_audience_enable").show());
-                        $(jQuery("#id_token_audience_add").show());
-                        $(jQuery("#id_token_audience_table").show());
-                        $(jQuery("#access_token_audience_enable").show());
-                        $(jQuery("#access_token_audience_add").show());
-                        $(jQuery("#access_token_audience_table").show());
+
+                         if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                             $(jQuery("#audience-enable").show());
+                             $(jQuery("#audience-add").show());
+                             $(jQuery("#audience-table").show());
+                         } else {
+                             $(jQuery("#id_token_audience_enable").show());
+                             $(jQuery("#id_token_audience_add").show());
+                             $(jQuery("#id_token_audience_table").show());
+                             $(jQuery("#access_token_audience_enable").show());
+                             $(jQuery("#access_token_audience_add").show());
+                             $(jQuery("#access_token_audience_table").show());
+                         }
+
                         $(jQuery("#validate_request_object_signature").show());
                         $(jQuery("#encrypt_id_token").show());
                         $(jQuery('#encryption_method_row')).show();
@@ -1042,6 +1062,111 @@
                                 </tr>
                                 <!-- EnableAudienceRestriction -->
                                 <%
+                                    if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                                %>
+                                <%
+                                    audienceTableStyle = app.getIdTokenAudiences() != null ? "" :
+                                            "display:none";
+                                    if (OAuthUIUtil.isAudienceNotEmpty(app.getIdTokenAudiences())) {
+                                %>
+                                <tr id="audience-enable">
+                                    <td colspan="2">
+                                        <label title="Enable Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
+                                            <input type="checkbox" name="enableAudienceRestriction"
+                                                   id="enableAudienceRestriction" value="true" checked="checked"
+                                                   onclick="toggleAudienceRestriction(this);"/>
+                                            <fmt:message key="enable.audience.restriction"/>
+                                        </label>
+                                </tr>
+                                <tr id="audience-add">
+                                    <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                                        <fmt:message key="sp.audience"/>
+                                    </td>
+                                    <td>
+                                        <input type="text" id="audience" name="audience"
+                                               class="text-box-big"/>
+                                        <input id="addAudience" name="addAudience"
+                                               type="button"
+                                               value="<fmt:message key="oauth.add.audience"/>"
+                                               onclick="return addAudienceFunc()"/>
+                                    </td>
+                                </tr>
+                                <% } else {%>
+                                <tr id="audience-enable">
+                                    <td colspan="2">
+                                        <label title="Enable Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
+                                            <input type="checkbox" name="enableAudienceRestriction"
+                                                   id="enableAudienceRestriction" value="true"
+                                                   onclick="toggleAudienceRestriction(this);"/>
+                                            <fmt:message key="enable.audience.restriction"/>
+                                        </label>
+                                    </td>
+                                </tr>
+                                <tr id="audience-add">
+                                    <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                                        <fmt:message key="sp.audience"/>
+                                    </td>
+                                    <td>
+                                        <input type="text" id="audience" name="audience"
+                                               class="text-box-big" disabled="disabled"/>
+                                        <input id="addAudience" name="addAudience"
+                                               type="button"
+                                               disabled="disabled" value="<fmt:message key="oauth.add.audience"/>"
+                                               onclick="return addAudienceFunc()"/>
+                                    </td>
+                                </tr>
+                                <%} %>
+                                <tr id="audience-table">
+                                    <td></td>
+                                    <td>
+                                        <table id="audienceTableId"
+                                               style="width: 40%; <%=audienceTableStyle%>"
+                                               class="styledInner">
+                                            <tbody id="audienceTableTbody">
+                                            <%
+                                                int j = 0;
+                                                if (app.getIdTokenAudiences() != null) {
+                                            %>
+                                            <%
+                                                for (String audience : audiences) {
+                                                    if (audience != null &&
+                                                            !"null".equals(audience)) {
+                                            %>
+                                            <tr id="audienceRow<%=j%>">
+                                                <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                                                    <input type="hidden"
+                                                           name="audiencePropertyName"
+                                                           id="audiencePropertyName<%=j%>"
+                                                           value="<%=Encode.forHtmlAttribute(audience)%>"/>
+                                                    <%=Encode.forHtml(audience)%>
+                                                </td>
+                                                <td>
+                                                    <a onclick="removeAudience('<%=j%>');return false;"
+                                                       href="#" class="icon-link"
+                                                       style="background-image: url(../admin/images/delete.gif)">Delete
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            <%
+                                                        j++;
+                                                    }
+                                                }
+                                            %>
+                                            <%
+                                                }
+                                            %>
+                                            <input type="hidden"
+                                                   name="audiencePropertyCounter"
+                                                   id="audiencePropertyCounter"
+                                                   value="<%=j%>"/>
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <%
+                                    } else {
+                                %>
+                                <%
                                     idTokenAudienceTableStyle = app.getIdTokenAudiences() != null ? "" :
                                             "display:none";
                                     if (OAuthUIUtil.isAudienceNotEmpty(app.getIdTokenAudiences())) {
@@ -1244,6 +1369,9 @@
                                         </table>
                                     </td>
                                 </tr>
+                                <%
+                                    }
+                                %>
                                 <!-- OIDC related properties -->
                                 <tr id="validate_request_object_signature">
                                     <td colspan="2">

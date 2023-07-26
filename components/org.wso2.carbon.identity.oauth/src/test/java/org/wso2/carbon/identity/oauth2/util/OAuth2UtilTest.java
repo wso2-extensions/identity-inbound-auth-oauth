@@ -1229,11 +1229,11 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 // tenantDomain
                 // oauthUrl
                 {true, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain",
-                        "https://localhost:9443/t/testDomain/api/identity/oauth2/dcr/v1.0/register"},
+                        "https://localhost:9443/t/testDomain/api/identity/oauth2/dcr/v1.1/register"},
                 {true, "", "https://localhost:9443/testUrl", "",
-                        "https://localhost:9443/api/identity/oauth2/dcr/v1.0/register"},
+                        "https://localhost:9443/api/identity/oauth2/dcr/v1.1/register"},
                 {true, "", "https://localhost:9443/testUrl", "testDomain",
-                        "https://localhost:9443/t/testDomain/api/identity/oauth2/dcr/v1.0/register"},
+                        "https://localhost:9443/t/testDomain/api/identity/oauth2/dcr/v1.1/register"},
                 {false, "", "https://localhost:9443/testUrl", "testDomain",
                         "https://localhost:9443/t/testDomain/testUrl"},
                 {false, "", "https://localhost:9443/testUrl", "",

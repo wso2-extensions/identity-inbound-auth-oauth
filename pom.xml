@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>6.11.81-SNAPSHOT</version>
+    <version>6.11.90-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -863,8 +863,8 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.25.221</carbon.identity.framework.version>
-        <carbon.identity.framework.imp.pkg.version.range>[5.17.5, 7.0.0)
+        <carbon.identity.framework.version>5.25.234</carbon.identity.framework.version>
+        <carbon.identity.framework.imp.pkg.version.range>[5.25.234, 7.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
         <carbon.identity.organization.management.version>1.1.14
@@ -872,7 +872,7 @@
         <carbon.identity.organization.management.version.range>[1.1.14, 2.0.0)
         </carbon.identity.organization.management.version.range>
 
-        <carbon.identity.organization.management.core.version>1.0.17
+        <carbon.identity.organization.management.core.version>1.0.52
         </carbon.identity.organization.management.core.version>
         <carbon.identity.organization.management.core.version.range>[1.0.0, 2.0.0)
         </carbon.identity.organization.management.core.version.range>
@@ -926,7 +926,7 @@
         <thetransactioncompany.cors-filter.wso2.version>1.7.0.wso2v1</thetransactioncompany.cors-filter.wso2.version>
         <thetransactioncompany.utils.wso2.version>1.9.0.wso2v1</thetransactioncompany.utils.wso2.version>
 
-        <json.wso2.version>3.0.0.wso2v1</json.wso2.version>
+        <json.wso2.version>3.0.0.wso2v2</json.wso2.version>
         <json.wso2.version.range>[3.0.0.wso2v1, 4.0.0)</json.wso2.version.range>
 
         <opensaml.version>3.3.1</opensaml.version>

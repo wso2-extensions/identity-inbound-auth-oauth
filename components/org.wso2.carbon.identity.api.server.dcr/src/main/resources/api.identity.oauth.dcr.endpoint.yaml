@@ -54,7 +54,7 @@ paths:
          "grant_types": ["password"], 
          "ext_param_client_id":"provided_client_id0001", 
          "ext_param_client_secret":"provided_client_secret0001" }' 
-        "https://localhost:9443/api/identity/oauth2/dcr/v1.0/register"
+        "https://localhost:9443/api/identity/oauth2/dcr/v1.1/register"
       x-wso2-response: |
         "HTTP/1.1 201 Created"
         {"client_name”:"application_test",

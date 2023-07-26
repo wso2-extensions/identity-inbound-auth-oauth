@@ -247,12 +247,19 @@
                         $(jQuery('#idTokenPlain').hide());
                         $(jQuery('#logout_mechanism_row').hide());
                         $(jQuery('#logout_url_row').hide());
-                        $(jQuery("#id_token_audience_enable").hide());
-                        $(jQuery("#add_id_token_audience").hide());
-                        $(jQuery("#id_token_audience_table").hide());
-                        $(jQuery("#access_token_audience_enable").hide());
-                        $(jQuery("#add_access_token_audience").hide());
-                        $(jQuery("#access_token_audience_table").hide());
+
+                        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                            $(jQuery("#audience_enable").hide());
+                            $(jQuery("#add_audience").hide());
+                            $(jQuery("#audience_table").hide());
+                        } else {
+                            $(jQuery("#id_token_audience_enable").hide());
+                            $(jQuery("#add_id_token_audience").hide());
+                            $(jQuery("#id_token_audience_table").hide());
+                            $(jQuery("#access_token_audience_enable").hide());
+                            $(jQuery("#add_access_token_audience").hide());
+                            $(jQuery("#access_token_audience_table").hide());
+                        }
                         $(jQuery("#validate_request_object_signature_row").hide());
                         $(jQuery("#encrypt_id_token_row").hide());
                         $(jQuery('#encryption_method_row')).hide();
@@ -275,12 +282,20 @@
                         $(jQuery('#applicationAccessTokenPlain').show());
                         $(jQuery('#refreshTokenPlain').show());
                         $(jQuery('#idTokenPlain').show());
-                        $(jQuery("#id_token_audience_enable").show());
-                        $(jQuery("#add_id_token_audience").show());
-                        $(jQuery("#id_token_audience_table").show());
-                        $(jQuery("#access_token_audience_enable").show());
-                        $(jQuery("#add_access_token_audience").show());
-                        $(jQuery("#access_token_audience_table").show());
+
+                        if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                            $(jQuery("#audience_enable").show());
+                            $(jQuery("#add_audience").show());
+                            $(jQuery("#audience_table").show());
+                        } else {
+                            $(jQuery("#id_token_audience_enable").show());
+                            $(jQuery("#add_id_token_audience").show());
+                            $(jQuery("#id_token_audience_table").show());
+                            $(jQuery("#access_token_audience_enable").show());
+                            $(jQuery("#add_access_token_audience").show());
+                            $(jQuery("#access_token_audience_table").show());
+                        }
+
                         $(jQuery("#validate_request_object_signature_row").show());
                         $(jQuery("#encrypt_id_token_row").show());
                         $(jQuery('#encryption_algorithm_row')).show();
@@ -886,6 +901,52 @@
                                         <fmt:message key='seconds'/>
                                     </td>
                                 </tr>
+                                <%
+                                    if (OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+                                %>
+                                <tr id="audience_enable">
+                                    <td colspan="2">
+                                        <label title="Enable Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
+                                            <input type="checkbox" name="enableAudienceRestriction"
+                                                   id="enableAudienceRestriction" value="true"
+                                                   onclick="toggleAudienceRestriction(this);"/>
+                                            <fmt:message key="enable.audience.restriction"/>
+                                        </label>
+                                    </td>
+                                </tr>
+                                <tr id="add_audience">
+                                    <td style="padding-left: 40px ! important; color: rgb(119, 119, 119); font-style: italic;">
+                                        <fmt:message key="sp.audience"/>
+                                    </td>
+                                    <td>
+                                        <input type="text" id="audience" name="audience"
+                                               class="text-box-big" disabled="disabled"/>
+                                        <input id="addAudience" name="addAudience" type="button"
+                                               disabled="disabled" value="<fmt:message key="oauth.add.audience"/>"
+                                               onclick="return addAudienceFunc()"/>
+                                    </td>
+                                </tr>
+
+                                <tr id="audience_table">
+                                    <td></td>
+                                    <td>
+                                        <table id="audienceTableId"
+                                               style="<%=audienceTableStyle%>"
+                                               class="styledInner">
+                                            <tbody id="audienceTableTbody">
+                                            <%
+                                                int j = 0;
+                                            %>
+                                            <input type="hidden" name="audiencePropertyCounter"
+                                                   id="audiencePropertyCounter"
+                                                   value="<%=j%>"/>
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <%
+                                    } else {
+                                %>
                                 <tr id="id_token_audience_enable">
                                     <td colspan="2">
                                         <label title="Enable ID Token Audience Restriction to restrict the audience. You may add audience members using the Audience text box and clicking the Add button">
