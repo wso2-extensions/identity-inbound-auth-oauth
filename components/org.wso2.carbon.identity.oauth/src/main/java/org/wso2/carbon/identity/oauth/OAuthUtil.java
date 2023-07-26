@@ -482,7 +482,8 @@ public final class OAuthUtil {
         dto.setApplicationAccessTokenExpiryTime(appDO.getApplicationAccessTokenExpiryTime());
         dto.setRefreshTokenExpiryTime(appDO.getRefreshTokenExpiryTime());
         dto.setIdTokenExpiryTime(appDO.getIdTokenExpiryTime());
-        dto.setAudiences(appDO.getAudiences());
+        dto.setIdTokenAudiences(appDO.getIdTokenAudiences());
+        dto.setAccessTokenAudiences(appDO.getAccessTokenAudiences());
         dto.setRequestObjectSignatureValidationEnabled(appDO.isRequestObjectSignatureValidationEnabled());
         dto.setIdTokenEncryptionEnabled(appDO.isIdTokenEncryptionEnabled());
         dto.setIdTokenEncryptionAlgorithm(appDO.getIdTokenEncryptionAlgorithm());

@@ -62,6 +62,12 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     @XmlElementWrapper(name = "audiences")
     @XmlElement(name = "audience")
     private String[] audiences = new String[0];
+    @XmlElementWrapper(name = "idTokenAudiences")
+    @XmlElement(name = "idTokenAudience")
+    private String[] idTokenAudiences = new String[0];
+    @XmlElementWrapper(name = "accessTokenAudiences")
+    @XmlElement(name = "accessTokenAudience")
+    private String[] accessTokenAudiences = new String[0];
     private boolean bypassClientCredentials;
     private String renewRefreshTokenEnabled;
     // OIDC related properties.
@@ -218,12 +224,40 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
         this.refreshTokenExpiryTime = refreshTokenExpiryTime;
     }
 
+    /**
+     * @deprecated use {@link #getIdTokenAudiences()} | {@link #getAccessTokenAudiences()} instead.
+     */
+    @Deprecated
     public String[] getAudiences() {
         return audiences;
     }
 
+    /**
+     * @deprecated use {@link #setIdTokenAudiences(String[])} instead.
+     */
+    @Deprecated
     public void setAudiences(String[] audiences) {
         this.audiences = audiences;
+    }
+
+    public String[] getIdTokenAudiences() {
+
+        return idTokenAudiences;
+    }
+
+    public void setIdTokenAudiences(String[] idTokenAudiences) {
+
+        this.idTokenAudiences = idTokenAudiences;
+    }
+
+    public String[] getAccessTokenAudiences() {
+
+        return accessTokenAudiences;
+    }
+
+    public void setAccessTokenAudiences(String[] accessTokenAudiences) {
+
+        this.accessTokenAudiences = accessTokenAudiences;
     }
 
     public boolean isRequestObjectSignatureValidationEnabled() {

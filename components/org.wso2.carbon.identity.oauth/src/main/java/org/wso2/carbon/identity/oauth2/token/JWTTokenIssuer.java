@@ -119,7 +119,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         try {
-            return this.buildJWTToken(oAuthTokenReqMessageContext);
+            return this.buildJWTAccessToken(oAuthTokenReqMessageContext);
         } catch (IdentityOAuth2Exception e) {
             throw new OAuthSystemException(e);
         }
@@ -134,7 +134,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         try {
-            return this.buildJWTToken(oAuthAuthzReqMessageContext);
+            return this.buildJWTAccessToken(oAuthAuthzReqMessageContext);
         } catch (IdentityOAuth2Exception e) {
             throw new OAuthSystemException(e);
         }
@@ -177,8 +177,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     protected String buildJWTToken(OAuthTokenReqMessageContext request) throws IdentityOAuth2Exception {
 
         // Set claims to jwt token.
-        JWTClaimsSet jwtClaimsSet = createJWTClaimSet(null, request, request.getOauth2AccessTokenReqDTO()
-                .getClientId());
+        JWTClaimsSet jwtClaimsSet = createJWTClaimSet(null, request,
+                request.getOauth2AccessTokenReqDTO().getClientId(), false);
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
 
         if (request.getScope() != null && Arrays.asList((request.getScope())).contains(AUDIENCE)) {
@@ -211,8 +211,71 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     protected String buildJWTToken(OAuthAuthzReqMessageContext request) throws IdentityOAuth2Exception {
 
         // Set claims to jwt token.
-        JWTClaimsSet jwtClaimsSet = createJWTClaimSet(request, null, request.getAuthorizationReqDTO()
-                .getConsumerKey());
+        JWTClaimsSet jwtClaimsSet = createJWTClaimSet(request, null,
+                request.getAuthorizationReqDTO().getConsumerKey(), false);
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
+
+        if (request.getApprovedScope() != null && Arrays.asList((request.getApprovedScope())).contains(AUDIENCE)) {
+            jwtClaimsSetBuilder.audience(Arrays.asList(request.getApprovedScope()));
+        }
+        List<JWTAccessTokenClaimProvider> claimProviders = getJWTAccessTokenClaimProviders();
+        for (JWTAccessTokenClaimProvider claimProvider : claimProviders) {
+            Map<String, Object> additionalClaims = claimProvider.getAdditionalClaims(request);
+            if (additionalClaims != null) {
+                additionalClaims.forEach(jwtClaimsSetBuilder::claim);
+            }
+        }
+        jwtClaimsSet = jwtClaimsSetBuilder.build();
+        if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
+            return new PlainJWT(jwtClaimsSet).serialize();
+        }
+        return signJWT(jwtClaimsSet, null, request);
+    }
+
+    /**
+     * Build a signed jwt token for the access token from OauthToken request message context.
+     *
+     * @param request Token request message context.
+     * @return Signed jwt string.
+     * @throws IdentityOAuth2Exception
+     */
+    protected String buildJWTAccessToken(OAuthTokenReqMessageContext request) throws IdentityOAuth2Exception {
+
+        // Set claims to jwt token.
+        JWTClaimsSet jwtClaimsSet = createJWTClaimSet(null, request,
+                request.getOauth2AccessTokenReqDTO().getClientId(), true);
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
+
+        if (request.getScope() != null && Arrays.asList((request.getScope())).contains(AUDIENCE)) {
+            jwtClaimsSetBuilder.audience(Arrays.asList(request.getScope()));
+        }
+        List<JWTAccessTokenClaimProvider> claimProviders = getJWTAccessTokenClaimProviders();
+        for (JWTAccessTokenClaimProvider claimProvider : claimProviders) {
+            Map<String, Object> additionalClaims = claimProvider.getAdditionalClaims(request);
+            if (additionalClaims != null) {
+                additionalClaims.forEach(jwtClaimsSetBuilder::claim);
+            }
+        }
+        jwtClaimsSet = jwtClaimsSetBuilder.build();
+        if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
+            return new PlainJWT(jwtClaimsSet).serialize();
+        }
+
+        return signJWT(jwtClaimsSet, request, null);
+    }
+
+    /**
+     * Build a signed jwt token for the access token from authorization request message context.
+     *
+     * @param request Oauth authorization message context.
+     * @return Signed jwt string.
+     * @throws IdentityOAuth2Exception
+     */
+    protected String buildJWTAccessToken(OAuthAuthzReqMessageContext request) throws IdentityOAuth2Exception {
+
+        // Set claims to jwt token.
+        JWTClaimsSet jwtClaimsSet = createJWTClaimSet(request, null,
+                request.getAuthorizationReqDTO().getConsumerKey(), true);
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
 
         if (request.getApprovedScope() != null && Arrays.asList((request.getApprovedScope())).contains(AUDIENCE)) {
@@ -510,18 +573,96 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         } else {
             jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
         }
+        // Include token binding.
+        jwtClaimsSet = handleTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
 
-        if (tokenReqMessageContext != null && tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
-                tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes() != null) {
-            Map<String, String> customClaims =
-                    tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes()
-                            .getParameters();
-            if (customClaims != null && !customClaims.isEmpty()) {
-                for (Map.Entry<String, String> entry : customClaims.entrySet()) {
-                    jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
-                }
-            }
+        if (tokenReqMessageContext != null && tokenReqMessageContext.getProperty(CNF) != null) {
+            jwtClaimsSet = handleCnf(jwtClaimsSetBuilder, tokenReqMessageContext);
         }
+
+        return jwtClaimsSet;
+    }
+
+    /**
+     * Create a JWT claim set according to the JWT format.
+     *
+     * @param authAuthzReqMessageContext Oauth authorization request message context.
+     * @param tokenReqMessageContext     Token request message context.
+     * @param consumerKey                Consumer key of the application.
+     * @param isAccessToken              Checks whether the token is an access token to add proper audiences.
+     * @return JWT claim set.
+     * @throws IdentityOAuth2Exception
+     */
+    protected JWTClaimsSet createJWTClaimSet(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
+                                             OAuthTokenReqMessageContext tokenReqMessageContext,
+                                             String consumerKey, boolean isAccessToken) throws IdentityOAuth2Exception {
+
+        // loading the stored application data
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
+        }
+
+        String spTenantDomain;
+        long accessTokenLifeTimeInMillis;
+        if (authAuthzReqMessageContext != null) {
+            accessTokenLifeTimeInMillis =
+                    getAccessTokenLifeTimeInMillis(authAuthzReqMessageContext, oAuthAppDO, consumerKey);
+            spTenantDomain = authAuthzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
+        } else {
+            accessTokenLifeTimeInMillis =
+                    getAccessTokenLifeTimeInMillis(tokenReqMessageContext, oAuthAppDO, consumerKey);
+            spTenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
+        }
+
+        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
+        long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
+
+        AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
+        String sub = getSubjectClaim(consumerKey, spTenantDomain, authenticatedUser);
+
+        // Set the default claims.
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        jwtClaimsSetBuilder.issuer(issuer);
+        jwtClaimsSetBuilder.subject(sub);
+        jwtClaimsSetBuilder.claim(AUTHORIZATION_PARTY, consumerKey);
+        jwtClaimsSetBuilder.issueTime(new Date(curTimeInMillis));
+        jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
+        jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis));
+        jwtClaimsSetBuilder.claim(CLIENT_ID, consumerKey);
+
+        String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
+        if (StringUtils.isNotEmpty(scope)) {
+            jwtClaimsSetBuilder.claim(SCOPE, scope);
+        }
+
+        jwtClaimsSetBuilder.claim(OAuthConstants.AUTHORIZED_USER_TYPE,
+                getAuthorizedUserType(authAuthzReqMessageContext, tokenReqMessageContext));
+
+        jwtClaimsSetBuilder.expirationTime(calculateAccessTokenExpiryTime(accessTokenLifeTimeInMillis,
+                curTimeInMillis));
+
+        // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens. But we are keeping this in JWT
+        // as well.
+
+        List<String> audience;
+        if (isAccessToken && !OAuth2ServiceComponentHolder.isLegacyAudienceEnabled()) {
+            audience = OAuth2Util.getOIDCAccessTokenAudience(issuer, oAuthAppDO);
+        } else {
+            audience = OAuth2Util.getOIDCIdTokenAudience(consumerKey, oAuthAppDO);
+        }
+        jwtClaimsSetBuilder.audience(audience);
+        JWTClaimsSet jwtClaimsSet;
+
+        // Handle custom claims
+        if (authAuthzReqMessageContext != null) {
+            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, authAuthzReqMessageContext);
+        } else {
+            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
+        }
+
         // Include token binding.
         jwtClaimsSet = handleTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
 

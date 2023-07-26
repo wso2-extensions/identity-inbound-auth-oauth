@@ -106,9 +106,9 @@ import javax.xml.stream.XMLStreamReader;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabled;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkConsentedTokenColumnAvailable;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkLegacyAudiencesEnabled;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getJWTRenewWithoutRevokeAllowedGrantTypes;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isAccessTokenExtendedTableExist;
 
@@ -307,17 +307,6 @@ public class OAuth2ServiceComponent {
             log.error(errMsg, e);
             throw new RuntimeException(errMsg, e);
         }
-        if (checkAudienceEnabled()) {
-            if (log.isDebugEnabled()) {
-                log.debug("OAuth - OIDC audiences enabled.");
-            }
-            OAuth2ServiceComponentHolder.setAudienceEnabled(true);
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("OAuth - OIDC audiences disabled.");
-            }
-            OAuth2ServiceComponentHolder.setAudienceEnabled(false);
-        }
         if (checkIDPIdColumnAvailable()) {
             if (log.isDebugEnabled()) {
                 log.debug("IDP_ID column is available in all relevant tables. " +
@@ -336,6 +325,14 @@ public class OAuth2ServiceComponent {
             log.debug("IDN_OAUTH2_ACCESS_TOKEN_EXTENDED table is available Setting " +
                     "isAccessTokenExtendedTableExist to true.");
             OAuth2ServiceComponentHolder.setTokenExtendedTableExist(true);
+        }
+
+        if (checkLegacyAudiencesEnabled()) {
+            log.debug("OAuth Legacy audiences enabled.");
+            OAuth2ServiceComponentHolder.setLegacyAudienceEnabled(true);
+        } else {
+            log.debug("OAuth Legacy audiences disabled.");
+            OAuth2ServiceComponentHolder.setLegacyAudienceEnabled(false);
         }
 
         boolean isConsentedTokenColumnAvailable = checkConsentedTokenColumnAvailable();

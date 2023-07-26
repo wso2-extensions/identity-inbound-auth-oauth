@@ -83,6 +83,7 @@ public class OAuth2ServiceComponentHolder {
     private static UserSessionManagementService userSessionManagementService;
     private static SAMLSSOServiceProviderManager samlSSOServiceProviderManager;
     private static RoleManager roleManager;
+    private static boolean legacyAudienceEnabled = false;
     private static OrganizationUserResidentResolverService organizationUserResidentResolverService;
     private List<ScopeDTO> oidcScopesClaims = new ArrayList<>();
     private List<Scope> oauthScopeBinding = new ArrayList<>();
@@ -134,11 +135,13 @@ public class OAuth2ServiceComponentHolder {
         OAuth2ServiceComponentHolder.pkceEnabled = pkceEnabled;
     }
 
+    @Deprecated
     public static boolean isAudienceEnabled() {
 
         return audienceEnabled;
     }
 
+    @Deprecated
     public static void setAudienceEnabled(boolean audienceEnabled) {
 
         OAuth2ServiceComponentHolder.audienceEnabled = audienceEnabled;
@@ -194,6 +197,16 @@ public class OAuth2ServiceComponentHolder {
             AuthenticationMethodNameTranslator authenticationMethodNameTranslator) {
 
         OAuth2ServiceComponentHolder.authenticationMethodNameTranslator = authenticationMethodNameTranslator;
+    }
+
+    public static boolean isLegacyAudienceEnabled() {
+
+        return legacyAudienceEnabled;
+    }
+
+    public static void setLegacyAudienceEnabled(boolean legacyAudienceEnabled) {
+
+        OAuth2ServiceComponentHolder.legacyAudienceEnabled = legacyAudienceEnabled;
     }
 
     /**

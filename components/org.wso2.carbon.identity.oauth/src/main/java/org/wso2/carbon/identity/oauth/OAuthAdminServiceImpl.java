@@ -296,8 +296,11 @@ public class OAuthAdminServiceImpl {
 
                         app.setScopeValidators(filterScopeValidators(application));
 
-                        validateAudiences(application);
-                        app.setAudiences(application.getAudiences());
+                        validateIdTokenAudiences(application);
+                        validateAccessTokenAudiences(application);
+                        app.setIdTokenAudiences(application.getIdTokenAudiences());
+                        app.setAccessTokenAudiences(application.getAccessTokenAudiences());
+
                         app.setPkceMandatory(application.getPkceMandatory());
                         app.setPkceSupportPlain(application.getPkceSupportPlain());
                         // Validate access token expiry configurations.
@@ -364,16 +367,32 @@ public class OAuthAdminServiceImpl {
         return OAuthUtil.buildConsumerAppDTO(app);
     }
 
-    private void validateAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
+    private void validateIdTokenAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
 
-        if (application.getAudiences() != null) {
+        if (application.getIdTokenAudiences() != null) {
             // Filter out any duplicates and empty audiences here.
-            long filteredAudienceSize = Arrays.stream(application.getAudiences()).filter(StringUtils::isNotBlank)
+            long filteredAudienceSize = Arrays.stream(application.getIdTokenAudiences()).filter(StringUtils::isNotBlank)
                     .distinct().count();
 
-            if (filteredAudienceSize != application.getAudiences().length) {
+            if (filteredAudienceSize != application.getIdTokenAudiences().length) {
                 // This means we had duplicates and empty strings.
-                throw handleClientError(INVALID_REQUEST, "Audience values cannot contain duplicates or empty values.");
+                throw handleClientError(INVALID_REQUEST,
+                        "Id Token audience values cannot contain duplicates or empty values.");
+            }
+        }
+    }
+
+    private void validateAccessTokenAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
+
+        if (application.getAccessTokenAudiences() != null) {
+            // Filter out any duplicates and empty audiences here.
+            long filteredAudienceSize = Arrays.stream(application.getAccessTokenAudiences())
+                    .filter(StringUtils::isNotBlank).distinct().count();
+
+            if (filteredAudienceSize != application.getAccessTokenAudiences().length) {
+                // This means we had duplicates and empty strings.
+                throw handleClientError(INVALID_REQUEST,
+                        "Access Token Audience values cannot contain duplicates or empty values.");
             }
         }
     }
@@ -517,8 +536,10 @@ public class OAuthAdminServiceImpl {
             validateGrantTypes(consumerAppDTO);
             oauthappdo.setGrantTypes(consumerAppDTO.getGrantTypes());
 
-            validateAudiences(consumerAppDTO);
-            oauthappdo.setAudiences(consumerAppDTO.getAudiences());
+            validateIdTokenAudiences(consumerAppDTO);
+            validateAccessTokenAudiences(consumerAppDTO);
+            oauthappdo.setIdTokenAudiences(consumerAppDTO.getIdTokenAudiences());
+            oauthappdo.setAccessTokenAudiences(consumerAppDTO.getAccessTokenAudiences());
             oauthappdo.setScopeValidators(filterScopeValidators(consumerAppDTO));
             oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
                     .isRequestObjectSignatureValidationEnabled());

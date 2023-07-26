@@ -38,6 +38,8 @@ public class OAuthConsumerAppDTO {
     private long applicationAccessTokenExpiryTime;
     private long refreshTokenExpiryTime;
     private String[] audiences;
+    private String[] idTokenAudiences;
+    private String[] accessTokenAudiences;
     private boolean bypassClientCredentials;
     private String renewRefreshTokenEnabled;
     // OIDC related properties
@@ -168,14 +170,45 @@ public class OAuthConsumerAppDTO {
         return state;
     }
 
+    /**
+     * @deprecated use {@link #getIdTokenAudiences()} instead.
+     */
+    @Deprecated
     public String[] getAudiences() {
         return audiences;
     }
 
+    /**
+     * @deprecated use {@link #setIdTokenAudiences(String[])} instead.
+     */
+    @Deprecated
     public void setAudiences(String[] audiences) {
 
         if (audiences != null) {
             this.audiences = audiences;
+        }
+    }
+
+    public String[] getIdTokenAudiences() {
+        return idTokenAudiences;
+    }
+
+    public void setIdTokenAudiences(String[] idTokenAudiences) {
+
+        if (idTokenAudiences != null) {
+            this.idTokenAudiences = idTokenAudiences;
+        }
+    }
+
+    public String[] getAccessTokenAudiences() {
+
+        return accessTokenAudiences;
+    }
+
+    public void setAccessTokenAudiences(String[] accessTokenAudiences) {
+
+        if (accessTokenAudiences != null) {
+            this.accessTokenAudiences = accessTokenAudiences;
         }
     }
 
