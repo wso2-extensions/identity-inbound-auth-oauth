@@ -424,7 +424,8 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
      * authentication context.
      *
      * @param eventProperties Event properties.
-     * @return context Authentication context.
+     * @param context         Authentication context.
+     * @return Authentication user.
      */
     private AuthenticatedUser getAuthenticatedUser(Map<String, Object> eventProperties, AuthenticationContext context) {
 
