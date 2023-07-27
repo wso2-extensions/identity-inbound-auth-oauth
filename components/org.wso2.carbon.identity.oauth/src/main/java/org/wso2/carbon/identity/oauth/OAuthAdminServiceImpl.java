@@ -1741,9 +1741,7 @@ public class OAuthAdminServiceImpl {
         return OAuthComponentServiceHolder.getInstance().getOauth2Service();
     }
 
-    OAuthAppDO getOAuthApp(String consumerKey) throws InvalidOAuthClientException, IdentityOAuth2Exception {
-
-        OAuthAppDO oauthApp = AppInfoCache.getInstance().getValueFromCache(consumerKey);
+    OAuthAppDO getOAuthApp(String consumerKey) throws InvalidOAuthClientException, IdentityOAuth2Exception {OAuthAppDO oauthApp = AppInfoCache.getInstance().getValueFromCache(consumerKey);
         if (oauthApp != null) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("OAuth app with consumerKey: " + consumerKey + " retrieved from AppInfoCache.");

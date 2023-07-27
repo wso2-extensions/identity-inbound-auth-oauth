@@ -326,6 +326,7 @@ public class OAuthAppDAO {
             try (PreparedStatement prepStmt = connection.prepareStatement(sqlQuery)) {
                 String preprocessedClientId = persistenceProcessor.getProcessedClientId(consumerKey);
                 prepStmt.setString(1, preprocessedClientId);
+                prepStmt.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
 
                 try (ResultSet rSet = prepStmt.executeQuery()) {
                     /*
@@ -461,6 +462,7 @@ public class OAuthAppDAO {
                 prepStmt.setString(1, oauthAppDO.getApplicationName());
                 prepStmt.setString(2, oauthAppDO.getCallbackUrl());
                 prepStmt.setString(3, oauthAppDO.getGrantTypes());
+                prepStmt.setString(4, CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
 
                 if (isUserValidForOwnerUpdate) {
                     setValuesToStatementWithPKCEAndOwnerUpdate(oauthAppDO, prepStmt);
@@ -734,12 +736,13 @@ public class OAuthAppDAO {
     public void removeConsumerApplication(String consumerKey) throws IdentityOAuthAdminException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+            String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
             try (PreparedStatement prepStmt = connection
                     .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_APPLICATION)) {
                 prepStmt.setString(1, consumerKey);
+                prepStmt.setString(2, tenantDomain);
                 prepStmt.execute();
                 if (isOIDCAudienceEnabled()) {
-                    String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
                     removeOauthOIDCPropertyTable(connection, tenantDomain, consumerKey);
                 }
                 IdentityDatabaseUtil.commitTransaction(connection);
@@ -797,6 +800,7 @@ public class OAuthAppDAO {
                          statement = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_INFO)) {
                 statement.setString(1, appName);
                 statement.setString(2, consumerKey);
+                statement.setInt(3, CarbonContext.getThreadLocalCarbonContext().getTenantId());
                 statement.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e1) {
@@ -827,6 +831,7 @@ public class OAuthAppDAO {
                      statement.setString(2, serviceProvider.getOwner().getUserName());
                      statement.setString(3, serviceProvider.getOwner().getUserStoreDomain());
                      statement.setString(4, consumerKey);
+                     statement.setInt(5, CarbonContext.getThreadLocalCarbonContext().getTenantId());
                      statement.execute();
                      IdentityDatabaseUtil.commitTransaction(connection);
                  } catch (SQLException e1) {
@@ -920,10 +925,11 @@ public class OAuthAppDAO {
     public boolean isDuplicateConsumer(String consumerKey) throws IdentityOAuthAdminException {
 
         boolean isDuplicateConsumer = false;
-
+        int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false); PreparedStatement
                 prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.CHECK_EXISTING_CONSUMER)) {
             prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerKey));
+            prepStmt.setInt(2, tenantId);
 
             try (ResultSet rSet = prepStmt.executeQuery()) {
                 if (rSet.next()) {
@@ -1043,6 +1049,7 @@ public class OAuthAppDAO {
             try (PreparedStatement prepStmt = connection.prepareStatement(
                     SQLQueries.OAuthAppDAOSQLQueries.REMOVE_SP_ASSOCIATIONS_BY_CONSUMER_ID)) {
                 prepStmt.setString(1, consumerKey);
+                prepStmt.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
                 prepStmt.execute();
             }
         }
