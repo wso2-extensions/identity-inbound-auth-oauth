@@ -18,12 +18,10 @@
 
 package org.wso2.carbon.identity.oauth.par.exceptions;
 
-import org.wso2.carbon.identity.base.IdentityException;
-
 /**
  * Client exception from par core component.
  */
-public class ParClientException extends IdentityException {
+public class ParClientException extends ParCoreException {
 
     /**
      * Constructor with error code and error message.

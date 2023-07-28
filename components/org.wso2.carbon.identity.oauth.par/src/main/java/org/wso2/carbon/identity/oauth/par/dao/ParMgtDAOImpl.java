@@ -21,8 +21,6 @@ package org.wso2.carbon.identity.oauth.par.dao;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.common.SQLQueries;
@@ -34,13 +32,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Implementation of abstract DAO layer.
  */
 public class ParMgtDAOImpl implements ParMgtDAO {
-
-    private static final Log log = LogFactory.getLog(ParMgtDAOImpl.class);
 
     @Override
     public void persistRequestData(String requestURIReference, String clientId, long expiresIn,
@@ -57,9 +54,6 @@ public class ParMgtDAOImpl implements ParMgtDAO {
                 prepStmt.setString(4, getSerializedParams(parameters));
 
                 prepStmt.execute();
-            } catch (SQLException e) {
-                IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new ParCoreException("Error occurred in persisting PAR request.", e);
             }
         } catch (SQLException e) {
             throw new ParCoreException("Error occurred in persisting PAR request.", e);
@@ -67,7 +61,7 @@ public class ParMgtDAOImpl implements ParMgtDAO {
     }
 
     @Override
-    public ParRequestDO getRequestData(String requestURIReference) throws ParCoreException {
+    public Optional<ParRequestDO> getRequestData(String requestURIReference) throws ParCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
@@ -77,20 +71,14 @@ public class ParMgtDAOImpl implements ParMgtDAO {
 
             try (ResultSet resultSet = prepStmt.executeQuery()) {
                 if (resultSet.next()) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Successfully obtained client_id of RequestURI with UUID: " + requestURIReference);
-                    }
                     String jsonParams = resultSet.getString(ParConstants.COL_LBL_PARAMETERS);
                     long scheduledExpiry = resultSet.getLong(ParConstants.COL_LBL_SCHEDULED_EXPIRY);
                     String clientId = resultSet.getString(ParConstants.COL_LBL_CLIENT_ID);
 
-                    return new ParRequestDO(getDeserializedParams(jsonParams), scheduledExpiry, clientId);
+                    return Optional.of(new ParRequestDO(getDeserializedParams(jsonParams), scheduledExpiry, clientId));
 
-                } else {
-                    throw new ParCoreException("uuid does not exist in the database");
                 }
-            } catch (SQLException e) {
-                throw new ParCoreException("Error occurred while retrieving PAR request from the database.", e);
+                return Optional.empty();
             }
         } catch (SQLException e) {
             throw new ParCoreException("Error occurred while retrieving PAR request from the database.", e);

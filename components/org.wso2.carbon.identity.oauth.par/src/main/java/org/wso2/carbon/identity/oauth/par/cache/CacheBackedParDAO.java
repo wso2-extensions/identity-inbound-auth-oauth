@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.oauth.par.model.ParRequestCacheEntry;
 import org.wso2.carbon.identity.oauth.par.model.ParRequestDO;
 
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Caching layer for PAR Requests.
@@ -49,19 +50,19 @@ public class CacheBackedParDAO implements ParMgtDAO {
     }
 
     @Override
-    public ParRequestDO getRequestData(String requestURIReference) throws ParCoreException {
+    public Optional<ParRequestDO> getRequestData(String requestURIReference) throws ParCoreException {
 
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         ParRequestCacheEntry parRequest = parCache.getValueFromCache(requestURIReference);
-        ParRequestDO parRequestDO;
+        Optional<ParRequestDO> parRequestDO;
         if (parRequest != null) {
             if (log.isDebugEnabled()) {
                 log.debug(
                         String.format("Cache hit for expiry time of local uuid: %s for tenant: %s ",
                                 requestURIReference, tenantDomain));
             }
-            parRequestDO = new ParRequestDO(parRequest.getParams(), parRequest.getExpiresIn(),
-                    parRequest.getClientId());
+            parRequestDO = Optional.of(new ParRequestDO(parRequest.getParams(), parRequest.getExpiresIn(),
+                    parRequest.getClientId()));
         } else {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Cache miss for expiry time of uuid:%s for tenant: %s ",

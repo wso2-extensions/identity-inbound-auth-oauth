@@ -23,6 +23,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParAuthFailureException;
+import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 
 import java.util.Map;
@@ -60,6 +61,10 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
             params = parAuthService.retrieveParams(uuid,
                     request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
             params.put(OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST, "true");
+            // set request_uri to empty string to avoid conflicting with OIDC flow
+            params.put(OAuthConstants.OAuth20Params.REQUEST_URI, "");
+        } catch (ParClientException e) {
+            throw new ParAuthFailureException(e.getMessage());
         } catch (ParCoreException e) {
             throw new ParAuthFailureException("Error occurred while retrieving params from PAR request");
         }

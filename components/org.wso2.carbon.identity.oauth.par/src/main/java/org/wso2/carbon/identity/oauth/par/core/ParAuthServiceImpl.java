@@ -18,27 +18,27 @@
 
 package org.wso2.carbon.identity.oauth.par.core;
 
-import org.apache.axiom.om.OMElement;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
-import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
 import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAO;
+import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
 import org.wso2.carbon.identity.oauth.par.model.ParRequestDO;
 
 import java.util.Calendar;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TimeZone;
 import java.util.UUID;
 
-import javax.xml.namespace.QName;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PAR_EXPIRY_TIME;
 
 /**
  * Provides PAR services.
@@ -70,45 +70,46 @@ public class ParAuthServiceImpl implements ParAuthService {
     }
 
     @Override
-    public Map<String, String> retrieveParams(String uuid, String clientId) throws ParCoreException {
+    public Map<String, String> retrieveParams(String uuid, String clientId)
+            throws ParCoreException {
 
-        ParRequestDO parRequestDO = parMgtDAO.getRequestData(uuid);
+        Optional<ParRequestDO> optionalParRequestDO = parMgtDAO.getRequestData(uuid);
+        if (!optionalParRequestDO.isPresent()) {
+            throw new ParCoreException("A PAR request does not exist for the uuid: " + uuid);
+        }
+
+        ParRequestDO parRequestDO = optionalParRequestDO.get();
         parMgtDAO.removeRequestData(uuid);
-        validateRequestURI(parRequestDO.getExpiresIn());
+        validateExpiryTime(parRequestDO.getExpiresIn());
         validateClientID(clientId, parRequestDO.getClientId());
 
         return parRequestDO.getParams();
     }
 
-    private void validateRequestURI(long expiresIn) throws ParCoreException {
+    private void validateExpiryTime(long expiresIn) throws ParClientException {
 
         long currentTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis();
 
         if (currentTimeInMillis > expiresIn) {
-            throw new ParCoreException(OAuth2ErrorCodes.INVALID_REQUEST, "request_uri expired");
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, "request_uri expired");
         }
     }
 
-    private void validateClientID(String clientId, String parClientId) throws
-            ParCoreException {
+    private void validateClientID(String clientId, String parClientId) throws ParClientException {
 
         if (!StringUtils.equals(parClientId, clientId)) {
-            throw new ParCoreException(OAuth2ErrorCodes.INVALID_CLIENT, "client_ids do not match.");
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_CLIENT,
+                    String.format("Received client_id %s does not match the client_id from the initial PAR request %s",
+                            clientId, parClientId));
         }
     }
 
     private static long getExpiresInValue() throws ParCoreException {
 
         try {
-            OMElement parConfig = IdentityConfigParser.getInstance().getConfigElement(ParConstants.CONFIG_ELEM_OAUTH)
-                    .getFirstChildWithName(new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE,
-                            ParConstants.PAR));
-            if (parConfig != null) {
-                String expiryTimeValue = parConfig.getFirstChildWithName(new QName(
-                        IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, ParConstants.EXPIRY_TIME)).getText();
-                if (StringUtils.isNotBlank(expiryTimeValue)) {
-                    return Long.parseLong(expiryTimeValue);
-                }
+            Object expiryTimeValue = IdentityConfigParser.getInstance().getConfiguration().get(PAR_EXPIRY_TIME);
+            if (expiryTimeValue != null && (StringUtils.isNotBlank((String) expiryTimeValue))) {
+                return Long.parseLong((String) expiryTimeValue);
             }
             log.debug("PAR expiry time is not configured. Default value will be used.");
             return ParConstants.EXPIRES_IN_DEFAULT_VALUE;

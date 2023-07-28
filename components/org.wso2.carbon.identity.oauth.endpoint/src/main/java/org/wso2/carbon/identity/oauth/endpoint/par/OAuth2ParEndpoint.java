@@ -159,7 +159,7 @@ public class OAuth2ParEndpoint {
         return params.containsKey(OAuthConstants.OAuth20Params.REQUEST_URI);
     }
 
-    private void checkClientAuthentication(HttpServletRequest request) throws ParCoreException, ParClientException {
+    private void checkClientAuthentication(HttpServletRequest request) throws ParCoreException {
 
         OAuthClientAuthnContext oAuthClientAuthnContext = getClientAuthnContext(request);
         if (oAuthClientAuthnContext.isAuthenticated()) {
@@ -169,12 +169,12 @@ public class OAuth2ParEndpoint {
             if (oAuthClientAuthnContext.getErrorCode().equals(OAuth2ErrorCodes.SERVER_ERROR)) {
                 throw new ParCoreException(oAuthClientAuthnContext.getErrorCode(),
                         oAuthClientAuthnContext.getErrorMessage());
-            } else {
-                throw new ParClientException(oAuthClientAuthnContext.getErrorCode(),
-                        oAuthClientAuthnContext.getErrorMessage());
             }
+            throw new ParClientException(oAuthClientAuthnContext.getErrorCode(),
+                    oAuthClientAuthnContext.getErrorMessage());
+
         }
-        throw new ParClientException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, PAR_CLIENT_AUTH_ERROR);
+        throw new ParClientException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, "Client authentication required");
     }
 
     private OAuthClientAuthnContext getClientAuthnContext(HttpServletRequest request) {
@@ -186,7 +186,7 @@ public class OAuth2ParEndpoint {
         } else {
             oAuthClientAuthnContext = new OAuthClientAuthnContext();
             oAuthClientAuthnContext.setAuthenticated(false);
-            oAuthClientAuthnContext.setErrorMessage("Client Authentication Failed");
+            oAuthClientAuthnContext.setErrorMessage(PAR_CLIENT_AUTH_ERROR);
             oAuthClientAuthnContext.setErrorCode(OAuthError.TokenResponse.INVALID_REQUEST);
         }
         return oAuthClientAuthnContext;

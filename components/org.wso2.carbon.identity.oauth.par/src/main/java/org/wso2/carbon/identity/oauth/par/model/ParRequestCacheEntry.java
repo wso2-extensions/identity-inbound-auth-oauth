@@ -24,7 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Object that holds data related to PAR request for caching.
+ * Class that holds data related to PAR request for caching.
  */
 public class ParRequestCacheEntry extends CacheEntry {
 
