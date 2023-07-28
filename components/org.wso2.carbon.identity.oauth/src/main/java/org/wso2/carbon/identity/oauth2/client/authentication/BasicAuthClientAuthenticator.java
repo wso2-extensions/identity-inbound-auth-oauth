@@ -86,11 +86,11 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
             return OAuth2Util.authenticateClient(oAuthClientAuthnContext.getClientId(),
                     (String) oAuthClientAuthnContext.getParameter(OAuth.OAUTH_CLIENT_SECRET));
         } catch (IdentityOAuthAdminException e) {
-            throw new OAuthClientAuthnException(OAuth2ErrorCodes.INVALID_CLIENT, "Error while authenticating " +
-                    "client", e);
+            throw new OAuthClientAuthnException("Error while authenticating client",
+                    OAuth2ErrorCodes.INVALID_CLIENT, e);
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
-            throw new OAuthClientAuthnException(OAuth2ErrorCodes.INVALID_CLIENT,
-                    "Invalid Client : " + oAuthClientAuthnContext.getClientId(), e);
+            throw new OAuthClientAuthnException("Invalid Client : " + oAuthClientAuthnContext.getClientId(),
+                    OAuth2ErrorCodes.INVALID_CLIENT, e);
         }
 
     }
