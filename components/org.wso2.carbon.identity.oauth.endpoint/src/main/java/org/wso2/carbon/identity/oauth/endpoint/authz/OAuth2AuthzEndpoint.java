@@ -120,7 +120,6 @@ import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
-import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.DiagnosticLog;
 
@@ -1439,7 +1438,7 @@ public class OAuth2AuthzEndpoint {
         oAuthAuthzReqMessageContext.setAuthorizationReqDTO(authzReqDTO);
         // authorizing the request
         OAuth2AuthorizeRespDTO authzRespDTO = authorize(oAuthAuthzReqMessageContext);
-        if (authorizationResponseDTO.getRedirectUrl() == null) {
+        if (authzRespDTO != null && authzRespDTO.getCallbackURI() != null) {
             authorizationResponseDTO.setRedirectUrl(authzRespDTO.getCallbackURI());
         }
 
@@ -1957,7 +1956,7 @@ public class OAuth2AuthzEndpoint {
         OAuthAuthzRequest oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
 
         OAuth2Parameters params = new OAuth2Parameters();
-        String sessionDataKey = UUIDGenerator.generateUUID();
+        String sessionDataKey = UUID.randomUUID().toString();
         params.setSessionDataKey(sessionDataKey);
         String redirectURI = populateOauthParameters(params, oAuthMessage, validationResponse, oauthRequest);
         if (redirectURI != null) {
@@ -2001,8 +2000,12 @@ public class OAuth2AuthzEndpoint {
         String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
         try {
             OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+            if (Boolean.TRUE.equals(oAuthMessage.getRequest().getAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW))) {
+                validationResponse.setPkceMandatory(false);
+            } else {
+                validationResponse.setPkceMandatory(appDO.isPkceMandatory());
+            }
             validationResponse.setApplicationName(appDO.getApplicationName());
-            validationResponse.setPkceMandatory(appDO.isPkceMandatory());
             validationResponse.setPkceSupportPlain(appDO.isPkceSupportPlain());
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
             throw new OAuthSystemException("Error while retrieving app information for client_id : " + clientId, e);
@@ -3792,11 +3795,13 @@ public class OAuth2AuthzEndpoint {
             }
         }
 
-        return OIDCSessionManagementUtil.getSessionStateParam(oAuth2Parameters.getClientId(),
-                oAuth2Parameters.getRedirectURI(),
-                opBrowserStateCookie == null ?
-                        null :
-                        opBrowserStateCookie.getValue());
+        String sessionStateParam = null;
+        if (sessionStateObj.isAddSessionState() && StringUtils.isNotEmpty(oAuth2Parameters.getRedirectURI())) {
+            sessionStateParam = OIDCSessionManagementUtil.getSessionStateParam(oAuth2Parameters.getClientId(),
+                    oAuth2Parameters.getRedirectURI(),
+                    opBrowserStateCookie == null ? null : opBrowserStateCookie.getValue());
+        }
+        return sessionStateParam;
     }
 
     private String appendAuthenticatedIDPs(SessionDataCacheEntry sessionDataCacheEntry, String redirectURL,

@@ -39,13 +39,9 @@ import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
-import org.wso2.carbon.registry.api.RegistryException;
-import org.wso2.carbon.registry.api.Resource;
-import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
@@ -68,7 +64,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.EM
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.PHONE_NUMBER_VERIFIED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ROLES;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.UPDATED_AT;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SCOPE_RESOURCE_PATH;
 
 /**
  * Default implementation of {@link OpenIDConnectClaimFilter}
@@ -348,39 +343,6 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
             }
         }
         return essentialClaims;
-    }
-
-    private Properties getOIDCScopeProperties(String spTenantDomain) {
-
-        Resource oidcScopesResource = null;
-        try {
-            int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
-            startTenantFlow(spTenantDomain, tenantId);
-
-            RegistryService registryService = OAuth2ServiceComponentHolder.getRegistryService();
-            if (registryService == null) {
-                throw new RegistryException("Registry Service not set in OAuth2 Component. Component may not have " +
-                        "initialized correctly.");
-            }
-
-            oidcScopesResource = registryService.getConfigSystemRegistry(tenantId).get(SCOPE_RESOURCE_PATH);
-        } catch (RegistryException e) {
-            log.error("Error while obtaining registry collection from registry path:" + SCOPE_RESOURCE_PATH, e);
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
-        }
-
-        Properties propertiesToReturn = new Properties();
-        if (oidcScopesResource != null) {
-            for (Object scopeProperty : oidcScopesResource.getProperties().keySet()) {
-                String propertyKey = (String) scopeProperty;
-                propertiesToReturn.setProperty(propertyKey, oidcScopesResource.getProperty(propertyKey));
-            }
-        } else {
-            log.error("OIDC scope resource cannot be found at " + SCOPE_RESOURCE_PATH + " for tenantDomain: "
-                    + spTenantDomain);
-        }
-        return propertiesToReturn;
     }
 
     private List<ScopeDTO> getOIDCScopes(int tenantId) {
