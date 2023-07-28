@@ -20,7 +20,7 @@ jobs:
     strategy:
       matrix:
         # Will add the 17 once Nashorn is removed.
-        java-version: [ 11 ]
+        java-version: [ 11.0.19+7 ]
 
     steps:
       - uses: actions/checkout@v2
