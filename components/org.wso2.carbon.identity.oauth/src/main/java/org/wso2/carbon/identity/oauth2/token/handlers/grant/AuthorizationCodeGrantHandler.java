@@ -393,7 +393,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 diagnosticLogBuilder.resultMessage("Invalid authorization code received. Couldn't find persisted data" +
                                 " for authorization code.")
-                        .inputParam("authorization code", authzCode)
+                        .inputParam(OAuth2Constants.LogConstants.InputKeys.AUTHORIZATION_CODE, authzCode)
                         .resultStatus(DiagnosticLog.ResultStatus.FAILED)
                         .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
                 LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
@@ -405,7 +405,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             clearTokenCache(authzCodeBean, clientId);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 diagnosticLogBuilder.resultMessage("Inactive authorization code received.")
-                        .inputParam("authorization code", authzCode)
+                        .inputParam(OAuth2Constants.LogConstants.InputKeys.AUTHORIZATION_CODE, authzCode)
                         .resultStatus(DiagnosticLog.ResultStatus.FAILED);
                 LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }

@@ -89,7 +89,6 @@ public class OAuth2Constants {
             public static final String ISSUE_ID_TOKEN = "issue-id-token";
             public static final String VALIDATE_AUTHORIZATION_CODE = "validate-authz-code";
             public static final String ISSUE_AUTHZ_CODE = "issue-authz-code";
-
         }
 
         /**
@@ -102,7 +101,6 @@ public class OAuth2Constants {
             public static final String AUTHORIZED_SCOPES = "authorized scopes";
             public static final String GRANT_TYPE = "grant type";
             public static final String AUTHORIZATION_CODE = "authorization code";
-
         }
     }
 }

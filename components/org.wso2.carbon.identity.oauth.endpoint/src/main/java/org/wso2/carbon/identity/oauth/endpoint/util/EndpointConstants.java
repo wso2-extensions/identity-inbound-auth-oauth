@@ -47,6 +47,7 @@ public class EndpointConstants {
             public static final String VALIDATE_SCOPES_BEFORE_CONSENT = "validate-scopes-before-consent";
             public static final String HAND_OVER_TO_FRAMEWORK = "hand-over-to-framework";
             public static final String PERSIST_OAUTH_SCOPE_CONSENT = "persist-oauth-scope-consent";
+            public static final String GENERATE_CONSENT_CLAIMS = "generate-consent-claims";
         }
 
         /**

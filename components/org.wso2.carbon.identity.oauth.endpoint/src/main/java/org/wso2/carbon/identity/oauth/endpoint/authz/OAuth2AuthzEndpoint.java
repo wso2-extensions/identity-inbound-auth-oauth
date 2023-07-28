@@ -3023,12 +3023,12 @@ public class OAuth2AuthzEndpoint {
         ServiceProvider serviceProvider = getServiceProvider(clientId);
 
         Map<String, Object> params = new HashMap<>();
-        params.put("clientId", clientId);
+        params.put(LogConstants.InputKeys.CLIENT_ID, clientId);
         try {
-            params.put("user", user.getUserId());
+            params.put(LogConstants.InputKeys.USER_ID, user.getUserId());
         } catch (UserIdNotFoundException e) {
             if (StringUtils.isNotBlank(user.getAuthenticatedSubjectIdentifier())) {
-                params.put("user", LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(
+                params.put(LogConstants.InputKeys.USER, LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(
                         user.getAuthenticatedSubjectIdentifier()) : user.getAuthenticatedSubjectIdentifier());
             }
         }
@@ -3044,11 +3044,16 @@ public class OAuth2AuthzEndpoint {
                         + spTenantDomain + " for user: " + user.toFullQualifiedUsername());
             }
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                params.put("skipConsent", "true");
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.SUCCESS,
-                        "'skipConsent' is enabled for the OAuth client. Hence consent claims not generated.",
-                        "generate-consent-claims", null);
+                params.put("skip consent", "true");
+                DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            EndpointConstants.LogConstants.ActionIDs.GENERATE_CONSENT_CLAIMS);
+                diagnosticLogBuilder.inputParams(params)
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultMessage("'skipConsent' is enabled for the OAuth client. Hence consent claims not " +
+                                "generated.");
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             return StringUtils.EMPTY;
         }
