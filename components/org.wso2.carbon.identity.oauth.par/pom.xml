@@ -121,7 +121,6 @@
                             org.wso2.carbon.identity.core.*; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.context; version="${carbon.kernel.imp.pkg.version.range}",
                             javax.servlet.*; version="${imp.pkg.version.javax.servlet}",
-
                             com.fasterxml.jackson.databind; version="${com.fasterxml.jackson.databind.version.range}",
                             org.apache.oltu.oauth2.common.*; version="${oltu.package.import.version.range}",
                         </Import-Package>

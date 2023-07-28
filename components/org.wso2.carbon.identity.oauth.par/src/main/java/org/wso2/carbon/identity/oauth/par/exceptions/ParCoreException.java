@@ -47,6 +47,7 @@ public class ParCoreException extends IdentityException {
     }
 
     public ParCoreException(String message, Throwable cause) {
+
         super(message, cause);
     }
 }

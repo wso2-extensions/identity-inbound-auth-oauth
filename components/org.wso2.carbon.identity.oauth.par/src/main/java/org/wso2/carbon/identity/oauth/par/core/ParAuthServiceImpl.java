@@ -20,6 +20,8 @@ package org.wso2.carbon.identity.oauth.par.core;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -38,12 +40,12 @@ import java.util.UUID;
 
 import javax.xml.namespace.QName;
 
-
 /**
  * Provides PAR services.
  */
 public class ParAuthServiceImpl implements ParAuthService {
 
+    private static final Log log = LogFactory.getLog(ParAuthService.class);
     ParMgtDAO parMgtDAO = ParDAOFactory.getInstance().getParAuthMgtDAO();
 
     @Override
@@ -108,6 +110,7 @@ public class ParAuthServiceImpl implements ParAuthService {
                     return Long.parseLong(expiryTimeValue);
                 }
             }
+            log.debug("PAR expiry time is not configured. Default value will be used.");
             return ParConstants.EXPIRES_IN_DEFAULT_VALUE;
         } catch (NumberFormatException e) {
             throw new ParCoreException("Error while parsing the expiry time value.", e);

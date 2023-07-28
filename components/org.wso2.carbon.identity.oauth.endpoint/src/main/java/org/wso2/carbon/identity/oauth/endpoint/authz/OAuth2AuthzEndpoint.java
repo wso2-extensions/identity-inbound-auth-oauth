@@ -2455,7 +2455,7 @@ public class OAuth2AuthzEndpoint {
     private void validateRequestObjectParams(OAuthAuthzRequest oauthRequest) throws RequestObjectException {
 
         /*
-            With in the same request it can not be used both request parameter and request_uri parameter.
+            A single request cannot contain both 'request' and 'request_uri' parameters concurrently.
             This validation is skipped when ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST parameter is set to true,
             where both request param and request_uri param will be present in the parameter map.
          */

@@ -63,6 +63,8 @@ public class OAuth2ParEndpoint {
 
     private static final Log log = LogFactory.getLog(OAuth2ParEndpoint.class);
 
+    private static final String PAR_CLIENT_AUTH_ERROR = "Client Authentication Failed";
+
     @POST
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
@@ -123,7 +125,7 @@ public class OAuth2ParEndpoint {
         } else {
             responseBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
         }
-        log.error("PAR client Exception: ", exception);
+        log.debug("Client error while handling the request: ", exception);
         return responseBuilder.entity(parErrorResponse.toString()).build();
     }
 
@@ -134,7 +136,7 @@ public class OAuth2ParEndpoint {
         parErrorResponse.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, "Internal Server Error.");
 
         Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        log.error("PAR Server Exception: ", parCoreException);
+        log.debug("Exception occurred when handling the request: ", parCoreException);
         return respBuilder.entity(parErrorResponse.toString()).build();
     }
 
@@ -154,24 +156,25 @@ public class OAuth2ParEndpoint {
 
     private boolean isRequestUriProvided(MultivaluedMap<String, String> params) {
 
-        return params.containsKey(OAuthConstants.OAuth20Params.REQUEST_URI) &&
-                !params.get(OAuthConstants.OAuth20Params.REQUEST_URI).isEmpty();
+        return params.containsKey(OAuthConstants.OAuth20Params.REQUEST_URI);
     }
 
     private void checkClientAuthentication(HttpServletRequest request) throws ParCoreException, ParClientException {
+
         OAuthClientAuthnContext oAuthClientAuthnContext = getClientAuthnContext(request);
-        if (!oAuthClientAuthnContext.isAuthenticated()) {
-            if (StringUtils.isNotBlank(oAuthClientAuthnContext.getErrorCode())) {
-                if (oAuthClientAuthnContext.getErrorCode().equals(OAuth2ErrorCodes.SERVER_ERROR)) {
-                    throw new ParCoreException(oAuthClientAuthnContext.getErrorCode(),
-                            oAuthClientAuthnContext.getErrorMessage());
-                } else {
-                    throw new ParClientException(oAuthClientAuthnContext.getErrorCode(),
-                            oAuthClientAuthnContext.getErrorMessage());
-                }
-            }
-            throw new ParClientException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, "Client authentication required");
+        if (oAuthClientAuthnContext.isAuthenticated()) {
+            return;
         }
+        if (StringUtils.isNotBlank(oAuthClientAuthnContext.getErrorCode())) {
+            if (oAuthClientAuthnContext.getErrorCode().equals(OAuth2ErrorCodes.SERVER_ERROR)) {
+                throw new ParCoreException(oAuthClientAuthnContext.getErrorCode(),
+                        oAuthClientAuthnContext.getErrorMessage());
+            } else {
+                throw new ParClientException(oAuthClientAuthnContext.getErrorCode(),
+                        oAuthClientAuthnContext.getErrorMessage());
+            }
+        }
+        throw new ParClientException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, PAR_CLIENT_AUTH_ERROR);
     }
 
     private OAuthClientAuthnContext getClientAuthnContext(HttpServletRequest request) {
