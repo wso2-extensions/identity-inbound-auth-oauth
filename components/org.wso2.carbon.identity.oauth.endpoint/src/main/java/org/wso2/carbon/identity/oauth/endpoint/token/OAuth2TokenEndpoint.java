@@ -40,7 +40,6 @@ import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequestException;
-import org.wso2.carbon.identity.oauth.endpoint.util.EndpointConstants;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -100,7 +99,7 @@ public class OAuth2TokenEndpoint {
             paramMap = parseJsonTokenRequest(payload);
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    EndpointConstants.LogConstants.ActionIDs.RECEIVE_TOKEN_REQUEST);
+                    OAuthConstants.LogConstants.ActionIDs.RECEIVE_TOKEN_REQUEST);
             if (MapUtils.isNotEmpty(paramMap) && paramMap.containsKey(PROP_CLIENT_ID)) {
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, paramMap.get(PROP_CLIENT_ID));
             }
@@ -130,7 +129,7 @@ public class OAuth2TokenEndpoint {
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    EndpointConstants.LogConstants.ActionIDs.RECEIVE_TOKEN_REQUEST);
+                    OAuthConstants.LogConstants.ActionIDs.RECEIVE_TOKEN_REQUEST);
             if (MapUtils.isNotEmpty(paramMap) && paramMap.containsKey(PROP_CLIENT_ID)) {
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, paramMap.getFirst(PROP_CLIENT_ID));
             }

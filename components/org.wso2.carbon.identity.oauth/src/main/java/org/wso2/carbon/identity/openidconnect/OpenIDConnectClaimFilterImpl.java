@@ -37,7 +37,6 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
@@ -59,6 +58,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.EMAIL_VERIFIED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.PHONE_NUMBER_VERIFIED;
@@ -175,8 +176,8 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "issue-access-token");
-            diagnosticLogBuilder.inputParam(OAuth2Constants.LogConstants.InputKeys.REQUESTED_SCOPES, requestedScopes)
+                    OAUTH_INBOUND_SERVICE, ISSUE_ACCESS_TOKEN);
+            diagnosticLogBuilder.inputParam(OAuthConstants.LogConstants.InputKeys.REQUESTED_SCOPES, requestedScopes)
                     .resultMessage("Get Claims Filtered By OIDC Scopes.")
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);

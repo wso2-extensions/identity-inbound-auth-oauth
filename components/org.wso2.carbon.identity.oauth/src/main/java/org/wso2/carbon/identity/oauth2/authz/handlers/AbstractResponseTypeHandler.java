@@ -33,7 +33,6 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
@@ -48,7 +47,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.wso2.carbon.identity.oauth2.OAuth2Constants.LogConstants.InputKeys.SCOPE_VALIDATOR;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.SCOPE_VALIDATOR;
 
 /**
  * AbstractResponseTypeHandler contains all the common methods of all three basic handlers.
@@ -121,7 +120,7 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                        OAuth2Constants.LogConstants.ActionIDs.SCOPE_VALIDATION);
+                        OAuthConstants.LogConstants.ActionIDs.SCOPE_VALIDATION);
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID,
                                 oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
                         .inputParam(SCOPE_VALIDATOR, validator.getName())
@@ -135,7 +134,7 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                        OAuth2Constants.LogConstants.ActionIDs.SCOPE_VALIDATION);
+                        OAuthConstants.LogConstants.ActionIDs.SCOPE_VALIDATION);
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID,
                                 oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
                         .inputParam(SCOPE_VALIDATOR, validator.getName())

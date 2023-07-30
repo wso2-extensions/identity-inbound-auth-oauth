@@ -46,7 +46,6 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -69,9 +68,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.ActionIDs.ISSUE_AUTHZ_CODE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
-import static org.wso2.carbon.identity.oauth2.OAuth2Constants.LogConstants.ActionIDs.ISSUE_AUTHZ_CODE;
-import static org.wso2.carbon.identity.oauth2.OAuth2Constants.LogConstants.OAUTH_INBOUND_SERVICE;
 
 /**
  * ResponseTypeHandlerUtil contains all the common methods in tokenResponseTypeHandler and IDTokenResponseTypeHandler.
@@ -221,7 +220,7 @@ public class ResponseTypeHandlerUtil {
             OauthTokenIssuer oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
             return generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled, oauthTokenIssuer);
         } catch (InvalidOAuthClientException e) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+            LoggerUtils.triggerDiagnosticLogEvent(OAUTH_INBOUND_SERVICE, null,
                     OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-authz-code", null);
             throw new IdentityOAuth2Exception(
                     "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
@@ -274,7 +273,7 @@ public class ResponseTypeHandlerUtil {
         try {
             authorizationCode = oauthIssuerImpl.authorizationCode(oauthAuthzMsgCtx);
         } catch (OAuthSystemException e) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
+            LoggerUtils.triggerDiagnosticLogEvent(OAUTH_INBOUND_SERVICE, null,
                     OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-authz-code", null);
             throw new IdentityOAuth2Exception(e.getMessage(), e);
         }
@@ -313,7 +312,7 @@ public class ResponseTypeHandlerUtil {
             diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, authorizationReqDTO.getConsumerKey())
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .resultMessage("Authorization Code issued successfully.")
-                    .inputParam(OAuth2Constants.LogConstants.InputKeys.REQUESTED_SCOPES,
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.REQUESTED_SCOPES,
                             OAuth2Util.buildScopeString(authorizationReqDTO.getScopes()))
                     .inputParam(LogConstants.InputKeys.REDIREDCT_URI, authorizationReqDTO.getCallbackUrl())
                     .inputParam("authz code validity period (ms)", String.valueOf(validityPeriod))

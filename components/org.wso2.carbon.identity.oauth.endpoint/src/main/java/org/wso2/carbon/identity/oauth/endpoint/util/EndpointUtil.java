@@ -1079,7 +1079,7 @@ public class EndpointUtil {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                             OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                            EndpointConstants.LogConstants.ActionIDs.PERSIST_OAUTH_SCOPE_CONSENT);
+                            OAuthConstants.LogConstants.ActionIDs.PERSIST_OAUTH_SCOPE_CONSENT);
                     diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, params.getClientId())
                             .inputParam("approved scopes", userApprovedScopes)
                             .inputParam(LogConstants.InputKeys.USER_ID, userId)

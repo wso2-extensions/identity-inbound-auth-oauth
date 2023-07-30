@@ -53,7 +53,6 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -464,11 +463,11 @@ public class AccessTokenIssuer {
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    OAuth2Constants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN);
+                    OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN);
             diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
-                    .inputParam(OAuth2Constants.LogConstants.InputKeys.AUTHORIZED_SCOPES,
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.AUTHORIZED_SCOPES,
                             tokenRespDTO.getAuthorizedScopes())
-                    .inputParam(OAuth2Constants.LogConstants.InputKeys.GRANT_TYPE, grantType)
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE, grantType)
                     .inputParam("token expiry time (s)", tokenRespDTO.getExpiresIn())
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .resultMessage("Access token issued for the application.")
@@ -497,7 +496,7 @@ public class AccessTokenIssuer {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                             OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                            OAuth2Constants.LogConstants.ActionIDs.ISSUE_ID_TOKEN);
+                            OAuthConstants.LogConstants.ActionIDs.ISSUE_ID_TOKEN);
                     diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
                             .inputParam("issued claims for id token", tokReqMsgCtx.getProperty(
                                     ID_TOKEN_USER_CLAIMS_PROP_KEY))

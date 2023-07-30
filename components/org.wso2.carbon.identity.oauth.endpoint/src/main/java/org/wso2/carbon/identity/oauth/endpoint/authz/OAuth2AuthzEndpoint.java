@@ -88,7 +88,6 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedEx
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
-import org.wso2.carbon.identity.oauth.endpoint.util.EndpointConstants;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth.extension.engine.JSEngine;
@@ -174,13 +173,13 @@ import static org.wso2.carbon.identity.application.authentication.endpoint.util.
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.USER_CLAIMS_CONSENT_ONLY;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TENANT_DOMAIN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.USER_CONSENT_RESPONSE;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointConstants.LogConstants.InputKeys.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getErrorPageURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getLoginPageURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
@@ -574,7 +573,7 @@ public class OAuth2AuthzEndpoint {
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    EndpointConstants.LogConstants.ActionIDs.RECEIVE_CONSENT_RESPONSE);
+                    OAuthConstants.LogConstants.ActionIDs.RECEIVE_CONSENT_RESPONSE);
             if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
                 oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
                     if (ArrayUtils.isNotEmpty(value)) {
@@ -991,7 +990,7 @@ public class OAuth2AuthzEndpoint {
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    EndpointConstants.LogConstants.ActionIDs.RECEIVE_AUTHENTICATION_RESPONSE);
+                    OAuthConstants.LogConstants.ActionIDs.RECEIVE_AUTHENTICATION_RESPONSE);
             if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
                 oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
                     if (ArrayUtils.isNotEmpty(value)) {
@@ -1036,7 +1035,7 @@ public class OAuth2AuthzEndpoint {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                             OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                            EndpointConstants.LogConstants.ActionIDs.VALIDATE_AUTHENTICATION_RESPONSE);
+                            OAuthConstants.LogConstants.ActionIDs.VALIDATE_AUTHENTICATION_RESPONSE);
                     diagnosticLogBuilder.inputParam(LogConstants.InputKeys.APPLICATION_NAME,
                                     oauth2Params.getApplicationName())
                             .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuthMessage.getClientId())
@@ -1275,7 +1274,7 @@ public class OAuth2AuthzEndpoint {
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    EndpointConstants.LogConstants.ActionIDs.RECEIVE_AUTHORIZATION_RESPONSE);
+                    OAuthConstants.LogConstants.ActionIDs.RECEIVE_AUTHORIZATION_RESPONSE);
             if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
                 oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
                     if (ArrayUtils.isNotEmpty(value)) {
@@ -1541,7 +1540,7 @@ public class OAuth2AuthzEndpoint {
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    EndpointConstants.LogConstants.ActionIDs.HANDLE_AUTHORIZATION);
+                    OAuthConstants.LogConstants.ActionIDs.HANDLE_AUTHORIZATION);
             if (oauth2Params != null) {
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
                         .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
@@ -1577,7 +1576,7 @@ public class OAuth2AuthzEndpoint {
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    EndpointConstants.LogConstants.ActionIDs.HANDLE_AUTHORIZATION);
+                    OAuthConstants.LogConstants.ActionIDs.HANDLE_AUTHORIZATION);
             if (oauth2Params != null) {
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
                         .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
@@ -1598,7 +1597,7 @@ public class OAuth2AuthzEndpoint {
 
         DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                 OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                EndpointConstants.LogConstants.ActionIDs.VALIDATE_SCOPES_BEFORE_CONSENT);
+                OAuthConstants.LogConstants.ActionIDs.VALIDATE_SCOPES_BEFORE_CONSENT);
         LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         String errorMsg = authzRespDTO.getErrorMsg() != null ? authzRespDTO.getErrorMsg()
                 : "Error occurred while processing authorization request.";
@@ -1669,7 +1668,7 @@ public class OAuth2AuthzEndpoint {
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    EndpointConstants.LogConstants.ActionIDs.HANDLE_AUTHORIZATION);
+                    OAuthConstants.LogConstants.ActionIDs.HANDLE_AUTHORIZATION);
             diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
                     .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
                     .inputParam(LogConstants.InputKeys.REDIREDCT_URI, redirectURL)
@@ -2755,7 +2754,7 @@ public class OAuth2AuthzEndpoint {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                        EndpointConstants.LogConstants.ActionIDs.VALIDATE_SCOPES_BEFORE_CONSENT);
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_SCOPES_BEFORE_CONSENT);
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
                         .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
                         .inputParam("scopes to be validate", oauth2Params.getScopes())
@@ -2768,7 +2767,7 @@ public class OAuth2AuthzEndpoint {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                        EndpointConstants.LogConstants.ActionIDs.VALIDATE_SCOPES_BEFORE_CONSENT);
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_SCOPES_BEFORE_CONSENT);
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
                         .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
                         .inputParam("scopes after validation", oauth2Params.getScopes())
@@ -3047,7 +3046,7 @@ public class OAuth2AuthzEndpoint {
                 params.put("skip consent", "true");
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                             OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                            EndpointConstants.LogConstants.ActionIDs.GENERATE_CONSENT_CLAIMS);
+                        OAuthConstants.LogConstants.ActionIDs.GENERATE_CONSENT_CLAIMS);
                 diagnosticLogBuilder.inputParams(params)
                         .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                         .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
@@ -3677,7 +3676,7 @@ public class OAuth2AuthzEndpoint {
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    EndpointConstants.LogConstants.ActionIDs.HAND_OVER_TO_FRAMEWORK)
+                    OAuthConstants.LogConstants.ActionIDs.HAND_OVER_TO_FRAMEWORK)
                     .resultMessage("Forward authorization request to framework for user authentication.")
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuthMessage.getClientId())

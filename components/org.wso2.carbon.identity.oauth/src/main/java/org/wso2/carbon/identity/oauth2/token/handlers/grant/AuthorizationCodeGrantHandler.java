@@ -38,7 +38,6 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeValidationResult;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -379,7 +378,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
 
         DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                 OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                OAuth2Constants.LogConstants.ActionIDs.VALIDATE_AUTHORIZATION_CODE);
+                OAuthConstants.LogConstants.ActionIDs.VALIDATE_AUTHORIZATION_CODE);
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
@@ -393,7 +392,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 diagnosticLogBuilder.resultMessage("Invalid authorization code received. Couldn't find persisted data" +
                                 " for authorization code.")
-                        .inputParam(OAuth2Constants.LogConstants.InputKeys.AUTHORIZATION_CODE, authzCode)
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.AUTHORIZATION_CODE, authzCode)
                         .resultStatus(DiagnosticLog.ResultStatus.FAILED)
                         .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
                 LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
@@ -405,7 +404,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             clearTokenCache(authzCodeBean, clientId);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 diagnosticLogBuilder.resultMessage("Inactive authorization code received.")
-                        .inputParam(OAuth2Constants.LogConstants.InputKeys.AUTHORIZATION_CODE, authzCode)
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.AUTHORIZATION_CODE, authzCode)
                         .resultStatus(DiagnosticLog.ResultStatus.FAILED);
                 LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
@@ -423,7 +422,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             } else if (isAuthzCodeRevoked(authzCodeBean)) {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     diagnosticLogBuilder.resultMessage("Revoked authorization code received.")
-                            .inputParam(OAuth2Constants.LogConstants.InputKeys.AUTHORIZATION_CODE, authzCode)
+                            .inputParam(OAuthConstants.LogConstants.InputKeys.AUTHORIZATION_CODE, authzCode)
                             .resultStatus(DiagnosticLog.ResultStatus.FAILED);
                     LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
