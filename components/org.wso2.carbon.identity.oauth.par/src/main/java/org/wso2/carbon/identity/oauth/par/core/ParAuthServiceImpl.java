@@ -124,7 +124,6 @@ public class ParAuthServiceImpl implements ParAuthService {
         } catch (NumberFormatException e) {
             throw new ParCoreException("Error while parsing the expiry time value.", e);
         }
-
     }
 
     private long getScheduledExpiry(long requestedTime) throws ParCoreException {
