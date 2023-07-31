@@ -1282,10 +1282,13 @@ public class OAuth2AuthzEndpoint {
                     }
                 });
             }
-            UserAgent userAgent = new UserAgent(oAuthMessage.getRequest().getHeader("User-Agent"));
-            diagnosticLogBuilder.inputParam("login browser", userAgent.getBrowser())
-                    .inputParam("login device", userAgent.getDevice())
-                    .resultMessage("Successfully received OAuth2 Authorize request.")
+            String userAgentHeader = oAuthMessage.getRequest().getHeader("User-Agent");
+            if (StringUtils.isNotEmpty(userAgentHeader)) {
+                UserAgent userAgent = new UserAgent(userAgentHeader);
+                diagnosticLogBuilder.inputParam("login browser", userAgent.getBrowser())
+                        .inputParam("login device", userAgent.getDevice());
+            }
+            diagnosticLogBuilder.resultMessage("Successfully received OAuth2 Authorize request.")
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
