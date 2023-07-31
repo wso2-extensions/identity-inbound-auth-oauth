@@ -182,9 +182,8 @@ public class OAuth2ParEndpoint {
         Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
         if (oauthClientAuthnContextObj instanceof OAuthClientAuthnContext) {
             return (OAuthClientAuthnContext) oauthClientAuthnContextObj;
-        } else {
-            return createNewOAuthClientAuthnContext();
         }
+        return createNewOAuthClientAuthnContext();
     }
 
     private OAuthClientAuthnContext createNewOAuthClientAuthnContext() {

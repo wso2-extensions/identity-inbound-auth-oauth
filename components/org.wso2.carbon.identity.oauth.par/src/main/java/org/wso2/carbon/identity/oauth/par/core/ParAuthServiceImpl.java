@@ -109,10 +109,16 @@ public class ParAuthServiceImpl implements ParAuthService {
         try {
             Object expiryTimeValue = IdentityConfigParser.getInstance().getConfiguration().get(PAR_EXPIRY_TIME);
             if (expiryTimeValue != null && (StringUtils.isNotBlank((String) expiryTimeValue))) {
-                return Long.parseLong((String) expiryTimeValue);
+                long expiryTime = Long.parseLong(((String) expiryTimeValue).trim());
+                if (expiryTime > 0) {
+                    return expiryTime;
+                }
+                log.warn("PAR expiry time should be positive. Default value will be used.");
+            } else {
+                log.debug("PAR expiry time is not configured. Default value will be used.");
             }
-            log.debug("PAR expiry time is not configured. Default value will be used.");
             return ParConstants.EXPIRES_IN_DEFAULT_VALUE;
+
         } catch (NumberFormatException e) {
             throw new ParCoreException("Error while parsing the expiry time value.", e);
         }
