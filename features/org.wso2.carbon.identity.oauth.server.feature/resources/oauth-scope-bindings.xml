@@ -1021,4 +1021,24 @@
             <Permission>/permission/admin/manage/identity/user/idv/claim/verify</Permission>
         </Permissions>
     </Scope>
+    <Scope name="internal_organization_create" displayName="Create Organization">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/organizationmgt/create</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_organization_view" displayName="View Organization">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/organizationmgt/view</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_organization_delete" displayName="Delete Organization">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/organizationmgt/delete</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_organization_update" displayName="Update Organization">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/organizationmgt/update</Permission>
+        </Permissions>
+    </Scope>
 </Scopes>
