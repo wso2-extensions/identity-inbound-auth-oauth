@@ -113,9 +113,11 @@ public class ParAuthServiceImpl implements ParAuthService {
                 if (expiryTime > 0) {
                     return expiryTime;
                 }
-                log.warn("PAR expiry time should be positive. Default value will be used.");
+                log.warn(String.format("PAR expiry time should be positive. Default value: %s will be used.",
+                        ParConstants.EXPIRES_IN_DEFAULT_VALUE));
             } else {
-                log.debug("PAR expiry time is not configured. Default value will be used.");
+                log.debug(String.format("PAR expiry time is not configured. Default value: %s will be used.",
+                        ParConstants.EXPIRES_IN_DEFAULT_VALUE));
             }
             return ParConstants.EXPIRES_IN_DEFAULT_VALUE;
 
