@@ -54,6 +54,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
@@ -103,6 +104,7 @@ import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.idp.mgt.IdpManager;
+import org.wso2.carbon.utils.DiagnosticLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.io.IOException;
@@ -142,7 +144,7 @@ public class EndpointUtil {
     private static final String OAUTH2_AUTHORIZE = "/oauth2/authorize";
     public static final String OAUTH2_CIBA_ENDPOINT = "oauth2/ciba";
     private static final String UTF_8 = "UTF-8";
-    private static final String PROP_CLIENT_ID = "client_id";
+    public static final String PROP_CLIENT_ID = "client_id";
     private static final String PROP_GRANT_TYPE = "response_type";
     private static final String PROP_RESPONSE_TYPE = "response_type";
     private static final String PROP_SCOPE = "scope";
@@ -1075,17 +1077,17 @@ public class EndpointUtil {
                     }
                 }
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> consentParams = new HashMap<>();
-                    consentParams.put("clientId", params.getClientId());
-                    consentParams.put("approvedScopes", userApprovedScopes);
-                    consentParams.put("user", userId);
-
-                    Map<String, Object> configs = new HashMap<>();
-                    configs.put("overrideExistingConsent", String.valueOf(overrideExistingConsent));
-                    LoggerUtils
-                            .triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, consentParams,
-                                    OAuthConstants.LogConstants.SUCCESS, "Successfully persisted oauth scopes.",
-                                    "persist-oauth-scope-consent", configs);
+                    DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.PERSIST_OAUTH_SCOPE_CONSENT);
+                    diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, params.getClientId())
+                            .inputParam("approved scopes", userApprovedScopes)
+                            .inputParam(LogConstants.InputKeys.USER_ID, userId)
+                            .inputParam("override existing consent", overrideExistingConsent)
+                            .resultMessage("Successfully persisted oauth scopes.")
+                            .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
             }
         } catch (IdentityOAuthAdminException e) {

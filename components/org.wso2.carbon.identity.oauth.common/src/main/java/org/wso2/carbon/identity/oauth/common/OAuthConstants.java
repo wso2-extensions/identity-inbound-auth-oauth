@@ -552,6 +552,41 @@ public final class OAuthConstants {
         public static final String DELETE_OAUTH_APPLICATION = "DELETE OAUTH APPLICATION";
         public static final String REGENERATE_CLIENT_SECRET = "REGENERATE CLIENT SECRET";
         public static final String UPDATE_APP_STATE = "UPDATE APP STATE";
+
+        /**
+         * Define action IDs for diagnostic logs.
+         */
+        public static class ActionIDs {
+
+            public static final String SCOPE_VALIDATION = "scope-validation";
+            public static final String ISSUE_ACCESS_TOKEN = "issue-access-token";
+            public static final String ISSUE_ID_TOKEN = "issue-id-token";
+            public static final String VALIDATE_AUTHORIZATION_CODE = "validate-authz-code";
+            public static final String ISSUE_AUTHZ_CODE = "issue-authz-code";
+            public static final String RECEIVE_CONSENT_RESPONSE = "receive-consent-response";
+            public static final String RECEIVE_TOKEN_REQUEST = "receive-token-request";
+            public static final String RECEIVE_AUTHENTICATION_RESPONSE = "receive-authn-response";
+            public static final String VALIDATE_AUTHENTICATION_RESPONSE = "validate-authn-status";
+            public static final String RECEIVE_AUTHORIZATION_RESPONSE = "receive-authz-request";
+            public static final String HANDLE_AUTHORIZATION = "handle-authorization";
+            public static final String VALIDATE_SCOPES_BEFORE_CONSENT = "validate-scopes-before-consent";
+            public static final String HAND_OVER_TO_FRAMEWORK = "hand-over-to-framework";
+            public static final String PERSIST_OAUTH_SCOPE_CONSENT = "persist-oauth-scope-consent";
+            public static final String GENERATE_CONSENT_CLAIMS = "generate-consent-claims";
+        }
+
+        /**
+         * Define common and reusable Input keys for diagnostic logs.
+         */
+        public static class InputKeys {
+
+            public static final String RESPONSE_TYPE = "response type";
+            public static final String SCOPE_VALIDATOR = "scope validator";
+            public static final String REQUESTED_SCOPES = "requested scopes";
+            public static final String AUTHORIZED_SCOPES = "authorized scopes";
+            public static final String GRANT_TYPE = "grant type";
+            public static final String AUTHORIZATION_CODE = "authorization code";
+        }
     }
 
     /**

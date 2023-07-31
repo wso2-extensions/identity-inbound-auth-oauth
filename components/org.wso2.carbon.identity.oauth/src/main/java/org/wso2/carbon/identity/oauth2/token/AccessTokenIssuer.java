@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -71,6 +72,7 @@ import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -93,6 +95,7 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
+import static org.wso2.carbon.identity.openidconnect.OIDCConstants.ID_TOKEN_USER_CLAIMS_PROP_KEY;
 
 /**
  * This class is used to issue access tokens and refresh tokens.
@@ -458,11 +461,25 @@ public class AccessTokenIssuer {
                     tokReqMsgCtx.getAuthorizedUser() + " and scopes: " + tokenRespDTO.getAuthorizedScopes());
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            Map<String, Object> params = new HashMap<>();
-            params.put("clientId", tokenReqDTO.getClientId());
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                    OAuthConstants.LogConstants.SUCCESS, "Access token issued for the application.",
-                    "issue-access-token", null);
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN);
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.AUTHORIZED_SCOPES,
+                            tokenRespDTO.getAuthorizedScopes())
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE, grantType)
+                    .inputParam("token expiry time (s)", tokenRespDTO.getExpiresIn())
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .resultMessage("Access token issued for the application.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+            if (tokReqMsgCtx.getAuthorizedUser() != null) {
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER_ID,
+                        tokReqMsgCtx.getAuthorizedUser().getUserId());
+                String username = tokReqMsgCtx.getAuthorizedUser().getUserName();
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER, LoggerUtils.isLogMaskingEnable ?
+                        LoggerUtils.getMaskedContent(username) : username);
+            }
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
 
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
@@ -477,11 +494,16 @@ public class AccessTokenIssuer {
             try {
                 String idToken = builder.buildIDToken(tokReqMsgCtx, tokenRespDTO);
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", tokenReqDTO.getClientId());
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.SUCCESS, "ID token issued for the application.",
-                            "issue-id-token", null);
+                    DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.ISSUE_ID_TOKEN);
+                    diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                            .inputParam("issued claims for id token", tokReqMsgCtx.getProperty(
+                                    ID_TOKEN_USER_CLAIMS_PROP_KEY))
+                            .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                            .resultMessage("ID token issued for the application.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 tokenRespDTO.setIDToken(idToken);
             } catch (IDTokenValidationFailureException e) {
@@ -554,7 +576,6 @@ public class AccessTokenIssuer {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     Map<String, Object> params = new HashMap<>();
                     params.put("clientId", tokenReqDTO.getClientId());
-                    params.put("requestedScopes", getScopeList(tokenReqDTO.getScope()));
                     params.put("authorizedScopes", getScopeList(tokReqMsgCtx.getScope()));
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                             OAuthConstants.LogConstants.SUCCESS, "OAuth scope validation is successful.",
