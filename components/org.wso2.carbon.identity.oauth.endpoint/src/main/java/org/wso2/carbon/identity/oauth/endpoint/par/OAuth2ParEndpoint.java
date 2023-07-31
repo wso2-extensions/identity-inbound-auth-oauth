@@ -166,29 +166,33 @@ public class OAuth2ParEndpoint {
             return;
         }
         if (StringUtils.isNotBlank(oAuthClientAuthnContext.getErrorCode())) {
-            if (oAuthClientAuthnContext.getErrorCode().equals(OAuth2ErrorCodes.SERVER_ERROR)) {
+            if (OAuth2ErrorCodes.SERVER_ERROR.equals(oAuthClientAuthnContext.getErrorCode())) {
                 throw new ParCoreException(oAuthClientAuthnContext.getErrorCode(),
                         oAuthClientAuthnContext.getErrorMessage());
             }
             throw new ParClientException(oAuthClientAuthnContext.getErrorCode(),
                     oAuthClientAuthnContext.getErrorMessage());
-
         }
+
         throw new ParClientException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, "Client authentication required");
     }
 
     private OAuthClientAuthnContext getClientAuthnContext(HttpServletRequest request) {
 
-        OAuthClientAuthnContext oAuthClientAuthnContext;
         Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
         if (oauthClientAuthnContextObj instanceof OAuthClientAuthnContext) {
-            oAuthClientAuthnContext = (OAuthClientAuthnContext) oauthClientAuthnContextObj;
+            return (OAuthClientAuthnContext) oauthClientAuthnContextObj;
         } else {
-            oAuthClientAuthnContext = new OAuthClientAuthnContext();
-            oAuthClientAuthnContext.setAuthenticated(false);
-            oAuthClientAuthnContext.setErrorMessage(PAR_CLIENT_AUTH_ERROR);
-            oAuthClientAuthnContext.setErrorCode(OAuthError.TokenResponse.INVALID_REQUEST);
+            return createNewOAuthClientAuthnContext();
         }
+    }
+
+    private OAuthClientAuthnContext createNewOAuthClientAuthnContext() {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(false);
+        oAuthClientAuthnContext.setErrorMessage(PAR_CLIENT_AUTH_ERROR);
+        oAuthClientAuthnContext.setErrorCode(OAuthError.TokenResponse.INVALID_REQUEST);
         return oAuthClientAuthnContext;
     }
 }
