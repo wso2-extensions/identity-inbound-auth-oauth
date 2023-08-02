@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
@@ -20,10 +20,10 @@ package org.wso2.carbon.identity.oauth.par.model;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
-import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParAuthFailureException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
+import org.wso2.carbon.identity.oauth.par.util.ParUtil;
 
 import java.util.Map;
 
@@ -43,27 +43,23 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
      * Wraps the request with parameters obtained from the PAR endpoint.
      *
      * @param request HttpServletRequest.
-     * @param parAuthService ParAuthService.
      * @throws OAuthProblemException OAuthProblemException.
      */
-    public OAuthParRequestWrapper(HttpServletRequest request, ParAuthService parAuthService)
+    public OAuthParRequestWrapper(HttpServletRequest request)
             throws OAuthProblemException {
 
         super(request);
 
-        //get only uuid from request_uri
+        // Get only uuid from request_uri.
         String requestUri = request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI);
         String uuid = requestUri.replaceFirst(ParConstants.REQUEST_URI_PREFIX, "");
 
         try {
-            if (parAuthService == null) {
-                throw new ParAuthFailureException("ParAuthService is not initialized properly");
-            }
 
-            params = parAuthService.retrieveParams(uuid,
-                    request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
+            params = ParUtil.getParAuthService()
+                    .retrieveParams(uuid, request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
             params.put(OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST, "true");
-            // set request_uri to empty string to avoid conflicting with OIDC flow
+            // Set request_uri to empty string to avoid conflicting with OIDC flow.
             params.put(OAuthConstants.OAuth20Params.REQUEST_URI, "");
         } catch (ParClientException e) {
             throw new ParAuthFailureException(e.getMessage());

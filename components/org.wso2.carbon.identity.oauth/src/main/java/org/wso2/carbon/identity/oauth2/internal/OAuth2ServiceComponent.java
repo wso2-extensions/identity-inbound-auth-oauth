@@ -47,7 +47,7 @@ import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
-import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
+import org.wso2.carbon.identity.oauth2.AbstractRequestBuilder;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -146,21 +146,26 @@ public class OAuth2ServiceComponent {
     }
 
     @Reference(
-            name = "identity.oauth.par.service.component",
-            service = ParAuthService.class,
-            cardinality = ReferenceCardinality.MANDATORY,
+            name = "request.builder.service",
+            service = AbstractRequestBuilder.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
             policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetParService"
+            unbind = "removeRequestBuilderService"
     )
-    protected void setParService(ParAuthService parAuthService) {
+    protected void addRequestBuilderService(AbstractRequestBuilder abstractRequestBuilder) {
 
-        log.debug("Setting ParAuthService Service.");
-        OAuth2ServiceComponentHolder.setParAuthService(parAuthService);
+        if (log.isDebugEnabled()) {
+            log.debug("Adding the Request builder Service : " + abstractRequestBuilder.getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().addRequestBuilder(abstractRequestBuilder);
     }
 
-    protected void unsetParService(ParAuthService parAuthService) {
+    protected void removeRequestBuilderService(AbstractRequestBuilder abstractRequestBuilder) {
 
-        OAuth2ServiceComponentHolder.setParAuthService(null);
+        if (log.isDebugEnabled()) {
+            log.debug("Removing the Request builder Service : " + abstractRequestBuilder.getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().removeRequestBuilder(abstractRequestBuilder);
     }
 
     protected void unsetAuthenticationMethodNameTranslator(

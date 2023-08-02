@@ -112,6 +112,7 @@ import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvide
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.RequestUtil;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
@@ -280,11 +281,15 @@ public class OAuth2AuthzEndpoint {
 
         // Using a separate try-catch block as this next try block has operations in the final block.
         try {
+            request = RequestUtil.buildRequest(request);
             oAuthMessage = buildOAuthMessage(request, response);
 
         } catch (InvalidRequestParentException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
             throw e;
+        } catch (OAuthProblemException e) {
+            EndpointUtil.triggerOnAuthzRequestException(e, request);
+            throw new InvalidRequestException(e.getMessage(), OAuth2ErrorCodes.INVALID_REQUEST);
         }
 
         try {
@@ -1955,7 +1960,7 @@ public class OAuth2AuthzEndpoint {
             setSPAttributeToRequest(oAuthMessage.getRequest(), validationResponse.getApplicationName(), tenantDomain);
         }
 
-        OAuthAuthzRequest oauthRequest = getOAuthAuthzRequest(oAuthMessage.getRequest());
+        OAuthAuthzRequest oauthRequest = EndpointUtil.getOAuthAuthzRequest(oAuthMessage.getRequest());
 
         OAuth2Parameters params = new OAuth2Parameters();
         String sessionDataKey = UUID.randomUUID().toString();

@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
@@ -93,6 +94,7 @@ import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.scopeservice.OAuth2Resource;
@@ -110,6 +112,8 @@ import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -167,6 +171,7 @@ public class EndpointUtil {
     private static IdpManager idpManager;
     private static final String ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL = "OAuth.AllowAdditionalParamsFromErrorUrl";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
+    private static Class<? extends OAuthAuthzRequest> oAuthAuthzRequestClass;
 
     public static void setIdpManager(IdpManager idpManager) {
 
@@ -1803,5 +1808,58 @@ public class EndpointUtil {
 
     public static boolean isConsentPageRedirectParamsAllowed() {
         return FileBasedConfigurationBuilder.getInstance().isConsentPageRedirectParamsAllowed();
+    }
+
+    public static OAuthAuthzRequest getOAuthAuthzRequest(HttpServletRequest request)
+            throws OAuthProblemException, OAuthSystemException {
+
+        OAuthAuthzRequest oAuthAuthzRequest;
+
+        if (isDefaultOAuthAuthzRequestClassConfigured()) {
+            oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
+        } else {
+            try {
+                Class<? extends OAuthAuthzRequest> clazz = getOAuthAuthzRequestClass();
+                // Validations will be performed when initializing the class instance.
+                Constructor<?> constructor = clazz.getConstructor(HttpServletRequest.class);
+                oAuthAuthzRequest = (OAuthAuthzRequest) constructor.newInstance(request);
+            } catch (InvocationTargetException e) {
+                // Handle OAuthProblemException & OAuthSystemException thrown from extended class.
+                if (e.getTargetException() instanceof OAuthProblemException) {
+                    throw (OAuthProblemException) e.getTargetException();
+                } else if (e.getTargetException() instanceof OAuthSystemException) {
+                    throw (OAuthSystemException) e.getTargetException();
+                } else {
+                    log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
+                            "Hence initiating the default implementation");
+                    oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
+                }
+            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
+                     NoSuchMethodException e) {
+                log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
+                        "Hence initiating the default implementation");
+                oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
+            }
+        }
+        return oAuthAuthzRequest;
+    }
+
+    private static boolean isDefaultOAuthAuthzRequestClassConfigured() {
+
+        String oauthAuthzRequestClassName = OAuthServerConfiguration.getInstance().getOAuthAuthzRequestClassName();
+        return OAuthServerConfiguration.DEFAULT_OAUTH_AUTHZ_REQUEST_CLASSNAME.equals(oauthAuthzRequestClassName);
+    }
+
+    private static Class<? extends OAuthAuthzRequest> getOAuthAuthzRequestClass() throws ClassNotFoundException {
+
+        if (oAuthAuthzRequestClass == null) {
+
+            String oauthAuthzRequestClassName =
+                    OAuthServerConfiguration.getInstance().getOAuthAuthzRequestClassName();
+            oAuthAuthzRequestClass = (Class<? extends OAuthAuthzRequest>) Thread.currentThread()
+                    .getContextClassLoader().loadClass(oauthAuthzRequestClassName);
+
+        }
+        return oAuthAuthzRequestClass;
     }
 }
