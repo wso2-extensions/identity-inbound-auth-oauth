@@ -21,14 +21,13 @@ package org.wso2.carbon.identity.oauth.par.exceptions;
 /**
  * Client exception from par core component.
  */
-
 public class ParClientException extends ParCoreException {
 
     /**
      * Constructor with error code and error message.
      *
-     * @param errorCode Error code
-     * @param message error message
+     * @param errorCode Error code for the exception.
+     * @param message Error message for the exception.
      */
     public ParClientException(String errorCode, String message) {
 

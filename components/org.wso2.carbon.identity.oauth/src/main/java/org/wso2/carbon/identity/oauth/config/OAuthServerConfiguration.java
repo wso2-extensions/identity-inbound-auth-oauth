@@ -3738,6 +3738,8 @@ public class OAuthServerConfiguration {
         private static final String DEVICE_CODE_KEY_LENGTH = "KeyLength";
         private static final String DEVICE_CODE_EXPIRY_TIME = "ExpiryTime";
         private static final String DEVICE_CODE_POLLING_INTERVAL = "PollingInterval";
+        private static final String PAR = "PAR";
+        private static final String PAR_EXPIRY_TIME = "ExpiryTime";
         private static final String DEVICE_CODE_KEY_SET = "KeySet";
 
         // Allow Cross Tenant Introspection Config.

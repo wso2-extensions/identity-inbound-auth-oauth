@@ -22,18 +22,17 @@ package org.wso2.carbon.identity.oauth.par.common;
  * Contains the required constants for PAR feature.
  */
 public class ParConstants {
-
-    public static final long EXPIRES_IN_DEFAULT_VALUE_IN_SEC = 60;
+    public static final long EXPIRES_IN_DEFAULT_VALUE = 60;
     public static final long SEC_TO_MILLISEC_FACTOR = 1000;
     public static final String UTC = "UTC";
     public static final String EXPIRES_IN = "expires_in";
-    public static final String REQUEST_URI_HEAD = "urn:ietf:params:wso2is:request_uri:";
-    public static final String REQUEST_URI_IN_REQUEST_BODY_ERROR = "request.with.request_uri.not.allowed";
+    public static final String REQUEST_URI_PREFIX = "urn:ietf:params:oauth:request_uri:";
+    public static final String REQUEST_URI_IN_REQUEST_BODY_ERROR = "Request with request_uri not allowed.";
     public static final String CACHE_NAME = "ParCache";
-    public static final String COL_LBL_JSON_PARAMS = "PARAMETERS";
+    public static final String COL_LBL_PARAMETERS = "PARAMETERS";
     public static final String COL_LBL_SCHEDULED_EXPIRY = "SCHEDULED_EXPIRY";
     public static final String COL_LBL_CLIENT_ID = "CLIENT_ID";
-
+    public static final String PAR = "PAR";
 
     private ParConstants() {
 
