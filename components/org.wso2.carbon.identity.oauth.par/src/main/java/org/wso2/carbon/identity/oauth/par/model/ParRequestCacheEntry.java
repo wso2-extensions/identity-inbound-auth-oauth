@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth.par.model;
 
 import org.wso2.carbon.identity.core.cache.CacheEntry;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -33,13 +32,12 @@ public class ParRequestCacheEntry extends CacheEntry {
     private long expiresIn;
     private String clientId;
 
-
     /**
      * Contractor for Cache entry of a PAR request.
      *
-     * @param requestUri Parameter map
-     * @param params Scheduled expiry time
-     * @param expiresIn Client id
+     * @param requestUri Parameter map.
+     * @param params Scheduled expiry time.
+     * @param expiresIn Client id.
      */
     public ParRequestCacheEntry(String requestUri, Map<String, String> params, long expiresIn, String clientId) {
 
@@ -52,7 +50,7 @@ public class ParRequestCacheEntry extends CacheEntry {
     /**
      * Get uuid of PAR request's request_uri.
      *
-     * @return params
+     * @return Uuid of the request uri.
      */
     public String getRequestUri() {
 
@@ -62,7 +60,7 @@ public class ParRequestCacheEntry extends CacheEntry {
     /**
      * Get parameter map.
      *
-     * @return params
+     * @return Map of params.
      */
     public Map<String, String> getParams() {
 
@@ -72,7 +70,7 @@ public class ParRequestCacheEntry extends CacheEntry {
     /**
      * Get scheduled expiry time.
      *
-     * @return expiresIn
+     * @return Scheduled expiry time.
      */
     public long getExpiresIn() {
 
@@ -82,7 +80,7 @@ public class ParRequestCacheEntry extends CacheEntry {
     /**
      * Get client id.
      *
-     * @return clientId
+     * @return Client id.
      */
     public String getClientId() {
 
@@ -92,7 +90,7 @@ public class ParRequestCacheEntry extends CacheEntry {
     /**
      * Set uuid of PAR request cache entry.
      *
-     * @param requestUri Request_uri uuid
+     * @param requestUri Request uri uuid.
      */
     public void setRequestUri(String requestUri) {
 
@@ -102,9 +100,9 @@ public class ParRequestCacheEntry extends CacheEntry {
     /**
      * Set parameter map.
      *
-     * @param params Parameter map
+     * @param params Parameter map.
      */
-    public void setParams(HashMap<String, String> params) {
+    public void setParams(Map<String, String> params) {
 
         this.params = params;
     }
@@ -112,7 +110,7 @@ public class ParRequestCacheEntry extends CacheEntry {
     /**
      * Set scheduled expiry.
      *
-     * @param expiresIn Scheduled expiry
+     * @param expiresIn Scheduled expiry.
      */
     public void setExpiresIn(long expiresIn) {
 
@@ -122,7 +120,7 @@ public class ParRequestCacheEntry extends CacheEntry {
     /**
      * Set client id.
      *
-     * @param clientId Client id
+     * @param clientId Client id.
      */
     public void setClientId(String clientId) {
 

@@ -37,7 +37,7 @@ public class ParDAOFactory {
     /**
      * Returns parDAOFactory instance.
      *
-     * @return  instance of parDAOFactory
+     * @return Instance of parDAOFactory.
      */
     public static ParDAOFactory getInstance() {
 
@@ -47,7 +47,7 @@ public class ParDAOFactory {
     /**
      *  Returns instance of ParMgtDAO.
      *
-     * @return  ParMgtDAO.
+     * @return Instance of ParMgtDAO.
      */
     public ParMgtDAO getParAuthMgtDAO() {
 

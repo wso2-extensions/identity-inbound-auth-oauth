@@ -126,9 +126,9 @@ public class OAuth2ServiceComponentHolder {
     }
 
     /**
-     * Get ParAuth service
+     * Get ParAuth service.
      *
-     * @return ParAuthService
+     * @return Instance of ParAuthService.
      */
     public static ParAuthService getParAuthService() {
 
@@ -136,9 +136,9 @@ public class OAuth2ServiceComponentHolder {
     }
 
     /**
-     * Set parAuth service
+     * Set parAuth service.
      *
-     * @param parAuthService ApplicationManagementService
+     * @param parAuthService Instance of ParAuthService.
      */
     public static void setParAuthService(ParAuthService parAuthService) {
 

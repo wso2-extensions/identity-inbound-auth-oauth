@@ -45,10 +45,10 @@ public interface ParMgtDAO {
      * Retrieve the ParAuthRequest.
      *
      * @param requestURIReference PAR request identifier.
+     * @return Optional ParRequestDO instance.
      * @throws ParCoreException Exception thrown from PAR Core Component.
      */
     Optional<ParRequestDO> getRequestData(String requestURIReference) throws ParCoreException;
-
 
     /**
      * Remove record from cache and database.

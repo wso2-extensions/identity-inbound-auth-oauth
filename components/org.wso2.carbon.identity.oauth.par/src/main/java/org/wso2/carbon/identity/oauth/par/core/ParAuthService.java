@@ -23,7 +23,6 @@ import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
 
 import java.util.Map;
 
-
 /**
  * Provides the PAR services.
  */
@@ -32,14 +31,17 @@ public interface ParAuthService {
     /**
      * Creates PAR AuthenticationResponse by setting the values for the response to be generated from PAR endpoint.
      *
-     * @return parAuthResponse that contains response data for request.
+     * @param parameters Map of parameters in the request.
+     * @return Object that contains response data for request.
      */
     ParAuthData handleParAuthRequest(Map<String, String> parameters) throws ParCoreException;
 
     /**
      * Retrieves the parameter map relevant to the provided request_uri from store after validating.
      *
-     * @return parameter map for request.
+     * @param uuid     UUID of the request.
+     * @param clientId Client ID of the request.
+     * @return Parameter map for request.
      */
     Map<String, String> retrieveParams(String uuid, String clientId) throws ParCoreException;
 }

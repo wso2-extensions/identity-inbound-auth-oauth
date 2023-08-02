@@ -41,7 +41,7 @@ public class ParCache extends AuthenticationBaseCache<String, ParRequestCacheEnt
     /**
      * Retrieve ParCache instance.
      *
-     * @return instance of ParCache
+     * @return Instance of ParCache.
      */
     public static ParCache getInstance() {
 

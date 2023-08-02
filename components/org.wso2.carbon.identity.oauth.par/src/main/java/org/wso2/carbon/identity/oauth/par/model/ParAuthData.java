@@ -29,7 +29,7 @@ public class ParAuthData {
     /**
      * Get request uri's uuid.
      *
-     * @return reqUriUUID
+     * @return Uuid of request uri.
      */
     public String getrequestURIReference() {
 
@@ -39,7 +39,7 @@ public class ParAuthData {
     /**
      * Get expiry time.
      *
-     * @return expiryTime
+     * @return Scheduled expiry time.
      */
     public long getExpiryTime() {
 
@@ -47,9 +47,9 @@ public class ParAuthData {
     }
 
     /**
-     * Set uuid of request_uri.
+     * Set uuid of request uri.
      *
-     * @param requestURIReference request uri's uuid
+     * @param requestURIReference Request uri's uuid.
      */
     public void setrequestURIReference(String requestURIReference) {
 
@@ -59,7 +59,7 @@ public class ParAuthData {
     /**
      * Set expiry time.
      *
-     * @param expiryTime expiry time
+     * @param expiryTime Expiry time.
      */
     public void setExpiryTime(long expiryTime) {
 

@@ -26,7 +26,6 @@ public class ParConstants {
     public static final long SEC_TO_MILLISEC_FACTOR = 1000;
     public static final String UTC = "UTC";
     public static final String EXPIRES_IN = "expires_in";
-    public static final String REQUESTED_EXPIRY = "requested_expiry";
     public static final String REQUEST_URI_PREFIX = "urn:ietf:params:oauth:request_uri:";
     public static final String REQUEST_URI_IN_REQUEST_BODY_ERROR = "Request with request_uri not allowed.";
     public static final String CACHE_NAME = "ParCache";
@@ -34,8 +33,6 @@ public class ParConstants {
     public static final String COL_LBL_SCHEDULED_EXPIRY = "SCHEDULED_EXPIRY";
     public static final String COL_LBL_CLIENT_ID = "CLIENT_ID";
     public static final String PAR = "PAR";
-    public static final String EXPIRY_TIME = "ExpiryTime";
-    public static final String CONFIG_ELEM_OAUTH = "OAuth";
 
     private ParConstants() {
 

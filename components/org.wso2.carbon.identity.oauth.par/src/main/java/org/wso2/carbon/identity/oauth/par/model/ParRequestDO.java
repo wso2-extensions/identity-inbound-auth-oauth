@@ -32,9 +32,9 @@ public class ParRequestDO {
     /**
      * Constructor with variables obtained from DAO to ParRequestDO.
      *
-     * @param parameterMap Parameter map
-     * @param expiresIn Scheduled expiry time
-     * @param clientId Client id
+     * @param parameterMap Parameter map.
+     * @param expiresIn Scheduled expiry time.
+     * @param clientId Client id.
      */
     public ParRequestDO(Map<String, String> parameterMap, long expiresIn, String clientId) {
 
@@ -46,7 +46,7 @@ public class ParRequestDO {
     /**
      * Get parameter map.
      *
-     * @return params
+     * @return Map of params.
      */
     public Map<String, String> getParams() {
 
@@ -56,7 +56,7 @@ public class ParRequestDO {
     /**
      * Get scheduled expiry time.
      *
-     * @return expiresIn
+     * @return Scheduled expiry time.
      */
     public long getExpiresIn() {
 
@@ -66,7 +66,7 @@ public class ParRequestDO {
     /**
      * Get client id.
      *
-     * @return clientId
+     * @return Client id.
      */
     public String getClientId() {
 
@@ -86,7 +86,7 @@ public class ParRequestDO {
     /**
      * Set scheduled expiry.
      *
-     * @param expiresIn Scheduled expiry
+     * @param expiresIn Scheduled expiry.
      */
     public void setExpiresIn(long expiresIn) {
 
@@ -96,7 +96,7 @@ public class ParRequestDO {
     /**
      * Set client id.
      *
-     * @param clientId Client id
+     * @param clientId Client id.
      */
     public void setClientId(String clientId) {
 

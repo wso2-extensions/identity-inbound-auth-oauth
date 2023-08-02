@@ -17,7 +17,6 @@
  */
 package org.wso2.carbon.identity.oauth.par.model;
 
-
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
@@ -31,7 +30,6 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 
-
 /**
  * Wrapper class to handle PAR request where the parameters of the request will be replaced
  * with the parameters obtained from the PAR request at the PAR endpoint by accessing the relevant
@@ -43,6 +41,10 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
 
     /**
      * Wraps the request with parameters obtained from the PAR endpoint.
+     *
+     * @param request HttpServletRequest.
+     * @param parAuthService ParAuthService.
+     * @throws OAuthProblemException OAuthProblemException.
      */
     public OAuthParRequestWrapper(HttpServletRequest request, ParAuthService parAuthService)
             throws OAuthProblemException {
@@ -73,7 +75,8 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
     /**
      * Get parameter.
      *
-     * @return parameter from either this parameter map or from parameter map of super class.
+     * @param name Name of the parameter.
+     * @return Parameter from either this parameter map or from parameter map of super class.
      */
     @Override
     public String getParameter(String name) {

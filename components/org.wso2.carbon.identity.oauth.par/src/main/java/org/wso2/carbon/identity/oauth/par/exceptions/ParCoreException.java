@@ -28,7 +28,7 @@ public class ParCoreException extends IdentityException {
     /**
      * Constructor with error message.
      *
-     * @param message Error message
+     * @param message Error message.
      */
     public ParCoreException(String message) {
 
@@ -38,8 +38,8 @@ public class ParCoreException extends IdentityException {
     /**
      * Constructor with error code and error message.
      *
-     * @param errorCode Error code
-     * @param message Error message
+     * @param errorCode Error code.
+     * @param message Error message.
      */
     public ParCoreException(String errorCode, String message) {
 
