@@ -3015,6 +3015,7 @@ public class OAuth2Util {
      * @throws IdentityOAuth2Exception
      */
     public static String getThumbPrint(Certificate certificate, String alias) throws IdentityOAuth2Exception {
+
         return getThumbPrint(certificate);
     }
 
@@ -3038,6 +3039,7 @@ public class OAuth2Util {
 
     private static String getThumbPrintWithAlgorithm(Certificate certificate, String algorithm)
             throws IdentityOAuth2Exception {
+
         try {
             MessageDigest digestValue = MessageDigest.getInstance(algorithm);
             byte[] der = certificate.getEncoded();

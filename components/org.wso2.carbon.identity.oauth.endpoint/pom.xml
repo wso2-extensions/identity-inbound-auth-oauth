@@ -346,6 +346,7 @@
                 <artifactId>spotbugs-maven-plugin</artifactId>
                 <configuration>
                     <threshold>High</threshold>
+                    <maxHeap>2048</maxHeap>
                 </configuration>
             </plugin>
         </plugins>
