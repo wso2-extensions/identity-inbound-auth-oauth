@@ -86,9 +86,9 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
     private static final JSONArray X5C_ARRAY = new JSONArray();
     private static final String X5T = "YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5MmVjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjY" +
             "yZmZlYzkwNzY0YjU4NQ";
-
     private static final String rsa256Thumbprint = "be:07:a3:8b:7e:24:cc:b5:3f:ea:ef:29:2e:cf:7c:e6:3f:24:3c:" +
-            "14:45:b4:06:27:66:2f:fe:c9:07:64:b5:85";    private JwksEndpoint jwksEndpoint;
+            "14:45:b4:06:27:66:2f:fe:c9:07:64:b5:85";
+    private JwksEndpoint jwksEndpoint;
     private Object identityUtilObj;
 
     @BeforeTest
