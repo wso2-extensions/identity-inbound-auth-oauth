@@ -17,7 +17,6 @@
  */
 package org.wso2.carbon.identity.oauth.par.internal;
 
-import com.hazelcast.org.apache.hc.core5.http.support.AbstractRequestBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.service.component.ComponentContext;
@@ -25,6 +24,7 @@ import org.osgi.service.component.annotations.Component;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.par.core.ParRequestBuilder;
+import org.wso2.carbon.identity.oauth2.AbstractRequestBuilder;
 
 /**
  * Service component for PAR.

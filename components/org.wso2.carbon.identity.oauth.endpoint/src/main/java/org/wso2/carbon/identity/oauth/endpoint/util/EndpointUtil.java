@@ -1810,46 +1810,61 @@ public class EndpointUtil {
         return FileBasedConfigurationBuilder.getInstance().isConsentPageRedirectParamsAllowed();
     }
 
+    /**
+     * Returns an instance of OAuthAuthzRequest. If the configured classname is invalid the default implementation
+     * will be returned.
+     *
+     * @param request http servlet request.
+     * @return instance of OAuthAuthzRequest.
+     * @throws OAuthProblemException thrown when initializing the OAuthAuthzRequestClass instance.
+     * @throws OAuthSystemException  thrown when initializing the OAuthAuthzRequestClass instance.
+     */
     public static OAuthAuthzRequest getOAuthAuthzRequest(HttpServletRequest request)
             throws OAuthProblemException, OAuthSystemException {
 
-        OAuthAuthzRequest oAuthAuthzRequest;
-
         if (isDefaultOAuthAuthzRequestClassConfigured()) {
-            oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
-        } else {
-            try {
-                Class<? extends OAuthAuthzRequest> clazz = getOAuthAuthzRequestClass();
-                // Validations will be performed when initializing the class instance.
-                Constructor<?> constructor = clazz.getConstructor(HttpServletRequest.class);
-                oAuthAuthzRequest = (OAuthAuthzRequest) constructor.newInstance(request);
-            } catch (InvocationTargetException e) {
-                // Handle OAuthProblemException & OAuthSystemException thrown from extended class.
-                if (e.getTargetException() instanceof OAuthProblemException) {
-                    throw (OAuthProblemException) e.getTargetException();
-                } else if (e.getTargetException() instanceof OAuthSystemException) {
-                    throw (OAuthSystemException) e.getTargetException();
-                } else {
-                    log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
-                            "Hence initiating the default implementation");
-                    oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
-                }
-            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
-                     NoSuchMethodException e) {
-                log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
-                        "Hence initiating the default implementation");
-                oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
-            }
+            return new CarbonOAuthAuthzRequest(request);
         }
-        return oAuthAuthzRequest;
+        try {
+            Class<? extends OAuthAuthzRequest> clazz = getOAuthAuthzRequestClass();
+            // Validations will be performed when initializing the class instance.
+            Constructor<?> constructor = clazz.getConstructor(HttpServletRequest.class);
+            return (OAuthAuthzRequest) constructor.newInstance(request);
+        } catch (InvocationTargetException e) {
+            // Handle OAuthProblemException & OAuthSystemException thrown from extended class.
+            if (e.getTargetException() instanceof OAuthProblemException) {
+                throw (OAuthProblemException) e.getTargetException();
+            } else if (e.getTargetException() instanceof OAuthSystemException) {
+                throw (OAuthSystemException) e.getTargetException();
+            } else {
+                log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. ");
+            }
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
+                 NoSuchMethodException e) {
+            log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. ");
+        }
+        log.debug("Initiating the default OAuthAuthzRequest implementation");
+        return new CarbonOAuthAuthzRequest(request);
+
     }
 
+    /**
+     * Method to check whether the configured OAuthAuthzRequestImplementation is the default implementation.
+     *
+     * @return boolean whether the default class name is configured.
+     */
     private static boolean isDefaultOAuthAuthzRequestClassConfigured() {
 
         String oauthAuthzRequestClassName = OAuthServerConfiguration.getInstance().getOAuthAuthzRequestClassName();
         return OAuthServerConfiguration.DEFAULT_OAUTH_AUTHZ_REQUEST_CLASSNAME.equals(oauthAuthzRequestClassName);
     }
 
+    /**
+     * Load OAuthAuthzRequest class.
+     *
+     * @return OAuthAuthzRequest Class.
+     * @throws ClassNotFoundException when configured class name is invalid.
+     */
     private static Class<? extends OAuthAuthzRequest> getOAuthAuthzRequestClass() throws ClassNotFoundException {
 
         if (oAuthAuthzRequestClass == null) {

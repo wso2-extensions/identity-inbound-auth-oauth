@@ -66,8 +66,6 @@ public class OAuth2ParEndpoint {
 
     private static final Log log = LogFactory.getLog(OAuth2ParEndpoint.class);
 
-    private static final String PAR_CLIENT_AUTH_ERROR = "Client Authentication Failed";
-
     @POST
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
@@ -136,7 +134,7 @@ public class OAuth2ParEndpoint {
 
         JSONObject parErrorResponse = new JSONObject();
         parErrorResponse.put(OAuthConstants.OAUTH_ERROR, OAuth2ErrorCodes.SERVER_ERROR);
-        parErrorResponse.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, "Internal Server Error.");
+        parErrorResponse.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, ParConstants.INTERNAL_SERVER_ERROR);
 
         Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         log.debug("Exception occurred when handling the request: ", parCoreException);
@@ -176,7 +174,7 @@ public class OAuth2ParEndpoint {
                     oAuthClientAuthnContext.getErrorMessage());
         }
 
-        throw new ParClientException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, "Client authentication required");
+        throw new ParClientException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, ParConstants.CLIENT_AUTH_REQUIRED_ERROR);
     }
 
     private OAuthClientAuthnContext getClientAuthnContext(HttpServletRequest request) {
@@ -192,7 +190,7 @@ public class OAuth2ParEndpoint {
 
         OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
         oAuthClientAuthnContext.setAuthenticated(false);
-        oAuthClientAuthnContext.setErrorMessage(PAR_CLIENT_AUTH_ERROR);
+        oAuthClientAuthnContext.setErrorMessage(ParConstants.PAR_CLIENT_AUTH_ERROR);
         oAuthClientAuthnContext.setErrorCode(OAuth2ErrorCodes.INVALID_REQUEST);
         return oAuthClientAuthnContext;
     }
@@ -203,8 +201,7 @@ public class OAuth2ParEndpoint {
         OAuth2ClientValidationResponseDTO validationResponse = getOAuth2Service().validateClientInfo(request);
 
         if (!validationResponse.isValidClient()) {
-            throw new ParClientException(validationResponse.getErrorCode(),
-                    "Cannot find an application associated with the given consumer key.");
+            throw new ParClientException(validationResponse.getErrorCode(), ParConstants.INVALID_CONSUMER_KEY_ERROR);
         }
         if (isRequestUriProvided(params)) {
             throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
@@ -216,7 +213,8 @@ public class OAuth2ParEndpoint {
             throws ParClientException {
 
         if (!validateParams(request, paramMap)) {
-            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, "Invalid request with repeated parameters.");
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    ParConstants.REPEATED_PARAMS_IN_REQUEST_ERROR);
         }
     }
 

@@ -19,14 +19,16 @@ package org.wso2.carbon.identity.oauth.par.core;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.par.model.OAuthParRequestWrapper;
 import org.wso2.carbon.identity.oauth2.AbstractRequestBuilder;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * This is a global level interface for building requests.
+ * This builds the PAR request if the incoming request satisfies the PAR conditions.
  */
 public class ParRequestBuilder implements AbstractRequestBuilder {
 
@@ -41,7 +43,8 @@ public class ParRequestBuilder implements AbstractRequestBuilder {
     @Override
     public boolean canHandle(HttpServletRequest request) {
 
-        return StringUtils.isNotBlank(request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI));
+        boolean isOIDCRequest = OAuth2Util.isOIDCAuthzRequest(OAuthUtils.decodeScopes(request.getParameter("scope")));
+        return StringUtils.isNotBlank(request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI)) && !isOIDCRequest;
     }
 
     @Override

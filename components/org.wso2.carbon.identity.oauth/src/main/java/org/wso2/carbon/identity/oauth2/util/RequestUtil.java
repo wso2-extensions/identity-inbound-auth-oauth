@@ -41,10 +41,8 @@ public class RequestUtil {
 
         List<AbstractRequestBuilder> abstractRequestBuilders =
                 OAuth2ServiceComponentHolder.getInstance().getRequestBuilders();
-        AbstractRequestBuilder requestBuilder;
 
-        for (AbstractRequestBuilder abstractRequestBuilder : abstractRequestBuilders) {
-            requestBuilder = abstractRequestBuilder;
+        for (AbstractRequestBuilder requestBuilder : abstractRequestBuilders) {
             if (requestBuilder.canHandle(request)) {
                 return requestBuilder.buildRequest(request);
             }

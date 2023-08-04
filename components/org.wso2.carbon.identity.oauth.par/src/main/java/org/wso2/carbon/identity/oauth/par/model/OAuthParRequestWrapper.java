@@ -45,17 +45,18 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
      * @param request HttpServletRequest.
      * @throws OAuthProblemException OAuthProblemException.
      */
-    public OAuthParRequestWrapper(HttpServletRequest request)
-            throws OAuthProblemException {
+    public OAuthParRequestWrapper(HttpServletRequest request) throws OAuthProblemException {
 
         super(request);
 
         // Get only uuid from request_uri.
         String requestUri = request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI);
+        if (!requestUri.startsWith(ParConstants.REQUEST_URI_PREFIX)) {
+            throw new ParAuthFailureException(ParConstants.INVALID_REQUEST_URI_FORMAT);
+        }
         String uuid = requestUri.replaceFirst(ParConstants.REQUEST_URI_PREFIX, "");
 
         try {
-
             params = ParUtil.getParAuthService()
                     .retrieveParams(uuid, request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
             params.put(OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST, "true");

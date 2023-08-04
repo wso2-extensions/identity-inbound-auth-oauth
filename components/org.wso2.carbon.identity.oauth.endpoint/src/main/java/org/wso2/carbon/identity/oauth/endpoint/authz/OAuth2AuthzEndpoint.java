@@ -104,7 +104,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
-import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
@@ -125,8 +124,6 @@ import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
@@ -289,7 +286,7 @@ public class OAuth2AuthzEndpoint {
             throw e;
         } catch (OAuthProblemException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
-            throw new InvalidRequestException(e.getMessage(), OAuth2ErrorCodes.INVALID_REQUEST);
+            throw new InvalidRequestException(e.getMessage(), OAuth2ErrorCodes.INVALID_REQUEST, e);
         }
 
         try {
@@ -2017,79 +2014,6 @@ public class OAuth2AuthzEndpoint {
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
             throw new OAuthSystemException("Error while retrieving app information for client_id : " + clientId, e);
         }
-    }
-
-    /**
-     * Method to check whether the configured OAuthAuthzRequestImplementation is the default implementation.
-     *
-     * @return boolean whether the default class name is configured.
-     */
-    private boolean isDefaultOAuthAuthzRequestClassConfigured() {
-
-        String oauthAuthzRequestClassName = OAuthServerConfiguration.getInstance().getOAuthAuthzRequestClassName();
-        return OAuthServerConfiguration.DEFAULT_OAUTH_AUTHZ_REQUEST_CLASSNAME.equals(oauthAuthzRequestClassName);
-    }
-
-    /**
-     * Load OAuthAuthzRequest class.
-     *
-     * @return OAuthAuthzRequest Class.
-     * @throws ClassNotFoundException when configured class name is invalid.
-     */
-    private static Class<? extends OAuthAuthzRequest> getOAuthAuthzRequestClass() throws ClassNotFoundException {
-
-        if (oAuthAuthzRequestClass == null) {
-
-            String oauthAuthzRequestClassName =
-                    OAuthServerConfiguration.getInstance().getOAuthAuthzRequestClassName();
-            oAuthAuthzRequestClass = (Class<? extends OAuthAuthzRequest>) Thread.currentThread()
-                    .getContextClassLoader().loadClass(oauthAuthzRequestClassName);
-
-        }
-        return oAuthAuthzRequestClass;
-    }
-
-    /**
-     * Returns an instance of OAuthAuthzRequest. If the configured classname is invalid the default implementation
-     * will be returned.
-     *
-     * @param request http servlet request.
-     * @return instance of OAuthAuthzRequest.
-     * @throws OAuthProblemException thrown when initializing the OAuthAuthzRequestClass instance.
-     * @throws OAuthSystemException  thrown when initializing the OAuthAuthzRequestClass instance.
-     */
-    private OAuthAuthzRequest getOAuthAuthzRequest(HttpServletRequest request)
-            throws OAuthProblemException, OAuthSystemException {
-
-        OAuthAuthzRequest oAuthAuthzRequest;
-
-        if (isDefaultOAuthAuthzRequestClassConfigured()) {
-            oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
-        } else {
-            try {
-                Class<? extends OAuthAuthzRequest> clazz = getOAuthAuthzRequestClass();
-                // Validations will be performed when initializing the class instance.
-                Constructor<?> constructor = clazz.getConstructor(HttpServletRequest.class);
-                oAuthAuthzRequest = (OAuthAuthzRequest) constructor.newInstance(request);
-            } catch (InvocationTargetException e) {
-                // Handle OAuthProblemException & OAuthSystemException thrown from extended class.
-                if (e.getTargetException() instanceof OAuthProblemException) {
-                    throw (OAuthProblemException) e.getTargetException();
-                } else if (e.getTargetException() instanceof OAuthSystemException) {
-                    throw (OAuthSystemException) e.getTargetException();
-                } else {
-                    log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
-                            "Hence initiating the default implementation");
-                    oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
-                }
-            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
-                     NoSuchMethodException e) {
-                log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
-                        "Hence initiating the default implementation");
-                oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
-            }
-        }
-        return oAuthAuthzRequest;
     }
 
     /**
