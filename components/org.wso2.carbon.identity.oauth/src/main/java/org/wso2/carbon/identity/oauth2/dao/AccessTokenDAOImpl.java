@@ -476,22 +476,23 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
+            prepStmt.setInt(2, tenantId);
             if (isUsernameCaseSensitive) {
-                prepStmt.setString(2, tenantAwareUsernameWithNoUserDomain);
+                prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain);
             } else {
-                prepStmt.setString(2, tenantAwareUsernameWithNoUserDomain.toLowerCase());
+                prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain.toLowerCase());
             }
-            prepStmt.setInt(3, tenantId);
-            prepStmt.setString(4, userDomain);
+            prepStmt.setInt(4, tenantId);
+            prepStmt.setString(5, userDomain);
 
             if (hashedScope != null) {
-                prepStmt.setString(5, hashedScope);
+                prepStmt.setString(6, hashedScope);
             }
 
-            prepStmt.setString(6, tokenBindingReference);
+            prepStmt.setString(7, tokenBindingReference);
 
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                prepStmt.setString(7, authenticatedIDP);
+                prepStmt.setString(8, authenticatedIDP);
             }
 
             resultSet = prepStmt.executeQuery();
@@ -908,15 +909,16 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
+            prepStmt.setInt(2, tenantId);
             if (isUsernameCaseSensitive) {
-                prepStmt.setString(2, tenantAwareUsernameWithNoUserDomain);
+                prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain);
             } else {
-                prepStmt.setString(2, tenantAwareUsernameWithNoUserDomain.toLowerCase());
+                prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain.toLowerCase());
             }
-            prepStmt.setInt(3, tenantId);
-            prepStmt.setString(4, userDomain);
+            prepStmt.setInt(4, tenantId);
+            prepStmt.setString(5, userDomain);
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                prepStmt.setString(5, authenticatedIDP);
+                prepStmt.setString(6, authenticatedIDP);
             }
 
             resultSet = prepStmt.executeQuery();
@@ -2611,22 +2613,23 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
+            prepStmt.setInt(2, tenantId);
             if (isUsernameCaseSensitive) {
-                prepStmt.setString(2, tenantAwareUsernameWithNoUserDomain);
+                prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain);
             } else {
-                prepStmt.setString(2, tenantAwareUsernameWithNoUserDomain.toLowerCase());
+                prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain.toLowerCase());
             }
-            prepStmt.setInt(3, tenantId);
-            prepStmt.setString(4, userDomain);
+            prepStmt.setInt(4, tenantId);
+            prepStmt.setString(5, userDomain);
 
             if (hashedScope != null) {
-                prepStmt.setString(5, hashedScope);
+                prepStmt.setString(6, hashedScope);
             }
 
-            prepStmt.setString(6, tokenBindingReference);
+            prepStmt.setString(7, tokenBindingReference);
 
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                prepStmt.setString(7, authenticatedIDP);
+                prepStmt.setString(8, authenticatedIDP);
             }
 
             resultSet = prepStmt.executeQuery();

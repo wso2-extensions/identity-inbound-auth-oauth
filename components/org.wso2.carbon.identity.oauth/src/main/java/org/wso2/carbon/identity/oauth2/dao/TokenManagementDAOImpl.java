@@ -25,6 +25,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -572,6 +573,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         PreparedStatement updateStateStatement = null;
         PreparedStatement revokeActiveTokensStatement = null;
         PreparedStatement deactivateActiveCodesStatement = null;
+        int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
             connection = IdentityDatabaseUtil.getDBConnection();
             if (OAuthConstants.ACTION_REVOKE.equals(action)) {
@@ -591,6 +593,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                         (org.wso2.carbon.identity.oauth.dao.SQLQueries.OAuthAppDAOSQLQueries.UPDATE_APPLICATION_STATE);
                 updateStateStatement.setString(1, newAppState);
                 updateStateStatement.setString(2, consumerKey);
+                updateStateStatement.setInt(3, tenantId);
                 updateStateStatement.execute();
 
             } else if (OAuthConstants.ACTION_REGENERATE.equals(action)) {
@@ -609,6 +612,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     updateStateStatement.setString(1, getPersistenceProcessor().getProcessedClientSecret(newSecretKey));
                     updateStateStatement.setString(2, properties.getProperty(OAuthConstants.OAUTH_APP_NEW_STATE));
                     updateStateStatement.setString(3, consumerKey);
+                    updateStateStatement.setInt(4, tenantId);
                 } else {
                     // Update the consumer secret of the oauth app when the new app state is not available.
                     updateStateStatement = connection.prepareStatement
@@ -616,6 +620,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                                     UPDATE_OAUTH_SECRET_KEY);
                     updateStateStatement.setString(1, getPersistenceProcessor().getProcessedClientSecret(newSecretKey));
                     updateStateStatement.setString(2, consumerKey);
+                    updateStateStatement.setInt(3, tenantId);
                 }
                 updateStateStatement.execute();
 
@@ -635,6 +640,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                         revokeActiveTokensStatement.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
                         revokeActiveTokensStatement.setString(2, UUID.randomUUID().toString());
                         revokeActiveTokensStatement.setString(3, consumerKey);
+                        revokeActiveTokensStatement.setInt(4, tenantId);
                         int count = revokeActiveTokensStatement.executeUpdate();
                         if (log.isDebugEnabled()) {
                             log.debug("Number of rows being updated : " + count);
@@ -645,7 +651,8 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     revokeActiveTokensStatement.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
                     revokeActiveTokensStatement.setString(2, UUID.randomUUID().toString());
                     revokeActiveTokensStatement.setString(3, consumerKey);
-                    revokeActiveTokensStatement.setString(4, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+                    revokeActiveTokensStatement.setInt(4, tenantId);
+                    revokeActiveTokensStatement.setString(5, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
                     revokeActiveTokensStatement.execute();
                 }
             }
