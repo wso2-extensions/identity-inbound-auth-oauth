@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -69,6 +70,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
@@ -181,6 +183,33 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 log.debug("No active access token found for client Id: " + consumerKey + ", user: " +
                         authorizedUserId + " and scope: " + scope + ". Therefore issuing new token.");
             }
+
+            // retrieve five oldest ACTIVE access tokens for particular user and application combination
+            List<AccessTokenDO> oldestActiveTokens = null;
+            try {
+                oldestActiveTokens = getOldestAccessTokens(consumerKey,
+                        tokReqMsgCtx.getAuthorizedUser());
+            } catch (IdentityOAuthAdminException e) {
+                throw new RuntimeException(e);
+            }
+
+            //check whether there are five active tokens
+            if (oldestActiveTokens.size() == 5) {
+                //Expire the oldest token
+                AccessTokenDO oldestToken = oldestActiveTokens.get(0);
+                if (log.isDebugEnabled()) {
+                    log.debug("Expiring the oldest token for client Id: " + consumerKey + ", user: " +
+                            authorizedUserId + ". Therefore issuing new token.");
+                }
+                //Expire the oldest token
+                try {
+                    expireOldestToken(oldestToken.getTokenId(), OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED);
+                } catch (IdentityOAuthAdminException e) {
+                    throw new RuntimeException(e);
+                }
+
+            }
+
             return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean, true,
                     oauthTokenIssuer);
         }
@@ -398,6 +427,32 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         setDetailsToMessageContext(tokReqMsgCtx, existingTokenBean);
         return createResponseWithTokenBean(existingTokenBean, expireTime, scope);
+    }
+
+    private List<AccessTokenDO> getOldestAccessTokens(String consumerKey, AuthenticatedUser authzUser)
+            throws IdentityOAuthAdminException {
+
+        List<AccessTokenDO> accessTokenDOs;
+        try {
+            accessTokenDOs = new ArrayList<>(OAuthTokenPersistenceFactory
+                    .getInstance().getAccessTokenDAO().getOldestAccessTokens(consumerKey, authzUser));
+        } catch (IdentityOAuth2Exception e) {
+            String errorMsg = String.format("Error occurred while retrieving access tokens of user and app  " +
+                    "combination of app with consumer key: %s.", consumerKey);
+            throw handleError(errorMsg, e);
+        }
+        return accessTokenDOs;
+    }
+
+    private void expireOldestToken(String tokenId, String tokenState) throws IdentityOAuthAdminException {
+        try {
+            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .updateAccessTokenState(tokenId, tokenState);
+        } catch (IdentityOAuth2Exception e) {
+            String errorMsg = String.format("Error occurred while expiring the oldest access token with token id: %s.",
+                    tokenId);
+            throw handleError(errorMsg, e);
+        }
     }
 
     private OAuth2AccessTokenRespDTO generateNewAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
@@ -864,52 +919,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
     private AccessTokenDO getExistingToken(OAuthTokenReqMessageContext tokenMsgCtx, OAuthCacheKey cacheKey)
             throws IdentityOAuth2Exception {
-        AccessTokenDO existingToken = null;
-        OAuth2AccessTokenReqDTO tokenReq = tokenMsgCtx.getOauth2AccessTokenReqDTO();
-        String scope = OAuth2Util.buildScopeString(tokenMsgCtx.getScope());
-        String tokenBindingReference = getTokenBindingReference(tokenMsgCtx);
 
-        if (cacheEnabled) {
-            existingToken = getExistingTokenFromCache(cacheKey, tokenReq.getClientId(),
-                    tokenMsgCtx.getAuthorizedUser().getLoggableUserId(), scope, tokenBindingReference,
-                    tokenMsgCtx.getAuthorizedUser().getTenantDomain());
-        }
-
-        if (existingToken == null) {
-            existingToken = getExistingTokenFromDB(tokenMsgCtx, tokenReq, scope, cacheKey);
-        }
-        return existingToken;
+        return null;
     }
 
-    private AccessTokenDO getExistingTokenFromDB(OAuthTokenReqMessageContext tokenMsgCtx,
-                                                 OAuth2AccessTokenReqDTO tokenReq, String scope, OAuthCacheKey cacheKey)
-            throws IdentityOAuth2Exception {
-
-        AccessTokenDO existingToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                .getLatestAccessToken(tokenReq.getClientId(), tokenMsgCtx.getAuthorizedUser(),
-                        getUserStoreDomain(tokenMsgCtx.getAuthorizedUser()), scope,
-                        getTokenBindingReference(tokenMsgCtx), false);
-        if (existingToken != null) {
-            if (log.isDebugEnabled()) {
-                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                    log.debug("Retrieved latest access token(hashed): " + DigestUtils.sha256Hex
-                            (existingToken.getAccessToken()) + " in the state: " + existingToken.getTokenState() +
-                            " for client Id: " + tokenReq.getClientId() + " user: " + tokenMsgCtx.getAuthorizedUser() +
-                            " and scope: " + scope + " from db");
-                } else {
-                    log.debug("Retrieved latest access token for client Id: " + tokenReq.getClientId() + " user: " +
-                            tokenMsgCtx.getAuthorizedUser() + " and scope: " + scope + " from db");
-                }
-            }
-            long expireTime = getAccessTokenExpiryTimeMillis(existingToken);
-            if (TOKEN_STATE_ACTIVE.equals(existingToken.getTokenState()) &&
-                    expireTime != 0) {
-                // Active token retrieved from db, adding to cache if cacheEnabled
-                addTokenToCache(cacheKey, existingToken);
-            }
-        }
-        return existingToken;
-    }
 
     private AccessTokenDO getExistingTokenFromCache(OAuthCacheKey cacheKey, String consumerKey, String loggableUserId,
                                                     String scope, String tokenBindingReference, String tenantDomain)
