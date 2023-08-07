@@ -18,9 +18,6 @@
 
 package org.wso2.carbon.identity.oauth.dao;
 
-// TODO: Need to check for references of sql queries and fix them with tenant id.
-//  If refs are not found, search them in git.
-
 /**
  * SQL queries related to OAuth data access layer.
  */

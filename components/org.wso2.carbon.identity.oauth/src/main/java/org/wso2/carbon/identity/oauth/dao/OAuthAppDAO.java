@@ -323,11 +323,10 @@ public class OAuthAppDAO {
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
             String sqlQuery = SQLQueries.OAuthAppDAOSQLQueries.GET_APP_INFO_WITH_PKCE;
 
-            // TODO: Check tenant in reference tree.
             try (PreparedStatement prepStmt = connection.prepareStatement(sqlQuery)) {
                 String preprocessedClientId = persistenceProcessor.getProcessedClientId(consumerKey);
                 prepStmt.setString(1, preprocessedClientId);
-                prepStmt.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+                prepStmt.setInt(2, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
 
                 try (ResultSet rSet = prepStmt.executeQuery()) {
                     /*
@@ -558,7 +557,7 @@ public class OAuthAppDAO {
         prepStmt.setString(10, oauthAppDO.getAppOwner().getUserName());
         prepStmt.setString(11, oauthAppDO.getAppOwner().getUserStoreDomain());
         prepStmt.setString(12, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
-        prepStmt.setInt(13, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+        prepStmt.setInt(13, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
     }
 
     private void setValuesToStatementWithPKCENoOwnerUpdate(OAuthAppDO oauthAppDO, PreparedStatement prepStmt)
@@ -571,7 +570,7 @@ public class OAuthAppDAO {
         prepStmt.setLong(8, oauthAppDO.getRefreshTokenExpiryTime());
         prepStmt.setLong(9, oauthAppDO.getIdTokenExpiryTime());
         prepStmt.setString(10, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
-        prepStmt.setInt(11, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+        prepStmt.setInt(11, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
     }
 
     private void addOrUpdateOIDCSpProperty(OAuthAppDO oauthAppDO,
@@ -741,7 +740,7 @@ public class OAuthAppDAO {
             try (PreparedStatement prepStmt = connection
                     .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_APPLICATION)) {
                 prepStmt.setString(1, consumerKey);
-                prepStmt.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+                prepStmt.setInt(2, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
                 prepStmt.execute();
                 if (isOIDCAudienceEnabled()) {
                     String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
@@ -802,7 +801,7 @@ public class OAuthAppDAO {
                          statement = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_INFO)) {
                 statement.setString(1, appName);
                 statement.setString(2, consumerKey);
-                statement.setInt(3, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+                statement.setInt(3, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
                 statement.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e1) {
@@ -833,7 +832,8 @@ public class OAuthAppDAO {
                      statement.setString(2, serviceProvider.getOwner().getUserName());
                      statement.setString(3, serviceProvider.getOwner().getUserStoreDomain());
                      statement.setString(4, consumerKey);
-                     statement.setInt(5, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+                     statement.setInt(5, IdentityTenantUtil.getTenantId(
+                             IdentityTenantUtil.getTenantDomainFromContext()));
                      statement.execute();
                      IdentityDatabaseUtil.commitTransaction(connection);
                  } catch (SQLException e1) {
@@ -855,7 +855,7 @@ public class OAuthAppDAO {
                 prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_APPLICATION_STATE)) {
 
             prepStmt.setString(1, consumerKey);
-            prepStmt.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+            prepStmt.setInt(2, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
             try (ResultSet rSet = prepStmt.executeQuery()) {
                 if (rSet.next()) {
                     consumerAppState = rSet.getString(APP_STATE);
@@ -879,7 +879,7 @@ public class OAuthAppDAO {
                     .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.UPDATE_APPLICATION_STATE)) {
                 statement.setString(1, state);
                 statement.setString(2, consumerKey);
-                statement.setInt(3, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+                statement.setInt(3, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
                 statement.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e1) {
@@ -933,7 +933,7 @@ public class OAuthAppDAO {
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false); PreparedStatement
                 prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.CHECK_EXISTING_CONSUMER)) {
             prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerKey));
-            prepStmt.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+            prepStmt.setInt(2, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
 
             try (ResultSet rSet = prepStmt.executeQuery()) {
                 if (rSet.next()) {
@@ -1173,7 +1173,7 @@ public class OAuthAppDAO {
         try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
                 .GET_APP_ID_BY_CONSUMER_KEY)) {
             prepStmt.setString(1, persistenceProcessor.getProcessedClientId(clientId));
-            prepStmt.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+            prepStmt.setInt(2, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
             try (ResultSet rSet = prepStmt.executeQuery()) {
                 boolean rSetHasRows = false;
                 while (rSet.next()) {

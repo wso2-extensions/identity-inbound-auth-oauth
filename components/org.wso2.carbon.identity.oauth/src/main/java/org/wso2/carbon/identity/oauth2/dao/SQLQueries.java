@@ -27,9 +27,6 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SQLPlaceholde
  */
 public class SQLQueries {
 
-    // TODO: Check for consumer key.
-    // TODO: Check for references and add tenant.
-
     public static final String STORE_AUTHORIZATION_CODE = "INSERT INTO  IDN_OAUTH2_AUTHORIZATION_CODE " +
             "(CODE_ID, AUTHORIZATION_CODE, CONSUMER_KEY_ID, CALLBACK_URL, SCOPE, AUTHZ_USER, USER_DOMAIN, TENANT_ID, " +
             "TIME_CREATED, VALIDITY_PERIOD, SUBJECT_IDENTIFIER, AUTHORIZATION_CODE_HASH) SELECT ?,?,ID,?,?,?,?,?,?,?,"

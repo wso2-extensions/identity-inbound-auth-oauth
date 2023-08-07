@@ -25,7 +25,6 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -163,7 +162,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             prepStmt = connection.prepareStatement(sql);
 
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            prepStmt.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+            prepStmt.setInt(2, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
             if (refreshToken != null) {
                 prepStmt.setString(3, getHashingPersistenceProcessor().getProcessedRefreshToken(refreshToken));
             }
@@ -574,7 +573,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         PreparedStatement updateStateStatement = null;
         PreparedStatement revokeActiveTokensStatement = null;
         PreparedStatement deactivateActiveCodesStatement = null;
-        int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
+        int tenantId = IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext());
         try {
             connection = IdentityDatabaseUtil.getDBConnection();
             if (OAuthConstants.ACTION_REVOKE.equals(action)) {

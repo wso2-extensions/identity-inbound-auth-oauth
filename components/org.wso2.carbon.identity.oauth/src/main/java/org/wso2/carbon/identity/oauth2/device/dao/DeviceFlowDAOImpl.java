@@ -22,9 +22,9 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
@@ -273,7 +273,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                          connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.CHECK_CLIENT_ID_EXISTS)) {
                 ResultSet resultSet;
                 prepStmt.setString(1, clientId);
-                prepStmt.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+                prepStmt.setInt(2, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
                 resultSet = prepStmt.executeQuery();
                 while (resultSet.next()) {
                     String status = resultSet.getString(1);
@@ -404,7 +404,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                          connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.SET_CALLBACK_URL)) {
                 prepStmt.setString(1, callbackUri);
                 prepStmt.setString(2, clientId);
-                prepStmt.setInt(3, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+                prepStmt.setInt(3, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e) {
@@ -513,7 +513,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                 prepStmt.setString(8, Constants.PENDING);
                 prepStmt.setLong(9, quantifier);
                 prepStmt.setString(10, consumerKey);
-                prepStmt.setInt(11, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+                prepStmt.setInt(11, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e) {

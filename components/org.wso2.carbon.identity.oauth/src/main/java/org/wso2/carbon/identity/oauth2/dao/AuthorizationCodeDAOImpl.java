@@ -25,12 +25,12 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -226,7 +226,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             }
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            prepStmt.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+            prepStmt.setInt(2, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
             //use hash value for search
             prepStmt.setString(3, getHashingPersistenceProcessor().getProcessedAuthzCode(authorizationKey));
             resultSet = prepStmt.executeQuery();
@@ -592,7 +592,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             String sqlQuery = SQLQueries.GET_AUTHORIZATION_CODES_FOR_CONSUMER_KEY;
             ps = connection.prepareStatement(sqlQuery);
             ps.setString(1, consumerKey);
-            ps.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+            ps.setInt(2, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
             rs = ps.executeQuery();
             while (rs.next()) {
                 if (isHashDisabled) {
@@ -624,7 +624,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             String sqlQuery = SQLQueries.GET_ACTIVE_AUTHORIZATION_CODES_FOR_CONSUMER_KEY;
             ps = connection.prepareStatement(sqlQuery);
             ps.setString(1, consumerKey);
-            ps.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+            ps.setInt(2, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
             ps.setString(3, OAuthConstants.AuthorizationCodeState.ACTIVE);
             rs = ps.executeQuery();
             while (rs.next()) {
@@ -937,7 +937,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         try {
             ps = connection.prepareStatement(sqlQuery);
             ps.setString(1, consumerKey);
-            ps.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+            ps.setInt(2, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
             ps.setString(3, OAuthConstants.AuthorizationCodeState.ACTIVE);
             rs = ps.executeQuery();
             while (rs.next()) {

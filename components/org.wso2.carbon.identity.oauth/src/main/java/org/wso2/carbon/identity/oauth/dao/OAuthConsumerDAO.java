@@ -20,10 +20,10 @@ package org.wso2.carbon.identity.oauth.dao;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.Parameters;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -75,7 +75,7 @@ public class OAuthConsumerDAO {
             try {
                 prepStmt = connection.prepareStatement(SQLQueries.OAuthConsumerDAOSQLQueries.GET_CONSUMER_SECRET);
                 prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerKey));
-                prepStmt.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+                prepStmt.setInt(2, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
                 resultSet = prepStmt.executeQuery();
 
                 if (resultSet.next()) {
@@ -124,7 +124,7 @@ public class OAuthConsumerDAO {
             prepStmt = connection.prepareStatement(SQLQueries.OAuthConsumerDAOSQLQueries.EXISTENCE_OF_CONSUMER_SECRET);
             prepStmt.setString(1, persistenceProcessor.getProcessedClientId(consumerKey));
             prepStmt.setString(2, consumerSecretHash);
-            prepStmt.setInt(3, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+            prepStmt.setInt(3, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
             resultSet = prepStmt.executeQuery();
 
             if (resultSet.next()) {
@@ -156,7 +156,7 @@ public class OAuthConsumerDAO {
             statement = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_SECRET_KEY);
             statement.setString(1, newSecretKey);
             statement.setString(2, consumerKey);
-            statement.setInt(3, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+            statement.setInt(3, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
             statement.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
@@ -186,7 +186,7 @@ public class OAuthConsumerDAO {
                     connection.prepareStatement(SQLQueries.OAuthConsumerDAOSQLQueries.GET_USERNAME_FOR_KEY_AND_SECRET);
             prepStmt.setString(1, clientId);
             prepStmt.setString(2, clientSecret);
-            prepStmt.setInt(3, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+            prepStmt.setInt(3, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
             resultSet = prepStmt.executeQuery();
 
             if (resultSet.next()) {
@@ -277,7 +277,7 @@ public class OAuthConsumerDAO {
             prepStmt.setString(4, scope);
             prepStmt.setString(5, Boolean.toString(false));
             prepStmt.setString(6, consumerKey);
-            prepStmt.setInt(7, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+            prepStmt.setInt(7, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
 
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
@@ -450,7 +450,7 @@ public class OAuthConsumerDAO {
         try {
             prepStmt = connection.prepareStatement(SQLQueries.OAuthConsumerDAOSQLQueries.GET_REGISTERED_CALLBACK_URL);
             prepStmt.setString(1, consumerKey);
-            prepStmt.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+            prepStmt.setInt(2, IdentityTenantUtil.getTenantId(IdentityTenantUtil.getTenantDomainFromContext()));
             resultSet = prepStmt.executeQuery();
 
             if (resultSet.next()) {
