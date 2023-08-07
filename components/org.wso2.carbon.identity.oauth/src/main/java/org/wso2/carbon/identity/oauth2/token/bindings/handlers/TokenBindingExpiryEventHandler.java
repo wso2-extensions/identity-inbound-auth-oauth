@@ -98,7 +98,8 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                 }
 
                 if (bindingType != null) {
-                    revokeTokensForBindingType(request, context.getLastAuthenticatedUser(), consumerKey, bindingType);
+                    revokeTokensForBindingType(request, context.getLastAuthenticatedUser(), consumerKey, bindingType,
+                            context);
                 }
 
                 if (!OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(bindingType)) {
@@ -199,16 +200,16 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
     }
 
     private void revokeTokensForBindingType(HttpServletRequest request, AuthenticatedUser user, String consumerKey,
-                                            String bindingType) throws IdentityOAuth2Exception,
-            InvalidOAuthClientException, OAuthSystemException {
+                                            String bindingType, AuthenticationContext context)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException, OAuthSystemException {
 
-        revokeTokensOfBindingRef(user, getBindingRefFromType(request, consumerKey, bindingType));
+        revokeTokensOfBindingRef(user, getBindingRefFromType(request, consumerKey, bindingType), context);
     }
 
     private void revokeTokensForCommonAuthCookie(HttpServletRequest request, AuthenticatedUser user) throws
             IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        revokeTokensOfBindingRef(user, getBindingRefFromCommonAuthCookie(request));
+        revokeTokensOfBindingRef(user, getBindingRefFromCommonAuthCookie(request), null);
     }
 
     /**
@@ -278,7 +279,8 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
      * @throws IdentityOAuth2Exception     if an exception occurs while revoking tokens
      * @throws InvalidOAuthClientException if an exception occurs while revoking tokens
      */
-    private void revokeTokensOfBindingRef(AuthenticatedUser user, String tokenBindingReference) throws
+    private void revokeTokensOfBindingRef(AuthenticatedUser user, String tokenBindingReference,
+                                          AuthenticationContext context) throws
             IdentityOAuth2Exception, InvalidOAuthClientException {
 
         if (StringUtils.isBlank(tokenBindingReference) || user == null) {
@@ -299,22 +301,38 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         if (log.isDebugEnabled() && CollectionUtils.isEmpty(boundTokens)) {
             log.debug("No bound tokens found for the the provided binding reference: " + tokenBindingReference);
         }
+
+        int roleBasedAuthzApplicationCount = 0;
+        if (user.isFederatedUser()) {
+            for (AccessTokenDO accessTokenDO : boundTokens) {
+                String consumerKey = accessTokenDO.getConsumerKey();
+                if (OAuth2Util.isFederatedRoleBasedAuthzEnabled(consumerKey)) {
+                    roleBasedAuthzApplicationCount++;
+                }
+            }
+        }
+        int boundedTokens = boundTokens.size();
         for (AccessTokenDO accessTokenDO : boundTokens) {
             String consumerKey = accessTokenDO.getConsumerKey();
             if (OAuth2Util.getAppInformationByClientId(consumerKey).isTokenRevocationWithIDPSessionTerminationEnabled()
                     && accessTokenDO.getAuthzUser() != null) {
                 AuthenticatedUser authenticatedUser = new AuthenticatedUser(accessTokenDO.getAuthzUser());
+                boolean isFederatedRoleBasedAuthzEnabled = false;
                 try {
-                    boolean isFederatedRoleBasedAuthzEnabled = false;
                     if (authenticatedUser.isFederatedUser()) {
                         isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(consumerKey);
                     }
 
-                    if (isFederatedRoleBasedAuthzEnabled
-                            && StringUtils.equalsIgnoreCase(
-                                    user.getFederatedIdPName(), authenticatedUser.getFederatedIdPName())
-                            && StringUtils.equalsIgnoreCase(user.getUserName(), authenticatedUser.getUserName())) {
-                        revokeFederatedTokens(consumerKey, user, accessTokenDO, tokenBindingReference);
+                    if (isFederatedRoleBasedAuthzEnabled) {
+                        if (StringUtils.equalsIgnoreCase(
+                                user.getFederatedIdPName(), authenticatedUser.getFederatedIdPName())
+                                && StringUtils.equalsIgnoreCase(user.getUserName(), authenticatedUser.getUserName())) {
+                            if ((boundedTokens < (roleBasedAuthzApplicationCount * 2))) {
+                                context.setProperty("IsPrivilegedUserTokenRevoked", true);
+                            }
+                            revokeFederatedTokens(consumerKey, user, accessTokenDO, tokenBindingReference);
+                        }
+
                     } else if (StringUtils.equalsIgnoreCase(userId, authenticatedUser.getUserId())) {
                         revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
                     }
