@@ -32,7 +32,6 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.mgt.util.JdbcUtils;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -45,6 +44,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
+import org.wso2.carbon.identity.oauth2.util.JdbcUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -1532,7 +1532,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     }
 
     /**
-     * Ths method is to revoke specific tokens
+     * Ths method is to revoke specific tokens.
      *
      * @param tokenId token that needs to be revoked
      * @throws IdentityOAuth2Exception if failed to revoke the access token
@@ -1664,8 +1664,22 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         ResultSet rs;
         Set<AccessTokenDO> accessTokens;
         try {
-            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(
-                    SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER, authenticatedUser.getUserStoreDomain());
+            String sqlQuery;
+            if (JdbcUtils.isMSSqlDB()) {
+                sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_MSSQL;
+            } else if (JdbcUtils.isOracleDB()) {
+                sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_ORACLE;
+            } else if (JdbcUtils.isPostgreDB()) {
+                sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_POSTGRES;
+            } else if (JdbcUtils.isDB2DB()) {
+                sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_DB2;
+            } else if (JdbcUtils.isH2DB()) {
+                sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_H2;
+            } else {
+                sqlQuery = SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER_MYSQL_OR_MARIADB;
+            }
+            sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(sqlQuery, authenticatedUser.getUserStoreDomain());
+
             if (!isUsernameCaseSensitive) {
                 sqlQuery = sqlQuery.replace(AUTHZ_USER, LOWER_AUTHZ_USER);
             }
@@ -1679,13 +1693,14 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             ps.setString(3, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             ps.setString(4, authenticatedUser.getUserStoreDomain());
             ps.setString(5, OAuthConstants.Scope.OPENID);
+            ps.setTimestamp(6, new Timestamp(System.currentTimeMillis() + OAuth2Util.timestampSkew),
+                    Calendar.getInstance(TimeZone.getTimeZone(UTC)));
             rs = ps.executeQuery();
-
             Map<String, AccessTokenDO> tokenMap = getAccessTokenDOMapFromResultSet(authenticatedUser, rs);
 
             connection.commit();
             accessTokens = new HashSet<>(tokenMap.values());
-        } catch (SQLException e) {
+        } catch (DataAccessException | SQLException e) {
             IdentityDatabaseUtil.rollBack(connection);
             throw new IdentityOAuth2Exception("Error occurred while revoking access token with username : " +
                     authenticatedUser.getUserName() + " tenant ID : " + OAuth2Util.getTenantId(authenticatedUser
@@ -1702,9 +1717,15 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
         Map<String, AccessTokenDO> tokenMap = new HashMap<>();
         while (rs.next()) {
-            Timestamp timeCreated = rs.getTimestamp(4, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
-            long issuedTimeInMillis = timeCreated.getTime();
-            long validityPeriodInMillis = rs.getLong(5);
+            String accessToken = getPersistenceProcessor().
+                    getPreprocessedAccessTokenIdentifier(rs.getString(1));
+                    
+            AccessTokenDO accessTokenDO = new AccessTokenDO();
+            accessTokenDO.setAuthzUser(authenticatedUser);
+            accessTokenDO.setTenantID(OAuth2Util.getTenantId(authenticatedUser.getTenantDomain()));
+            accessTokenDO.setAccessToken(accessToken);
+            accessTokenDO.setTokenId(rs.getString(2));
+            accessTokenDO.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
 
             /*
              * Tokens returned by this method will be used to clear claims cached against the tokens.
@@ -1713,32 +1734,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
              * Tokens issued for openid scope can contain cached claims against them.
              * Tokens that are in ACTIVE state and not expired should be removed from the cache.
              */
-            if (isAccessTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
-                continue;
-            }
-
-            String accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1));
-            String refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(rs.getString(2));
-            String tokenId = rs.getString(3);
-            Timestamp refreshTokenTimeCreated = rs.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
-            long refreshTokenValidityPeriodInMillis = rs.getLong(7);
-            String consumerKey = rs.getString(8);
-            String grantType = rs.getString(9);
-
-            AccessTokenDO accessTokenDO = new AccessTokenDO();
-            accessTokenDO.setAuthzUser(authenticatedUser);
-            accessTokenDO.setTenantID(OAuth2Util.getTenantId(authenticatedUser.getTenantDomain()));
-            accessTokenDO.setAccessToken(accessToken);
-            accessTokenDO.setRefreshToken(refreshToken);
-            accessTokenDO.setTokenId(tokenId);
-            accessTokenDO.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
-            accessTokenDO.setIssuedTime(timeCreated);
-            accessTokenDO.setValidityPeriodInMillis(validityPeriodInMillis);
-            accessTokenDO.setRefreshTokenIssuedTime(refreshTokenTimeCreated);
-            accessTokenDO.setRefreshTokenValidityPeriodInMillis(refreshTokenValidityPeriodInMillis);
-            accessTokenDO.setConsumerKey(consumerKey);
-            accessTokenDO.setGrantType(grantType);
-
             tokenMap.put(accessToken, accessTokenDO);
         }
         return tokenMap;
@@ -2494,7 +2489,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     }
 
     /**
-     * Get latest AccessToken list
+     * Get latest AccessToken list.
      *
      * @param consumerKey
      * @param authzUser
@@ -2744,7 +2739,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     }
 
     /**
-     * Retrieves active AccessTokenDOs with token id for a given consumer key
+     * Retrieves active AccessTokenDOs with token id for a given consumer key.
      *
      * @param consumerKey     client id
      * @param userStoreDomain userstore domain
