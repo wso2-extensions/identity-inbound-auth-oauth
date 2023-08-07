@@ -1202,30 +1202,6 @@ public class OAuth2AuthzEndpoint {
         )).build();
     }
 
-    private Response handleFormPostMode(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params, String redirectURL,
-                                        boolean isOIDCRequest, OIDCSessionState sessionState, AuthorizationResponseDTO
-                                                authorizationResponseDTO) {
-
-        String sessionStateValue = null;
-        if (isOIDCRequest) {
-            sessionState.setAddSessionState(true);
-            sessionStateValue = manageOIDCSessionState(oAuthMessage,
-                    sessionState,
-                    oauth2Params,
-                    getLoggedInUser(oAuthMessage).getAuthenticatedSubjectIdentifier(),
-                    oAuthMessage.getSessionDataCacheEntry(), authorizationResponseDTO);
-            authorizationResponseDTO.setSessionState(sessionStateValue);
-        }
-        if (OAuthServerConfiguration.getInstance().isOAuthResponseJspPageAvailable()) {
-            String params = buildParams(redirectURL, StringUtils.EMPTY, sessionStateValue);
-            String redirectURI = oauth2Params.getRedirectURI();
-            return forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
-        } else {
-            return Response.ok(createFormPage(redirectURL, oauth2Params.getRedirectURI(),
-                    StringUtils.EMPTY, sessionStateValue)).build();
-        }
-    }
-
     private void addToAuthenticationResultDetailsToOAuthMessage(OAuthMessage oAuthMessage,
                                                                 AuthenticationResult authnResult,
                                                                 AuthenticatedUser authenticatedUser) {
