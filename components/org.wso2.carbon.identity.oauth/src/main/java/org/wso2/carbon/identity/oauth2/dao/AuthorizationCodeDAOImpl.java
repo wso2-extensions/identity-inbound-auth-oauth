@@ -592,6 +592,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             String sqlQuery = SQLQueries.GET_AUTHORIZATION_CODES_FOR_CONSUMER_KEY;
             ps = connection.prepareStatement(sqlQuery);
             ps.setString(1, consumerKey);
+            ps.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
             rs = ps.executeQuery();
             while (rs.next()) {
                 if (isHashDisabled) {
@@ -623,7 +624,8 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             String sqlQuery = SQLQueries.GET_ACTIVE_AUTHORIZATION_CODES_FOR_CONSUMER_KEY;
             ps = connection.prepareStatement(sqlQuery);
             ps.setString(1, consumerKey);
-            ps.setString(2, OAuthConstants.AuthorizationCodeState.ACTIVE);
+            ps.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+            ps.setString(3, OAuthConstants.AuthorizationCodeState.ACTIVE);
             rs = ps.executeQuery();
             while (rs.next()) {
                 if (isHashDisabled) {
@@ -935,7 +937,8 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         try {
             ps = connection.prepareStatement(sqlQuery);
             ps.setString(1, consumerKey);
-            ps.setString(2, OAuthConstants.AuthorizationCodeState.ACTIVE);
+            ps.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
+            ps.setString(3, OAuthConstants.AuthorizationCodeState.ACTIVE);
             rs = ps.executeQuery();
             while (rs.next()) {
 

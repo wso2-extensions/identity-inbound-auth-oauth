@@ -163,8 +163,9 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             prepStmt = connection.prepareStatement(sql);
 
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
+            prepStmt.setInt(2, CarbonContext.getThreadLocalCarbonContext().getTenantId());
             if (refreshToken != null) {
-                prepStmt.setString(2, getHashingPersistenceProcessor().getProcessedRefreshToken(refreshToken));
+                prepStmt.setString(3, getHashingPersistenceProcessor().getProcessedRefreshToken(refreshToken));
             }
 
             resultSet = prepStmt.executeQuery();
@@ -662,6 +663,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             deactivateActiveCodesStatement = connection.prepareStatement(sqlQuery);
             deactivateActiveCodesStatement.setString(1, OAuthConstants.AuthorizationCodeState.REVOKED);
             deactivateActiveCodesStatement.setString(2, consumerKey);
+            deactivateActiveCodesStatement.setInt(3, tenantId);
             deactivateActiveCodesStatement.executeUpdate();
 
             IdentityDatabaseUtil.commitTransaction(connection);
@@ -732,6 +734,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             ps.setString(3, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             ps.setString(4, consumerKey);
             ps.setInt(5, tenantId);
+            ps.setInt(6, tenantId);
             ps.executeUpdate();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
