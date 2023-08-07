@@ -15,9 +15,9 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.wso2.carbon.identity.oauth.par.model;
+package org.wso2.carbon.identity.oauth.par.core;
 
-import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParAuthFailureException;
@@ -43,9 +43,9 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
      * Wraps the request with parameters obtained from the PAR endpoint.
      *
      * @param request HttpServletRequest.
-     * @throws OAuthProblemException OAuthProblemException.
+     * @throws IdentityException IdentityException.
      */
-    public OAuthParRequestWrapper(HttpServletRequest request) throws OAuthProblemException {
+    public OAuthParRequestWrapper(HttpServletRequest request) throws IdentityException {
 
         super(request);
 
@@ -60,12 +60,12 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
             params = ParUtil.getParAuthService()
                     .retrieveParams(uuid, request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
             params.put(OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST, "true");
-            // Set request_uri to empty string to avoid conflicting with OIDC flow.
+            // Set request_uri to empty string to avoid conflicting with OIDC requests passed by reference.
             params.put(OAuthConstants.OAuth20Params.REQUEST_URI, "");
         } catch (ParClientException e) {
-            throw new ParAuthFailureException(e.getMessage());
+            throw new ParAuthFailureException(e.getMessage(), e);
         } catch (ParCoreException e) {
-            throw new ParAuthFailureException("Error occurred while retrieving params from PAR request");
+            throw new ParAuthFailureException("Error occurred while retrieving params from PAR request", e);
         }
     }
 

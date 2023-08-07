@@ -1845,7 +1845,6 @@ public class EndpointUtil {
         }
         log.debug("Initiating the default OAuthAuthzRequest implementation");
         return new CarbonOAuthAuthzRequest(request);
-
     }
 
     /**
@@ -1873,7 +1872,6 @@ public class EndpointUtil {
                     OAuthServerConfiguration.getInstance().getOAuthAuthzRequestClassName();
             oAuthAuthzRequestClass = (Class<? extends OAuthAuthzRequest>) Thread.currentThread()
                     .getContextClassLoader().loadClass(oauthAuthzRequestClassName);
-
         }
         return oAuthAuthzRequestClass;
     }

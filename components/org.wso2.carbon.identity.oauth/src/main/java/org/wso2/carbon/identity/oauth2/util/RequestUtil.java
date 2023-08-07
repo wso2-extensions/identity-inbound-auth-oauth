@@ -17,7 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth2.util;
 
-import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth2.AbstractRequestBuilder;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
@@ -30,14 +30,18 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class RequestUtil {
 
+    private RequestUtil() {
+
+    }
+
     /**
      * This method builds the request according to the type which can handle it.
      *
      * @param request Incoming HttpServletRequest.
      * @return Built HttpServletRequest instance.
-     * @throws OAuthProblemException OAuthProblemException.
+     * @throws IdentityException IdentityException.
      */
-    public static HttpServletRequest buildRequest(HttpServletRequest request) throws OAuthProblemException {
+    public static HttpServletRequest buildRequest(HttpServletRequest request) throws IdentityException {
 
         List<AbstractRequestBuilder> abstractRequestBuilders =
                 OAuth2ServiceComponentHolder.getInstance().getRequestBuilders();
@@ -50,9 +54,4 @@ public class RequestUtil {
 
         return request;
     }
-
-    private RequestUtil() {
-
-    }
-
 }

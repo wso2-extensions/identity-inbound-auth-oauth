@@ -167,8 +167,7 @@ public class OAuth2ParEndpoint {
                         oAuthClientAuthnContext.getErrorMessage());
             } else if (OAuth2ErrorCodes.INVALID_CLIENT.equals(oAuthClientAuthnContext.getErrorCode())) {
                 throw new ParClientException(oAuthClientAuthnContext.getErrorCode(),
-                        "A valid OAuth client could not be found for client_id: " +
-                                oAuthClientAuthnContext.getClientId());
+                        ParConstants.INVALID_CLIENT_ERROR + oAuthClientAuthnContext.getClientId());
             }
             throw new ParClientException(oAuthClientAuthnContext.getErrorCode(),
                     oAuthClientAuthnContext.getErrorMessage());
@@ -223,9 +222,9 @@ public class OAuth2ParEndpoint {
         try {
             EndpointUtil.getOAuthAuthzRequest(request);
         } catch (OAuthProblemException e) {
-            throw new ParClientException(e.getError(), e.getDescription());
+            throw new ParClientException(e.getError(), e.getDescription(), e);
         } catch (OAuthSystemException e) {
-            throw new ParCoreException(OAuth2ErrorCodes.SERVER_ERROR, e.getMessage());
+            throw new ParCoreException(OAuth2ErrorCodes.SERVER_ERROR, e.getMessage(), e);
         }
     }
 
@@ -234,7 +233,7 @@ public class OAuth2ParEndpoint {
         try {
             getOAuth2Service().validateInputParameters(request);
         } catch (InvalidOAuthRequestException e) {
-            throw new ParClientException(e.getErrorCode(), e.getMessage());
+            throw new ParClientException(e.getErrorCode(), e.getMessage(), e);
         }
     }
 }

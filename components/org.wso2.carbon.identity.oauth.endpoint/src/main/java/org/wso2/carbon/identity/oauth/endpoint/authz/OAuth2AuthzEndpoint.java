@@ -60,6 +60,7 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
@@ -284,7 +285,7 @@ public class OAuth2AuthzEndpoint {
         } catch (InvalidRequestParentException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
             throw e;
-        } catch (OAuthProblemException e) {
+        } catch (IdentityException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
             throw new InvalidRequestException(e.getMessage(), OAuth2ErrorCodes.INVALID_REQUEST, e);
         }
