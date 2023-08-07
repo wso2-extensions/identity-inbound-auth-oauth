@@ -1598,21 +1598,23 @@ public class OAuth2AuthzEndpoint {
     private String handleAuthorizationFailureBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
                                               OAuth2AuthorizeRespDTO authzRespDTO) {
 
-        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                OAuthConstants.LogConstants.ActionIDs.VALIDATE_SCOPES_BEFORE_CONSENT);
-        LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         String errorMsg = authzRespDTO.getErrorMsg() != null ? authzRespDTO.getErrorMsg()
                 : "Error occurred while processing authorization request.";
         OAuthProblemException oauthProblemException = OAuthProblemException.error(
                 authzRespDTO.getErrorCode(), errorMsg);
-        diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
-                .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
-                .inputParam(LogConstants.InputKeys.REDIREDCT_URI, authzRespDTO.getCallbackURI())
-                .resultMessage("Error occurred when processing the authorization request before consent. " +
-                        authzRespDTO.getErrorMsg())
-                .resultStatus(DiagnosticLog.ResultStatus.FAILED)
-                .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_SCOPES_BEFORE_CONSENT);
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
+                    .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
+                    .inputParam(LogConstants.InputKeys.REDIREDCT_URI, authzRespDTO.getCallbackURI())
+                    .resultMessage("Error occurred when processing the authorization request before consent. " +
+                            authzRespDTO.getErrorMsg())
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+        }
         return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), oauthProblemException, oauth2Params);
     }
 
