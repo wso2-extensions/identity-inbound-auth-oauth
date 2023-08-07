@@ -171,9 +171,9 @@ public class DCRMUtils {
     }
 
     /**
-     * Validate application name according to the regex
+     * Validate application name according to the regex.
      *
-     * @return validated or not
+     * @return validated or not.
      */
     public static boolean isRegexValidated(String applicationName) {
 
