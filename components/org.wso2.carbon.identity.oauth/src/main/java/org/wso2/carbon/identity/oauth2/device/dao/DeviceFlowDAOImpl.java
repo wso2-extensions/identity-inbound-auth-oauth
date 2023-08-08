@@ -167,7 +167,6 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         AuthenticatedUser user;
         int tenantId = 0;
         String userName = null;
-        boolean isMatchingDeviceCodeAndClientId = false; // Check for matching deviceCode and clientId.
         String userDomain = null;
         String authenticatedIDP = null;
         List<String> scopes = null;
@@ -178,7 +177,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             prepStmt.setString(1, deviceCode);
             prepStmt.setString(2, clientId);
             try (ResultSet resultSet = prepStmt.executeQuery()) {
-                while (resultSet.next()) {
+                if (resultSet.next()) {
                     deviceFlowDO.setStatus(resultSet.getString(1));
                     deviceFlowDO.setLastPollTime(resultSet.getTimestamp(2,
                             Calendar.getInstance(TimeZone.getTimeZone(Constants.UTC))));
@@ -190,9 +189,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                     userDomain = resultSet.getString(7);
                     authenticatedIDP = resultSet.getString(8);
                     scopes = getScopesForCodeId(resultSet.getString(9), connection);
-                    isMatchingDeviceCodeAndClientId = true;
-                }
-                if (isMatchingDeviceCodeAndClientId) {
+
                     if (StringUtils.isNotBlank(userName) && tenantId != 0 && StringUtils.isNotBlank(userDomain)) {
                         String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
                         user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain, authenticatedIDP);

@@ -239,10 +239,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         connection = dataSource1.getConnection();
         connection.createStatement().executeUpdate("RUNSCRIPT FROM '" + getFilePath(H2_SCRIPT_NAME) + "'");
 
-        mockStatic(FrameworkUtils.class);
-        when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
-
-
         RequestObjectService requestObjectService = Mockito.mock(RequestObjectService.class);
         List<RequestedClaim> requestedClaims = Collections.emptyList();
         when(requestObjectService.getRequestedClaimsForIDToken(anyString())).
@@ -262,13 +258,18 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
         OAuth2ServiceComponentHolder.getInstance().setScopeClaimMappingDAO(new ScopeClaimMappingDAOImpl());
     }
+
     @BeforeMethod
     public void setUpBeforeMethod() throws Exception {
         PrivilegedCarbonContext.startTenantFlow();
         PrivilegedCarbonContext privilegedCarbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
         privilegedCarbonContext.setTenantId(MultitenantConstants.SUPER_TENANT_ID);
         privilegedCarbonContext.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        mockStatic(FrameworkUtils.class);
+        when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
     }
+
     public static String getFilePath(String fileName) {
 
         if (StringUtils.isNotBlank(fileName)) {
@@ -315,6 +316,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
 
         ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
         mockApplicationManagementService(serviceProvider);
+
+        when(FrameworkUtils.isContinueOnClaimHandlingErrorAllowed()).thenReturn(true);
 
         JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
@@ -384,6 +387,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
         mockApplicationManagementService(serviceProvider);
 
+        when(FrameworkUtils.isContinueOnClaimHandlingErrorAllowed()).thenReturn(true);
+
         UserRealm userRealm = getExceptionThrowingUserRealm(new UserStoreException(USER_NOT_FOUND));
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
@@ -400,6 +405,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
 
         ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
         mockApplicationManagementService(serviceProvider);
+
+        when(FrameworkUtils.isContinueOnClaimHandlingErrorAllowed()).thenReturn(true);
 
         UserRealm userRealm = getExceptionThrowingUserRealm(new UserStoreException(""));
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);

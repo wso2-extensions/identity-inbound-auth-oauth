@@ -117,6 +117,7 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.utils.CarbonUtils;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -321,6 +322,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 -1234, new ArrayList<>(), new ArrayList<>());
         dummySp = new ServiceProvider();
         dummySp.setApplicationResourceId("sampleApp");
+
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        // Define behavior for triggerDiagnosticLogEvent (if it's a void method)
+        doNothing().when(LoggerUtils.class);
+        LoggerUtils.triggerDiagnosticLogEvent(any(DiagnosticLog.DiagnosticLogBuilder.class));
+        LoggerUtils.triggerDiagnosticLogEvent(anyString(), anyMap(), anyString(), anyString(), anyString(), anyMap());
     }
 
     @AfterTest
@@ -2497,5 +2505,24 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         String location = String.valueOf(response.getMetadata().get(HTTPConstants.HEADER_LOCATION).get(0));
         assertEquals(location, expectedUrl);
     }
+    @Test
+    public void testPKCEunsupportedflow() throws Exception {
 
+        OAuth2ClientValidationResponseDTO validationResponseDTO = new OAuth2ClientValidationResponseDTO();
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        mockOAuthServerConfiguration();
+        mockStatic(OAuth2Util.class);
+        oAuthAppDO.setPkceMandatory(true);
+        when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+        when(oAuthMessage.getRequest().getParameter(CLIENT_ID)).thenReturn(CLIENT_ID_VALUE);
+        when(oAuthMessage.getRequest().getAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW)).thenReturn(true);
+        when(OAuth2Util.getAppInformationByClientId(any())).thenReturn(oAuthAppDO);
+        Method method = authzEndpointObject.getClass().getDeclaredMethod(
+                "populateValidationResponseWithAppDetail", OAuthMessage.class,
+                OAuth2ClientValidationResponseDTO.class);
+        method.setAccessible(true);
+        method.invoke(authzEndpointObject, oAuthMessage, validationResponseDTO);
+        //PKCE mandoatory should be false when we set PKCE_UNSUPPORTED_FLOW attribute
+        assertEquals(validationResponseDTO.isPkceMandatory(), false);
+    }
 }

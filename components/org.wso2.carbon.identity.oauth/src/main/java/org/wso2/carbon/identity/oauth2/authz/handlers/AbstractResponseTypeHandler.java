@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallback;
@@ -39,11 +40,14 @@ import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.SCOPE_VALIDATOR;
 
 /**
  * AbstractResponseTypeHandler contains all the common methods of all three basic handlers.
@@ -113,7 +117,33 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
             if (log.isDebugEnabled()) {
                 log.debug("Engaging global scope validator in token issuer flow : " + validator.getName());
             }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.SCOPE_VALIDATION);
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID,
+                                oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
+                        .inputParam(SCOPE_VALIDATOR, validator.getName())
+                        .inputParam("scopes (before validation)", oauthAuthzMsgCtx.getApprovedScope())
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                        .resultMessage("Before validating scopes.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
             boolean isGlobalValidScope = validator.validateScope(oauthAuthzMsgCtx);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.SCOPE_VALIDATION);
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID,
+                                oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
+                        .inputParam(SCOPE_VALIDATOR, validator.getName())
+                        .inputParam("scopes (after validation)", oauthAuthzMsgCtx.getApprovedScope())
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                        .resultMessage("After validating scopes.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
             if (log.isDebugEnabled()) {
                 log.debug("Scope Validation was" + isGlobalValidScope + "at the global level by : "
                         + validator.getName());

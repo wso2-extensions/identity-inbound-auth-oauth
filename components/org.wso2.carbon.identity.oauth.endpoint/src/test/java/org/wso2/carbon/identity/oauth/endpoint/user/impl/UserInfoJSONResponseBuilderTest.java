@@ -46,7 +46,6 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
-import org.wso2.carbon.registry.core.service.RegistryService;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -72,7 +71,7 @@ import static org.testng.Assert.assertTrue;
 /**
  * This class contains tests for UserInfoJSONResponseBuilder.
  */
-@PrepareForTest({OAuthServerConfiguration.class, OAuth2Util.class, IdentityTenantUtil.class, RegistryService.class,
+@PrepareForTest({OAuthServerConfiguration.class, OAuth2Util.class, IdentityTenantUtil.class,
         AuthorizationGrantCache.class, ClaimUtil.class, IdentityUtil.class, UserInfoEndpointConfig.class,
         JDBCPersistenceManager.class})
 @PowerMockIgnore({"javax.management.*"})

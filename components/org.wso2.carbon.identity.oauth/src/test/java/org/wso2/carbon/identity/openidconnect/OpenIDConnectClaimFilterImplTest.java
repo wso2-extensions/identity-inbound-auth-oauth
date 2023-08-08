@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.openidconnect;
 
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
-import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
@@ -47,21 +46,15 @@ import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCacheEntry;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
-import org.wso2.carbon.registry.core.Resource;
-import org.wso2.carbon.registry.core.ResourceImpl;
-import org.wso2.carbon.registry.core.service.RegistryService;
-import org.wso2.carbon.registry.core.session.UserRegistry;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
@@ -81,7 +74,6 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
     private Set<String> requestedScopes;
     private List  scopeDTOList;
     private Map<String, Object> claims;
-    private Resource resource;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -101,13 +93,6 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
         OpenIDConnectServiceComponentHolder.getInstance()
                 .setClaimMetadataManagementService(claimMetadataManagementService);
         OpenIDConnectServiceComponentHolder.getInstance().setSsoConsentService(ssoConsentService);
-
-        RegistryService registryService = mock(RegistryService.class);
-        UserRegistry userRegistry = mock(UserRegistry.class);
-        resource = new ResourceImpl();
-        OAuth2ServiceComponentHolder.setRegistryService(registryService);
-        when(registryService.getConfigSystemRegistry(anyInt())).thenReturn(userRegistry);
-        when(userRegistry.get(anyString())).thenReturn(resource);
 
         List externalClaims = new ArrayList<>();
         ExternalClaim externalClaim = new ExternalClaim("testUserClaimURI",
@@ -257,29 +242,6 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
         Assert.assertNotNull(filteredClaims.get("testUserClaimURI"));
         Assert.assertNull(filteredClaims.get("testUserClaimURI2"));
         Assert.assertEquals(((String) filteredClaims.get("testUserClaimURI")), "value1");
-    }
-
-    @Test
-    public void testGetOIDCScopeProperties() throws Exception {
-
-        resource.setProperty("key", "value");
-        resource.setProperty("key1", "value1");
-        Properties properties = WhiteboxImpl.invokeMethod(openIDConnectClaimFilter, "getOIDCScopeProperties",
-                SUPER_TENANT_DOMAIN_NAME);
-        Assert.assertEquals(properties.getProperty("key"), "value");
-        Assert.assertEquals(properties.getProperty("key1"), "value1");
-    }
-
-    @Test
-    public void testGetOIDCScopePropertiesWithException() throws Exception {
-
-        resource.setProperty("key", "value");
-        resource.setProperty("key1", "value1");
-        Properties expectedNullProperty = new Properties();
-        OAuth2ServiceComponentHolder.setRegistryService(null);
-        Properties properties = WhiteboxImpl.invokeMethod(openIDConnectClaimFilter, "getOIDCScopeProperties",
-                SUPER_TENANT_DOMAIN_NAME);
-        Assert.assertEquals(properties, expectedNullProperty);
     }
 
     @Test

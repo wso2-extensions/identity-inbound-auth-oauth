@@ -123,6 +123,8 @@ public final class OAuthConstants {
     public static final String OAUTH_PKCE_CODE_CHALLENGE_METHOD = "code_challenge_method";
     public static final String OAUTH_PKCE_S256_CHALLENGE = "S256";
     public static final String OAUTH_PKCE_PLAIN_CHALLENGE = "plain";
+    //OAuth PKCE request attribute
+    public static final String PKCE_UNSUPPORTED_FLOW  = "pkce_unsupported_flow";
     //Response types
     public static final String NONE = "none";
     public static final String TOKEN = "token";
@@ -176,12 +178,14 @@ public final class OAuthConstants {
     public static final String TENANT_DOMAIN_FROM_CONTEXT = "tenant_domain_from_context";
     public static final String ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST =
             "allow_request_uri_and_request_object_in_request";
+    public static final String PAR_EXPIRY_TIME = "OAuth.PAR.ExpiryTime";
 
     public static final String RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ALLOWED_GRANT_TYPES_CONFIG =
             "OAuth.JWT.RenewTokenWithoutRevokingExisting.AllowedGrantTypes.AllowedGrantType";
     public static final String RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG =
             "OAuth.JWT.RenewTokenWithoutRevokingExisting.Enable";
     public static final String REQUEST_BINDING_TYPE = "request";
+    public static final String ORG_ID = "org_id";
 
     private OAuthConstants() {
 
@@ -307,7 +311,7 @@ public final class OAuthConstants {
         public static final String OAUTH20_AUTHORIZE_TOKEN_URL = "/authorize";
         public static final String OAUTH2_AUTHZ_EP_URL = "oauth2/authorize";
         public static final String OAUTH2_TOKEN_EP_URL = "oauth2/token";
-        public static final String OAUTH2_DCR_EP_URL = "/api/identity/oauth2/dcr/v1.0/register";
+        public static final String OAUTH2_DCR_EP_URL = "/api/identity/oauth2/dcr/v1.1/register";
         public static final String OAUTH2_JWKS_EP_URL = "/oauth2/jwks";
         public static final String  OAUTH2_DISCOVERY_EP_URL = "/oauth2/oidcdiscovery";
         public static final String OAUTH2_USER_INFO_EP_URL = "oauth2/userinfo";
@@ -544,6 +548,46 @@ public final class OAuthConstants {
         public static final String SUCCESS = "SUCCESS";
         public static final String CLIENT_ID = "client id";
         public static final String TENANT_DOMAIN = "tenant domain";
+        public static final String CREATE_OAUTH_APPLICATION = "CREATE OAUTH APPLICATION";
+        public static final String UPDATE_OAUTH_APPLICATION = "UPDATE OAUTH APPLICATION";
+        public static final String DELETE_OAUTH_APPLICATION = "DELETE OAUTH APPLICATION";
+        public static final String REGENERATE_CLIENT_SECRET = "REGENERATE CLIENT SECRET";
+        public static final String UPDATE_APP_STATE = "UPDATE APP STATE";
+
+        /**
+         * Define action IDs for diagnostic logs.
+         */
+        public static class ActionIDs {
+
+            public static final String SCOPE_VALIDATION = "scope-validation";
+            public static final String ISSUE_ACCESS_TOKEN = "issue-access-token";
+            public static final String ISSUE_ID_TOKEN = "issue-id-token";
+            public static final String VALIDATE_AUTHORIZATION_CODE = "validate-authz-code";
+            public static final String ISSUE_AUTHZ_CODE = "issue-authz-code";
+            public static final String RECEIVE_CONSENT_RESPONSE = "receive-consent-response";
+            public static final String RECEIVE_TOKEN_REQUEST = "receive-token-request";
+            public static final String RECEIVE_AUTHENTICATION_RESPONSE = "receive-authn-response";
+            public static final String VALIDATE_AUTHENTICATION_RESPONSE = "validate-authn-status";
+            public static final String RECEIVE_AUTHORIZATION_RESPONSE = "receive-authz-request";
+            public static final String HANDLE_AUTHORIZATION = "handle-authorization";
+            public static final String VALIDATE_SCOPES_BEFORE_CONSENT = "validate-scopes-before-consent";
+            public static final String HAND_OVER_TO_FRAMEWORK = "hand-over-to-framework";
+            public static final String PERSIST_OAUTH_SCOPE_CONSENT = "persist-oauth-scope-consent";
+            public static final String GENERATE_CONSENT_CLAIMS = "generate-consent-claims";
+        }
+
+        /**
+         * Define common and reusable Input keys for diagnostic logs.
+         */
+        public static class InputKeys {
+
+            public static final String RESPONSE_TYPE = "response type";
+            public static final String SCOPE_VALIDATOR = "scope validator";
+            public static final String REQUESTED_SCOPES = "requested scopes";
+            public static final String AUTHORIZED_SCOPES = "authorized scopes";
+            public static final String GRANT_TYPE = "grant type";
+            public static final String AUTHORIZATION_CODE = "authorization code";
+        }
     }
 
     /**

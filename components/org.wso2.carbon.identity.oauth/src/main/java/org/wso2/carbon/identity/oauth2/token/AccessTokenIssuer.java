@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -65,9 +66,13 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -90,6 +95,7 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
+import static org.wso2.carbon.identity.openidconnect.OIDCConstants.ID_TOKEN_USER_CLAIMS_PROP_KEY;
 
 /**
  * This class is used to issue access tokens and refresh tokens.
@@ -455,11 +461,25 @@ public class AccessTokenIssuer {
                     tokReqMsgCtx.getAuthorizedUser() + " and scopes: " + tokenRespDTO.getAuthorizedScopes());
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            Map<String, Object> params = new HashMap<>();
-            params.put("clientId", tokenReqDTO.getClientId());
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                    OAuthConstants.LogConstants.SUCCESS, "Access token issued for the application.",
-                    "issue-access-token", null);
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN);
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.AUTHORIZED_SCOPES,
+                            tokenRespDTO.getAuthorizedScopes())
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE, grantType)
+                    .inputParam("token expiry time (s)", tokenRespDTO.getExpiresIn())
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .resultMessage("Access token issued for the application.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+            if (tokReqMsgCtx.getAuthorizedUser() != null) {
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER_ID,
+                        tokReqMsgCtx.getAuthorizedUser().getUserId());
+                String username = tokReqMsgCtx.getAuthorizedUser().getUserName();
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER, LoggerUtils.isLogMaskingEnable ?
+                        LoggerUtils.getMaskedContent(username) : username);
+            }
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
 
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
@@ -474,11 +494,16 @@ public class AccessTokenIssuer {
             try {
                 String idToken = builder.buildIDToken(tokReqMsgCtx, tokenRespDTO);
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", tokenReqDTO.getClientId());
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.SUCCESS, "ID token issued for the application.",
-                            "issue-id-token", null);
+                    DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.ISSUE_ID_TOKEN);
+                    diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                            .inputParam("issued claims for id token", tokReqMsgCtx.getProperty(
+                                    ID_TOKEN_USER_CLAIMS_PROP_KEY))
+                            .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                            .resultMessage("ID token issued for the application.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 tokenRespDTO.setIDToken(idToken);
             } catch (IDTokenValidationFailureException e) {
@@ -551,7 +576,6 @@ public class AccessTokenIssuer {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     Map<String, Object> params = new HashMap<>();
                     params.put("clientId", tokenReqDTO.getClientId());
-                    params.put("requestedScopes", getScopeList(tokenReqDTO.getScope()));
                     params.put("authorizedScopes", getScopeList(tokReqMsgCtx.getScope()));
                     LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
                             OAuthConstants.LogConstants.SUCCESS, "OAuth scope validation is successful.",
@@ -782,9 +806,13 @@ public class AccessTokenIssuer {
         AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager) IdentityTenantUtil
                 .getRealm(authenticatedUser.getTenantDomain(), authenticatedUser.toFullQualifiedUsername())
                 .getUserStoreManager();
-
-        return userStoreManager
-                .getUserClaimValueWithID(authenticatedUser.getUserId(), subjectClaimUri, null);
+        if (OAuth2ServiceComponentHolder.getInstance().isOrganizationManagementEnabled() &&
+                !userStoreManager.isExistingUserWithID(authenticatedUser.getUserId())) {
+            // Fetch the user realm's user store manager corresponds to the tenant domain where the userID exists.
+            userStoreManager = getUserStoreManagerFromRealmOfUserResideOrganization(authenticatedUser.getTenantDomain(),
+                    authenticatedUser.getUserId()).orElse(userStoreManager);
+        }
+        return userStoreManager.getUserClaimValueWithID(authenticatedUser.getUserId(), subjectClaimUri, null);
     }
 
     private String getSubjectClaimUriInLocalDialect(ServiceProvider serviceProvider) {
@@ -837,7 +865,7 @@ public class AccessTokenIssuer {
     }
 
     private void addRequestedOIDCScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
-                                             String[] requestedOIDCScopes) {
+                                        String[] requestedOIDCScopes) {
 
         if (tokReqMsgCtx.getScope() == null) {
             tokReqMsgCtx.setScope(new String[0]);
@@ -1096,5 +1124,36 @@ public class AccessTokenIssuer {
     private static boolean isNotActiveState(String appState) {
 
         return !APP_STATE_ACTIVE.equalsIgnoreCase(appState);
+    }
+
+    /**
+     * If the user is not found in the given tenant domain, check the user existence from ancestor organizations and
+     * provide the correct user store manager from the user realm.
+     *
+     * @param tenantDomain The tenant domain of the authenticated user.
+     * @param userId The ID of the authenticated user.
+     * @return User store manager of the user reside organization.
+     */
+    private Optional<AbstractUserStoreManager> getUserStoreManagerFromRealmOfUserResideOrganization(String tenantDomain,
+                                                                                                    String userId) {
+
+        try {
+            String organizationId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+            Optional<String> userResideOrgId = OAuth2ServiceComponentHolder.getOrganizationUserResidentResolverService()
+                    .resolveResidentOrganization(userId, organizationId);
+            if (!userResideOrgId.isPresent()) {
+                return Optional.empty();
+            }
+            String userResideTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(userResideOrgId.get());
+            int tenantId = OAuth2ServiceComponentHolder.getInstance().getRealmService().getTenantManager()
+                    .getTenantId(userResideTenantDomain);
+            RealmService realmService = OAuth2ServiceComponentHolder.getInstance().getRealmService();
+            return Optional.of(
+                    (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager());
+        } catch (OrganizationManagementException | UserStoreException e) {
+            return Optional.empty();
+        }
     }
 }

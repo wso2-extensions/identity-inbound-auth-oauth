@@ -19,80 +19,116 @@
 package org.wso2.carbon.identity.oauth.par.core;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.dao.ParDAOFactory;
 import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAO;
+import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
-import org.wso2.carbon.identity.oauth.par.model.ParAuthResponseData;
+import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
 import org.wso2.carbon.identity.oauth.par.model.ParRequestDO;
 
 import java.util.Calendar;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TimeZone;
 import java.util.UUID;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PAR_EXPIRY_TIME;
 
 /**
- * Provides authentication services.
+ * Provides PAR services.
  */
 public class ParAuthServiceImpl implements ParAuthService {
 
+    private static final Log log = LogFactory.getLog(ParAuthService.class);
     ParMgtDAO parMgtDAO = ParDAOFactory.getInstance().getParAuthMgtDAO();
 
     @Override
-    public ParAuthResponseData generateParAuthResponse(Map<String, String> parameters) throws ParCoreException {
+    public ParAuthData handleParAuthRequest(Map<String, String> parameters) throws ParCoreException {
 
         String uuid = UUID.randomUUID().toString();
-        long expiry = ParConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC;
 
-        ParAuthResponseData parAuthResponse = new ParAuthResponseData();
-        parAuthResponse.setReqUriUUID(uuid);
-        parAuthResponse.setExpiryTime(expiry);
+        ParAuthData parAuthResponse = new ParAuthData();
+        parAuthResponse.setrequestURIReference(uuid);
+        parAuthResponse.setExpiryTime(getExpiresInValue());
 
         persistParRequest(uuid, parameters, getScheduledExpiry(System.currentTimeMillis()));
 
         return parAuthResponse;
     }
 
-    private void persistParRequest(String uuid, Map<String, String> params, long scheduledExpiryTime)
+    private void persistParRequest(String uuid, Map<String, String> params, long expiresIn)
             throws ParCoreException {
 
-        parMgtDAO.persistParRequest(uuid, params.get(OAuthConstants.OAuth20Params.CLIENT_ID),
-                scheduledExpiryTime, params);
+        parMgtDAO.persistRequestData(uuid, params.get(OAuthConstants.OAuth20Params.CLIENT_ID),
+                expiresIn, params);
     }
 
-    public Map<String, String> retrieveParams(String uuid, String clientId) throws ParCoreException {
+    @Override
+    public Map<String, String> retrieveParams(String uuid, String clientId)
+            throws ParCoreException {
 
-        ParRequestDO parRequestDO = parMgtDAO.getParRequest(uuid);
-        parMgtDAO.removeParRequest(uuid);
-        isRequestUriExpired(parRequestDO.getScheduledExpiryTime());
-        isClientIdValid(clientId, parRequestDO.getClientId());
+        Optional<ParRequestDO> optionalParRequestDO = parMgtDAO.getRequestData(uuid);
+        if (!optionalParRequestDO.isPresent()) {
+            throw new ParCoreException("A PAR request does not exist for the uuid: " + uuid);
+        }
+
+        ParRequestDO parRequestDO = optionalParRequestDO.get();
+        parMgtDAO.removeRequestData(uuid);
+        validateExpiryTime(parRequestDO.getExpiresIn());
+        validateClientID(clientId, parRequestDO.getClientId());
 
         return parRequestDO.getParams();
     }
 
-    private void isRequestUriExpired(long scheduledExpiryTime) throws ParCoreException {
+    private void validateExpiryTime(long expiresIn) throws ParClientException {
 
         long currentTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis();
 
-        if (currentTimeInMillis > scheduledExpiryTime) {
-            throw new ParCoreException(OAuth2ErrorCodes.INVALID_REQUEST, "request_uri expired");
+        if (currentTimeInMillis > expiresIn) {
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, "request_uri expired");
         }
     }
 
-    private void isClientIdValid(String clientId, String parClientId) throws
-            ParCoreException {
+    private void validateClientID(String clientId, String parClientId) throws ParClientException {
 
         if (!StringUtils.equals(parClientId, clientId)) {
-            throw new ParCoreException(OAuth2ErrorCodes.INVALID_CLIENT, "client_ids does not match");
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_CLIENT,
+                    String.format("Received client_id %s does not match the client_id from the initial PAR request %s",
+                            clientId, parClientId));
         }
     }
 
-    private long getScheduledExpiry(long requestedTime) {
+    private static long getExpiresInValue() throws ParCoreException {
 
-        long defaultExpiryInSecs = ParConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC * ParConstants.SEC_TO_MILLISEC_FACTOR;
+        try {
+            Object expiryTimeValue = IdentityConfigParser.getInstance().getConfiguration().get(PAR_EXPIRY_TIME);
+            if (expiryTimeValue != null && (StringUtils.isNotBlank((String) expiryTimeValue))) {
+                long expiryTime = Long.parseLong(((String) expiryTimeValue).trim());
+                if (expiryTime > 0) {
+                    return expiryTime;
+                }
+                log.warn(String.format("PAR expiry time should be positive. Default value: %s will be used.",
+                        ParConstants.EXPIRES_IN_DEFAULT_VALUE));
+            } else {
+                log.debug(String.format("PAR expiry time is not configured. Default value: %s will be used.",
+                        ParConstants.EXPIRES_IN_DEFAULT_VALUE));
+            }
+            return ParConstants.EXPIRES_IN_DEFAULT_VALUE;
+
+        } catch (NumberFormatException e) {
+            throw new ParCoreException("Error while parsing the expiry time value.", e);
+        }
+    }
+
+    private long getScheduledExpiry(long requestedTime) throws ParCoreException {
+
+        long defaultExpiryInSecs = getExpiresInValue() * ParConstants.SEC_TO_MILLISEC_FACTOR;
         return requestedTime + defaultExpiryInSecs;
     }
 }
