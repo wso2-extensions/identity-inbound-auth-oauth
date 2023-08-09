@@ -28,7 +28,7 @@ import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
-import org.wso2.carbon.identity.oauth2.AbstractRequestBuilder;
+import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
@@ -93,7 +93,7 @@ public class OAuth2ServiceComponentHolder {
     private static boolean restrictUnassignedScopes;
     private static ConfigurationContextService configurationContextService;
     private List<JWTAccessTokenClaimProvider> jwtAccessTokenClaimProviders = new ArrayList<>();
-    private final List<AbstractRequestBuilder> abstractRequestBuilders = new ArrayList<>();
+    private final List<OAuthAuthorizationRequestBuilder> abstractRequestBuilders = new ArrayList<>();
     private boolean isOrganizationManagementEnabled = false;
 
     private OAuth2ServiceComponentHolder() {
@@ -636,7 +636,7 @@ public class OAuth2ServiceComponentHolder {
      *
      * @return List<AbstractRequestBuilder> returns a list ot request builders.
      */
-    public List<AbstractRequestBuilder> getRequestBuilders() {
+    public List<OAuthAuthorizationRequestBuilder> getRequestBuilders() {
 
         return abstractRequestBuilders;
     }
@@ -646,7 +646,7 @@ public class OAuth2ServiceComponentHolder {
      *
      * @param abstractRequestBuilder Request builder implementation.
      */
-    public void addRequestBuilder(AbstractRequestBuilder abstractRequestBuilder) {
+    public void addRequestBuilder(OAuthAuthorizationRequestBuilder abstractRequestBuilder) {
 
         abstractRequestBuilders.add(abstractRequestBuilder);
     }
@@ -656,7 +656,7 @@ public class OAuth2ServiceComponentHolder {
      *
      * @param abstractRequestBuilder Request builder implementation.
      */
-    public void removeRequestBuilder(AbstractRequestBuilder abstractRequestBuilder) {
+    public void removeRequestBuilder(OAuthAuthorizationRequestBuilder abstractRequestBuilder) {
 
         abstractRequestBuilders.remove(abstractRequestBuilder);
     }

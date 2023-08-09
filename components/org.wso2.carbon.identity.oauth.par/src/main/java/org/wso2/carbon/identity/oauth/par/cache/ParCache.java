@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
@@ -21,19 +21,21 @@ package org.wso2.carbon.identity.oauth.par.cache;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationBaseCache;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.model.ParRequestCacheEntry;
+import org.wso2.carbon.utils.CarbonUtils;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Cache implementation for PAR requests.
  */
 public class ParCache extends AuthenticationBaseCache<String, ParRequestCacheEntry> {
 
-    private static final ParCache instance = new ParCache();
-
+    private static final AtomicReference<ParCache> instance = new AtomicReference<>();
 
     /**
      * Constructor for ParCache.
      */
-    public ParCache() {
+    private ParCache() {
 
         super(ParConstants.CACHE_NAME);
     }
@@ -45,6 +47,14 @@ public class ParCache extends AuthenticationBaseCache<String, ParRequestCacheEnt
      */
     public static ParCache getInstance() {
 
-        return instance;
+        CarbonUtils.checkSecurity();
+        if (instance.get() == null) {
+            synchronized (ParCache.class) {
+                if (instance.get() == null) {
+                    instance.set(new ParCache());
+                }
+            }
+        }
+        return instance.get();
     }
 }

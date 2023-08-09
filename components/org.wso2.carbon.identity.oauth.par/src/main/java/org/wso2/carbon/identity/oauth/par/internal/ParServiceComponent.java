@@ -24,7 +24,7 @@ import org.osgi.service.component.annotations.Component;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.par.core.ParRequestBuilder;
-import org.wso2.carbon.identity.oauth2.AbstractRequestBuilder;
+import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 
 /**
  * Service component for PAR.
@@ -40,9 +40,12 @@ public class ParServiceComponent {
     protected void activate(ComponentContext context) {
 
         try {
+            ParAuthServiceImpl parAuthServiceImpl = new ParAuthServiceImpl();
+            ParDataHolder.getInstance().setParAuthService(parAuthServiceImpl);
+
             context.getBundleContext().registerService(ParAuthService.class.getName(),
-                    new ParAuthServiceImpl(), null);
-            context.getBundleContext().registerService(AbstractRequestBuilder.class.getName(),
+                    parAuthServiceImpl, null);
+            context.getBundleContext().registerService(OAuthAuthorizationRequestBuilder.class.getName(),
                     new ParRequestBuilder(), null);
             log.debug("PAR component bundle is activated.");
         } catch (Throwable e) {

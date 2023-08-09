@@ -117,7 +117,7 @@
                             org.apache.commons.lang; version="${commons-lang.wso2.osgi.version.range}",
                             org.wso2.carbon.identity.oauth.common.*;version="${identity.inbound.auth.oauth.exp.pkg.version}"
                             org.apache.oltu.oauth2.common.*; version="${oltu.package.import.version.range}",
-                            org.wso2.carbon.identity.oauth2.*;version="${identity.inbound.auth.oauth.exp.pkg.version}",
+                            org.wso2.carbon.identity.oauth2.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
                             org.osgi.framework; version="${osgi.framework.imp.pkg.version.range}",
                             org.osgi.service.component; version="${osgi.service.component.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework.cache; version="${carbon.identity.framework.imp.pkg.version.range}",

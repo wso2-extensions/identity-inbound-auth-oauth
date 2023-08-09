@@ -22,9 +22,9 @@ import org.wso2.carbon.identity.base.IdentityException;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * This is a global level interface for building requests.
+ * This is a request builder used to build oauth authorization requests when the request_uri is present.
  */
-public interface AbstractRequestBuilder {
+public interface OAuthAuthorizationRequestBuilder {
 
     /**
      * Build the request.

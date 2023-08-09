@@ -47,10 +47,10 @@ import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
-import org.wso2.carbon.identity.oauth2.AbstractRequestBuilder;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
@@ -147,12 +147,12 @@ public class OAuth2ServiceComponent {
 
     @Reference(
             name = "request.builder.service",
-            service = AbstractRequestBuilder.class,
+            service = OAuthAuthorizationRequestBuilder.class,
             cardinality = ReferenceCardinality.MULTIPLE,
             policy = ReferencePolicy.DYNAMIC,
             unbind = "removeRequestBuilderService"
     )
-    protected void addRequestBuilderService(AbstractRequestBuilder abstractRequestBuilder) {
+    protected void addRequestBuilderService(OAuthAuthorizationRequestBuilder abstractRequestBuilder) {
 
         if (log.isDebugEnabled()) {
             log.debug("Adding the Request builder Service : " + abstractRequestBuilder.getName());
@@ -160,7 +160,7 @@ public class OAuth2ServiceComponent {
         OAuth2ServiceComponentHolder.getInstance().addRequestBuilder(abstractRequestBuilder);
     }
 
-    protected void removeRequestBuilderService(AbstractRequestBuilder abstractRequestBuilder) {
+    protected void removeRequestBuilderService(OAuthAuthorizationRequestBuilder abstractRequestBuilder) {
 
         if (log.isDebugEnabled()) {
             log.debug("Removing the Request builder Service : " + abstractRequestBuilder.getName());
