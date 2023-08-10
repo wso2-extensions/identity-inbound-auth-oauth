@@ -63,6 +63,7 @@ public class ParAuthServiceImpl implements ParAuthService {
                     .inputParam(LogConstants.InputKeys.CLIENT_ID,
                             parameters.get(OAuthConstants.OAuth20Params.CLIENT_ID))
                     .resultMessage("PAR auth request is being handled.")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
@@ -74,6 +75,20 @@ public class ParAuthServiceImpl implements ParAuthService {
         parAuthResponse.setExpiryTime(getExpiresInValue());
 
         persistParRequest(uuid, parameters, getScheduledExpiry(System.currentTimeMillis()));
+
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.HANDLE_REQUEST);
+            diagnosticLogBuilder
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID,
+                            parameters.get(OAuthConstants.OAuth20Params.CLIENT_ID))
+                    .inputParam(REQUEST_URI_REF, uuid)
+                    .resultMessage("PAR auth request handled successfully.")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+        }
 
         return parAuthResponse;
     }
@@ -97,6 +112,7 @@ public class ParAuthServiceImpl implements ParAuthService {
                     .inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
                     .inputParam(REQUEST_URI_REF, uuid)
                     .resultMessage("PAR auth request parameters are being retrieved.")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
@@ -111,6 +127,18 @@ public class ParAuthServiceImpl implements ParAuthService {
         validateExpiryTime(parRequestDO.getExpiresIn());
         validateClientID(clientId, parRequestDO.getClientId());
 
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.RETRIEVE_PARAMETERS);
+            diagnosticLogBuilder
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
+                    .inputParam(REQUEST_URI_REF, uuid)
+                    .resultMessage("PAR auth request parameters retrieved successfully.")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+        }
         return parRequestDO.getParams();
     }
 

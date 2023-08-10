@@ -62,6 +62,7 @@ public class ParRequestBuilder implements OAuthAuthorizationRequestBuilder {
                             request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID))
                     .inputParam(REQUEST_BUILDER, getName())
                     .resultMessage("PAR request builder handling the request")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
