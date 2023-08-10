@@ -40,8 +40,8 @@ public class ParServiceComponent {
     protected void activate(ComponentContext context) {
 
         try {
-            ParAuthServiceImpl parAuthServiceImpl = new ParAuthServiceImpl();
-            ParDataHolder.getInstance().setParAuthService(parAuthServiceImpl);
+            ParAuthService parAuthServiceImpl = new ParAuthServiceImpl();
+            ParAuthServiceComponentDataHolder.getInstance().setParAuthService(parAuthServiceImpl);
 
             context.getBundleContext().registerService(ParAuthService.class.getName(),
                     parAuthServiceImpl, null);

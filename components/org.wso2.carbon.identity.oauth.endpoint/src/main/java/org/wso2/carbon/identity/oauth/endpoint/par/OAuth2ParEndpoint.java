@@ -29,7 +29,6 @@ import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticat
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
-import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
@@ -53,6 +52,8 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthAuthzRequest;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getParAuthService;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 
 /**
@@ -78,7 +79,7 @@ public class OAuth2ParEndpoint {
             handleValidation(request, params);
             Map<String, String> parameters = transformParams(params);
             ParAuthData parAuthData =
-                    EndpointUtil.getParAuthService().handleParAuthRequest(parameters);
+                    getParAuthService().handleParAuthRequest(parameters);
             return createAuthResponse(response, parAuthData);
         } catch (ParClientException e) {
             return handleParClientException(e);
@@ -200,7 +201,7 @@ public class OAuth2ParEndpoint {
         OAuth2ClientValidationResponseDTO validationResponse = getOAuth2Service().validateClientInfo(request);
 
         if (!validationResponse.isValidClient()) {
-            throw new ParClientException(validationResponse.getErrorCode(), ParConstants.INVALID_CONSUMER_KEY_ERROR);
+            throw new ParClientException(validationResponse.getErrorCode(), validationResponse.getErrorMsg());
         }
         if (isRequestUriProvided(params)) {
             throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
@@ -220,7 +221,7 @@ public class OAuth2ParEndpoint {
     private void validateAuthzRequest(HttpServletRequest request) throws ParCoreException {
 
         try {
-            EndpointUtil.getOAuthAuthzRequest(request);
+            getOAuthAuthzRequest(request);
         } catch (OAuthProblemException e) {
             throw new ParClientException(e.getError(), e.getDescription(), e);
         } catch (OAuthSystemException e) {

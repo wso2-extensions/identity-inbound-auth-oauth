@@ -23,7 +23,7 @@ import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParAuthFailureException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
-import org.wso2.carbon.identity.oauth.par.internal.ParDataHolder;
+import org.wso2.carbon.identity.oauth.par.internal.ParAuthServiceComponentDataHolder;
 
 import java.util.Map;
 
@@ -54,7 +54,7 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
         String uuid = requestUri.replaceFirst(ParConstants.REQUEST_URI_PREFIX, "");
 
         try {
-            params = ParDataHolder.getInstance().getParAuthService()
+            params = ParAuthServiceComponentDataHolder.getInstance().getParAuthService()
                     .retrieveParams(uuid, request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
             params.put(OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST, "true");
             // Set request_uri to empty string to avoid conflicting with OIDC requests passed by reference.

@@ -21,6 +21,8 @@ package org.wso2.carbon.identity.oauth.par.core;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -31,6 +33,7 @@ import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
 import org.wso2.carbon.identity.oauth.par.model.ParRequestDO;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.Calendar;
 import java.util.Map;
@@ -38,6 +41,7 @@ import java.util.Optional;
 import java.util.TimeZone;
 import java.util.UUID;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.REQUEST_URI_REF;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PAR_EXPIRY_TIME;
 
 /**
@@ -50,6 +54,18 @@ public class ParAuthServiceImpl implements ParAuthService {
 
     @Override
     public ParAuthData handleParAuthRequest(Map<String, String> parameters) throws ParCoreException {
+
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.HANDLE_REQUEST);
+            diagnosticLogBuilder
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID,
+                            parameters.get(OAuthConstants.OAuth20Params.CLIENT_ID))
+                    .resultMessage("PAR auth request is being handled.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+        }
 
         String uuid = UUID.randomUUID().toString();
 
@@ -72,6 +88,18 @@ public class ParAuthServiceImpl implements ParAuthService {
     @Override
     public Map<String, String> retrieveParams(String uuid, String clientId)
             throws ParCoreException {
+
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.RETRIEVE_PARAMETERS);
+            diagnosticLogBuilder
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
+                    .inputParam(REQUEST_URI_REF, uuid)
+                    .resultMessage("PAR auth request parameters are being retrieved.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+        }
 
         Optional<ParRequestDO> optionalParRequestDO = parMgtDAO.getRequestData(uuid);
         if (!optionalParRequestDO.isPresent()) {

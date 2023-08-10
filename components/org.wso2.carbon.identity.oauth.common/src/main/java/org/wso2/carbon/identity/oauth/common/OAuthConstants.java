@@ -575,6 +575,8 @@ public final class OAuthConstants {
             public static final String PERSIST_OAUTH_SCOPE_CONSENT = "persist-oauth-scope-consent";
             public static final String GENERATE_CONSENT_CLAIMS = "generate-consent-claims";
             public static final String HANDLE_REQUEST = "handle-request";
+            public static final String BUILD_REQUEST = "build-request";
+            public static final String RETRIEVE_PARAMETERS = "retrieve-parameters";
         }
 
         /**
@@ -589,6 +591,7 @@ public final class OAuthConstants {
             public static final String GRANT_TYPE = "grant type";
             public static final String AUTHORIZATION_CODE = "authorization code";
             public static final String REQUEST_BUILDER = "request builder";
+            public static final String REQUEST_URI_REF = "request uri reference";
         }
     }
 

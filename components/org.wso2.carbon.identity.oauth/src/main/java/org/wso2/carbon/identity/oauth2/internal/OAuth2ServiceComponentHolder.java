@@ -93,7 +93,7 @@ public class OAuth2ServiceComponentHolder {
     private static boolean restrictUnassignedScopes;
     private static ConfigurationContextService configurationContextService;
     private List<JWTAccessTokenClaimProvider> jwtAccessTokenClaimProviders = new ArrayList<>();
-    private final List<OAuthAuthorizationRequestBuilder> abstractRequestBuilders = new ArrayList<>();
+    private final List<OAuthAuthorizationRequestBuilder> oAuthAuthorizationRequestBuilders = new ArrayList<>();
     private boolean isOrganizationManagementEnabled = false;
 
     private OAuth2ServiceComponentHolder() {
@@ -632,32 +632,32 @@ public class OAuth2ServiceComponentHolder {
     }
 
     /**
-     * Get the list of request builder implementations available.
+     * Get the list of oauth authorization request builder implementations available.
      *
-     * @return List<AbstractRequestBuilder> returns a list ot request builders.
+     * @return List<OAuthAuthorizationRequestBuilder> returns a list ot request builders.
      */
-    public List<OAuthAuthorizationRequestBuilder> getRequestBuilders() {
+    public List<OAuthAuthorizationRequestBuilder> getAuthorizationRequestBuilders() {
 
-        return abstractRequestBuilders;
+        return oAuthAuthorizationRequestBuilders;
     }
 
     /**
      * Add request builder implementation.
      *
-     * @param abstractRequestBuilder Request builder implementation.
+     * @param oAuthAuthorizationRequestBuilder Request builder implementation.
      */
-    public void addRequestBuilder(OAuthAuthorizationRequestBuilder abstractRequestBuilder) {
+    public void addAuthorizationRequestBuilder(OAuthAuthorizationRequestBuilder oAuthAuthorizationRequestBuilder) {
 
-        abstractRequestBuilders.add(abstractRequestBuilder);
+        oAuthAuthorizationRequestBuilders.add(oAuthAuthorizationRequestBuilder);
     }
 
     /**
      * Remove request builder implementation.
      *
-     * @param abstractRequestBuilder Request builder implementation.
+     * @param oAuthAuthorizationRequestBuilder Request builder implementation.
      */
-    public void removeRequestBuilder(OAuthAuthorizationRequestBuilder abstractRequestBuilder) {
+    public void removeAuthorizationRequestBuilder(OAuthAuthorizationRequestBuilder oAuthAuthorizationRequestBuilder) {
 
-        abstractRequestBuilders.remove(abstractRequestBuilder);
+        oAuthAuthorizationRequestBuilders.remove(oAuthAuthorizationRequestBuilder);
     }
 }

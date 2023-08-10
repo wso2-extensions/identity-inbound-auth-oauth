@@ -5,12 +5,12 @@ import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
 /**
  * Data holder class for the PAR component
  */
-public class ParDataHolder {
+public class ParAuthServiceComponentDataHolder {
 
-    private static final ParDataHolder instance = new ParDataHolder();
+    private static final ParAuthServiceComponentDataHolder instance = new ParAuthServiceComponentDataHolder();
     private ParAuthService parAuthService;
 
-    public static ParDataHolder getInstance() {
+    public static ParAuthServiceComponentDataHolder getInstance() {
 
         return instance;
     }

@@ -39,7 +39,7 @@ public class ParRequestBuilder implements OAuthAuthorizationRequestBuilder {
 
     private static final Log log = LogFactory.getLog(ParRequestBuilder.class);
 
-    private static final String REQUEST_BUILDER_NAME = "Pushed authorization request builder";
+    private static final String REQUEST_BUILDER_NAME = "pushedAuthorizationRequestBuilder";
 
     @Override
     public HttpServletRequest buildRequest(HttpServletRequest request) throws IdentityException {
@@ -50,9 +50,8 @@ public class ParRequestBuilder implements OAuthAuthorizationRequestBuilder {
     @Override
     public boolean canHandle(HttpServletRequest request) {
 
-        String requestUri = request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI);
-        boolean canHandle =
-                StringUtils.isNotBlank(requestUri) && requestUri.startsWith(ParConstants.REQUEST_URI_PREFIX);
+        boolean canHandle = StringUtils.startsWith(request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI),
+                ParConstants.REQUEST_URI_PREFIX);
 
         if (canHandle && LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
@@ -63,7 +62,7 @@ public class ParRequestBuilder implements OAuthAuthorizationRequestBuilder {
                             request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID))
                     .inputParam(REQUEST_BUILDER, getName())
                     .resultMessage("PAR request builder handling the request")
-                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
         return canHandle;

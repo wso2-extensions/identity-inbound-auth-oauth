@@ -150,22 +150,26 @@ public class OAuth2ServiceComponent {
             service = OAuthAuthorizationRequestBuilder.class,
             cardinality = ReferenceCardinality.MULTIPLE,
             policy = ReferencePolicy.DYNAMIC,
-            unbind = "removeRequestBuilderService"
+            unbind = "removeAuthorizationRequestBuilderService"
     )
-    protected void addRequestBuilderService(OAuthAuthorizationRequestBuilder abstractRequestBuilder) {
+    protected void addAuthorizationRequestBuilderService(
+            OAuthAuthorizationRequestBuilder oAuthAuthorizationRequestBuilder) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Adding the Request builder Service : " + abstractRequestBuilder.getName());
+            log.debug("Adding the oauth authorization request builder service : "
+                    + oAuthAuthorizationRequestBuilder.getName());
         }
-        OAuth2ServiceComponentHolder.getInstance().addRequestBuilder(abstractRequestBuilder);
+        OAuth2ServiceComponentHolder.getInstance().addAuthorizationRequestBuilder(oAuthAuthorizationRequestBuilder);
     }
 
-    protected void removeRequestBuilderService(OAuthAuthorizationRequestBuilder abstractRequestBuilder) {
+    protected void removeAuthorizationRequestBuilderService(
+            OAuthAuthorizationRequestBuilder oAuthAuthorizationRequestBuilder) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Removing the Request builder Service : " + abstractRequestBuilder.getName());
+            log.debug("Removing the oauth authorization request builder service : "
+                    + oAuthAuthorizationRequestBuilder.getName());
         }
-        OAuth2ServiceComponentHolder.getInstance().removeRequestBuilder(abstractRequestBuilder);
+        OAuth2ServiceComponentHolder.getInstance().removeAuthorizationRequestBuilder(oAuthAuthorizationRequestBuilder);
     }
 
     protected void unsetAuthenticationMethodNameTranslator(
