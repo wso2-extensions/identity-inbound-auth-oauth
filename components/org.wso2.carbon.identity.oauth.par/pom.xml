@@ -76,6 +76,10 @@
             <groupId>org.apache.ws.commons.axiom.wso2</groupId>
             <artifactId>axiom</artifactId>
         </dependency>
+        <dependency>
+            <artifactId>org.wso2.carbon.identity.central.log.mgt</artifactId>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -122,8 +126,10 @@
                             org.osgi.service.component; version="${osgi.service.component.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework.cache; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.base; version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.central.log.mgt.utils;version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.core.*; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.context; version="${carbon.kernel.imp.pkg.version.range}",
+                            org.wso2.carbon.utils; version="${carbon.kernel.imp.pkg.version.range}",
                             javax.servlet.*; version="${imp.pkg.version.javax.servlet}",
                             com.fasterxml.jackson.databind; version="${com.fasterxml.jackson.databind.version.range}",
                             org.apache.oltu.oauth2.common.*; version="${oltu.package.import.version.range}",
