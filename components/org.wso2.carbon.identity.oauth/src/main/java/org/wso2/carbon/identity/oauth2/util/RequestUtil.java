@@ -62,7 +62,7 @@ public class RequestUtil {
                             .inputParam(REQUEST_BUILDER, requestBuilder.getName())
                             .resultMessage("OAuth authorization request builder found for the request.")
                             .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
                     LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
 
