@@ -90,7 +90,7 @@ public class OAuthAppDAO {
     private static final String APP_STATE = "APP_STATE";
     private static final String USERNAME = "USERNAME";
     private static final String LOWER_USERNAME = "LOWER(USERNAME)";
-    private static final String CONSUMER_KEY_CONSTRAINT = "CONSUMER_KEY_CONSTRAINT";
+    private static final String CONSUMER_KEY_CONSTRAINT = "UK_TENANT_CONSUMER_KEY";
 
     private TokenPersistenceProcessor persistenceProcessor;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
