@@ -735,6 +735,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                                               OAuthTokenReqMessageContext tokenReqMessageContext)
             throws IdentityOAuth2Exception {
 
+        if (tokenReqMessageContext != null &&
+                tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
+                StringUtils.equals(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType(),
+                        OAuthConstants.GrantTypes.CLIENT_CREDENTIALS) &&
+                OAuthServerConfiguration.getInstance().isSkipOIDCClaimsForClientCredentialGrant()) {
+
+            // CC grant doesn't involve a user and hence skipping OIDC claims to CC grant type Access token.
+            return jwtClaimsSetBuilder.build();
+        }
+
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
