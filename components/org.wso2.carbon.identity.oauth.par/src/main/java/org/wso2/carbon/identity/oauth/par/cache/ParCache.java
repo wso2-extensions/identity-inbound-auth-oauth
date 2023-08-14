@@ -21,16 +21,13 @@ package org.wso2.carbon.identity.oauth.par.cache;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationBaseCache;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.model.ParRequestCacheEntry;
-import org.wso2.carbon.utils.CarbonUtils;
-
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Cache implementation for PAR requests.
  */
 public class ParCache extends AuthenticationBaseCache<String, ParRequestCacheEntry> {
 
-    private static final AtomicReference<ParCache> instance = new AtomicReference<>();
+    private static final ParCache instance = new ParCache();
 
     /**
      * Constructor for ParCache.
@@ -47,14 +44,6 @@ public class ParCache extends AuthenticationBaseCache<String, ParRequestCacheEnt
      */
     public static ParCache getInstance() {
 
-        CarbonUtils.checkSecurity();
-        if (instance.get() == null) {
-            synchronized (ParCache.class) {
-                if (instance.get() == null) {
-                    instance.set(new ParCache());
-                }
-            }
-        }
-        return instance.get();
+        return instance;
     }
 }
