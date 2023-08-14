@@ -146,7 +146,7 @@ public class OAuth2ServiceComponent {
     }
 
     @Reference(
-            name = "request.builder.service",
+            name = "oauth.authorization.request.builder.service",
             service = OAuthAuthorizationRequestBuilder.class,
             cardinality = ReferenceCardinality.MULTIPLE,
             policy = ReferencePolicy.DYNAMIC,

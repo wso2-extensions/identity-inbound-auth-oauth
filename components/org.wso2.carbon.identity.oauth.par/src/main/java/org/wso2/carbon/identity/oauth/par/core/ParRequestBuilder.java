@@ -18,15 +18,18 @@
 package org.wso2.carbon.identity.oauth.par.core;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
+import org.wso2.carbon.identity.oauth.par.exceptions.ParAuthFailureException;
+import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
+import org.wso2.carbon.identity.oauth.par.internal.ParAuthServiceComponentDataHolder;
 import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.utils.DiagnosticLog;
+
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -37,14 +40,26 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.
  */
 public class ParRequestBuilder implements OAuthAuthorizationRequestBuilder {
 
-    private static final Log log = LogFactory.getLog(ParRequestBuilder.class);
-
     private static final String REQUEST_BUILDER_NAME = "pushedAuthorizationRequestBuilder";
 
     @Override
     public HttpServletRequest buildRequest(HttpServletRequest request) throws IdentityException {
 
-        return new OAuthParRequestWrapper(request);
+        // Get only uuid from request_uri.
+        String requestUri = request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI);
+        String uuid = requestUri.replaceFirst(ParConstants.REQUEST_URI_PREFIX, "");
+        Map<String, String> params;
+
+        try {
+            params = ParAuthServiceComponentDataHolder.getInstance().getParAuthService()
+                    .retrieveParams(uuid, request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
+            params.put(OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST, "true");
+            // Set request_uri to empty string to avoid conflicting with OIDC requests passed by reference.
+            params.put(OAuthConstants.OAuth20Params.REQUEST_URI, "");
+        } catch (ParCoreException e) {
+            throw new ParAuthFailureException("Error occurred while retrieving params from PAR request", e);
+        }
+        return new OAuthParRequestWrapper(request, params);
     }
 
     @Override
