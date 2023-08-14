@@ -49,7 +49,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PAR_EXPIRY_TI
  */
 public class ParAuthServiceImpl implements ParAuthService {
 
-    private static final Log log = LogFactory.getLog(ParAuthService.class);
+    private static final Log log = LogFactory.getLog(ParAuthServiceImpl.class);
     ParMgtDAO parMgtDAO = ParDAOFactory.getInstance().getParAuthMgtDAO();
 
     @Override

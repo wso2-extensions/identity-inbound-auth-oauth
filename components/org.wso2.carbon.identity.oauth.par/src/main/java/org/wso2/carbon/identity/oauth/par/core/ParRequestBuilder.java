@@ -50,8 +50,9 @@ public class ParRequestBuilder implements OAuthAuthorizationRequestBuilder {
     @Override
     public boolean canHandle(HttpServletRequest request) {
 
-        boolean canHandle = StringUtils.startsWith(request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI),
-                ParConstants.REQUEST_URI_PREFIX);
+        boolean canHandle = (request != null) &&
+                StringUtils.startsWith(request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI),
+                        ParConstants.REQUEST_URI_PREFIX);
 
         if (canHandle && LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
