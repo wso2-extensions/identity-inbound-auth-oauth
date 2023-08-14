@@ -19,10 +19,10 @@ package org.wso2.carbon.identity.oauth.endpoint.jwks;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64;
+import com.nimbusds.jose.util.Base64URL;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
@@ -158,6 +158,7 @@ public class JwksEndpoint {
     private RSAKey.Builder getJWK(JWSAlgorithm algorithm, List<Base64> encodedCertList, X509Certificate certificate,
                                   String kidAlgorithm, String alias)
             throws ParseException, IdentityOAuth2Exception, JOSEException {
+
         RSAKey.Builder jwk = new RSAKey.Builder((RSAPublicKey) certificate.getPublicKey());
         if (kidAlgorithm.equals(OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM)) {
             jwk.keyID(OAuth2Util.getKID(certificate, algorithm, getTenantDomain()));
@@ -167,8 +168,7 @@ public class JwksEndpoint {
         jwk.algorithm(algorithm);
         jwk.keyUse(KeyUse.parse(KEY_USE));
         jwk.x509CertChain(encodedCertList);
-        JWK parsedJWK = JWK.parse(certificate);
-        jwk.x509CertSHA256Thumbprint(parsedJWK.getX509CertSHA256Thumbprint());
+        jwk.x509CertSHA256Thumbprint(new Base64URL(OAuth2Util.getThumbPrint(certificate, alias)));
         return jwk;
     }
 

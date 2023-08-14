@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.util;
 
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.util.Base64URL;
 import org.apache.axiom.om.OMElement;
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.engine.AxisConfiguration;
@@ -92,6 +93,8 @@ import org.wso2.carbon.utils.NetworkUtils;
 
 import java.net.SocketException;
 import java.nio.file.Paths;
+import java.security.KeyStore;
+import java.security.cert.Certificate;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -118,6 +121,7 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
+import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 
 @WithCarbonHome
 @PrepareForTest({OAuthServerConfiguration.class, OAuthCache.class, IdentityUtil.class, OAuthConsumerDAO.class,
@@ -207,6 +211,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     @Mock
     OAuthAdminServiceImpl oAuthAdminService;
 
+    private KeyStore wso2KeyStore;
+
     @BeforeMethod
     public void setUp() throws Exception {
         System.setProperty(
@@ -251,6 +257,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         mockStatic(LoggerUtils.class);
         when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+        wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon",
+                System.getProperty(CarbonBaseConstants.CARBON_HOME));
     }
 
     @AfterMethod
@@ -2295,5 +2303,16 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
             return;
         }
         fail("Expected IdentityOAuth2Exception was not thrown by getServiceProvider method");
+    }
+
+    @Test
+    public void testGetThumbPrint() throws Exception {
+
+        Certificate certificate = wso2KeyStore.getCertificate("wso2carbon");
+
+        String thumbPrint = OAuth2Util.getThumbPrint(certificate);
+        String rsa256Thumbprint = "50:f0:ed:a5:89:8a:f3:a1:15:c2:c5:08:19:49:56:e7:e1:14:fe:23:47:43:e9:d2:2f:70:9a:" +
+                "e7:cb:80:1b:bd";
+        assertEquals(thumbPrint, Base64URL.encode(rsa256Thumbprint.replaceAll(":", "")).toString());
     }
 }
