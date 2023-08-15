@@ -47,10 +47,10 @@ import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
-import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
@@ -146,21 +146,30 @@ public class OAuth2ServiceComponent {
     }
 
     @Reference(
-            name = "identity.oauth.par.service.component",
-            service = ParAuthService.class,
-            cardinality = ReferenceCardinality.MANDATORY,
+            name = "oauth.authorization.request.builder.service",
+            service = OAuthAuthorizationRequestBuilder.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
             policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetParService"
+            unbind = "removeAuthorizationRequestBuilderService"
     )
-    protected void setParService(ParAuthService parAuthService) {
+    protected void addAuthorizationRequestBuilderService(
+            OAuthAuthorizationRequestBuilder oAuthAuthorizationRequestBuilder) {
 
-        log.debug("Setting ParAuthService Service.");
-        OAuth2ServiceComponentHolder.setParAuthService(parAuthService);
+        if (log.isDebugEnabled()) {
+            log.debug("Adding the oauth authorization request builder service : "
+                    + oAuthAuthorizationRequestBuilder.getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().addAuthorizationRequestBuilder(oAuthAuthorizationRequestBuilder);
     }
 
-    protected void unsetParService(ParAuthService parAuthService) {
+    protected void removeAuthorizationRequestBuilderService(
+            OAuthAuthorizationRequestBuilder oAuthAuthorizationRequestBuilder) {
 
-        OAuth2ServiceComponentHolder.setParAuthService(null);
+        if (log.isDebugEnabled()) {
+            log.debug("Removing the oauth authorization request builder service : "
+                    + oAuthAuthorizationRequestBuilder.getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().removeAuthorizationRequestBuilder(oAuthAuthorizationRequestBuilder);
     }
 
     protected void unsetAuthenticationMethodNameTranslator(

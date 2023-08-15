@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
@@ -21,6 +21,8 @@ package org.wso2.carbon.identity.oauth.par.core;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -31,6 +33,7 @@ import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
 import org.wso2.carbon.identity.oauth.par.model.ParRequestDO;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.Calendar;
 import java.util.Map;
@@ -38,6 +41,7 @@ import java.util.Optional;
 import java.util.TimeZone;
 import java.util.UUID;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.REQUEST_URI_REF;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PAR_EXPIRY_TIME;
 
 /**
@@ -45,7 +49,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PAR_EXPIRY_TI
  */
 public class ParAuthServiceImpl implements ParAuthService {
 
-    private static final Log log = LogFactory.getLog(ParAuthService.class);
+    private static final Log log = LogFactory.getLog(ParAuthServiceImpl.class);
     ParMgtDAO parMgtDAO = ParDAOFactory.getInstance().getParAuthMgtDAO();
 
     @Override
@@ -59,6 +63,20 @@ public class ParAuthServiceImpl implements ParAuthService {
 
         persistParRequest(uuid, parameters, getScheduledExpiry(System.currentTimeMillis()));
 
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.HANDLE_REQUEST);
+            diagnosticLogBuilder
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID,
+                            parameters.get(OAuthConstants.OAuth20Params.CLIENT_ID))
+                    .inputParam(REQUEST_URI_REF, uuid)
+                    .resultMessage("PAR auth request handled successfully.")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+        }
+
         return parAuthResponse;
     }
 
@@ -70,12 +88,12 @@ public class ParAuthServiceImpl implements ParAuthService {
     }
 
     @Override
-    public Map<String, String> retrieveParams(String uuid, String clientId)
-            throws ParCoreException {
+    public Map<String, String> retrieveParams(String uuid, String clientId) throws ParCoreException {
 
         Optional<ParRequestDO> optionalParRequestDO = parMgtDAO.getRequestData(uuid);
         if (!optionalParRequestDO.isPresent()) {
-            throw new ParCoreException("A PAR request does not exist for the uuid: " + uuid);
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, "A PAR request does not exist for the " +
+                    "uuid: " + uuid);
         }
 
         ParRequestDO parRequestDO = optionalParRequestDO.get();
@@ -83,6 +101,18 @@ public class ParAuthServiceImpl implements ParAuthService {
         validateExpiryTime(parRequestDO.getExpiresIn());
         validateClientID(clientId, parRequestDO.getClientId());
 
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.RETRIEVE_PARAMETERS);
+            diagnosticLogBuilder
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
+                    .inputParam(REQUEST_URI_REF, uuid)
+                    .resultMessage("PAR auth request parameters retrieved successfully.")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+        }
         return parRequestDO.getParams();
     }
 

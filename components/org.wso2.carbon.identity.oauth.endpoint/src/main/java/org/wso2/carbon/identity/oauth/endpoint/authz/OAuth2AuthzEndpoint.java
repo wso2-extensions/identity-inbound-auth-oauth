@@ -60,6 +60,7 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
@@ -104,7 +105,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
-import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
@@ -112,6 +112,7 @@ import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvide
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.RequestUtil;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
@@ -124,8 +125,6 @@ import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
@@ -183,6 +182,7 @@ import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getErrorPageURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getLoginPageURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthAuthzRequest;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthServerConfiguration;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSSOConsentService;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.retrieveStateForErrorURL;
@@ -280,11 +280,15 @@ public class OAuth2AuthzEndpoint {
 
         // Using a separate try-catch block as this next try block has operations in the final block.
         try {
+            request = RequestUtil.buildRequest(request);
             oAuthMessage = buildOAuthMessage(request, response);
 
         } catch (InvalidRequestParentException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
             throw e;
+        } catch (IdentityException e) {
+            EndpointUtil.triggerOnAuthzRequestException(e, request);
+            throw new InvalidRequestException(e.getMessage(), OAuth2ErrorCodes.INVALID_REQUEST, e);
         }
 
         try {
@@ -1915,7 +1919,6 @@ public class OAuth2AuthzEndpoint {
 
         OAuth2ClientValidationResponseDTO validationResponse = validateClient(oAuthMessage);
 
-
         if (!validationResponse.isValidClient()) {
             EndpointUtil.triggerOnRequestValidationFailure(oAuthMessage, validationResponse);
             return getErrorPageURL(oAuthMessage.getRequest(), validationResponse.getErrorCode(), OAuth2ErrorCodes
@@ -1990,79 +1993,6 @@ public class OAuth2AuthzEndpoint {
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
             throw new OAuthSystemException("Error while retrieving app information for client_id : " + clientId, e);
         }
-    }
-
-    /**
-     * Method to check whether the configured OAuthAuthzRequestImplementation is the default implementation.
-     *
-     * @return boolean whether the default class name is configured.
-     */
-    private boolean isDefaultOAuthAuthzRequestClassConfigured() {
-
-        String oauthAuthzRequestClassName = OAuthServerConfiguration.getInstance().getOAuthAuthzRequestClassName();
-        return OAuthServerConfiguration.DEFAULT_OAUTH_AUTHZ_REQUEST_CLASSNAME.equals(oauthAuthzRequestClassName);
-    }
-
-    /**
-     * Load OAuthAuthzRequest class.
-     *
-     * @return OAuthAuthzRequest Class.
-     * @throws ClassNotFoundException when configured class name is invalid.
-     */
-    private static Class<? extends OAuthAuthzRequest> getOAuthAuthzRequestClass() throws ClassNotFoundException {
-
-        if (oAuthAuthzRequestClass == null) {
-
-            String oauthAuthzRequestClassName =
-                    OAuthServerConfiguration.getInstance().getOAuthAuthzRequestClassName();
-            oAuthAuthzRequestClass = (Class<? extends OAuthAuthzRequest>) Thread.currentThread()
-                    .getContextClassLoader().loadClass(oauthAuthzRequestClassName);
-
-        }
-        return oAuthAuthzRequestClass;
-    }
-
-    /**
-     * Returns an instance of OAuthAuthzRequest. If the configured classname is invalid the default implementation
-     * will be returned.
-     *
-     * @param request http servlet request.
-     * @return instance of OAuthAuthzRequest.
-     * @throws OAuthProblemException thrown when initializing the OAuthAuthzRequestClass instance.
-     * @throws OAuthSystemException  thrown when initializing the OAuthAuthzRequestClass instance.
-     */
-    private OAuthAuthzRequest getOAuthAuthzRequest(HttpServletRequest request)
-            throws OAuthProblemException, OAuthSystemException {
-
-        OAuthAuthzRequest oAuthAuthzRequest;
-
-        if (isDefaultOAuthAuthzRequestClassConfigured()) {
-            oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
-        } else {
-            try {
-                Class<? extends OAuthAuthzRequest> clazz = getOAuthAuthzRequestClass();
-                // Validations will be performed when initializing the class instance.
-                Constructor<?> constructor = clazz.getConstructor(HttpServletRequest.class);
-                oAuthAuthzRequest = (OAuthAuthzRequest) constructor.newInstance(request);
-            } catch (InvocationTargetException e) {
-                // Handle OAuthProblemException & OAuthSystemException thrown from extended class.
-                if (e.getTargetException() instanceof OAuthProblemException) {
-                    throw (OAuthProblemException) e.getTargetException();
-                } else if (e.getTargetException() instanceof OAuthSystemException) {
-                    throw (OAuthSystemException) e.getTargetException();
-                } else {
-                    log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
-                            "Hence initiating the default implementation");
-                    oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
-                }
-            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
-                     NoSuchMethodException e) {
-                log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. " +
-                        "Hence initiating the default implementation");
-                oAuthAuthzRequest = new CarbonOAuthAuthzRequest(request);
-            }
-        }
-        return oAuthAuthzRequest;
     }
 
     /**
@@ -2512,15 +2442,6 @@ public class OAuth2AuthzEndpoint {
 
     private void validateRequestObjectParams(OAuthAuthzRequest oauthRequest) throws RequestObjectException {
 
-        /*
-            A single request cannot contain both 'request' and 'request_uri' parameters concurrently.
-            This validation is skipped when ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST parameter is set to true,
-            where both request param and request_uri param will be present in the parameter map.
-         */
-        if (Boolean.parseBoolean(oauthRequest.getParam(
-                OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST))) {
-            return;
-        }
         if (StringUtils.isNotEmpty(oauthRequest.getParam(REQUEST)) && StringUtils.isNotEmpty(oauthRequest.getParam
                 (REQUEST_URI))) {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {

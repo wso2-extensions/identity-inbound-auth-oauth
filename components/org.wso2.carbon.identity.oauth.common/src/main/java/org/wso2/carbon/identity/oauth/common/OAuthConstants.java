@@ -176,8 +176,6 @@ public final class OAuthConstants {
 
     // Context tenant domain passed with request parameters.
     public static final String TENANT_DOMAIN_FROM_CONTEXT = "tenant_domain_from_context";
-    public static final String ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST =
-            "allow_request_uri_and_request_object_in_request";
     public static final String PAR_EXPIRY_TIME = "OAuth.PAR.ExpiryTime";
 
     public static final String RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ALLOWED_GRANT_TYPES_CONFIG =
@@ -574,6 +572,9 @@ public final class OAuthConstants {
             public static final String HAND_OVER_TO_FRAMEWORK = "hand-over-to-framework";
             public static final String PERSIST_OAUTH_SCOPE_CONSENT = "persist-oauth-scope-consent";
             public static final String GENERATE_CONSENT_CLAIMS = "generate-consent-claims";
+            public static final String HANDLE_REQUEST = "handle-request";
+            public static final String BUILD_REQUEST = "build-request";
+            public static final String RETRIEVE_PARAMETERS = "retrieve-parameters";
         }
 
         /**
@@ -587,6 +588,8 @@ public final class OAuthConstants {
             public static final String AUTHORIZED_SCOPES = "authorized scopes";
             public static final String GRANT_TYPE = "grant type";
             public static final String AUTHORIZATION_CODE = "authorization code";
+            public static final String REQUEST_BUILDER = "request builder";
+            public static final String REQUEST_URI_REF = "request uri reference";
         }
     }
 
