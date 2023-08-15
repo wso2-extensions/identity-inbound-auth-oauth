@@ -45,7 +45,6 @@ public class ParRequestBuilder implements OAuthAuthorizationRequestBuilder {
     @Override
     public HttpServletRequest buildRequest(HttpServletRequest request) throws IdentityException {
 
-        // Get only uuid from request_uri.
         String requestUri = request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI);
         String uuid = requestUri.replaceFirst(ParConstants.REQUEST_URI_PREFIX, "");
         Map<String, String> params;
@@ -53,9 +52,6 @@ public class ParRequestBuilder implements OAuthAuthorizationRequestBuilder {
         try {
             params = ParAuthServiceComponentDataHolder.getInstance().getParAuthService()
                     .retrieveParams(uuid, request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
-            params.put(OAuthConstants.ALLOW_REQUEST_URI_AND_REQUEST_OBJECT_IN_REQUEST, "true");
-            // Set request_uri to empty string to avoid conflicting with OIDC requests passed by reference.
-            params.put(OAuthConstants.OAuth20Params.REQUEST_URI, "");
         } catch (ParCoreException e) {
             throw new ParAuthFailureException("Error occurred while retrieving params from PAR request", e);
         }

@@ -55,19 +55,6 @@ public class ParAuthServiceImpl implements ParAuthService {
     @Override
     public ParAuthData handleParAuthRequest(Map<String, String> parameters) throws ParCoreException {
 
-        if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    OAuthConstants.LogConstants.ActionIDs.HANDLE_REQUEST);
-            diagnosticLogBuilder
-                    .inputParam(LogConstants.InputKeys.CLIENT_ID,
-                            parameters.get(OAuthConstants.OAuth20Params.CLIENT_ID))
-                    .resultMessage("PAR auth request is being handled.")
-                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
-            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
-        }
-
         String uuid = UUID.randomUUID().toString();
 
         ParAuthData parAuthResponse = new ParAuthData();
@@ -101,25 +88,12 @@ public class ParAuthServiceImpl implements ParAuthService {
     }
 
     @Override
-    public Map<String, String> retrieveParams(String uuid, String clientId)
-            throws ParCoreException {
-
-        if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    OAuthConstants.LogConstants.ActionIDs.RETRIEVE_PARAMETERS);
-            diagnosticLogBuilder
-                    .inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
-                    .inputParam(REQUEST_URI_REF, uuid)
-                    .resultMessage("PAR auth request parameters are being retrieved.")
-                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
-            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
-        }
+    public Map<String, String> retrieveParams(String uuid, String clientId) throws ParCoreException {
 
         Optional<ParRequestDO> optionalParRequestDO = parMgtDAO.getRequestData(uuid);
         if (!optionalParRequestDO.isPresent()) {
-            throw new ParCoreException("A PAR request does not exist for the uuid: " + uuid);
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, "A PAR request does not exist for the " +
+                    "uuid: " + uuid);
         }
 
         ParRequestDO parRequestDO = optionalParRequestDO.get();
