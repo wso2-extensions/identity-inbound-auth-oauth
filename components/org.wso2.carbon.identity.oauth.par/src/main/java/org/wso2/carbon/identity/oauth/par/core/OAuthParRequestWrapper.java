@@ -17,7 +17,6 @@
  */
 package org.wso2.carbon.identity.oauth.par.core;
 
-import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 
 import java.util.Collections;
@@ -57,7 +56,7 @@ public class OAuthParRequestWrapper extends HttpServletRequestWrapper {
     public String getParameter(String name) {
 
         // Remove param request_uri to avoid conflicting with OIDC requests passed by reference.
-        if (StringUtils.equals(name, OAuthConstants.OAuth20Params.REQUEST_URI)) {
+        if (OAuthConstants.OAuth20Params.REQUEST_URI.equals(name)) {
             return null;
         }
         if (params.containsKey(name)) {
