@@ -288,7 +288,7 @@ public class OAuth2AuthzEndpoint {
             throw e;
         } catch (IdentityException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
-            throw new InvalidRequestException(e.getMessage(), OAuth2ErrorCodes.INVALID_REQUEST, e);
+            return handleIdentityException(request, e);
         }
 
         try {
@@ -426,6 +426,23 @@ public class OAuth2AuthzEndpoint {
                 "Server error occurred while performing authorization");
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
                 EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), ex, params))).build();
+    }
+
+    private Response handleIdentityException(HttpServletRequest request, IdentityException e)
+            throws URISyntaxException {
+
+        if (OAuth2ErrorCodes.SERVER_ERROR.equals(e.getErrorCode())) {
+            if (log.isDebugEnabled()) {
+                log.debug("Server error occurred while performing authorization", e);
+            }
+            OAuthProblemException ex = OAuthProblemException.error(OAuth2ErrorCodes.SERVER_ERROR,
+                    "Server error occurred while performing authorization");
+            return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
+                    EndpointUtil.getErrorRedirectURL(request, ex, null))).build();
+        }
+        return Response.status(HttpServletResponse.SC_FOUND).location(new URI(EndpointUtil.getErrorPageURL(request,
+                e.getErrorCode(), OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
+                e.getMessage(), null))).build();
     }
 
     private Response handleOAuthProblemException(OAuthMessage oAuthMessage, OAuthProblemException e) throws
