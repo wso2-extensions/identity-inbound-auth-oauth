@@ -80,7 +80,6 @@ public class OAuthParRequestWrapperTest {
 
         HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
         doAnswer(invocation -> {
-
             String key = (String) invocation.getArguments()[0];
             return requestParams.get(key);
         }).when(httpServletRequest).getParameter(anyString());

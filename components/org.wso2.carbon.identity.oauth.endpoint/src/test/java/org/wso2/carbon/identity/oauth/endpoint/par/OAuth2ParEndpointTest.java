@@ -305,13 +305,11 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         }).when(httpServletRequest).getParameter(anyString());
 
         doAnswer(invocation -> {
-
             String key = (String) invocation.getArguments()[0];
             return requestAttributes.get(key);
         }).when(httpServletRequest).getAttribute(anyString());
 
         doAnswer(invocation -> {
-
             String key = (String) invocation.getArguments()[0];
             Object value = invocation.getArguments()[1];
             requestAttributes.put(key, value);

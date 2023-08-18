@@ -38,8 +38,8 @@ import java.util.Optional;
 
 import static org.mockito.Mockito.when;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({IdentityDatabaseUtil.class})
 @WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
@@ -104,7 +104,7 @@ public class ParMgtDAOImplTest extends PowerMockTestCase {
             prepareConnection(connection, false);
             Optional<ParRequestDO> parRequestDO1 = parMgtDAO.getRequestData(REQUEST_URI_1);
             parRequestDO1.ifPresent(
-                    requestDO -> assertTrue(compareHashMaps(parRequestDO.getParams(), requestDO.getParams())));
+                    requestDO -> assertEquals(requestDO.getParams(), parRequestDO.getParams()));
         }
     }
 
@@ -174,23 +174,5 @@ public class ParMgtDAOImplTest extends PowerMockTestCase {
                     .toString();
         }
         throw new IllegalArgumentException("DB Script file name cannot be empty.");
-    }
-
-    public static <K, V> boolean compareHashMaps(Map<K, V> map1, Map<K, V> map2) {
-
-        if (map1 == null || map2 == null || map1.size() != map2.size()) {
-            return false;
-        }
-
-        for (Map.Entry<K, V> entry : map1.entrySet()) {
-            K key = entry.getKey();
-            V value = entry.getValue();
-
-            if (!map2.containsKey(key) || !map2.get(key).equals(value)) {
-                return false;
-            }
-        }
-
-        return true;
     }
 }
