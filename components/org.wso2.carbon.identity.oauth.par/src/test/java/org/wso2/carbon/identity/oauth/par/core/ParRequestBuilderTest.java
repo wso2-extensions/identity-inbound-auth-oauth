@@ -43,6 +43,9 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 
+/**
+ * Test class for ParRequestBuilder.
+ */
 @PrepareForTest({LoggerUtils.class, ParAuthServiceComponentDataHolder.class})
 public class ParRequestBuilderTest extends PowerMockTestCase {
 
@@ -98,14 +101,7 @@ public class ParRequestBuilderTest extends PowerMockTestCase {
         request = mockHttpRequest(requestParams);
 
         assertEquals(parRequestBuilder.canHandle(request), expectedStatus);
-    }
-
-    @Test
-    public void testCanHandleNullRequest() {
-
-        mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
-
+        // Test for null request.
         assertFalse(parRequestBuilder.canHandle(null));
     }
 

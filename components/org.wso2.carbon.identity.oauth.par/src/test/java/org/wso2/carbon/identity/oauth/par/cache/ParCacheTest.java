@@ -23,15 +23,20 @@ import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertNotNull;
 
+/**
+ * Test class for ParCache.
+ */
 public class ParCacheTest {
 
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
+
         return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 
     @Test
     public void testGetInstance() {
+
         assertNotNull(ParCache.getInstance(), "Instance is null");
     }
 }

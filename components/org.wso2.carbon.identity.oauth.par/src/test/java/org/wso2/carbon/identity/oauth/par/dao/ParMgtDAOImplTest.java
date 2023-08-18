@@ -41,6 +41,9 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
+/**
+ * Test class for ParMgtDAOImpl.
+ */
 @PrepareForTest({IdentityDatabaseUtil.class})
 @WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
 public class ParMgtDAOImplTest extends PowerMockTestCase {
@@ -102,9 +105,9 @@ public class ParMgtDAOImplTest extends PowerMockTestCase {
 
         try (Connection connection = getConnection(DB_NAME)) {
             prepareConnection(connection, false);
-            Optional<ParRequestDO> parRequestDO1 = parMgtDAO.getRequestData(REQUEST_URI_1);
-            parRequestDO1.ifPresent(
-                    requestDO -> assertEquals(requestDO.getParams(), parRequestDO.getParams()));
+            Optional<ParRequestDO> parRequestDO = parMgtDAO.getRequestData(REQUEST_URI_1);
+            parRequestDO.ifPresent(
+                    requestDO -> assertEquals(requestDO.getParams(), this.parRequestDO.getParams()));
         }
     }
 
@@ -125,8 +128,8 @@ public class ParMgtDAOImplTest extends PowerMockTestCase {
 
         try (Connection connection = getConnection(DB_NAME)) {
             prepareConnection(connection, false);
-            Optional<ParRequestDO> parRequestDO1 = parMgtDAO.getRequestData(requestUri);
-            parRequestDO1.ifPresent(
+            Optional<ParRequestDO> parRequestDO = parMgtDAO.getRequestData(requestUri);
+            parRequestDO.ifPresent(
                     requestDO -> assertNotNull(requestDO.getParams()));
         }
     }
@@ -148,10 +151,10 @@ public class ParMgtDAOImplTest extends PowerMockTestCase {
         throw new RuntimeException("No datasource initiated for database: " + database);
     }
 
-    private void prepareConnection(Connection connection1, boolean b) {
+    private void prepareConnection(Connection connection, boolean shouldApplyTransaction) {
 
         mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection(b)).thenReturn(connection1);
+        when(IdentityDatabaseUtil.getDBConnection(shouldApplyTransaction)).thenReturn(connection);
     }
 
     protected void initiateH2Base(String scriptPath) throws Exception {

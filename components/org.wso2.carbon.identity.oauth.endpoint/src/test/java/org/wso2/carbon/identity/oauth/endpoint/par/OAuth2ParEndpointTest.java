@@ -21,7 +21,6 @@ import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
-import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.AfterTest;
@@ -72,6 +71,9 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
+/**
+ * Test class for OAuth2ParEndpoint.
+ */
 @PrepareForTest({OAuthServerConfiguration.class, EndpointUtil.class, ServiceURL.class,
         ServiceURLBuilder.class, IdentityTenantUtil.class,
         LoggerUtils.class, IdentityDatabaseUtil.class, IdentityUtil.class})
@@ -128,8 +130,8 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         super.cleanData();
     }
 
-    @DataProvider(name = "testDataProv")
-    public Object[][] testDataProv() {
+    @DataProvider(name = "testParDataProvider")
+    public Object[][] testParDataProvider() {
 
         Map<String, String[]> requestParams1 = createRequestParamsMap(new String[]{CLIENT_ID_VALUE},
                 new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE});
@@ -229,7 +231,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         };
     }
 
-    @Test(dataProvider = "testDataProv", groups = "testWithConnection")
+    @Test(dataProvider = "testParDataProvider", groups = "testWithConnection")
     public void testPar(Object requestParamsObj, Object paramMapObj, Object oAuthClientAuthnContextObj,
                         int expectedStatus, String expectedErrorCode, boolean testOAuthSystemException)
             throws Exception {
@@ -314,7 +316,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
             Object value = invocation.getArguments()[1];
             requestAttributes.put(key, value);
             return null;
-        }).when(httpServletRequest).setAttribute(anyString(), Matchers.anyObject());
+        }).when(httpServletRequest).setAttribute(anyString(), any());
 
         when(httpServletRequest.getParameterMap()).thenReturn(requestParams);
         when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(requestParams.keySet()));

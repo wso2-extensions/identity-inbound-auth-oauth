@@ -29,11 +29,16 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.HttpMethod;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * Test class for OAuthParRequestWrapper.
+ */
 public class OAuthParRequestWrapperTest {
 
     private static final String REQUEST_URI = "urn:ietf:params:oauth:par:request_uri:c0143cb3-7ae0-43a3" +
@@ -42,7 +47,6 @@ public class OAuthParRequestWrapperTest {
     private static final String APP_REDIRECT_URL = "http://localhost:8080/redirect";
     private static final String RESPONSE_TYPE = "code";
     private OAuthParRequestWrapper oAuthParRequestWrapper;
-    private Map<String, String> params;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -51,7 +55,7 @@ public class OAuthParRequestWrapperTest {
         requestParams1.put(OAuthConstants.OAuth20Params.REQUEST_URI, REQUEST_URI);
         requestParams1.put(OAuth.OAUTH_CLIENT_ID, CLIENT_ID_VALUE);
         HttpServletRequest request = mockHttpRequest(requestParams1);
-        params = new HashMap<>();
+        Map<String, String> params = new HashMap<>();
         params.put(OAuth.OAUTH_CLIENT_ID, CLIENT_ID_VALUE);
         params.put(OAuth.OAUTH_REDIRECT_URI, APP_REDIRECT_URL);
         params.put(OAuth.OAUTH_RESPONSE_TYPE, RESPONSE_TYPE);
@@ -61,19 +65,19 @@ public class OAuthParRequestWrapperTest {
     @Test
     public void testGetParameter() {
 
-        assert oAuthParRequestWrapper.getParameter(OAuth.OAUTH_CLIENT_ID).equals(CLIENT_ID_VALUE);
-        assert oAuthParRequestWrapper.getParameter(OAuth.OAUTH_REDIRECT_URI).equals(APP_REDIRECT_URL);
-        assert oAuthParRequestWrapper.getParameter(OAuth.OAUTH_RESPONSE_TYPE).equals(RESPONSE_TYPE);
-        assert oAuthParRequestWrapper.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI) == null;
+        assertEquals(CLIENT_ID_VALUE, oAuthParRequestWrapper.getParameter(OAuth.OAUTH_CLIENT_ID));
+        assertEquals(APP_REDIRECT_URL, oAuthParRequestWrapper.getParameter(OAuth.OAUTH_REDIRECT_URI));
+        assertEquals(RESPONSE_TYPE, oAuthParRequestWrapper.getParameter(OAuth.OAUTH_RESPONSE_TYPE));
+        assertNull(oAuthParRequestWrapper.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI));
     }
 
     @Test
     public void testGetParameterMap() {
 
-        assert oAuthParRequestWrapper.getParameterMap().get(OAuth.OAUTH_CLIENT_ID)[0].equals(CLIENT_ID_VALUE);
-        assert oAuthParRequestWrapper.getParameterMap().get(OAuth.OAUTH_REDIRECT_URI)[0].equals(APP_REDIRECT_URL);
-        assert oAuthParRequestWrapper.getParameterMap().get(OAuth.OAUTH_RESPONSE_TYPE)[0].equals(RESPONSE_TYPE);
-        assert oAuthParRequestWrapper.getParameterMap().get(OAuthConstants.OAuth20Params.REQUEST_URI) == null;
+        assertEquals(CLIENT_ID_VALUE, oAuthParRequestWrapper.getParameterMap().get(OAuth.OAUTH_CLIENT_ID)[0]);
+        assertEquals(APP_REDIRECT_URL, oAuthParRequestWrapper.getParameterMap().get(OAuth.OAUTH_REDIRECT_URI)[0]);
+        assertEquals(RESPONSE_TYPE, oAuthParRequestWrapper.getParameterMap().get(OAuth.OAUTH_RESPONSE_TYPE)[0]);
+        assertNull(oAuthParRequestWrapper.getParameterMap().get(OAuthConstants.OAuth20Params.REQUEST_URI));
     }
 
     private HttpServletRequest mockHttpRequest(final Map<String, String> requestParams) {

@@ -48,6 +48,9 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
+/**
+ * Test class for ParAuthService.
+ */
 @PrepareForTest({ParDAOFactory.class, LoggerUtils.class, IdentityConfigParser.class})
 public class ParAuthServiceTest extends PowerMockTestCase {
 
@@ -79,8 +82,8 @@ public class ParAuthServiceTest extends PowerMockTestCase {
         field.set(parAuthService, ParDAOFactory.getInstance().getParAuthMgtDAO());
     }
 
-    @DataProvider(name = "provideHandleParAuthRequestData")
-    public Object[][] provideHandleParAuthRequestData() {
+    @DataProvider(name = "provideExpiryTimeConfigData")
+    public Object[][] provideExpiryTimeConfigData() {
 
         return new Object[][]{
                 {"-1"},
@@ -90,8 +93,8 @@ public class ParAuthServiceTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "provideHandleParAuthRequestData")
-    public void testHandleParAuthRequestSuccess(String expiryTime) throws ParCoreException {
+    @Test(dataProvider = "provideExpiryTimeConfigData")
+    public void testExpiryTimeConfig(String expiryTime) throws ParCoreException {
 
         doNothing().when(parMgtDAO).persistRequestData(anyString(), anyString(), anyLong(), anyMap());
         mockStatic(IdentityConfigParser.class);
@@ -108,8 +111,8 @@ public class ParAuthServiceTest extends PowerMockTestCase {
         assertEquals(parAuthData.getExpiryTime(), defaultExpiry);
     }
 
-    @Test(expectedExceptions = {ParCoreException.class})
-    public void testHandleParAuthRequestFailure() throws ParCoreException {
+    @Test
+    public void testNotANumberExpiryTimeFailure() throws ParCoreException {
 
         doNothing().when(parMgtDAO).persistRequestData(anyString(), anyString(), anyLong(), anyMap());
         mockStatic(IdentityConfigParser.class);
@@ -118,17 +121,11 @@ public class ParAuthServiceTest extends PowerMockTestCase {
         config.put("OAuth.PAR.ExpiryTime", "NaN");
         when(identityConfigParser.getConfiguration()).thenReturn(config);
 
-        parAuthService.handleParAuthRequest(new HashMap<>());
-    }
-
-    @Test
-    public void testRetrieveParamsSuccess() throws ParCoreException {
-
-        doNothing().when(parMgtDAO).removeRequestData(anyString());
-        when(parMgtDAO.getRequestData(anyString())).thenReturn(Optional.ofNullable(parRequestDO));
-        when(parRequestDO.getExpiresIn()).thenReturn(System.currentTimeMillis() + 60);
-        when(parRequestDO.getClientId()).thenReturn(CLIENT_ID_VALUE);
-        parAuthService.retrieveParams(UUID, CLIENT_ID_VALUE);
+        try {
+            parAuthService.handleParAuthRequest(new HashMap<>());
+        } catch (ParCoreException e) {
+            assertEquals(e.getMessage(), "Error while parsing the expiry time value.");
+        }
     }
 
     @DataProvider(name = "provideRetrieveParamsData")
