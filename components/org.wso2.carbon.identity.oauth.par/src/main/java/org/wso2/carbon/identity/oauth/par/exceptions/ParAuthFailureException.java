@@ -45,4 +45,16 @@ public class ParAuthFailureException extends IdentityException {
 
         super(message, cause);
     }
+
+    /**
+     * Constructor with error code, error message and throwable.
+     *
+     * @param errorCode Error code.
+     * @param message Error message.
+     * @param cause Throwable.
+     */
+    public ParAuthFailureException(String errorCode, String message, Throwable cause) {
+
+        super(errorCode, message, cause);
+    }
 }

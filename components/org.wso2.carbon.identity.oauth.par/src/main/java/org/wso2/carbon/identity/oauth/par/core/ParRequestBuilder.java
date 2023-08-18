@@ -21,9 +21,11 @@ import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParAuthFailureException;
+import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.internal.ParAuthServiceComponentDataHolder;
 import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
@@ -52,8 +54,11 @@ public class ParRequestBuilder implements OAuthAuthorizationRequestBuilder {
         try {
             params = ParAuthServiceComponentDataHolder.getInstance().getParAuthService()
                     .retrieveParams(uuid, request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
+        } catch (ParClientException e) {
+            throw new ParAuthFailureException(e.getErrorCode(), e.getMessage(), e);
         } catch (ParCoreException e) {
-            throw new ParAuthFailureException("Error occurred while retrieving params from PAR request", e);
+            throw new ParAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
+                    "Error occurred while retrieving params from PAR request", e);
         }
         return new OAuthParRequestWrapper(request, params);
     }
