@@ -121,7 +121,7 @@ public class ParAuthServiceImpl implements ParAuthService {
         long currentTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis();
 
         if (currentTimeInMillis > expiresIn) {
-            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, "request_uri expired");
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, "Request uri expired");
         }
     }
 
