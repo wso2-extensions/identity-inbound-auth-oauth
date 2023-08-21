@@ -86,9 +86,15 @@ public class ParAuthServiceTest extends PowerMockTestCase {
     public Object[][] provideExpiryTimeConfigData() {
 
         return new Object[][]{
+                // invalid negative number
                 {"-1"},
+                // invalid zero
                 {"0"},
+                // valid positive integer
                 {"60"},
+                // invalid integer surpassing the max value
+                {"601"},
+                // no config value
                 {null}
         };
     }
@@ -111,14 +117,25 @@ public class ParAuthServiceTest extends PowerMockTestCase {
         assertEquals(parAuthData.getExpiryTime(), defaultExpiry);
     }
 
-    @Test
-    public void testNotANumberExpiryTimeFailure() throws ParCoreException {
+    @DataProvider(name = "provideNotANumberExpiryTimeConfigData")
+    public Object[][] provideNotANumberExpiryTimeConfigData() {
+
+        return new Object[][]{
+                // invalid string
+                {"NaN"},
+                // invalid decimal
+                {"50.45"}
+        };
+    }
+
+    @Test(dataProvider = "provideNotANumberExpiryTimeConfigData")
+    public void testNotANumberExpiryTimeFailure(String expiryTime) throws ParCoreException {
 
         doNothing().when(parMgtDAO).persistRequestData(anyString(), anyString(), anyLong(), anyMap());
         mockStatic(IdentityConfigParser.class);
         when(IdentityConfigParser.getInstance()).thenReturn(identityConfigParser);
         Map<String, Object> config = new HashMap<>();
-        config.put("OAuth.PAR.ExpiryTime", "NaN");
+        config.put("OAuth.PAR.ExpiryTime", expiryTime);
         when(identityConfigParser.getConfiguration()).thenReturn(config);
 
         try {

@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
+import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.json.JSONObject;
@@ -33,8 +34,13 @@ import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
+import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
+import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 import java.util.HashMap;
 import java.util.List;
@@ -51,9 +57,11 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUEST;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthAuthzRequest;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getParAuthService;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSPTenantDomainFromClientId;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 
 /**
@@ -221,7 +229,8 @@ public class OAuth2ParEndpoint {
     private void validateAuthzRequest(HttpServletRequest request) throws ParCoreException {
 
         try {
-            getOAuthAuthzRequest(request);
+            OAuthAuthzRequest oAuthAuthzRequest = getOAuthAuthzRequest(request);
+            validateRequestObject(oAuthAuthzRequest);
         } catch (OAuthProblemException e) {
             throw new ParClientException(e.getError(), e.getDescription(), e);
         } catch (OAuthSystemException e) {
@@ -234,6 +243,32 @@ public class OAuth2ParEndpoint {
         try {
             getOAuth2Service().validateInputParameters(request);
         } catch (InvalidOAuthRequestException e) {
+            throw new ParClientException(e.getErrorCode(), e.getMessage(), e);
+        }
+    }
+
+    private void validateRequestObject(OAuthAuthzRequest oAuthAuthzRequest) throws ParCoreException {
+
+        try {
+            if (OAuth2Util.isOIDCAuthzRequest(oAuthAuthzRequest.getScopes()) &&
+                    StringUtils.isNotBlank(oAuthAuthzRequest.getParam(REQUEST))) {
+
+                OAuth2Parameters parameters = new OAuth2Parameters();
+                parameters.setClientId(oAuthAuthzRequest.getClientId());
+                parameters.setRedirectURI(oAuthAuthzRequest.getRedirectURI());
+                parameters.setResponseType(oAuthAuthzRequest.getResponseType());
+                parameters.setTenantDomain(getSPTenantDomainFromClientId(oAuthAuthzRequest.getClientId()));
+
+                RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, parameters);
+                if (requestObject == null) {
+                    throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, ParConstants.INVALID_REQUEST_OBJECT);
+                }
+            }
+        } catch (RequestObjectException e) {
+
+            if (OAuth2ErrorCodes.SERVER_ERROR.equals(e.getErrorCode())) {
+                throw new ParCoreException(e.getErrorCode(), e.getMessage(), e);
+            }
             throw new ParClientException(e.getErrorCode(), e.getMessage(), e);
         }
     }
