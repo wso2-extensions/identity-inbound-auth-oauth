@@ -265,7 +265,6 @@ public class OAuth2ParEndpoint {
                 }
             }
         } catch (RequestObjectException e) {
-
             if (OAuth2ErrorCodes.SERVER_ERROR.equals(e.getErrorCode())) {
                 throw new ParCoreException(e.getErrorCode(), e.getMessage(), e);
             }

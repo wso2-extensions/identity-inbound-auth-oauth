@@ -44,6 +44,8 @@ import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
+import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 import java.nio.file.Paths;
 import java.util.Collections;
@@ -74,9 +76,9 @@ import static org.testng.Assert.assertTrue;
 /**
  * Test class for OAuth2ParEndpoint.
  */
-@PrepareForTest({OAuthServerConfiguration.class, EndpointUtil.class, ServiceURL.class,
-        ServiceURLBuilder.class, IdentityTenantUtil.class,
-        LoggerUtils.class, IdentityDatabaseUtil.class, IdentityUtil.class})
+@PrepareForTest({OAuthServerConfiguration.class, EndpointUtil.class, ServiceURL.class, ServiceURLBuilder.class,
+        IdentityTenantUtil.class, LoggerUtils.class, IdentityDatabaseUtil.class, IdentityUtil.class,
+        OIDCRequestObjectUtil.class})
 public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -157,6 +159,11 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                 createRequestParamsMap(new String[]{CLIENT_ID_VALUE}, new String[]{"http://localhost:8080" +
                                 "/invalid-redirect"}, new String[]{RESPONSE_TYPE});
 
+        Map<String, String[]> requestParams8 = createRequestParamsMap(new String[]{CLIENT_ID_VALUE},
+                new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE});
+        requestParams8.put(OAuthConstants.OAuth20Params.SCOPE, new String[]{"openid"});
+        requestParams8.put(OAuthConstants.OAuth20Params.REQUEST, new String[]{"dummyRequest"});
+
         MultivaluedMap<String, String> paramMap1 = new MultivaluedHashMap<>();
         paramMap1.add(OAuth.OAUTH_CLIENT_ID, CLIENT_ID_VALUE);
         paramMap1.add(OAuth.OAUTH_REDIRECT_URI, APP_REDIRECT_URL);
@@ -228,6 +235,8 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                         HttpServletResponse.SC_INTERNAL_SERVER_ERROR, OAuth2ErrorCodes.SERVER_ERROR, true},
                 // Request that contains form param with empty value. Will ignore the empty value and return success.
                 {requestParams1, paramMap3, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false},
+                // Request with request object. Will return success.
+                {requestParams8, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false},
         };
     }
 
@@ -264,6 +273,9 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         when(parAuthService.handleParAuthRequest(any())).thenReturn(parAuthData);
         when(parAuthData.getrequestURIReference()).thenReturn(REQUEST_URI_REF);
         when(parAuthData.getExpiryTime()).thenReturn(EXPIRY_TIME);
+
+        mockStatic(OIDCRequestObjectUtil.class);
+        when(OIDCRequestObjectUtil.buildRequestObject(any(), any())).thenReturn(new RequestObject());
 
         Response response;
         response = oAuth2ParEndpoint.par(request, httpServletResponse, paramMap);
