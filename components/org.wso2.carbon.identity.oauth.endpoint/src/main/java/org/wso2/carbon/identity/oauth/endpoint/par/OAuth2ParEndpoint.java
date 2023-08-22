@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticat
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
+import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
@@ -131,7 +132,8 @@ public class OAuth2ParEndpoint {
 
         Response.ResponseBuilder responseBuilder;
         if (OAuth2ErrorCodes.INVALID_CLIENT.equals(errorCode)) {
-            responseBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED);
+            responseBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED)
+                    .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, EndpointUtil.getRealmInfo());
         } else {
             responseBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
         }

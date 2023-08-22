@@ -128,18 +128,19 @@ public class ParAuthServiceImpl implements ParAuthService {
     private void validateClientID(String clientId, String parClientId) throws ParClientException {
 
         if (!StringUtils.equals(parClientId, clientId)) {
-            throw new ParClientException(OAuth2ErrorCodes.INVALID_CLIENT,
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
                     String.format("Received client_id %s does not match the client_id from the initial PAR request %s",
                             clientId, parClientId));
         }
     }
 
-    private static long getExpiresInValue() throws ParCoreException {
+    private static int getExpiresInValue() throws ParCoreException {
 
         try {
-            Object expiryTimeValue = IdentityConfigParser.getInstance().getConfiguration().get(PAR_EXPIRY_TIME);
-            if (expiryTimeValue != null && (StringUtils.isNotBlank((String) expiryTimeValue))) {
-                long expiryTime = Long.parseLong(((String) expiryTimeValue).trim());
+            String expiryTimeValue =
+                    (String) IdentityConfigParser.getInstance().getConfiguration().get(PAR_EXPIRY_TIME);
+            if ((StringUtils.isNotBlank(expiryTimeValue))) {
+                int expiryTime = Integer.parseInt((expiryTimeValue).trim());
                 if (expiryTime > 0 && expiryTime <= 600) {
                     return expiryTime;
                 }
