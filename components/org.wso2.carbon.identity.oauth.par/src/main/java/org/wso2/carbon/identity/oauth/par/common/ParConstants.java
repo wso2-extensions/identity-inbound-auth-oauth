@@ -23,7 +23,7 @@ package org.wso2.carbon.identity.oauth.par.common;
  */
 public class ParConstants {
 
-    public static final long EXPIRES_IN_DEFAULT_VALUE = 60;
+    public static final int EXPIRES_IN_DEFAULT_VALUE = 60;
     public static final long SEC_TO_MILLISEC_FACTOR = 1000;
     public static final String UTC = "UTC";
     public static final String EXPIRES_IN = "expires_in";
@@ -40,8 +40,9 @@ public class ParConstants {
     public static final String PAR_CLIENT_AUTH_ERROR = "Client Authentication Failed.";
     public static final String CLIENT_AUTH_REQUIRED_ERROR = "Client authentication required.";
     public static final String INTERNAL_SERVER_ERROR = "Internal Server Error.";
-    public static final String INVALID_REQUEST_URI_FORMAT = "Invalid request_uri format";
     public static final String INVALID_CLIENT_ERROR = "A valid OAuth client could not be found for client_id: ";
+    public static final String INVALID_REQUEST_OBJECT = "Unable to build a valid Request Object from the" +
+            " pushed authorization request.";
 
     private ParConstants() {
 
