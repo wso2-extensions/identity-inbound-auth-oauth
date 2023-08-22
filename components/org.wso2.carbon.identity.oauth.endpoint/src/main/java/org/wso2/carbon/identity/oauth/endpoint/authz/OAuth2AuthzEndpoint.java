@@ -1566,7 +1566,7 @@ public class OAuth2AuthzEndpoint {
             if (oauth2Params != null) {
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
                         .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
-                        .inputParam(LogConstants.InputKeys.REDIREDCT_URI, oauth2Params.getRedirectURI())
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.REDIRECT_URI, oauth2Params.getRedirectURI())
                         .inputParam(LogConstants.InputKeys.SCOPE, oauth2Params.getScopes())
                         .inputParam(RESPONSE_TYPE, oauth2Params.getResponseType());
             }
@@ -1602,7 +1602,7 @@ public class OAuth2AuthzEndpoint {
             if (oauth2Params != null) {
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
                         .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
-                        .inputParam(LogConstants.InputKeys.REDIREDCT_URI, oauth2Params.getRedirectURI())
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.REDIRECT_URI, oauth2Params.getRedirectURI())
                         .inputParam(LogConstants.InputKeys.SCOPE, oauth2Params.getScopes())
                         .inputParam(RESPONSE_TYPE, oauth2Params.getResponseType());
             }
@@ -1627,7 +1627,7 @@ public class OAuth2AuthzEndpoint {
                     OAuthConstants.LogConstants.ActionIDs.VALIDATE_SCOPES_BEFORE_CONSENT);
             diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
                     .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
-                    .inputParam(LogConstants.InputKeys.REDIREDCT_URI, authzRespDTO.getCallbackURI())
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.REDIRECT_URI, authzRespDTO.getCallbackURI())
                     .resultMessage("Error occurred when processing the authorization request before consent. " +
                             authzRespDTO.getErrorMsg())
                     .resultStatus(DiagnosticLog.ResultStatus.FAILED)
@@ -1695,7 +1695,7 @@ public class OAuth2AuthzEndpoint {
                     OAuthConstants.LogConstants.ActionIDs.HANDLE_AUTHORIZATION);
             diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
                     .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oauth2Params.getApplicationName())
-                    .inputParam(LogConstants.InputKeys.REDIREDCT_URI, redirectURL)
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.REDIRECT_URI, redirectURL)
                     .inputParam(RESPONSE_TYPE, oauth2Params.getResponseMode())
                     .inputParam("authorized scopes", authzRespDTO.getScope())
                     .resultMessage("Successfully generated oauth response.")
@@ -2498,7 +2498,8 @@ public class OAuth2AuthzEndpoint {
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
                         OAuthConstants.LogConstants.ActionIDs.VALIDATE_OAUTH_CLIENT)
                         .inputParam("request", oauthRequest.getParam(REQUEST))
-                        .inputParam(LogConstants.InputKeys.REDIREDCT_URI, oauthRequest.getParam(REQUEST_URI))
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.REDIRECT_URI,
+                                oauthRequest.getParam(REQUEST_URI))
                         .resultMessage("'request' and 'request_uri' parameters associated with the same " +
                                 "authorization request.")
                         .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)

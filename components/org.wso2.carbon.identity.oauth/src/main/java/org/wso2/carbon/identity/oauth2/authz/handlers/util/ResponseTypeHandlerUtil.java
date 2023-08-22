@@ -323,7 +323,8 @@ public class ResponseTypeHandlerUtil {
                     .resultMessage("Authorization Code issued successfully.")
                     .inputParam(OAuthConstants.LogConstants.InputKeys.REQUESTED_SCOPES,
                             OAuth2Util.buildScopeString(authorizationReqDTO.getScopes()))
-                    .inputParam(LogConstants.InputKeys.REDIREDCT_URI, authorizationReqDTO.getCallbackUrl())
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.REDIRECT_URI,
+                            authorizationReqDTO.getCallbackUrl())
                     .inputParam("authz code validity period (ms)", String.valueOf(validityPeriod))
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             if (authorizationReqDTO.getUser() != null) {
