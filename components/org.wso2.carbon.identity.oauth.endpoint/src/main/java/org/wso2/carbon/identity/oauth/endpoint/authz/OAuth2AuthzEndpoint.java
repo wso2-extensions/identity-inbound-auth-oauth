@@ -723,13 +723,13 @@ public class OAuth2AuthzEndpoint {
                                     "Therefore handling post consent is not applicable.");
                 }
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", clientId);
-                    Map<String, Object> configs = new HashMap<>();
-                    configs.put("skipConsent", "true");
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.SUCCESS, "Consent is disabled for the OAuth client.",
-                            "handle-consent", configs);
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "handle-consent")
+                            .inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
+                            .configParam("skip consent", "true")
+                            .resultMessage("Consent is disabled for the OAuth client.")
+                            .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION));
                 }
                 return;
             }
@@ -766,26 +766,33 @@ public class OAuth2AuthzEndpoint {
             }
 
             Map<String, Object> params;
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.HAND_OVER_TO_CONSENT_SERVICE)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.PROMPT, oauth2Params.getPrompt())
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
+            }
             if (hasPromptContainsConsent(oauth2Params)) {
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    params = new HashMap<>();
-                    params.put("clientId", clientId);
-                    params.put("prompt", oauth2Params.getPrompt());
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.SUCCESS, "Prompt for consent is enabled. Overriding the " +
-                                    "existing consent and handing over to consent service.", "hand-over-to-consent" +
-                                    "-service", null);
+                if (diagnosticLogBuilder != null) {
+                    // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+                    diagnosticLogBuilder.resultMessage("Prompt for consent is enabled. Overriding the existing " +
+                            "consent and handing over to consent service.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
                         loggedInUser, value, true);
             } else {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    params = new HashMap<>();
-                    params.put("clientId", clientId);
-                    params.put("prompt", oauth2Params.getPrompt());
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.SUCCESS, "Prompt for consent is not enabled. " +
-                                    "Handing over to consent service.", "hand-over-to-consent-service", null);
+                    if (diagnosticLogBuilder != null) {
+                        // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+                        diagnosticLogBuilder.resultMessage("Prompt for consent is not enabled. Handing over to " +
+                                "consent service.");
+                        LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+                    }
                 }
                 getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
                         loggedInUser, value, false);
@@ -793,26 +800,37 @@ public class OAuth2AuthzEndpoint {
 
         } catch (OAuthSystemException | SSOConsentServiceException e) {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                        OAuthConstants.LogConstants.FAILED, "System error occurred.", "process-consent", null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.PROCESS_CONSENT)
+                        .resultMessage("System error occurred.")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION));
             }
             String msg = "Error while processing consent of user: " + loggedInUser.toFullQualifiedUsername() + " for " +
                     "client_id: " + clientId + " of tenantDomain: " + spTenantDomain;
             throw new ConsentHandlingFailedException(msg, e);
         } catch (ClaimMetadataException e) {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                        OAuthConstants.LogConstants.FAILED,
-                        String.format("Error occurred while getting " + "claim mappings for %s.", OIDC_DIALECT),
-                        "process-consent", null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.PROCESS_CONSENT)
+                        .resultMessage(String.format("Error occurred while getting claim mappings for %s.",
+                                OIDC_DIALECT))
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION));
             }
             throw new ConsentHandlingFailedException("Error while getting claim mappings for " + OIDC_DIALECT, e);
         } catch (RequestObjectException e) {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                        OAuthConstants.LogConstants.FAILED,
-                        String.format("Error occurred while getting essential claims for the session data key : %s.",
-                                oauth2Params.getSessionDataKey()), "process-consent", null);
+
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.PROCESS_CONSENT)
+                        .resultMessage(String.format("Error occurred while getting essential claims " +
+                                                "for the session data key : %s.", oauth2Params.getSessionDataKey()))
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION));
             }
             throw new ConsentHandlingFailedException("Error while getting essential claims for the session data key " +
                     ": " + oauth2Params.getSessionDataKey(), e);
@@ -1082,21 +1100,25 @@ public class OAuth2AuthzEndpoint {
 
             } else {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", oAuthMessage.getClientId());
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "Authentication failed.", "validate-authn-status",
-                            null);
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.VALIDATE_AUTHENTICATION_RESPONSE)
+                            .inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getApplicationName())
+                            .resultMessage("Authentication failed.")
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION));
                 }
                 return handleFailedAuthentication(oAuthMessage, oauth2Params, authnResult, authorizationResponseDTO);
             }
         } else {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", oAuthMessage.getClientId());
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Authentication status is empty.", "validate-authn-status",
-                        null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_AUTHENTICATION_RESPONSE)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getApplicationName())
+                        .resultMessage("Authentication status is empty")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION));
             }
             return handleEmptyAuthenticationResult(oAuthMessage, authorizationResponseDTO);
         }
@@ -1633,14 +1655,14 @@ public class OAuth2AuthzEndpoint {
                 tokenBindingValue = tokenBinder.getOrGenerateTokenBindingValue(oAuthMessage.getRequest());
                 tokenBinder.setTokenBindingValueForResponse(oAuthMessage.getResponse(), tokenBindingValue);
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", oauth2Params.getClientId());
-                    params.put("tokenBindingValue", tokenBindingValue);
-                    Map<String, Object> configs = new HashMap<>();
-                    configs.put("tokenBinderType", tokenBinder.getBindingType());
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.SUCCESS, "Successfully generated token binding value.",
-                            "generate-token-binding-value", configs);
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "generate-token-binding-value")
+                            .inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
+                            .inputParam("token binding value", tokenBindingValue)
+                            .configParam("token binder type", tokenBinder.getBindingType())
+                            .resultMessage("Successfully generated token binding value.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
                 }
             }
             setAuthorizationCode(oAuthMessage, authzRespDTO, builder, tokenBindingValue, oauth2Params,
@@ -1803,10 +1825,15 @@ public class OAuth2AuthzEndpoint {
             return accessTokenExtendedAttributes;
         } catch (Exception e) {
             String msg = "Error occurred when processing consent response request from tenant: " +
-                    oauth2Params.getTenantDomain() + " application: " + oauth2Params.getClientId() + "after consent.";
+                    oauth2Params.getTenantDomain() + "after consent.";
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                        OAuthConstants.LogConstants.FAILED, msg, "authorize-client", null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,  "authorize-client")
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
+                        .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                        .resultMessage(msg)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
             log.warn(msg, e);
         }
@@ -1943,11 +1970,13 @@ public class OAuth2AuthzEndpoint {
         } else {
             populateValidationResponseWithAppDetail(oAuthMessage, validationResponse);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> logParams = new HashMap<>();
-                logParams.put("clientId", oAuthMessage.getClientId());
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, logParams,
-                        OAuthConstants.LogConstants.SUCCESS, "OAuth client validation is successful.",
-                        "validate-oauth-client", null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_OAUTH_CLIENT)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuthMessage.getClientId())
+                        .resultMessage("OAuth client validation is successful.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
             }
             String tenantDomain = EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
             setSPAttributeToRequest(oAuthMessage.getRequest(), validationResponse.getApplicationName(), tenantDomain);
@@ -1977,9 +2006,14 @@ public class OAuth2AuthzEndpoint {
 
         addDataToSessionCache(oAuthMessage, params, sessionDataKey);
 
-        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                OAuthConstants.LogConstants.SUCCESS, "OIDC request input parameter validation is successful.",
-                "validate-input-parameters", null);
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS)
+                    .resultMessage("OIDC request input parameter validation is successful.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
+        }
 
         try {
             oAuthMessage.getRequest().setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus
@@ -2035,14 +2069,20 @@ public class OAuth2AuthzEndpoint {
      */
     private void validateNonceParameter(String nonce) throws OAuthProblemException {
 
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS);
+            diagnosticLogBuilder.inputParam("nonce", nonce)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+        }
         if (StringUtils.isBlank(nonce)) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> logParams = new HashMap<>();
-                logParams.put("nonce", nonce);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, logParams,
-                        OAuthConstants.LogConstants.FAILED,
-                        "'response_type' contains 'id_token' but 'nonce' param not found.", "validate-input-parameters",
-                        null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+                diagnosticLogBuilder.resultMessage("'response_type' contains 'id_token' but 'nonce' param not found.")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw OAuthProblemException.error(OAuthError.TokenResponse.INVALID_REQUEST)
                     .description("\'response_type\' contains \'id_token\'; but \'nonce\' parameter not found");
@@ -2050,12 +2090,11 @@ public class OAuth2AuthzEndpoint {
         if (log.isDebugEnabled()) {
             log.debug("Mandatory " + NONCE + " parameter is successfully validated");
         }
-        if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            Map<String, Object> logParams = new HashMap<>();
-            logParams.put("nonce", nonce);
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, logParams,
-                    OAuthConstants.LogConstants.SUCCESS, "'nonce' parameter validation is successful.",
-                    "validate-input-parameters", null);
+        if (diagnosticLogBuilder != null) {
+            // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+            diagnosticLogBuilder.resultMessage("'nonce' parameter validation is successful.")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
     }
 
@@ -2099,18 +2138,25 @@ public class OAuth2AuthzEndpoint {
         List promptsList = getSupportedPromtsValues();
         boolean containsNone = (OAuthConstants.Prompt.NONE).equals(prompt);
 
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS);
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, params.getClientId())
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.PROMPT, prompt)
+                    .configParam("serverSupportedPrompts", promptsList)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+        }
         if (StringUtils.isNotBlank(prompt)) {
             List requestedPrompts = getRequestedPromptList(prompt);
             if (!CollectionUtils.containsAny(requestedPrompts, promptsList)) {
                 String message = "Invalid prompt variables passed with the authorization request";
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> logParams = new HashMap<>();
-                    logParams.put("prompt", prompt);
-                    logParams.put("clientId", params.getClientId());
-                    Map<String, Object> configs = new HashMap<>();
-                    configs.put("serverSupportedPrompts", promptsList);
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, logParams,
-                            OAuthConstants.LogConstants.FAILED, message, "validate-input-parameters", configs);
+                if (diagnosticLogBuilder != null) {
+                    // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+                    diagnosticLogBuilder.resultMessage(message);
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 return handleInvalidPromptValues(oAuthMessage, params, prompt, message);
             }
@@ -2121,16 +2167,10 @@ public class OAuth2AuthzEndpoint {
                     String message =
                             "Invalid prompt variable combination. The value 'none' cannot be used with others " +
                                     "prompts. Prompt: ";
-                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                        Map<String, Object> logParams = new HashMap<>();
-                        logParams.put("prompt", prompt);
-                        logParams.put("clientId", params.getClientId());
-                        Map<String, Object> configs = new HashMap<>();
-                        configs.put("serverSupportedPrompts", promptsList);
-                        LoggerUtils
-                                .triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, logParams,
-                                        OAuthConstants.LogConstants.FAILED, message, "validate-input-parameters",
-                                        configs);
+                    if (diagnosticLogBuilder != null) {
+                        // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+                        diagnosticLogBuilder.resultMessage(message);
+                        LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                     }
                     return handleInvalidPromptValues(oAuthMessage, params, prompt, message);
 
@@ -2182,22 +2222,26 @@ public class OAuth2AuthzEndpoint {
 
         OAuth2Parameters oAuth2Parameters = getOAuth2ParamsFromOAuthMessage(oAuthMessage);
 
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_PKCE)
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuth2Parameters.getClientId())
+                    .inputParam("PKCE challenge", pkceChallengeCode)
+                    .inputParam("PKCE method", pkceChallengeMethod)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+        }
         // Check if PKCE is mandatory for the application
         if (validationResponse.isPkceMandatory()) {
             if (pkceChallengeCode == null || !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode,
                     pkceChallengeMethod)) {
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", oAuth2Parameters.getClientId());
-                    params.put("pkceChallenge", pkceChallengeCode);
-                    params.put("pkceMethod", pkceChallengeMethod);
-
-                    Map<String, Object> configs = new HashMap<>();
-                    configs.put("isPkceMandatory", "true");
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED,
-                            "PKCE Challenge is not provided or is not upto RFC 7636 specification.", "validate-pkce",
-                            configs);
+                if (diagnosticLogBuilder != null) {
+                    // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+                    diagnosticLogBuilder.configParam("is PKCE mandatory", "true")
+                            .resultMessage("PKCE Challenge is not provided or is not upto RFC 7636 specification.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
                         .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE, "PKCE is mandatory for this application. " +
@@ -2209,18 +2253,12 @@ public class OAuth2AuthzEndpoint {
         if (pkceChallengeCode != null && pkceChallengeMethod != null) {
             if (!OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(pkceChallengeMethod) &&
                     !OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(pkceChallengeMethod)) {
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", oAuth2Parameters.getClientId());
-                    params.put("pkceChallenge", pkceChallengeCode);
-                    params.put("pkceMethod", pkceChallengeMethod);
-
-                    Map<String, Object> configs = new HashMap<>();
-                    configs.put("isPkceMandatory", Boolean.toString(validationResponse.isPkceMandatory()));
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED,
-                            "Unsupported PKCE Challenge Method.", "validate-pkce",
-                            configs);
+                if (diagnosticLogBuilder != null) {
+                    // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+                    diagnosticLogBuilder.configParam("is PKCE mandatory",
+                                    Boolean.toString(validationResponse.isPkceMandatory()))
+                            .resultMessage("Unsupported PKCE Challenge Method.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
                                 .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE,
@@ -2231,19 +2269,13 @@ public class OAuth2AuthzEndpoint {
         // Check if "plain" transformation algorithm is disabled for the application
         if (pkceChallengeCode != null && !validationResponse.isPkceSupportPlain()) {
             if (pkceChallengeMethod == null || OAuthConstants.OAUTH_PKCE_PLAIN_CHALLENGE.equals(pkceChallengeMethod)) {
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", oAuth2Parameters.getClientId());
-                    params.put("pkceChallenge", pkceChallengeCode);
-                    params.put("pkceMethod", pkceChallengeMethod);
-
-                    Map<String, Object> configs = new HashMap<>();
-                    configs.put("isPkceMandatory", Boolean.toString(validationResponse.isPkceMandatory()));
-                    configs.put("isPkceSupportPlain", "false");
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED,
-                            "OAuth client does not support 'plain' transformation algorithm.", "validate-pkce",
-                            configs);
+                if (diagnosticLogBuilder != null) {
+                    // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+                    diagnosticLogBuilder.configParam("is PKCE mandatory",
+                                    Boolean.toString(validationResponse.isPkceMandatory()))
+                            .configParam("is PKCE support plain", "false")
+                            .resultMessage("OAuth client does not support 'plain' transformation algorithm.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
                         .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE, "This application does not support " +
@@ -2254,24 +2286,22 @@ public class OAuth2AuthzEndpoint {
         // If PKCE challenge code was sent, check if the code challenge is upto specifications
         if (pkceChallengeCode != null && !OAuth2Util.validatePKCECodeChallenge(pkceChallengeCode,
                 pkceChallengeMethod)) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", oAuth2Parameters.getClientId());
-                params.put("pkceChallenge", pkceChallengeCode);
-                params.put("pkceMethod", pkceChallengeMethod);
-
-                Map<String, Object> configs = new HashMap<>();
-                configs.put("isPkceMandatory", Boolean.toString(validationResponse.isPkceMandatory()));
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Code challenge used is not up to RFC 7636 specifications.",
-                        "validate-pkce", configs);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+                diagnosticLogBuilder.configParam("is PKCE mandatory",
+                                Boolean.toString(validationResponse.isPkceMandatory()))
+                        .resultMessage("Code challenge used is not up to RFC 7636 specifications.");
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             return getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
                     .OAuth2SubErrorCodes.INVALID_PKCE_CHALLENGE_CODE, "Code challenge used is not up to RFC 7636 " +
                     "specifications.", null, oAuth2Parameters);
         }
-        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                OAuthConstants.LogConstants.SUCCESS, "PKCE validation is successful.", "validate-pkce", null);
+        if (diagnosticLogBuilder != null) {
+            diagnosticLogBuilder.resultMessage("PKCE validation is successful.")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+        }
         return null;
     }
 
@@ -2423,12 +2453,14 @@ public class OAuth2AuthzEndpoint {
                     log.debug("Invalid max_age parameter: '" + maxAgeParam + "' sent in the authorization request.");
                 }
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> logParams = new HashMap<>();
-                    logParams.put("clientId", params.getClientId());
-                    logParams.put("maxAge", maxAgeParam);
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, logParams,
-                            OAuthConstants.LogConstants.FAILED, "Invalid max_age paramter value",
-                            "validate-input-parameters", null);
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS)
+                            .inputParam(LogConstants.InputKeys.CLIENT_ID, params.getClientId())
+                            .inputParam("max age", maxAgeParam)
+                            .resultMessage("Invalid max_age parameter value.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED));
                 }
                 throw new InvalidRequestException("Invalid max_age parameter value sent in the authorization request" +
                         ".", OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_PARAMETERS);
@@ -2462,12 +2494,16 @@ public class OAuth2AuthzEndpoint {
         if (StringUtils.isNotEmpty(oauthRequest.getParam(REQUEST)) && StringUtils.isNotEmpty(oauthRequest.getParam
                 (REQUEST_URI))) {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("request", oauthRequest.getParam(REQUEST));
-                params.put("request_uri", oauthRequest.getParam(REQUEST_URI));
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "request and request_uri parameters associated with the " +
-                                "same authorization request", "validate-oauth-client", null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_OAUTH_CLIENT)
+                        .inputParam("request", oauthRequest.getParam(REQUEST))
+                        .inputParam(LogConstants.InputKeys.REDIREDCT_URI, oauthRequest.getParam(REQUEST_URI))
+                        .resultMessage("'request' and 'request_uri' parameters associated with the same " +
+                                "authorization request.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED
+                ));
             }
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Both request and " +
                     "request_uri parameters can not be associated with the same authorization request.");
@@ -2494,9 +2530,14 @@ public class OAuth2AuthzEndpoint {
         // so validating if the registered redirect uri is a single uri that can be properly redirected.
         if (StringUtils.isBlank(parameters.getRedirectURI()) ||
                 StringUtils.startsWith(parameters.getRedirectURI(), REGEX_PATTERN)) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "Redirect URI is not present in the authorization request.",
-                    "validate-input-parameters", null);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS)
+                        .resultMessage("Redirect URI is not present in the authorization request.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+            }
             throw new InvalidRequestException("Redirect URI is not present in the authorization request.",
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
@@ -2552,10 +2593,15 @@ public class OAuth2AuthzEndpoint {
                     oAuthMessage.getRequest().setAttribute(ACR_VALUES, acrRequestedValues);
                 }
             }
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.SUCCESS,
-                    "Successfully overridden the parameters in authorization request with the parameters " +
-                            "available in request object.", "override-authz-parameters", null);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.OVERRIDE_AUTHZ_PARAMS)
+                        .resultMessage("Successfully overridden the parameters in authorization request with the " +
+                                "parameters available in request object.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
+            }
         }
     }
 
@@ -2715,24 +2761,24 @@ public class OAuth2AuthzEndpoint {
             String clientId = oauth2Params.getClientId();
             OpenIDConnectUserRPStore.getInstance().removeConsentForUser(authenticatedUser, clientId);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", oauth2Params.getClientId());
-                params.put("prompt", oauth2Params.getPrompt());
-                if (authenticatedUser != null) {
-                    try {
-                        params.put("user", authenticatedUser.getUserId());
-                    } catch (UserIdNotFoundException e) {
-                        if (StringUtils.isNotBlank(authenticatedUser.getAuthenticatedSubjectIdentifier())) {
-                            params.put("user", LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(
-                                    authenticatedUser.getAuthenticatedSubjectIdentifier()) : authenticatedUser
-                                    .getAuthenticatedSubjectIdentifier());
-                        }
+                DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.REMOVE_USER_CONSENT);
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.PROMPT, oauth2Params.getPrompt())
+                        .resultMessage("'prompt' contains consent. Hence existing user consent is revoked.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
+                try {
+                    diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER_ID, authenticatedUser.getUserId());
+                } catch (UserIdNotFoundException e) {
+                    if (StringUtils.isNotBlank(authenticatedUser.getAuthenticatedSubjectIdentifier())) {
+                        diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER, LoggerUtils.isLogMaskingEnable ?
+                                LoggerUtils.getMaskedContent(authenticatedUser.getAuthenticatedSubjectIdentifier())
+                                : authenticatedUser.getAuthenticatedSubjectIdentifier());
                     }
                 }
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.SUCCESS,
-                        "'prompt' contains consent. Hence existing user consent is revoked.", "remove-user-consent",
-                        null);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             if (log.isDebugEnabled()) {
                 log.debug("Prompt parameter contains 'consent'. Existing consents for user: "
@@ -2851,11 +2897,13 @@ public class OAuth2AuthzEndpoint {
             preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, user);
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            Map<String, Object> params = new HashMap<>();
-            params.put("clientId", clientId);
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                    OAuthConstants.LogConstants.SUCCESS, "Redirecting to Consent Page URL.", "prompt-consent-page",
-                    null);
+            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.PROMPT_CONSENT_PAGE)
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
+                    .resultMessage("Redirecting to Consent Page URL.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
         }
         return getUserConsentURL(sessionDataKey, oauth2Params, user, preConsent, oAuthMessage);
     }
@@ -2873,12 +2921,13 @@ public class OAuth2AuthzEndpoint {
             // http://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
             sessionState.setAddSessionState(true);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", oauth2Params.getClientId());
-                params.put("prompt", oauth2Params.getPrompt());
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "Request with 'prompt=none' but user session does not exist", "validate-user-session", null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_USER_SESSION)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
+                        .resultMessage("Request with 'prompt=none' but user session does not exist.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
             throw OAuthProblemException.error(OAuth2ErrorCodes.LOGIN_REQUIRED,
                     "Request with \'prompt=none\' but user session does not exist");
@@ -2980,6 +3029,15 @@ public class OAuth2AuthzEndpoint {
             return StringUtils.EMPTY;
         }
 
+        DiagnosticLog.DiagnosticLogBuilder errorDiagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            errorDiagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.GENERATE_CONSENT_CLAIMS)
+                    .inputParams(params)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+        }
         try {
             ConsentClaimsData claimsForApproval = getConsentRequiredClaims(user, serviceProvider, useExistingConsents,
                     oauth2Params);
@@ -3005,23 +3063,31 @@ public class OAuth2AuthzEndpoint {
                 additionalQueryParam = buildQueryParamString(requestClaimsQueryParam, mandatoryClaimsQueryParam);
             }
         } catch (UnsupportedEncodingException | SSOConsentServiceException e) {
-            String msg = "Error while handling user consent for claim for user: " + user.toFullQualifiedUsername() +
-                    " for client_id: " + clientId + " of tenantDomain: " + spTenantDomain;
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "System error occurred.", "generate-consent-claims", null);
+            String username = LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(
+                    user.toFullQualifiedUsername()) : user.toFullQualifiedUsername();
+            String msg = "Error while handling user consent for claim for user: " + username + " for client_id: " +
+                    clientId + " of tenantDomain: " + spTenantDomain;
+            if (errorDiagnosticLogBuilder != null) {
+                // errorDiagnosticLogBuilder is not null only if diagnostic logs are enabled.
+                errorDiagnosticLogBuilder.inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                        .resultMessage(msg);
+                LoggerUtils.triggerDiagnosticLogEvent(errorDiagnosticLogBuilder);
             }
             throw new ConsentHandlingFailedException(msg, e);
         } catch (ClaimMetadataException e) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "System error occurred.", "generate-consent-claims", null);
+            if (errorDiagnosticLogBuilder != null) {
+                // errorDiagnosticLogBuilder is not null only if diagnostic logs are enabled.
+                errorDiagnosticLogBuilder.inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                        .resultMessage("System error occurred.");
+                LoggerUtils.triggerDiagnosticLogEvent(errorDiagnosticLogBuilder);
             }
             throw new ConsentHandlingFailedException("Error while getting claim mappings for " + OIDC_DIALECT, e);
         } catch (RequestObjectException e) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "System error occurred.", "generate-consent-claims", null);
+            if (errorDiagnosticLogBuilder != null) {
+                // errorDiagnosticLogBuilder is not null only if diagnostic logs are enabled.
+                errorDiagnosticLogBuilder.inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                        .resultMessage("System error occurred.");
+                LoggerUtils.triggerDiagnosticLogEvent(errorDiagnosticLogBuilder);
             }
             throw new ConsentHandlingFailedException("Error while getting essential claims for the session data key " +
                     ": " + oauth2Params.getSessionDataKey(), e);
@@ -3212,17 +3278,24 @@ public class OAuth2AuthzEndpoint {
             ConsentHandlingFailedException, OAuthProblemException {
 
         sessionState.setAddSessionState(true);
-        Map<String, Object> params = new HashMap<>();
-        params.put("clientId", oauth2Params.getClientId());
-        params.put("prompt", oauth2Params.getPrompt());
-        params.put("idTokenHint", oauth2Params.getIDTokenHint());
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_ID_TOKEN_HINT);
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.PROMPT, oauth2Params.getPrompt())
+                    .inputParam("id token hint", oauth2Params.getIDTokenHint())
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+        }
         try {
             String idTokenHint = oauth2Params.getIDTokenHint();
             if (isIdTokenValidationFailed(idTokenHint)) {
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "ID token signature validation failed.",
-                            "validate-id-token-hint", null);
+                if (diagnosticLogBuilder != null) {
+                    // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
+                    diagnosticLogBuilder.resultMessage("ID token signature validation failed.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 throw OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED,
                         "Request with \'id_token_hint=" + idTokenHint +
@@ -3234,11 +3307,11 @@ public class OAuth2AuthzEndpoint {
                 return handlePreviouslyApprovedConsent(oAuthMessage, sessionState, oauth2Params, hasUserApproved,
                         authorizationResponseDTO);
             } else {
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED,
-                            "ID token 'sub' does not match with the authenticated user subject identifier.",
-                            "validate-id-token-hint", null);
+                if (diagnosticLogBuilder != null) {
+                    // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
+                    diagnosticLogBuilder.resultMessage("ID token 'sub' does not match with the authenticated user " +
+                            "subject identifier.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 throw OAuthProblemException.error(OAuth2ErrorCodes.LOGIN_REQUIRED,
                         "Request with \'id_token_hint=" + idTokenHint +
@@ -3249,9 +3322,11 @@ public class OAuth2AuthzEndpoint {
             if (log.isDebugEnabled()) {
                 log.debug(msg, e);
             }
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "System error occurred.", "validate-id-token-hint", null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                        .resultMessage("System error occurred.");
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED, msg);
         }
@@ -3264,33 +3339,34 @@ public class OAuth2AuthzEndpoint {
 
         ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
         sessionState.setAddSessionState(true);
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_EXISTING_CONSENT);
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.PROMPT, oauth2Params.getPrompt())
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+        }
         if (isConsentSkipped(serviceProvider)) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", oauth2Params.getClientId());
-                params.put("prompt", oauth2Params.getPrompt());
-
-                Map<String, Object> configs = new HashMap<>();
-                configs.put("skipConsent", "true");
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.SUCCESS,
-                        "'prompt' is set to none, and consent is disabled for the OAuth client.",
-                        "validate-existing-consent", configs);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder will be null only if diagnostic logs are disabled.
+                diagnosticLogBuilder.configParam("skip consent", "true")
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                        .resultMessage("'prompt' is set to none, and consent is disabled for the OAuth client.");
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             return handleUserConsent(oAuthMessage, APPROVE, sessionState, oauth2Params, authorizationResponseDTO);
         } else if (hasUserApproved) {
             return handleApprovedAlwaysWithoutPromptingForNewConsent(oAuthMessage, sessionState, oauth2Params,
                     authorizationResponseDTO);
         } else {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", oauth2Params.getClientId());
-                params.put("prompt", oauth2Params.getPrompt());
-                Map<String, Object> configs = new HashMap<>();
-                configs.put("skipConsent", "false");
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "'prompt' is set to none, but required consent not found.",
-                        "validate-existing-consent", configs);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder will be null only if diagnostic logs are disabled.
+                diagnosticLogBuilder.configParam("skip consent", "false")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                        .resultMessage("'prompt' is set to none, but required consent not found.");
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw OAuthProblemException.error(OAuth2ErrorCodes.CONSENT_REQUIRED,
                     "Required consent not found");
@@ -3306,31 +3382,33 @@ public class OAuth2AuthzEndpoint {
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
         String preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, authenticatedUser);
 
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_EXISTING_CONSENT);
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.PROMPT, oauth2Params.getPrompt())
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+        }
         if (isConsentFromUserRequired(preConsent)) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", oauth2Params.getClientId());
-                params.put("prompt", oauth2Params.getPrompt());
-
-                Map<String, Object> configs = new HashMap<>();
-                configs.put("consentRequiredClaims", preConsent);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "'prompt' is set to none, and existing user consent is incomplete for the OAuth client.",
-                        "validate-existing-consent", configs);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder will be null only if diagnostic logs are disabled.
+                diagnosticLogBuilder.configParam("consent required claims", preConsent)
+                        .resultMessage("'prompt' is set to none, and existing user consent is incomplete for " +
+                                "the OAuth client.")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw OAuthProblemException.error(OAuth2ErrorCodes.CONSENT_REQUIRED,
                     "Consent approved always without prompting for new consent");
         } else {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", oauth2Params.getClientId());
-                params.put("prompt", oauth2Params.getPrompt());
-
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.SUCCESS,
-                        "'prompt' is set to none, and existing user consent found for the OAuth client.",
-                        "validate-existing-consent", null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder will be null only if diagnostic logs are disabled.
+                diagnosticLogBuilder.resultMessage("'prompt' is set to none, and existing user consent found for " +
+                        "the OAuth client.")
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             return handleUserConsent(oAuthMessage, APPROVE, sessionState, oauth2Params, authorizationResponseDTO);
         }
@@ -3640,10 +3718,13 @@ public class OAuth2AuthzEndpoint {
         } catch (ServletException | IOException | URLBuilderException e) {
             log.error("Error occurred while sending request to authentication framework.");
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", oAuthMessage.getClientId());
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Server error occurred.", "hand-over-to-framework", null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.HAND_OVER_TO_FRAMEWORK)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuthMessage.getClientId())
+                        .resultMessage("Server error occurred.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }

@@ -117,7 +117,6 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.utils.CarbonUtils;
-import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -325,10 +324,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         mockStatic(LoggerUtils.class);
         when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
-        // Define behavior for triggerDiagnosticLogEvent (if it's a void method)
-        doNothing().when(LoggerUtils.class);
-        LoggerUtils.triggerDiagnosticLogEvent(any(DiagnosticLog.DiagnosticLogBuilder.class));
-        LoggerUtils.triggerDiagnosticLogEvent(anyString(), anyMap(), anyString(), anyString(), anyString(), anyMap());
     }
 
     @AfterTest

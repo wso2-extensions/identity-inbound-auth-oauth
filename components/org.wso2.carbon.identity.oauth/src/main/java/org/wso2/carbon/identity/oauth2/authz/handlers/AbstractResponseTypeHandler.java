@@ -43,9 +43,7 @@ import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.SCOPE_VALIDATOR;
 
@@ -164,13 +162,13 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
                 log.debug("Could not find authorized grant types for client id: " + consumerKey);
             }
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", authzReqDTO.getConsumerKey());
-
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "Could not find any configured authorized grant types for the OAuth client.",
-                        "validate-authz-request", null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_AUTHZ_REQUEST)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, consumerKey)
+                        .resultMessage("Could not find any configured authorized grant types for the OAuth client.")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION));
             }
             return false;
         }
@@ -195,15 +193,16 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
                     log.debug("Unsupported Grant Type : " + grantType + " for client id : " + consumerKey);
                 }
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", authzReqDTO.getConsumerKey());
-                    params.put("grantType", grantType);
-
-                    Map<String, Object> configs = new HashMap<>();
-                    configs.put("supportedGrantTypes", oAuthAppDO.getGrantTypes());
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "Un-supported grant type.", "validate-authz-request",
-                            configs);
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS)
+                            .inputParam(LogConstants.InputKeys.CLIENT_ID, consumerKey)
+                            .inputParam(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE, grantType)
+                            .configParam(OAuthConstants.LogConstants.ConfigKeys.SUPPORTED_GRANT_TYPES,
+                                    oAuthAppDO.getGrantTypes())
+                            .resultMessage("Un-supported grant type.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED));
                 }
                 return false;
             }
