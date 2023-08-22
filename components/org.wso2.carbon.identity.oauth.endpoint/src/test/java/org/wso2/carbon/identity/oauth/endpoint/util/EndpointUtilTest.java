@@ -62,12 +62,16 @@ import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
+import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
+import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -97,6 +101,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
 
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.nullable;
@@ -782,6 +787,48 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         assertEquals(EndpointUtil.getUserInfoResponseBuilder(), USER_INFO_RESPONSE_BUILDER);
         assertEquals(EndpointUtil.getUserInfoClaimRetriever(), USER_INFO_CLAIM_RETRIEVER);
         assertEquals(EndpointUtil.getUserInfoClaimDialect(), USER_INFO_CLAIM_DIALECT);
+    }
+
+    @Test
+    public void testGetOAuthAuthzRequest() throws Exception {
+
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
+        // test when OAuthAuthzRequestClassName is not defined
+        when(mockedOAuthServerConfiguration.getOAuthAuthzRequestClassName()).thenReturn("");
+        CarbonOAuthAuthzRequest mockCarbonOAuthAuthzRequest = mock(CarbonOAuthAuthzRequest.class);
+        whenNew(CarbonOAuthAuthzRequest.class).withArguments(any(HttpServletRequest.class))
+                .thenReturn(mockCarbonOAuthAuthzRequest);
+        assertEquals(EndpointUtil.getOAuthAuthzRequest(mockedHttpServletRequest), mockCarbonOAuthAuthzRequest);
+    }
+
+    @DataProvider(name = "provideState")
+    public Object[][] provideState() {
+
+        return new Object[][]{
+                {"ACTIVE"},
+                {"INACTIVE"},
+                {null},
+        };
+    }
+
+    @Test(dataProvider = "provideState")
+    public void testValidateOauthApplication(String state) {
+
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        EndpointUtil.setOAuth2Service(mockedOAuth2Service);
+        when(mockedOAuth2Service.getOauthApplicationState(anyString())).thenReturn(state);
+
+        Response response;
+        try {
+            EndpointUtil.validateOauthApplication(clientId);
+        } catch (InvalidApplicationClientException e) {
+            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+            response = invalidRequestExceptionMapper.toResponse(e);
+            final String responseBody = response.getEntity().toString();
+            assertTrue(responseBody.contains(OAuth2ErrorCodes.INVALID_CLIENT), "Expected error code not found");
+        }
     }
 
     private void setMockedLog(boolean isDebugEnabled) throws Exception {

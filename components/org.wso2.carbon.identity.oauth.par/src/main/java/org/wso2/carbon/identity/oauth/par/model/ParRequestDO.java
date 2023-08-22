@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth.par.model;
 
+import org.apache.commons.collections.MapUtils;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -39,7 +41,7 @@ public class ParRequestDO {
      */
     public ParRequestDO(Map<String, String> parameterMap, long expiresIn, String clientId) {
 
-        this.params = (parameterMap == null) ? new HashMap<>() : parameterMap;
+        this.params = MapUtils.isEmpty(parameterMap) ? new HashMap<>() : parameterMap;
         this.expiresIn = expiresIn;
         this.clientId = clientId;
     }
