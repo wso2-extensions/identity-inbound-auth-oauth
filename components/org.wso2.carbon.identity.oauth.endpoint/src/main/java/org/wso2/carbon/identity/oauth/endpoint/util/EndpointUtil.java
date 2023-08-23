@@ -1365,7 +1365,7 @@ public class EndpointUtil {
                     }
                     if (diagnosticLogBuilder != null) {
                         // diagnosticLogBuilder is null when diagnostic logs are disabled.
-                        diagnosticLogBuilder.inputParams(paramMap)
+                        diagnosticLogBuilder.inputParam("param keys", paramMap.keySet())
                                 .resultMessage("Parameter with name: '" + paramEntry.getKey() + "' is repeated in " +
                                         "the request.");
                         LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
@@ -1384,7 +1384,7 @@ public class EndpointUtil {
                     }
                     if (diagnosticLogBuilder != null) {
                         // diagnosticLogBuilder is null when diagnostic logs are disabled.
-                        diagnosticLogBuilder.inputParams(map)
+                        diagnosticLogBuilder.inputParam("param keys", map.keySet())
                                 .resultMessage("Parameter with name: '" + entry.getKey() + "' is repeated in the " +
                                         "request.");
                         LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
