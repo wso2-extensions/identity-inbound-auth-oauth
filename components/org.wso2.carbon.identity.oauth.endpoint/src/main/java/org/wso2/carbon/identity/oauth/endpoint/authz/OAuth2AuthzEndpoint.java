@@ -2495,9 +2495,9 @@ public class OAuth2AuthzEndpoint {
         if (StringUtils.isBlank(parameters.getRedirectURI()) ||
                 StringUtils.startsWith(parameters.getRedirectURI(), REGEX_PATTERN)) {
             LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "Redirect URI is not present in the authorization request.",
-                    "validate-input-parameters", null);
-            throw new InvalidRequestException("Redirect URI is not present in the authorization request.",
+                    OAuthConstants.LogConstants.FAILED, OAuthConstants.OAuthError.AuthorizationResponse
+                            .INVALID_REDIRECT_URI, "validate-input-parameters", null);
+            throw new InvalidRequestException(OAuthConstants.OAuthError.AuthorizationResponse.INVALID_REDIRECT_URI,
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
         persistRequestObject(parameters, requestObject);

@@ -406,6 +406,22 @@ public final class OAuthConstants {
 
             }
         }
+
+        /**
+         * Define Authorization request constants.
+         */
+        public static class AuthorizationResponse {
+
+            public static final String CALLBACK_NOT_MATCH = "Registered callback does not match with the provided url.";
+            public static final String APPLICATION_NOT_FOUND = "Cannot find an application associated with the given " +
+                    "consumer key.";
+            public static final String INVALID_REDIRECT_URI = "Redirect URI is not present in the authorization " +
+                    "request.";
+
+            private AuthorizationResponse() {
+
+            }
+        }
     }
 
     /**
