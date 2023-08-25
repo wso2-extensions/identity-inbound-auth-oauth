@@ -141,10 +141,10 @@ public class ParAuthServiceImpl implements ParAuthService {
                     (String) IdentityConfigParser.getInstance().getConfiguration().get(PAR_EXPIRY_TIME);
             if ((StringUtils.isNotBlank(expiryTimeValue))) {
                 int expiryTime = Integer.parseInt((expiryTimeValue).trim());
-                if (expiryTime > 0 && expiryTime <= 600) {
+                if (expiryTime > 0) {
                     return expiryTime;
                 }
-                log.warn(String.format("PAR expiry time should be a positive integer less than or equal to 600. " +
+                log.warn(String.format("PAR expiry time should be a positive integer. " +
                                 "Default value: %s will be used.", ParConstants.EXPIRES_IN_DEFAULT_VALUE));
             } else {
                 log.debug(String.format("PAR expiry time is not configured. Default value: %s will be used.",
