@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.JSONException;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -30,10 +31,9 @@ import org.wso2.carbon.identity.oauth2.IntrospectionDataProvider;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
+import org.wso2.carbon.utils.DiagnosticLog;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
@@ -76,26 +76,6 @@ public class OAuth2IntrospectionEndpoint {
         OAuth2TokenValidationRequestDTO introspectionRequest;
         OAuth2IntrospectionResponseDTO introspectionResponse;
 
-        if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            Map<String, Object> params = new HashMap<>();
-            if (StringUtils.isNotBlank(tokenTypeHint)) {
-                params.put("tokenTypeHint", tokenTypeHint);
-            }
-
-            if (StringUtils.isNotBlank(requiredClaims)) {
-                params.put("requiredClaims", requiredClaims);
-            }
-
-            if (StringUtils.isNotBlank(token)) {
-                params.put("token", token.replaceAll(".", "*"));
-            }
-            if (StringUtils.isBlank(token)) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "'token' parameter cannot be empty.",
-                        "validate-input-parameters", null);
-            }
-        }
-
         if (log.isDebugEnabled()) {
             log.debug("Token type hint: " + tokenTypeHint);
         }
@@ -104,6 +84,17 @@ public class OAuth2IntrospectionEndpoint {
             introspectionResponse = new OAuth2IntrospectionResponseDTO();
             introspectionResponse.setError(INVALID_INPUT);
             triggerOnIntrospectionExceptionListeners(null, introspectionResponse);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS)
+                        .inputParam("token type hint", tokenTypeHint)
+                        .inputParam("required claims", requiredClaims)
+                        .resultMessage("'token' parameter cannot be empty.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
             return Response.status(Response.Status.BAD_REQUEST).
                     entity("{\"error\": \"" + INVALID_INPUT + "\"}").build();
         }
@@ -195,9 +186,15 @@ public class OAuth2IntrospectionEndpoint {
                             (((IntrospectionDataProvider) dataProvider).getIntrospectionData(
                                     introspectionRequest, introspectionResponse)));
                 } catch (IdentityOAuth2Exception e) {
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                            OAuthConstants.LogConstants.FAILED, "System error occurred.",
-                            "generate-introspect-response", null);
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                        LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                                OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                                OAuthConstants.LogConstants.ActionIDs.GENERATE_INTROSPECTION_RESPONSE)
+                                .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                                .resultMessage("System error occurred.")
+                                .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                                .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+                    }
                     log.error("Error occurred while processing additional token introspection data.", e);
 
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -211,8 +208,15 @@ public class OAuth2IntrospectionEndpoint {
         try {
             return Response.ok(respBuilder.build(), MediaType.APPLICATION_JSON).status(Response.Status.OK).build();
         } catch (JSONException e) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "generate-introspect-response", null);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.GENERATE_INTROSPECTION_RESPONSE)
+                        .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                        .resultMessage("System error occurred.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+            }
             log.error("Error occurred while building the json response.", e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity("{\"error\": \"Error occurred while building the json response.\"}").build();

@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorC
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -47,6 +48,7 @@ import org.wso2.carbon.identity.organization.management.service.exception.Organi
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementConfigUtil;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
+import org.wso2.carbon.utils.DiagnosticLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.security.PublicKey;
@@ -82,13 +84,23 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             return false;
         }
 
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_JWT_ACCESS_TOKEN)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+        }
         try {
             SignedJWT signedJWT = getSignedJWT(validationReqDTO);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
             if (claimsSet == null) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                        OAuthConstants.LogConstants.FAILED, "Claim values are empty in the provided token.",
-                        "validate-jwt-access-token", null);
+                // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+                if (diagnosticLogBuilder != null) {
+                    diagnosticLogBuilder.resultMessage("Claim values are empty in the provided token.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+                }
                 throw new IdentityOAuth2Exception("Claim values are empty in the given Token.");
             }
 
@@ -114,31 +126,48 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
                     tenantDomain, switchedOrgId);
 
             if (!validateSignature(signedJWT, identityProvider)) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                        OAuthConstants.LogConstants.FAILED, "Signature validation failed.", "validate-jwt-access-token",
-                        null);
+                // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+                if (diagnosticLogBuilder != null) {
+                    diagnosticLogBuilder.resultMessage("Signature validation failed.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+                }
                 return false;
             }
             if (!checkExpirationTime(claimsSet.getExpirationTime())) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                        OAuthConstants.LogConstants.FAILED, "Token is expired.", "validate-jwt-access-token", null);
+                // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+                if (diagnosticLogBuilder != null) {
+                    diagnosticLogBuilder.resultMessage("Token is expired.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+                }
                 return false;
             }
             checkNotBeforeTime(claimsSet.getNotBeforeTime());
             setJWTMessageContext(validationReqDTO, claimsSet);
         } catch (JOSEException | ParseException e) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "validate-jwt-access-token", null);
+            // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+            if (diagnosticLogBuilder != null) {
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                        .resultMessage("System error occurred.");
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
             throw new IdentityOAuth2Exception("Error while validating Token.", e);
         } catch (OrganizationManagementException e) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "Error while retrieving the organization hierarchy.",
-                    "validate-jwt-access-token", null);
+            // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+            if (diagnosticLogBuilder != null) {
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                        .resultMessage("Error while retrieving the organization hierarchy.");
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
             throw new IdentityOAuth2Exception("Error while retrieving the organization hierarchy.", e);
         }
-        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                OAuthConstants.LogConstants.SUCCESS, "Token validation is successful.", "validate-jwt-access-token",
-                null);
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_JWT_ACCESS_TOKEN)
+                    .resultMessage("Token validation is successful.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
+        }
         return true;
     }
 
@@ -320,13 +349,15 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
                             ", Current Time : " + currentTimeInMillis + ". Token Rejected and validation terminated.");
                 }
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("notBeforeTime", notBeforeTimeMillis);
-                    params.put("timestampSkew", timeStampSkewMillis);
-                    params.put("currentTime", currentTimeInMillis);
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "Token is used before Not_Before_Time.",
-                            "validate-jwt-access-token", null);
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.VALIDATE_JWT_ACCESS_TOKEN)
+                            .inputParam("not before time (ms)", notBeforeTimeMillis)
+                            .inputParam("timestamp skew (ms)", timeStampSkewMillis)
+                            .inputParam("current time (ms)", currentTimeInMillis)
+                            .resultMessage("Token is used before Not_Before_Time.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED));
                 }
                 throw new IdentityOAuth2Exception("Token is used before Not_Before_Time.");
             }
@@ -348,10 +379,14 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
                 log.debug("Mandatory fields(Issuer, Subject, Expiration time," +
                         " jtl or Audience) are empty in the given Token.");
             }
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED,
-                    "Mandatory fields (iss, sub, exp, jtl, aud) are empty in the provided token.",
-                    "validate-jwt-access-token", null);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_JWT_ACCESS_TOKEN)
+                        .resultMessage("Mandatory fields (iss, sub, exp, jtl, aud) are empty in the provided token.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+            }
             return false;
         }
         return true;
