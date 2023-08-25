@@ -573,7 +573,7 @@ public final class OAuthConstants {
          */
         public static class ActionIDs {
 
-            public static final String SCOPE_VALIDATION = "scope-validation";
+            public static final String SCOPE_VALIDATION = "validate-scope";
             public static final String ISSUE_ACCESS_TOKEN = "issue-access-token";
             public static final String ISSUE_ID_TOKEN = "issue-id-token";
             public static final String VALIDATE_AUTHORIZATION_CODE = "validate-authz-code";
@@ -591,6 +591,28 @@ public final class OAuthConstants {
             public static final String HANDLE_REQUEST = "handle-request";
             public static final String BUILD_REQUEST = "build-request";
             public static final String RETRIEVE_PARAMETERS = "retrieve-parameters";
+            public static final String VALIDATE_AUTHZ_REQUEST = "validate-authz-request";
+            public static final String VALIDATE_INPUT_PARAMS = "validate-input-parameters";
+            public static final String VALIDATE_OAUTH_CLIENT = "validate-oauth-client";
+            public static final String REVOKE_TOKEN = "revoke-token";
+            public static final String VALIDATE_TOKEN_BINDING = "validate-token-binding";
+            public static final String VALIDATE_PKCE = "validate-pkce";
+            public static final String VALIDATE_JWT_ACCESS_TOKEN = "validate-jwt-access-token";
+            public static final String VALIDATE_REFRESH_TOKEN = "validate-refresh-token";
+            public static final String VALIDATE_ACCESS_TOKEN = "validate-access-token";
+            public static final String PARSE_REQUEST_OBJECT = "parse-request-object";
+            public static final String VALIDATE_REQUEST_OBJECT_SIGNATURE = "validate-request-object-signature";
+            public static final String VALIDATE_REQUEST_OBJECT = "validate-request-object";
+            public static final String HAND_OVER_TO_CONSENT_SERVICE = "hand-over-to-consent-service";
+            public static final String PROCESS_CONSENT = "process-consent";
+            public static final String OVERRIDE_AUTHZ_PARAMS = "override-authz-parameters";
+            public static final String REMOVE_USER_CONSENT = "remove-user-consent";
+            public static final String PROMPT_CONSENT_PAGE = "prompt-consent-page";
+            public static final String VALIDATE_USER_SESSION = "validate-user-session";
+            public static final String VALIDATE_ID_TOKEN_HINT = "validate-id-token-hint";
+            public static final String VALIDATE_EXISTING_CONSENT = "validate-existing-consent";
+            public static final String GENERATE_INTROSPECTION_RESPONSE = "generate-introspect-response";
+            public static final String RECEIVE_REVOKE_REQUEST = "receive-revoke-request";
         }
 
         /**
@@ -606,6 +628,23 @@ public final class OAuthConstants {
             public static final String AUTHORIZATION_CODE = "authorization code";
             public static final String REQUEST_BUILDER = "request builder";
             public static final String REQUEST_URI_REF = "request uri reference";
+            public static final String REDIRECT_URI = "redirect URI";
+            public static final String CALLBACK_URI = "callback URI";
+            public static final String PROMPT = "prompt";
+            public static final String APP_STATE = "app state";
+        }
+
+        /**
+         * Define common and reusable Configuration keys for diagnostic logs.
+         */
+        public static class ConfigKeys {
+
+            public static final String SUPPORTED_GRANT_TYPES = "supported grant types";
+            public static final String CALLBACK_URI = "callback URI";
+            public static final String REGISTERED_CALLBACK_URI = "registered callback URI";
+            public static final String REQUEST_OBJECT_SIGNATURE_VALIDATION_ENABLED =
+                    "request object signature validation enabled";
+
         }
     }
 

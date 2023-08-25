@@ -35,6 +35,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
@@ -83,7 +84,7 @@ import static org.testng.Assert.assertEquals;
         CarbonOAuthAuthzRequest.class, IdentityTenantUtil.class, OAuthResponse.class, SignedJWT.class,
         OIDCSessionManagementUtil.class, CarbonUtils.class, SessionDataCache.class, IdentityUtil.class,
         DeviceFlowPersistenceFactory.class, HttpServletRequest.class, OAuthServerConfiguration.class,
-        TokenPersistenceProcessor.class, ServiceURLBuilder.class, ServiceURL.class})
+        TokenPersistenceProcessor.class, ServiceURLBuilder.class, ServiceURL.class, LoggerUtils.class})
 public class DeviceEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -119,6 +120,8 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
 
         System.setProperty(CarbonBaseConstants.CARBON_HOME, Paths.get(System.getProperty("user.dir"),
                 "src", "test", "resources").toString());
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
     }
 
     @DataProvider(name = "provideValues")

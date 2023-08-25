@@ -23,6 +23,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
@@ -43,10 +44,10 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
 import org.wso2.carbon.utils.CarbonUtils;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -509,24 +510,30 @@ public class AuthorizationHandlerManager {
                         OAuth2Util.buildScopeString(authzReqDTO.getScopes()));
             }
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", authzReqDTO.getConsumerKey());
+                DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_AUTHZ_REQUEST);
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, authzReqDTO.getConsumerKey());
                 if (authzReqDTO.getUser() != null) {
                     try {
-                        params.put("user", authzReqDTO.getUser().getUserId());
+                        diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER_ID,
+                                authzReqDTO.getUser().getUserId());
                     } catch (UserIdNotFoundException e) {
                         if (StringUtils.isNotBlank(authzReqDTO.getUser().getAuthenticatedSubjectIdentifier())) {
-                            params.put("user", LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(
+                            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER,
+                                    LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(
                                     authzReqDTO.getUser().getAuthenticatedSubjectIdentifier()) : authzReqDTO.getUser()
                                     .getAuthenticatedSubjectIdentifier());
                         }
                     }
                 }
-                params.put("requestedScopes", OAuth2Util.buildScopeString(authzReqDTO.getScopes()));
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "User doesn't have necessary rights to grant access to the requested resource(s).",
-                        "validate-authz-request", null);
+                diagnosticLogBuilder.inputParam(OAuthConstants.LogConstants.InputKeys.REQUESTED_SCOPES,
+                        OAuth2Util.buildScopeString(authzReqDTO.getScopes()))
+                        .resultMessage("User doesn't have necessary rights to grant access to the requested " +
+                                "resource(s).")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             return true;
         }
@@ -583,13 +590,14 @@ public class AuthorizationHandlerManager {
                         ", for client :" + authzReqDTO.getConsumerKey());
             }
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", authzReqDTO.getConsumerKey());
-                params.put("response_type", authzReqDTO.getResponseType());
-
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Un-supported response type.", "validate-authz-request",
-                        null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_AUTHZ_REQUEST)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, authzReqDTO.getConsumerKey())
+                        .inputParam("response type", authzReqDTO.getResponseType())
+                        .resultMessage("Un-supported response type.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
             return true;
         }

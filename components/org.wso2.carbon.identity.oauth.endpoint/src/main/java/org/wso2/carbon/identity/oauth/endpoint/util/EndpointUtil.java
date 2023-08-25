@@ -1042,6 +1042,13 @@ public class EndpointUtil {
     public static void storeOAuthScopeConsent(AuthenticatedUser user, OAuth2Parameters params,
                                               boolean overrideExistingConsent) throws OAuthSystemException {
 
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.PERSIST_OAUTH_SCOPE_CONSENT);
+            diagnosticLogBuilder.logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+        }
         try {
             Set<String> userApprovedScopesSet = params.getConsentRequiredScopes();
             if (CollectionUtils.isNotEmpty(userApprovedScopesSet)) {
@@ -1082,28 +1089,35 @@ public class EndpointUtil {
                                 userApprovedScopes, null);
                     }
                 }
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                            OAuthConstants.LogConstants.ActionIDs.PERSIST_OAUTH_SCOPE_CONSENT);
+                if (diagnosticLogBuilder != null) {
+                    // diagnosticLogBuilder is null when diagnostic logs are disabled.
                     diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, params.getClientId())
                             .inputParam("approved scopes", userApprovedScopes)
                             .inputParam(LogConstants.InputKeys.USER_ID, userId)
                             .inputParam("override existing consent", overrideExistingConsent)
                             .resultMessage("Successfully persisted oauth scopes.")
-                            .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                            .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
+                            .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
                     LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
             }
         } catch (IdentityOAuthAdminException e) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "persist-oauth-scope-consent", null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder is null when diagnostic logs are disabled.
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                        .resultMessage("Error occurred while removing OIDC scopes from approved OAuth scopes.")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
             throw new OAuthSystemException(
                     "Error occurred while removing OIDC scopes from approved OAuth scopes.", e);
         } catch (IdentityOAuth2ScopeException e) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "persist-oauth-scope-consent", null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder is null when diagnostic logs are disabled.
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                        .resultMessage("Error occurred while storing OAuth scope consent.")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
             throw new OAuthSystemException("Error occurred while storing OAuth scope consent.", e);
         }
     }
@@ -1336,20 +1350,26 @@ public class EndpointUtil {
 
     public static boolean validateParams(HttpServletRequest request, Map<String, List<String>> paramMap) {
 
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS);
+            diagnosticLogBuilder.logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+        }
         if (paramMap != null) {
             for (Map.Entry<String, List<String>> paramEntry : paramMap.entrySet()) {
                 if (paramEntry.getValue().size() > 1) {
                     if (log.isDebugEnabled()) {
                         log.debug("Repeated param found:" + paramEntry.getKey());
                     }
-                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                        Map<String, Object> logParams = new HashMap<>();
-                        paramMap.forEach(logParams::put);
-                        LoggerUtils
-                                .triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, logParams,
-                                        OAuthConstants.LogConstants.FAILED,
-                                        "Parameter with name: '" + paramEntry.getKey() +
-                                                "' is repeated in the request.", "validate-input-parameters", null);
+                    if (diagnosticLogBuilder != null) {
+                        // diagnosticLogBuilder is null when diagnostic logs are disabled.
+                        diagnosticLogBuilder.inputParam("param keys", paramMap.keySet())
+                                .resultMessage("Parameter with name: '" + paramEntry.getKey() + "' is repeated in " +
+                                        "the request.");
+                        LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                     }
                     return false;
                 }
@@ -1363,14 +1383,12 @@ public class EndpointUtil {
                         log.debug("Repeated param found:" + entry.getKey());
 
                     }
-                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                        Map<String, Object> logParams = new HashMap<>();
-                        map.forEach(logParams::put);
-                        LoggerUtils
-                                .triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, logParams,
-                                        OAuthConstants.LogConstants.FAILED,
-                                        "Parameter with name: '" + entry.getKey() + "' is repeated in the request.",
-                                        "validate-input-parameters", null);
+                    if (diagnosticLogBuilder != null) {
+                        // diagnosticLogBuilder is null when diagnostic logs are disabled.
+                        diagnosticLogBuilder.inputParam("param keys", map.keySet())
+                                .resultMessage("Parameter with name: '" + entry.getKey() + "' is repeated in the " +
+                                        "request.");
+                        LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                     }
                     return false;
                 }
@@ -1439,17 +1457,25 @@ public class EndpointUtil {
 
         String appState = EndpointUtil.getOAuth2Service().getOauthApplicationState(consumerKey);
 
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_OAUTH_CLIENT);
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, consumerKey)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+        }
         if (StringUtils.isEmpty(appState)) {
             if (log.isDebugEnabled()) {
                 log.debug("A valid OAuth client could not be found for client_id: " + consumerKey);
             }
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", consumerKey);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "A valid OAuth application could not be found for the given client_id.",
-                        "validate-oauth-client", null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder is null when diagnostic logs are disabled.
+                diagnosticLogBuilder.resultMessage("A valid OAuth application could not be found for the given " +
+                        "client_id.")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw new InvalidApplicationClientException("A valid OAuth client could not be found for client_id: " +
                     Encode.forHtml(consumerKey));
@@ -1459,13 +1485,12 @@ public class EndpointUtil {
             if (log.isDebugEnabled()) {
                 log.debug("App is not in active state in client ID: " + consumerKey + ". App state is:" + appState);
             }
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", consumerKey);
-                params.put("appState", appState);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "OAuth application is not in active state.",
-                        "validate-oauth-client", null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder is null when diagnostic logs are disabled.
+                diagnosticLogBuilder.inputParam(OAuthConstants.LogConstants.InputKeys.APP_STATE, appState)
+                        .resultMessage("OAuth application is not in active state.")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw new InvalidApplicationClientException("Oauth application is not in active state");
         }
@@ -1473,13 +1498,12 @@ public class EndpointUtil {
         if (log.isDebugEnabled()) {
             log.debug("Oauth App validation success for consumer key: " + consumerKey);
         }
-        if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            Map<String, Object> params = new HashMap<>();
-            params.put("clientId", consumerKey);
-            params.put("appState", appState);
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                    OAuthConstants.LogConstants.SUCCESS, "OAuth Application validation is successful.",
-                    "validate-oauth-client", null);
+        if (diagnosticLogBuilder != null) {
+            // diagnosticLogBuilder is null when diagnostic logs are disabled.
+            diagnosticLogBuilder.inputParam(OAuthConstants.LogConstants.InputKeys.APP_STATE, appState)
+                    .resultMessage("OAuth application is in active state.")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
     }
 
