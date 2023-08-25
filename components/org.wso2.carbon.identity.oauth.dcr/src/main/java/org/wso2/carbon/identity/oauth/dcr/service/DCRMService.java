@@ -117,7 +117,7 @@ public class DCRMService {
             }
             return buildResponse(oAuthConsumerAppDTO);
         } catch (IdentityOAuthAdminException e) {
-            if (e.getErrorCode().contains(INVALID_OAUTH_CLIENT.getErrorCode())) {
+            if (INVALID_OAUTH_CLIENT.getErrorCode().equals(e.getErrorCode())) {
                 throw DCRMUtils.generateClientException(
                         DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_NAME, clientName);
             }
