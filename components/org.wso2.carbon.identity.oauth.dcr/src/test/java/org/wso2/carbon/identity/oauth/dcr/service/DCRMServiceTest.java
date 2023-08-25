@@ -380,7 +380,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
     }
 
     @Test
-    public void getApplicationNameTestWithIOCExceptionTest() throws Exception {
+    public void getApplicationNameWithInvalidOAuthClientExceptionTest() throws Exception {
 
         startTenantFlow();
         doThrow(new IdentityOAuthAdminException(INVALID_OAUTH_CLIENT.getErrorCode(),
