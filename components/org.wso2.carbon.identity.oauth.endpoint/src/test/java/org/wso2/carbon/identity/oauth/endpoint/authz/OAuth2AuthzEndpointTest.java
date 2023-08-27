@@ -542,31 +542,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
             mockServiceURLBuilder();
             try {
-                Map<String, ResponseModeProvider> supportedResponseModeProviders = new HashMap<>();
-                ResponseModeProvider defaultResponseModeProvider;
-                Map<String, String> supportedResponseModeClassNames = new HashMap<>();
-                String defaultResponseModeProviderClassName;
-                supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.QUERY,
-                        QueryResponseModeProvider.class.getCanonicalName());
-                supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FRAGMENT,
-                        FragmentResponseModeProvider.class.getCanonicalName());
-                supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FORM_POST,
-                        FormPostResponseModeProvider.class.getCanonicalName());
-                defaultResponseModeProviderClassName = DefaultResponseModeProvider.class.getCanonicalName();
-
-                for (Map.Entry<String, String> entry : supportedResponseModeClassNames.entrySet()) {
-                    ResponseModeProvider responseModeProvider = (ResponseModeProvider)
-                            Class.forName(entry.getValue()).newInstance();
-
-                    supportedResponseModeProviders.put(entry.getKey(), responseModeProvider);
-                }
-
-                defaultResponseModeProvider = (ResponseModeProvider)
-                        Class.forName(defaultResponseModeProviderClassName).newInstance();
-
-                OAuth2ServiceComponentHolder.setResponseModeProviders(supportedResponseModeProviders);
-                OAuth2ServiceComponentHolder.setDefaultResponseModeProvider(defaultResponseModeProvider);
-
+                setSupportedResponseModes();
                 response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
             } catch (InvalidRequestParentException ire) {
                 InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
@@ -751,32 +727,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                     anyString(), isNull(), anyInt(), anyList())).thenReturn(true);
 
             mockServiceURLBuilder();
-
-            Map<String, ResponseModeProvider> supportedResponseModeProviders = new HashMap<>();
-            ResponseModeProvider defaultResponseModeProvider;
-            Map<String, String> supportedResponseModeClassNames = new HashMap<>();
-            String defaultResponseModeProviderClassName;
-            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.QUERY,
-                    QueryResponseModeProvider.class.getCanonicalName());
-            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FRAGMENT,
-                    FragmentResponseModeProvider.class.getCanonicalName());
-            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FORM_POST,
-                    FormPostResponseModeProvider.class.getCanonicalName());
-            defaultResponseModeProviderClassName = DefaultResponseModeProvider.class.getCanonicalName();
-
-            for (Map.Entry<String, String> entry : supportedResponseModeClassNames.entrySet()) {
-                ResponseModeProvider responseModeProvider = (ResponseModeProvider)
-                        Class.forName(entry.getValue()).newInstance();
-
-                supportedResponseModeProviders.put(entry.getKey(), responseModeProvider);
-            }
-
-            defaultResponseModeProvider = (ResponseModeProvider)
-                    Class.forName(defaultResponseModeProviderClassName).newInstance();
-
-            OAuth2ServiceComponentHolder.setResponseModeProviders(supportedResponseModeProviders);
-            OAuth2ServiceComponentHolder.setDefaultResponseModeProvider(defaultResponseModeProvider);
-
+            setSupportedResponseModes();
             Response response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
             assertEquals(response.getStatus(), expected, "Unexpected HTTP response status");
             if (!isAuthenticated) {
@@ -947,31 +898,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         Response response;
         try {
-            Map<String, ResponseModeProvider> supportedResponseModeProviders = new HashMap<>();
-            ResponseModeProvider defaultResponseModeProvider;
-            Map<String, String> supportedResponseModeClassNames = new HashMap<>();
-            String defaultResponseModeProviderClassName;
-            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.QUERY,
-                    QueryResponseModeProvider.class.getCanonicalName());
-            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FRAGMENT,
-                    FragmentResponseModeProvider.class.getCanonicalName());
-            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FORM_POST,
-                    FormPostResponseModeProvider.class.getCanonicalName());
-            defaultResponseModeProviderClassName = DefaultResponseModeProvider.class.getCanonicalName();
-
-            for (Map.Entry<String, String> entry : supportedResponseModeClassNames.entrySet()) {
-                ResponseModeProvider responseModeProvider = (ResponseModeProvider)
-                        Class.forName(entry.getValue()).newInstance();
-
-                supportedResponseModeProviders.put(entry.getKey(), responseModeProvider);
-            }
-
-            defaultResponseModeProvider = (ResponseModeProvider)
-                    Class.forName(defaultResponseModeProviderClassName).newInstance();
-
-            OAuth2ServiceComponentHolder.setResponseModeProviders(supportedResponseModeProviders);
-            OAuth2ServiceComponentHolder.setDefaultResponseModeProvider(defaultResponseModeProvider);
-
+            setSupportedResponseModes();
             response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
         } catch (InvalidRequestParentException ire) {
             InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
@@ -1357,31 +1284,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         Response response;
         try {
-            Map<String, ResponseModeProvider> supportedResponseModeProviders = new HashMap<>();
-            ResponseModeProvider defaultResponseModeProvider;
-            Map<String, String> supportedResponseModeClassNames = new HashMap<>();
-            String defaultResponseModeProviderClassName;
-            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.QUERY,
-                    QueryResponseModeProvider.class.getCanonicalName());
-            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FRAGMENT,
-                    FragmentResponseModeProvider.class.getCanonicalName());
-            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FORM_POST,
-                    FormPostResponseModeProvider.class.getCanonicalName());
-            defaultResponseModeProviderClassName = DefaultResponseModeProvider.class.getCanonicalName();
-
-            for (Map.Entry<String, String> entry : supportedResponseModeClassNames.entrySet()) {
-                ResponseModeProvider responseModeProvider = (ResponseModeProvider)
-                        Class.forName(entry.getValue()).newInstance();
-
-                supportedResponseModeProviders.put(entry.getKey(), responseModeProvider);
-            }
-
-            defaultResponseModeProvider = (ResponseModeProvider)
-                    Class.forName(defaultResponseModeProviderClassName).newInstance();
-
-            OAuth2ServiceComponentHolder.setResponseModeProviders(supportedResponseModeProviders);
-            OAuth2ServiceComponentHolder.setDefaultResponseModeProvider(defaultResponseModeProvider);
-
+            setSupportedResponseModes();
             response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
         } catch (InvalidRequestParentException ire) {
             InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
@@ -1524,31 +1427,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         Response response;
         try {
-            Map<String, ResponseModeProvider> supportedResponseModeProviders = new HashMap<>();
-            ResponseModeProvider defaultResponseModeProvider;
-            Map<String, String> supportedResponseModeClassNames = new HashMap<>();
-            String defaultResponseModeProviderClassName;
-            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.QUERY,
-                    QueryResponseModeProvider.class.getCanonicalName());
-            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FRAGMENT,
-                    FragmentResponseModeProvider.class.getCanonicalName());
-            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FORM_POST,
-                    FormPostResponseModeProvider.class.getCanonicalName());
-            defaultResponseModeProviderClassName = DefaultResponseModeProvider.class.getCanonicalName();
-
-            for (Map.Entry<String, String> entry : supportedResponseModeClassNames.entrySet()) {
-                ResponseModeProvider responseModeProvider = (ResponseModeProvider)
-                        Class.forName(entry.getValue()).newInstance();
-
-                supportedResponseModeProviders.put(entry.getKey(), responseModeProvider);
-            }
-
-            defaultResponseModeProvider = (ResponseModeProvider)
-                    Class.forName(defaultResponseModeProviderClassName).newInstance();
-
-            OAuth2ServiceComponentHolder.setResponseModeProviders(supportedResponseModeProviders);
-            OAuth2ServiceComponentHolder.setDefaultResponseModeProvider(defaultResponseModeProvider);
-
+            setSupportedResponseModes();
             response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
         } catch (InvalidRequestParentException ire) {
             InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
@@ -1701,31 +1580,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         Response response;
         try {
-            Map<String, ResponseModeProvider> supportedResponseModeProviders = new HashMap<>();
-            ResponseModeProvider defaultResponseModeProvider;
-            Map<String, String> supportedResponseModeClassNames = new HashMap<>();
-            String defaultResponseModeProviderClassName;
-            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.QUERY,
-                    QueryResponseModeProvider.class.getCanonicalName());
-            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FRAGMENT,
-                    FragmentResponseModeProvider.class.getCanonicalName());
-            supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FORM_POST,
-                    FormPostResponseModeProvider.class.getCanonicalName());
-            defaultResponseModeProviderClassName = DefaultResponseModeProvider.class.getCanonicalName();
-
-            for (Map.Entry<String, String> entry : supportedResponseModeClassNames.entrySet()) {
-                ResponseModeProvider responseModeProvider = (ResponseModeProvider)
-                        Class.forName(entry.getValue()).newInstance();
-
-                supportedResponseModeProviders.put(entry.getKey(), responseModeProvider);
-            }
-
-            defaultResponseModeProvider = (ResponseModeProvider)
-                    Class.forName(defaultResponseModeProviderClassName).newInstance();
-
-            OAuth2ServiceComponentHolder.setResponseModeProviders(supportedResponseModeProviders);
-            OAuth2ServiceComponentHolder.setDefaultResponseModeProvider(defaultResponseModeProvider);
-
+            setSupportedResponseModes();
             response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
         } catch (InvalidRequestParentException ire) {
             InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
@@ -2544,5 +2399,33 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         Object[] newArray = Arrays.copyOf(originalArray, originalArray.length + 1);
         newArray[originalArray.length] = value;
         return newArray;
+    }
+
+    private void setSupportedResponseModes() throws ClassNotFoundException, InstantiationException,
+            IllegalAccessException {
+        Map<String, ResponseModeProvider> supportedResponseModeProviders = new HashMap<>();
+        ResponseModeProvider defaultResponseModeProvider;
+        Map<String, String> supportedResponseModeClassNames = new HashMap<>();
+        String defaultResponseModeProviderClassName;
+        supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.QUERY,
+                QueryResponseModeProvider.class.getCanonicalName());
+        supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FRAGMENT,
+                FragmentResponseModeProvider.class.getCanonicalName());
+        supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FORM_POST,
+                FormPostResponseModeProvider.class.getCanonicalName());
+        defaultResponseModeProviderClassName = DefaultResponseModeProvider.class.getCanonicalName();
+
+        for (Map.Entry<String, String> entry : supportedResponseModeClassNames.entrySet()) {
+            ResponseModeProvider responseModeProvider = (ResponseModeProvider)
+                    Class.forName(entry.getValue()).newInstance();
+
+            supportedResponseModeProviders.put(entry.getKey(), responseModeProvider);
+        }
+
+        defaultResponseModeProvider = (ResponseModeProvider)
+                Class.forName(defaultResponseModeProviderClassName).newInstance();
+
+        OAuth2ServiceComponentHolder.setResponseModeProviders(supportedResponseModeProviders);
+        OAuth2ServiceComponentHolder.setDefaultResponseModeProvider(defaultResponseModeProvider);
     }
 }
