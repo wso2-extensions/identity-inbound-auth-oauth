@@ -296,6 +296,7 @@ public class OAuthAppDAO {
                             oauthApp.setRefreshTokenExpiryTime(rSet.getLong(15));
                             oauthApp.setIdTokenExpiryTime(rSet.getLong(16));
                             oauthApp.setUser(authenticatedUser);
+                            oauthApp.setState(rSet.getString(17));
                             String spTenantDomain = authenticatedUser.getTenantDomain();
                             handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
                             oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
