@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013, WSO2 LLC. (https://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -125,6 +125,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
@@ -1909,6 +1910,16 @@ public class EndpointUtil {
      */
     private static String getErrorMessageToi18nMapping(String errorMsg) {
 
+        Pattern invalidRequestUri = Pattern.compile(OAuthConstants.OAuthError
+                .AuthorizationResponse.INVALID_REQUEST_URI);
+        Pattern clientIdNotMatchRegex = Pattern.compile(OAuthConstants.OAuthError
+                .AuthorizationResponse.CLIENT_IDS_NOT_MATCH);
+        if (invalidRequestUri.matcher(errorMsg).matches()) {
+            return "par.invalid.request.uri";
+        } else if (clientIdNotMatchRegex.matcher(errorMsg).matches()) {
+            return "par.client.id.not.match";
+        }
+
         switch (errorMsg) {
             case OAuthConstants.OAuthError.AuthorizationResponse.CALLBACK_NOT_MATCH:
                 return "callback.not.match";
@@ -1916,6 +1927,8 @@ public class EndpointUtil {
                 return "application.not.found";
             case OAuthConstants.OAuthError.AuthorizationResponse.INVALID_REDIRECT_URI:
                 return "invalid.redirect.uri";
+            case OAuthConstants.OAuthError.AuthorizationResponse.REQUEST_URI_EXPIRED:
+                return "par.request.uri.expired";
             default:
                 return errorMsg;
         }
