@@ -27,7 +27,6 @@ import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
 import org.apache.oltu.oauth2.as.issuer.UUIDValueGenerator;
 import org.apache.oltu.oauth2.as.issuer.ValueGenerator;
-import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
@@ -36,6 +35,7 @@ import org.wso2.carbon.identity.application.common.cache.BaseCache;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.CodeResponseValidator;
 import org.wso2.carbon.identity.oauth.common.CodeTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.IDTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.IDTokenTokenResponseValidator;
@@ -992,7 +992,7 @@ public class OAuthServerConfiguration {
                             supportedResponseTypeValidatorsTemp = new Hashtable<>();
                     // Load default grant type validators
                     supportedResponseTypeValidatorsTemp
-                            .put(ResponseType.CODE.toString(), CodeValidator.class);
+                            .put(ResponseType.CODE.toString(), CodeResponseValidator.class);
                     supportedResponseTypeValidatorsTemp.put(ResponseType.TOKEN.toString(),
                             TokenValidator.class);
                     supportedResponseTypeValidatorsTemp.put(OAuthConstants.ID_TOKEN,

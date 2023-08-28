@@ -20,7 +20,10 @@ package org.wso2.carbon.identity.oauth.common;
 
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.utils.OAuthUtils;
+import org.json.JSONObject;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
@@ -67,5 +70,31 @@ public class OAuthCommonUtil {
         if (!isAllowedContentType(contentType, ALLOWED_CONTENT_TYPES)) {
             throw OAuthUtils.handleBadContentTypeException(String.join(" or ", ALLOWED_CONTENT_TYPES));
         }
+    }
+
+    /**
+     * Check whether the application/server is FAPI compliant.
+     *
+     * @return true if the application/server is FAPI compliant, else, false.
+     */
+    public static boolean isFapiEnabled() {
+        // Todo: Need to implement the logic to check whether the application/server is FAPI compliant.
+        return true;
+    }
+
+    /**
+     * Method to decode the request object jwt.
+     * @param requestObjectJwt request object jwt
+     * @return json body of the request object
+     */
+    public static JSONObject decodeRequestObject(String requestObjectJwt) {
+        byte[] requestObjectBytes;
+        try {
+            requestObjectBytes = Base64.getDecoder().decode(requestObjectJwt.split("\\.")[1]);
+        } catch (IllegalArgumentException e) {
+            // Decode if the requestObject is base64-url encoded.
+            requestObjectBytes = Base64.getUrlDecoder().decode(requestObjectJwt.split("\\.")[1]);
+        }
+        return new JSONObject(new String(requestObjectBytes, StandardCharsets.UTF_8));
     }
 }
