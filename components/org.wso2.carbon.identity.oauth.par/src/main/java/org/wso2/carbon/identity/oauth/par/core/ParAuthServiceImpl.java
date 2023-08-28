@@ -92,8 +92,8 @@ public class ParAuthServiceImpl implements ParAuthService {
 
         Optional<ParRequestDO> optionalParRequestDO = parMgtDAO.getRequestData(uuid);
         if (!optionalParRequestDO.isPresent()) {
-            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, "A PAR request does not exist for the " +
-                    "uuid: " + uuid);
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    OAuthConstants.OAuthError.AuthorizationResponsei18nKey.INVALID_REQUEST_URI);
         }
 
         ParRequestDO parRequestDO = optionalParRequestDO.get();
@@ -121,7 +121,8 @@ public class ParAuthServiceImpl implements ParAuthService {
         long currentTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis();
 
         if (currentTimeInMillis > expiresIn) {
-            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, "Request uri expired");
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    OAuthConstants.OAuthError.AuthorizationResponsei18nKey.REQUEST_URI_EXPIRED);
         }
     }
 
@@ -129,7 +130,7 @@ public class ParAuthServiceImpl implements ParAuthService {
 
         if (!StringUtils.equals(parClientId, clientId)) {
             throw new ParClientException(OAuth2ErrorCodes.INVALID_CLIENT,
-                    String.format("Received client_id %s does not match the client_id from the initial PAR request %s",
+                    String.format(OAuthConstants.OAuthError.AuthorizationResponsei18nKey.CLIENT_IDS_NOT_MATCH,
                             clientId, parClientId));
         }
     }

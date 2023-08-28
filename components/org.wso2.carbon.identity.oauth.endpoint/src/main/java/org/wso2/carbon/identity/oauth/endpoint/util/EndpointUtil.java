@@ -125,7 +125,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
@@ -515,18 +514,17 @@ public class EndpointUtil {
         // For the backward compatibility, this property can be set to false and then the error page is
         // redirected to a common OAuth Error page.
         if (!OAuthServerConfiguration.getInstance().isRedirectToRequestedRedirectUriEnabled()) {
-            return getErrorPageURL(request, errorCode, getErrorMessageToi18nMapping(errorMessage), appName);
+            return getErrorPageURL(request, errorCode, errorMessage, appName);
         } else if (subErrorCode.equals(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI) ||
                 subErrorCode.equals(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT) ||
                 StringUtils.isBlank(request.getParameter(PROP_REDIRECT_URI))) {
-            return getErrorPageURL(request, errorCode, getErrorMessageToi18nMapping(errorMessage), appName);
+            return getErrorPageURL(request, errorCode, errorMessage, appName);
         } else {
             String redirectUri = request.getParameter(OAuthConstants.OAuth20Params.REDIRECT_URI);
 
             // If the redirect url is not set in the request, page is redirected to common OAuth error page.
             if (StringUtils.isBlank(redirectUri)) {
-                redirectUri = getErrorPageURL(request, errorCode,
-                        getErrorMessageToi18nMapping(errorMessage), appName);
+                redirectUri = getErrorPageURL(request, errorCode, errorMessage, appName);
             } else {
                 String state = retrieveStateForErrorURL(request, oAuth2Parameters);
                 redirectUri = getUpdatedRedirectURL(request, redirectUri, errorCode, errorMessage, state, appName);
@@ -1900,37 +1898,5 @@ public class EndpointUtil {
                     .getContextClassLoader().loadClass(oauthAuthzRequestClassName);
         }
         return oAuthAuthzRequestClass;
-    }
-
-    /**
-     * Returns the i18n key for the given error message.
-     *
-     * @param errorMsg Error message.
-     * @return The i18n key defined in Resources.properties file of the authentication endpoint.
-     */
-    private static String getErrorMessageToi18nMapping(String errorMsg) {
-
-        Pattern invalidRequestUri = Pattern.compile(OAuthConstants.OAuthError
-                .AuthorizationResponse.INVALID_REQUEST_URI);
-        Pattern clientIdNotMatchRegex = Pattern.compile(OAuthConstants.OAuthError
-                .AuthorizationResponse.CLIENT_IDS_NOT_MATCH);
-        if (invalidRequestUri.matcher(errorMsg).matches()) {
-            return "par.invalid.request.uri";
-        } else if (clientIdNotMatchRegex.matcher(errorMsg).matches()) {
-            return "par.client.id.not.match";
-        }
-
-        switch (errorMsg) {
-            case OAuthConstants.OAuthError.AuthorizationResponse.CALLBACK_NOT_MATCH:
-                return "callback.not.match";
-            case OAuthConstants.OAuthError.AuthorizationResponse.APPLICATION_NOT_FOUND:
-                return "application.not.found";
-            case OAuthConstants.OAuthError.AuthorizationResponse.INVALID_REDIRECT_URI:
-                return "invalid.redirect.uri";
-            case OAuthConstants.OAuthError.AuthorizationResponse.REQUEST_URI_EXPIRED:
-                return "par.request.uri.expired";
-            default:
-                return errorMsg;
-        }
     }
 }

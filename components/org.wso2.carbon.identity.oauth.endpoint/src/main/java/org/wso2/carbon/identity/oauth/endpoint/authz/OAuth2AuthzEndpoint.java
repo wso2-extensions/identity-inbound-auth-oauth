@@ -2535,11 +2535,12 @@ public class OAuth2AuthzEndpoint {
                 LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
                         OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS)
-                        .resultMessage(OAuthConstants.OAuthError.AuthorizationResponse.INVALID_REDIRECT_URI)
+                        .resultMessage("Redirect URI is not present in the authorization request.")
                         .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                         .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
-            throw new InvalidRequestException(OAuthConstants.OAuthError.AuthorizationResponse.INVALID_REDIRECT_URI,
+            throw new InvalidRequestException(
+                    OAuthConstants.OAuthError.AuthorizationResponsei18nKey.INVALID_REDIRECT_URI,
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
         persistRequestObject(parameters, requestObject);

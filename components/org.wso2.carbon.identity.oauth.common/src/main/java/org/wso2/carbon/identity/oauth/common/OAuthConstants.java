@@ -408,21 +408,19 @@ public final class OAuthConstants {
         }
 
         /**
-         * Define Authorization request constants.
+         * Define Authorization request constants with i18n keys which will be mapped to the error
+         * message in the frontend.
          */
-        public static class AuthorizationResponse {
+        public static class AuthorizationResponsei18nKey {
 
-            public static final String CALLBACK_NOT_MATCH = "Registered callback does not match with the provided url.";
-            public static final String APPLICATION_NOT_FOUND = "Cannot find an application associated with the given " +
-                    "consumer key.";
-            public static final String INVALID_REDIRECT_URI = "Redirect URI is not present in the authorization " +
-                    "request.";
-            public static final String INVALID_REQUEST_URI = "A PAR request does not exist for the uuid: .+";
-            public static final String CLIENT_IDS_NOT_MATCH = "Received client_id .+ does not match the " +
-                    "client_id from the initial PAR request .+";
-            public static final String REQUEST_URI_EXPIRED = "Request uri expired";
+            public static final String CALLBACK_NOT_MATCH = "callback.not.match";
+            public static final String APPLICATION_NOT_FOUND = "application.not.found";
+            public static final String INVALID_REDIRECT_URI = "invalid.redirect.uri";
+            public static final String INVALID_REQUEST_URI = "par.invalid.request.uri";
+            public static final String CLIENT_IDS_NOT_MATCH = "par.client.id.not.match";
+            public static final String REQUEST_URI_EXPIRED = "par.request.uri.expired";
 
-            private AuthorizationResponse() {
+            private AuthorizationResponsei18nKey() {
 
             }
         }
