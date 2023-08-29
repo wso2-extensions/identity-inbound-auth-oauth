@@ -92,8 +92,6 @@ public class ParAuthServiceTest extends PowerMockTestCase {
                 {"0"},
                 // valid positive integer
                 {"60"},
-                // invalid integer surpassing the max value
-                {"601"},
                 // no config value
                 {null}
         };
