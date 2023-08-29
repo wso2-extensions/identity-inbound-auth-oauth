@@ -79,7 +79,7 @@ public class OAuthCommonUtil {
      */
     public static boolean isFapiEnabled() {
         // Todo: Need to implement the logic to check whether the application/server is FAPI compliant.
-        return true;
+        return false;
     }
 
     /**
