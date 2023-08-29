@@ -96,6 +96,8 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
     public static final String ESSENTIAL_CLAIM_JSON = "ESSENTIAL_CLAIM_JSON";
 
     protected static final String OIDC_SCOPE = "openid";
+
+    protected static final String CLIENT_ID = "dummy_client_id";
     protected static final String UPDATED_AT = "updated_at";
     protected static final String PHONE_NUMBER_VERIFIED = "phone_number_verified";
     protected static final String EMAIL_VERIFIED = "email_verified";
