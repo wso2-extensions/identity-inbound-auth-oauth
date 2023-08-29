@@ -15,6 +15,8 @@
  */
 package org.wso2.carbon.identity.openidconnect;
 
+import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jose.util.X509CertUtils;
 import com.nimbusds.jwt.JWTClaimsSet;
 import net.minidev.json.JSONArray;
 import org.apache.commons.lang.ArrayUtils;
@@ -31,6 +33,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
@@ -41,17 +44,21 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -61,6 +68,8 @@ import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -95,6 +104,10 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         try {
             Map<String, Object> userClaimsInOIDCDialect = getUserClaimsInOIDCDialect(tokenReqMessageContext);
             tokenReqMessageContext.addProperty(ID_TOKEN_USER_CLAIMS_PROP_KEY, userClaimsInOIDCDialect.keySet());
+            if (Boolean.parseBoolean(isFapiApplication(tokenReqMessageContext.getOauth2AccessTokenReqDTO()
+                    .getClientId()))) {
+                addCnfClaimToOIDCDialect(tokenReqMessageContext, userClaimsInOIDCDialect);
+            }
             return setClaimsToJwtClaimSet(jwtClaimsSetBuilder, userClaimsInOIDCDialect);
         } catch (OAuthSystemException e) {
             if (log.isDebugEnabled()) {
@@ -842,5 +855,62 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             return true;
         }
         return StringUtils.contains(claimValue, multiAttributeSeparator);
+    }
+
+    /**
+     * Check whether the application should support FAPI.
+     *
+     * @param clientId       Client ID of the application.
+     * @return Whether the application should support FAPI.
+     * @throws OAuthClientAuthnException
+     */
+    public String isFapiApplication(String clientId) throws OAuthClientAuthnException {
+
+        String isFapiApp = "IsFAPIApp";
+        try {
+            ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
+            if (StringUtils.isEmpty(serviceProvider.getCertificateContent())) {
+                ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
+                for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
+                    if (isFapiApp.equals(serviceProviderProperty.getName())) {
+                        return serviceProviderProperty.getValue();
+                    }
+                }
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw new OAuthClientAuthnException("Token signing algorithm not registered",
+                    OAuth2ErrorCodes.INVALID_REQUEST);
+        }
+        return null;
+    }
+
+    /**
+     * Add the CNF claim to the OIDC dialect when a TLS certificate is passed in the request.
+     *
+     * @param tokenReqMessageContext       Token request message context.
+     * @param userClaimsInOIDCDialect      Map of the user claims in the OIDC dialect.
+     */
+    private void addCnfClaimToOIDCDialect(OAuthTokenReqMessageContext tokenReqMessageContext,
+                                          Map<String, Object> userClaimsInOIDCDialect) {
+        Base64URL certThumbprint;
+        X509Certificate certificate;
+        String headerName = Optional.ofNullable(IdentityUtil.getProperty(OAuthConstants.MTLS_AUTH_HEADER))
+                .orElse("CONFIG_NOT_FOUND");
+
+        HttpRequestHeader[] requestHeaders = tokenReqMessageContext.getOauth2AccessTokenReqDTO()
+                .getHttpRequestHeaders();
+        if (requestHeaders != null && requestHeaders.length != 0) {
+            Optional<HttpRequestHeader> certHeader =
+                    Arrays.stream(requestHeaders).filter(h -> headerName.equals(h.getName())).findFirst();
+            if (certHeader.isPresent()) {
+                try {
+                    certificate = OAuth2Util.parseCertificate(certHeader.get().getValue()[0]);
+                    certThumbprint = X509CertUtils.computeSHA256Thumbprint(certificate);
+                    userClaimsInOIDCDialect.put("cnf", Collections.singletonMap("x5t#S256", certThumbprint));
+                } catch (CertificateException e) {
+                    log.error("Error while extracting the certificate", e);
+                }
+            }
+        }
     }
 }

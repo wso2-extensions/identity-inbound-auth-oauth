@@ -58,6 +58,7 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -69,9 +70,11 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
@@ -80,6 +83,7 @@ import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -88,6 +92,8 @@ import java.lang.reflect.Modifier;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collections;
@@ -130,7 +136,9 @@ import static org.wso2.carbon.user.core.UserCoreConstants.DOMAIN_SEPARATOR;
         FrameworkUtils.class,
         JDBCPersistenceManager.class,
         OAuthServerConfiguration.class,
-        PrivilegedCarbonContext.class
+        PrivilegedCarbonContext.class,
+        IdentityUtil.class,
+        OAuth2Util.class
 })
 
 public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
@@ -225,6 +233,36 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
 
     public static final String DB_NAME = "jdbc/WSO2CarbonDB";
     public static final String H2_SCRIPT_NAME = "dbScripts/scope_claim.sql";
+    public static final String CERTIFICATE_CONTENT = "-----BEGIN CERTIFICATE-----" +
+            "MIIFODCCBCCgAwIBAgIEWcWGxDANBgkqhkiG9w0BAQsFADBTMQswCQYDVQQGEwJH" +
+            "QjEUMBIGA1UEChMLT3BlbkJhbmtpbmcxLjAsBgNVBAMTJU9wZW5CYW5raW5nIFBy" +
+            "ZS1Qcm9kdWN0aW9uIElzc3VpbmcgQ0EwHhcNMTkwNTE2MDg0NDQ2WhcNMjAwNjE2" +
+            "MDkxNDQ2WjBhMQswCQYDVQQGEwJHQjEUMBIGA1UEChMLT3BlbkJhbmtpbmcxGzAZ" +
+            "BgNVBAsTEjAwMTU4MDAwMDFIUVFyWkFBWDEfMB0GA1UEAxMWc0Zna2k3Mk9pcXda" +
+            "TkZPWmc2T2FqaTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBANoVwx4E" +
+            "iWnQs89lj8vKSy/xTbZU2AHS9tFNz7wVa+rkpFyLVPtQW8AthG4hlfrBYMne7/P9" +
+            "c1Fi/q+n7eomWvJJo44GV44GJhegM6yyRaIcQdpxe9x9G4twWK4cY+VU3TfE6Dbd" +
+            "DdmAt7ai4KFbbpB33N8RwXoeGZdwxZFNPmfaoZZbz5p9+aSMQf1UyExcdlPXah77" +
+            "PDZDwAnyy5kYXUPS59S78+p4twqZXyZu9hd+Su5Zod5UObRJ4F5LQzZPS1+KzBje" +
+            "JM0o8qoRRZTZkLNnmmQw503KXp/LCLrSbFU2ZLGy3bQpKFFc5I6tZiy67ELNzLWo" +
+            "DzngEbApwhX+jtsCAwEAAaOCAgQwggIAMA4GA1UdDwEB/wQEAwIHgDAgBgNVHSUB" +
+            "Af8EFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwgeAGA1UdIASB2DCB1TCB0gYLKwYB" +
+            "BAGodYEGAWQwgcIwKgYIKwYBBQUHAgEWHmh0dHA6Ly9vYi50cnVzdGlzLmNvbS9w" +
+            "b2xpY2llczCBkwYIKwYBBQUHAgIwgYYMgYNVc2Ugb2YgdGhpcyBDZXJ0aWZpY2F0" +
+            "ZSBjb25zdGl0dXRlcyBhY2NlcHRhbmNlIG9mIHRoZSBPcGVuQmFua2luZyBSb290" +
+            "IENBIENlcnRpZmljYXRpb24gUG9saWNpZXMgYW5kIENlcnRpZmljYXRlIFByYWN0" +
+            "aWNlIFN0YXRlbWVudDBtBggrBgEFBQcBAQRhMF8wJgYIKwYBBQUHMAGGGmh0dHA6" +
+            "Ly9vYi50cnVzdGlzLmNvbS9vY3NwMDUGCCsGAQUFBzAChilodHRwOi8vb2IudHJ1" +
+            "c3Rpcy5jb20vb2JfcHBfaXNzdWluZ2NhLmNydDA6BgNVHR8EMzAxMC+gLaArhilo" +
+            "dHRwOi8vb2IudHJ1c3Rpcy5jb20vb2JfcHBfaXNzdWluZ2NhLmNybDAfBgNVHSME" +
+            "GDAWgBRQc5HGIXLTd/T+ABIGgVx5eW4/UDAdBgNVHQ4EFgQU5eqvEZ6ZdQS5bq/X" +
+            "dzP5XY/fUXUwDQYJKoZIhvcNAQELBQADggEBAIg8bd/bIh241ewS79lXU058VjCu" +
+            "JC+4QtcI2XiGV3dBpg10V6Kb6E/h8Gru04uVZW1JK52ivVb5NYs6r8txRsTBIaA8" +
+            "Cr03LJqEftclL9NbkPZnpEkUfqCBfujNQF8XWaQgXIIA+io1UzV1TG3K9XCa/w2S" +
+            "sTANKfF8qK5kRsy6z9OGPUE+Oi3DUt+E9p5LCq6n5Bkp9YRGmyYRPs8JMkJmq3sf" +
+            "wtXOy27LE4exJRuZsF1CA78ObaRytuE3DJcnIRdhOcjWieS/MxZD7bzuuAPu5ySX" +
+            "i2/qxT3AlWtHtxrz0mKSC3rlgYAHCzCAHoASWKpf5tnB3TodPVZ6DYOu7oI=" +
+            "-----END CERTIFICATE-----";
     Connection connection = null;
 
     @BeforeClass
@@ -300,6 +338,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         serviceProvider.setApplicationName(SERVICE_PROVIDER_NAME);
         mockApplicationManagementService();
 
+        setServiceProvideProperties(false);
         JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertTrue(jwtClaimsSet.getClaims().isEmpty());
@@ -430,6 +469,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         // Mock to return all the scopes when the consent is asked for.
         UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
+        setServiceProvideProperties(false);
         JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet, "JWT Custom claim handling failed.");
         assertFalse(jwtClaimsSet.getClaims().isEmpty(), "JWT custom claim handling failed");
@@ -466,6 +506,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
 
         UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
+        setServiceProvideProperties(false);
         JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
 
         Assert.assertFalse(jwtClaimsSet.getClaims().isEmpty(),
@@ -898,6 +939,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
 
         mockApplicationManagementService();
 
+        setServiceProvideProperties(false);
         JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertEquals(jwtClaimsSet.getClaims().size(), 0, "Claims are not successfully set.");
     }
@@ -912,6 +954,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
     private void mockApplicationManagementService(ServiceProvider sp) throws Exception {
 
         mockApplicationManagementService();
+        setServiceProvideProperties(false);
         when(applicationManagementService.getApplicationExcludingFileBasedSPs(sp.getApplicationName(), TENANT_DOMAIN))
                 .thenReturn(sp);
     }
@@ -1007,6 +1050,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
 
         UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
+        setServiceProvideProperties(false);
         JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet, "JWT Custom claim handling failed.");
         assertFalse(jwtClaimsSet.getClaims().isEmpty(), "JWT custom claim handling failed");
@@ -1131,5 +1175,62 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
             log.error("Error while obtaining the datasource. ");
         }
         return jwtClaimsSet;
+    }
+
+    @Test
+    public void testHandleCustomClaimsWithHashAsCnfClaim() throws Exception {
+
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getProperty(OAuthConstants.MTLS_AUTH_HEADER)).thenReturn("x-wso2-mutual-auth-cert");
+        HttpRequestHeader httpRequestHeader = new HttpRequestHeader("x-wso2-mutual-auth-cert", CERTIFICATE_CONTENT);
+        HttpRequestHeader[] httpRequestHeaders = new HttpRequestHeader[1];
+        httpRequestHeaders[0] = httpRequestHeader;
+
+        OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+        accessTokenReqDTO.setHttpRequestHeaders(httpRequestHeaders);
+        accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
+
+        OAuthTokenReqMessageContext requestMsgCtx = new OAuthTokenReqMessageContext(accessTokenReqDTO);
+        requestMsgCtx.setAuthorizedUser(getDefaultAuthenticatedLocalUser());
+
+        setServiceProvideProperties(true);
+
+        String decodedContent = StringUtils.trim(CERTIFICATE_CONTENT);
+        // Remove Certificate Headers.
+        byte[] decoded = java.util.Base64.getDecoder().decode(StringUtils.trim(decodedContent
+                .replaceAll(OAuthConstants.BEGIN_CERT, StringUtils.EMPTY)
+                .replaceAll(OAuthConstants.END_CERT, StringUtils.EMPTY)
+        ));
+        PowerMockito.when(OAuth2Util.parseCertificate(CERTIFICATE_CONTENT))
+                .thenReturn((X509Certificate) CertificateFactory.getInstance("X.509")
+                        .generateCertificate(new ByteArrayInputStream(decoded)));
+
+        UserRealm userRealm = getUserRealmWithUserClaims(Collections.emptyMap());
+        mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
+
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
+        assertNotNull(jwtClaimsSet);
+        assertNotNull(jwtClaimsSet.getClaim("cnf"));
+
+    }
+
+    private void setServiceProvideProperties (boolean isFapi) throws Exception {
+        ServiceProvider serviceProvider = new ServiceProvider();
+        ServiceProviderProperty fapiAppSpProperty = new ServiceProviderProperty();
+        fapiAppSpProperty.setName("IsFAPIApp");
+        if (isFapi) {
+            fapiAppSpProperty.setValue("true");
+        } else {
+            fapiAppSpProperty.setValue("false");
+        }
+        serviceProvider.setSpProperties(new ServiceProviderProperty[]{fapiAppSpProperty});
+
+        OAuthServerConfiguration oAuthServerConfigurationMock = PowerMockito.mock(OAuthServerConfiguration.class);
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfigurationMock);
+        PowerMockito.mockStatic(OAuth2Util.class);
+        PowerMockito.when(OAuth2Util.getServiceProvider(Mockito.anyString())).thenReturn(serviceProvider);
     }
 }
