@@ -394,7 +394,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
         try {
             dcrmService.getApplicationByName(dummyClientName);
         } catch (IdentityException ex) {
-            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_NAME.toString());
+            assertEquals(ex.getErrorCode(),
+                    DCRMConstants.ErrorMessages.NOT_FOUND_OAUTH_APPLICATION_WITH_NAME.toString());
             return;
         }
         fail("Expected IdentityException was not thrown by getApplicationByName method");

@@ -119,7 +119,7 @@ public class DCRMService {
         } catch (IdentityOAuthAdminException e) {
             if (INVALID_OAUTH_CLIENT.getErrorCode().equals(e.getErrorCode())) {
                 throw DCRMUtils.generateClientException(
-                        DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_NAME, clientName);
+                        DCRMConstants.ErrorMessages.NOT_FOUND_OAUTH_APPLICATION_WITH_NAME, clientName);
             }
             throw DCRMUtils.generateServerException(
                     DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION, clientName, e);
