@@ -4697,4 +4697,26 @@ public class OAuth2Util {
 
         return externalConsentPageUrl;
     }
+
+    /**
+     * Validate whether a TLS certificate is passed through the request.
+     *
+     * @param content     Certificate content.
+     * @return X.509 certificate after decoding the certificate content.
+     * @throws CertificateException
+     */
+    public static X509Certificate parseCertificate(String content) throws CertificateException {
+
+        // Trim extra spaces.
+        String decodedContent = StringUtils.trim(content);
+
+        // Remove Certificate Headers.
+        byte[] decoded = java.util.Base64.getDecoder().decode(StringUtils.trim(decodedContent
+                .replaceAll(OAuthConstants.BEGIN_CERT, StringUtils.EMPTY)
+                .replaceAll(OAuthConstants.END_CERT, StringUtils.EMPTY)
+        ));
+
+        return (java.security.cert.X509Certificate) CertificateFactory.getInstance(Constants.X509)
+                .generateCertificate(new ByteArrayInputStream(decoded));
+    }
 }

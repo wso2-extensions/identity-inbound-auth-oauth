@@ -184,6 +184,17 @@ public final class OAuthConstants {
             "OAuth.JWT.RenewTokenWithoutRevokingExisting.Enable";
     public static final String REQUEST_BINDING_TYPE = "request";
     public static final String ORG_ID = "org_id";
+    public static final String MTLS_AUTH_HEADER = "MutualTLS.ClientCertificateHeader";
+    public static final String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
+    public static final String END_CERT = "-----END CERTIFICATE-----";
+    public static final String OAUTH_JWT_ASSERTION = "client_assertion";
+    public static final String OAUTH_JWT_ASSERTION_TYPE = "client_assertion_type";
+    public static final String AUTHORIZATION_HEADER = "authorization";
+    public static final String OAUTH_JWT_BEARER_GRANT_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
+    public static final String PRIVATE_KEY_JWT = "private_key_jwt";
+    public static final String TLS_CLIENT_AUTH = "tls_client_auth";
+    public static final String NOT_APPLICABLE = "N/A";
+    public static final String TOKEN_ENDPOINT_AUTH_METHOD = "token_endpoint_auth_method";
 
     private OAuthConstants() {
 
