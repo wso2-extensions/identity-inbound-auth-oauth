@@ -76,7 +76,7 @@ public class OAuthClientAuthnService {
 
         OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
         try {
-            if (Boolean.parseBoolean(isFapiApplication(extractClientId(request)))) {
+            if (Boolean.parseBoolean(isFapiApplication(extractClientId(request, bodyContentParams)))) {
                 if (!isMTLSEnforced(request)) {
                     setErrorToContext(OAuth2ErrorCodes.INVALID_REQUEST, "Transport certificate not passed " +
                             "through the request or the certificate is not valid", oAuthClientAuthnContext);
@@ -303,7 +303,7 @@ public class OAuthClientAuthnService {
     private boolean isRegisteredClientAuthMethod(HttpServletRequest request, Map<String, List> contentParams)
             throws OAuthClientAuthnException {
 
-        String registeredClientAuthMethod = retrieveRegisteredAuthMethod(extractClientId(request));
+        String registeredClientAuthMethod = retrieveRegisteredAuthMethod(extractClientId(request, contentParams));
 
         if (registeredClientAuthMethod.equals(OAuthConstants.NOT_APPLICABLE)) {
             return false;
@@ -404,7 +404,8 @@ public class OAuthClientAuthnService {
      * @return Client ID of the application.
      * @throws OAuthClientAuthnException
      */
-    private String extractClientId(HttpServletRequest request) throws OAuthClientAuthnException {
+    private String extractClientId(HttpServletRequest request, Map<String, List> contentParams)
+            throws OAuthClientAuthnException {
 
         String basicAuthErrorMessage = "Unable to find client id in the request. Invalid Authorization header found.";
         String authHeader = "Authorization";
@@ -414,11 +415,15 @@ public class OAuthClientAuthnService {
                     Optional.ofNullable(request.getParameter(OAuthConstants.OAUTH_JWT_ASSERTION));
             Optional<String> clientIdAsReqParam =
                     Optional.ofNullable(request.getParameter(OAuth.OAUTH_CLIENT_ID));
+            Optional<List> clientIdInContentParamList =
+                    Optional.ofNullable(contentParams.get(OAuth.OAUTH_CLIENT_ID));
             if (signedObject.isPresent()) {
                 SignedJWT signedJWT = SignedJWT.parse(signedObject.get());
                 return signedJWT.getJWTClaimsSet().getIssuer();
             } else if (clientIdAsReqParam.isPresent()) {
                 return clientIdAsReqParam.get();
+            } else if (clientIdInContentParamList.isPresent()) {
+                return (String) clientIdInContentParamList.get().get(0);
             } else if (request.getHeader(authHeader) != null) {
                 String authorizationHeader = request.getHeader(authHeader);
                 if (authorizationHeader.split(" ").length == 2) {
