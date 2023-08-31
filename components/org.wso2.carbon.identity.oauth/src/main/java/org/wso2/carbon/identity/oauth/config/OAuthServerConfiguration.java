@@ -123,6 +123,7 @@ public class OAuthServerConfiguration {
     private static String oauth1AuthorizeUrl = null;
     private static String oauth1AccessTokenUrl = null;
     private static String oauth2AuthzEPUrl = null;
+    private static String oauth2ParEPUrl = null;
     private static String oauth2TokenEPUrl = null;
     private static String oauth2UserInfoEPUrl = null;
     private static String oauth2RevocationEPUrl = null;
@@ -280,6 +281,11 @@ public class OAuthServerConfiguration {
     // Property added to customize the token valued generation method. (IDENTITY-6139)
     private ValueGenerator tokenValueGenerator;
 
+    // property to skip OIDC claims retrieval for client credential grant type.
+    // By default, this is true because OIDC claims are not required for client credential grant type
+    // and CC grant doesn't involve a user.
+    private boolean skipOIDCClaimsForClientCredentialGrant = true;
+
     private String tokenValueGeneratorClassName;
     //property to define hashing algorithm when enabling hashing of tokens and authorization codes.
     private String hashAlgorithm = "SHA-256";
@@ -432,6 +438,8 @@ public class OAuthServerConfiguration {
         // read openid connect configurations
         parseOpenIDConnectConfig(oauthElem);
 
+        parseSkipOIDCClaimsForClientCredentialGrantConfig(oauthElem);
+
         // parse OAuth 2.0 token generator
         parseOAuthTokenGeneratorConfig(oauthElem);
 
@@ -516,6 +524,22 @@ public class OAuthServerConfiguration {
                 OMElement scopeElement = (OMElement) scopeIterator.next();
                 allowedScopes.add(scopeElement.getText());
             }
+        }
+    }
+
+    /**
+     * Parse config for skipping OIDC claims for client credentials
+     *
+     * @param oauthElem OauthConfigElem.
+     */
+    private void parseSkipOIDCClaimsForClientCredentialGrantConfig(OMElement oauthElem) {
+
+        OMElement skipOIDCClaimsForClientCredentialGrantElement = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                        .SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT));
+        if (skipOIDCClaimsForClientCredentialGrantElement != null) {
+            skipOIDCClaimsForClientCredentialGrant = Boolean.parseBoolean(
+                    skipOIDCClaimsForClientCredentialGrantElement.getText().trim());
         }
     }
 
@@ -635,6 +659,11 @@ public class OAuthServerConfiguration {
         return oauth2AuthzEPUrl;
     }
 
+    public String getOAuth2ParEPUrl() {
+
+        return oauth2ParEPUrl;
+    }
+
     public String getOAuth2TokenEPUrl() {
         return oauth2TokenEPUrl;
     }
@@ -672,6 +701,11 @@ public class OAuthServerConfiguration {
     public String getDeviceAuthzEPUrl() {
 
         return deviceAuthzEPUrl;
+    }
+
+    public boolean isSkipOIDCClaimsForClientCredentialGrant() {
+
+        return skipOIDCClaimsForClientCredentialGrant;
     }
     /**
      * instantiate the OAuth token generator. to override the default implementation, one can specify the custom class
@@ -2008,6 +2042,13 @@ public class OAuthServerConfiguration {
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2AuthzEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.OAUTH2_PAR_EP_URL));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2ParEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
         elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
@@ -3512,6 +3553,7 @@ public class OAuthServerConfiguration {
         public static final String OAUTH1_AUTHORIZE_URL = "OAuth1AuthorizeUrl";
         public static final String OAUTH1_ACCESS_TOKEN_URL = "OAuth1AccessTokenUrl";
         public static final String OAUTH2_AUTHZ_EP_URL = "OAuth2AuthzEPUrl";
+        public static final String OAUTH2_PAR_EP_URL = "OAuth2ParEPUrl";
         public static final String OAUTH2_TOKEN_EP_URL = "OAuth2TokenEPUrl";
         public static final String OAUTH2_USERINFO_EP_URL = "OAuth2UserInfoEPUrl";
         public static final String OAUTH2_REVOCATION_EP_URL = "OAuth2RevokeEPUrl";
@@ -3751,6 +3793,9 @@ public class OAuthServerConfiguration {
 
         // FAPI Configurations
         private static final String FAPI = "FAPI";
+
+        private static final String SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT =
+                "SkipOIDCClaimsForClientCredentialGrant";
     }
 
 }

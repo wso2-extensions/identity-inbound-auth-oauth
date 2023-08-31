@@ -62,12 +62,16 @@ import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
+import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
+import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -97,6 +101,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
 
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.nullable;
@@ -670,20 +675,21 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         Map<String, String[]> requestParams2 = new HashedMap();
         requestParams2.put("reqParam1", new String[]{"val1"});
 
-        return new Object[][]{
+        return addDiagnosticLogStatusToExistingDataProvider(new Object[][]{
                 {paramMap1, requestParams1, false},
                 {paramMap2, requestParams1, false},
                 {paramMap2, requestParams2, true},
                 {null, null, true}
-        };
+        });
     }
 
     @Test(dataProvider = "provideParams")
-    public void testValidateParams(Object paramObject, Map<String, String[]> requestParams, boolean expected) {
+    public void testValidateParams(Object paramObject, Map<String, String[]> requestParams, boolean expected,
+                                   boolean diagnosticLogEnabled) {
 
         mockStatic(IdentityTenantUtil.class);
         mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(diagnosticLogEnabled);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         MultivaluedMap<String, String> paramMap = (MultivaluedMap<String, String>) paramObject;
         when(mockedHttpServletRequest.getParameterMap()).thenReturn(requestParams);
@@ -784,6 +790,48 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         assertEquals(EndpointUtil.getUserInfoClaimDialect(), USER_INFO_CLAIM_DIALECT);
     }
 
+    @Test
+    public void testGetOAuthAuthzRequest() throws Exception {
+
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
+        // test when OAuthAuthzRequestClassName is not defined
+        when(mockedOAuthServerConfiguration.getOAuthAuthzRequestClassName()).thenReturn("");
+        CarbonOAuthAuthzRequest mockCarbonOAuthAuthzRequest = mock(CarbonOAuthAuthzRequest.class);
+        whenNew(CarbonOAuthAuthzRequest.class).withArguments(any(HttpServletRequest.class))
+                .thenReturn(mockCarbonOAuthAuthzRequest);
+        assertEquals(EndpointUtil.getOAuthAuthzRequest(mockedHttpServletRequest), mockCarbonOAuthAuthzRequest);
+    }
+
+    @DataProvider(name = "provideState")
+    public Object[][] provideState() {
+
+        return addDiagnosticLogStatusToExistingDataProvider(new Object[][]{
+                {"ACTIVE"},
+                {"INACTIVE"},
+                {null},
+        });
+    }
+
+    @Test(dataProvider = "provideState")
+    public void testValidateOauthApplication(String state, boolean diagnosticLogEnabled) {
+
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(diagnosticLogEnabled);
+        EndpointUtil.setOAuth2Service(mockedOAuth2Service);
+        when(mockedOAuth2Service.getOauthApplicationState(anyString())).thenReturn(state);
+
+        Response response;
+        try {
+            EndpointUtil.validateOauthApplication(clientId);
+        } catch (InvalidApplicationClientException e) {
+            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+            response = invalidRequestExceptionMapper.toResponse(e);
+            final String responseBody = response.getEntity().toString();
+            assertTrue(responseBody.contains(OAuth2ErrorCodes.INVALID_CLIENT), "Expected error code not found");
+        }
+    }
+
     private void setMockedLog(boolean isDebugEnabled) throws Exception {
 
         Constructor<EndpointUtil> constructor = EndpointUtil.class.getDeclaredConstructor(new Class[0]);
@@ -868,5 +916,23 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         localAndOutboundAuthenticationConfig.setUseExternalConsentPage(true);
         serviceProvider.setLocalAndOutBoundAuthenticationConfig(localAndOutboundAuthenticationConfig);
         return serviceProvider;
+    }
+
+    private static Object[][] addDiagnosticLogStatusToExistingDataProvider(Object[][] existingData) {
+
+        // Combine original values with diagnostic log status.
+        Object[][] combinedValues = new Object[existingData.length * 2][];
+        for (int i = 0; i < existingData.length; i++) {
+            combinedValues[i * 2] = appendValue(existingData[i], true); // Enable diagnostic logs.
+            combinedValues[i * 2 + 1] = appendValue(existingData[i], false); // Disable diagnostic logs.
+        }
+        return combinedValues;
+    }
+
+    private static Object[] appendValue(Object[] originalArray, Object value) {
+
+        Object[] newArray = Arrays.copyOf(originalArray, originalArray.length + 1);
+        newArray[originalArray.length] = value;
+        return newArray;
     }
 }

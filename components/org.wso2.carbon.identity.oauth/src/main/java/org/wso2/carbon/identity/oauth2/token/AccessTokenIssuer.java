@@ -185,16 +185,20 @@ public class AccessTokenIssuer {
 
         OAuthClientAuthnContext oAuthClientAuthnContext = tokenReqDTO.getoAuthClientAuthnContext();
 
+        DiagnosticLog.DiagnosticLogBuilder errorDiagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            errorDiagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN)
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+        }
         if (oAuthClientAuthnContext == null) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                if (StringUtils.isNotBlank(tokenReqDTO.getClientSecret())) {
-                    params.put("clientSecret", tokenReqDTO.getClientSecret().replaceAll(".", "*"));
-                }
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "OAuth client authentication failed.", "issue-access-token",
-                        null);
+            // errorDiagnosticLogBuilder will be null if diagnostic logs are disabled.
+            if (errorDiagnosticLogBuilder != null) {
+                errorDiagnosticLogBuilder.resultMessage("OAuth client authentication failed.");
+                LoggerUtils.triggerDiagnosticLogEvent(errorDiagnosticLogBuilder);
             }
             oAuthClientAuthnContext = new OAuthClientAuthnContext();
             oAuthClientAuthnContext.setAuthenticated(false);
@@ -205,14 +209,12 @@ public class AccessTokenIssuer {
         // Will return an invalid request response if multiple authentication mechanisms are engaged irrespective of
         // whether the grant type is confidential or not.
         if (oAuthClientAuthnContext.isMultipleAuthenticatorsEngaged()) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                params.put("clientAuthenticators", oAuthClientAuthnContext.getExecutedAuthenticators());
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "The client MUST NOT use more than one authentication method per request.",
-                        "issue-access-token", null);
+            // errorDiagnosticLogBuilder will be null if diagnostic logs are disabled.
+            if (errorDiagnosticLogBuilder != null) {
+                errorDiagnosticLogBuilder.inputParam("client authenticators",
+                                oAuthClientAuthnContext.getExecutedAuthenticators())
+                        .resultMessage("The client MUST NOT use more than one authentication method per request.");
+                LoggerUtils.triggerDiagnosticLogEvent(errorDiagnosticLogBuilder);
             }
             tokenRespDTO = handleError(OAuth2ErrorCodes.INVALID_REQUEST, "The client MUST NOT use more than one " +
                     "authentication method in each", tokenReqDTO);
@@ -228,12 +230,11 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug(errorMsg);
             }
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                params.put("grantType", grantType);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Unsupported grant type.", "issue-access-token", null);
+            // errorDiagnosticLogBuilder will be null if diagnostic logs are disabled.
+            if (errorDiagnosticLogBuilder != null) {
+                errorDiagnosticLogBuilder.resultMessage("Unsupported grant type.")
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE, grantType);
+                LoggerUtils.triggerDiagnosticLogEvent(errorDiagnosticLogBuilder);
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNSUPPORTED_GRANT_TYPE,
                     errorMsg, tokenReqDTO);
@@ -250,12 +251,10 @@ public class AccessTokenIssuer {
 
         if (!isAuthenticated && !oAuthClientAuthnContext.isPreviousAuthenticatorEngaged() && authzGrantHandler
                 .isConfidentialClient()) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Unsupported client authentication method.",
-                        "issue-access-token", null);
+            // errorDiagnosticLogBuilder will be null if diagnostic logs are disabled.
+            if (errorDiagnosticLogBuilder != null) {
+                errorDiagnosticLogBuilder.resultMessage("Unsupported client authentication method.");
+                LoggerUtils.triggerDiagnosticLogEvent(errorDiagnosticLogBuilder);
             }
             tokenRespDTO = handleError(
                     OAuth2ErrorCodes.INVALID_CLIENT,
@@ -265,13 +264,11 @@ public class AccessTokenIssuer {
             return tokenRespDTO;
         }
         if (!isAuthenticated) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "Client authentication failed. " + oAuthClientAuthnContext.getErrorMessage(),
-                        "issue-access-token", null);
+            // errorDiagnosticLogBuilder will be null if diagnostic logs are disabled.
+            if (errorDiagnosticLogBuilder != null) {
+                errorDiagnosticLogBuilder.resultMessage("Client authentication failed.")
+                        .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, oAuthClientAuthnContext.getErrorMessage());
+                LoggerUtils.triggerDiagnosticLogEvent(errorDiagnosticLogBuilder);
             }
             tokenRespDTO = handleError(
                     oAuthClientAuthnContext.getErrorCode(),
@@ -316,9 +313,16 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while validating client for authorization", e);
             }
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-access-token", null);
             error = e.getMessage();
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN)
+                        .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, error)
+                        .resultMessage("System error occurred.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+            }
         }
 
         if (!isAuthorizedClient) {
@@ -327,13 +331,11 @@ public class AccessTokenIssuer {
                 log.debug("Client Id: " + tokenReqDTO.getClientId() + " is not authorized to use grant type: " +
                         grantType);
             }
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                params.put("grantType", grantType);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Client is not authorized to use the requested grant type.",
-                        "issue-access-token", null);
+            // errorDiagnosticLogBuilder will be null if diagnostic logs are disabled.
+            if (errorDiagnosticLogBuilder != null) {
+                errorDiagnosticLogBuilder.inputParam(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE, grantType)
+                        .resultMessage("Client is not authorized to use the requested grant type.");
+                LoggerUtils.triggerDiagnosticLogEvent(errorDiagnosticLogBuilder);
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT, error, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
@@ -399,12 +401,15 @@ public class AccessTokenIssuer {
             }
 
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                params.put("requestedScopes", getScopeList(tokenReqDTO.getScope()));
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Invalid scope provided in the request.", "validate-scope",
-                        null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.SCOPE_VALIDATION)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.REQUESTED_SCOPES,
+                                getScopeList(tokenReqDTO.getScope()))
+                        .resultMessage("Invalid scope provided in the request.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.INVALID_SCOPE, "Invalid Scope!", tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
@@ -509,10 +514,14 @@ public class AccessTokenIssuer {
             } catch (IDTokenValidationFailureException e) {
                 log.error(e.getMessage());
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", tokenReqDTO.getClientId());
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-id-token", null);
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.ISSUE_ID_TOKEN)
+                            .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                            .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                            .resultMessage("System error occurred.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED));
                 }
                 tokenRespDTO = handleError(OAuth2ErrorCodes.SERVER_ERROR, "Server Error", tokenReqDTO);
                 return tokenRespDTO;
@@ -574,12 +583,15 @@ public class AccessTokenIssuer {
             boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
             if (isValidScope) {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", tokenReqDTO.getClientId());
-                    params.put("authorizedScopes", getScopeList(tokReqMsgCtx.getScope()));
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.SUCCESS, "OAuth scope validation is successful.",
-                            "validate-scope", null);
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.SCOPE_VALIDATION)
+                            .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                            .inputParam(OAuthConstants.LogConstants.InputKeys.AUTHORIZED_SCOPES,
+                                    getScopeList(tokReqMsgCtx.getScope()))
+                            .resultMessage("OAuth scope validation is successful.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
                 }
             }
             return isValidScope;
@@ -671,13 +683,17 @@ public class AccessTokenIssuer {
             addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
             addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                params.put("requestedScopes", getScopeList(tokenReqDTO.getScope()));
-                params.put("authorizedScopes", getScopeList(tokReqMsgCtx.getScope()));
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.SUCCESS, "OAuth scope validation is successful.", "validate-scope",
-                        null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.SCOPE_VALIDATION)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.REQUESTED_SCOPES,
+                                getScopeList(tokenReqDTO.getScope()))
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.AUTHORIZED_SCOPES,
+                                getScopeList(tokReqMsgCtx.getScope()))
+                        .resultMessage("OAuth scope validation is successful.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
             }
         }
         return isValidScope;

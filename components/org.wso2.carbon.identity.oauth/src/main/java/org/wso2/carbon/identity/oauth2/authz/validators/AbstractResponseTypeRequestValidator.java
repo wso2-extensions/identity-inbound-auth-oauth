@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -32,14 +33,16 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.ActionIDs.VALIDATE_OAUTH_CLIENT;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUEST_URI;
@@ -61,9 +64,11 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             if (log.isDebugEnabled()) {
                 log.debug("Client Id is not present in the authorization request");
             }
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "client_id is not present in the authorization request",
-                    "validate-input-parameters", null);
+            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                    OAUTH_INBOUND_SERVICE, VALIDATE_INPUT_PARAMS)
+                    .resultMessage("Client Id is not present in the authorization request.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             throw new InvalidOAuthRequestException("Client Id is not present in the authorization request",
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT);
         }
@@ -74,10 +79,13 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             if (log.isDebugEnabled()) {
                 log.debug("Redirect URI is not present in the authorization request");
             }
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "redirect_uri is not present in the authorization request",
-                    "validate-input-parameters", null);
-            throw new InvalidOAuthRequestException("Redirect URI is not present in the authorization request",
+            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                    OAUTH_INBOUND_SERVICE, VALIDATE_INPUT_PARAMS)
+                    .resultMessage("Redirect URI is not present in the authorization request.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+            throw new InvalidOAuthRequestException(
+                    OAuthConstants.OAuthError.AuthorizationResponsei18nKey.INVALID_REDIRECT_URI,
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
     }
@@ -96,15 +104,24 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
         try {
             String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
             validateRequestTenantDomain(appTenantDomain);
-
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(OAUTH_INBOUND_SERVICE,
+                        VALIDATE_INPUT_PARAMS)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+            }
             if (StringUtils.isBlank(clientId)) {
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                            OAuthConstants.LogConstants.FAILED, "client_id cannot be empty.",
-                            "validate-input-parameters", null);
+                // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+                if (diagnosticLogBuilder != null) {
+                    diagnosticLogBuilder.resultMessage("client_id cannot be empty.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 throw new InvalidOAuthClientException("Invalid client_id. No OAuth application has been registered " +
                         "with the given client_id");
+            }
+            if (diagnosticLogBuilder != null) {
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, clientId);
             }
             OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
             String appState = appDO.getState();
@@ -113,13 +130,10 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
                 if (log.isDebugEnabled()) {
                     log.debug("A valid OAuth client could not be found for client_id: " + clientId);
                 }
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", clientId);
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED,
-                            "A valid OAuth application could not be found for given client_id.",
-                            "validate-input-parameters", null);
+                if (diagnosticLogBuilder != null) {
+                    diagnosticLogBuilder.resultMessage("A valid OAuth application could not be found for given " +
+                            "client_id.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 throw new InvalidOAuthClientException("A valid OAuth client could not be found for client_id: " +
                         Encode.forHtml(clientId));
@@ -129,12 +143,9 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
                 if (log.isDebugEnabled()) {
                     log.debug("App is not in active state in client ID: " + clientId + ". App state is: " + appState);
                 }
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", clientId);
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "OAuth application is not in active state.",
-                            "validate-input-parameters", null);
+                if (diagnosticLogBuilder != null) {
+                    diagnosticLogBuilder.resultMessage("OAuth application is not in active state.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 throw new InvalidOAuthClientException("Oauth application is not in active state.");
             }
@@ -145,12 +156,12 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
                 log.debug("Error while retrieving the Application Information", e);
             }
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", clientId);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "Cannot find an application associated with the given client_id",
-                        "validate-oauth-client", null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAUTH_INBOUND_SERVICE, VALIDATE_OAUTH_CLIENT)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
+                        .resultMessage("Cannot find an application associated with the given client_id.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
             OAuth2ClientValidationResponseDTO validationResponseDTO = new OAuth2ClientValidationResponseDTO();
             validationResponseDTO.setValidClient(false);
@@ -159,9 +170,15 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             return validationResponseDTO;
         } catch (IdentityOAuth2Exception e) {
             log.error("Error when reading the Application Information.", e);
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "Server error occurred.",
-                    "validate-input-parameters", null);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAUTH_INBOUND_SERVICE, VALIDATE_INPUT_PARAMS)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
+                        .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                        .resultMessage("Error when reading the Application Information.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+            }
             OAuth2ClientValidationResponseDTO validationResponseDTO = new OAuth2ClientValidationResponseDTO();
             validationResponseDTO.setValidClient(false);
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.SERVER_ERROR);
@@ -185,16 +202,15 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
                         .getApplicationName() + ", does not support the requested grant type.");
             }
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", clientId);
-
-                Map<String, Object> configurations = new HashMap<>();
-                configurations.put("callbackUrl", appDO.getCallbackUrl());
-                configurations.put("supportedGrantTypes", appDO.getGrantTypes());
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "The OAuth client is not authorized to use the requested grant type.",
-                        "validate-input-parameters", configurations);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAUTH_INBOUND_SERVICE, VALIDATE_INPUT_PARAMS)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
+                        .configParam(OAuthConstants.LogConstants.ConfigKeys.CALLBACK_URI, appDO.getCallbackUrl())
+                        .configParam(OAuthConstants.LogConstants.ConfigKeys.SUPPORTED_GRANT_TYPES,
+                                appDO.getGrantTypes())
+                        .resultMessage("The OAuth client is not authorized to use the requested grant type.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
             validationResponseDTO.setValidClient(false);
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT);
@@ -222,20 +238,19 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
         } else {    // Provided callback URL does not match the registered callback url.
             log.warn("Provided Callback URL does not match with the registered one.");
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", clientId);
-                params.put("redirectUri", callbackURI);
-
-                Map<String, Object> configurations = new HashMap<>();
-                configurations.put("redirectUri", appDO.getApplicationName());
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "redirect_uri in request does not match with the registered one.",
-                        "validate-input-parameters", configurations);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAUTH_INBOUND_SERVICE, VALIDATE_INPUT_PARAMS)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.REDIRECT_URI, callbackURI)
+                        .configParam(OAuthConstants.LogConstants.ConfigKeys.CALLBACK_URI, appDO.getCallbackUrl())
+                        .resultMessage("redirect_uri in request does not match with the registered one.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
             validationResponseDTO.setValidClient(false);
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CALLBACK);
-            validationResponseDTO.setErrorMsg("callback.not.match");
+            validationResponseDTO.setErrorMsg(
+                    OAuthConstants.OAuthError.AuthorizationResponsei18nKey.CALLBACK_NOT_MATCH);
         }
         return validationResponseDTO;
     }

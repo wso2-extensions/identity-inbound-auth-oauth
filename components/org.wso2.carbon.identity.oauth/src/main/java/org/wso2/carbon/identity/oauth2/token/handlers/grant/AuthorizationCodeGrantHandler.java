@@ -49,7 +49,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.HashMap;
-import java.util.Map;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserId;
@@ -126,13 +125,15 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                         " is not matching with persisted callback url " + callbackUrlFromPersistedAuthzCode);
             }
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("callbackUrlInRequest", callbackUrlFromRequest);
-                Map<String, Object> configs = new HashMap<>();
-                configs.put("applicationCallbackUrl", callbackUrlFromPersistedAuthzCode);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Received callback URL does not match with the persisted.",
-                        "validate-input-parameters", configs);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS)
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.CALLBACK_URI, callbackUrlFromRequest)
+                        .configParam(OAuthConstants.LogConstants.ConfigKeys.REGISTERED_CALLBACK_URI,
+                                callbackUrlFromPersistedAuthzCode)
+                        .resultMessage("Received callback URL does not match with the persisted.")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION));
             }
             throw new IdentityOAuth2Exception("Callback url mismatch");
         }

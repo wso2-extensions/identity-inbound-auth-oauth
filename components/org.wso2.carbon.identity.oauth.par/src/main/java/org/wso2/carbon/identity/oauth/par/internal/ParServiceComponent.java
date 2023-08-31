@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
@@ -15,7 +15,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.wso2.carbon.identity.oauth.par.internal;
 
 import org.apache.commons.logging.Log;
@@ -24,6 +23,8 @@ import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Component;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
+import org.wso2.carbon.identity.oauth.par.core.ParRequestBuilder;
+import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 
 /**
  * Service component for PAR.
@@ -39,8 +40,13 @@ public class ParServiceComponent {
     protected void activate(ComponentContext context) {
 
         try {
+            ParAuthService parAuthServiceImpl = new ParAuthServiceImpl();
+            ParAuthServiceComponentDataHolder.getInstance().setParAuthService(parAuthServiceImpl);
+
             context.getBundleContext().registerService(ParAuthService.class.getName(),
-                    new ParAuthServiceImpl(), null);
+                    parAuthServiceImpl, null);
+            context.getBundleContext().registerService(OAuthAuthorizationRequestBuilder.class.getName(),
+                    new ParRequestBuilder(), null);
             log.debug("PAR component bundle is activated.");
         } catch (Throwable e) {
             log.error("Error occurred while activating PAR component.", e);

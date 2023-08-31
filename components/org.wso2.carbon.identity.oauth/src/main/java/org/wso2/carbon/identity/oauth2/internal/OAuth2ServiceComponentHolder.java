@@ -28,7 +28,7 @@ import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
-import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
+import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
@@ -61,7 +61,6 @@ public class OAuth2ServiceComponentHolder {
 
     private static OAuth2ServiceComponentHolder instance = new OAuth2ServiceComponentHolder();
     private static ApplicationManagementService applicationMgtService;
-    private static ParAuthService parAuthService;
     private static boolean pkceEnabled = false;
     private static boolean audienceEnabled = false;
     private static RegistryService registryService;
@@ -94,6 +93,7 @@ public class OAuth2ServiceComponentHolder {
     private static boolean restrictUnassignedScopes;
     private static ConfigurationContextService configurationContextService;
     private List<JWTAccessTokenClaimProvider> jwtAccessTokenClaimProviders = new ArrayList<>();
+    private final List<OAuthAuthorizationRequestBuilder> oAuthAuthorizationRequestBuilders = new ArrayList<>();
     private boolean isOrganizationManagementEnabled = false;
 
     private OAuth2ServiceComponentHolder() {
@@ -123,26 +123,6 @@ public class OAuth2ServiceComponentHolder {
     public static void setApplicationMgtService(ApplicationManagementService applicationMgtService) {
 
         OAuth2ServiceComponentHolder.applicationMgtService = applicationMgtService;
-    }
-
-    /**
-     * Get ParAuth service.
-     *
-     * @return Instance of ParAuthService.
-     */
-    public static ParAuthService getParAuthService() {
-
-        return parAuthService;
-    }
-
-    /**
-     * Set parAuth service.
-     *
-     * @param parAuthService Instance of ParAuthService.
-     */
-    public static void setParAuthService(ParAuthService parAuthService) {
-
-        OAuth2ServiceComponentHolder.parAuthService = parAuthService;
     }
 
     @Deprecated
@@ -649,5 +629,35 @@ public class OAuth2ServiceComponentHolder {
             return getDefaultResponseModeProvider();
         }
         return responseModeProvider;
+    }
+
+    /**
+     * Get the list of oauth authorization request builder implementations available.
+     *
+     * @return List<OAuthAuthorizationRequestBuilder> returns a list ot request builders.
+     */
+    public List<OAuthAuthorizationRequestBuilder> getAuthorizationRequestBuilders() {
+
+        return oAuthAuthorizationRequestBuilders;
+    }
+
+    /**
+     * Add request builder implementation.
+     *
+     * @param oAuthAuthorizationRequestBuilder Request builder implementation.
+     */
+    public void addAuthorizationRequestBuilder(OAuthAuthorizationRequestBuilder oAuthAuthorizationRequestBuilder) {
+
+        oAuthAuthorizationRequestBuilders.add(oAuthAuthorizationRequestBuilder);
+    }
+
+    /**
+     * Remove request builder implementation.
+     *
+     * @param oAuthAuthorizationRequestBuilder Request builder implementation.
+     */
+    public void removeAuthorizationRequestBuilder(OAuthAuthorizationRequestBuilder oAuthAuthorizationRequestBuilder) {
+
+        oAuthAuthorizationRequestBuilders.remove(oAuthAuthorizationRequestBuilder);
     }
 }

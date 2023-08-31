@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013, WSO2 LLC. (https://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
@@ -93,6 +94,7 @@ import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.scopeservice.OAuth2Resource;
@@ -110,6 +112,8 @@ import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -167,6 +171,7 @@ public class EndpointUtil {
     private static IdpManager idpManager;
     private static final String ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL = "OAuth.AllowAdditionalParamsFromErrorUrl";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
+    private static Class<? extends OAuthAuthzRequest> oAuthAuthzRequestClass;
 
     public static void setIdpManager(IdpManager idpManager) {
 
@@ -1036,6 +1041,13 @@ public class EndpointUtil {
     public static void storeOAuthScopeConsent(AuthenticatedUser user, OAuth2Parameters params,
                                               boolean overrideExistingConsent) throws OAuthSystemException {
 
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.PERSIST_OAUTH_SCOPE_CONSENT);
+            diagnosticLogBuilder.logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+        }
         try {
             Set<String> userApprovedScopesSet = params.getConsentRequiredScopes();
             if (CollectionUtils.isNotEmpty(userApprovedScopesSet)) {
@@ -1076,28 +1088,35 @@ public class EndpointUtil {
                                 userApprovedScopes, null);
                     }
                 }
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                            OAuthConstants.LogConstants.ActionIDs.PERSIST_OAUTH_SCOPE_CONSENT);
+                if (diagnosticLogBuilder != null) {
+                    // diagnosticLogBuilder is null when diagnostic logs are disabled.
                     diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, params.getClientId())
                             .inputParam("approved scopes", userApprovedScopes)
                             .inputParam(LogConstants.InputKeys.USER_ID, userId)
                             .inputParam("override existing consent", overrideExistingConsent)
                             .resultMessage("Successfully persisted oauth scopes.")
-                            .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                            .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
+                            .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
                     LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
             }
         } catch (IdentityOAuthAdminException e) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "persist-oauth-scope-consent", null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder is null when diagnostic logs are disabled.
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                        .resultMessage("Error occurred while removing OIDC scopes from approved OAuth scopes.")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
             throw new OAuthSystemException(
                     "Error occurred while removing OIDC scopes from approved OAuth scopes.", e);
         } catch (IdentityOAuth2ScopeException e) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "persist-oauth-scope-consent", null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder is null when diagnostic logs are disabled.
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                        .resultMessage("Error occurred while storing OAuth scope consent.")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
             throw new OAuthSystemException("Error occurred while storing OAuth scope consent.", e);
         }
     }
@@ -1330,20 +1349,26 @@ public class EndpointUtil {
 
     public static boolean validateParams(HttpServletRequest request, Map<String, List<String>> paramMap) {
 
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS);
+            diagnosticLogBuilder.logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+        }
         if (paramMap != null) {
             for (Map.Entry<String, List<String>> paramEntry : paramMap.entrySet()) {
                 if (paramEntry.getValue().size() > 1) {
                     if (log.isDebugEnabled()) {
                         log.debug("Repeated param found:" + paramEntry.getKey());
                     }
-                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                        Map<String, Object> logParams = new HashMap<>();
-                        paramMap.forEach(logParams::put);
-                        LoggerUtils
-                                .triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, logParams,
-                                        OAuthConstants.LogConstants.FAILED,
-                                        "Parameter with name: '" + paramEntry.getKey() +
-                                                "' is repeated in the request.", "validate-input-parameters", null);
+                    if (diagnosticLogBuilder != null) {
+                        // diagnosticLogBuilder is null when diagnostic logs are disabled.
+                        diagnosticLogBuilder.inputParam("param keys", paramMap.keySet())
+                                .resultMessage("Parameter with name: '" + paramEntry.getKey() + "' is repeated in " +
+                                        "the request.");
+                        LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                     }
                     return false;
                 }
@@ -1357,14 +1382,12 @@ public class EndpointUtil {
                         log.debug("Repeated param found:" + entry.getKey());
 
                     }
-                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                        Map<String, Object> logParams = new HashMap<>();
-                        map.forEach(logParams::put);
-                        LoggerUtils
-                                .triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, logParams,
-                                        OAuthConstants.LogConstants.FAILED,
-                                        "Parameter with name: '" + entry.getKey() + "' is repeated in the request.",
-                                        "validate-input-parameters", null);
+                    if (diagnosticLogBuilder != null) {
+                        // diagnosticLogBuilder is null when diagnostic logs are disabled.
+                        diagnosticLogBuilder.inputParam("param keys", map.keySet())
+                                .resultMessage("Parameter with name: '" + entry.getKey() + "' is repeated in the " +
+                                        "request.");
+                        LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                     }
                     return false;
                 }
@@ -1433,17 +1456,25 @@ public class EndpointUtil {
 
         String appState = EndpointUtil.getOAuth2Service().getOauthApplicationState(consumerKey);
 
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_OAUTH_CLIENT);
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, consumerKey)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+        }
         if (StringUtils.isEmpty(appState)) {
             if (log.isDebugEnabled()) {
                 log.debug("A valid OAuth client could not be found for client_id: " + consumerKey);
             }
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", consumerKey);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "A valid OAuth application could not be found for the given client_id.",
-                        "validate-oauth-client", null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder is null when diagnostic logs are disabled.
+                diagnosticLogBuilder.resultMessage("A valid OAuth application could not be found for the given " +
+                        "client_id.")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw new InvalidApplicationClientException("A valid OAuth client could not be found for client_id: " +
                     Encode.forHtml(consumerKey));
@@ -1453,13 +1484,12 @@ public class EndpointUtil {
             if (log.isDebugEnabled()) {
                 log.debug("App is not in active state in client ID: " + consumerKey + ". App state is:" + appState);
             }
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", consumerKey);
-                params.put("appState", appState);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "OAuth application is not in active state.",
-                        "validate-oauth-client", null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder is null when diagnostic logs are disabled.
+                diagnosticLogBuilder.inputParam(OAuthConstants.LogConstants.InputKeys.APP_STATE, appState)
+                        .resultMessage("OAuth application is not in active state.")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw new InvalidApplicationClientException("Oauth application is not in active state");
         }
@@ -1467,13 +1497,12 @@ public class EndpointUtil {
         if (log.isDebugEnabled()) {
             log.debug("Oauth App validation success for consumer key: " + consumerKey);
         }
-        if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            Map<String, Object> params = new HashMap<>();
-            params.put("clientId", consumerKey);
-            params.put("appState", appState);
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                    OAuthConstants.LogConstants.SUCCESS, "OAuth Application validation is successful.",
-                    "validate-oauth-client", null);
+        if (diagnosticLogBuilder != null) {
+            // diagnosticLogBuilder is null when diagnostic logs are disabled.
+            diagnosticLogBuilder.inputParam(OAuthConstants.LogConstants.InputKeys.APP_STATE, appState)
+                    .resultMessage("OAuth application is in active state.")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
     }
 
@@ -1803,5 +1832,71 @@ public class EndpointUtil {
 
     public static boolean isConsentPageRedirectParamsAllowed() {
         return FileBasedConfigurationBuilder.getInstance().isConsentPageRedirectParamsAllowed();
+    }
+
+    /**
+     * Returns an instance of OAuthAuthzRequest. If the configured classname is invalid the default implementation
+     * will be returned.
+     *
+     * @param request http servlet request.
+     * @return instance of OAuthAuthzRequest.
+     * @throws OAuthProblemException thrown when initializing the OAuthAuthzRequestClass instance.
+     * @throws OAuthSystemException  thrown when initializing the OAuthAuthzRequestClass instance.
+     */
+    public static OAuthAuthzRequest getOAuthAuthzRequest(HttpServletRequest request)
+            throws OAuthProblemException, OAuthSystemException {
+
+        if (isDefaultOAuthAuthzRequestClassConfigured()) {
+            return new CarbonOAuthAuthzRequest(request);
+        }
+        try {
+            Class<? extends OAuthAuthzRequest> clazz = getOAuthAuthzRequestClass();
+            // Validations will be performed when initializing the class instance.
+            Constructor<?> constructor = clazz.getConstructor(HttpServletRequest.class);
+            return (OAuthAuthzRequest) constructor.newInstance(request);
+        } catch (InvocationTargetException e) {
+            // Handle OAuthProblemException & OAuthSystemException thrown from extended class.
+            if (e.getTargetException() instanceof OAuthProblemException) {
+                throw (OAuthProblemException) e.getTargetException();
+            } else if (e.getTargetException() instanceof OAuthSystemException) {
+                throw (OAuthSystemException) e.getTargetException();
+            } else {
+                log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. ");
+            }
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
+                 NoSuchMethodException e) {
+            log.warn("Failed to initiate OAuthAuthzRequest from identity.xml. ");
+        }
+        log.debug("Initiating the default OAuthAuthzRequest implementation");
+        return new CarbonOAuthAuthzRequest(request);
+    }
+
+    /**
+     * Method to check whether the configured OAuthAuthzRequestImplementation is the default implementation.
+     *
+     * @return boolean whether the default class name is configured.
+     */
+    private static boolean isDefaultOAuthAuthzRequestClassConfigured() {
+
+        String oauthAuthzRequestClassName = OAuthServerConfiguration.getInstance().getOAuthAuthzRequestClassName();
+        return OAuthServerConfiguration.DEFAULT_OAUTH_AUTHZ_REQUEST_CLASSNAME.equals(oauthAuthzRequestClassName);
+    }
+
+    /**
+     * Load OAuthAuthzRequest class.
+     *
+     * @return OAuthAuthzRequest Class.
+     * @throws ClassNotFoundException when configured class name is invalid.
+     */
+    private static Class<? extends OAuthAuthzRequest> getOAuthAuthzRequestClass() throws ClassNotFoundException {
+
+        if (oAuthAuthzRequestClass == null) {
+
+            String oauthAuthzRequestClassName =
+                    OAuthServerConfiguration.getInstance().getOAuthAuthzRequestClassName();
+            oAuthAuthzRequestClass = (Class<? extends OAuthAuthzRequest>) Thread.currentThread()
+                    .getContextClassLoader().loadClass(oauthAuthzRequestClassName);
+        }
+        return oAuthAuthzRequestClass;
     }
 }

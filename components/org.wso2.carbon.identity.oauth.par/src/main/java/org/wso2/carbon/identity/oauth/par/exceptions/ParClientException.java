@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
@@ -32,5 +32,17 @@ public class ParClientException extends ParCoreException {
     public ParClientException(String errorCode, String message) {
 
         super(errorCode, message);
+    }
+
+    /**
+     * Constructor with error code, error message and throwable.
+     *
+     * @param errorCode Error code.
+     * @param message Error message.
+     * @param cause Throwable.
+     */
+    public ParClientException(String errorCode, String message, Throwable cause) {
+
+        super(errorCode, message, cause);
     }
 }

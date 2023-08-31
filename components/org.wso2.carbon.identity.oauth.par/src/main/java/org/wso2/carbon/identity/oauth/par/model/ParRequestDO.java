@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.par.model;
 
+import org.apache.commons.collections.MapUtils;
+
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -33,12 +36,12 @@ public class ParRequestDO {
      * Constructor with variables obtained from DAO to ParRequestDO.
      *
      * @param parameterMap Parameter map.
-     * @param expiresIn Scheduled expiry time.
-     * @param clientId Client id.
+     * @param expiresIn    Scheduled expiry time.
+     * @param clientId     Client id.
      */
     public ParRequestDO(Map<String, String> parameterMap, long expiresIn, String clientId) {
 
-        this.params = parameterMap;
+        this.params = MapUtils.isEmpty(parameterMap) ? new HashMap<>() : parameterMap;
         this.expiresIn = expiresIn;
         this.clientId = clientId;
     }

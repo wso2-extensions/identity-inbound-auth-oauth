@@ -26,14 +26,12 @@ import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.par.model.OAuthParRequestWrapper;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.utils.DiagnosticLog;
 
-import java.util.HashMap;
-import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -48,22 +46,7 @@ public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
     public CarbonOAuthAuthzRequest(HttpServletRequest request) throws OAuthSystemException,
             OAuthProblemException {
 
-        super(buildRequest(request));
-    }
-
-    /*
-        If request_uri parameter is present in the parameter map, consider request as a PAR request and
-        use OAuthParRequestWrapper to make the request's parameter map contain the parameter map obtained from
-        the PAR endpoint as parameters such as response_type are only provided in the PAR request,
-        but are needed in the Authorization request for validations.
-     */
-    private static HttpServletRequest buildRequest(HttpServletRequest request) throws OAuthProblemException {
-
-        // If request_uri is there consider as par request.
-        if (request.getParameter(OAuthConstants.OAuth20Params.REQUEST_URI) != null) {
-            return new OAuthParRequestWrapper(request, OAuth2ServiceComponentHolder.getParAuthService());
-        }
-        return request;
+        super(request);
     }
 
     protected OAuthValidator<HttpServletRequest> initValidator() throws OAuthProblemException, OAuthSystemException {
@@ -83,12 +66,14 @@ public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
                         " for client id : " + getClientId());
             }
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("response_type", responseTypeValue);
-                params.put("client_id", getClientId());
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Invalid response_type parameter.",
-                        "validate-input-parameters", null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS)
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.RESPONSE_TYPE, responseTypeValue)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, getClientId())
+                        .resultMessage("Invalid response_type parameter.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
             throw OAuthUtils.handleOAuthProblemException("Invalid response_type parameter value");
         }
