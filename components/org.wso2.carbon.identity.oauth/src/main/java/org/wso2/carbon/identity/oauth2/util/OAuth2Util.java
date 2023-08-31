@@ -4709,20 +4709,20 @@ public class OAuth2Util {
      * @return Whether the application should be FAPI conformant.
      * @throws OAuthClientAuthnException
      */
-    public static String isFapiConformantApp(String clientId) throws OAuthClientAuthnException {
+    public static boolean isFapiConformantApp(String clientId) throws OAuthClientAuthnException {
 
         try {
             ServiceProvider serviceProvider = getServiceProvider(clientId);
             ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
             for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
                 if (IS_FAPI_CONFORMANT_APP.equals(serviceProviderProperty.getName())) {
-                    return serviceProviderProperty.getValue();
+                    return Boolean.parseBoolean(serviceProviderProperty.getValue());
                 }
             }
         } catch (IdentityOAuth2Exception e) {
             throw new OAuthClientAuthnException("Error occurred while retrieving the service provider of the app",
                     OAuth2ErrorCodes.INVALID_REQUEST);
         }
-        return null;
+        return false;
     }
 }

@@ -2322,19 +2322,19 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     public Object[][] getFapiStatus() {
 
         return new Object[][]{
-                {"true"},
-                {"false"}
+                {true},
+                {false}
         };
     }
 
     @Test(dataProvider = "FAPI status data provider")
-    public void testIsFapiConformantApp(String isFapiConformant) throws Exception {
+    public void testIsFapiConformantApp(boolean isFapiConformant) throws Exception {
 
         setCache();
         ServiceProvider serviceProvider = new ServiceProvider();
         ServiceProviderProperty fapiAppSpProperty = new ServiceProviderProperty();
         fapiAppSpProperty.setName(IS_FAPI_CONFORMANT_APP);
-        fapiAppSpProperty.setValue(isFapiConformant);
+        fapiAppSpProperty.setValue(String.valueOf(isFapiConformant));
         serviceProvider.setSpProperties(new ServiceProviderProperty[]{fapiAppSpProperty});
         ApplicationManagementService applicationManagementService = mock(ApplicationManagementService.class);
         OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
