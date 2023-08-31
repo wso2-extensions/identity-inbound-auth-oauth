@@ -19,31 +19,20 @@
 package org.wso2.carbon.identity.oauth.common;
 
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
-import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.core.classloader.annotations.SuppressStaticInitializationFor;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import javax.servlet.http.HttpServletRequest;
 
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ALLOWED_CONTENT_TYPES;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IS_FAPI_CONFORMANT_APP;
 
 /**
  * Test class for OAuthCommonUtil.
  */
-@PrepareForTest({OAuth2Util.class})
-@SuppressStaticInitializationFor({"org.wso2.carbon.identity.oauth2.util.OAuth2Util"})
-public class OAuthCommonUtilTest extends PowerMockTestCase {
+public class OAuthCommonUtilTest {
 
     @DataProvider(name = "Content Type Provider")
     public Object[][] getContentType() {
@@ -83,28 +72,5 @@ public class OAuthCommonUtilTest extends PowerMockTestCase {
                 Assert.fail(contentType + " should be an allowed content type");
             }
         }
-    }
-
-    @DataProvider(name = "FAPI status data provider")
-    public Object[][] getFapiStatus() {
-
-        return new Object[][]{
-                {"true"},
-                {"false"}
-        };
-    }
-
-    @Test(dataProvider = "FAPI status data provider")
-    public void testIsFapiConformantApp(String isFapiConformant) throws Exception {
-
-        PowerMockito.mockStatic(OAuth2Util.class);
-        ServiceProvider serviceProvider = new ServiceProvider();
-        ServiceProviderProperty fapiAppSpProperty = new ServiceProviderProperty();
-        fapiAppSpProperty.setName(IS_FAPI_CONFORMANT_APP);
-        fapiAppSpProperty.setValue(isFapiConformant);
-        serviceProvider.setSpProperties(new ServiceProviderProperty[]{fapiAppSpProperty});
-        PowerMockito.when(OAuth2Util.getServiceProvider(Mockito.anyString())).thenReturn(serviceProvider);
-        Assert.assertEquals(OAuthCommonUtil.isFapiConformantApp("sample_client_id"), isFapiConformant);
-
     }
 }

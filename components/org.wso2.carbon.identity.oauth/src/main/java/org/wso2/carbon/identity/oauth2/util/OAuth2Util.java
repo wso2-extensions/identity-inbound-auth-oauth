@@ -74,6 +74,7 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -94,6 +95,7 @@ import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -114,6 +116,7 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -188,6 +191,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IS_FAPI_CONFORMANT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_TOKEN_EP_URL;
@@ -4696,5 +4700,29 @@ public class OAuth2Util {
         }
 
         return externalConsentPageUrl;
+    }
+
+    /**
+     * Check whether the application should be FAPI conformant.
+     *
+     * @param clientId       Client ID of the application.
+     * @return Whether the application should be FAPI conformant.
+     * @throws OAuthClientAuthnException
+     */
+    public static String isFapiConformantApp(String clientId) throws OAuthClientAuthnException {
+
+        try {
+            ServiceProvider serviceProvider = getServiceProvider(clientId);
+            ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
+            for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
+                if (IS_FAPI_CONFORMANT_APP.equals(serviceProviderProperty.getName())) {
+                    return serviceProviderProperty.getValue();
+                }
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw new OAuthClientAuthnException("Error occurred while retrieving the service provider of the app",
+                    OAuth2ErrorCodes.INVALID_REQUEST);
+        }
+        return null;
     }
 }

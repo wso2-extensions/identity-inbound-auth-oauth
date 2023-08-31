@@ -20,18 +20,12 @@ package org.wso2.carbon.identity.oauth.common;
 
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.utils.OAuthUtils;
-import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ALLOWED_CONTENT_TYPES;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IS_FAPI_CONFORMANT_APP;
 
 /**
  * Common utility functions for OAuth related operations.
@@ -73,29 +67,5 @@ public class OAuthCommonUtil {
         if (!isAllowedContentType(contentType, ALLOWED_CONTENT_TYPES)) {
             throw OAuthUtils.handleBadContentTypeException(String.join(" or ", ALLOWED_CONTENT_TYPES));
         }
-    }
-
-    /**
-     * Check whether the application should be FAPI conformant.
-     *
-     * @param clientId       Client ID of the application.
-     * @return Whether the application should be FAPI conformant.
-     * @throws OAuthClientAuthnException
-     */
-    public static String isFapiConformantApp(String clientId) throws OAuthClientAuthnException {
-
-        try {
-            ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
-            ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
-            for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
-                if (IS_FAPI_CONFORMANT_APP.equals(serviceProviderProperty.getName())) {
-                    return serviceProviderProperty.getValue();
-                }
-            }
-        } catch (IdentityOAuth2Exception e) {
-            throw new OAuthClientAuthnException("Error occurred while retrieving the service provider of the app",
-                    OAuth2ErrorCodes.INVALID_REQUEST);
-        }
-        return null;
     }
 }
