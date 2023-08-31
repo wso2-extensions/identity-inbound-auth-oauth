@@ -36,6 +36,9 @@ public interface AuthorizationCodeDAO {
     void insertAuthorizationCode(String authzCode, String consumerKey, String callbackUrl,
                                  AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception;
 
+    void insertAuthorizationCode(String authzCode, String consumerKey, String appTenantDomain, String callbackUrl,
+                                 AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception;
+
     void deactivateAuthorizationCodes(List<AuthzCodeDO> authzCodeDOs) throws IdentityOAuth2Exception;
 
     AuthorizationCodeValidationResult validateAuthorizationCode(String consumerKey, String authorizationKey)

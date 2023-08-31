@@ -554,6 +554,64 @@ public class OAuth2Util {
         return true;
     }
 
+    /**
+     * Authenticate the OAuth Consumer.
+     *
+     * @param clientId             Consumer Key/ Id.
+     * @param clientSecretProvided Consumer Secret issued during the time of registration.
+     * @param appTenant            Tenant domain of the application.
+     * @return true, if the authentication is successful, false otherwise.
+     * @throws IdentityOAuthAdminException Error when looking up the credentials from the database
+     */
+    public static boolean authenticateClient(String clientId, String clientSecretProvided, String appTenant)
+            throws IdentityOAuthAdminException, IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId, appTenant);
+        if (appDO == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Cannot find a valid application with the provided client_id: " + clientId);
+            }
+            return false;
+        }
+
+        if (appTenant != null && !isTenantActive(appTenant)) {
+            log.error("Cannot retrieve application inside deactivated tenant: " + appTenant);
+            throw new InvalidOAuthClientException("Cannot retrieve application inside deactivated tenant: "
+                    + appTenant);
+        }
+
+        // Cache miss
+        boolean isHashDisabled = isHashDisabled();
+        String appClientSecret = appDO.getOauthConsumerSecret();
+        if (isHashDisabled) {
+            if (!StringUtils.equals(appClientSecret, clientSecretProvided)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided the Client ID : " + clientId +
+                            " and Client Secret do not match with the issued credentials.");
+                }
+                return false;
+            }
+        } else {
+            TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+            // We convert the provided client_secret to the processed form stored in the DB.
+            String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
+
+            if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided the Client ID : " + clientId +
+                            " and Client Secret do not match with the issued credentials.");
+                }
+                return false;
+            }
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Successfully authenticated the client with client id : " + clientId);
+        }
+
+        return true;
+    }
+
     private static boolean isTenantActive(String tenantDomain) throws IdentityOAuth2Exception {
         try {
             TenantManager tenantManager = OAuthComponentServiceHolder.getInstance()
@@ -2156,6 +2214,34 @@ public class OAuth2Util {
         }
     }
 
+    public static OAuthAppDO getAppInformationByClientId(String clientId, String tenantDomain)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
+        if (oAuthAppDO == null) {
+            oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, IdentityTenantUtil.getTenantId(tenantDomain));
+            if (oAuthAppDO != null) {
+                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+            }
+        }
+        return oAuthAppDO;
+    }
+
+    public static OAuthAppDO getAppInformationByAccessTokenDO(AccessTokenDO accessTokenDO)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        String clientId = accessTokenDO.getConsumerKey();
+
+        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
+        if (oAuthAppDO == null) {
+            oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, accessTokenDO);
+            if (oAuthAppDO != null) {
+                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+            }
+        }
+        return oAuthAppDO;
+    }
+
     /**
      * Get the tenant domain of an oauth application
      *
@@ -2187,6 +2273,89 @@ public class OAuth2Util {
     }
 
     /**
+     * Get all the OAuth applications for the client ID.
+     *
+     * @param clientId Client ID.
+     * @return  Array of OAuthApp data objects.
+     * @throws IdentityOAuth2Exception      If an error occurred while retrieving the applications.
+     * @throws InvalidOAuthClientException  If an application not found for the given client ID.
+     */
+    public static OAuthAppDO[] getAllAppInformationByClientId(String clientId)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
+        if (oAuthAppDO != null) {
+            return new OAuthAppDO[]{oAuthAppDO};
+        }
+        return new OAuthAppDAO().getAppsForConsumerKey(clientId);
+    }
+
+    public static OAuthAppDO getAppInformationByClientIdFromAppListForConsumerKey(String clientId)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAppDO oAuthAppDO = null;
+
+        // In tenant qualified URL mode we would always have the tenant domain in the context.
+        String tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
+
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            OAuthAppDO[] oAuthAppDOList = getAllAppInformationByClientId(clientId);
+
+            if (oAuthAppDOList.length > 1) {
+                /*
+                 If multiple apps are retrieved for the client ID, that means this is not a SaaS app
+                 (SaaS app client IDs are unique across the server).
+                 */
+                for (OAuthAppDO oAuthApp : oAuthAppDOList) {
+                    if (StringUtils.equals(tenantDomainFromContext, oAuthApp.getAppOwner().getTenantDomain())) {
+                        oAuthAppDO = oAuthApp;
+                        break;
+                    }
+                }
+            } else {
+                // As per the implementation of DAO method, executing this line means only a single app is returned.
+                String tenantDomainOfApp = oAuthAppDOList[0].getAppOwner().getTenantDomain();
+
+                if (StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
+                    /*
+                     This app could be a SaaS application. However, since the tenant domain of the app matches the
+                     requested tenant domain, there's no need to check for the SaaS property at this point.
+                     */
+                    oAuthAppDO = oAuthAppDOList[0];
+                } else if (IdentityTenantUtil.isSaaSAppsAllowedInTenants()
+                        || MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(tenantDomainOfApp)) {
+                    /*
+                     Since the tenants don't match, valid access is only when it is a SaaS app.
+                     It could be a SaaS if the SaaS apps are allowed in tenants or the app is in the super tenant.
+                     */
+                    ServiceProvider serviceProvider = getServiceProvider(clientId, tenantDomainOfApp);
+                    if (serviceProvider != null && serviceProvider.isSaasApp()) {
+                        oAuthAppDO = oAuthAppDOList[0];
+                    }
+                }
+            }
+        } else {
+            /*
+             When tenant qualified URLs are disabled, only a single app could exist for the client ID.
+             In this case, the client ID is considered to be unique across the server.
+             */
+            oAuthAppDO = getAppInformationByClientId(clientId);
+        }
+
+        if (oAuthAppDO == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Cannot find an application associated with the given consumer key: " + clientId);
+            }
+            throw new InvalidOAuthClientException("application.not.found");
+        }
+        // TODO: My note: This might work because of the cache.
+        //  Try to fix problem by commenting out below line. can enable it later on.
+        //  AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+
+        return oAuthAppDO;
+    }
+
+    /**
      * Get the client secret of the application.
      *
      * @param consumerKey Consumer Key provided by the user.
@@ -2201,6 +2370,26 @@ public class OAuth2Util {
         if (oAuthAppDO == null) {
             throw new InvalidOAuthClientException("Unable to retrieve app information for consumer key: "
                     + consumerKey);
+        }
+        return oAuthAppDO.getOauthConsumerSecret();
+    }
+
+    /**
+     * Get the client secret of the application.
+     *
+     * @param consumerKey   Consumer Key provided by the user.
+     * @param tenantDomain  Tenant domain of the application.
+     * @return Consumer Secret.
+     * @throws IdentityOAuth2Exception      Error when loading the application.
+     * @throws InvalidOAuthClientException  Error when loading the application.
+     */
+    public static String getClientSecret(String consumerKey, String tenantDomain) throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
+
+        OAuthAppDO oAuthAppDO = getAppInformationByClientId(consumerKey, tenantDomain);
+        if (oAuthAppDO == null) {
+            throw new InvalidOAuthClientException("Unable to retrieve app information for consumer key: "
+                    + consumerKey + " and tenant: " + tenantDomain);
         }
         return oAuthAppDO.getOauthConsumerSecret();
     }

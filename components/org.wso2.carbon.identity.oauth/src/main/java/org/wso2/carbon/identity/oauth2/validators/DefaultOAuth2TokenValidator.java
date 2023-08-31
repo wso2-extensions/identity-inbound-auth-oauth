@@ -75,7 +75,9 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
 
         OAuthAppDO app;
         try {
-            app = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey());
+            // app = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey());
+            app = OAuth2Util.getAppInformationByAccessTokenDO(accessTokenDO);
+            // app = OAuth2Util.getAppInformationByClientIdFromAppListForConsumerKey(accessTokenDO.getConsumerKey());
             scopeValidators = app.getScopeValidators();
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception(String.format("Exception occurred when getting app information for " +

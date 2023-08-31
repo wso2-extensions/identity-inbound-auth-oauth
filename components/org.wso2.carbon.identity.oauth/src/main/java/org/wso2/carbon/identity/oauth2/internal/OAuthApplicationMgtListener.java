@@ -395,7 +395,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                             property.setName(OAUTH2_CONSUMER_SECRET);
                             String clientSecret = null;
                             try {
-                                clientSecret = OAuth2Util.getClientSecret(inboundRequestConfig.getInboundAuthKey());
+                                clientSecret = OAuth2Util.getClientSecret(inboundRequestConfig.getInboundAuthKey(),
+                                        serviceProvider.getTenantDomain());
                             } catch (InvalidOAuthClientException e) {
                                 log.warn("The OAuth application data not exists for " +
                                         inboundRequestConfig.getInboundAuthKey());

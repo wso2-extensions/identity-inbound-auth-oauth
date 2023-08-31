@@ -573,7 +573,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         PreparedStatement updateStateStatement = null;
         PreparedStatement revokeActiveTokensStatement = null;
         PreparedStatement deactivateActiveCodesStatement = null;
-        int tenantId = IdentityTenantUtil.getLoginTenantId();
+        int appTenantId = IdentityTenantUtil.getLoginTenantId();
         try {
             connection = IdentityDatabaseUtil.getDBConnection();
             if (OAuthConstants.ACTION_REVOKE.equals(action)) {
@@ -593,7 +593,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                         (org.wso2.carbon.identity.oauth.dao.SQLQueries.OAuthAppDAOSQLQueries.UPDATE_APPLICATION_STATE);
                 updateStateStatement.setString(1, newAppState);
                 updateStateStatement.setString(2, consumerKey);
-                updateStateStatement.setInt(3, tenantId);
+                updateStateStatement.setInt(3, appTenantId);
                 updateStateStatement.execute();
 
             } else if (OAuthConstants.ACTION_REGENERATE.equals(action)) {
@@ -612,7 +612,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     updateStateStatement.setString(1, getPersistenceProcessor().getProcessedClientSecret(newSecretKey));
                     updateStateStatement.setString(2, properties.getProperty(OAuthConstants.OAUTH_APP_NEW_STATE));
                     updateStateStatement.setString(3, consumerKey);
-                    updateStateStatement.setInt(4, tenantId);
+                    updateStateStatement.setInt(4, appTenantId);
                 } else {
                     // Update the consumer secret of the oauth app when the new app state is not available.
                     updateStateStatement = connection.prepareStatement
@@ -620,7 +620,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                                     UPDATE_OAUTH_SECRET_KEY);
                     updateStateStatement.setString(1, getPersistenceProcessor().getProcessedClientSecret(newSecretKey));
                     updateStateStatement.setString(2, consumerKey);
-                    updateStateStatement.setInt(3, tenantId);
+                    updateStateStatement.setInt(3, appTenantId);
                 }
                 updateStateStatement.execute();
 
@@ -640,7 +640,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                         revokeActiveTokensStatement.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
                         revokeActiveTokensStatement.setString(2, UUID.randomUUID().toString());
                         revokeActiveTokensStatement.setString(3, consumerKey);
-                        revokeActiveTokensStatement.setInt(4, tenantId);
+                        revokeActiveTokensStatement.setInt(4, appTenantId);
                         int count = revokeActiveTokensStatement.executeUpdate();
                         if (log.isDebugEnabled()) {
                             log.debug("Number of rows being updated : " + count);
@@ -651,7 +651,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     revokeActiveTokensStatement.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
                     revokeActiveTokensStatement.setString(2, UUID.randomUUID().toString());
                     revokeActiveTokensStatement.setString(3, consumerKey);
-                    revokeActiveTokensStatement.setInt(4, tenantId);
+                    revokeActiveTokensStatement.setInt(4, appTenantId);
                     revokeActiveTokensStatement.setString(5, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
                     revokeActiveTokensStatement.execute();
                 }
@@ -662,7 +662,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             deactivateActiveCodesStatement = connection.prepareStatement(sqlQuery);
             deactivateActiveCodesStatement.setString(1, OAuthConstants.AuthorizationCodeState.REVOKED);
             deactivateActiveCodesStatement.setString(2, consumerKey);
-            deactivateActiveCodesStatement.setInt(3, tenantId);
+            deactivateActiveCodesStatement.setInt(3, appTenantId);
             deactivateActiveCodesStatement.executeUpdate();
 
             IdentityDatabaseUtil.commitTransaction(connection);
@@ -733,7 +733,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             ps.setString(3, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             ps.setString(4, consumerKey);
             ps.setInt(5, tenantId);
-            ps.setInt(6, tenantId);
+            ps.setInt(6, IdentityTenantUtil.getLoginTenantId());
             ps.executeUpdate();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {

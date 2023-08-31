@@ -239,27 +239,28 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             } else {
                 insertTokenPrepStmt.setString(18, NONE);
             }
+            int appTenantId = IdentityTenantUtil.getLoginTenantId();
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                 if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
                     insertTokenPrepStmt.setString(19, Boolean.toString(accessTokenDO.isConsentedToken()));
                     insertTokenPrepStmt.setString(20, authenticatedIDP);
                     insertTokenPrepStmt.setInt(21, tenantId);
                     insertTokenPrepStmt.setString(22, getPersistenceProcessor().getProcessedClientId(consumerKey));
-                    insertTokenPrepStmt.setInt(23, tenantId);
+                    insertTokenPrepStmt.setInt(23, appTenantId);
                 } else {
                     insertTokenPrepStmt.setString(19, authenticatedIDP);
                     insertTokenPrepStmt.setInt(20, tenantId);
                     insertTokenPrepStmt.setString(21, getPersistenceProcessor().getProcessedClientId(consumerKey));
-                    insertTokenPrepStmt.setInt(22, tenantId);
+                    insertTokenPrepStmt.setInt(22, appTenantId);
                 }
             } else {
                 if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
                     insertTokenPrepStmt.setString(19, Boolean.toString(accessTokenDO.isConsentedToken()));
                     insertTokenPrepStmt.setString(20, getPersistenceProcessor().getProcessedClientId(consumerKey));
-                    insertTokenPrepStmt.setInt(21, tenantId);
+                    insertTokenPrepStmt.setInt(21, appTenantId);
                 } else {
                     insertTokenPrepStmt.setString(19, getPersistenceProcessor().getProcessedClientId(consumerKey));
-                    insertTokenPrepStmt.setInt(20, tenantId);
+                    insertTokenPrepStmt.setInt(20, appTenantId);
                 }
             }
             insertTokenPrepStmt.executeUpdate();
@@ -481,7 +482,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            prepStmt.setInt(2, tenantId);
+            prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
             if (isUsernameCaseSensitive) {
                 prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain);
             } else {
@@ -795,7 +796,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            prepStmt.setInt(2, tenantId);
+            prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
             if (isUsernameCaseSensitive) {
                 prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain);
             } else {
@@ -915,7 +916,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            prepStmt.setInt(2, tenantId);
+            prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
             if (isUsernameCaseSensitive) {
                 prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain);
             } else {
@@ -2648,7 +2649,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            prepStmt.setInt(2, tenantId);
+            prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
             if (isUsernameCaseSensitive) {
                 prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain);
             } else {

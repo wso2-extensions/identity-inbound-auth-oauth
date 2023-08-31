@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -602,7 +603,13 @@ public class AuthorizationHandlerManager {
         if (oAuthAppDO != null) {
             return oAuthAppDO;
         } else {
-            oAuthAppDO = new OAuthAppDAO().getAppInformation(authzReqDTO.getConsumerKey());
+            String tenantDomain = authzReqDTO.getTenantDomain();
+            if (StringUtils.isNotEmpty(tenantDomain)) {
+                oAuthAppDO = new OAuthAppDAO().getAppInformation(
+                        authzReqDTO.getConsumerKey(), IdentityTenantUtil.getTenantId(tenantDomain));
+            } else {
+                oAuthAppDO = new OAuthAppDAO().getAppInformation(authzReqDTO.getConsumerKey());
+            }
             AppInfoCache.getInstance().addToCache(authzReqDTO.getConsumerKey(), oAuthAppDO);
             return oAuthAppDO;
         }
