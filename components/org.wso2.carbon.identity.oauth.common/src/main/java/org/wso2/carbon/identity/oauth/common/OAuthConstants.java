@@ -184,6 +184,7 @@ public final class OAuthConstants {
             "OAuth.JWT.RenewTokenWithoutRevokingExisting.Enable";
     public static final String REQUEST_BINDING_TYPE = "request";
     public static final String ORG_ID = "org_id";
+    public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
 
     private OAuthConstants() {
 
