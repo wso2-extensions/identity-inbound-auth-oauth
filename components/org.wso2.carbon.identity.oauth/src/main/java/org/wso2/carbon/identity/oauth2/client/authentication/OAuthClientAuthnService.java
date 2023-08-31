@@ -76,7 +76,8 @@ public class OAuthClientAuthnService {
 
         OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
         try {
-            if (Boolean.parseBoolean(isFapiApplication(extractClientId(request, bodyContentParams)))) {
+            String clientId = extractClientId(request, bodyContentParams);
+            if (!StringUtils.isBlank(clientId) && Boolean.parseBoolean(isFapiApplication(clientId))) {
                 if (!isMTLSEnforced(request)) {
                     setErrorToContext(OAuth2ErrorCodes.INVALID_REQUEST, "Transport certificate not passed " +
                             "through the request or the certificate is not valid", oAuthClientAuthnContext);
@@ -427,14 +428,18 @@ public class OAuthClientAuthnService {
             } else if (request.getHeader(authHeader) != null) {
                 String authorizationHeader = request.getHeader(authHeader);
                 if (authorizationHeader.split(" ").length == 2) {
-                    String authToken = request.getHeader(authHeader).split(" ")[1];
-                    byte[] decodedBytes = Base64.getUrlDecoder().decode(authToken.getBytes(StandardCharsets.UTF_8));
-                    String decodedAuthToken = new String(decodedBytes, StandardCharsets.UTF_8);
-                    if (decodedAuthToken.split(":").length == 2) {
-                        return decodedAuthToken.split(":")[0];
+                    if (request.getHeader(authHeader).split(" ")[0].equals("Basic")) {
+                        String authToken = request.getHeader(authHeader).split(" ")[1];
+                        byte[] decodedBytes = Base64.getUrlDecoder().decode(authToken.getBytes(StandardCharsets.UTF_8));
+                        String decodedAuthToken = new String(decodedBytes, StandardCharsets.UTF_8);
+                        if (decodedAuthToken.split(":").length == 2) {
+                            return decodedAuthToken.split(":")[0];
+                        } else {
+                            log.error(basicAuthErrorMessage);
+                            throw new OAuthClientAuthnException(basicAuthErrorMessage, OAuth2ErrorCodes.INVALID_CLIENT);
+                        }
                     } else {
-                        log.error(basicAuthErrorMessage);
-                        throw new OAuthClientAuthnException(basicAuthErrorMessage, OAuth2ErrorCodes.INVALID_CLIENT);
+                        return null;
                     }
                 } else {
                     log.error(basicAuthErrorMessage);
