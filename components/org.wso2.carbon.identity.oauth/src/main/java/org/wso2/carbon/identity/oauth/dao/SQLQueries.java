@@ -223,7 +223,6 @@ public class SQLQueries {
         public static final String GET_CONSUMER_SECRET = "SELECT CONSUMER_SECRET FROM IDN_OAUTH_CONSUMER_APPS " +
                 "WHERE CONSUMER_KEY=? AND TENANT_ID=?";
 
-        // TODO: Check whether this query needs to be updated with tenant ID.
         public static final String EXISTENCE_OF_CONSUMER_SECRET = "SELECT CONSUMER_KEY FROM IDN_OAUTH_CONSUMER_APPS " +
                 "WHERE CONSUMER_KEY=? AND CONSUMER_SECRET=? AND TENANT_ID=?";
 

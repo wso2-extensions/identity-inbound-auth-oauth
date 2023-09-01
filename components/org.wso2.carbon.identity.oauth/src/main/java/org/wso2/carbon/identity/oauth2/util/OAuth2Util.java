@@ -2302,76 +2302,7 @@ public class OAuth2Util {
     public static OAuthAppDO[] getAllAppInformationByClientId(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
-        if (oAuthAppDO != null) {
-            return new OAuthAppDO[]{oAuthAppDO};
-        }
         return new OAuthAppDAO().getAppsForConsumerKey(clientId);
-    }
-
-    public static OAuthAppDO getAppInformationByClientIdFromAppListForConsumerKey(String clientId)
-            throws IdentityOAuth2Exception, InvalidOAuthClientException {
-
-        OAuthAppDO oAuthAppDO = null;
-
-        // In tenant qualified URL mode we would always have the tenant domain in the context.
-        String tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
-
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            OAuthAppDO[] oAuthAppDOList = getAllAppInformationByClientId(clientId);
-
-            if (oAuthAppDOList.length > 1) {
-                /*
-                 If multiple apps are retrieved for the client ID, that means this is not a SaaS app
-                 (SaaS app client IDs are unique across the server).
-                 */
-                for (OAuthAppDO oAuthApp : oAuthAppDOList) {
-                    if (StringUtils.equals(tenantDomainFromContext, oAuthApp.getAppOwner().getTenantDomain())) {
-                        oAuthAppDO = oAuthApp;
-                        break;
-                    }
-                }
-            } else {
-                // As per the implementation of DAO method, executing this line means only a single app is returned.
-                String tenantDomainOfApp = oAuthAppDOList[0].getAppOwner().getTenantDomain();
-
-                if (StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
-                    /*
-                     This app could be a SaaS application. However, since the tenant domain of the app matches the
-                     requested tenant domain, there's no need to check for the SaaS property at this point.
-                     */
-                    oAuthAppDO = oAuthAppDOList[0];
-                } else if (IdentityTenantUtil.isSaaSAppsAllowedInTenants()
-                        || MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(tenantDomainOfApp)) {
-                    /*
-                     Since the tenants don't match, valid access is only when it is a SaaS app.
-                     It could be a SaaS if the SaaS apps are allowed in tenants or the app is in the super tenant.
-                     */
-                    ServiceProvider serviceProvider = getServiceProvider(clientId, tenantDomainOfApp);
-                    if (serviceProvider != null && serviceProvider.isSaasApp()) {
-                        oAuthAppDO = oAuthAppDOList[0];
-                    }
-                }
-            }
-        } else {
-            /*
-             When tenant qualified URLs are disabled, only a single app could exist for the client ID.
-             In this case, the client ID is considered to be unique across the server.
-             */
-            oAuthAppDO = getAppInformationByClientId(clientId);
-        }
-
-        if (oAuthAppDO == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Cannot find an application associated with the given consumer key: " + clientId);
-            }
-            throw new InvalidOAuthClientException("application.not.found");
-        }
-        // TODO: My note: This might work because of the cache.
-        //  Try to fix problem by commenting out below line. can enable it later on.
-        //  AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
-
-        return oAuthAppDO;
     }
 
     /**
