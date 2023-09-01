@@ -90,6 +90,9 @@ public class OAuthClientAuthnService {
                 }
             }
         } catch (OAuthClientAuthnException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while processing the request to validate the client authentication method");
+            }
             setErrorToContext(OAuth2ErrorCodes.INVALID_REQUEST, "Error occurred while validating the " +
                     "request auth method with the registered token endpoint auth method", oAuthClientAuthnContext);
             return oAuthClientAuthnContext;
@@ -341,7 +344,7 @@ public class OAuthClientAuthnService {
             return "INVALID_AUTH";
         } catch (OAuthClientAuthnException e) {
             throw new OAuthClientAuthnException("Error occurred when obtaining request authentication method",
-                    OAuth2ErrorCodes.INVALID_REQUEST);
+                    OAuth2ErrorCodes.INVALID_REQUEST, e);
         }
     }
 
@@ -418,13 +421,17 @@ public class OAuthClientAuthnService {
                     Optional.ofNullable(request.getParameter(OAuth.OAUTH_CLIENT_ID));
             Optional<List> clientIdInContentParamList =
                     Optional.ofNullable(contentParams.get(OAuth.OAUTH_CLIENT_ID));
+            //   Obtain client ID from the JWT in the request
             if (signedObject.isPresent()) {
                 SignedJWT signedJWT = SignedJWT.parse(signedObject.get());
                 return signedJWT.getJWTClaimsSet().getIssuer();
+            //   Obtain client ID from request parameters
             } else if (clientIdAsReqParam.isPresent()) {
                 return clientIdAsReqParam.get();
+            //   Obtain client ID from the request body
             } else if (clientIdInContentParamList.isPresent()) {
                 return (String) clientIdInContentParamList.get().get(0);
+            //   Obtain client ID from the authorization header when basic authentication is used
             } else if (request.getHeader(authHeader) != null) {
                 String authorizationHeader = request.getHeader(authHeader);
                 if (authorizationHeader.split(" ").length == 2) {
@@ -435,14 +442,12 @@ public class OAuthClientAuthnService {
                         if (decodedAuthToken.split(":").length == 2) {
                             return decodedAuthToken.split(":")[0];
                         } else {
-                            log.error(basicAuthErrorMessage);
                             throw new OAuthClientAuthnException(basicAuthErrorMessage, OAuth2ErrorCodes.INVALID_CLIENT);
                         }
                     } else {
                         return null;
                     }
                 } else {
-                    log.error(basicAuthErrorMessage);
                     throw new OAuthClientAuthnException(basicAuthErrorMessage, OAuth2ErrorCodes.INVALID_CLIENT);
                 }
             } else {
@@ -451,7 +456,7 @@ public class OAuthClientAuthnService {
             }
         } catch (ParseException e) {
             throw new OAuthClientAuthnException("Error occurred while parsing the signed assertion",
-                    OAuth2ErrorCodes.INVALID_REQUEST);
+                    OAuth2ErrorCodes.INVALID_REQUEST, e);
         }
     }
 
@@ -489,7 +494,7 @@ public class OAuthClientAuthnService {
                     OAuth2Util.parseCertificate(x509Certificate) != null);
         } catch (CertificateException e) {
             throw new OAuthClientAuthnException("Error occurred while parsing the certificate",
-                    OAuth2ErrorCodes.INVALID_REQUEST);
+                    OAuth2ErrorCodes.INVALID_REQUEST, e);
         }
     }
 
@@ -526,7 +531,7 @@ public class OAuthClientAuthnService {
                 return false;
             }
         } catch (CertificateException e) {
-            log.error("Invalid transport certificate.");
+            log.error("Invalid transport certificate.", e);
             return false;
         }
         return true;
