@@ -867,8 +867,6 @@
         <carbon.identity.framework.imp.pkg.version.range>[5.25.234, 7.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
-        <carbon.security.mgt.version>1.0.0</carbon.security.mgt.version>
-
         <carbon.identity.organization.management.version>1.1.14
         </carbon.identity.organization.management.version>
         <carbon.identity.organization.management.version.range>[1.1.14, 2.0.0)
