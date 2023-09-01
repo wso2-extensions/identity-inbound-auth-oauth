@@ -878,8 +878,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                 }
             }
         } catch (IdentityOAuth2Exception e) {
-            throw new OAuthClientAuthnException("Token signing algorithm not registered",
-                    OAuth2ErrorCodes.INVALID_REQUEST);
+            throw new OAuthClientAuthnException("Error occurred while retrieving the service provider of the app",
+                    OAuth2ErrorCodes.INVALID_REQUEST, e);
         }
         return null;
     }
