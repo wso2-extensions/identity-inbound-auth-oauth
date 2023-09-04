@@ -3848,6 +3848,11 @@ public class OAuth2Util {
                 IDP_ENTITY_ID).getValue();
     }
 
+    /**
+     * If enabled, hostname will be used as the issuer of the ID token instead of entity id of the resident IDP.
+     *
+     * @return true if hostname is to be used as the issuer of the ID token.
+     */
     private static boolean isUseHostnameAsIssuer() {
 
         String useHostnameAsIssuer = IdentityUtil.getProperty(OAUTH_USE_HOSTNAME_AS_ISSUER);
