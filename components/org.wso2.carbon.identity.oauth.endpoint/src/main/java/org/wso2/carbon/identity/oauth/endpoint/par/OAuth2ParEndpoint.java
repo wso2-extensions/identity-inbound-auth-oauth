@@ -178,7 +178,7 @@ public class OAuth2ParEndpoint {
                         oAuthClientAuthnContext.getErrorMessage());
             } else if (OAuth2ErrorCodes.INVALID_CLIENT.equals(oAuthClientAuthnContext.getErrorCode())) {
                 throw new ParClientException(oAuthClientAuthnContext.getErrorCode(),
-                        ParConstants.INVALID_CLIENT_ERROR + oAuthClientAuthnContext.getClientId());
+                        oAuthClientAuthnContext.getErrorMessage());
             }
             throw new ParClientException(oAuthClientAuthnContext.getErrorCode(),
                     oAuthClientAuthnContext.getErrorMessage());
