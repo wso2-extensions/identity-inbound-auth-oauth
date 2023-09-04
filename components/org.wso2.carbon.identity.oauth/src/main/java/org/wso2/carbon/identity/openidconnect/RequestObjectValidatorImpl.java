@@ -35,7 +35,9 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
@@ -126,6 +128,17 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                 return false;
             }
         }
+
+        try {
+            if (OAuth2Util.isFapiConformantApp(requestObject.getClaimValue(Constants.CLIENT_ID)) &&
+                    !isValidNbfExp(requestObject)) {
+                return false;
+            }
+        } catch (OAuthClientAuthnException e) {
+            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, e.getMessage()
+                    + Constants.CLIENT_ID);
+        }
+
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
@@ -170,6 +183,68 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                 throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Request Object " +
                         "is Expired.");
             }
+        }
+        return true;
+    }
+
+    /**
+     * Validate the request object nbf claim and exp claim according to the FAPI specification.
+     * @param requestObject request object
+     * @return  true if both claims are valid
+     * @throws RequestObjectException
+     */
+    protected boolean isValidNbfExp(RequestObject requestObject) throws RequestObjectException {
+
+        Date nbfTime = requestObject.getClaimsSet().getNotBeforeTime();
+        Date expirationTime = requestObject.getClaimsSet().getExpirationTime();
+
+        String errorMsg = null;
+        String errorLog = null;
+        if (nbfTime == null) {
+            errorMsg = "Request Object does not contain Not Before Time.";
+        } else if (expirationTime == null) {
+            errorMsg = "Request Object does not contain Expiration Time.";
+        } else {
+            long timeStampSkewMillis = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
+            long nbfTimeInMillis = nbfTime.getTime();
+            long expirationTimeInMillis = expirationTime.getTime();
+            long currentTimeInMillis = System.currentTimeMillis();
+            // nbf should be older than current time
+            if ((currentTimeInMillis + timeStampSkewMillis) < nbfTimeInMillis) {
+                errorMsg = "Request Object is not valid yet.";
+                errorLog = "Request Object is not valid yet." +
+                        ", Not Before Time(ms) : " + nbfTimeInMillis +
+                        ", TimeStamp Skew : " + timeStampSkewMillis +
+                        ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
+            } else if ((currentTimeInMillis + timeStampSkewMillis) - 3600000 > nbfTimeInMillis) {
+                // nbf should not be older than 1 hour from current time
+                errorMsg = "Request Object nbf claim is too old.";
+                errorLog = "Request Object nbf claim is too old." +
+                        ", Not Before Time(ms) : " + nbfTimeInMillis +
+                        ", TimeStamp Skew : " + timeStampSkewMillis +
+                        ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
+            } else if (expirationTimeInMillis > nbfTimeInMillis + 3600000) {
+                // exp time should not be older than 1 hour from nbf time
+                errorMsg = "Request Object expiry time is too far in the future than not before time.";
+                errorLog = "Request Object expiry time is too far in the future than not before time." +
+                        ", Expiration Time(ms) : " + expirationTimeInMillis +
+                        ", Not Before Time(ms) : " + nbfTimeInMillis +
+                        ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
+            }
+        }
+
+        if (StringUtils.isNotBlank(errorMsg)) {
+            errorLog = StringUtils.isEmpty(errorLog) ? errorMsg : errorLog;
+            logAndReturnFalse(errorLog);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_REQUEST_OBJECT)
+                        .resultMessage(errorLog)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+            }
+            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMsg);
         }
         return true;
     }

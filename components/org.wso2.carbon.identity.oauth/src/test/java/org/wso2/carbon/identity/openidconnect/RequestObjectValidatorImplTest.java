@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jwt.JWTClaimsSet;
 import org.mockito.Mock;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
@@ -39,12 +40,11 @@ import org.wso2.carbon.identity.common.testng.WithAxisConfiguration;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithKeyStore;
-import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponent;
+import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
@@ -56,7 +56,9 @@ import java.security.Key;
 import java.security.KeyStore;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateKey;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -72,8 +74,6 @@ import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreF
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
-@WithRealmService(tenantId = SUPER_TENANT_ID, tenantDomain = SUPER_TENANT_DOMAIN_NAME,
-        injectToSingletons = {OAuth2ServiceComponent.class})
 @WithKeyStore
 @WithAxisConfiguration
 @PrepareForTest({RequestObjectValidatorImpl.class, IdentityUtil.class, IdentityTenantUtil.class,
@@ -175,6 +175,7 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         // Mock OAuth2Util returning public cert of the service provider
         when(OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1, SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(clientKeyStore.getCertificate(CLIENT_PUBLIC_CERT_ALIAS));
+        when(OAuth2Util.isFapiConformantApp(anyString())).thenReturn(false);
 
         RequestObjectValidatorImpl requestObjectValidator = PowerMockito.spy(new RequestObjectValidatorImpl());
 
@@ -222,4 +223,55 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         when(IdentityProviderManager.getInstance()).thenReturn(identityProviderManager);
         when(identityProviderManager.getResidentIdP(anyString())).thenReturn(idp);
     }
+
+    @DataProvider(name = "nbfExpDataProvider")
+    public Object[][] getNbfExpClaims() {
+        long currentTimeMillis = System.currentTimeMillis();
+        Date timeInLastHour = new Date(currentTimeMillis - TimeUnit.MINUTES.toMillis(30));
+        Date timeInNextHour = new Date(currentTimeMillis + TimeUnit.MINUTES.toMillis(30));
+
+        return new Object[][] {
+                {new Date(currentTimeMillis - TimeUnit.MINUTES.toMillis(70)), timeInNextHour, false,
+                        "Request Object nbf claim is too old."},
+                {timeInLastHour, timeInNextHour, true, null},
+                {new Date(currentTimeMillis + TimeUnit.MINUTES.toMillis(10)), timeInNextHour, false,
+                        "Request Object is not valid yet."},
+                {null, timeInNextHour, false, "Request Object does not contain Not Before Time."},
+                { timeInLastHour, new Date(timeInLastHour.getTime() + TimeUnit.MINUTES.toMillis(50)), true,
+                        null},
+                { timeInLastHour, new Date(timeInLastHour.getTime() + TimeUnit.MINUTES.toMillis(65)), false,
+                        "Request Object expiry time is too far in the future than not before time."},
+                { timeInLastHour, null, false, "Request Object does not contain Expiration Time."},
+        };
+    }
+
+    @Test(dataProvider = "nbfExpDataProvider")
+    public void testNbfExpClaims(Date nbfTime, Date expTime, boolean shouldPass, String errorMsg) throws Exception {
+
+        RequestObjectValidatorImpl requestObjectValidator = new RequestObjectValidatorImpl();
+        RequestObject requestObject = mock(RequestObject.class);
+
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        jwtClaimsSetBuilder.notBeforeTime(nbfTime);
+        jwtClaimsSetBuilder.expirationTime(expTime);
+        when(requestObject.getClaimsSet()).thenReturn(jwtClaimsSetBuilder.build());
+        OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(oauthServerConfigurationMock);
+        when(oauthServerConfigurationMock.getTimeStampSkewInSeconds()).thenReturn(0L);
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(false);
+        if (shouldPass) {
+            requestObjectValidator.isValidNbfExp(requestObject);
+        } else {
+            try {
+                requestObjectValidator.isValidNbfExp(requestObject);
+                Assert.fail("Request validation should have failed");
+            } catch (RequestObjectException e) {
+                Assert.assertEquals(e.getMessage(), errorMsg, "Invalid error message received");
+            }
+        }
+
+    }
+
 }
