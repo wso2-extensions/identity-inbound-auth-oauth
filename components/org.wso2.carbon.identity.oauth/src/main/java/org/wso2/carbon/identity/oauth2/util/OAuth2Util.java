@@ -3856,9 +3856,6 @@ public class OAuth2Util {
     private static boolean isBuildIssuerWithHostname() {
 
         String buildIssuerWithHostname = IdentityUtil.getProperty(OAUTH_BUILD_ISSUER_WITH_HOSTNAME);
-        if (StringUtils.isBlank(buildIssuerWithHostname)) {
-            return false;
-        }
         return Boolean.parseBoolean(buildIssuerWithHostname);
     }
 
