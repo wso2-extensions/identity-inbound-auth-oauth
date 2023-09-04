@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -158,7 +159,7 @@ public class OAuth2ParEndpoint {
         validateInputParameters(request);
         validateClient(request, params);
         validateRepeatedParams(request, params);
-        validateAuthzRequest(request);
+        validateAuthzRequest(request, params);
     }
 
     private boolean isRequestUriProvided(MultivaluedMap<String, String> params) {
@@ -228,11 +229,12 @@ public class OAuth2ParEndpoint {
         }
     }
 
-    private void validateAuthzRequest(HttpServletRequest request) throws ParCoreException {
+    private void validateAuthzRequest(HttpServletRequest request, Map<String, List<String>> paramMap)
+            throws ParCoreException {
 
         try {
             OAuthAuthzRequest oAuthAuthzRequest = getOAuthAuthzRequest(request);
-            validateRequestObject(oAuthAuthzRequest);
+            validateRequestObject(oAuthAuthzRequest, paramMap);
         } catch (OAuthProblemException e) {
             throw new ParClientException(e.getError(), e.getDescription(), e);
         } catch (OAuthSystemException e) {
@@ -249,7 +251,8 @@ public class OAuth2ParEndpoint {
         }
     }
 
-    private void validateRequestObject(OAuthAuthzRequest oAuthAuthzRequest) throws ParCoreException {
+    private void validateRequestObject(OAuthAuthzRequest oAuthAuthzRequest, Map<String, List<String>> paramMap)
+            throws ParCoreException {
 
         try {
             if (OAuth2Util.isOIDCAuthzRequest(oAuthAuthzRequest.getScopes()) &&
@@ -265,12 +268,45 @@ public class OAuth2ParEndpoint {
                 if (requestObject == null) {
                     throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, ParConstants.INVALID_REQUEST_OBJECT);
                 }
+                if (OAuth2Util.isFapiConformantApp(oAuthAuthzRequest.getClientId())) {
+                    validatePKCEParameters(requestObject, paramMap);
+                }
             }
-        } catch (RequestObjectException e) {
+        } catch (RequestObjectException | IdentityOAuth2Exception e) {
             if (OAuth2ErrorCodes.SERVER_ERROR.equals(e.getErrorCode())) {
                 throw new ParCoreException(e.getErrorCode(), e.getMessage(), e);
             }
             throw new ParClientException(e.getErrorCode(), e.getMessage(), e);
         }
     }
+
+    private void validatePKCEParameters(RequestObject requestObject, Map<String, List<String>> paramMap)
+            throws ParClientException {
+
+        String codeChallenge = null;
+        String codeChallengeMethod = null;
+        if (paramMap != null) {
+            if (paramMap.containsKey(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE)) {
+                codeChallenge = paramMap.get(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE).get(0);
+            }
+            if (paramMap.containsKey(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD)) {
+                codeChallengeMethod = paramMap.get(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD).get(0);
+            }
+        }
+        if (requestObject.getClaim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE) != null) {
+            codeChallenge = requestObject.getClaim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE).toString();
+        }
+        if (requestObject.getClaim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD) != null) {
+            codeChallengeMethod = requestObject.getClaim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD).toString();
+        }
+        if (StringUtils.isEmpty(codeChallenge)) {
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Mandatory parameter code_challenge, not found in the request");
+        }
+        if (StringUtils.isEmpty(codeChallengeMethod)) {
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Mandatory parameter code_challenge_method, not found in the request");
+        }
+    }
+
 }
