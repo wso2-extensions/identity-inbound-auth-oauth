@@ -188,6 +188,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_USE_HOSTNAME_AS_ISSUER;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_TOKEN_EP_URL;
@@ -3812,7 +3813,7 @@ public class OAuth2Util {
         * This method should only honor the given tenant.
         * Do not add any auto tenant resolving logic.
         */
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled() || isUseHostnameAsIssuer()) {
             try {
                 startTenantFlow(tenantDomain);
                 return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
@@ -3845,6 +3846,15 @@ public class OAuth2Util {
                         IdentityApplicationConstants.Authenticator.OIDC.NAME);
         return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
                 IDP_ENTITY_ID).getValue();
+    }
+
+    private static boolean isUseHostnameAsIssuer() {
+
+        String useHostnameAsIssuer = IdentityUtil.getProperty(OAUTH_USE_HOSTNAME_AS_ISSUER);
+        if (StringUtils.isBlank(useHostnameAsIssuer)) {
+            return false;
+        }
+        return Boolean.parseBoolean(useHostnameAsIssuer);
     }
 
     private static IdentityProvider getResidentIdp(String tenantDomain) throws IdentityOAuth2Exception {
