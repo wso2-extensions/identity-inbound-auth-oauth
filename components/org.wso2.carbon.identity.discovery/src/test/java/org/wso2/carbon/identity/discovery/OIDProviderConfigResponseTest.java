@@ -63,6 +63,15 @@ public class OIDProviderConfigResponseTest {
     }
 
     @Test
+    public void testGetandSetPushedAuthorizationRequestEndpoint() {
+
+        String pushedAuthorizationRequestEndpoint = "pushedAuthorizationRequestEndpoint";
+        oidProviderConfigResponse.setPushedAuthorizationRequestEndpoint("pushedAuthorizationRequestEndpoint");
+        String pushedAuthorizationEndpoint = oidProviderConfigResponse.getPushedAuthorizationRequestEndpoint();
+        assertEquals(pushedAuthorizationEndpoint, pushedAuthorizationRequestEndpoint);
+    }
+
+    @Test
     public void testGetandSetTokenEndpoint() throws Exception {
 
         String tokenEndpoint = "tokenEndpoint";

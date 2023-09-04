@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
@@ -57,15 +58,14 @@ import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -268,18 +268,20 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 }
                 if (!isValid) {
                     if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                        Map<String, Object> configs = new HashMap<>();
-                        configs.put("scopeValidator", scopeHandler.getClass().getCanonicalName());
-                        Map<String, Object> params = new HashMap<>();
-                        params.put("clientId", tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+                        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new
+                                DiagnosticLog.DiagnosticLogBuilder(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                                OAuthConstants.LogConstants.ActionIDs.SCOPE_VALIDATION);
+                        diagnosticLogBuilder.configParam("scope validator", scopeHandler.getClass().getCanonicalName())
+                                .inputParam(LogConstants.InputKeys.CLIENT_ID,
+                                        tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId())
+                                .resultMessage("Scope validation failed against the configured scope validator.")
+                                .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                                .resultStatus(DiagnosticLog.ResultStatus.FAILED);
                         if (ArrayUtils.isNotEmpty(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope())) {
                             List<String> scopes = Arrays.asList(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope());
-                            params.put("scopes", scopes);
+                            diagnosticLogBuilder.inputParam("scopes", scopes);
                         }
-                        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                                OAuthConstants.LogConstants.FAILED,
-                                "Scope validation failed against the configured scope validator.", "validate-scope",
-                                configs);
+                        LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                     }
                     break;
                 }

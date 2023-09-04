@@ -220,8 +220,13 @@ public class ResponseTypeHandlerUtil {
             OauthTokenIssuer oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
             return generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled, oauthTokenIssuer);
         } catch (InvalidOAuthClientException e) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-authz-code", null);
+            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                    OAUTH_INBOUND_SERVICE, ISSUE_AUTHZ_CODE)
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID, consumerKey)
+                    .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                    .resultMessage("System error occurred.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             throw new IdentityOAuth2Exception(
                     "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
@@ -273,8 +278,12 @@ public class ResponseTypeHandlerUtil {
         try {
             authorizationCode = oauthIssuerImpl.authorizationCode(oauthAuthzMsgCtx);
         } catch (OAuthSystemException e) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-authz-code", null);
+            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                    OAUTH_INBOUND_SERVICE, ISSUE_AUTHZ_CODE)
+                    .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                    .resultMessage("System error occurred.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             throw new IdentityOAuth2Exception(e.getMessage(), e);
         }
 
@@ -314,7 +323,8 @@ public class ResponseTypeHandlerUtil {
                     .resultMessage("Authorization Code issued successfully.")
                     .inputParam(OAuthConstants.LogConstants.InputKeys.REQUESTED_SCOPES,
                             OAuth2Util.buildScopeString(authorizationReqDTO.getScopes()))
-                    .inputParam(LogConstants.InputKeys.REDIREDCT_URI, authorizationReqDTO.getCallbackUrl())
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.REDIRECT_URI,
+                            authorizationReqDTO.getCallbackUrl())
                     .inputParam("authz code validity period (ms)", String.valueOf(validityPeriod))
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             if (authorizationReqDTO.getUser() != null) {

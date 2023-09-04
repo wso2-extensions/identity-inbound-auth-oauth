@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.RequestObjectValidatorUtil;
@@ -39,12 +40,11 @@ import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.security.cert.Certificate;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
@@ -126,9 +126,14 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                 return false;
             }
         }
-        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                OAuthConstants.LogConstants.SUCCESS, "Request object validation is successful.",
-                "validate-request-object", null);
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_REQUEST_OBJECT)
+                    .resultMessage("Request object validation is successful.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
+        }
         return true;
     }
 
@@ -154,11 +159,13 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                         ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
                 logAndReturnFalse(msg);
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("requestObjectExpirationTime", expirationTime);
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "Request Object is Expired.", "validate-request-object",
-                            null);
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.VALIDATE_REQUEST_OBJECT)
+                            .inputParam("request object expiration time (ms)", expirationTime)
+                            .resultMessage("Request Object is Expired.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED));
                 }
                 throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Request Object " +
                         "is Expired.");
@@ -174,27 +181,32 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         String responseTypeInReqObj = requestObject.getClaimValue(Constants.RESPONSE_TYPE);
         final String errorMsg = "Request Object and Authorization request contains unmatched ";
 
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_REQUEST_OBJECT)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+        }
         if (!isValidParameter(oauthRequest.getClientId(), clientIdInReqObj)) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientIdInRequest", oauthRequest.getClientId());
-                params.put("clientIdInRequestObject", clientIdInReqObj);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, errorMsg + Constants.CLIENT_ID, "validate-request-object",
-                        null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+                diagnosticLogBuilder.inputParam("client id in request", oauthRequest.getClientId())
+                        .inputParam("client id in request object", clientIdInReqObj)
+                        .resultMessage(errorMsg + Constants.CLIENT_ID);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMsg + Constants
                     .CLIENT_ID);
         }
 
         if (!isValidParameter(oauthRequest.getResponseType(), responseTypeInReqObj)) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("responseTypeInRequest", oauthRequest.getResponseType());
-                params.put("responseTypeInRequestObject", responseTypeInReqObj);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, errorMsg + Constants.CLIENT_ID, "validate-request-object",
-                        null);
+            if (diagnosticLogBuilder != null) {
+                diagnosticLogBuilder.inputParam("response type in request", oauthRequest.getResponseType())
+                        .inputParam("response type in request object", responseTypeInReqObj)
+                        .resultMessage(errorMsg + Constants.RESPONSE_TYPE);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST,
                     errorMsg + Constants.RESPONSE_TYPE);
@@ -256,13 +268,14 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         boolean isValid = StringUtils.isNotEmpty(issuer) && issuer.equals(oAuth2Parameters.getClientId());
         if (!isValid) {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("issuer", issuer);
-                params.put("clientId", oAuth2Parameters.getClientId());
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "'issuer' field in request object should match with 'client_id' in request.",
-                        "validate-request-object", null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_REQUEST_OBJECT)
+                        .inputParam("issuer", issuer)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuth2Parameters.getClientId())
+                        .resultMessage("'issuer' field in request object should match with 'client_id' in request.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
         }
         return isValid;
@@ -289,15 +302,14 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
             }
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            Map<String, Object> params = new HashMap<>();
-            params.put("audience", audience);
-
-            Map<String, Object> configs = new HashMap<>();
-            params.put("tokenEndpointUrl", currentAudience);
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                    OAuthConstants.LogConstants.FAILED,
-                    "None of the audiences in request object matched the token endpoint", "validate-request-object",
-                    configs);
+            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_REQUEST_OBJECT)
+                    .inputParam("audience", audience)
+                    .configParam("token endpoint URL", currentAudience)
+                    .resultMessage("None of the audiences in request object matched the token endpoint.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED));
         }
         return logAndReturnFalse("None of the audience values matched the tokenEndpoint Alias: " + currentAudience);
     }
@@ -362,13 +374,14 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
 
         if (!isValid) {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("redirectUriInRequest", oAuth2Parameters.getRedirectURI());
-                params.put("redirectUriInRequestObject", redirectUriInReqObj);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "Redirect URI in request object does not match with redirect URI in request.",
-                        "validate-request-object", null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_REQUEST_OBJECT)
+                        .inputParam("redirect URI in request", oAuth2Parameters.getRedirectURI())
+                        .inputParam("redirect URI in request object", redirectUriInReqObj)
+                        .resultMessage("Redirect URI in request object does not match with redirect URI in request.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
         }
         return isValid;

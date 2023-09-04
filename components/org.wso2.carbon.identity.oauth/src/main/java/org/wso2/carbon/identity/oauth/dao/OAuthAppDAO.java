@@ -296,6 +296,7 @@ public class OAuthAppDAO {
                             oauthApp.setRefreshTokenExpiryTime(rSet.getLong(15));
                             oauthApp.setIdTokenExpiryTime(rSet.getLong(16));
                             oauthApp.setUser(authenticatedUser);
+                            oauthApp.setState(rSet.getString(17));
                             String spTenantDomain = authenticatedUser.getTenantDomain();
                             handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
                             oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
@@ -1359,7 +1360,7 @@ public class OAuthAppDAO {
     }
 
     private void handleRequestForANonExistingConsumerKey(String consumerKey) throws InvalidOAuthClientException {
-        String message = "application.not.found";
+        String message = OAuthConstants.OAuthError.AuthorizationResponsei18nKey.APPLICATION_NOT_FOUND;
         if (LOG.isDebugEnabled()) {
             LOG.debug("Cannot find an application associated with the given consumer key: " + consumerKey);
         }
