@@ -328,7 +328,8 @@ public class OAuth2Service extends AbstractAdmin {
                 }
                 validationResponseDTO.setValidClient(false);
                 validationResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CALLBACK);
-                validationResponseDTO.setErrorMsg("callback.not.match");
+                validationResponseDTO.setErrorMsg(
+                        OAuthConstants.OAuthError.AuthorizationResponsei18nKey.CALLBACK_NOT_MATCH);
                 return validationResponseDTO;
             }
         } catch (InvalidOAuthClientException e) {
