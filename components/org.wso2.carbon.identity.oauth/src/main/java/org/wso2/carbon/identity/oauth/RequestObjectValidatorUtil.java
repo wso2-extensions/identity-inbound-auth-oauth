@@ -21,8 +21,10 @@ package org.wso2.carbon.identity.oauth;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.SignedJWT;
+import net.minidev.json.JSONObject;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -31,6 +33,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidator;
@@ -41,6 +44,9 @@ import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.interfaces.RSAPublicKey;
 
+import static com.nimbusds.jose.JWSAlgorithm.ES256;
+import static com.nimbusds.jose.JWSAlgorithm.PS256;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.CLIENT_ID;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.PS;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
 
@@ -146,6 +152,17 @@ public class RequestObjectValidatorUtil {
         if (StringUtils.isNotBlank(jwksUri)) {
             String jwtString = signedJWT.getParsedString();
             String alg = signedJWT.getHeader().getAlgorithm().getName();
+            String clientId = getClientIdFromPayload(signedJWT.getPayload());
+            try {
+                if (OAuth2Util.isFapiConformantApp(clientId) && !isValidFAPISignatureAlgorithm(alg)) {
+                    return false;
+                }
+            } catch (OAuthClientAuthnException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Unable to verify whether the service provider is FAPI conformant. Skipping FAPI " +
+                            "specific signature validations.");
+                }
+            }
             try {
                 return new JWKSBasedJWTValidator().validateSignature(jwtString, jwksUri, alg, MapUtils.EMPTY_MAP);
             } catch (IdentityOAuth2Exception e) {
@@ -157,6 +174,38 @@ public class RequestObjectValidatorUtil {
         }
         return false;
 
+    }
+
+    /**
+     * Get client id from jwt payload.
+     * @param payload jwt payload.
+     * @return  client id.
+     */
+    private static String getClientIdFromPayload(Payload payload) {
+
+        if (payload != null) {
+            JSONObject payloadJson = payload.toJSONObject();
+            if (payloadJson.containsKey(CLIENT_ID)) {
+                return payloadJson.getAsString(CLIENT_ID);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Validate the signature algorithm according to FAPI specification.
+     * According to FAPI, signature algorithm should be PS256 or ES256.
+     * <a href="https://openid.net/specs/openid-financial-api-part-2-1_0.html#algorithm-considerations">...</a>
+     *
+     * @param algorithm signature algorithm
+     */
+    private static boolean isValidFAPISignatureAlgorithm(String algorithm) {
+
+        if (!PS256.getName().equals(algorithm) && !ES256.getName().equals(algorithm)) {
+            log.error("Invalid signature algorithm. Signature algorithm should be PS256 or ES256");
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -217,6 +266,18 @@ public class RequestObjectValidatorUtil {
         String alg = signedJWT.getHeader().getAlgorithm().getName();
         if (log.isDebugEnabled()) {
             log.debug("Signature Algorithm found in the JWT Header: " + alg);
+        }
+        String clientId = getClientIdFromPayload(signedJWT.getPayload());
+
+        try {
+            if (OAuth2Util.isFapiConformantApp(clientId) && !isValidFAPISignatureAlgorithm(alg)) {
+                return false;
+            }
+        } catch (OAuthClientAuthnException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Unable to verify whether the service provider is FAPI conformant. Skipping FAPI " +
+                        "specific signature validations.");
+            }
         }
         if (alg.indexOf(RS) == 0 || alg.indexOf(PS) == 0) {
             // At this point 'x509Certificate' will never be null.
