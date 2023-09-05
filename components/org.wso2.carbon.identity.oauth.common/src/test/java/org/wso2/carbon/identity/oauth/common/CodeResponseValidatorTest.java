@@ -108,8 +108,8 @@ public class CodeResponseValidatorTest extends PowerMockTestCase {
                 .thenReturn(headerMap.containsKey(RESPONSE_MODE) ? headerMap.get(RESPONSE_MODE).toString() : null);
         when(mockRequest.getParameter(REQUEST))
                 .thenReturn(headerMap.containsKey(REQUEST) ? headerMap.get(REQUEST).toString() : null);
+        when(mockRequest.getAttribute(OAuthConstants.IS_FAPI_CONFORMANT_APP)).thenReturn(isFapiEnabled);
         mockStatic(OAuthCommonUtil.class);
-        when(OAuthCommonUtil.isFapiEnabled()).thenReturn(isFapiEnabled);
         when(OAuthCommonUtil.decodeRequestObject(anyString()))
                 .thenReturn(headerMap.containsKey(REQUEST) ? new JSONObject(headerMap.get(REQUEST).toString()) : null);
 

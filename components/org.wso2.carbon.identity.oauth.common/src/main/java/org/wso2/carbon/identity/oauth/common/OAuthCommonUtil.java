@@ -73,16 +73,6 @@ public class OAuthCommonUtil {
     }
 
     /**
-     * Check whether the application/server is FAPI compliant.
-     *
-     * @return true if the application/server is FAPI compliant, else, false.
-     */
-    public static boolean isFapiEnabled() {
-        // Todo: Need to implement the logic to check whether the application/server is FAPI compliant.
-        return false;
-    }
-
-    /**
      * Method to decode the request object jwt.
      * @param requestObjectJwt request object jwt
      * @return json body of the request object
