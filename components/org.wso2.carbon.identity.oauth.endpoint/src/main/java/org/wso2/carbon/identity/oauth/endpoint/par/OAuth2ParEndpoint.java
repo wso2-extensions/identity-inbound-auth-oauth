@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -232,6 +233,7 @@ public class OAuth2ParEndpoint {
 
         try {
             OAuthAuthzRequest oAuthAuthzRequest = getOAuthAuthzRequest(request);
+            setIsFAPIConformantApp(request, oAuthAuthzRequest.getClientId());
             validateRequestObject(oAuthAuthzRequest);
         } catch (OAuthProblemException e) {
             throw new ParClientException(e.getError(), e.getDescription(), e);
@@ -271,6 +273,17 @@ public class OAuth2ParEndpoint {
                 throw new ParCoreException(e.getErrorCode(), e.getMessage(), e);
             }
             throw new ParClientException(e.getErrorCode(), e.getMessage(), e);
+        }
+    }
+
+    private void setIsFAPIConformantApp(HttpServletRequest request, String clientId) throws ParClientException {
+        // Add the isFAPIConformant as a request attribute to retrieve from response validators to avoid the cyclic
+        // dependency in accessing the OAuth2Util.isFapiConformantApp() method.
+        try {
+            request.setAttribute(OAuthConstants.IS_FAPI_CONFORMANT_APP, OAuth2Util.isFapiConformantApp(clientId));
+        } catch (IdentityOAuth2Exception e) {
+            EndpointUtil.triggerOnAuthzRequestException(e, request);
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, e.getMessage(), e);
         }
     }
 }

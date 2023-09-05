@@ -43,7 +43,8 @@ public class CodeResponseValidator extends CodeValidator {
 
         super.validateRequiredParameters(request);
         // FAPI requests require the response_mode to be jwt when the response_type is code.
-        if (OAuthCommonUtil.isFapiEnabled()) {
+        if (request.getAttribute(OAuthConstants.IS_FAPI_CONFORMANT_APP) != null &&
+                Boolean.parseBoolean(request.getAttribute(OAuthConstants.IS_FAPI_CONFORMANT_APP).toString())) {
             String responseMode = request.getParameter(RESPONSE_MODE);
             if (StringUtils.isNotBlank(request.getParameter(OAuthConstants.OAuth20Params.REQUEST))) {
                 JSONObject requestObjectJson =

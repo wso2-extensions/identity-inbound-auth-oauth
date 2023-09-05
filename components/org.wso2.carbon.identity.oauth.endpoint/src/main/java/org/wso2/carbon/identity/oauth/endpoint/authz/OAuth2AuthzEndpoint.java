@@ -291,6 +291,15 @@ public class OAuth2AuthzEndpoint {
             return handleIdentityException(request, e);
         }
 
+        // Add the isFAPIConformant as a request attribute to retrieve from response validators to avoid the cyclic
+        // dependency in accessing the OAuth2Util.isFapiConformantApp() method.
+        try {
+            request.setAttribute(OAuthConstants.IS_FAPI_CONFORMANT_APP,
+                    OAuth2Util.isFapiConformantApp(oAuthMessage.getClientId()));
+        } catch (IdentityOAuth2Exception e) {
+            EndpointUtil.triggerOnAuthzRequestException(e, request);
+            throw new InvalidRequestException(e.getMessage(), OAuth2ErrorCodes.INVALID_REQUEST, e);
+        }
         try {
             // Start tenant domain flow if the tenant configuration is not enabled.
             if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
