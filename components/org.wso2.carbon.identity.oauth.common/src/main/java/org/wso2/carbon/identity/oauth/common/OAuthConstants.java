@@ -35,6 +35,11 @@ public final class OAuthConstants {
     //OAuth2 request headers.
     public static final String HTTP_REQ_HEADER_AUTHZ = "Authorization";
     public static final String HTTP_REQ_HEADER_AUTH_METHOD_BASIC = "Basic";
+    public static final String RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ALLOWED_GRANT_TYPES_CONFIG =
+            "OAuth.JWT.RenewTokenWithoutRevokingExisting.AllowedGrantTypes.AllowedGrantType";
+    public static final String RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG =
+            "OAuth.JWT.RenewTokenWithoutRevokingExisting.Enable";
+    public static final String REQUEST_BINDING_TYPE = "request";
     public static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList("application/x-www-form-urlencoded",
                                                                            "application/json");
 
