@@ -59,6 +59,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
+
 /**
  * DCRMService service is used to manage OAuth2/OIDC application registration.
  */
@@ -115,10 +117,13 @@ public class DCRMService {
             }
             return buildResponse(oAuthConsumerAppDTO);
         } catch (IdentityOAuthAdminException e) {
+            if (INVALID_OAUTH_CLIENT.getErrorCode().equals(e.getErrorCode())) {
+                throw DCRMUtils.generateClientException(
+                        DCRMConstants.ErrorMessages.NOT_FOUND_OAUTH_APPLICATION_WITH_NAME, clientName);
+            }
             throw DCRMUtils.generateServerException(
                     DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION, clientName, e);
         }
-
     }
 
     /**

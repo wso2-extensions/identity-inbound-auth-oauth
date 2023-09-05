@@ -31,6 +31,7 @@ public class OIDProviderConfigResponse {
 
     private String issuer;
     private String authorizationEndpoint;
+    private String pushedAuthorizationRequestEndpoint;
     private String tokenEndpoint;
     private String userinfoEndpoint;
     private String revocationEndpoint;
@@ -93,6 +94,16 @@ public class OIDProviderConfigResponse {
 
     public void setAuthorizationEndpoint(String authorizationEndpoint) {
         this.authorizationEndpoint = authorizationEndpoint;
+    }
+
+    public String getPushedAuthorizationRequestEndpoint() {
+
+        return pushedAuthorizationRequestEndpoint;
+    }
+
+    public void setPushedAuthorizationRequestEndpoint(String pushedAuthorizationRequestEndpoint) {
+
+        this.pushedAuthorizationRequestEndpoint = pushedAuthorizationRequestEndpoint;
     }
 
     public String getTokenEndpoint() {
@@ -493,6 +504,8 @@ public class OIDProviderConfigResponse {
         configMap.put(DiscoveryConstants.ISSUER.toLowerCase(), this.issuer);
         configMap.put(DiscoveryConstants.ACR_VALUES_SUPPORTED.toLowerCase(), this.acrValuesSupported);
         configMap.put(DiscoveryConstants.AUTHORIZATION_ENDPOINT.toLowerCase(), this.authorizationEndpoint);
+        configMap.put(DiscoveryConstants.PUSHED_AUTHORIZATION_REQUEST_ENDPOINT.toLowerCase(),
+                this.pushedAuthorizationRequestEndpoint);
         configMap.put(DiscoveryConstants.CLAIM_TYPES_SUPPORTED.toLowerCase(), this.claimTypesSupported);
         configMap.put(DiscoveryConstants.CLAIMS_LOCALES_SUPPORTED.toLowerCase(), this.claimsLocalesSupported);
         configMap.put(DiscoveryConstants.CLAIMS_PARAMETER_SUPPORTED.toLowerCase(), this.isClaimsParameterSupported);

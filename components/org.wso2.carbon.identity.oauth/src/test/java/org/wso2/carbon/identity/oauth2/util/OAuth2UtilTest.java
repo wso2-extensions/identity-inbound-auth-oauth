@@ -1170,6 +1170,14 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     }
 
     @Test(dataProvider = "OAuthURLData")
+    public void testGetOAuth2ParEPUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+        when(oauthServerConfigurationMock.getOAuth2ParEPUrl()).thenReturn(configUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOAuth2ParEPUrl).get())
+                .thenReturn(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2ParEPUrl(), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthURLData")
     public void testGetOAuth2TokenEPUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
         when(oauthServerConfigurationMock.getOAuth2TokenEPUrl()).thenReturn(configUrl);
         when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOAuth2TokenEPUrl).get())
