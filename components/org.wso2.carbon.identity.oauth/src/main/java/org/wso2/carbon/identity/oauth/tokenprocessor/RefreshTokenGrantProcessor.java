@@ -29,16 +29,51 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
  */
 public interface RefreshTokenGrantProcessor {
 
+    /**
+     * Validate the refresh token.
+     *
+     * @param tokenReqMessageContext Token request message context.
+     * @return Refresh token validation data.
+     * @throws IdentityOAuth2Exception If an error occurred while validating the refresh token.
+     */
     RefreshTokenValidationDataDO validateRefreshToken(OAuthTokenReqMessageContext tokenReqMessageContext)
             throws IdentityOAuth2Exception;
 
+    /**
+     * Persist the new access token.
+     *
+     * @param tokenReqMessageContext Token request message context.
+     * @param accessTokenBean        Access token data object.
+     * @param userStoreDomain        User store domain.
+     * @param clientId               Client ID.
+     * @throws IdentityOAuth2Exception If an error occurred while persisting the new access token.
+     */
     void persistNewToken(OAuthTokenReqMessageContext tokenReqMessageContext, AccessTokenDO accessTokenBean,
                          String userStoreDomain, String clientId) throws IdentityOAuth2Exception;
 
+    /**
+     * Create the access token bean.
+     *
+     * @param tokReqMsgCtx   Token request message context.
+     * @param tokenReq       Token request.
+     * @param validationBean Refresh token validation data.
+     * @param tokenType      Token type.
+     * @return Access token data object.
+     * @throws IdentityOAuth2Exception If an error occurred while creating the access token bean.
+     */
     AccessTokenDO createAccessTokenBean(OAuthTokenReqMessageContext tokReqMsgCtx, OAuth2AccessTokenReqDTO tokenReq,
                                         RefreshTokenValidationDataDO validationBean, String tokenType)
             throws IdentityOAuth2Exception;
 
+    /**
+     * Check whether the refresh token is the latest refresh token.
+     *
+     * @param tokenReq        Token request.
+     * @param validationBean  Refresh token validation data.
+     * @param userStoreDomain User store domain.
+     * @return True if the refresh token is the latest refresh token.
+     * @throws IdentityOAuth2Exception If an error occurred while checking whether the refresh token is the latest
+     */
     boolean isLatestRefreshToken(OAuth2AccessTokenReqDTO tokenReq, RefreshTokenValidationDataDO validationBean,
                                  String userStoreDomain) throws IdentityOAuth2Exception;
 }

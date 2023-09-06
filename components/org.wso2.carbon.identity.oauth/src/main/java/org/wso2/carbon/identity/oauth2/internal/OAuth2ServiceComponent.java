@@ -675,6 +675,11 @@ public class OAuth2ServiceComponent {
         OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(null);
     }
 
+    /**
+     * Sets the refresh token grant processor.
+     *
+     * @param refreshTokenGrantProcessor RefreshTokenGrantProcessor
+     */
     @Reference(
             name = "refreshtoken.grant.processor",
             service = RefreshTokenGrantProcessor.class,
@@ -690,6 +695,11 @@ public class OAuth2ServiceComponent {
         OAuth2ServiceComponentHolder.getInstance().setRefreshTokenGrantProcessor(refreshTokenGrantProcessor);
     }
 
+    /**
+     * Unsets the refresh token grant processor.
+     *
+     * @param refreshTokenGrantProcessor RefreshTokenGrantProcessor
+     */
     protected void unsetRefreshTokenGrantProcessor(RefreshTokenGrantProcessor refreshTokenGrantProcessor) {
 
         if (log.isDebugEnabled()) {
@@ -698,6 +708,11 @@ public class OAuth2ServiceComponent {
         OAuth2ServiceComponentHolder.getInstance().setRefreshTokenGrantProcessor(null);
     }
 
+    /**
+     * Sets the access token grant processor.
+     *
+     * @param accessTokenDAO AccessTokenDAO
+     */
     @Reference(
             name = "access.token.dao.service",
             service = AccessTokenDAO.class,
@@ -713,6 +728,11 @@ public class OAuth2ServiceComponent {
         OAuthComponentServiceHolder.getInstance().setAccessTokenDAOService(accessTokenDAO);
     }
 
+    /**
+     * Unsets the access token grant processor.
+     *
+     * @param accessTokenDAO   AccessTokenDAO
+     */
     protected void unsetAccessTokenDAOService(AccessTokenDAO accessTokenDAO) {
 
         if (log.isDebugEnabled()) {
@@ -721,6 +741,11 @@ public class OAuth2ServiceComponent {
         OAuthComponentServiceHolder.getInstance().setAccessTokenDAOService(null);
     }
 
+    /**
+     * Sets the access token grant processor.
+     *
+     * @param tokenMgtDAOService TokenManagementDAO
+     */
     @Reference(
             name = "token.management.dao.service",
             service = TokenManagementDAO.class,
@@ -736,6 +761,11 @@ public class OAuth2ServiceComponent {
         OAuthComponentServiceHolder.getInstance().setTokenManagementDAOService(tokenMgtDAOService);
     }
 
+    /**
+     * Unsets the access token grant processor.
+     *
+     * @param tokenManagementDAO TokenManagementDAO
+     */
     protected void unsetTokenMgtDAOService(TokenManagementDAO tokenManagementDAO) {
 
         if (log.isDebugEnabled()) {
@@ -746,6 +776,11 @@ public class OAuth2ServiceComponent {
     }
 
 
+    /**
+     * Sets the access token grant processor.
+     *
+     * @param oAuth2RevocationProcessor OAuth2RevocationProcessor
+     */
     @Reference(
             name = "oauth2.revocation.processor",
             service = OAuth2RevocationProcessor.class,
@@ -761,6 +796,11 @@ public class OAuth2ServiceComponent {
         OAuth2ServiceComponentHolder.getInstance().setRevocationProcessor(oAuth2RevocationProcessor);
     }
 
+    /**
+     * Unsets the access token grant processor.
+     *
+     * @param oAuth2RevocationProcessor OAuth2RevocationProcessor
+     */
     protected void unsetOAuth2RevocationProcessor(OAuth2RevocationProcessor oAuth2RevocationProcessor) {
 
         if (log.isDebugEnabled()) {

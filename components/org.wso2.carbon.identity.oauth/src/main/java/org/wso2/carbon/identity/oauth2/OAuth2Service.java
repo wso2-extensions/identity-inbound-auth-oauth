@@ -739,6 +739,11 @@ public class OAuth2Service extends AbstractAdmin {
         }
     }
 
+    /**
+     * Get the revocation processor.
+     *
+     * @return OAuth2RevocationProcessor
+     */
     private OAuth2RevocationProcessor getRevocationProcessor() {
 
         return OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor();
