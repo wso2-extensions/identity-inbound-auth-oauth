@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
@@ -18,20 +18,17 @@
 
 package org.wso2.carbon.identity.oauth.par.exceptions;
 
-import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+import org.wso2.carbon.identity.base.IdentityException;
 
 /**
- * PAR error DTO for Authorization Failure.
+ * PAR Authorization flow failure.
  */
-public class ParAuthFailureException extends OAuthProblemException {
-
-    private String errorCode;
-    private String errorMsg;
+public class ParAuthFailureException extends IdentityException {
 
     /**
      * Constructor with error message.
      *
-     * @param errorMsg error message
+     * @param errorMsg Error message.
      */
     public ParAuthFailureException(String errorMsg) {
 
@@ -39,42 +36,25 @@ public class ParAuthFailureException extends OAuthProblemException {
     }
 
     /**
-     * Get error code.
+     * Constructor with error message and throwable.
      *
-     * @return errorCode
+     * @param message Error message.
+     * @param cause Throwable.
      */
-    public String getErrorCode() {
+    public ParAuthFailureException(String message, Throwable cause) {
 
-        return errorCode;
+        super(message, cause);
     }
 
     /**
-     * Get error message.
+     * Constructor with error code, error message and throwable.
      *
-     * @return errorMsg
+     * @param errorCode Error code.
+     * @param message Error message.
+     * @param cause Throwable.
      */
-    public String getErrorMsg() {
+    public ParAuthFailureException(String errorCode, String message, Throwable cause) {
 
-        return errorMsg;
-    }
-
-    /**
-     * Set error code.
-     *
-     * @param errorCode error code
-     */
-    public void setErrorCode(String errorCode) {
-
-        this.errorCode = errorCode;
-    }
-
-    /**
-     * Set error message.
-     *
-     * @param  errorMsg error message
-     */
-    public void setErrorMsg(String errorMsg) {
-
-        this.errorMsg = errorMsg;
+        super(errorCode, message, cause);
     }
 }

@@ -28,23 +28,22 @@ import org.wso2.carbon.identity.application.authentication.framework.handler.req
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.Claim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
-import org.wso2.carbon.registry.api.RegistryException;
-import org.wso2.carbon.registry.api.Resource;
-import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -59,12 +58,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.EMAIL_VERIFIED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.PHONE_NUMBER_VERIFIED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ROLES;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.UPDATED_AT;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SCOPE_RESOURCE_PATH;
 
 /**
  * Default implementation of {@link OpenIDConnectClaimFilter}
@@ -173,6 +173,15 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
                 log.debug("No OIDC scopes defined for tenantDomain: " + spTenantDomain + ". Cannot proceed with " +
                         "getting claims for the requested scopes. Therefore returning an empty claim list.");
             }
+        }
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAUTH_INBOUND_SERVICE, ISSUE_ACCESS_TOKEN);
+            diagnosticLogBuilder.inputParam(OAuthConstants.LogConstants.InputKeys.REQUESTED_SCOPES, requestedScopes)
+                    .resultMessage("Get Claims Filtered By OIDC Scopes.")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
         return filteredClaims;
     }
@@ -335,39 +344,6 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
             }
         }
         return essentialClaims;
-    }
-
-    private Properties getOIDCScopeProperties(String spTenantDomain) {
-
-        Resource oidcScopesResource = null;
-        try {
-            int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
-            startTenantFlow(spTenantDomain, tenantId);
-
-            RegistryService registryService = OAuth2ServiceComponentHolder.getRegistryService();
-            if (registryService == null) {
-                throw new RegistryException("Registry Service not set in OAuth2 Component. Component may not have " +
-                        "initialized correctly.");
-            }
-
-            oidcScopesResource = registryService.getConfigSystemRegistry(tenantId).get(SCOPE_RESOURCE_PATH);
-        } catch (RegistryException e) {
-            log.error("Error while obtaining registry collection from registry path:" + SCOPE_RESOURCE_PATH, e);
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
-        }
-
-        Properties propertiesToReturn = new Properties();
-        if (oidcScopesResource != null) {
-            for (Object scopeProperty : oidcScopesResource.getProperties().keySet()) {
-                String propertyKey = (String) scopeProperty;
-                propertiesToReturn.setProperty(propertyKey, oidcScopesResource.getProperty(propertyKey));
-            }
-        } else {
-            log.error("OIDC scope resource cannot be found at " + SCOPE_RESOURCE_PATH + " for tenantDomain: "
-                    + spTenantDomain);
-        }
-        return propertiesToReturn;
     }
 
     private List<ScopeDTO> getOIDCScopes(int tenantId) {

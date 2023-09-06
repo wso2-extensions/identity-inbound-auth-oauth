@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com). All Rights Reserved.
+/*
+ * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -18,17 +18,30 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.par;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
+import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
+import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.json.JSONObject;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
-import org.wso2.carbon.identity.oauth.par.model.ParAuthResponseData;
+import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
+import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
+import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 import java.util.HashMap;
 import java.util.List;
@@ -45,7 +58,12 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUEST;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthAuthzRequest;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getParAuthService;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSPTenantDomainFromClientId;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 
 /**
  * REST implementation for OAuth2 PAR endpoint.
@@ -56,6 +74,8 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth
 @InInterceptors(classes = OAuthClientAuthenticatorProxy.class)
 public class OAuth2ParEndpoint {
 
+    private static final Log log = LogFactory.getLog(OAuth2ParEndpoint.class);
+
     @POST
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
@@ -64,11 +84,12 @@ public class OAuth2ParEndpoint {
                         MultivaluedMap<String, String> params) {
 
         try {
+            checkClientAuthentication(request);
             handleValidation(request, params);
             Map<String, String> parameters = transformParams(params);
-            ParAuthResponseData parAuthResponseData =
-                    EndpointUtil.getParAuthService().generateParAuthResponse(parameters);
-            return createAuthResponse(response, parAuthResponseData);
+            ParAuthData parAuthData =
+                    getParAuthService().handleParAuthRequest(parameters);
+            return createAuthResponse(response, parAuthData);
         } catch (ParClientException e) {
             return handleParClientException(e);
         } catch (ParCoreException e) {
@@ -91,13 +112,13 @@ public class OAuth2ParEndpoint {
         return parameters;
     }
 
-    private Response createAuthResponse(HttpServletResponse response, ParAuthResponseData parAuthResponseData) {
+    private Response createAuthResponse(HttpServletResponse response, ParAuthData parAuthData) {
 
         response.setContentType(MediaType.APPLICATION_JSON);
-        net.minidev.json.JSONObject parAuthResponse = new net.minidev.json.JSONObject();
+        JSONObject parAuthResponse = new JSONObject();
         parAuthResponse.put(OAuthConstants.OAuth20Params.REQUEST_URI,
-                ParConstants.REQUEST_URI_HEAD + parAuthResponseData.getReqUriUUID());
-        parAuthResponse.put(ParConstants.EXPIRES_IN, parAuthResponseData.getExpiryTime());
+                ParConstants.REQUEST_URI_PREFIX + parAuthData.getrequestURIReference());
+        parAuthResponse.put(ParConstants.EXPIRES_IN, parAuthData.getExpiryTime());
         Response.ResponseBuilder responseBuilder = Response.status(HttpServletResponse.SC_CREATED);
         return responseBuilder.entity(parAuthResponse.toString()).build();
     }
@@ -111,10 +132,12 @@ public class OAuth2ParEndpoint {
 
         Response.ResponseBuilder responseBuilder;
         if (OAuth2ErrorCodes.INVALID_CLIENT.equals(errorCode)) {
-            responseBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED);
+            responseBuilder = Response.status(HttpServletResponse.SC_UNAUTHORIZED)
+                    .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, EndpointUtil.getRealmInfo());
         } else {
             responseBuilder = Response.status(HttpServletResponse.SC_BAD_REQUEST);
         }
+        log.debug("Client error while handling the request: ", exception);
         return responseBuilder.entity(parErrorResponse.toString()).build();
     }
 
@@ -122,13 +145,67 @@ public class OAuth2ParEndpoint {
 
         JSONObject parErrorResponse = new JSONObject();
         parErrorResponse.put(OAuthConstants.OAUTH_ERROR, OAuth2ErrorCodes.SERVER_ERROR);
-        parErrorResponse.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, parCoreException.getMessage());
+        parErrorResponse.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, ParConstants.INTERNAL_SERVER_ERROR);
 
         Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        log.debug("Exception occurred when handling the request: ", parCoreException);
         return respBuilder.entity(parErrorResponse.toString()).build();
     }
 
     private void handleValidation(HttpServletRequest request, MultivaluedMap<String, String> params)
+            throws ParCoreException {
+
+        validateInputParameters(request);
+        validateClient(request, params);
+        validateRepeatedParams(request, params);
+        validateAuthzRequest(request);
+    }
+
+    private boolean isRequestUriProvided(MultivaluedMap<String, String> params) {
+
+        return params.containsKey(OAuthConstants.OAuth20Params.REQUEST_URI);
+    }
+
+    private void checkClientAuthentication(HttpServletRequest request) throws ParCoreException {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = getClientAuthnContext(request);
+        if (oAuthClientAuthnContext.isAuthenticated()) {
+            return;
+        }
+        if (StringUtils.isNotBlank(oAuthClientAuthnContext.getErrorCode())) {
+            if (OAuth2ErrorCodes.SERVER_ERROR.equals(oAuthClientAuthnContext.getErrorCode())) {
+                throw new ParCoreException(oAuthClientAuthnContext.getErrorCode(),
+                        oAuthClientAuthnContext.getErrorMessage());
+            } else if (OAuth2ErrorCodes.INVALID_CLIENT.equals(oAuthClientAuthnContext.getErrorCode())) {
+                throw new ParClientException(oAuthClientAuthnContext.getErrorCode(),
+                        ParConstants.INVALID_CLIENT_ERROR + oAuthClientAuthnContext.getClientId());
+            }
+            throw new ParClientException(oAuthClientAuthnContext.getErrorCode(),
+                    oAuthClientAuthnContext.getErrorMessage());
+        }
+
+        throw new ParClientException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT, ParConstants.CLIENT_AUTH_REQUIRED_ERROR);
+    }
+
+    private OAuthClientAuthnContext getClientAuthnContext(HttpServletRequest request) {
+
+        Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
+        if (oauthClientAuthnContextObj instanceof OAuthClientAuthnContext) {
+            return (OAuthClientAuthnContext) oauthClientAuthnContextObj;
+        }
+        return createNewOAuthClientAuthnContext();
+    }
+
+    private OAuthClientAuthnContext createNewOAuthClientAuthnContext() {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(false);
+        oAuthClientAuthnContext.setErrorMessage(ParConstants.PAR_CLIENT_AUTH_ERROR);
+        oAuthClientAuthnContext.setErrorCode(OAuth2ErrorCodes.INVALID_REQUEST);
+        return oAuthClientAuthnContext;
+    }
+
+    private void validateClient(HttpServletRequest request, MultivaluedMap<String, String> params)
             throws ParClientException {
 
         OAuth2ClientValidationResponseDTO validationResponse = getOAuth2Service().validateClientInfo(request);
@@ -142,8 +219,58 @@ public class OAuth2ParEndpoint {
         }
     }
 
-    private boolean isRequestUriProvided(MultivaluedMap<String, String> params) {
+    private void validateRepeatedParams(HttpServletRequest request, Map<String, List<String>> paramMap)
+            throws ParClientException {
 
-        return params.containsKey(OAuthConstants.OAuth20Params.REQUEST_URI);
+        if (!validateParams(request, paramMap)) {
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    ParConstants.REPEATED_PARAMS_IN_REQUEST_ERROR);
+        }
+    }
+
+    private void validateAuthzRequest(HttpServletRequest request) throws ParCoreException {
+
+        try {
+            OAuthAuthzRequest oAuthAuthzRequest = getOAuthAuthzRequest(request);
+            validateRequestObject(oAuthAuthzRequest);
+        } catch (OAuthProblemException e) {
+            throw new ParClientException(e.getError(), e.getDescription(), e);
+        } catch (OAuthSystemException e) {
+            throw new ParCoreException(OAuth2ErrorCodes.SERVER_ERROR, e.getMessage(), e);
+        }
+    }
+
+    private void validateInputParameters(HttpServletRequest request) throws ParClientException {
+
+        try {
+            getOAuth2Service().validateInputParameters(request);
+        } catch (InvalidOAuthRequestException e) {
+            throw new ParClientException(e.getErrorCode(), e.getMessage(), e);
+        }
+    }
+
+    private void validateRequestObject(OAuthAuthzRequest oAuthAuthzRequest) throws ParCoreException {
+
+        try {
+            if (OAuth2Util.isOIDCAuthzRequest(oAuthAuthzRequest.getScopes()) &&
+                    StringUtils.isNotBlank(oAuthAuthzRequest.getParam(REQUEST))) {
+
+                OAuth2Parameters parameters = new OAuth2Parameters();
+                parameters.setClientId(oAuthAuthzRequest.getClientId());
+                parameters.setRedirectURI(oAuthAuthzRequest.getRedirectURI());
+                parameters.setResponseType(oAuthAuthzRequest.getResponseType());
+                parameters.setTenantDomain(getSPTenantDomainFromClientId(oAuthAuthzRequest.getClientId()));
+
+                RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, parameters);
+                if (requestObject == null) {
+                    throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, ParConstants.INVALID_REQUEST_OBJECT);
+                }
+            }
+        } catch (RequestObjectException e) {
+            if (OAuth2ErrorCodes.SERVER_ERROR.equals(e.getErrorCode())) {
+                throw new ParCoreException(e.getErrorCode(), e.getMessage(), e);
+            }
+            throw new ParClientException(e.getErrorCode(), e.getMessage(), e);
+        }
     }
 }

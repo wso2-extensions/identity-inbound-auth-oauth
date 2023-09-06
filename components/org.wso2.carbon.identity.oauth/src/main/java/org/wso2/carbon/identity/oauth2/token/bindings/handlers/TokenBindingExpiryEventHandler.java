@@ -47,7 +47,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -64,8 +63,6 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
 public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
 
     private static final Log log = LogFactory.getLog(TokenBindingExpiryEventHandler.class);
-
-    private static final List<String> TOKEN_BINDING_PREFIX_LIST = Arrays.asList("os_");
 
     @Override
     public void handleEvent(Event event) throws IdentityEventException {
@@ -108,7 +105,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                     revokeTokensForCommonAuthCookie(request, context.getLastAuthenticatedUser());
                 }
             } else {
-                revokeTokensForCommonAuthCookie(request, context.getLastAuthenticatedUser());
+                revokeTokensForCommonAuthCookie(request, getAuthenticatedUser(eventProperties, context));
             }
         } catch (IdentityOAuth2Exception | OAuthSystemException  e) {
             log.error("Error while revoking the tokens on session termination.", e);
@@ -299,11 +296,6 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
 
         Set<AccessTokenDO> boundTokens = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .getAccessTokensByBindingRef(tokenBindingReference);
-        for (String prefix : TOKEN_BINDING_PREFIX_LIST) {
-            boundTokens.addAll(OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                    .getAccessTokensByBindingRef(prefix + tokenBindingReference));
-        }
-
         if (log.isDebugEnabled() && CollectionUtils.isEmpty(boundTokens)) {
             log.debug("No bound tokens found for the the provided binding reference: " + tokenBindingReference);
         }
@@ -425,5 +417,38 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()}, OAuth2Util.isHashEnabled());
         OAuthUtil.invokePostRevocationBySystemListeners(accessTokenDO, Collections.emptyMap());
+    }
+
+    /**
+     * Retrieve the authenticated user from the session context identifier in the event if it is not available in the
+     * authentication context.
+     *
+     * @param eventProperties Event properties.
+     * @param context         Authentication context.
+     * @return Authentication user.
+     */
+    private AuthenticatedUser getAuthenticatedUser(Map<String, Object> eventProperties, AuthenticationContext context) {
+
+        AuthenticatedUser authenticatedUser = context.getLastAuthenticatedUser();
+        if (authenticatedUser != null) {
+            return authenticatedUser;
+        }
+        Map<String, Object> paramMap = (Map<String, Object>) eventProperties.get(IdentityEventConstants
+                .EventProperty.PARAMS);
+        String sessionContextIdentifier = getSessionIdentifier(paramMap);
+        if (StringUtils.isNotBlank(sessionContextIdentifier)) {
+            SessionContext sessionContext = (SessionContext) eventProperties.get(IdentityEventConstants
+                    .EventProperty.SESSION_CONTEXT);
+            if (sessionContext != null) {
+                authenticatedUser = (AuthenticatedUser) sessionContext
+                        .getProperty(FrameworkConstants.AUTHENTICATED_USER);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Session context for session context identifier: " + sessionContextIdentifier +
+                            " is not found.");
+                }
+            }
+        }
+        return authenticatedUser;
     }
 }

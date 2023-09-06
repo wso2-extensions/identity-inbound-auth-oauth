@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProc
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
+import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
@@ -96,6 +97,7 @@ public class OAuth2ServiceComponentHolder {
     private static boolean restrictUnassignedScopes;
     private static ConfigurationContextService configurationContextService;
     private List<JWTAccessTokenClaimProvider> jwtAccessTokenClaimProviders = new ArrayList<>();
+    private final List<OAuthAuthorizationRequestBuilder> oAuthAuthorizationRequestBuilders = new ArrayList<>();
     private boolean isOrganizationManagementEnabled = false;
     private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
     private OAuth2RevocationProcessor revocationProcessor;
@@ -679,5 +681,35 @@ public class OAuth2ServiceComponentHolder {
             return getDefaultResponseModeProvider();
         }
         return responseModeProvider;
+    }
+
+    /**
+     * Get the list of oauth authorization request builder implementations available.
+     *
+     * @return List<OAuthAuthorizationRequestBuilder> returns a list ot request builders.
+     */
+    public List<OAuthAuthorizationRequestBuilder> getAuthorizationRequestBuilders() {
+
+        return oAuthAuthorizationRequestBuilders;
+    }
+
+    /**
+     * Add request builder implementation.
+     *
+     * @param oAuthAuthorizationRequestBuilder Request builder implementation.
+     */
+    public void addAuthorizationRequestBuilder(OAuthAuthorizationRequestBuilder oAuthAuthorizationRequestBuilder) {
+
+        oAuthAuthorizationRequestBuilders.add(oAuthAuthorizationRequestBuilder);
+    }
+
+    /**
+     * Remove request builder implementation.
+     *
+     * @param oAuthAuthorizationRequestBuilder Request builder implementation.
+     */
+    public void removeAuthorizationRequestBuilder(OAuthAuthorizationRequestBuilder oAuthAuthorizationRequestBuilder) {
+
+        oAuthAuthorizationRequestBuilders.remove(oAuthAuthorizationRequestBuilder);
     }
 }

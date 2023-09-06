@@ -19,27 +19,27 @@
 package org.wso2.carbon.identity.oauth.par.model;
 
 /**
- * Captures the values for response given by PAR Endpoint.
+ * Captures the values for response given by PAR auth service.
  */
-public class ParAuthResponseData {
+public class ParAuthData {
 
-    private String reqUriUUID;
+    private String requestURIReference;
     private long expiryTime;
 
     /**
      * Get request uri's uuid.
      *
-     * @return reqUriUUID
+     * @return Uuid of request uri.
      */
-    public String getReqUriUUID() {
+    public String getrequestURIReference() {
 
-        return reqUriUUID;
+        return requestURIReference;
     }
 
     /**
      * Get expiry time.
      *
-     * @return expiryTime
+     * @return Scheduled expiry time.
      */
     public long getExpiryTime() {
 
@@ -47,19 +47,19 @@ public class ParAuthResponseData {
     }
 
     /**
-     * Set uuid of request_uri.
+     * Set uuid of request uri.
      *
-     * @param reqUriUUID request uri's uuid
+     * @param requestURIReference Request uri's uuid.
      */
-    public void setReqUriUUID(String reqUriUUID) {
+    public void setrequestURIReference(String requestURIReference) {
 
-        this.reqUriUUID = reqUriUUID;
+        this.requestURIReference = requestURIReference;
     }
 
     /**
      * Set expiry time.
      *
-     * @param expiryTime expiry time
+     * @param expiryTime Expiry time.
      */
     public void setExpiryTime(long expiryTime) {
 

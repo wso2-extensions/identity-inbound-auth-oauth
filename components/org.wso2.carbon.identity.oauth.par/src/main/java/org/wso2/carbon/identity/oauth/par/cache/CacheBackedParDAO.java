@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.par.cache;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAO;
 import org.wso2.carbon.identity.oauth.par.dao.ParMgtDAOImpl;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
@@ -27,6 +28,7 @@ import org.wso2.carbon.identity.oauth.par.model.ParRequestCacheEntry;
 import org.wso2.carbon.identity.oauth.par.model.ParRequestDO;
 
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Caching layer for PAR Requests.
@@ -38,38 +40,43 @@ public class CacheBackedParDAO implements ParMgtDAO {
     private final ParMgtDAOImpl parMgtDAO = new ParMgtDAOImpl();
 
     @Override
-    public void persistParRequest(String reqUriUUID, String clientId, long scheduledExpiryTime,
-                                  Map<String, String> parameters) throws ParCoreException {
+    public void persistRequestData(String requestURIReference, String clientId, long expiresIn,
+                                   Map<String, String> parameters) throws ParCoreException {
 
-        ParRequestCacheEntry parRequestCacheEntry = new ParRequestCacheEntry(reqUriUUID, parameters,
-                scheduledExpiryTime);
-        parMgtDAO.persistParRequest(reqUriUUID, clientId, scheduledExpiryTime, parameters);
-        parCache.addToCache(reqUriUUID, parRequestCacheEntry);
+        ParRequestCacheEntry parRequestCacheEntry = new ParRequestCacheEntry(requestURIReference, parameters,
+                expiresIn, clientId);
+        parMgtDAO.persistRequestData(requestURIReference, clientId, expiresIn, parameters);
+        parCache.addToCache(requestURIReference, parRequestCacheEntry);
     }
 
     @Override
-    public ParRequestDO getParRequest(String reqUriUUID) throws ParCoreException {
+    public Optional<ParRequestDO> getRequestData(String requestURIReference) throws ParCoreException {
 
-        ParRequestCacheEntry parCacheRequest = parCache.getValueFromCache(reqUriUUID);
-        ParRequestDO parRequestDO;
-        if (parCacheRequest != null) {
+        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        ParRequestCacheEntry parRequest = parCache.getValueFromCache(requestURIReference);
+        Optional<ParRequestDO> parRequestDO;
+        if (parRequest != null) {
             if (log.isDebugEnabled()) {
-                log.debug("Cache miss for expiry time of local uuid: %s for tenant:%s " + reqUriUUID);
+                log.debug(
+                        String.format("Cache hit for expiry time of local uuid: %s for tenant: %s ",
+                                requestURIReference, tenantDomain));
             }
-            return new ParRequestDO(parCacheRequest);
+            parRequestDO = Optional.of(new ParRequestDO(parRequest.getParams(), parRequest.getExpiresIn(),
+                    parRequest.getClientId()));
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("Cache hit for expiry time of uuid:%s for tenant:%s " + reqUriUUID);
+                log.debug(String.format("Cache miss for expiry time of uuid:%s for tenant: %s ",
+                        requestURIReference, tenantDomain));
             }
-            parRequestDO = parMgtDAO.getParRequest(reqUriUUID);
+            parRequestDO = parMgtDAO.getRequestData(requestURIReference);
         }
         return parRequestDO;
     }
 
     @Override
-    public void removeParRequest(String reqUriUUID) throws ParCoreException {
+    public void removeRequestData(String requestURIReference) throws ParCoreException {
 
-        parCache.clearCacheEntry(reqUriUUID);
-        parMgtDAO.removeParRequest(reqUriUUID);
+        parCache.clearCacheEntry(requestURIReference);
+        parMgtDAO.removeRequestData(requestURIReference);
     }
 }

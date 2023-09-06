@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
@@ -28,7 +28,7 @@ public class ParCoreException extends IdentityException {
     /**
      * Constructor with error message.
      *
-     * @param message error message
+     * @param message Error message.
      */
     public ParCoreException(String message) {
 
@@ -38,11 +38,34 @@ public class ParCoreException extends IdentityException {
     /**
      * Constructor with error code and error message.
      *
-     * @param errorCode Error code
-     * @param message error message
+     * @param errorCode Error code.
+     * @param message Error message.
      */
     public ParCoreException(String errorCode, String message) {
 
         super(errorCode, message);
+    }
+
+    /**
+     * Constructor with error message and throwable.
+     *
+     * @param message Error message.
+     * @param cause Throwable.
+     */
+    public ParCoreException(String message, Throwable cause) {
+
+        super(message, cause);
+    }
+
+    /**
+     * Constructor with error code, error message and throwable.
+     *
+     * @param errorCode Error code.
+     * @param message Error message.
+     * @param cause Throwable.
+     */
+    public ParCoreException(String errorCode, String message, Throwable cause) {
+
+        super(errorCode, message, cause);
     }
 }

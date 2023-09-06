@@ -349,16 +349,19 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         Map<String, String[]> requestParams2 = new HashMap<>();
         requestParams2.put("reqParam1", new String[]{"val1"});
 
-        return new Object[][]{
+        return addDiagnosticLogStatusToExistingDataProvider(new Object[][]{
                 {paramMap2, requestParams2, HttpServletResponse.SC_FOUND},
                 {paramMap1, requestParams2, HttpServletResponse.SC_BAD_REQUEST},
-        };
+        });
     }
 
     @Test(dataProvider = "providePostParams")
-    public void testAuthorizePost(Object paramObject, Map<String, String[]> requestParams, int expected)
+    public void testAuthorizePost(Object paramObject, Map<String, String[]> requestParams, int expected,
+                                  boolean diagnosticLogsEnabled)
             throws Exception {
 
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(diagnosticLogsEnabled);
         MultivaluedMap<String, String> paramMap = (MultivaluedMap<String, String>) paramObject;
         when(httpServletRequest.getParameterMap()).thenReturn(requestParams);
         when(httpServletRequest.getParameterNames()).thenReturn(new Vector(requestParams.keySet()).elements());
@@ -385,7 +388,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         initMocks(this);
 
-        return new Object[][]{
+        return addDiagnosticLogStatusToExistingDataProvider(new Object[][]{
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{"val1", "val2"},
                         SESSION_DATA_KEY_CONSENT_VALUE, "true", "scope1", SESSION_DATA_KEY_VALUE, null,
                         HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, null, false},
@@ -445,13 +448,14 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
                         null, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST,
                         RESPONSE_MODE_FORM_POST, false}
-        };
+        });
     }
 
     @Test(dataProvider = "provideParams", groups = "testWithConnection")
     public void testAuthorize(Object flowStatusObject, String[] clientId, String sessionDataKayConsent,
                               String toCommonAuth, String scope, String sessionDataKey, Exception e, int expectedStatus,
-                              String expectedError, String responseMode, boolean isOAuthResponseJspPageAvailable)
+                              String expectedError, String responseMode, boolean isOAuthResponseJspPageAvailable,
+                              boolean diagnosticLogsEnabled)
             throws Exception {
 
         AuthenticatorFlowStatus flowStatus = (AuthenticatorFlowStatus) flowStatusObject;
@@ -490,7 +494,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         doNothing().when(FrameworkUtils.class, "endTenantFlow");
         mockStatic(IdentityTenantUtil.class);
         mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(diagnosticLogsEnabled);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
         IdentityEventService eventServiceMock = mock(IdentityEventService.class);
@@ -613,7 +617,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     @DataProvider(name = "provideAuthenticatedData")
     public Object[][] provideAuthenticatedData() {
 
-        return new Object[][]{
+        return addDiagnosticLogStatusToExistingDataProvider(new Object[][]{
                 {true, true, new HashMap(), null, null, null, new HashSet<>(Arrays.asList(OAuthConstants.Scope.OPENID)),
                         RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL, HttpServletResponse.SC_FOUND},
 
@@ -639,14 +643,15 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 {true, false, null, null, null, "http://localhost:8080/error",
                         new HashSet<>(Arrays.asList(OAuthConstants.Scope.OPENID)), RESPONSE_MODE_FORM_POST,
                         APP_REDIRECT_URL, HttpServletResponse.SC_OK}
-        };
+        });
     }
 
     @Test(dataProvider = "provideAuthenticatedData", groups = "testWithConnection")
     public void testAuthorizeForAuthenticationResponse(boolean isResultInRequest, boolean isAuthenticated,
                                                        Map<ClaimMapping, String> attributes, String errorCode,
                                                        String errorMsg, String errorUri, Set<String> scopes,
-                                                       String responseMode, String redirectUri, int expected)
+                                                       String responseMode, String redirectUri, int expected,
+                                                       boolean diagnosticLogsEnabled)
             throws Exception {
 
         mockStatic(SessionDataCache.class);
@@ -654,7 +659,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         SessionDataCacheKey loginDataCacheKey = new SessionDataCacheKey(SESSION_DATA_KEY_VALUE);
         when(sessionDataCache.getValueFromCache(loginDataCacheKey)).thenReturn(loginCacheEntry);
         mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(diagnosticLogsEnabled);
 
         AuthenticationResult result =
                 setAuthenticationResult(isAuthenticated, attributes, errorCode, errorMsg, errorUri);
@@ -784,7 +789,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     @DataProvider(name = "provideConsentData")
     public Object[][] provideConsentData() {
 
-        return new Object[][]{
+        return addDiagnosticLogStatusToExistingDataProvider(new Object[][]{
                 {null, APP_REDIRECT_URL, new HashSet<>(Arrays.asList(OAuthConstants.Scope.OPENID)),
                         HttpServletResponse.SC_FOUND, null, OAuth2ErrorCodes.INVALID_REQUEST},
 
@@ -808,7 +813,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
                 {"approve", APP_REDIRECT_URL_JSON, new HashSet<>(Arrays.asList("scope1")),
                         HttpServletResponse.SC_OK, null, null},
-        };
+        });
     }
 
     @DataProvider(name = "provideRequestObject")
@@ -856,7 +861,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     @Test(dataProvider = "provideConsentData", groups = "testWithConnection")
     public void testUserConsentResponse(String consent, String redirectUrl, Set<String> scopes,
-                                        int expectedStatus, String oAuthErrorDTODescription, String expectedError)
+                                        int expectedStatus, String oAuthErrorDTODescription, String expectedError,
+                                        boolean diagnosticLogsEnabled)
             throws Exception {
 
         initMocks(this);
@@ -866,7 +872,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         doNothing().when(FrameworkUtils.class, "startTenantFlow", anyString());
         doNothing().when(FrameworkUtils.class, "endTenantFlow");
         mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(diagnosticLogsEnabled);
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
 
@@ -997,7 +1003,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     public Object[][] provideAuthzRequestData() {
 
         String validPKCEChallenge = "abcdef1234A46gfdhhjhnmvmu764745463565nnnvbnn6";
-        return new Object[][]{
+        return addDiagnosticLogStatusToExistingDataProvider(new Object[][]{
                 // Authz request from Valid client, PKCE not enabled. request sent to framework for authentication
                 {CLIENT_ID_VALUE, APP_REDIRECT_URL, null, null, null, true, false, true, LOGIN_PAGE_URL},
 
@@ -1097,7 +1103,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 // Redirected to error page with invalid_request error because of the exception
                 {CLIENT_ID_VALUE, APP_REDIRECT_URL, null, null, OAuthConstants.Prompt.NONE, true, false, true,
                         ERROR_PAGE_URL},
-        };
+        });
     }
 
     /**
@@ -1107,7 +1113,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     public void testHandleOAuthAuthorizationRequest(String clientId, String redirectUri, String pkceChallengeCode,
                                                     String pkceChallengeMethod, String prompt, boolean clientValid,
                                                     boolean pkceEnabled, boolean supportPlainPkce,
-                                                    String expectedLocation) throws Exception {
+                                                    String expectedLocation, boolean diagnosticLogsEnabled)
+            throws Exception {
 
         Map<String, String[]> requestParams = new HashMap();
         Map<String, Object> requestAttributes = new HashMap();
@@ -1153,7 +1160,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
         mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(diagnosticLogsEnabled);
         IdentityEventService eventServiceMock = mock(IdentityEventService.class);
         mockStatic(CentralLogMgtServiceComponentHolder.class);
         when(CentralLogMgtServiceComponentHolder.getInstance()).thenReturn(centralLogMgtServiceComponentHolderMock);
@@ -1815,15 +1822,15 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     @DataProvider(name = "provideSendRequestToFrameworkData")
     public Object[][] provideSendRequestToFrameworkData() {
 
-        return new Object[][]{
+        return addDiagnosticLogStatusToExistingDataProvider(new Object[][]{
                 {null},
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED},
                 {AuthenticatorFlowStatus.INCOMPLETE}
-        };
+        });
     }
 
     @Test(dataProvider = "provideSendRequestToFrameworkData")
-    public void testSendRequestToFramework(Object flowStatusObject) throws Exception {
+    public void testSendRequestToFramework(Object flowStatusObject, boolean diagnosticLogsEnabled) throws Exception {
 
         AuthenticatorFlowStatus flowStatus = (AuthenticatorFlowStatus) flowStatusObject;
         Map<String, String[]> requestParams = new HashMap<>();
@@ -1833,7 +1840,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockHttpRequest(requestParams, requestAttributes, HttpMethod.POST);
 
         mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(diagnosticLogsEnabled);
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
 
@@ -2040,16 +2047,17 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         ServiceProviderProperty[] properties2 = new ServiceProviderProperty[]{property2};
         sp2.setSpProperties(properties2);
 
-        return new Object[][]{
+        return addDiagnosticLogStatusToExistingDataProvider(new Object[][]{
                 {true, sp1, "myApplication"},
                 {true, sp2, null},
                 {true, sp3, null},
                 {false, sp1, null},
-        };
+        });
     }
 
     @Test(dataProvider = "provideHandleOAuthAuthorizationRequest1Data", groups = "testWithConnection")
-    public void testHandleOAuthAuthorizationRequest1(boolean showDisplayName, Object spObj, String savedDisplayName)
+    public void testHandleOAuthAuthorizationRequest1(boolean showDisplayName, Object spObj, String savedDisplayName,
+                                                     boolean diagnosticLogsEnabled)
             throws Exception {
 
         ServiceProvider sp = (ServiceProvider) spObj;
@@ -2064,7 +2072,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
         mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(diagnosticLogsEnabled);
         IdentityEventService eventServiceMock = mock(IdentityEventService.class);
         mockStatic(CentralLogMgtServiceComponentHolder.class);
         when(CentralLogMgtServiceComponentHolder.getInstance()).thenReturn(centralLogMgtServiceComponentHolderMock);
@@ -2408,21 +2416,23 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     @DataProvider(name = "provideGetLoginTenantDomainData")
     public Object[][] provideGetLoginTenantDomainData() {
-        return new Object[][]{
+
+        return addDiagnosticLogStatusToExistingDataProvider(new Object[][]{
                 {true, "loginTenantDomain", "loginTenantDomain"},
                 {true, "", MultitenantConstants.SUPER_TENANT_DOMAIN_NAME},
                 {false, "domain", MultitenantConstants.SUPER_TENANT_DOMAIN_NAME},
-        };
+        });
     }
 
     @Test(dataProvider = "provideGetLoginTenantDomainData")
-    public void testGetLoginTenantDomain(boolean isTenantedSessionsEnabled, String loginDomain, String expectedDomain)
+    public void testGetLoginTenantDomain(boolean isTenantedSessionsEnabled, String loginDomain, String expectedDomain,
+                                         boolean diagnosticLogsEnabled)
             throws Exception {
 
         mockOAuthServerConfiguration();
 
         mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(diagnosticLogsEnabled);
         spy(FrameworkUtils.class);
         doNothing().when(FrameworkUtils.class, "startTenantFlow", anyString());
         doNothing().when(FrameworkUtils.class, "endTenantFlow");
@@ -2497,5 +2507,42 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         String location = String.valueOf(response.getMetadata().get(HTTPConstants.HEADER_LOCATION).get(0));
         assertEquals(location, expectedUrl);
     }
+    @Test
+    public void testPKCEunsupportedflow() throws Exception {
 
+        OAuth2ClientValidationResponseDTO validationResponseDTO = new OAuth2ClientValidationResponseDTO();
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        mockOAuthServerConfiguration();
+        mockStatic(OAuth2Util.class);
+        oAuthAppDO.setPkceMandatory(true);
+        when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+        when(oAuthMessage.getRequest().getParameter(CLIENT_ID)).thenReturn(CLIENT_ID_VALUE);
+        when(oAuthMessage.getRequest().getAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW)).thenReturn(true);
+        when(OAuth2Util.getAppInformationByClientId(any())).thenReturn(oAuthAppDO);
+        Method method = authzEndpointObject.getClass().getDeclaredMethod(
+                "populateValidationResponseWithAppDetail", OAuthMessage.class,
+                OAuth2ClientValidationResponseDTO.class);
+        method.setAccessible(true);
+        method.invoke(authzEndpointObject, oAuthMessage, validationResponseDTO);
+        //PKCE mandoatory should be false when we set PKCE_UNSUPPORTED_FLOW attribute
+        assertEquals(validationResponseDTO.isPkceMandatory(), false);
+    }
+
+    private static Object[][] addDiagnosticLogStatusToExistingDataProvider(Object[][] existingData) {
+
+        // Combine original values with diagnostic log status.
+        Object[][] combinedValues = new Object[existingData.length * 2][];
+        for (int i = 0; i < existingData.length; i++) {
+            combinedValues[i * 2] = appendValue(existingData[i], true); // Enable diagnostic logs.
+            combinedValues[i * 2 + 1] = appendValue(existingData[i], false); // Disable diagnostic logs.
+        }
+        return combinedValues;
+    }
+
+    private static Object[] appendValue(Object[] originalArray, Object value) {
+
+        Object[] newArray = Arrays.copyOf(originalArray, originalArray.length + 1);
+        newArray[originalArray.length] = value;
+        return newArray;
+    }
 }

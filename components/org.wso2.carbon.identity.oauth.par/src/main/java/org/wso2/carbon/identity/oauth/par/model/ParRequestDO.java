@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.par.model;
 
+import org.apache.commons.collections.MapUtils;
+
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -26,39 +29,27 @@ import java.util.Map;
 public class ParRequestDO {
 
     private Map<String, String> params;
-    private long scheduledExpiryTime;
+    private long expiresIn;
     private String clientId;
 
     /**
-     * Constructor with variables obtained from ParRequestCacheEntry object to ParRequestDO.
+     * Constructor with variables obtained from DAO to ParRequestDO.
      *
-     * @param parRequestCacheEntry cache entry for PAR request.
+     * @param parameterMap Parameter map.
+     * @param expiresIn    Scheduled expiry time.
+     * @param clientId     Client id.
      */
-    public ParRequestDO (ParRequestCacheEntry parRequestCacheEntry) {
+    public ParRequestDO(Map<String, String> parameterMap, long expiresIn, String clientId) {
 
-        this.params = parRequestCacheEntry.getParams();
-        this.scheduledExpiryTime = parRequestCacheEntry.getScheduledExpiryTime();
-        this.clientId = parRequestCacheEntry.getClientId();
-    }
-
-    /**
-     * Contractor with variables obtained from DAO to ParRequestDO.
-     *
-     * @param parameterMap parameter map
-     * @param scheduledExpiryTime scheduled expiry time
-     * @param clientId client id
-     */
-    public ParRequestDO (Map<String, String> parameterMap, long scheduledExpiryTime, String clientId) {
-
-        this.params = parameterMap;
-        this.scheduledExpiryTime = scheduledExpiryTime;
+        this.params = MapUtils.isEmpty(parameterMap) ? new HashMap<>() : parameterMap;
+        this.expiresIn = expiresIn;
         this.clientId = clientId;
     }
 
     /**
      * Get parameter map.
      *
-     * @return params
+     * @return Map of params.
      */
     public Map<String, String> getParams() {
 
@@ -68,28 +59,27 @@ public class ParRequestDO {
     /**
      * Get scheduled expiry time.
      *
-     * @return scheduledExpiryTime
+     * @return Scheduled expiry time.
      */
-    public long getScheduledExpiryTime() {
+    public long getExpiresIn() {
 
-        return scheduledExpiryTime;
+        return expiresIn;
     }
 
     /**
      * Get client id.
      *
-     * @return clientId
+     * @return Client id.
      */
     public String getClientId() {
 
         return clientId;
     }
 
-
     /**
      * Set parameter map.
      *
-     * @param params parameter map
+     * @param params Parameter map.
      */
     public void setParams(Map<String, String> params) {
 
@@ -99,17 +89,17 @@ public class ParRequestDO {
     /**
      * Set scheduled expiry.
      *
-     * @param scheduledExpiryTime scheduled expiry
+     * @param expiresIn Scheduled expiry.
      */
-    public void setScheduledExpiryTime(long scheduledExpiryTime) {
+    public void setExpiresIn(long expiresIn) {
 
-        this.scheduledExpiryTime = scheduledExpiryTime;
+        this.expiresIn = expiresIn;
     }
 
     /**
      * Set client id.
      *
-     * @param clientId client id
+     * @param clientId Client id.
      */
     public void setClientId(String clientId) {
 

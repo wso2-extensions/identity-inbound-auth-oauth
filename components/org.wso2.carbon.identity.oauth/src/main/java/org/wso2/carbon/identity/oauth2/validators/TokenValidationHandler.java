@@ -26,6 +26,7 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -41,6 +42,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -310,17 +312,35 @@ public class TokenValidationHandler {
         // If there aren't any active tokens, then there should be an error or exception. If no error or exception
         // as well, that means this token is not active. So show the generic error.
         if (!introResp.isActive()) {
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_ACCESS_TOKEN);
+                diagnosticLogBuilder.logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+            }
             if (introResp.getError() != null) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                        OAuthConstants.LogConstants.FAILED, introResp.getError(), "validate-token", null);
+                // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
+                if (diagnosticLogBuilder != null) {
+                    diagnosticLogBuilder.resultMessage(introResp.getError());
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+                }
                 return introResp;
             } else if (exception != null) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                        OAuthConstants.LogConstants.FAILED, "System error occurred.", "validate-token", null);
+                // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
+                if (diagnosticLogBuilder != null) {
+                    diagnosticLogBuilder.inputParam(LogConstants.InputKeys.ERROR_MESSAGE, exception.getMessage())
+                            .resultMessage("System error occurred.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+                }
                 throw new IdentityOAuth2Exception("Error occurred while validating token.", exception);
             } else {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                        OAuthConstants.LogConstants.FAILED, "Token validation failed.", "validate-token", null);
+                // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
+                if (diagnosticLogBuilder != null) {
+                    diagnosticLogBuilder.resultMessage("Token validation failed.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+                }
                 return buildIntrospectionErrorResponse("Token validation failed");
             }
         }
@@ -351,25 +371,40 @@ public class TokenValidationHandler {
 
         OAuth2IntrospectionResponseDTO introResp = new OAuth2IntrospectionResponseDTO();
         AccessTokenDO refreshTokenDataDO;
-
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_REFRESH_TOKEN);
+            diagnosticLogBuilder.logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+        }
         try {
             refreshTokenDataDO = findRefreshToken(validationRequest.getAccessToken().getIdentifier());
         } catch (IllegalArgumentException e) {
             // Refresh token not found in the system.
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "Provided token is not a valid refresh token.",
-                    "validate-refresh-token", null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                        .resultMessage("Provided token is not a valid refresh token.");
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
             return buildIntrospectionErrorResponse(e.getMessage());
         }
 
         if (refreshTokenDataDO == null || hasRefreshTokenExpired(refreshTokenDataDO)) {
             if (refreshTokenDataDO == null) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                        OAuthConstants.LogConstants.FAILED, "Provided token is not a valid refresh token.",
-                        "validate-refresh-token", null);
+                if (diagnosticLogBuilder != null) {
+                    // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
+                    diagnosticLogBuilder.resultMessage("Provided token is not a valid refresh token.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+                }
             } else if (hasRefreshTokenExpired(refreshTokenDataDO)) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                        OAuthConstants.LogConstants.FAILED, "Token is expired.", "validate-refresh-token", null);
+                if (diagnosticLogBuilder != null) {
+                    // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
+                    diagnosticLogBuilder.resultMessage("Token is expired.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+                }
             }
             // Token is not active. we do not need to worry about other details.
             introResp.setActive(false);
@@ -423,6 +458,14 @@ public class TokenValidationHandler {
         AccessTokenDO accessTokenDO = null;
         List<String> requestedAllowedScopes = new ArrayList<>();
 
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_ACCESS_TOKEN);
+            diagnosticLogBuilder.logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+        }
         if (messageContext.getProperty(OAuth2Util.REMOTE_ACCESS_TOKEN) != null
                 && "true".equalsIgnoreCase((String) messageContext.getProperty(OAuth2Util.REMOTE_ACCESS_TOKEN))) {
             // this can be a self-issued JWT or any access token issued by a trusted OAuth authorization server.
@@ -475,15 +518,21 @@ public class TokenValidationHandler {
                 }
             } catch (IllegalArgumentException e) {
                 // access token not found in the system.
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                        OAuthConstants.LogConstants.FAILED, "Provided token is not a valid access token.",
-                        "validate-access-token", null);
+                if (diagnosticLogBuilder != null) {
+                    // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
+                    diagnosticLogBuilder.inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                            .resultMessage("Provided token is not a valid access token.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+                }
                 return buildIntrospectionErrorResponse(e.getMessage());
             }
 
             if (hasAccessTokenExpired(accessTokenDO)) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                        OAuthConstants.LogConstants.FAILED, "Access token is expired.", "validate-access-token", null);
+                if (diagnosticLogBuilder != null) {
+                    // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
+                    diagnosticLogBuilder.resultMessage("Token is expired.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+                }
                 // token is not active. we do not need to worry about other details.
                 introResp.setActive(false);
                 return introResp;
@@ -565,8 +614,11 @@ public class TokenValidationHandler {
         // Validate access delegation.
         if (!tokenValidator.validateAccessDelegation(messageContext)) {
             // This is redundant. But sake of readability.
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "Invalid access delegation.", "validate-access-token", null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
+                diagnosticLogBuilder.resultMessage("Invalid access delegation.");
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
             introResp.setActive(false);
             return buildIntrospectionErrorResponse("Invalid access delegation");
         }
@@ -574,9 +626,12 @@ public class TokenValidationHandler {
         // Validate scopes at app level.
         if (!tokenValidator.validateScope(messageContext)) {
             // This is redundant. But sake of readability.
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "Scope validation failed at application level.",
-                    "validate-access-token", null);
+
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
+                diagnosticLogBuilder.resultMessage("Scope validation failed at application level.");
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
             introResp.setActive(false);
             if (log.isDebugEnabled()) {
                 log.debug("Scope validation has failed at app level.");

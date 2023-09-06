@@ -52,6 +52,9 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
     private static final String oAuth2AuthzEPUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/oauth2/authorize";
+    private static final String oAuth2ParEPUrl
+            = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
+            "/oauth2/par";
     private static final String oAuth2TokenEPUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/oauth2/token";
@@ -161,6 +164,16 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
                 .thenReturn(fillURLPlaceholdersForTest(oAuth2AuthzEPUrl));
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
                         .getOAuth2AuthzEPUrl(), fillURLPlaceholdersForTest(oAuth2AuthzEPUrl),
+                "Expected value not returned from getter");
+    }
+
+    @Test
+    public void testGetOAuth2ParEPUrl() throws Exception {
+
+        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2ParEPUrl))
+                .thenReturn(fillURLPlaceholdersForTest(oAuth2ParEPUrl));
+        Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                        .getOAuth2ParEPUrl(), fillURLPlaceholdersForTest(oAuth2ParEPUrl),
                 "Expected value not returned from getter");
     }
 

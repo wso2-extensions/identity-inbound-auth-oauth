@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
@@ -146,6 +147,33 @@ public class OAuth2ServiceComponent {
             AuthenticationMethodNameTranslator authenticationMethodNameTranslator) {
 
         OAuth2ServiceComponentHolder.setAuthenticationMethodNameTranslator(authenticationMethodNameTranslator);
+    }
+
+    @Reference(
+            name = "oauth.authorization.request.builder.service",
+            service = OAuthAuthorizationRequestBuilder.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "removeAuthorizationRequestBuilderService"
+    )
+    protected void addAuthorizationRequestBuilderService(
+            OAuthAuthorizationRequestBuilder oAuthAuthorizationRequestBuilder) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Adding the oauth authorization request builder service : "
+                    + oAuthAuthorizationRequestBuilder.getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().addAuthorizationRequestBuilder(oAuthAuthorizationRequestBuilder);
+    }
+
+    protected void removeAuthorizationRequestBuilderService(
+            OAuthAuthorizationRequestBuilder oAuthAuthorizationRequestBuilder) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing the oauth authorization request builder service : "
+                    + oAuthAuthorizationRequestBuilder.getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().removeAuthorizationRequestBuilder(oAuthAuthorizationRequestBuilder);
     }
 
     protected void unsetAuthenticationMethodNameTranslator(

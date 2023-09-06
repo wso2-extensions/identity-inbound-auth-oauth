@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
@@ -29,19 +29,18 @@ public class ParCache extends AuthenticationBaseCache<String, ParRequestCacheEnt
 
     private static final ParCache instance = new ParCache();
 
-
     /**
      * Constructor for ParCache.
      */
-    public ParCache() {
+    private ParCache() {
 
         super(ParConstants.CACHE_NAME);
     }
 
     /**
-     * Returns ParCache instance.
+     * Retrieve ParCache instance.
      *
-     * @return instance of ParCache
+     * @return Instance of ParCache.
      */
     public static ParCache getInstance() {
 
