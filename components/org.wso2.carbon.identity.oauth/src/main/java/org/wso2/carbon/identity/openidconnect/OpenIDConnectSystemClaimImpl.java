@@ -21,8 +21,6 @@ import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
-import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
-import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -64,12 +62,8 @@ public class OpenIDConnectSystemClaimImpl implements ClaimProvider {
         String responseType = authAuthzReqMessageContext.getAuthorizationReqDTO().getResponseType();
         String authorizationCode = authorizeRespDTO.getAuthorizationCode();
         String accessToken = authorizeRespDTO.getAccessToken();
-        String sessionDataKey = authAuthzReqMessageContext.getAuthorizationReqDTO().getSessionDataKey();
-        String stateValue = null;
-        if (isNotBlank(sessionDataKey)) {
-            stateValue = SessionDataCache.getInstance().getValueFromCache(new SessionDataCacheKey(sessionDataKey))
-                            .getoAuth2Parameters().getState();
-        }
+        String stateValue = authAuthzReqMessageContext.getAuthorizationReqDTO().getState();
+
         if (isIDTokenSigned() && isAccessTokenHashApplicable(responseType) && isNotBlank(accessToken)) {
             String atHash = getHashValue(accessToken);
             oidcSystemClaims.put(AT_HASH, atHash);

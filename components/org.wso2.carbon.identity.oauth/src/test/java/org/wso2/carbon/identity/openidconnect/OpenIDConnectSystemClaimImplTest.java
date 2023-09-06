@@ -28,9 +28,6 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.common.testng.WithRegistry;
-import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
-import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
-import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -38,7 +35,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
-import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -145,14 +141,7 @@ public class OpenIDConnectSystemClaimImplTest extends PowerMockTestCase {
     public void testStateHashClaim() throws Exception {
 
         String state = "testState";
-        String sessionDataKey = "session-data-key";
-        oAuth2AuthorizeReqDTO.setSessionDataKey(sessionDataKey);
-        SessionDataCacheEntry sessionDataCacheEntry = new SessionDataCacheEntry();
-        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
-        oAuth2Parameters.setState(state);
-        sessionDataCacheEntry.setoAuth2Parameters(oAuth2Parameters);
-        SessionDataCache.getInstance().addToCache(new SessionDataCacheKey(sessionDataKey),
-                sessionDataCacheEntry);
+        oAuth2AuthorizeReqDTO.setState(state);
         oAuth2AuthorizeReqDTO.setResponseType("code");
         Map<String, Object> claims = openIDConnectSystemClaim.getAdditionalClaims(oAuthAuthzReqMessageContext,
                 oAuth2AuthorizeRespDTO);

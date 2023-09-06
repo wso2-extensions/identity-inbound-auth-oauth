@@ -57,6 +57,7 @@ public class OAuth2AuthorizeReqDTO {
     // Set the login tenant domain.
     private String loggedInTenantDomain;
     private boolean isRequestObjectFlow;
+    private String state;
 
     public String getSessionDataKey() {
         return sessionDataKey;
@@ -268,5 +269,15 @@ public class OAuth2AuthorizeReqDTO {
     public void setRequestObjectFlow(boolean isRequestObjectFlow) {
 
         this.isRequestObjectFlow = isRequestObjectFlow;
+    }
+
+    public String getState() {
+
+        return state;
+    }
+
+    public void setState(String state) {
+
+        this.state = state;
     }
 }
