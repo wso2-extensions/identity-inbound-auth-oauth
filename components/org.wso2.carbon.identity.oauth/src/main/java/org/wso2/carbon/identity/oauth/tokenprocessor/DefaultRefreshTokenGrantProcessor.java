@@ -139,8 +139,13 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                                         String userStoreDomain) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.debug(String.format("Evaluating refresh token. Token value: %s, Token state: %s",
-                    tokenReq.getRefreshToken(), validationBean.getRefreshTokenState()));
+            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.REFRESH_TOKEN)) {
+                log.debug(String.format("Evaluating refresh token. Token value(hashed): %s, Token state: %s",
+                        DigestUtils.sha256Hex(tokenReq.getRefreshToken()), validationBean.getRefreshTokenState()));
+            } else {
+                log.debug(String.format("Evaluating refresh token. Token state: %s",
+                        validationBean.getRefreshTokenState()));
+            }
         }
         if (!OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(validationBean.getRefreshTokenState())) {
             /* if refresh token is not in active state, check whether there is an access token issued with the same
