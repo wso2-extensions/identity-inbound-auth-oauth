@@ -708,7 +708,7 @@ public class OAuth2ServiceComponent {
     protected void setAccessTokenDAOService(AccessTokenDAO accessTokenDAO) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Adding the Access Token DAO Service : " + accessTokenDAO.getClass().getName());
+            log.debug(String.format("Adding the Access Token DAO Service : %s", accessTokenDAO.getClass().getName()));
         }
         OAuthComponentServiceHolder.getInstance().setAccessTokenDAOService(accessTokenDAO);
     }
@@ -716,7 +716,7 @@ public class OAuth2ServiceComponent {
     protected void unsetAccessTokenDAOService(AccessTokenDAO accessTokenDAO) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Removing the Access Token DAO Service : " + accessTokenDAO.getClass().getName());
+            log.debug(String.format("Removing the Access Token DAO Service : %s", accessTokenDAO.getClass().getName()));
         }
         OAuthComponentServiceHolder.getInstance().setAccessTokenDAOService(null);
     }
@@ -731,7 +731,7 @@ public class OAuth2ServiceComponent {
     protected void setTokenMgtDAOService(TokenManagementDAO tokenMgtDAOService) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Adding the Token Mgt DAO Service : " + tokenMgtDAOService.getClass().getName());
+            log.debug(String.format("Adding the Token Mgt DAO Service : %s", tokenMgtDAOService.getClass().getName()));
         }
         OAuthComponentServiceHolder.getInstance().setTokenManagementDAOService(tokenMgtDAOService);
     }
@@ -739,7 +739,8 @@ public class OAuth2ServiceComponent {
     protected void unsetTokenMgtDAOService(TokenManagementDAO tokenManagementDAO) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Removing the Token Mgt DAO Service : " + tokenManagementDAO.getClass().getName());
+            log.debug(String.format("Removing the Token Mgt DAO Service : %s",
+                    tokenManagementDAO.getClass().getName()));
         }
         OAuthComponentServiceHolder.getInstance().setTokenManagementDAOService(null);
     }

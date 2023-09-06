@@ -68,7 +68,8 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                 (RefreshTokenValidationDataDO) tokenReqMessageContext.getProperty(PREV_ACCESS_TOKEN);
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                log.debug("Previous access token (hashed): " + DigestUtils.sha256Hex(oldAccessToken.getAccessToken()));
+                log.debug(String.format("Previous access token (hashed): %s", DigestUtils.sha256Hex(
+                        oldAccessToken.getAccessToken())));
             }
         }
         // set the previous access token state to "INACTIVE" and store new access token in single db connection
@@ -126,7 +127,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
 
         if (validationBean.getAccessToken() == null) {
             if (log.isDebugEnabled()) {
-                log.debug("Invalid Refresh Token provided for Client with " + "Client Id : " + clientId);
+                log.debug(String.format("Invalid Refresh Token provided for Client with Client Id : %s", clientId));
             }
             throw new IdentityOAuth2Exception("Persisted access token data not found");
         }
@@ -138,12 +139,13 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                                         String userStoreDomain) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.debug("Evaluating refresh token. Token value: " + tokenReq.getRefreshToken() + ", Token state: " +
-                    validationBean.getRefreshTokenState());
+            log.debug(String.format("Evaluating refresh token. Token value: %s, Token state: %s",
+                    tokenReq.getRefreshToken(), validationBean.getRefreshTokenState()));
         }
         if (!OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(validationBean.getRefreshTokenState())) {
-            // if refresh token is not in active state, check whether there is an access token
-            // issued with the same refresh token
+            /* if refresh token is not in active state, check whether there is an access token issued with the same
+             * refresh token.
+             */
             List<AccessTokenDO> accessTokenBeans = getAccessTokenBeans(tokenReq, validationBean, userStoreDomain);
             for (AccessTokenDO token : accessTokenBeans) {
                 if (tokenReq.getRefreshToken().equals(token.getRefreshToken())
@@ -153,7 +155,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                 }
             }
             if (log.isDebugEnabled()) {
-                log.debug("Refresh token: " + tokenReq.getRefreshToken() + " is not the latest");
+                log.debug(String.format("Refresh token: %s is not the latest", tokenReq.getRefreshToken()));
             }
             return false;
         }
@@ -170,9 +172,9 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                         validationBean.getTokenBindingReference(), true, LAST_ACCESS_TOKEN_RETRIEVAL_LIMIT);
         if (accessTokenBeans == null || accessTokenBeans.isEmpty()) {
             if (log.isDebugEnabled()) {
-                log.debug("No previous access tokens found. User: " + validationBean.getAuthorizedUser() + ", client: "
-                        + tokenReq.getClientId() + ", scope: "
-                        + OAuth2Util.buildScopeString(validationBean.getScope()));
+                log.debug(String.format("No previous access tokens found. User: %s, client: %s, scope: %s",
+                        validationBean.getAuthorizedUser(), tokenReq.getClientId(),
+                        OAuth2Util.buildScopeString(validationBean.getScope())));
             }
             throw new IdentityOAuth2Exception("No previous access tokens found");
         }
