@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.oauth2.responsemode.provider.impl;
 
 import org.apache.commons.lang.StringUtils;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AbstractResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
@@ -89,10 +88,7 @@ public class FragmentResponseModeProvider extends AbstractResponseModeProvider {
                 queryParams.add(OAuthConstants.SCOPE + "=" + scope);
             }
 
-            redirectUrl = FrameworkUtils.appendQueryParamsStringToUrl(redirectUrl,
-                    String.join("&", queryParams));
-
-            redirectUrl = redirectUrl.replace("?", "#");
+            redirectUrl += "#" + String.join("&", queryParams);
 
         } else {
             redirectUrl += "#" +
