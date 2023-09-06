@@ -318,6 +318,7 @@ public class OAuthAppDAO {
         return oauthAppsOfUser;
     }
 
+    @Deprecated
     public OAuthAppDO getAppInformation(String consumerKey) throws
             InvalidOAuthClientException, IdentityOAuth2Exception {
 
@@ -397,9 +398,10 @@ public class OAuthAppDAO {
             InvalidOAuthClientException, IdentityOAuth2Exception {
 
         OAuthAppDO oauthApp = null;
-
-        // TODO: Current the query is only for the token ID. Need to handle when it is null.
         String tokenId = accessTokenDO.getTokenId();
+        if (StringUtils.isBlank(tokenId)) {
+            throw new IdentityOAuth2Exception("Error while retrieving the application. Token id is empty.");
+        }
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             String sqlQuery = SQLQueries.OAuthAppDAOSQLQueries.GET_APP_INFO_FOR_TOKEN_ID_WITH_PKCE;
