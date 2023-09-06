@@ -95,8 +95,6 @@ public class OAuth2ServiceComponentHolder {
     private List<JWTAccessTokenClaimProvider> jwtAccessTokenClaimProviders = new ArrayList<>();
     private final List<OAuthAuthorizationRequestBuilder> oAuthAuthorizationRequestBuilders = new ArrayList<>();
     private boolean isOrganizationManagementEnabled = false;
-    private boolean isOrganizationManagementEnable;
-    private OrganizationManager organizationManager;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -661,48 +659,5 @@ public class OAuth2ServiceComponentHolder {
     public void removeAuthorizationRequestBuilder(OAuthAuthorizationRequestBuilder oAuthAuthorizationRequestBuilder) {
 
         oAuthAuthorizationRequestBuilders.remove(oAuthAuthorizationRequestBuilder);
-    }
-
-    /**
-     * Get whether organization management enabled.
-     *
-     * @return True if organization management is enabled.
-     */
-    public boolean isOrganizationManagementEnabled() {
-
-        return isOrganizationManagementEnable;
-    }
-
-    /**
-     * Set organization management enable/disable state.
-     *
-     * @param organizationManagementInitializeService OrganizationManagementInitializeInstance.
-     */
-    public void setOrganizationManagementEnable(
-            OrganizationManagementInitialize organizationManagementInitializeService) {
-
-        if (organizationManagementInitializeService != null) {
-            isOrganizationManagementEnable = organizationManagementInitializeService.isOrganizationManagementEnabled();
-        }
-    }
-
-    /**
-     * Get the organization manager instance.
-     *
-     * @return OrganizationManager instance.
-     */
-    public OrganizationManager getOrganizationManager() {
-
-        return organizationManager;
-    }
-
-    /**
-     * Set the organization manager instance.
-     *
-     * @param organizationManager OrganizationManager instance.
-     */
-    public void setOrganizationManager(OrganizationManager organizationManager) {
-
-        this.organizationManager = organizationManager;
     }
 }

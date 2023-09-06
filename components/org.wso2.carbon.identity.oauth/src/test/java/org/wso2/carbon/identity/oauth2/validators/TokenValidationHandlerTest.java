@@ -64,7 +64,6 @@ import org.wso2.carbon.identity.openidconnect.util.TestUtils;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementConfigUtil;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
-import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
@@ -97,9 +96,7 @@ import static org.wso2.carbon.identity.organization.management.service.constant.
 @PrepareForTest({OAuthServerConfiguration.class, JDBCPersistenceManager.class, IdentityDatabaseUtil.class,
         IdentityApplicationManagementUtil.class, IdentityProviderManager.class, RealmService.class, LoggerUtils.class,
         FederatedAuthenticatorConfig.class, OAuth2ServiceComponentHolder.class, OAuth2JWTTokenValidator.class,
-        OrganizationManagementConfigUtil.class})
-        RealmService.class, LoggerUtils.class, OAuth2Util.class, PrivilegedCarbonContext.class,
-        OAuth2ServiceComponentHolder.class})
+        OrganizationManagementConfigUtil.class, OAuth2Util.class, PrivilegedCarbonContext.class})
 public class TokenValidationHandlerTest extends PowerMockTestCase {
 
     private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
@@ -131,8 +128,6 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
     private OrganizationManager organizationManager;
     @Mock
     private TenantManager tenantManager;
-    @Mock
-    private OrganizationManager organizationManager;
     @Mock
     private RealmConfiguration realmConfiguration;
     @Mock
