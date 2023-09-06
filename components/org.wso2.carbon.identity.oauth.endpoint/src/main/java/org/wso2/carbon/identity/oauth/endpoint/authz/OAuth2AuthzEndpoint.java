@@ -2004,6 +2004,14 @@ public class OAuth2AuthzEndpoint {
             validateNonceParameter(params.getNonce());
         }
 
+        try {
+            if (OAuth2Util.isFapiConformantApp(params.getClientId())) {
+                EndpointUtil.validateFAPIResponseMode(params.getResponseType(), params.getResponseMode());
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw new OAuthSystemException(e);
+        }
+
         addDataToSessionCache(oAuthMessage, params, sessionDataKey);
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {

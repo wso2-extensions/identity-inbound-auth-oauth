@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
@@ -78,7 +79,7 @@ import static org.testng.Assert.assertTrue;
  */
 @PrepareForTest({OAuthServerConfiguration.class, EndpointUtil.class, ServiceURL.class, ServiceURLBuilder.class,
         IdentityTenantUtil.class, LoggerUtils.class, IdentityDatabaseUtil.class, IdentityUtil.class,
-        OIDCRequestObjectUtil.class})
+        OIDCRequestObjectUtil.class, OAuth2Util.class})
 public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -276,6 +277,9 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
 
         mockStatic(OIDCRequestObjectUtil.class);
         when(OIDCRequestObjectUtil.buildRequestObject(any(), any())).thenReturn(new RequestObject());
+
+        spy(OAuth2Util.class);
+        doReturn(false).when(OAuth2Util.class, "isFapiConformantApp", any());
 
         Response response;
         response = oAuth2ParEndpoint.par(request, httpServletResponse, paramMap);

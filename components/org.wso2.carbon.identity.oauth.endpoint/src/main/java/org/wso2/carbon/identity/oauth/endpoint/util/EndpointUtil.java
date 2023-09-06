@@ -133,8 +133,10 @@ import javax.ws.rs.core.MultivaluedMap;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils.getRedirectURL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_REQ_HEADER_AUTH_METHOD_BASIC;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ResponseModes.JWT;
 
 /**
  * Util class which contains common methods used by all the OAuth endpoints.
@@ -1898,5 +1900,21 @@ public class EndpointUtil {
                     .getContextClassLoader().loadClass(oauthAuthzRequestClassName);
         }
         return oAuthAuthzRequestClass;
+    }
+
+    /**
+     * Validate the response mode against the response type as per FAPI spec.
+     *
+     * @param responseType response mode
+     * @param responseMode response type
+     * @throws OAuthProblemException when response mode is not valid
+     */
+    public static void validateFAPIResponseMode(String responseType, String responseMode)
+            throws OAuthProblemException {
+
+        if (CODE.equals(responseType) && !JWT.equals(responseMode)) {
+            throw OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST)
+                    .description("Invalid response mode provided.");
+        }
     }
 }

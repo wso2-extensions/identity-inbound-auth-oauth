@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -59,6 +60,7 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUEST;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_MODE;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthAuthzRequest;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getParAuthService;
@@ -232,7 +234,11 @@ public class OAuth2ParEndpoint {
 
         try {
             OAuthAuthzRequest oAuthAuthzRequest = getOAuthAuthzRequest(request);
-            validateRequestObject(oAuthAuthzRequest);
+            RequestObject requestObject = validateRequestObject(oAuthAuthzRequest);
+            if (isFAPIConformantApp(oAuthAuthzRequest.getClientId())) {
+                EndpointUtil.validateFAPIResponseMode(oAuthAuthzRequest.getResponseType(),
+                        getResponseMode(request, requestObject));
+            }
         } catch (OAuthProblemException e) {
             throw new ParClientException(e.getError(), e.getDescription(), e);
         } catch (OAuthSystemException e) {
@@ -249,9 +255,10 @@ public class OAuth2ParEndpoint {
         }
     }
 
-    private void validateRequestObject(OAuthAuthzRequest oAuthAuthzRequest) throws ParCoreException {
+    private RequestObject validateRequestObject(OAuthAuthzRequest oAuthAuthzRequest) throws ParCoreException {
 
         try {
+            RequestObject requestObject = null;
             if (OAuth2Util.isOIDCAuthzRequest(oAuthAuthzRequest.getScopes()) &&
                     StringUtils.isNotBlank(oAuthAuthzRequest.getParam(REQUEST))) {
 
@@ -261,16 +268,35 @@ public class OAuth2ParEndpoint {
                 parameters.setResponseType(oAuthAuthzRequest.getResponseType());
                 parameters.setTenantDomain(getSPTenantDomainFromClientId(oAuthAuthzRequest.getClientId()));
 
-                RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, parameters);
+                requestObject = OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, parameters);
                 if (requestObject == null) {
                     throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, ParConstants.INVALID_REQUEST_OBJECT);
                 }
             }
+            return requestObject;
         } catch (RequestObjectException e) {
             if (OAuth2ErrorCodes.SERVER_ERROR.equals(e.getErrorCode())) {
                 throw new ParCoreException(e.getErrorCode(), e.getMessage(), e);
             }
             throw new ParClientException(e.getErrorCode(), e.getMessage(), e);
         }
+    }
+
+    private boolean isFAPIConformantApp(String clientId) throws ParCoreException {
+
+        try {
+            return OAuth2Util.isFapiConformantApp(clientId);
+        } catch (IdentityOAuth2Exception e) {
+            throw new ParCoreException(OAuth2ErrorCodes.SERVER_ERROR, e.getMessage(), e);
+        }
+    }
+
+    private String getResponseMode(HttpServletRequest request, RequestObject requestObject) {
+
+        String responseMode = request.getParameter(RESPONSE_MODE);
+        if (requestObject != null && StringUtils.isNotBlank(requestObject.getClaimValue(RESPONSE_MODE))) {
+            responseMode = requestObject.getClaimValue(RESPONSE_MODE);
+        }
+        return responseMode;
     }
 }
