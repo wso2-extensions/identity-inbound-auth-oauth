@@ -148,7 +148,7 @@ public class OAuth2ParEndpoint {
         parErrorResponse.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, ParConstants.INTERNAL_SERVER_ERROR);
 
         Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        log.debug("Exception occurred when handling the request: ", parCoreException);
+        log.error("Exception occurred when handling the request: ", parCoreException);
         return respBuilder.entity(parErrorResponse.toString()).build();
     }
 
