@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.oauth.tokenprocessor;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.base.IdentityConstants;
