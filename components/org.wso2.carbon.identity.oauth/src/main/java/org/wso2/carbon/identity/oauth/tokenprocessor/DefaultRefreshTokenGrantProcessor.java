@@ -102,7 +102,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
         if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
             String previousGrantType = validationBean.getGrantType();
             // Check if the previous grant type is consent refresh token type or not.
-            if (!StringUtils.equals(OAuthConstants.GrantTypes.REFRESH_TOKEN, previousGrantType)) {
+            if (!OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(previousGrantType)) {
                 // If the previous grant type is not a refresh token, then check if it's a consent token or not.
                 if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(previousGrantType)) {
                     accessTokenDO.setIsConsentedToken(true);
@@ -153,7 +153,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
              */
             List<AccessTokenDO> accessTokenBeans = getAccessTokenBeans(tokenReq, validationBean, userStoreDomain);
             for (AccessTokenDO token : accessTokenBeans) {
-                if (tokenReq.getRefreshToken().equals(token.getRefreshToken())
+                if (tokenReq.getRefreshToken() != null && tokenReq.getRefreshToken().equals(token.getRefreshToken())
                         && (OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(token.getTokenState())
                         || OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED.equals(token.getTokenState()))) {
                     return true;
