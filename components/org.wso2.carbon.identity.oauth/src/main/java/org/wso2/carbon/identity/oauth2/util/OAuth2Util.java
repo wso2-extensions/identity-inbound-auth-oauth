@@ -191,6 +191,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_TOKEN_EP_URL;
@@ -3985,7 +3986,7 @@ public class OAuth2Util {
         * This method should only honor the given tenant.
         * Do not add any auto tenant resolving logic.
         */
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled() || isBuildIssuerWithHostname()) {
             try {
                 startTenantFlow(tenantDomain);
                 return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
@@ -4018,6 +4019,17 @@ public class OAuth2Util {
                         IdentityApplicationConstants.Authenticator.OIDC.NAME);
         return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
                 IDP_ENTITY_ID).getValue();
+    }
+
+    /**
+     * If enabled, hostname will be used to build the issuer of the ID token instead of entity id of the resident IDP.
+     *
+     * @return true if hostname is to be used to build the issuer of the ID token.
+     */
+    private static boolean isBuildIssuerWithHostname() {
+
+        String buildIssuerWithHostname = IdentityUtil.getProperty(OAUTH_BUILD_ISSUER_WITH_HOSTNAME);
+        return Boolean.parseBoolean(buildIssuerWithHostname);
     }
 
     private static IdentityProvider getResidentIdp(String tenantDomain) throws IdentityOAuth2Exception {
