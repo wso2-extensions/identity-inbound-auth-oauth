@@ -116,7 +116,6 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
-import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -4725,7 +4724,7 @@ public class OAuth2Util {
      *
      * @param clientId       Client ID of the application.
      * @return Whether the application should be FAPI conformant.
-     * @throws OAuthClientAuthnException
+     * @throws IdentityOAuth2Exception
      */
     public static boolean isFapiConformantApp(String clientId) throws OAuthClientAuthnException {
 
