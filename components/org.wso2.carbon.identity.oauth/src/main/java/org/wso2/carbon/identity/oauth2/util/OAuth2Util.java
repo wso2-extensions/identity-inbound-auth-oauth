@@ -4738,7 +4738,7 @@ public class OAuth2Util {
                 }
             }
         } catch (IdentityOAuth2Exception e) {
-            throw new OAuthClientAuthnException("Error occurred while retrieving the service provider of the app",
+            throw new IdentityOAuth2Exception("Error occurred while retrieving the service provider of the app",
                     OAuth2ErrorCodes.INVALID_REQUEST, e);
         }
         return false;
