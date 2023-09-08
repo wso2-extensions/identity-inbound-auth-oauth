@@ -35,7 +35,6 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
-import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
@@ -130,13 +129,26 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         }
 
         try {
-            if (OAuth2Util.isFapiConformantApp(requestObject.getClaimValue(Constants.CLIENT_ID)) &&
-                    !isValidNbfExp(requestObject)) {
-                return false;
+            if (OAuth2Util.isFapiConformantApp(requestObject.getClaimValue(Constants.CLIENT_ID))) {
+
+                if (!isValidNbfExp(requestObject)) {
+                    return false;
+                }
+                if (!isParamPresent(requestObject, Constants.SCOPES)) {
+                    throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST,
+                            "Scopes is not present in the request object.");
+                }
+                if (!isParamPresent(requestObject, Constants.NONCE)) {
+                    throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST,
+                            "Nonce is not present in the request object.");
+                }
+                if (!isParamPresent(requestObject, Constants.REDIRECT_URI)) {
+                    throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST,
+                            "Redirect URI is not present in the request object.");
+                }
             }
-        } catch (OAuthClientAuthnException e) {
-            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, e.getMessage()
-                    + Constants.CLIENT_ID);
+        } catch (IdentityOAuth2Exception e) {
+            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, e.getMessage(), e);
         }
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {

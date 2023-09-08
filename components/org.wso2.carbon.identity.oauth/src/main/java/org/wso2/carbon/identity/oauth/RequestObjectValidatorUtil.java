@@ -33,7 +33,6 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
-import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidator;
@@ -153,16 +152,11 @@ public class RequestObjectValidatorUtil {
             String jwtString = signedJWT.getParsedString();
             String alg = signedJWT.getHeader().getAlgorithm().getName();
             String clientId = getClientIdFromPayload(signedJWT.getPayload());
-            try {
-                if (OAuth2Util.isFapiConformantApp(clientId) && !isValidFAPISignatureAlgorithm(alg)) {
-                    return false;
-                }
-            } catch (OAuthClientAuthnException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Unable to verify whether the service provider is FAPI conformant. Skipping FAPI " +
-                            "specific signature validations.");
-                }
+
+            if (isFapiConformant(clientId) && !isValidFAPISignatureAlgorithm(alg)) {
+                return false;
             }
+
             try {
                 return new JWKSBasedJWTValidator().validateSignature(jwtString, jwksUri, alg, MapUtils.EMPTY_MAP);
             } catch (IdentityOAuth2Exception e) {
@@ -269,16 +263,10 @@ public class RequestObjectValidatorUtil {
         }
         String clientId = getClientIdFromPayload(signedJWT.getPayload());
 
-        try {
-            if (OAuth2Util.isFapiConformantApp(clientId) && !isValidFAPISignatureAlgorithm(alg)) {
-                return false;
-            }
-        } catch (OAuthClientAuthnException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Unable to verify whether the service provider is FAPI conformant. Skipping FAPI " +
-                        "specific signature validations.");
-            }
+        if (isFapiConformant(clientId) && !isValidFAPISignatureAlgorithm(alg)) {
+            return false;
         }
+
         if (alg.indexOf(RS) == 0 || alg.indexOf(PS) == 0) {
             // At this point 'x509Certificate' will never be null.
             PublicKey publicKey = x509Certificate.getPublicKey();
@@ -305,5 +293,16 @@ public class RequestObjectValidatorUtil {
             }
             return false;
         }
+    }
+
+    private static boolean isFapiConformant(String clientId) {
+
+        try {
+            return OAuth2Util.isFapiConformantApp(clientId);
+        } catch (IdentityOAuth2Exception e) {
+            log.debug("Unable to verify whether the service provider is FAPI conformant. Skipping FAPI " +
+                        "specific signature validations.");
+        }
+        return false;
     }
 }
