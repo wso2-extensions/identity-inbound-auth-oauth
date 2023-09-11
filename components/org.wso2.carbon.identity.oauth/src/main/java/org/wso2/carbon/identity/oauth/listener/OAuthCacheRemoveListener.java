@@ -25,7 +25,11 @@ import org.wso2.carbon.identity.core.cache.AbstractCacheListener;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import javax.cache.event.CacheEntryEvent;
@@ -67,18 +71,30 @@ public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKe
         oauthCache.clearCacheEntry(oauthcacheKey, accessTokenDO.getAuthzUser().getTenantDomain());
 
         try {
-            String userId = accessTokenDO.getAuthzUser().getUserId();
+            String grantType = accessTokenDO.getGrantType();
             String cacheKeyString;
-            cacheKeyString = accessTokenDO.getConsumerKey() + ":" + userId + ":" +
-                    OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":" +
-                    accessTokenDO.getAuthzUser().getFederatedIdPName();
-
+            AuthorizationGrantHandler grantHandler =
+                    OAuthServerConfiguration.getInstance().getSupportedGrantTypes().get(grantType);
+            boolean isInternalApplicationRolesEnabled =
+                    OAuth2ServiceComponentHolder.getInstance().isInternalApplicationRolesEnabled();
+            if (isInternalApplicationRolesEnabled && !grantHandler.isOfTypeApplicationUser()) {
+                cacheKeyString = accessTokenDO.getConsumerKey() + ":" +
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":" +
+                        accessTokenDO.getAuthzUser().getFederatedIdPName();
+            } else {
+                String userId = accessTokenDO.getAuthzUser().getUserId();
+                cacheKeyString = accessTokenDO.getConsumerKey() + ":" + userId + ":" +
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":" +
+                        accessTokenDO.getAuthzUser().getFederatedIdPName();
+            }
             oauthcacheKey = new OAuthCacheKey(cacheKeyString);
 
             oauthCache.clearCacheEntry(oauthcacheKey);
         } catch (UserIdNotFoundException e) {
             throw new CacheEntryListenerException("User id not found for user: "
                     + accessTokenDO.getAuthzUser().getLoggableUserId());
+        } catch (IdentityOAuth2Exception e) {
+            throw new CacheEntryListenerException("Error occurred while retrieving the grant type for the token");
         }
     }
 }

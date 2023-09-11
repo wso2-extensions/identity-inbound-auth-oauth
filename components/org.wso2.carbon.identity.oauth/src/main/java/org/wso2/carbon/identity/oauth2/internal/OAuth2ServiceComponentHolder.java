@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
+import org.wso2.carbon.identity.oauth2.claim.resolver.ClaimResolver;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
@@ -101,6 +102,8 @@ public class OAuth2ServiceComponentHolder {
     private boolean isOrganizationManagementEnabled = false;
     private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
     private OAuth2RevocationProcessor revocationProcessor;
+    private boolean isInternalApplicationRolesEnabled = false;
+    private ClaimResolver claimResolver;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -711,5 +714,25 @@ public class OAuth2ServiceComponentHolder {
     public void removeAuthorizationRequestBuilder(OAuthAuthorizationRequestBuilder oAuthAuthorizationRequestBuilder) {
 
         oAuthAuthorizationRequestBuilders.remove(oAuthAuthorizationRequestBuilder);
+    }
+
+    public void setInternalApplicationRolesEnabled(boolean isInternalApplicationRolesEnabled) {
+
+        this.isInternalApplicationRolesEnabled = isInternalApplicationRolesEnabled;
+    }
+
+    public boolean isInternalApplicationRolesEnabled() {
+
+        return isInternalApplicationRolesEnabled;
+    }
+
+    public void setClaimResolver(ClaimResolver claimResolver) {
+
+        this.claimResolver = claimResolver;
+    }
+
+    public ClaimResolver getClaimResolver() {
+
+        return claimResolver;
     }
 }

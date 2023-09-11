@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -56,6 +57,8 @@ import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
+import org.wso2.carbon.identity.oauth2.claim.resolver.ClaimResolver;
+import org.wso2.carbon.identity.oauth2.claim.resolver.ClaimResolverImpl;
 import org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
@@ -134,6 +137,7 @@ public class OAuth2ServiceComponent {
     private static final String DESCRIPTION = "description";
     private static final String PERMISSION = "Permission";
     private static final String CLAIM = "Claim";
+    private static final String INTERNAL_APPLICATION_ROLES_ENABLED_CONFIG = "Internal.Application.Roles.Enabled";
     private BundleContext bundleContext;
 
     @Reference(
@@ -244,7 +248,12 @@ public class OAuth2ServiceComponent {
 
             bundleContext.registerService(ResponseTypeRequestValidator.class.getName(),
                     new DeviceFlowResponseTypeRequestValidator(), null);
-
+            if (OAuth2ServiceComponentHolder.getInstance().getClaimResolver() == null) {
+                OAuth2ServiceComponentHolder.getInstance()
+                        .setClaimResolver(new ClaimResolverImpl());
+            }
+            OAuth2ServiceComponentHolder.getInstance().setInternalApplicationRolesEnabled(Boolean.parseBoolean(
+                    IdentityUtil.getProperty(INTERNAL_APPLICATION_ROLES_ENABLED_CONFIG)));
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
             }
@@ -1187,5 +1196,38 @@ public class OAuth2ServiceComponent {
     protected void unsetRealmService(RealmService realmService) {
 
         OAuth2ServiceComponentHolder.getInstance().setRealmService(null);
+    }
+
+    @Reference(
+            name = "claim.resolver",
+            service = ClaimResolver.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetClaimResolver"
+    )
+    protected void setClaimResolver(ClaimResolver claimResolver) {
+
+        ClaimResolver existingClaimResolver =
+                OAuth2ServiceComponentHolder.getInstance().getClaimResolver();
+
+        if (existingClaimResolver != null) {
+            log.warn("Multiple claim resolvers are registered. Claim resolver:"
+                    + existingClaimResolver.getClass().getName() + " will be replaced with "
+                    + claimResolver.getClass().getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance()
+                .setClaimResolver(claimResolver);
+        log.info("Application permission provider got registered: " +
+                claimResolver.getClass().getName());
+    }
+
+    protected void unsetClaimResolver(ClaimResolver claimResolver) {
+
+        OAuth2ServiceComponentHolder.getInstance()
+                .setClaimResolver(new ClaimResolverImpl());
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removed application permission provider.");
+        }
     }
 }

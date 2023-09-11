@@ -24,12 +24,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.role.management.service.models.Role;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -42,6 +45,7 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -91,7 +95,16 @@ public class RoleBasedInternalScopeValidator {
         if (isFederatedRoleBasedAuthzEnabled) {
             roles = getRolesFromFederatedUserAttributes(authenticatedUser.getUserAttributes());
         } else {
-            roles = getRolesOfTheUser(authenticatedUser);
+            String grantType = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType();
+            AuthorizationGrantHandler grantHandler =
+                    OAuthServerConfiguration.getInstance().getSupportedGrantTypes().get(grantType);
+            boolean isInternalApplicationRolesEnabled =
+                    OAuth2ServiceComponentHolder.getInstance().isInternalApplicationRolesEnabled();
+            if (isInternalApplicationRolesEnabled && !grantHandler.isOfTypeApplicationUser()) {
+                roles = getApplicationRoles(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+            } else {
+                roles = getRolesOfTheUser(authenticatedUser);
+            }
         }
         List<String> rolesWithoutInternalDomain = removeInternalDomain(roles);
 
@@ -264,5 +277,12 @@ public class RoleBasedInternalScopeValidator {
             }
         }
         return requestedScopes.toArray(new String[0]);
+    }
+
+    private ArrayList<String> getApplicationRoles(String clientId) throws IdentityOAuth2Exception {
+
+        ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
+        String[] roles = serviceProvider.getApplicationRoles();
+        return new ArrayList<>(Arrays.asList(roles));
     }
 }

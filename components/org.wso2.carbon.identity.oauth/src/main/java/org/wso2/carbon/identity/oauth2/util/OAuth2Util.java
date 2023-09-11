@@ -797,6 +797,26 @@ public class OAuth2Util {
         return clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP;
     }
 
+    /**
+     * Build the cache key string when storing token info in cache.
+     *
+     * @param clientId              ClientId of the App.
+     * @param scope                 Scopes used.
+     * @param authenticatedIDP      Authenticated IdP.
+     * @param tokenBindingReference Token binding reference.
+     * @return Cache key string combining the input parameters.
+     */
+    public static String buildCacheKeyStringForTokenWithoutUser(String clientId, String scope, String authenticatedIDP,
+                                                                String tokenBindingReference) {
+
+        String oauthCacheKey =
+                clientId + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Building cache key: %s to access OAuthCache.", oauthCacheKey));
+        }
+        return oauthCacheKey;
+    }
+
     @SuppressFBWarnings("WEAK_MESSAGE_DIGEST_MD5")
     public static String getTokenBindingReference(String tokenBindingValue) {
 
