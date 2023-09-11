@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -428,6 +429,45 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
         Assert.assertFalse(OAuthServerConfiguration.getInstance()
                 .isAccessTokenPartitioningEnabled());
+    }
+    @Test
+    public void testGetPushedAuthorizationRequestEndpoint() throws Exception {
+
+        Assert.assertEquals(OAuthServerConfiguration.getInstance().getPushedAuthorizationRequestEndpoint(),
+                "https://iam:9446/api/openbanking/push-authorization/pa");
+    }
+
+    @Test
+    public void testIsTlsClientCertificateBoundAccessTokens() throws Exception {
+
+        Assert.assertTrue(OAuthServerConfiguration.getInstance().isTlsClientCertificateBoundAccessTokens());
+    }
+
+    @Test
+    public void testGetUserInfoJWTSignatureAlgorithms() throws Exception {
+
+        List<String> userInfoJWTSignatureAlgorithms = OAuthServerConfiguration.getInstance()
+                .getUserInfoJWTSignatureAlgorithms();
+        Assert.assertTrue(userInfoJWTSignatureAlgorithms.contains("PS256"));
+        Assert.assertTrue(userInfoJWTSignatureAlgorithms.size() == 3);
+    }
+
+    @Test
+    public void testGetSupportedTokenEndpointAuthMethods() throws Exception {
+
+        List<String> supportedTokenEndpointAuthMethods = OAuthServerConfiguration.getInstance()
+                .getSupportedTokenEndpointAuthMethods();
+        Assert.assertTrue(supportedTokenEndpointAuthMethods.contains("client_secret_basic"));
+        Assert.assertTrue(supportedTokenEndpointAuthMethods.size() == 4);
+    }
+
+    @Test
+    public void testGetSupportedTokenEndpointSigningAlgorithms() throws Exception {
+
+        List<String> supportedTokenEndpointSigningAlgorithms = OAuthServerConfiguration.getInstance()
+                .getSupportedTokenEndpointSigningAlgorithms();
+        Assert.assertTrue(supportedTokenEndpointSigningAlgorithms.contains("PS256"));
+        Assert.assertTrue(supportedTokenEndpointSigningAlgorithms.size() == 2);
     }
 
     private String fillURLPlaceholdersForTest(String url) {

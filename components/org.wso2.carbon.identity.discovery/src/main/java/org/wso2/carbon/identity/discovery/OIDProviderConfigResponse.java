@@ -78,6 +78,8 @@ public class OIDProviderConfigResponse {
     private Boolean backchannelLogoutSessionSupported;
     private String[] codeChallengeMethodsSupported;
     private String deviceAuthorizationEndpoint;
+    private String pushedAuthorizationRequestEndpoint;
+    private Boolean tlsClientCertificateBoundAccessTokens;
 
     public String getIssuer() {
         return issuer;
@@ -488,6 +490,14 @@ public class OIDProviderConfigResponse {
         this.deviceAuthorizationEndpoint = deviceAuthorizationEndpoint;
     }
 
+    public void setPushedAuthorizationRequestEndpoint(String pushedAuthorizationRequestEndpoint) {
+        this.pushedAuthorizationRequestEndpoint = pushedAuthorizationRequestEndpoint;
+    }
+
+    public void setTlsClientCertificateBoundAccessTokens(Boolean tlsClientCertificateBoundAccessTokens) {
+        this.tlsClientCertificateBoundAccessTokens = tlsClientCertificateBoundAccessTokens;
+    }
+
     public Map<String, Object> getConfigMap() {
         Map<String, Object> configMap = new HashMap<String, Object>();
         configMap.put(DiscoveryConstants.ISSUER.toLowerCase(), this.issuer);
@@ -551,6 +561,12 @@ public class OIDProviderConfigResponse {
         configMap.put(DiscoveryConstants.RESPONSE_MODES_SUPPORTED, this.responseModesSupported);
         configMap.put(DiscoveryConstants.CODE_CHALLENGE_METHODS_SUPPORTED, this.codeChallengeMethodsSupported);
         configMap.put(DiscoveryConstants.DEVICE_AUTHORIZATION_ENDPOINT, this.deviceAuthorizationEndpoint);
+        configMap.put(DiscoveryConstants.PUSHED_AUTHORIZATION_REQUEST_ENDPOINT,
+                this.pushedAuthorizationRequestEndpoint);
+        configMap.put(DiscoveryConstants.TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN,
+                this.tlsClientCertificateBoundAccessTokens);
+        configMap.put(DiscoveryConstants.ID_TOKEN_SIGNING_ALG, this.idTokenSigningAlgValuesSupported);
+
         return configMap;
     }
 }

@@ -284,6 +284,23 @@
             <UserInfoEndpointAccessTokenValidator>org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoISAccessTokenValidator</UserInfoEndpointAccessTokenValidator>
             <UserInfoEndpointResponseBuilder>org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilder</UserInfoEndpointResponseBuilder>
             <SkipUserConsent>false</SkipUserConsent>
+            <SupportedTokenEndpointAuthMethods>
+                <SupportedTokenEndpointAuthMethod>client_secret_basic</SupportedTokenEndpointAuthMethod>
+                <SupportedTokenEndpointAuthMethod>client_secret_post</SupportedTokenEndpointAuthMethod>
+                <SupportedTokenEndpointAuthMethod>private_key_jwt</SupportedTokenEndpointAuthMethod>
+                <SupportedTokenEndpointAuthMethod>tls_client_auth</SupportedTokenEndpointAuthMethod>
+            </SupportedTokenEndpointAuthMethods>
+            <PushedAuthorizationRequestEndpoint>https://iam:9446/api/openbanking/push-authorization/pa</PushedAuthorizationRequestEndpoint>
+            <TLSClientCertificateBoundAccessTokens>true</TLSClientCertificateBoundAccessTokens>
+            <SupportedTokenEndpointSigningAlgorithms>
+                <SupportedTokenEndpointSigningAlgorithm>PS256</SupportedTokenEndpointSigningAlgorithm>
+                <SupportedTokenEndpointSigningAlgorithm>ES256</SupportedTokenEndpointSigningAlgorithm>
+            </SupportedTokenEndpointSigningAlgorithms>
+            <UserInfoJWTSignatureAlgorithms>
+                <UserInfoJWTSignatureAlgorithm>SHA256withRSA</UserInfoJWTSignatureAlgorithm>
+                <UserInfoJWTSignatureAlgorithm>PS256</UserInfoJWTSignatureAlgorithm>
+                <UserInfoJWTSignatureAlgorithm>ES256</UserInfoJWTSignatureAlgorithm>
+            </UserInfoJWTSignatureAlgorithms>
         </OpenIDConnect>
 
         <DeviceCodeGrant>

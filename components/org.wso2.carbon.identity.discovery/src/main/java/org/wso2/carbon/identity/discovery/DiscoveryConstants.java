@@ -352,4 +352,24 @@ public class DiscoveryConstants {
      * as defined in OAuth 2.0 Device Grant [rfc8628]
      */
     public static final String DEVICE_AUTHORIZATION_ENDPOINT = "device_authorization_endpoint";
+
+    /**
+     * pushed_authorization_request_endpoint
+     * The URL of the pushed authorization request endpoint at which a client can post an authorization request
+     * to exchange for a request_uri value usable at the authorization server. This is REQUIRED for PAR.
+     */
+    public static final String PUSHED_AUTHORIZATION_REQUEST_ENDPOINT = "pushed_authorization_request_endpoint";
+
+    /**
+     * tls_client_certificate_bound_access_tokens
+     * OPTIONAL. Boolean value indicating server support for mutual-TLS client certificate-bound access tokens.
+     * If omitted, the default value is false.
+     */
+    public static final String TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN = "tls_client_certificate_bound_access_tokens";
+
+    /**
+     * id_token_signing_alg
+     * OPTIONAL. JSON array containing a list of the JWS signing algorithms that could be used to sign the ID Token.
+     */
+    public static final String ID_TOKEN_SIGNING_ALG = "id_token_signing_alg";
 }

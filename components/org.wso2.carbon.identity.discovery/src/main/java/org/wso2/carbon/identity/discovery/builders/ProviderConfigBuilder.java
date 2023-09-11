@@ -118,16 +118,21 @@ public class ProviderConfigBuilder {
         providerConfig.setEndSessionEndpoint(buildServiceUrl(IdentityConstants.OAuth.LOGOUT,
                 IdentityUtil.getProperty(IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL)));
 
-        try {
-            providerConfig.setUserinfoSigningAlgValuesSupported(new String[] {
-                    OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(
-                            OAuthServerConfiguration.getInstance().getUserInfoJWTSignatureAlgorithm()).getName()
-            });
-        } catch (IdentityOAuth2Exception e) {
-            throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
+        List<String> supportedUserinfoSigningAlgValues = OAuthServerConfiguration.getInstance()
+                .getUserInfoJWTSignatureAlgorithms();
+        if (!supportedUserinfoSigningAlgValues.isEmpty()) {
+            String[] supportedUserinfoSigningAlgValuesArray = new String[supportedUserinfoSigningAlgValues.size()];
+            try {
+                for (int count = 0; count < supportedUserinfoSigningAlgValues.size(); count++) {
+                    supportedUserinfoSigningAlgValuesArray[count] =  String.valueOf(OAuth2Util
+                            .mapSignatureAlgorithmForJWSAlgorithm(supportedUserinfoSigningAlgValues.get(count)));
+                }
+            } catch (IdentityOAuth2Exception e) {
+                throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
+            }
+            providerConfig.setUserinfoSigningAlgValuesSupported(supportedUserinfoSigningAlgValuesArray);
         }
-        providerConfig.setTokenEndpointAuthMethodsSupported(
-                OAuth2Util.getSupportedClientAuthenticationMethods().stream().toArray(String[]::new));
+
         providerConfig.setGrantTypesSupported(OAuth2Util.getSupportedGrantTypes().stream().toArray(String[]::new));
         providerConfig.setRequestParameterSupported(Boolean.valueOf(OAuth2Util.isRequestParameterSupported()));
         providerConfig.setClaimsParameterSupported(Boolean.valueOf(OAuth2Util.isClaimsParameterSupported()));
@@ -140,6 +145,25 @@ public class ProviderConfigBuilder {
         if (OAuth2Util.getSupportedGrantTypes().contains(DEVICE_FLOW_GRANT_TYPE)) {
             providerConfig.setDeviceAuthorizationEndpoint(OAuth2Util.OAuthURL.getDeviceAuthzEPUrl());
         }
+
+        List<String> supportedTokenEndpointAuthMethods = OAuthServerConfiguration.getInstance()
+                .getSupportedTokenEndpointAuthMethods();
+        if (!supportedTokenEndpointAuthMethods.isEmpty()) {
+            providerConfig.setTokenEndpointAuthMethodsSupported(supportedTokenEndpointAuthMethods.toArray(new
+                    String[supportedUserinfoSigningAlgValues.size()]));
+        }
+
+        List<String> supportedTokenEndpointSigningAlgorithms = OAuthServerConfiguration.getInstance()
+                .getSupportedTokenEndpointSigningAlgorithms();
+        if (!supportedTokenEndpointSigningAlgorithms.isEmpty()) {
+            providerConfig.setTokenEndpointAuthSigningAlgValuesSupported(supportedTokenEndpointSigningAlgorithms
+                    .toArray(new String[supportedUserinfoSigningAlgValues.size()]));
+        }
+        
+        providerConfig.setPushedAuthorizationRequestEndpoint(OAuthServerConfiguration.getInstance()
+                .getPushedAuthorizationRequestEndpoint());
+        providerConfig.setTlsClientCertificateBoundAccessTokens(OAuthServerConfiguration.getInstance()
+                .isTlsClientCertificateBoundAccessTokens());
         return providerConfig;
     }
 }

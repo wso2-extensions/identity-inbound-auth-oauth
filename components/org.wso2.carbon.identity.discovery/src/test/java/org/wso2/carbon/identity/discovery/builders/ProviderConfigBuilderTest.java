@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.mockito.Matchers.anyString;
@@ -234,7 +235,8 @@ public class ProviderConfigBuilderTest extends PowerMockTestCase {
 
         when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
         String wrongAlgo = "SHA150withRSA";
-        when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn(wrongAlgo);
+        List<String> wrongAlgoInList = Arrays.asList(wrongAlgo);
+        when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithms()).thenReturn(wrongAlgoInList);
 
         when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(idTokenSignatureAlgorithm)).thenReturn(JWSAlgorithm.RS256);
         when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(wrongAlgo))

@@ -311,6 +311,11 @@ public class OAuthServerConfiguration {
     private int deviceCodePollingInterval = 5000;
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     private String deviceAuthzEPUrl = null;
+    private String pushedAuthorizationRequestEndpoint = null;
+    private boolean tlsClientCertificateBoundAccessTokens = false;
+    private List<String> userInfoJWTSignatureAlgorithms = new ArrayList<>();
+    private List<String> supportedTokenEndpointAuthMethods = new ArrayList<>();
+    private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -3226,6 +3231,38 @@ public class OAuthServerConfiguration {
                     requestObjectEnabled = false;
                 }
             }
+
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                    ConfigElements.PUSHED_AUTHORIZATION_REQUEST_ENDPOINT)) != null) {
+                pushedAuthorizationRequestEndpoint = openIDConnectConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.PUSHED_AUTHORIZATION_REQUEST_ENDPOINT)).getText().trim();
+            }
+
+            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                    ConfigElements.TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN)) != null) {
+                tlsClientCertificateBoundAccessTokens = Boolean.parseBoolean(
+                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                                ConfigElements.TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN)).getText().trim());
+            }
+
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHMS)) != null) {
+                parseSupportedUserInfoJWTSignatureAlgorithm(openIDConnectConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHMS)));
+            }
+
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_AUTH_METHODS)) != null) {
+                parseSupportedTokenEndpointAuthMethods(openIDConnectConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_AUTH_METHODS)));
+            }
+
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS)) != null) {
+                parseSupportedTokenEndpointSigningAlgorithms(openIDConnectConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS)));
+            }
+
             OMElement oAuthAuthzRequest = openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
                     (ConfigElements.OAUTH_AUTHZ_REQUEST_CLASS));
             oAuthAuthzRequestClassName = (oAuthAuthzRequest != null) ? oAuthAuthzRequest.getText().trim() :
@@ -3530,6 +3567,95 @@ public class OAuthServerConfiguration {
         this.globalRbacScopeIssuerEnabled = globalRbacScopeIssuerEnabled;
     }
 
+    public String getPushedAuthorizationRequestEndpoint() {
+        return pushedAuthorizationRequestEndpoint;
+    }
+
+    public boolean isTlsClientCertificateBoundAccessTokens() {
+        return tlsClientCertificateBoundAccessTokens;
+    }
+
+    public List<String> getUserInfoJWTSignatureAlgorithms() {
+        return userInfoJWTSignatureAlgorithms;
+    }
+
+    public List<String> getSupportedTokenEndpointAuthMethods() {
+        return supportedTokenEndpointAuthMethods;
+    }
+
+    public List<String> getSupportedTokenEndpointSigningAlgorithms() {
+        return supportedTokenEndpointSigningAlgorithms;
+    }
+
+    /**
+     * Parse supported signing algorithms and add them to the userInfoJWTSignatureAlgorithms list.
+     *
+     * @param algorithms OMElement of supported algorithms.
+     */
+    private void parseSupportedUserInfoJWTSignatureAlgorithm(OMElement algorithms) {
+
+        if (algorithms == null) {
+            return;
+        }
+
+        Iterator iterator = algorithms.getChildrenWithLocalName(
+                ConfigElements.OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM);
+        if (iterator != null) {
+            for (; iterator.hasNext(); ) {
+                OMElement algorithm = (OMElement) iterator.next();
+                if (algorithm != null) {
+                    userInfoJWTSignatureAlgorithms.add((algorithm.getText()));
+                }
+            }
+        }
+    }
+
+    /**
+     * Parse supported client authentication methods and add them to the supportedTokenEndpointAuthMethods list.
+     *
+     * @param methods OMElement of supported authentication methods.
+     */
+    private void parseSupportedTokenEndpointAuthMethods(OMElement methods) {
+
+        if (methods == null) {
+            return;
+        }
+
+        Iterator iterator = methods.getChildrenWithLocalName(
+                ConfigElements.SUPPORTED_TOKEN_ENDPOINT_AUTH_METHOD);
+        if (iterator != null) {
+            for (; iterator.hasNext(); ) {
+                OMElement method = (OMElement) iterator.next();
+                if (method != null) {
+                    supportedTokenEndpointAuthMethods.add(method.getText());
+                }
+            }
+        }
+    }
+
+    /**
+     * Parse supported signing algorithms and add them to the supportedTokenEndpointSigningAlgorithms list.
+     *
+     * @param algorithms OMElement of supported algorithms.
+     */
+    private void parseSupportedTokenEndpointSigningAlgorithms(OMElement algorithms) {
+
+        if (algorithms == null) {
+            return;
+        }
+
+        Iterator iterator = algorithms.getChildrenWithLocalName(
+                ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG);
+        if (iterator != null) {
+            for (; iterator.hasNext(); ) {
+                OMElement algorithm = (OMElement) iterator.next();
+                if (algorithm != null) {
+                    supportedTokenEndpointSigningAlgorithms.add(algorithm.getText());
+                }
+            }
+        }
+    }
+
     /**
      * Localpart names for the OAuth configuration in identity.xml.
      */
@@ -3592,6 +3718,7 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_USERINFO_ENDPOINT_RESPONSE_BUILDER =
                 "UserInfoEndpointResponseBuilder";
         public static final String OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM = "UserInfoJWTSignatureAlgorithm";
+        public static final String OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHMS = "UserInfoJWTSignatureAlgorithms";
         public static final String OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY = "SignJWTWithSPKey";
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER =
                 "IDTokenCustomClaimsCallBackHandler";
@@ -3782,6 +3909,13 @@ public class OAuthServerConfiguration {
 
         private static final String SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT =
                 "SkipOIDCClaimsForClientCredentialGrant";
+
+        private static final String PUSHED_AUTHORIZATION_REQUEST_ENDPOINT = "PushedAuthorizationRequestEndpoint";
+        private static final String TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN = "TLSClientCertificateBoundAccessTokens";
+        private static final String SUPPORTED_TOKEN_ENDPOINT_AUTH_METHODS = "SupportedTokenEndpointAuthMethods";
+        private static final String SUPPORTED_TOKEN_ENDPOINT_AUTH_METHOD = "SupportedTokenEndpointAuthMethod";
+        private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS = "SupportedTokenEndpointSigningAlgorithms";
+        private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG = "SupportedTokenEndpointSigningAlgorithm";
     }
 
 }
