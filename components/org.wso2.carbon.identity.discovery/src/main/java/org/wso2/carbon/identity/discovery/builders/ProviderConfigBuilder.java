@@ -133,6 +133,13 @@ public class ProviderConfigBuilder {
             providerConfig.setUserinfoSigningAlgValuesSupported(supportedUserinfoSigningAlgValuesArray);
         }
 
+        List<String> supportedTokenEndpointAuthMethods = OAuthServerConfiguration.getInstance()
+                .getSupportedTokenEndpointAuthMethods();
+        if (!supportedTokenEndpointAuthMethods.isEmpty()) {
+            providerConfig.setTokenEndpointAuthMethodsSupported(supportedTokenEndpointAuthMethods.toArray(new
+                    String[supportedUserinfoSigningAlgValues.size()]));
+        }
+
         providerConfig.setGrantTypesSupported(OAuth2Util.getSupportedGrantTypes().stream().toArray(String[]::new));
         providerConfig.setRequestParameterSupported(Boolean.valueOf(OAuth2Util.isRequestParameterSupported()));
         providerConfig.setClaimsParameterSupported(Boolean.valueOf(OAuth2Util.isClaimsParameterSupported()));
@@ -144,13 +151,6 @@ public class ProviderConfigBuilder {
 
         if (OAuth2Util.getSupportedGrantTypes().contains(DEVICE_FLOW_GRANT_TYPE)) {
             providerConfig.setDeviceAuthorizationEndpoint(OAuth2Util.OAuthURL.getDeviceAuthzEPUrl());
-        }
-
-        List<String> supportedTokenEndpointAuthMethods = OAuthServerConfiguration.getInstance()
-                .getSupportedTokenEndpointAuthMethods();
-        if (!supportedTokenEndpointAuthMethods.isEmpty()) {
-            providerConfig.setTokenEndpointAuthMethodsSupported(supportedTokenEndpointAuthMethods.toArray(new
-                    String[supportedUserinfoSigningAlgValues.size()]));
         }
 
         List<String> supportedTokenEndpointSigningAlgorithms = OAuthServerConfiguration.getInstance()
