@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.client.authentication;
 
 import org.apache.axis2.transport.http.HTTPConstants;
+import org.mockito.Mock;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeMethod;
@@ -27,6 +28,7 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -34,6 +36,7 @@ import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -49,7 +52,8 @@ import static org.testng.Assert.assertEquals;
 @PrepareForTest({
         HttpServletRequest.class,
         OAuth2Util.class,
-        IdentityUtil.class
+        IdentityUtil.class,
+        OAuthServerConfiguration.class
 })
 @WithCarbonHome
 public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
@@ -58,6 +62,9 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
     private static final String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
     private static final String CLIENT_ID = "someclientid";
     private static final String CLIENT_SECRET = "someclientsecret";
+
+    @Mock
+    private OAuthServerConfiguration mockedServerConfig;
 
     @BeforeMethod
     public void setUp() {
@@ -95,6 +102,12 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
                                     boolean publicClient, boolean canHandle) throws Exception {
 
         PowerMockito.mockStatic(OAuth2Util.class);
+
+        List<String> publicClientSupportedGrantTypes = new ArrayList<>();
+        publicClientSupportedGrantTypes.add("custom_grant_type");
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedServerConfig);
+        when(mockedServerConfig.getPublicClientSupportedGrantTypesList()).thenReturn(publicClientSupportedGrantTypes);
 
         OAuthAppDO appDO = new OAuthAppDO();
         appDO.setBypassClientCredentials(publicClient);
