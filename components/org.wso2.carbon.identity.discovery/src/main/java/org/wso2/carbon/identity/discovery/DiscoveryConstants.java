@@ -365,4 +365,12 @@ public class DiscoveryConstants {
      * OPTIONAL. JSON array containing a list of the JWS signing algorithms that could be used to sign the ID Token.
      */
     public static final String ID_TOKEN_SIGNING_ALG = "id_token_signing_alg";
+
+    /**
+     * pushed_authorization_request_endpoint
+     * The URL of the pushed authorization request endpoint at which a client can post an authorization request
+     * to exchange for a request_uri value usable at the authorization server. This is REQUIRED for PAR.
+     */
+    public static final String PUSHED_AUTHORIZATION_REQUEST_ENDPOINT = "pushed_authorization_request_endpoint";
+    
 }
