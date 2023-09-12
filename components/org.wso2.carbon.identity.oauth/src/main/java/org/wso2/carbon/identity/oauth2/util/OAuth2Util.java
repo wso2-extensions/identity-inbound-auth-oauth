@@ -4912,7 +4912,7 @@ public class OAuth2Util {
                 authorizationHeader.toUpperCase().startsWith(BASIC_AUTHORIZATION_PREFIX.toUpperCase());
 
         if (!isBasicAuthorizationHeaderExist) {
-            String errMsg = "Error decoding authorization header. Authorization header is not available.";
+            String errMsg = "Basic authorization header is not available in the request.";
             throw new OAuthClientAuthnException(errMsg, OAuth2ErrorCodes.INVALID_REQUEST);
         }
 
