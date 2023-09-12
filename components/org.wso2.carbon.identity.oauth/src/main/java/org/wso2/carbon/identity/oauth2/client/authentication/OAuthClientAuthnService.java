@@ -77,7 +77,7 @@ public class OAuthClientAuthnService {
         OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
         try {
             String clientId = extractClientId(request, bodyContentParams);
-            if (!StringUtils.isBlank(clientId) && OAuth2Util.isFapiConformantApp(clientId)) {
+            if (StringUtils.isNotBlank(clientId) && OAuth2Util.isFapiConformantApp(clientId)) {
                 if (!isMTLSEnforced(request)) {
                     setErrorToContext(OAuth2ErrorCodes.INVALID_REQUEST, "Transport certificate not passed " +
                             "through the request or the certificate is not valid", oAuthClientAuthnContext);
@@ -302,14 +302,14 @@ public class OAuthClientAuthnService {
      * @param request                Http servlet request.
      * @param contentParams          Map of request body params.
      * @return Whether the client authentication method of the request is registered for the application.
-     * @throws OAuthClientAuthnException
+     * @throws OAuthClientAuthnException OAuth Client Authentication Exception.
      */
     private boolean isRegisteredClientAuthMethod(HttpServletRequest request, Map<String, List> contentParams)
             throws OAuthClientAuthnException {
 
         String registeredClientAuthMethod = retrieveRegisteredAuthMethod(extractClientId(request, contentParams));
 
-        if (registeredClientAuthMethod.equals(OAuthConstants.NOT_APPLICABLE)) {
+        if (OAuthConstants.NOT_APPLICABLE.equals(registeredClientAuthMethod)) {
             return false;
         }
 
@@ -317,9 +317,8 @@ public class OAuthClientAuthnService {
         if (!(registeredClientAuthMethod.contains(retrieveRequestAuthMethod(request, contentParams)))) {
             throw new OAuthClientAuthnException("Request does not follow the registered token endpoint auth " +
                     "method", OAuth2ErrorCodes.INVALID_REQUEST);
-        } else {
-            return true;
         }
+        return true;
     }
 
     /**
@@ -328,20 +327,20 @@ public class OAuthClientAuthnService {
      * @param request                Http servlet request.
      * @param contentParams          Map of request body params.
      * @return Client authentication method of the request.
-     * @throws OAuthClientAuthnException
+     * @throws OAuthClientAuthnException OAuth Client Authentication Exception.
      */
     public String retrieveRequestAuthMethod(HttpServletRequest request, Map<String, List> contentParams) throws
             OAuthClientAuthnException {
 
         try {
             if (isPrivateKeyJWTAuthentication(request)) {
-                log.debug("Validating request with JWT client authentication method");
+                log.info("Validating request with JWT client authentication method");
                 return OAuthConstants.PRIVATE_KEY_JWT;
             } else if (isMTLSAuthentication(request, contentParams)) {
-                log.debug("Validating request with MTLS client authentication method");
+                log.info("Validating request with MTLS client authentication method");
                 return OAuthConstants.TLS_CLIENT_AUTH;
             }
-            return "INVALID_AUTH";
+            return OAuthConstants.INVALID_AUTH_METHOD;
         } catch (OAuthClientAuthnException e) {
             throw new OAuthClientAuthnException("Error occurred when obtaining request authentication method",
                     OAuth2ErrorCodes.INVALID_REQUEST, e);
@@ -353,18 +352,16 @@ public class OAuthClientAuthnService {
      *
      * @param clientId     Client ID of the application.
      * @return Registered client authentication method for the application.
-     * @throws OAuthClientAuthnException
+     * @throws OAuthClientAuthnException OAuth Client Authentication Exception.
      */
     public String retrieveRegisteredAuthMethod(String clientId) throws OAuthClientAuthnException {
 
         try {
             ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
-            if (StringUtils.isEmpty(serviceProvider.getCertificateContent())) {
-                ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
-                for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
-                    if (OAuthConstants.TOKEN_ENDPOINT_AUTH_METHOD.equals(serviceProviderProperty.getName())) {
-                        return serviceProviderProperty.getValue();
-                    }
+            ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
+            for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
+                if (OAuthConstants.TOKEN_ENDPOINT_AUTH_METHOD.equals(serviceProviderProperty.getName())) {
+                    return serviceProviderProperty.getValue();
                 }
             }
         } catch (IdentityOAuth2Exception e) {
@@ -379,13 +376,10 @@ public class OAuthClientAuthnService {
      *
      * @param request       Http servlet request.
      * @return Client ID of the application.
-     * @throws OAuthClientAuthnException
+     * @throws OAuthClientAuthnException OAuth Client Authentication Exception.
      */
     private String extractClientId(HttpServletRequest request, Map<String, List> contentParams)
             throws OAuthClientAuthnException {
-
-        String basicAuthErrorMessage = "Unable to find client id in the request. Invalid Authorization header found.";
-        String authHeader = "Authorization";
 
         try {
             Optional<String> signedObject =
@@ -396,8 +390,7 @@ public class OAuthClientAuthnService {
                     Optional.ofNullable(contentParams.get(OAuth.OAUTH_CLIENT_ID));
             //   Obtain client ID from the JWT in the request
             if (signedObject.isPresent()) {
-                SignedJWT signedJWT = SignedJWT.parse(signedObject.get());
-                return signedJWT.getJWTClaimsSet().getIssuer();
+                return getClientIdFromJWT(signedObject.get());
             //   Obtain client ID from request parameters
             } else if (clientIdAsReqParam.isPresent()) {
                 return clientIdAsReqParam.get();
@@ -405,24 +398,8 @@ public class OAuthClientAuthnService {
             } else if (clientIdInContentParamList.isPresent()) {
                 return (String) clientIdInContentParamList.get().get(0);
             //   Obtain client ID from the authorization header when basic authentication is used
-            } else if (request.getHeader(authHeader) != null) {
-                String authorizationHeader = request.getHeader(authHeader);
-                if (authorizationHeader.split(" ").length == 2) {
-                    if (request.getHeader(authHeader).split(" ")[0].equals("Basic")) {
-                        String authToken = request.getHeader(authHeader).split(" ")[1];
-                        byte[] decodedBytes = Base64.getUrlDecoder().decode(authToken.getBytes(StandardCharsets.UTF_8));
-                        String decodedAuthToken = new String(decodedBytes, StandardCharsets.UTF_8);
-                        if (decodedAuthToken.split(":").length == 2) {
-                            return decodedAuthToken.split(":")[0];
-                        } else {
-                            throw new OAuthClientAuthnException(basicAuthErrorMessage, OAuth2ErrorCodes.INVALID_CLIENT);
-                        }
-                    } else {
-                        return null;
-                    }
-                } else {
-                    throw new OAuthClientAuthnException(basicAuthErrorMessage, OAuth2ErrorCodes.INVALID_CLIENT);
-                }
+            } else if (request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ) != null) {
+                return getClientIdFromBasicAuth(request);
             } else {
                 throw new OAuthClientAuthnException("Unable to find client id in the request",
                         OAuth2ErrorCodes.INVALID_CLIENT);
@@ -434,12 +411,53 @@ public class OAuthClientAuthnService {
     }
 
     /**
+     * Obtain the client ID of the application from the JWT in the request.
+     *
+     * @param signedObject       Client assertion sent in the request.
+     * @return Client ID of the application.
+     * @throws ParseException An exception is thrown when the signed JWT cannot be processed.
+     */
+    private String getClientIdFromJWT(String signedObject) throws ParseException {
+        SignedJWT signedJWT = SignedJWT.parse(signedObject);
+        return signedJWT.getJWTClaimsSet().getIssuer();
+    }
+
+    /**
+     * Obtain the client ID of the application from the authorization header of the request.
+     *
+     * @param request       Http servlet request.
+     * @return Client ID of the application.
+     * @throws OAuthClientAuthnException OAuth Client Authentication Exception.
+     */
+    private String getClientIdFromBasicAuth(HttpServletRequest request) throws OAuthClientAuthnException {
+
+        String basicAuthErrorMessage = "Unable to find client id in the request. Invalid Authorization header found.";
+        String authorizationHeader = request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ);
+        if (authorizationHeader.split(" ").length == 2) {
+            if (authorizationHeader.split(" ")[0].equals("Basic")) {
+                String authToken = authorizationHeader.split(" ")[1];
+                byte[] decodedBytes = Base64.getUrlDecoder().decode(authToken.getBytes(StandardCharsets.UTF_8));
+                String decodedAuthToken = new String(decodedBytes, StandardCharsets.UTF_8);
+                if (decodedAuthToken.split(":").length == 2) {
+                    return decodedAuthToken.split(":")[0];
+                } else {
+                    throw new OAuthClientAuthnException(basicAuthErrorMessage, OAuth2ErrorCodes.INVALID_CLIENT);
+                }
+            } else {
+                return null;
+            }
+        } else {
+            throw new OAuthClientAuthnException(basicAuthErrorMessage, OAuth2ErrorCodes.INVALID_CLIENT);
+        }
+    }
+
+    /**
      * Validate whether the request follows MTLS client authentication.
      *
      * @param request               Http servlet request.
      * @param contentParam          Map of request body params.
      * @return Whether the request follows MTLS client authentication.
-     * @throws OAuthClientAuthnException
+     * @throws OAuthClientAuthnException OAuth Client Authentication Exception.
      */
     private boolean isMTLSAuthentication(HttpServletRequest request, Map<String, List> contentParam)
             throws OAuthClientAuthnException {
@@ -448,7 +466,7 @@ public class OAuthClientAuthnService {
                 .orElse("CONFIG_NOT_FOUND");
 
         String oauthClientID =  request.getParameter(OAuth.OAUTH_CLIENT_ID);
-        if (StringUtils.isBlank(OAuth.OAUTH_CLIENT_ID)) {
+        if (StringUtils.isBlank(oauthClientID) && contentParam.get(OAuth.OAUTH_CLIENT_ID).size() > 0) {
             oauthClientID = (String) contentParam.get(OAuth.OAUTH_CLIENT_ID).get(0);
         }
         try {
@@ -490,7 +508,7 @@ public class OAuthClientAuthnService {
      *
      * @param request     Http servlet request.
      * @return Whether a TLS certificate is passed through the request.
-     * @throws OAuthClientAuthnException
+     * @throws OAuthClientAuthnException OAuth Client Authentication Exception.
      */
     private boolean isMTLSEnforced(HttpServletRequest request) throws OAuthClientAuthnException {
 
@@ -498,8 +516,7 @@ public class OAuthClientAuthnService {
                 .orElse("CONFIG_NOT_FOUND");
         String x509Certificate = request.getHeader(mtlsAuthHeader);
         try {
-            if (!(StringUtils.isNotEmpty(x509Certificate) &&
-                    OAuth2Util.parseCertificate(x509Certificate) != null)) {
+            if (StringUtils.isEmpty(x509Certificate) || OAuth2Util.parseCertificate(x509Certificate) == null) {
                 log.error("Transport certificate not passed through the request or the certificate is not valid");
                 return false;
             }

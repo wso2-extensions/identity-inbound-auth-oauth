@@ -4742,7 +4742,7 @@ public class OAuth2Util {
      *
      * @param content     Certificate content.
      * @return X.509 certificate after decoding the certificate content.
-     * @throws CertificateException
+     * @throws CertificateException An exception is thrown when the X509Certificate cannot be generated.
      */
     public static X509Certificate parseCertificate(String content) throws CertificateException {
 
