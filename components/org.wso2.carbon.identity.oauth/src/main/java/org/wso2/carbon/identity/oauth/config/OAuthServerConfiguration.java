@@ -215,7 +215,7 @@ public class OAuthServerConfiguration {
     private boolean addTenantDomainToIdTokenEnabled = false;
     private boolean addUserstoreDomainToIdTokenEnabled = false;
     private boolean requestObjectEnabled = true;
-    private boolean ppidEnabledForAccessTokens = false;
+    private boolean pairwiseSubEnabledForAccessTokens = false;
 
     //default token types
     public static final String DEFAULT_TOKEN_TYPE = "Default";
@@ -1671,8 +1671,8 @@ public class OAuthServerConfiguration {
         return requestObjectEnabled;
     }
 
-    public boolean isPPIDEnabledForAccessTokens() {
-        return ppidEnabledForAccessTokens;
+    public boolean isPairwiseSubForAccessTokensEnabled() {
+        return pairwiseSubEnabledForAccessTokens;
     }
 
     public int getDeviceCodeKeyLength() {
@@ -3245,10 +3245,10 @@ public class OAuthServerConfiguration {
                 }
             }
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
-                    .PPID_FOR_ACCESS_TOKEN_ENABLED)) != null) {
-                ppidEnabledForAccessTokens =
+                    .PAIRWISE_SUB_FOR_ACCESS_TOKEN_ENABLED)) != null) {
+                pairwiseSubEnabledForAccessTokens =
                         Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
-                        (ConfigElements.PPID_FOR_ACCESS_TOKEN_ENABLED)).getText().trim());
+                        (ConfigElements.PAIRWISE_SUB_FOR_ACCESS_TOKEN_ENABLED)).getText().trim());
             }
             OMElement oAuthAuthzRequest = openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
                     (ConfigElements.OAUTH_AUTHZ_REQUEST_CLASS));
@@ -3627,7 +3627,7 @@ public class OAuthServerConfiguration {
         // Property to decide whether to add userstore domain to id_token.
         private static final String OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN = "AddUserstoreDomainToIdToken";
         private static final String REQUEST_OBJECT_ENABLED = "RequestObjectEnabled";
-        private static final String PPID_FOR_ACCESS_TOKEN_ENABLED = "EnablePPIDForAccessToken";
+        private static final String PAIRWISE_SUB_FOR_ACCESS_TOKEN_ENABLED = "EnablePairwiseSubForAccessToken";
         private static final String ENABLE_FAPI_CIBA_PROFILE = "EnableCibaProfile";
         private static final String ENABLE_FAPI_SECURITY_PROFILE = "EnableSecurityProfile";
         public static final String SEND_ONLY_LOCALLY_MAPPED_ROLES_OF_IDP = "FederatedRoleManagement"

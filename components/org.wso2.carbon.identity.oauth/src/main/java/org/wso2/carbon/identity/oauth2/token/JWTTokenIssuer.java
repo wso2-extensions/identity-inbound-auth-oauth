@@ -479,8 +479,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         String userId = authenticatedUser.getAuthenticatedSubjectIdentifier();
 
         String sub;
-        if (checkPPIDEnabledForAccessTokens()) {
-            // PPID sub claim is returned only if pairwise subject identifier for access tokens is enabled.
+        if (checkPairwiseSubEnabledForAccessTokens()) {
+            // pairwise sub claim is returned only if pairwise subject identifier for access tokens is enabled.
             sub = OIDCClaimUtil.getSubjectClaim(consumerKey, userId, oAuthAppDO.getCallbackUrl());
         } else {
             sub = getSubjectClaim(consumerKey, spTenantDomain, authenticatedUser);
@@ -853,12 +853,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     /**
-     * Check whether PPID is enabled for access token response.
+     * Check whether pairwise subject identifier is enabled for access token response.
      *
-     * @return true if PPID is enabled for access token response.
+     * @return true if pairwise subject identifier is enabled for access token response.
      */
-    public static boolean checkPPIDEnabledForAccessTokens() {
+    public static boolean checkPairwiseSubEnabledForAccessTokens() {
 
-        return OAuthServerConfiguration.getInstance().isPPIDEnabledForAccessTokens();
+        return OAuthServerConfiguration.getInstance().isPairwiseSubForAccessTokensEnabled();
     }
 }
