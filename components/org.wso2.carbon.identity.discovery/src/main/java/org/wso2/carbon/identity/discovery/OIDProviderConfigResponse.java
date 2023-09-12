@@ -561,8 +561,7 @@ public class OIDProviderConfigResponse {
         configMap.put(DiscoveryConstants.RESPONSE_MODES_SUPPORTED, this.responseModesSupported);
         configMap.put(DiscoveryConstants.CODE_CHALLENGE_METHODS_SUPPORTED, this.codeChallengeMethodsSupported);
         configMap.put(DiscoveryConstants.DEVICE_AUTHORIZATION_ENDPOINT, this.deviceAuthorizationEndpoint);
-        configMap.put(DiscoveryConstants.PUSHED_AUTHORIZATION_REQUEST_ENDPOINT,
-                this.pushedAuthorizationRequestEndpoint);
+        configMap.put("pushed_authorization_request_endpoint", this.pushedAuthorizationRequestEndpoint);
         configMap.put(DiscoveryConstants.TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN,
                 this.tlsClientCertificateBoundAccessTokens);
         configMap.put(DiscoveryConstants.ID_TOKEN_SIGNING_ALG, this.idTokenSigningAlgValuesSupported);
