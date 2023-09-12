@@ -32,6 +32,7 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -63,6 +64,7 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
 /**
  * Test class to test UserInfoJWTResponse.
@@ -113,6 +115,48 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
             updateAuthenticatedSubjectIdentifier(authenticatedUser, appendTenantDomain, appendUserStoreDomain,
                     inputClaims);
 
+            mockObjectsRelatedToTokenValidation();
+
+            mockStatic(FrameworkUtils.class);
+            when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+                    .thenReturn(authenticatedUser.getUserId());
+            when(IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
+            userInfoJWTResponse = spy(new UserInfoJWTResponse());
+            when(userInfoJWTResponse.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
+                    .thenReturn(inputClaims);
+            mockStatic(JDBCPersistenceManager.class);
+            DataSource dataSource = mock(DataSource.class);
+            JDBCPersistenceManager jdbcPersistenceManager = mock(JDBCPersistenceManager.class);
+            Mockito.when(dataSource.getConnection()).thenReturn(con);
+            Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
+            Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
+            String responseString =
+                    userInfoJWTResponse
+                            .getResponseString(getTokenResponseDTO(authenticatedUser.toFullQualifiedUsername()));
+
+            JWT jwt = JWTParser.parse(responseString);
+            assertNotNull(jwt);
+            assertNotNull(jwt.getJWTClaimsSet());
+            assertNotNull(jwt.getJWTClaimsSet().getSubject());
+            assertEquals(jwt.getJWTClaimsSet().getSubject(), expectedSubjectValue);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    @Test(dataProvider = "subjectClaimDataProvider")
+    public void testSubjectClaimWithAlteredApplicationConfigs(Map<String, Object> inputClaims,
+                                                              Object authorizedUser,
+                                                              boolean appendTenantDomain,
+                                                              boolean appendUserStoreDomain,
+                                                              String expectedSubjectValue) throws Exception {
+
+        try {
+            AuthenticatedUser authenticatedUser = (AuthenticatedUser) authorizedUser;
+            prepareForSubjectClaimTest(authenticatedUser, inputClaims, !appendTenantDomain, !appendUserStoreDomain);
+            authenticatedUser.setAuthenticatedSubjectIdentifier(expectedSubjectValue,
+                    applicationManagementService.getServiceProviderByClientId(CLIENT_ID,
+                            IdentityApplicationConstants.OAuth2.NAME, SUPER_TENANT_DOMAIN_NAME));
             mockObjectsRelatedToTokenValidation();
 
             mockStatic(FrameworkUtils.class);

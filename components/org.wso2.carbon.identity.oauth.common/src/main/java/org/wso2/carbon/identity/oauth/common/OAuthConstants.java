@@ -182,8 +182,11 @@ public final class OAuthConstants {
             "OAuth.JWT.RenewTokenWithoutRevokingExisting.AllowedGrantTypes.AllowedGrantType";
     public static final String RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG =
             "OAuth.JWT.RenewTokenWithoutRevokingExisting.Enable";
+    public static final String OAUTH_BUILD_ISSUER_WITH_HOSTNAME = "OAuth.BuildIssuerWithHostname";
+
     public static final String REQUEST_BINDING_TYPE = "request";
     public static final String ORG_ID = "org_id";
+    public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
     public static final String MTLS_AUTH_HEADER = "MutualTLS.ClientCertificateHeader";
     public static final String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
     public static final String END_CERT = "-----END CERTIFICATE-----";
@@ -319,6 +322,7 @@ public final class OAuthConstants {
         public static final String OAUTH20_ACCESS_TOKEN_URL = "/token";
         public static final String OAUTH20_AUTHORIZE_TOKEN_URL = "/authorize";
         public static final String OAUTH2_AUTHZ_EP_URL = "oauth2/authorize";
+        public static final String OAUTH2_PAR_EP_URL = "oauth2/par";
         public static final String OAUTH2_TOKEN_EP_URL = "oauth2/token";
         public static final String OAUTH2_DCR_EP_URL = "/api/identity/oauth2/dcr/v1.1/register";
         public static final String OAUTH2_JWKS_EP_URL = "/oauth2/jwks";
