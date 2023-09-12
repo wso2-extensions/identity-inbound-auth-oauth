@@ -2009,7 +2009,8 @@ public class OAuth2AuthzEndpoint {
                 EndpointUtil.validateFAPIResponseMode(params.getResponseType(), params.getResponseMode());
             }
         } catch (IdentityOAuth2Exception e) {
-            throw new OAuthSystemException(e);
+            throw new OAuthSystemException("Error while obtaining the service provider for client_id: " +
+                    params.getClientId(), e);
         }
 
         addDataToSessionCache(oAuthMessage, params, sessionDataKey);
