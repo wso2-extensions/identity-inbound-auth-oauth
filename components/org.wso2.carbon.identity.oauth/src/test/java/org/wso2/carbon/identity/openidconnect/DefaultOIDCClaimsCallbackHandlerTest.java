@@ -263,6 +263,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
             "wtXOy27LE4exJRuZsF1CA78ObaRytuE3DJcnIRdhOcjWieS/MxZD7bzuuAPu5ySX" +
             "i2/qxT3AlWtHtxrz0mKSC3rlgYAHCzCAHoASWKpf5tnB3TodPVZ6DYOu7oI=" +
             "-----END CERTIFICATE-----";
+    private static final String CERT_HEADER_NAME = "x-wso2-mutual-auth-cert";
     Connection connection = null;
 
     @BeforeClass
@@ -338,7 +339,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         serviceProvider.setApplicationName(SERVICE_PROVIDER_NAME);
         mockApplicationManagementService();
 
-        setServiceProvideProperties(false);
         JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet);
         assertTrue(jwtClaimsSet.getClaims().isEmpty());
@@ -469,7 +469,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         // Mock to return all the scopes when the consent is asked for.
         UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
-        setServiceProvideProperties(false);
         JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet, "JWT Custom claim handling failed.");
         assertFalse(jwtClaimsSet.getClaims().isEmpty(), "JWT custom claim handling failed");
@@ -506,7 +505,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
 
         UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
-        setServiceProvideProperties(false);
         JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
 
         Assert.assertFalse(jwtClaimsSet.getClaims().isEmpty(),
@@ -939,7 +937,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
 
         mockApplicationManagementService();
 
-        setServiceProvideProperties(false);
         JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertEquals(jwtClaimsSet.getClaims().size(), 0, "Claims are not successfully set.");
     }
@@ -954,7 +951,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
     private void mockApplicationManagementService(ServiceProvider sp) throws Exception {
 
         mockApplicationManagementService();
-        setServiceProvideProperties(false);
         when(applicationManagementService.getApplicationExcludingFileBasedSPs(sp.getApplicationName(), TENANT_DOMAIN))
                 .thenReturn(sp);
     }
@@ -1050,7 +1046,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
 
         UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
-        setServiceProvideProperties(false);
         JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
         assertNotNull(jwtClaimsSet, "JWT Custom claim handling failed.");
         assertFalse(jwtClaimsSet.getClaims().isEmpty(), "JWT custom claim handling failed");
@@ -1141,6 +1136,11 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
 
         DefaultOIDCClaimsCallbackHandler mockDefaultOIDCClaimsCallbackHandler =
                 spy(new DefaultOIDCClaimsCallbackHandler());
+        HttpRequestHeader[] httpRequestHeaders = requestMsgCtx.getOauth2AccessTokenReqDTO().getHttpRequestHeaders();
+        if (!(httpRequestHeaders != null && CERT_HEADER_NAME.equals(httpRequestHeaders[0].getName()))) {
+            PowerMockito.mockStatic(OAuth2Util.class);
+            PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(false);
+        }
         jwtClaimsSet = mockDefaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
                 requestMsgCtx);
 
@@ -1183,8 +1183,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
 
         mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getProperty(OAuthConstants.MTLS_AUTH_HEADER)).thenReturn("x-wso2-mutual-auth-cert");
-        HttpRequestHeader httpRequestHeader = new HttpRequestHeader("x-wso2-mutual-auth-cert", CERTIFICATE_CONTENT);
+        when(IdentityUtil.getProperty(OAuthConstants.MTLS_AUTH_HEADER)).thenReturn(CERT_HEADER_NAME);
+        HttpRequestHeader httpRequestHeader = new HttpRequestHeader(CERT_HEADER_NAME, CERTIFICATE_CONTENT);
         HttpRequestHeader[] httpRequestHeaders = new HttpRequestHeader[1];
         httpRequestHeaders[0] = httpRequestHeader;
 
@@ -1195,7 +1195,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         OAuthTokenReqMessageContext requestMsgCtx = new OAuthTokenReqMessageContext(accessTokenReqDTO);
         requestMsgCtx.setAuthorizedUser(getDefaultAuthenticatedLocalUser());
 
-        setServiceProvideProperties(true);
+        PowerMockito.mockStatic(OAuth2Util.class);
+        PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(true);
 
         String decodedContent = StringUtils.trim(CERTIFICATE_CONTENT);
         // Remove Certificate Headers.
@@ -1214,23 +1215,5 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         assertNotNull(jwtClaimsSet);
         assertNotNull(jwtClaimsSet.getClaim("cnf"));
 
-    }
-
-    private void setServiceProvideProperties (boolean isFapi) throws Exception {
-        ServiceProvider serviceProvider = new ServiceProvider();
-        ServiceProviderProperty fapiAppSpProperty = new ServiceProviderProperty();
-        fapiAppSpProperty.setName("IsFAPIApp");
-        if (isFapi) {
-            fapiAppSpProperty.setValue("true");
-        } else {
-            fapiAppSpProperty.setValue("false");
-        }
-        serviceProvider.setSpProperties(new ServiceProviderProperty[]{fapiAppSpProperty});
-
-        OAuthServerConfiguration oAuthServerConfigurationMock = PowerMockito.mock(OAuthServerConfiguration.class);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfigurationMock);
-        PowerMockito.mockStatic(OAuth2Util.class);
-        PowerMockito.when(OAuth2Util.getServiceProvider(Mockito.anyString())).thenReturn(serviceProvider);
     }
 }

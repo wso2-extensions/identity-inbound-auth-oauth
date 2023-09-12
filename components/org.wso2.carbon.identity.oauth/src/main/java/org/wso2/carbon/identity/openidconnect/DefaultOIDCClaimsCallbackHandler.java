@@ -33,7 +33,6 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
@@ -44,14 +43,12 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
-import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
-import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
@@ -104,8 +101,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         try {
             Map<String, Object> userClaimsInOIDCDialect = getUserClaimsInOIDCDialect(tokenReqMessageContext);
             tokenReqMessageContext.addProperty(ID_TOKEN_USER_CLAIMS_PROP_KEY, userClaimsInOIDCDialect.keySet());
-            if (Boolean.parseBoolean(isFapiApplication(tokenReqMessageContext.getOauth2AccessTokenReqDTO()
-                    .getClientId()))) {
+            if (OAuth2Util.isFapiConformantApp(tokenReqMessageContext.getOauth2AccessTokenReqDTO()
+                    .getClientId())) {
                 addCnfClaimToOIDCDialect(tokenReqMessageContext, userClaimsInOIDCDialect);
             }
             return setClaimsToJwtClaimSet(jwtClaimsSetBuilder, userClaimsInOIDCDialect);
@@ -858,33 +855,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             return true;
         }
         return StringUtils.contains(claimValue, multiAttributeSeparator);
-    }
-
-    /**
-     * Check whether the application should support FAPI.
-     *
-     * @param clientId       Client ID of the application.
-     * @return Whether the application should support FAPI.
-     * @throws OAuthClientAuthnException
-     */
-    public String isFapiApplication(String clientId) throws OAuthClientAuthnException {
-
-        String isFapiApp = "IsFAPIApp";
-        try {
-            ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
-            if (StringUtils.isEmpty(serviceProvider.getCertificateContent())) {
-                ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
-                for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
-                    if (isFapiApp.equals(serviceProviderProperty.getName())) {
-                        return serviceProviderProperty.getValue();
-                    }
-                }
-            }
-        } catch (IdentityOAuth2Exception e) {
-            throw new OAuthClientAuthnException("Error occurred while retrieving the service provider of the app",
-                    OAuth2ErrorCodes.INVALID_REQUEST, e);
-        }
-        return null;
     }
 
     /**
