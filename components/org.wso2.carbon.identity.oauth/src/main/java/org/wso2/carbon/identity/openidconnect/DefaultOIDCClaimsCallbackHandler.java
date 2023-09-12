@@ -733,6 +733,9 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
      */
     private boolean isTokenHasCustomUserClaims(RefreshTokenValidationDataDO refreshTokenValidationDataDO) {
 
+        if (refreshTokenValidationDataDO.getAccessToken() == null) {
+            return false;
+        }
         AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(
                 refreshTokenValidationDataDO.getAccessToken());
         AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()

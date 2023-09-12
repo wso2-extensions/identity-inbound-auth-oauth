@@ -31,6 +31,7 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -67,6 +68,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
 /**
  * This class contains tests for UserInfoJSONResponseBuilder.
@@ -319,6 +321,37 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
             AuthenticatedUser authzUser = (AuthenticatedUser) authorizedUser;
             prepareForSubjectClaimTest(authzUser, inputClaims, appendTenantDomain, appendUserStoreDomain);
             updateAuthenticatedSubjectIdentifier(authzUser, appendTenantDomain, appendUserStoreDomain, inputClaims);
+
+            when(userInfoJSONResponseBuilder.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
+                    .thenReturn(inputClaims);
+            Mockito.when(IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
+            mockDataSource();
+            mockObjectsRelatedToTokenValidation();
+            String responseString =
+                    userInfoJSONResponseBuilder
+                            .getResponseString(getTokenResponseDTO((authzUser).toFullQualifiedUsername()));
+
+            Map<String, Object> claimsInResponse = JSONUtils.parseJSON(responseString);
+            assertSubjectClaimPresent(claimsInResponse);
+            assertEquals(claimsInResponse.get(sub), expectedSubjectValue);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    @Test(dataProvider = "subjectClaimDataProvider")
+    public void testSubjectClaimWithAlteredApplicationConfigs(Map<String, Object> inputClaims,
+                                                              Object authorizedUser,
+                                                              boolean appendTenantDomain,
+                                                              boolean appendUserStoreDomain,
+                                                              String expectedSubjectValue) throws Exception {
+
+        try {
+            AuthenticatedUser authzUser = (AuthenticatedUser) authorizedUser;
+            prepareForSubjectClaimTest(authzUser, inputClaims, !appendTenantDomain, !appendUserStoreDomain);
+            authzUser.setAuthenticatedSubjectIdentifier(expectedSubjectValue,
+                    applicationManagementService.getServiceProviderByClientId(CLIENT_ID,
+                            IdentityApplicationConstants.OAuth2.NAME, SUPER_TENANT_DOMAIN_NAME));
 
             when(userInfoJSONResponseBuilder.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
                     .thenReturn(inputClaims);
