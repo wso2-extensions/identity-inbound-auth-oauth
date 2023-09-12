@@ -311,7 +311,6 @@ public class OAuthServerConfiguration {
     private int deviceCodePollingInterval = 5000;
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     private String deviceAuthzEPUrl = null;
-    private String pushedAuthorizationRequestEndpoint = null;
     private boolean tlsClientCertificateBoundAccessTokens = false;
     private List<String> userInfoJWTSignatureAlgorithms = new ArrayList<>();
     private List<String> supportedTokenEndpointAuthMethods = new ArrayList<>();
@@ -3233,12 +3232,6 @@ public class OAuthServerConfiguration {
             }
 
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
-                    ConfigElements.PUSHED_AUTHORIZATION_REQUEST_ENDPOINT)) != null) {
-                pushedAuthorizationRequestEndpoint = openIDConnectConfigElem.getFirstChildWithName(
-                        getQNameWithIdentityNS(ConfigElements.PUSHED_AUTHORIZATION_REQUEST_ENDPOINT)).getText().trim();
-            }
-
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                     ConfigElements.TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN)) != null) {
                 tlsClientCertificateBoundAccessTokens = Boolean.parseBoolean(
                         openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
@@ -3565,10 +3558,6 @@ public class OAuthServerConfiguration {
     public void setGlobalRbacScopeIssuerEnabled(boolean globalRbacScopeIssuerEnabled) {
 
         this.globalRbacScopeIssuerEnabled = globalRbacScopeIssuerEnabled;
-    }
-
-    public String getPushedAuthorizationRequestEndpoint() {
-        return pushedAuthorizationRequestEndpoint;
     }
 
     public boolean isTlsClientCertificateBoundAccessTokens() {
@@ -3910,7 +3899,6 @@ public class OAuthServerConfiguration {
         private static final String SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT =
                 "SkipOIDCClaimsForClientCredentialGrant";
 
-        private static final String PUSHED_AUTHORIZATION_REQUEST_ENDPOINT = "PushedAuthorizationRequestEndpoint";
         private static final String TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN = "TLSClientCertificateBoundAccessTokens";
         private static final String SUPPORTED_TOKEN_ENDPOINT_AUTH_METHODS = "SupportedTokenEndpointAuthMethods";
         private static final String SUPPORTED_TOKEN_ENDPOINT_AUTH_METHOD = "SupportedTokenEndpointAuthMethod";

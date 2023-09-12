@@ -159,9 +159,7 @@ public class ProviderConfigBuilder {
             providerConfig.setTokenEndpointAuthSigningAlgValuesSupported(supportedTokenEndpointSigningAlgorithms
                     .toArray(new String[supportedUserinfoSigningAlgValues.size()]));
         }
-        
-        providerConfig.setPushedAuthorizationRequestEndpoint(OAuthServerConfiguration.getInstance()
-                .getPushedAuthorizationRequestEndpoint());
+
         providerConfig.setTlsClientCertificateBoundAccessTokens(OAuthServerConfiguration.getInstance()
                 .isTlsClientCertificateBoundAccessTokens());
         return providerConfig;

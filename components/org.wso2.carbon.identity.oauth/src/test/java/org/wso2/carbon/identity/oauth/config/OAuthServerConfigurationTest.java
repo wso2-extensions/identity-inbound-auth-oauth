@@ -430,12 +430,6 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
         Assert.assertFalse(OAuthServerConfiguration.getInstance()
                 .isAccessTokenPartitioningEnabled());
     }
-    @Test
-    public void testGetPushedAuthorizationRequestEndpoint() throws Exception {
-
-        Assert.assertEquals(OAuthServerConfiguration.getInstance().getPushedAuthorizationRequestEndpoint(),
-                "https://iam:9446/api/openbanking/push-authorization/pa");
-    }
 
     @Test
     public void testIsTlsClientCertificateBoundAccessTokens() throws Exception {
