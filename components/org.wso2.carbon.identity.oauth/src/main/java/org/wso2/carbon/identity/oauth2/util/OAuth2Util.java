@@ -4717,7 +4717,7 @@ public class OAuth2Util {
 
         return externalConsentPageUrl;
     }
-  
+
     /**
      * Check whether the application should be FAPI conformant.
      *
