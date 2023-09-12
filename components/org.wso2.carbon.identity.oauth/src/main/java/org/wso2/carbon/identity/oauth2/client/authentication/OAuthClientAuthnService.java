@@ -77,7 +77,7 @@ public class OAuthClientAuthnService {
         OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
         try {
             String clientId = extractClientId(request, bodyContentParams);
-            if (!StringUtils.isBlank(clientId) && Boolean.parseBoolean(isFapiApplication(clientId))) {
+            if (!StringUtils.isBlank(clientId) && OAuth2Util.isFapiConformantApp(clientId)) {
                 if (!isMTLSEnforced(request)) {
                     setErrorToContext(OAuth2ErrorCodes.INVALID_REQUEST, "Transport certificate not passed " +
                             "through the request or the certificate is not valid", oAuthClientAuthnContext);
@@ -89,7 +89,7 @@ public class OAuthClientAuthnService {
                     return oAuthClientAuthnContext;
                 }
             }
-        } catch (OAuthClientAuthnException e) {
+        } catch (IdentityOAuth2Exception e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while processing the request to validate the client authentication method");
             }
@@ -372,33 +372,6 @@ public class OAuthClientAuthnService {
                     OAuth2ErrorCodes.INVALID_REQUEST);
         }
         return OAuthConstants.NOT_APPLICABLE;
-    }
-
-    /**
-     * Check whether the application should support FAPI.
-     *
-     * @param clientId       Client ID of the application.
-     * @return Whether the application should support FAPI.
-     * @throws OAuthClientAuthnException
-     */
-    private String isFapiApplication(String clientId) throws OAuthClientAuthnException {
-
-        String isFapiApp = "IsFAPIApp";
-        try {
-            ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
-            if (StringUtils.isEmpty(serviceProvider.getCertificateContent())) {
-                ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
-                for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
-                    if (isFapiApp.equals(serviceProviderProperty.getName())) {
-                        return serviceProviderProperty.getValue();
-                    }
-                }
-            }
-        } catch (IdentityOAuth2Exception e) {
-            throw new OAuthClientAuthnException("Token signing algorithm not registered",
-                    OAuth2ErrorCodes.INVALID_REQUEST);
-        }
-        return null;
     }
 
     /**

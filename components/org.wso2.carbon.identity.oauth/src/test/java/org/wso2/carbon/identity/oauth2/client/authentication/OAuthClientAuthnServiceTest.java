@@ -186,12 +186,7 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
         HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
         setHeaders(httpServletRequest, headers);
         when(httpServletRequest.getParameter(OAuth.OAUTH_CLIENT_ID)).thenReturn(CLIENT_ID);
-        ServiceProvider serviceProvider = new ServiceProvider();
-        ServiceProviderProperty fapiAppSpProperty = new ServiceProviderProperty();
-        fapiAppSpProperty.setName("IsFAPIApp");
-        fapiAppSpProperty.setValue("false");
-        serviceProvider.setSpProperties(new ServiceProviderProperty[]{fapiAppSpProperty});
-        PowerMockito.when(OAuth2Util.getServiceProvider(Mockito.anyString())).thenReturn(serviceProvider);
+        PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(false);
         OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService.authenticateClient
                 (httpServletRequest, bodyParams);
         assertEquals(oAuthClientAuthnContext.isAuthenticated(), isAuthenticated);
@@ -281,10 +276,11 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
         authMethodSpProperty.setName(OAuthConstants.TOKEN_ENDPOINT_AUTH_METHOD);
         authMethodSpProperty.setValue(authMethod);
         ServiceProviderProperty fapiAppSpProperty = new ServiceProviderProperty();
-        fapiAppSpProperty.setName("IsFAPIApp");
+        fapiAppSpProperty.setName(OAuthConstants.IS_FAPI_CONFORMANT_APP);
         fapiAppSpProperty.setValue("true");
         serviceProvider.setSpProperties(new ServiceProviderProperty[]{authMethodSpProperty, fapiAppSpProperty});
         PowerMockito.when(OAuth2Util.getServiceProvider(Mockito.anyString())).thenReturn(serviceProvider);
+        PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(true);
         OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService.authenticateClient
                 (httpServletRequest, bodyParams);
         assertEquals(oAuthClientAuthnContext.isAuthenticated(), isAuthenticated);
