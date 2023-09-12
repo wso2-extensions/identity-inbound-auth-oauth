@@ -126,7 +126,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         AuthenticatedUser authorizedUser = tokenReqMsgCtxt.getAuthorizedUser();
-        String subjectClaim = getSubjectClaim(tokenReqMsgCtxt, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
+        String userId = authorizedUser.getAuthenticatedSubjectIdentifier();
+        String subjectClaim = OIDCClaimUtil.getSubjectClaim(clientId, userId, tokenRespDTO.getCallbackURI());
 
         String nonceValue = null;
         String idpSessionKey = null;
@@ -236,8 +237,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         // Get subject from Authenticated Subject Identifier
         AuthenticatedUser authorizedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
-        String subject =
-                getSubjectClaim(authzReqMessageContext, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
+        String userId = authorizedUser.getAuthenticatedSubjectIdentifier();
+        String subject = OIDCClaimUtil.getSubjectClaim(clientId, userId,
+                authzReqMessageContext.getAuthorizationReqDTO().getCallbackUrl());
 
         String nonceValue = authzReqMessageContext.getAuthorizationReqDTO().getNonce();
         String acrValue = authzReqMessageContext.getAuthorizationReqDTO().getSelectedAcr();
@@ -322,24 +324,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         } else {
             return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
         }
-    }
-
-    protected String getSubjectClaim(OAuthTokenReqMessageContext tokenReqMessageContext,
-                                     OAuth2AccessTokenRespDTO tokenRespDTO,
-                                     String clientId,
-                                     String spTenantDomain,
-                                     AuthenticatedUser authorizedUser) throws IdentityOAuth2Exception {
-
-        return authorizedUser.getAuthenticatedSubjectIdentifier();
-    }
-
-    protected String getSubjectClaim(OAuthAuthzReqMessageContext authzReqMessageContext,
-                                     OAuth2AuthorizeRespDTO authorizeRespDTO,
-                                     String clientId,
-                                     String spTenantDomain,
-                                     AuthenticatedUser authorizedUser) throws IdentityOAuth2Exception {
-
-        return authorizedUser.getAuthenticatedSubjectIdentifier();
     }
 
     private String buildDebugMessage(String issuer, String subject, String nonceValue, long idTokenLifeTimeInMillis,

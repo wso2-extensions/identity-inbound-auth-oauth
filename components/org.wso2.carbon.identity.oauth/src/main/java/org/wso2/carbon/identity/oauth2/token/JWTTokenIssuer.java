@@ -51,6 +51,7 @@ import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaim
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
+import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 
 import java.security.Key;
 import java.security.interfaces.RSAPrivateKey;
@@ -475,7 +476,15 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
-        String sub = getSubjectClaim(consumerKey, spTenantDomain, authenticatedUser);
+        String userId = authenticatedUser.getAuthenticatedSubjectIdentifier();
+
+        String sub;
+        if (checkPPIDEnabledForAccessTokens()) {
+            // PPID sub claim is returned only if pairwise subject identifier for access tokens is enabled.
+            sub = OIDCClaimUtil.getSubjectClaim(consumerKey, userId, oAuthAppDO.getCallbackUrl());
+        } else {
+            sub = getSubjectClaim(consumerKey, spTenantDomain, authenticatedUser);
+        }
 
         // Set the default claims.
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
@@ -841,5 +850,15 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSet = jwtClaimsSetBuilder.build();
         }
         return jwtClaimsSet;
+    }
+
+    /**
+     * Check whether PPID is enabled for access token response.
+     *
+     * @return true if PPID is enabled for access token response.
+     */
+    public static boolean checkPPIDEnabledForAccessTokens() {
+
+        return OAuthServerConfiguration.getInstance().isPPIDEnabledForAccessTokens();
     }
 }

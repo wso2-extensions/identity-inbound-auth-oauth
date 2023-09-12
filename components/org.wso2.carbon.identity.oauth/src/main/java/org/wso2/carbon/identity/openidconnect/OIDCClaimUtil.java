@@ -24,20 +24,27 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.RoleMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants.SubjectType;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang.ArrayUtils.isNotEmpty;
@@ -46,6 +53,8 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
         APPLICATION_DOMAIN;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.InternalRoleDomains.
         WORKFLOW_DOMAIN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SECTOR_IDENTIFIER_URI;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SUBJECT_TYPE;
 
 /**
  * Utility to handle OIDC Claim related functionality.
@@ -269,5 +278,97 @@ public class OIDCClaimUtil {
     private static boolean isUserConsentRequiredForClaims(String grantType) {
 
         return OAuthServerConfiguration.getInstance().isUserConsentRequiredForClaims(grantType);
+    }
+
+    /**
+     * Get the application's preferred subject type.
+     *
+     * @param clientId client id
+     * @return subject type
+     */
+    private static SubjectType getSubjectType(String clientId) throws IdentityOAuth2Exception {
+
+        ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
+        ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
+        try {
+            for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
+                if (SUBJECT_TYPE.equals(serviceProviderProperty.getName())) {
+                    return SubjectType.valueOf(serviceProviderProperty.getValue());
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            // return default subject type if an incorrect value is configured.
+            return SubjectType.PUBLIC;
+        }
+        // return default subject type if the property is not configured.
+        return SubjectType.PUBLIC;
+    }
+
+    /**
+     * Get the subject claim for the given user. If pairwise subject type is opted, then a PPID will be returned,
+     * otherwise, the authenticated user's username will be returned.
+     *
+     * @param clientId                       client id
+     * @param authenticatedSubjectIdentifier authenticated subject identifier
+     * @param callBackURI                    callback uri
+     * @return sub claim
+     * @throws IdentityOAuth2Exception when an error occurred while getting the service provider properties or user id
+     */
+    public static String getSubjectClaim(String clientId, String authenticatedSubjectIdentifier, String callBackURI)
+            throws IdentityOAuth2Exception {
+
+        if (SubjectType.PAIRWISE.equals(getSubjectType(clientId))) {
+            String sectorIdentifierUri = getSectorIdentifierUri(clientId);
+            return getPairwiseSubjectIdentifier(sectorIdentifierUri, authenticatedSubjectIdentifier, callBackURI);
+        }
+        return authenticatedSubjectIdentifier;
+    }
+
+    /**
+     * Get the sector identifier URI from the service provider properties.
+     *
+     * @param clientId client id
+     * @return sector identifier URI
+     * @throws IdentityOAuth2Exception when an error occurred while getting the service provider properties
+     */
+    private static String getSectorIdentifierUri(String clientId) throws IdentityOAuth2Exception {
+
+        ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
+        ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
+        for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
+            if (SECTOR_IDENTIFIER_URI.equals(serviceProviderProperty.getName())) {
+                return serviceProviderProperty.getValue();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Calculate pairwise subject identifier.
+     *
+     * @param sectorIdentifierUri sector identifier URI
+     * @param userId              user id
+     * @param callBackURI         callback URI
+     * @return pairwise subject identifier
+     * @throws IdentityOAuth2Exception if required values are not present
+     */
+    private static String getPairwiseSubjectIdentifier(String sectorIdentifierUri, String userId, String callBackURI)
+            throws IdentityOAuth2Exception {
+
+        URI uri = StringUtils.isNotBlank(sectorIdentifierUri) ? URI.create(sectorIdentifierUri) :
+                StringUtils.isNotBlank(callBackURI) ? URI.create(callBackURI) : null;
+        String hostname;
+        if (uri != null) {
+            hostname = uri.getHost();
+        } else {
+            throw new IdentityOAuth2Exception("Invalid sector identifier URI or callback URI.");
+        }
+
+        if (StringUtils.isBlank(userId)) {
+            throw new IdentityOAuth2Exception("Invalid user id.");
+        }
+
+        String seed = hostname.concat(userId);
+        return UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8)).toString();
     }
 }

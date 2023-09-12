@@ -68,7 +68,16 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         Map<String, Object> filteredUserClaims = filterOIDCClaims(tokenResponse, clientId, spTenantDomain, userClaims);
 
         // Handle subject claim.
-        String subjectClaim = getSubjectClaim(userClaims, clientId, spTenantDomain, tokenResponse);
+        String subjectClaim;
+        AuthenticatedUser authenticatedUser = getAuthenticatedUser(OAuth2Util.getAccessTokenIdentifier(tokenResponse));
+        String userId = authenticatedUser.getAuthenticatedSubjectIdentifier();
+        String callbackUri = getCallbackUrl(clientId);
+        try {
+            subjectClaim = OIDCClaimUtil.getSubjectClaim(clientId, userId, callbackUri);
+        } catch (IdentityOAuth2Exception e) {
+            throw new UserInfoEndpointException("Error while getting subject claim for client_id: " + clientId +
+                    " of tenantDomain: " + spTenantDomain, e);
+        }
         filteredUserClaims.put(OAuth2Util.SUB, subjectClaim);
 
         return buildResponse(tokenResponse, spTenantDomain, filteredUserClaims);
@@ -314,5 +323,16 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
             }
         }
         return new ArrayList<>();
+    }
+
+    private String getCallbackUrl(String clientId) throws UserInfoEndpointException {
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new UserInfoEndpointException("Error while retrieving OAuth app information for clientId: "
+                    + clientId);
+        }
+        return oAuthAppDO.getCallbackUrl();
     }
 }
