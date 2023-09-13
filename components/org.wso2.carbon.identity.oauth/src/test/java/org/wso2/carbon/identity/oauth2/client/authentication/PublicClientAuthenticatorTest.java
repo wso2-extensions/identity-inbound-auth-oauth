@@ -99,12 +99,11 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
      */
     @Test(dataProvider = "testCanAuthenticateData")
     public void testCanAuthenticate(String headerName, String headerValue, HashMap<String, List> bodyContent,
-                                    boolean publicClient, boolean canHandle) throws Exception {
+                                    boolean publicClient, boolean canHandle,
+                                    List<String> publicClientSupportedGrantTypes) throws Exception {
 
         PowerMockito.mockStatic(OAuth2Util.class);
 
-        List<String> publicClientSupportedGrantTypes = new ArrayList<>();
-        publicClientSupportedGrantTypes.add("custom_grant_type");
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(mockedServerConfig);
         when(mockedServerConfig.getPublicClientSupportedGrantTypesList()).thenReturn(publicClientSupportedGrantTypes);
@@ -128,57 +127,74 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
     @DataProvider(name = "testCanAuthenticateData")
     public Object[][] testCanAuthenticateData() {
 
+        List<String> publicClientSupportedGrantTypes = new ArrayList<>();
+        publicClientSupportedGrantTypes.add("custom_grant_type");
+
         return new Object[][]{
 
                 // Correct Authorization header with valid client id and secret. Also a Public client.
                 {HTTPConstants.HEADER_AUTHORIZATION, ClientAuthUtil.getBase64EncodedBasicAuthHeader(CLIENT_ID,
-                        CLIENT_SECRET, null), new HashMap<String, List>(), true, false},
+                        CLIENT_SECRET, null), new HashMap<String, List>(), true, false,
+                        publicClientSupportedGrantTypes},
+
+                // Correct Authorization header with valid client id and secret. Not a Public client. But no grant type
+                // is allowed for public clients.
+                {HTTPConstants.HEADER_AUTHORIZATION, ClientAuthUtil.getBase64EncodedBasicAuthHeader(CLIENT_ID,
+                        CLIENT_SECRET, null), new HashMap<String, List>(), true, false,
+                        new ArrayList<>()},
 
                 // Simple case correct authorization header with valid client id and secret. Also a Public client.
                 {SIMPLE_CASE_AUTHORIZATION_HEADER, ClientAuthUtil.getBase64EncodedBasicAuthHeader(CLIENT_ID,
-                        CLIENT_SECRET, null), new HashMap<String, List>(), true, false},
+                        CLIENT_SECRET, null), new HashMap<String, List>(), true, false,
+                        publicClientSupportedGrantTypes},
 
                 // Simple case authorization header value without "Basic" prefix. Also a Public client.
                 {SIMPLE_CASE_AUTHORIZATION_HEADER, "Some value without Basic part", new HashMap<String, List>(),
-                        true, false},
+                        true, false, publicClientSupportedGrantTypes},
 
                 // Simple case authorization header value with "Basic" prefix. Also a Public client.
                 {SIMPLE_CASE_AUTHORIZATION_HEADER, "Basic some value with Basic part", new HashMap<String, List>(),
-                        true, false},
+                        true, false, publicClientSupportedGrantTypes},
 
                 // Simple authorization header with null value. Also a Public client.
-                {SIMPLE_CASE_AUTHORIZATION_HEADER, null, new HashMap<String, List>(), true, false},
+                {SIMPLE_CASE_AUTHORIZATION_HEADER, null, new HashMap<String, List>(), true, false,
+                        publicClientSupportedGrantTypes},
 
                 // Simple authorization header but no value. But has client id and secret in body. Also a Public client.
                 {SIMPLE_CASE_AUTHORIZATION_HEADER, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID,
-                        CLIENT_SECRET), true, true},
+                        CLIENT_SECRET), true, true, publicClientSupportedGrantTypes},
 
                 // No authorization header. but client id and secret present in the body and a public client.
-                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID, CLIENT_SECRET), true, true},
+                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID, CLIENT_SECRET), true, true,
+                        publicClientSupportedGrantTypes},
 
                 // No authorization header. but client id and secret present in the body and not a public client.
-                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID, CLIENT_SECRET), false, false},
+                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID, CLIENT_SECRET), false, false,
+                        publicClientSupportedGrantTypes},
 
                 // No authorization header. Only client secret is present in body and a public client.
                 {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(null, CLIENT_SECRET),
-                        true, false},
+                        true, false, publicClientSupportedGrantTypes},
 
                 // No authorization header. Only client secret is present in body and not a public client.
                 {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(null, CLIENT_SECRET),
-                        false, false},
+                        false, false, publicClientSupportedGrantTypes},
 
                 // No authorization header. Only client id is present in the body and a public client.
-                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID, null), true, true},
+                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID, null), true, true,
+                        publicClientSupportedGrantTypes},
 
                 // No authorization header. Only client id is present in the body and not a public client.
-                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID, null), false, false},
+                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(CLIENT_ID, null), false, false,
+                        publicClientSupportedGrantTypes},
 
                 // Neither authorization header nor body parameters present and a public client.
                 {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(null, null),
-                        true, false},
+                        true, false, publicClientSupportedGrantTypes},
 
                 // Neither authorization header nor body parameters present and not a public client.
-                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(null, null), false, false},
+                {null, null, ClientAuthUtil.getBodyContentWithClientAndSecret(null, null), false, false,
+                        publicClientSupportedGrantTypes},
         };
     }
 
