@@ -30,8 +30,10 @@ import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultTokenValidationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenValidationProcessor;
 import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
@@ -101,6 +103,7 @@ public class OAuth2ServiceComponentHolder {
     private boolean isOrganizationManagementEnabled = false;
     private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
     private OAuth2RevocationProcessor revocationProcessor;
+    private TokenValidationProcessor tokenValidationProcessor;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -711,5 +714,28 @@ public class OAuth2ServiceComponentHolder {
     public void removeAuthorizationRequestBuilder(OAuthAuthorizationRequestBuilder oAuthAuthorizationRequestBuilder) {
 
         oAuthAuthorizationRequestBuilders.remove(oAuthAuthorizationRequestBuilder);
+    }
+
+    /**
+     * Get Token Validation Processor.
+     *
+     * @return TokenValidationProcessor
+     */
+    public TokenValidationProcessor getTokenValidationProcessor() {
+
+        if (tokenValidationProcessor == null) {
+            tokenValidationProcessor = new DefaultTokenValidationProcessor();
+        }
+        return tokenValidationProcessor;
+    }
+
+    /**
+     * Set Token Validation Processor.
+     *
+     * @param tokenValidationProcessor TokenValidationProcessor
+     */
+    public void setTokenValidationProcessor(TokenValidationProcessor tokenValidationProcessor) {
+
+        this.tokenValidationProcessor = tokenValidationProcessor;
     }
 }
