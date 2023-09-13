@@ -24,6 +24,9 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
 
+/**
+ * Default token validation processor with token persistence.
+ */
 public class DefaultTokenValidationProcessor implements TokenValidationProcessor {
 
     @Override
