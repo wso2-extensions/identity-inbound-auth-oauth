@@ -61,6 +61,7 @@ import javax.ws.rs.core.Response;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUEST;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_MODE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthAuthzRequest;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getParAuthService;
@@ -235,15 +236,53 @@ public class OAuth2ParEndpoint {
         try {
             OAuthAuthzRequest oAuthAuthzRequest = getOAuthAuthzRequest(request);
             RequestObject requestObject = validateRequestObject(oAuthAuthzRequest);
+            Map<String, String> oauthParams = overrideRequestObjectParams(request, requestObject);
             if (isFAPIConformantApp(oAuthAuthzRequest.getClientId())) {
-                EndpointUtil.validateFAPIResponseMode(oAuthAuthzRequest.getResponseType(),
-                        getResponseMode(request, requestObject));
+                EndpointUtil.validateFAPIResponseMode(oauthParams.get(RESPONSE_TYPE), oauthParams.get(RESPONSE_MODE));
             }
         } catch (OAuthProblemException e) {
             throw new ParClientException(e.getError(), e.getDescription(), e);
         } catch (OAuthSystemException e) {
             throw new ParCoreException(OAuth2ErrorCodes.SERVER_ERROR, e.getMessage(), e);
         }
+    }
+
+    /**
+     * Return a map of parameters needed for validations overriding the values from the request object if present.
+     *
+     * @param request       Http servlet request
+     * @param requestObject request object
+     * @return map of parameters
+     */
+    private Map<String, String> overrideRequestObjectParams(HttpServletRequest request, RequestObject requestObject) {
+
+        Map<String, String> oauthParams = new HashMap<>();
+        oauthParams.put(RESPONSE_MODE, getParameterValue(request, requestObject, RESPONSE_MODE));
+        oauthParams.put(RESPONSE_TYPE, getParameterValue(request, requestObject, RESPONSE_TYPE));
+        oauthParams.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE,
+                getParameterValue(request, requestObject, OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE));
+        oauthParams.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD,
+                getParameterValue(request, requestObject, OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD));
+        return oauthParams;
+    }
+
+    /**
+     * Get the parameter value from the PAR request or from the request object if present. Request object parameter
+     * will be prioritized.
+     *
+     * @param request       Http servlet request
+     * @param requestObject request object
+     * @param parameter     parameter name
+     * @return parameter value
+     */
+    private String getParameterValue(HttpServletRequest request, RequestObject requestObject, String parameter) {
+
+        String parameterValue = request.getParameter(parameter);
+        if (requestObject != null && requestObject.getClaimsSet() != null &&
+                StringUtils.isNotBlank(requestObject.getClaimValue(parameter))) {
+            parameterValue = requestObject.getClaimValue(parameter);
+        }
+        return parameterValue;
     }
 
     private void validateInputParameters(HttpServletRequest request) throws ParClientException {
@@ -289,14 +328,5 @@ public class OAuth2ParEndpoint {
         } catch (IdentityOAuth2Exception e) {
             throw new ParCoreException(OAuth2ErrorCodes.SERVER_ERROR, e.getMessage(), e);
         }
-    }
-
-    private String getResponseMode(HttpServletRequest request, RequestObject requestObject) {
-
-        String responseMode = request.getParameter(RESPONSE_MODE);
-        if (requestObject != null && StringUtils.isNotBlank(requestObject.getClaimValue(RESPONSE_MODE))) {
-            responseMode = requestObject.getClaimValue(RESPONSE_MODE);
-        }
-        return responseMode;
     }
 }

@@ -1904,6 +1904,8 @@ public class EndpointUtil {
 
     /**
      * Validate the response mode against the response type as per FAPI spec.
+     * Response mode required to be jwt if code response type is used.
+     * <a href="https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server">5.2.2-2.2</a>
      *
      * @param responseType response mode
      * @param responseMode response type
