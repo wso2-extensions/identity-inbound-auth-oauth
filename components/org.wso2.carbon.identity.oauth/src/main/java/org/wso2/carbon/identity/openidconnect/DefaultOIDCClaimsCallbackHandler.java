@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -862,9 +863,10 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
      *
      * @param tokenReqMessageContext       Token request message context.
      * @param userClaimsInOIDCDialect      Map of the user claims in the OIDC dialect.
+     * @throws IdentityOAuth2Exception     An exception is thrown if the cert could not be obtained from the request.
      */
     private void addCnfClaimToOIDCDialect(OAuthTokenReqMessageContext tokenReqMessageContext,
-                                          Map<String, Object> userClaimsInOIDCDialect) {
+                                       Map<String, Object> userClaimsInOIDCDialect) throws IdentityOAuth2Exception {
         Base64URL certThumbprint;
         X509Certificate certificate;
         String headerName = Optional.ofNullable(IdentityUtil.getProperty(OAuthConstants.MTLS_AUTH_HEADER))
@@ -881,7 +883,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                     certThumbprint = X509CertUtils.computeSHA256Thumbprint(certificate);
                     userClaimsInOIDCDialect.put("cnf", Collections.singletonMap("x5t#S256", certThumbprint));
                 } catch (CertificateException e) {
-                    log.error("Error while extracting the certificate", e);
+                    throw new IdentityOAuth2Exception("Error occurred while extracting the certificate", e);
                 }
             }
         }

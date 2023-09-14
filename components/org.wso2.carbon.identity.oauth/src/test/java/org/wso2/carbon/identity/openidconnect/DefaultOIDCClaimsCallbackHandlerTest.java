@@ -1199,7 +1199,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(true);
 
         String decodedContent = StringUtils.trim(CERTIFICATE_CONTENT);
-        // Remove Certificate Headers.
         byte[] decoded = java.util.Base64.getDecoder().decode(StringUtils.trim(decodedContent
                 .replaceAll(OAuthConstants.BEGIN_CERT, StringUtils.EMPTY)
                 .replaceAll(OAuthConstants.END_CERT, StringUtils.EMPTY)
