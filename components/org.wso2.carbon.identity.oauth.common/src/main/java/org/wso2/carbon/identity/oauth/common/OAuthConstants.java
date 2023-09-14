@@ -1,17 +1,17 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013, WSO2 LLC. (https://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -182,8 +182,11 @@ public final class OAuthConstants {
             "OAuth.JWT.RenewTokenWithoutRevokingExisting.AllowedGrantTypes.AllowedGrantType";
     public static final String RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG =
             "OAuth.JWT.RenewTokenWithoutRevokingExisting.Enable";
+    public static final String OAUTH_BUILD_ISSUER_WITH_HOSTNAME = "OAuth.BuildIssuerWithHostname";
+
     public static final String REQUEST_BINDING_TYPE = "request";
     public static final String ORG_ID = "org_id";
+    public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
 
     private OAuthConstants() {
 
@@ -308,6 +311,7 @@ public final class OAuthConstants {
         public static final String OAUTH20_ACCESS_TOKEN_URL = "/token";
         public static final String OAUTH20_AUTHORIZE_TOKEN_URL = "/authorize";
         public static final String OAUTH2_AUTHZ_EP_URL = "oauth2/authorize";
+        public static final String OAUTH2_PAR_EP_URL = "oauth2/par";
         public static final String OAUTH2_TOKEN_EP_URL = "oauth2/token";
         public static final String OAUTH2_DCR_EP_URL = "/api/identity/oauth2/dcr/v1.1/register";
         public static final String OAUTH2_JWKS_EP_URL = "/oauth2/jwks";
@@ -403,6 +407,24 @@ public final class OAuthConstants {
                     "unsupported_client_authentication_method";
 
             private TokenResponse() {
+
+            }
+        }
+
+        /**
+         * Define Authorization request constants with i18n keys which will be mapped to the error
+         * message in the frontend.
+         */
+        public static class AuthorizationResponsei18nKey {
+
+            public static final String CALLBACK_NOT_MATCH = "callback.not.match";
+            public static final String APPLICATION_NOT_FOUND = "application.not.found";
+            public static final String INVALID_REDIRECT_URI = "invalid.redirect.uri";
+            public static final String INVALID_REQUEST_URI = "par.invalid.request.uri";
+            public static final String CLIENT_IDS_NOT_MATCH = "par.client.id.not.match";
+            public static final String REQUEST_URI_EXPIRED = "par.request.uri.expired";
+
+            private AuthorizationResponsei18nKey() {
 
             }
         }

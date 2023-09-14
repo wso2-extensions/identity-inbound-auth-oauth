@@ -81,10 +81,11 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             }
             LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
                     OAUTH_INBOUND_SERVICE, VALIDATE_INPUT_PARAMS)
-                    .resultMessage("Redirect URI is not present in the authorization request")
+                    .resultMessage("Redirect URI is not present in the authorization request.")
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                     .resultStatus(DiagnosticLog.ResultStatus.FAILED));
-            throw new InvalidOAuthRequestException("Redirect URI is not present in the authorization request",
+            throw new InvalidOAuthRequestException(
+                    OAuthConstants.OAuthError.AuthorizationResponsei18nKey.INVALID_REDIRECT_URI,
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
     }
@@ -248,7 +249,8 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             }
             validationResponseDTO.setValidClient(false);
             validationResponseDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CALLBACK);
-            validationResponseDTO.setErrorMsg("callback.not.match");
+            validationResponseDTO.setErrorMsg(
+                    OAuthConstants.OAuthError.AuthorizationResponsei18nKey.CALLBACK_NOT_MATCH);
         }
         return validationResponseDTO;
     }

@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorC
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -120,6 +121,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IS_FAPI_CONFORMANT_APP;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 
@@ -1165,6 +1167,14 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOAuth2AuthzEPUrl).get())
                 .thenReturn(serverUrl);
         assertEquals(OAuth2Util.OAuthURL.getOAuth2AuthzEPUrl(), oauthUrl);
+    }
+
+    @Test(dataProvider = "OAuthURLData")
+    public void testGetOAuth2ParEPUrl(String configUrl, String serverUrl, String oauthUrl) throws Exception {
+        when(oauthServerConfigurationMock.getOAuth2ParEPUrl()).thenReturn(configUrl);
+        when(((Supplier<String>) OAuthServerConfiguration.getInstance()::getOAuth2ParEPUrl).get())
+                .thenReturn(serverUrl);
+        assertEquals(OAuth2Util.OAuthURL.getOAuth2ParEPUrl(), oauthUrl);
     }
 
     @Test(dataProvider = "OAuthURLData")
@@ -2314,5 +2324,31 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         String rsa256Thumbprint = "50:f0:ed:a5:89:8a:f3:a1:15:c2:c5:08:19:49:56:e7:e1:14:fe:23:47:43:e9:d2:2f:70:9a:" +
                 "e7:cb:80:1b:bd";
         assertEquals(thumbPrint, Base64URL.encode(rsa256Thumbprint.replaceAll(":", "")).toString());
+    }
+
+    @DataProvider(name = "FAPI status data provider")
+    public Object[][] getFapiStatus() {
+
+        return new Object[][]{
+                {true},
+                {false}
+        };
+    }
+
+    @Test(dataProvider = "FAPI status data provider")
+    public void testIsFapiConformantApp(boolean isFapiConformant) throws Exception {
+
+        setCache();
+        ServiceProvider serviceProvider = new ServiceProvider();
+        ServiceProviderProperty fapiAppSpProperty = new ServiceProviderProperty();
+        fapiAppSpProperty.setName(IS_FAPI_CONFORMANT_APP);
+        fapiAppSpProperty.setValue(String.valueOf(isFapiConformant));
+        serviceProvider.setSpProperties(new ServiceProviderProperty[]{fapiAppSpProperty});
+        ApplicationManagementService applicationManagementService = mock(ApplicationManagementService.class);
+        OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
+        when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
+                .thenReturn(serviceProvider);
+        Assert.assertEquals(OAuth2Util.isFapiConformantApp(clientId), isFapiConformant);
+
     }
 }

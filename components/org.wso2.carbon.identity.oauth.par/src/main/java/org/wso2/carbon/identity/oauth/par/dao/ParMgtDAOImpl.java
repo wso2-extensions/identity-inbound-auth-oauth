@@ -54,6 +54,7 @@ public class ParMgtDAOImpl implements ParMgtDAO {
                 prepStmt.setString(4, getSerializedParams(parameters));
 
                 prepStmt.execute();
+                IdentityDatabaseUtil.commitTransaction(connection);
             }
         } catch (SQLException e) {
             throw new ParCoreException("Error occurred in persisting PAR request.", e);

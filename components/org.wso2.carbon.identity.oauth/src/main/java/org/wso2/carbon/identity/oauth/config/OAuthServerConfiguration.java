@@ -123,6 +123,7 @@ public class OAuthServerConfiguration {
     private static String oauth1AuthorizeUrl = null;
     private static String oauth1AccessTokenUrl = null;
     private static String oauth2AuthzEPUrl = null;
+    private static String oauth2ParEPUrl = null;
     private static String oauth2TokenEPUrl = null;
     private static String oauth2UserInfoEPUrl = null;
     private static String oauth2RevocationEPUrl = null;
@@ -656,6 +657,11 @@ public class OAuthServerConfiguration {
 
     public String getOAuth2AuthzEPUrl() {
         return oauth2AuthzEPUrl;
+    }
+
+    public String getOAuth2ParEPUrl() {
+
+        return oauth2ParEPUrl;
     }
 
     public String getOAuth2TokenEPUrl() {
@@ -2036,6 +2042,13 @@ public class OAuthServerConfiguration {
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2AuthzEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.OAUTH2_PAR_EP_URL));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2ParEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
         elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
@@ -3540,6 +3553,7 @@ public class OAuthServerConfiguration {
         public static final String OAUTH1_AUTHORIZE_URL = "OAuth1AuthorizeUrl";
         public static final String OAUTH1_ACCESS_TOKEN_URL = "OAuth1AccessTokenUrl";
         public static final String OAUTH2_AUTHZ_EP_URL = "OAuth2AuthzEPUrl";
+        public static final String OAUTH2_PAR_EP_URL = "OAuth2ParEPUrl";
         public static final String OAUTH2_TOKEN_EP_URL = "OAuth2TokenEPUrl";
         public static final String OAUTH2_USERINFO_EP_URL = "OAuth2UserInfoEPUrl";
         public static final String OAUTH2_REVOCATION_EP_URL = "OAuth2RevokeEPUrl";

@@ -2539,7 +2539,8 @@ public class OAuth2AuthzEndpoint {
                         .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                         .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
-            throw new InvalidRequestException("Redirect URI is not present in the authorization request.",
+            throw new InvalidRequestException(
+                    OAuthConstants.OAuthError.AuthorizationResponsei18nKey.INVALID_REDIRECT_URI,
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
         persistRequestObject(parameters, requestObject);
