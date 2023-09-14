@@ -166,7 +166,7 @@ public class ProviderConfigBuilder {
             } catch (IdentityOAuth2Exception e) {
                 throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
             }
-            providerConfig.setTokenEndpointAuthSigningAlgValuesSupported(supportedUserinfoSigningAlgValuesArray);
+            providerConfig.setTokenEndpointAuthSigningAlgValuesSupported(supportedTokenEndpointSigningAlgorithmsArray);
         }
 
         providerConfig.setTlsClientCertificateBoundAccessTokens(OAuthServerConfiguration.getInstance()
