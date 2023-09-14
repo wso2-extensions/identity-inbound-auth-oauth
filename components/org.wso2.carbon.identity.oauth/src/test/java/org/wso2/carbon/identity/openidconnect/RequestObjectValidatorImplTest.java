@@ -33,6 +33,7 @@ import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.central.log.mgt.internal.CentralLogMgtServiceComponentHolder;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -129,13 +130,16 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         String jsonWebEncryption2 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2001", audience,
                 JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims1);
         return new Object[][]{
-                {jsonWebToken1, true, false, true, true, "Valid Request Object, signed not encrypted."},
-                {jsonWebToken2, false, false, true, true, "Valid Request Object, not xsigned not encrypted."},
-                {jsonWebToken3, false, false, true, false, "InValid Request Object, expired, not signed not " +
+                {jsonWebToken1, true, false, true, true, false, "Valid Request Object, signed not encrypted."},
+                {jsonWebToken2, false, false, true, true, false, "Valid Request Object, not xsigned not encrypted."},
+                {jsonWebToken3, false, false, true, false, false, "InValid Request Object, expired, not signed not " +
                         "encrypted."},
-                {jsonWebToken4, true, false, true, false, "InValid Request Object, expired, signed not encrypted."},
-                {jsonWebEncryption1, false, true, true, true, "Valid Request Object, signed and encrypted."},
-                {jsonWebEncryption2, true, true, true, true, "Valid Request Object, signed and encrypted."}
+                {jsonWebToken4, true, false, true, false, false, "InValid Request Object, expired, signed not " +
+                        "encrypted."},
+                {jsonWebEncryption1, false, true, true, true, false, "Valid Request Object, signed and encrypted."},
+                {jsonWebEncryption2, true, true, true, true, false, "Valid Request Object, signed and encrypted."},
+                {jsonWebEncryption2, true, true, false, true, true, "InValid FAPI Request Object with an unpermitted " +
+                        "signing algorithm, signed and encrypted."}
         };
     }
 
@@ -145,6 +149,7 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
                                        boolean isEncrypted,
                                        boolean validSignature,
                                        boolean validRequestObj,
+                                       boolean isFAPITest,
                                        String errorMsg) throws Exception {
 
         OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
@@ -175,7 +180,8 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         // Mock OAuth2Util returning public cert of the service provider
         when(OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1, SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(clientKeyStore.getCertificate(CLIENT_PUBLIC_CERT_ALIAS));
-        when(OAuth2Util.isFapiConformantApp(anyString())).thenReturn(false);
+        when(OAuth2Util.isFapiConformantApp(anyString())).thenReturn(isFAPITest);
+        when(OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
 
         RequestObjectValidatorImpl requestObjectValidator = PowerMockito.spy(new RequestObjectValidatorImpl());
 
@@ -199,8 +205,14 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
                 "Request object isSigned: " + isSigned);
 
         if (isSigned) {
-            Assert.assertEquals(requestObjectValidator.validateSignature(requestObject, oAuth2Parameters),
-                    validSignature, errorMsg + "Request Object Signature Validation failed.");
+            boolean isValidSignature;
+            try {
+                isValidSignature = requestObjectValidator.validateSignature(requestObject, oAuth2Parameters);
+            } catch (Exception e) {
+                isValidSignature = false;
+            }
+            Assert.assertEquals(isValidSignature, validSignature,
+                    errorMsg + "Request Object Signature Validation failed.");
         }
 
         boolean validObject;

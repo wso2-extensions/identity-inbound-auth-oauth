@@ -21,10 +21,8 @@ package org.wso2.carbon.identity.oauth;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.SignedJWT;
-import net.minidev.json.JSONObject;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -42,10 +40,12 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.interfaces.RSAPublicKey;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static com.nimbusds.jose.JWSAlgorithm.PS256;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.CLIENT_ID;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.PS;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
 
@@ -81,14 +81,20 @@ public class RequestObjectValidatorUtil {
                 log.debug(message, e);
             }
         }
+        String alg = jwt.getHeader().getAlgorithm().getName();
+        String clientId = oAuth2Parameters.getClientId();
+        if (isFapiConformant(clientId) && !isValidFAPISignatureAlgorithm(clientId, alg)) {
+            throw new RequestObjectException("Request Object signature verification failed. Invalid signature " +
+                    "algorithm.", OAuth2ErrorCodes.INVALID_REQUEST);
+        }
         if (certificate == null) {
             if (log.isDebugEnabled()) {
 
                 log.debug("Public certificate not configured for Service Provider with " +
-                        "client_id: " + oAuth2Parameters.getClientId() + " of tenantDomain: " + oAuth2Parameters
+                        "client_id: " + clientId + " of tenantDomain: " + oAuth2Parameters
                         .getTenantDomain() + ". Fetching the jwks endpoint for validating request object");
             }
-            String jwksUri = getJWKSEndpoint(oAuth2Parameters);
+            String jwksUri = getSpProperty(clientId, Constants.JWKS_URI);
             isVerified = isSignatureVerified(jwt, jwksUri);
         } else {
             if (log.isDebugEnabled()) {
@@ -104,29 +110,31 @@ public class RequestObjectValidatorUtil {
     }
 
     /**
-     * Fetch JWKS endpoint using OAuth2 Parameters.
+     * Get service provider property.
      *
-     * @param oAuth2Parameters oAuth2Parameters
+     * @param clientId     client id
+     * @param propertyName property name
+     * @return property value
+     * @throws RequestObjectException if error occurred while getting the service provider
      */
-    private static String getJWKSEndpoint(OAuth2Parameters oAuth2Parameters) throws RequestObjectException {
+    private static String getSpProperty(String clientId, String propertyName) throws RequestObjectException {
 
-        String jwksUri = StringUtils.EMPTY;
+        String propertyValue = StringUtils.EMPTY;
         ServiceProviderProperty[] spProperties;
         try {
-            spProperties = OAuth2Util.getServiceProvider(oAuth2Parameters.getClientId())
-                    .getSpProperties();
+            spProperties = OAuth2Util.getServiceProvider(clientId).getSpProperties();
         } catch (IdentityOAuth2Exception e) {
-            throw new RequestObjectException("Error while getting the service provider for client ID " +
-                    oAuth2Parameters.getClientId(), OAuth2ErrorCodes.SERVER_ERROR, e);
+            throw new RequestObjectException("Error while getting the service provider for client ID " + clientId,
+                    OAuth2ErrorCodes.SERVER_ERROR, e);
         }
 
         if (spProperties != null) {
             for (ServiceProviderProperty spProperty : spProperties) {
-                if (Constants.JWKS_URI.equals(spProperty.getName())) {
-                    jwksUri = spProperty.getValue();
+                if (propertyName.equals(spProperty.getName())) {
+                    propertyValue = spProperty.getValue();
                     if (log.isDebugEnabled()) {
-                        log.debug("Found jwks endpoint " + jwksUri + " for service provider with client id " +
-                                oAuth2Parameters.getClientId());
+                        log.debug("Found " + propertyName + propertyValue + " for service provider with client id " +
+                                clientId);
                     }
                     break;
                 }
@@ -134,7 +142,7 @@ public class RequestObjectValidatorUtil {
         } else {
             return StringUtils.EMPTY;
         }
-        return jwksUri;
+        return propertyValue;
     }
 
     /**
@@ -151,12 +159,6 @@ public class RequestObjectValidatorUtil {
         if (StringUtils.isNotBlank(jwksUri)) {
             String jwtString = signedJWT.getParsedString();
             String alg = signedJWT.getHeader().getAlgorithm().getName();
-            String clientId = getClientIdFromPayload(signedJWT.getPayload());
-
-            if (isFapiConformant(clientId) && !isValidFAPISignatureAlgorithm(alg)) {
-                return false;
-            }
-
             try {
                 return new JWKSBasedJWTValidator().validateSignature(jwtString, jwksUri, alg, MapUtils.EMPTY_MAP);
             } catch (IdentityOAuth2Exception e) {
@@ -171,32 +173,31 @@ public class RequestObjectValidatorUtil {
     }
 
     /**
-     * Get client id from jwt payload.
-     * @param payload jwt payload.
-     * @return  client id.
-     */
-    private static String getClientIdFromPayload(Payload payload) {
-
-        if (payload != null) {
-            JSONObject payloadJson = payload.toJSONObject();
-            if (payloadJson.containsKey(CLIENT_ID)) {
-                return payloadJson.getAsString(CLIENT_ID);
-            }
-        }
-        return null;
-    }
-
-    /**
      * Validate the signature algorithm according to FAPI specification.
      * According to FAPI, signature algorithm should be PS256 or ES256.
      * <a href="https://openid.net/specs/openid-financial-api-part-2-1_0.html#algorithm-considerations">...</a>
      *
+     * @param clientId  client id
      * @param algorithm signature algorithm
+     * @return is valid signature algorithm
+     * @throws RequestObjectException if an error occurred while getting the service provider
      */
-    private static boolean isValidFAPISignatureAlgorithm(String algorithm) {
+    private static boolean isValidFAPISignatureAlgorithm(String clientId, String algorithm)
+            throws RequestObjectException {
 
-        if (!PS256.getName().equals(algorithm) && !ES256.getName().equals(algorithm)) {
-            log.error("Invalid signature algorithm. Signature algorithm should be PS256 or ES256");
+        String requestObjSignatureAlgorithms = getSpProperty(clientId, Constants.REQUEST_OBJECT_SIGNING_ALG);
+        List<String> allowedAlgorithms;
+        if (StringUtils.isNotEmpty(requestObjSignatureAlgorithms)) {
+            allowedAlgorithms = Arrays.asList(requestObjSignatureAlgorithms.split(" "));
+        } else {
+            allowedAlgorithms = new ArrayList<>();
+            allowedAlgorithms.add(PS256.getName());
+            allowedAlgorithms.add(ES256.getName());
+        }
+
+        if (!allowedAlgorithms.contains(algorithm)) {
+            log.debug("Invalid signature algorithm. Signature algorithm should be one of " +
+                    String.join(", ", allowedAlgorithms));
             return false;
         }
         return true;
@@ -261,12 +262,6 @@ public class RequestObjectValidatorUtil {
         if (log.isDebugEnabled()) {
             log.debug("Signature Algorithm found in the JWT Header: " + alg);
         }
-        String clientId = getClientIdFromPayload(signedJWT.getPayload());
-
-        if (isFapiConformant(clientId) && !isValidFAPISignatureAlgorithm(alg)) {
-            return false;
-        }
-
         if (alg.indexOf(RS) == 0 || alg.indexOf(PS) == 0) {
             // At this point 'x509Certificate' will never be null.
             PublicKey publicKey = x509Certificate.getPublicKey();
@@ -295,14 +290,14 @@ public class RequestObjectValidatorUtil {
         }
     }
 
-    private static boolean isFapiConformant(String clientId) {
+    private static boolean isFapiConformant(String clientId) throws RequestObjectException {
 
         try {
             return OAuth2Util.isFapiConformantApp(clientId);
         } catch (IdentityOAuth2Exception e) {
-            log.debug("Unable to verify whether the service provider is FAPI conformant. Skipping FAPI " +
-                        "specific signature validations.");
+            log.debug("Error while retrieving service provider. Unable to verify whether the service provider is " +
+                    "FAPI conformant.");
+            throw new RequestObjectException("Error while retrieving service provider to check FAPI compliance.", e);
         }
-        return false;
     }
 }
