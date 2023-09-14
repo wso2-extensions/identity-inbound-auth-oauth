@@ -156,8 +156,16 @@ public class ProviderConfigBuilder {
         List<String> supportedTokenEndpointSigningAlgorithms = OAuthServerConfiguration.getInstance()
                 .getSupportedTokenEndpointSigningAlgorithms();
         if (!supportedTokenEndpointSigningAlgorithms.isEmpty()) {
-            providerConfig.setTokenEndpointAuthSigningAlgValuesSupported(supportedTokenEndpointSigningAlgorithms
-                    .toArray(new String[supportedUserinfoSigningAlgValues.size()]));
+            String[] supportedTokenEndpointSigningAlgorithmsArray = new String[supportedTokenEndpointSigningAlgorithms.size()];
+            try {
+                for (int count = 0; count < supportedTokenEndpointSigningAlgorithms.size(); count++) {
+                    supportedTokenEndpointSigningAlgorithmsArray[count] =  String.valueOf(OAuth2Util
+                            .mapSignatureAlgorithmForJWSAlgorithm(supportedTokenEndpointSigningAlgorithms.get(count)));
+                }
+            } catch (IdentityOAuth2Exception e) {
+                throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
+            }
+            providerConfig.setTokenEndpointAuthSigningAlgValuesSupported(supportedUserinfoSigningAlgValuesArray);
         }
 
         providerConfig.setTlsClientCertificateBoundAccessTokens(OAuthServerConfiguration.getInstance()
