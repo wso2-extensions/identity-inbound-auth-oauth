@@ -36,7 +36,6 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
@@ -128,27 +127,11 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
             }
         }
 
-        try {
-            if (OAuth2Util.isFapiConformantApp(requestObject.getClaimValue(Constants.CLIENT_ID))) {
-
-                if (!isValidNbfExp(requestObject)) {
-                    return false;
-                }
-                if (!isParamPresent(requestObject, Constants.SCOPES)) {
-                    throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST,
-                            "Scopes is not present in the request object.");
-                }
-                if (!isParamPresent(requestObject, Constants.NONCE)) {
-                    throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST,
-                            "Nonce is not present in the request object.");
-                }
-                if (!isParamPresent(requestObject, Constants.REDIRECT_URI)) {
-                    throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST,
-                            "Redirect URI is not present in the request object.");
-                }
+        if (RequestObjectValidatorUtil.isFapiConformant(oAuth2Parameters.getClientId())) {
+            checkMandatoryParams(requestObject);
+            if (!isValidNbfExp(requestObject)) {
+                return false;
             }
-        } catch (IdentityOAuth2Exception e) {
-            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, e.getMessage(), e);
         }
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -160,6 +143,17 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
         }
         return true;
+    }
+
+    private void checkMandatoryParams(RequestObject requestObject) throws RequestObjectException {
+
+        String[] mandatoryParams = {Constants.SCOPES, Constants.NONCE, Constants.REDIRECT_URI};
+        for (String param : mandatoryParams) {
+            if (!isParamPresent(requestObject, param)) {
+                throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST,
+                        param + " is not present in the request object.");
+            }
+        }
     }
 
     protected boolean isValidAudience(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws
@@ -201,9 +195,11 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
 
     /**
      * Validate the request object nbf claim and exp claim according to the FAPI specification.
+     * <a href="https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server">...</a>
+     *
      * @param requestObject request object
-     * @return  true if both claims are valid
-     * @throws RequestObjectException
+     * @return true if both claims are valid
+     * @throws RequestObjectException if nbf exp validation fails
      */
     protected boolean isValidNbfExp(RequestObject requestObject) throws RequestObjectException {
 

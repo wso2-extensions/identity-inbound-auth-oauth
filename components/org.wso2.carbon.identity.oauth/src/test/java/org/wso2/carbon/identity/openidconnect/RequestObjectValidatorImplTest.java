@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
@@ -66,6 +67,7 @@ import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.buildJWE;
@@ -117,6 +119,17 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
 
         HashMap<String, Object> claims1 = new HashMap<>();
         claims1.put(Constants.STATE, "af0ifjsldkj");
+        HashMap<String, Object> claims2 = new HashMap<>();
+        claims2.put(Constants.STATE, "af0ifjsldkj");
+        claims2.put(Constants.REDIRECT_URI, TestConstants.CALLBACK);
+        claims2.put(Constants.NONCE, "asdrfa");
+        claims2.put(Constants.SCOPES, TestConstants.SCOPE_STRING);
+        HashMap<String, Object> claims3 = (HashMap<String, Object>) claims2.clone();
+        claims3.remove(Constants.NONCE);
+        HashMap<String, Object> claims4 = (HashMap<String, Object>) claims2.clone();
+        claims4.remove(Constants.SCOPES);
+        HashMap<String, Object> claims5 = (HashMap<String, Object>) claims2.clone();
+        claims5.remove(Constants.REDIRECT_URI);
         String jsonWebToken1 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1000", audience, "RSA265", privateKey, 0,
                 claims1);
         String jsonWebToken2 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1001", audience, "none", privateKey, 0,
@@ -125,10 +138,20 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
                 privateKey, 0, claims1, (-3600 * 1000));
         String jsonWebToken4 = buildJWTWithExpiry(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1004", audience, "RSA265",
                 privateKey, 0, claims1, (-3600 * 1000));
+        String jsonWebToken5 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1001", audience, "none", privateKey, 0,
+                claims2);
+        String jsonWebToken6 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1001", audience, "none", privateKey, 0,
+                claims3);
+        String jsonWebToken7 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1001", audience, "none", privateKey, 0,
+                claims4);
+        String jsonWebToken8 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1001", audience, "none", privateKey, 0,
+                claims5);
         String jsonWebEncryption1 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2000", audience,
                 JWSAlgorithm.NONE.getName(), privateKey, publicKey, 0, claims1);
         String jsonWebEncryption2 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2001", audience,
                 JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims1);
+        String jsonWebEncryption3 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2001", audience,
+                JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims2);
         return new Object[][]{
                 {jsonWebToken1, true, false, true, true, false, "Valid Request Object, signed not encrypted."},
                 {jsonWebToken2, false, false, true, true, false, "Valid Request Object, not xsigned not encrypted."},
@@ -138,8 +161,16 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
                         "encrypted."},
                 {jsonWebEncryption1, false, true, true, true, false, "Valid Request Object, signed and encrypted."},
                 {jsonWebEncryption2, true, true, true, true, false, "Valid Request Object, signed and encrypted."},
-                {jsonWebEncryption2, true, true, false, true, true, "InValid FAPI Request Object with an unpermitted " +
-                        "signing algorithm, signed and encrypted."}
+                {jsonWebEncryption3, true, true, false, true, true, "FAPI Request Object with an unpermitted signing " +
+                        "algorithm, signed and encrypted."},
+                {jsonWebToken5, false, false, true, true, true, "Unsigned FAPI Request Object with valid Request " +
+                        "Object claims."},
+                {jsonWebToken6, false, false, true, false, true, "Unsigned FAPI Request Object without mandatory " +
+                        "parameter Nonce."},
+                {jsonWebToken7, false, false, true, false, true, "Unsigned FAPI Request Object without mandatory " +
+                        "parameter Scopes."},
+                {jsonWebToken8, false, false, true, false, true, "Unsigned FAPI Request Object without mandatory " +
+                        "parameter Redirect URI."},
         };
     }
 
@@ -155,6 +186,7 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
         oAuth2Parameters.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
         oAuth2Parameters.setClientId(TEST_CLIENT_ID_1);
+        oAuth2Parameters.setRedirectURI(TestConstants.CALLBACK);
 
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn("some-server-url");
@@ -184,7 +216,7 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         when(OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
 
         RequestObjectValidatorImpl requestObjectValidator = PowerMockito.spy(new RequestObjectValidatorImpl());
-
+        doReturn(true).when(requestObjectValidator, "isValidNbfExp", any());
         RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
         when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
 
