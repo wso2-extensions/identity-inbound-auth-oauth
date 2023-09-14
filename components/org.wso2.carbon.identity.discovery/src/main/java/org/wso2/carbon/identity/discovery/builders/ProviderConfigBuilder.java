@@ -156,7 +156,8 @@ public class ProviderConfigBuilder {
         List<String> supportedTokenEndpointSigningAlgorithms = OAuthServerConfiguration.getInstance()
                 .getSupportedTokenEndpointSigningAlgorithms();
         if (!supportedTokenEndpointSigningAlgorithms.isEmpty()) {
-            String[] supportedTokenEndpointSigningAlgorithmsArray = new String[supportedTokenEndpointSigningAlgorithms.size()];
+            String[] supportedTokenEndpointSigningAlgorithmsArray = new String[
+                supportedTokenEndpointSigningAlgorithms.size()];
             try {
                 for (int count = 0; count < supportedTokenEndpointSigningAlgorithms.size(); count++) {
                     supportedTokenEndpointSigningAlgorithmsArray[count] =  String.valueOf(OAuth2Util
