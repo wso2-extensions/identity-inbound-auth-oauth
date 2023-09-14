@@ -318,6 +318,16 @@ public class OAuthAppDAO {
         return oauthAppsOfUser;
     }
 
+    /**
+     * Get the OAuth consumer application for the given consumer key. Internally it uses the
+     * tenant present in the carbon context.
+     * This method is deprecated. Use {@link #getAppInformation(String, int)} instead.
+     *
+     * @param consumerKey Consumer key of the OAuth application.
+     * @return OAuthAppDO object.
+     * @throws InvalidOAuthClientException  Invalid OAuth client.
+     * @throws IdentityOAuth2Exception      Error while retrieving the OAuth application.
+     */
     @Deprecated
     public OAuthAppDO getAppInformation(String consumerKey) throws
             InvalidOAuthClientException, IdentityOAuth2Exception {
@@ -325,6 +335,15 @@ public class OAuthAppDAO {
         return getAppInformation(consumerKey, IdentityTenantUtil.getLoginTenantId());
     }
 
+    /**
+     * Get the OAuth consumer application for the given consumer key and tenant ID.
+     *
+     * @param consumerKey   Consumer key of the OAuth application.
+     * @param tenantId      Tenant ID of the OAuth application.
+     * @return OAuthAppDO object.
+     * @throws InvalidOAuthClientException  Invalid OAuth client.
+     * @throws IdentityOAuth2Exception      Error while retrieving the OAuth application.
+     */
     public OAuthAppDO getAppInformation(String consumerKey, int tenantId) throws
             InvalidOAuthClientException, IdentityOAuth2Exception {
 
@@ -394,6 +413,15 @@ public class OAuthAppDAO {
         return oauthApp;
     }
 
+    /**
+     * Get the OAuth consumer application for the given consumer key and access token.
+     *
+     * @param consumerKey   Consumer key of the OAuth application.
+     * @param accessTokenDO AccessTokenDO object.
+     * @return OAuthAppDO object.
+     * @throws InvalidOAuthClientException  Invalid OAuth client.
+     * @throws IdentityOAuth2Exception      Error while retrieving the OAuth application.
+     */
     public OAuthAppDO getAppInformation(String consumerKey, AccessTokenDO accessTokenDO) throws
             InvalidOAuthClientException, IdentityOAuth2Exception {
 
@@ -467,6 +495,14 @@ public class OAuthAppDAO {
         return oauthApp;
     }
 
+    /**
+     * Get a list of OAuth applications for the given consumer key.
+     *
+     * @param consumerKey  Consumer key of the OAuth application.
+     * @return A list of OAuthAppDO objects.
+     * @throws InvalidOAuthClientException  Invalid OAuth client.
+     * @throws IdentityOAuth2Exception      Error while retrieving the OAuth application.
+     */
     public OAuthAppDO[] getAppsForConsumerKey(String consumerKey)
             throws InvalidOAuthClientException, IdentityOAuth2Exception {
 

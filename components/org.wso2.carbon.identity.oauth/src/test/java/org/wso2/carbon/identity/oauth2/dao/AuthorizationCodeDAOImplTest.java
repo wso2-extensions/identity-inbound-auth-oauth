@@ -169,6 +169,7 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         mockStatic(IdentityTenantUtil.class);
         mockStatic(IdentityCoreServiceDataHolder.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(DEFAULT_TENANT_ID);
         when(IdentityCoreServiceDataHolder.getInstance()).thenReturn(mockedIdentityCoreServiceDataHolder);
         when(mockedIdentityCoreServiceDataHolder.getRealmService()).thenReturn(mockedRealmService);
         when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedTenantUserRealm);

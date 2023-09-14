@@ -33,9 +33,31 @@ import java.util.Set;
  */
 public interface AuthorizationCodeDAO {
 
+    /**
+     * Insert an authorization code. Internally this method uses the tenant present
+     * in the carbon context to retrieve the oauth application.
+     * This method is deprecated. Use {@link #insertAuthorizationCode(String, String, String, String, AuthzCodeDO)}.
+     *
+     * @param authzCode     Authorization code.
+     * @param consumerKey   Consumer key.
+     * @param callbackUrl   Callback URL.
+     * @param authzCodeDO   Authorization code data object.
+     * @throws IdentityOAuth2Exception Identity OAuth2 Exception.
+     */
+    @Deprecated
     void insertAuthorizationCode(String authzCode, String consumerKey, String callbackUrl,
                                  AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception;
 
+    /**
+     * Insert an authorization code.
+     *
+     * @param authzCode         Authorization code.
+     * @param consumerKey       Consumer key.
+     * @param appTenantDomain   Application tenant domain.
+     * @param callbackUrl       Callback URL.
+     * @param authzCodeDO       Authorization code data object.
+     * @throws IdentityOAuth2Exception Identity OAuth2 Exception.
+     */
     void insertAuthorizationCode(String authzCode, String consumerKey, String appTenantDomain, String callbackUrl,
                                  AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception;
 
