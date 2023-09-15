@@ -125,6 +125,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             "REFRESH_TOKEN_VALIDITY_PERIOD, TOKEN_SCOPE_HASH, TOKEN_STATE, TOKEN_STATE_ID, SUBJECT_IDENTIFIER, " +
             "ACCESS_TOKEN_HASH, REFRESH_TOKEN_HASH, IDP_ID) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
+    private static final String DELETE_ALL_OAUTH2_ACC_TOKENS = "DELETE FROM IDN_OAUTH2_ACCESS_TOKEN WHERE 1=1";
+
     private static final String BACKCHANNEL_LOGOUT = "https://localhost:8090/playground2/backChannelLogout";
 
     @Mock
@@ -308,7 +310,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         final String getAppFields = "SELECT APP_NAME,GRANT_TYPES,CALLBACK_URL," +
                 "APP_ACCESS_TOKEN_EXPIRE_TIME,USER_ACCESS_TOKEN_EXPIRE_TIME,REFRESH_TOKEN_EXPIRE_TIME, " +
                 "ID_TOKEN_EXPIRE_TIME, PKCE_MANDATORY, PKCE_SUPPORT_PLAIN, ID " +
-                "FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?";
+                "FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=? AND TENANT_ID=?";
 
         final String getScopeValidators = "SELECT SCOPE_VALIDATOR FROM IDN_OAUTH2_SCOPE_VALIDATORS " +
                 "WHERE APP_ID=?";
@@ -326,6 +328,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             addOAuthApplication(appDO, TENANT_ID);
 
             preparedStatement.setString(1, CONSUMER_KEY);
+            preparedStatement.setInt(2, TENANT_ID);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 assertTrue(resultSet.next());
                 assertEquals(resultSet.getString(1), APP_NAME);
@@ -363,9 +366,11 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             AuthenticatedUser authenticatedUser = new AuthenticatedUser();
             appDO.setAppOwner(authenticatedUser);
             appDO.getAppOwner().setUserName("testUser");
+            appDO.getAppOwner().setTenantDomain(TENANT_DOMAIN);
             appDAO.updateConsumerApplication(appDO);
 
             preparedStatement.setString(1, CONSUMER_KEY);
+            preparedStatement.setInt(2, TENANT_ID);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 assertTrue(resultSet.next());
                 assertEquals(resultSet.getString(1), modifiedAppName);
@@ -690,9 +695,12 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
             mockIdentityUtilDataBaseConnection(connection);
             addOAuthApplication(getDefaultOAuthAppDO(), TENANT_ID);
-            mockOAuth2TokenTable(accessTokenDO);
+            int appId = getOAuthApplication(CONSUMER_KEY, TENANT_ID).getId();
+            mockOAuth2TokenTable(accessTokenDO, appId);
 
             assertNotNull(new OAuthAppDAO().getAppInformation(CONSUMER_KEY, accessTokenDO));
+        } finally {
+            cleanUpOAuth2TokenTable();
         }
     }
 
@@ -890,14 +898,26 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         Mockito.when(mockUserRealmFromRealmService.getUserStoreManager()).thenReturn(mockAbstractUserStoreManager);
     }
 
-    private void mockOAuth2TokenTable(AccessTokenDO accessTokenDO) throws SQLException {
+    private OAuthAppDO getOAuthApplication(String consumerKey, int tenantId) {
+
+        OAuthAppDO oAuthAppDO = null;
+        try {
+            oAuthAppDO = new OAuthAppDAO().getAppInformation(consumerKey, tenantId);
+            assertNotNull(oAuthAppDO.getOauthConsumerKey());
+        } catch (Exception e) {
+            fail("Error while retrieving oauth app from database.", e);
+        }
+        return oAuthAppDO;
+    }
+
+    private void mockOAuth2TokenTable(AccessTokenDO accessTokenDO, int appId) throws SQLException {
 
         try (Connection connection = getConnection(DB_NAME);
              PreparedStatement ps = connection.prepareStatement(ADD_OAUTH2_ACC_TOKEN)) {
             ps.setString(1, accessTokenDO.getTokenId());
             ps.setString(2, accessTokenDO.getAccessToken());
             ps.setString(3, accessTokenDO.getRefreshToken());
-            ps.setInt(4, 1);
+            ps.setInt(4, appId);
             ps.setString(5, USER_NAME);
             ps.setInt(6, TENANT_ID);
             ps.setString(7, "PRIMARY");
@@ -915,6 +935,13 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             ps.setString(19, null);
             ps.setInt(20, 1);
             ps.execute();
+        }
+    }
+
+    private void cleanUpOAuth2TokenTable() throws Exception {
+        try (Connection connection = getConnection(DB_NAME);
+             PreparedStatement preparedStatement = connection.prepareStatement((DELETE_ALL_OAUTH2_ACC_TOKENS))) {
+            preparedStatement.executeUpdate();
         }
     }
 }
