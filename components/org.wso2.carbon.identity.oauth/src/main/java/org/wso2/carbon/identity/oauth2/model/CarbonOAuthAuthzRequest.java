@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.model;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
@@ -26,12 +27,16 @@ import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
+import org.json.JSONObject;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.utils.DiagnosticLog;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -79,5 +84,26 @@ public class CarbonOAuthAuthzRequest extends OAuthAuthzRequest {
         }
 
         return OAuthUtils.instantiateClass(clazz);
+    }
+
+    @Override
+    public String getState() {
+
+         /*If request object is present, get the state from the request object.
+         This state value was required to overridden from the request object in order to make sure the correct state
+         value(value inside the request object) is sent in error responses prior to building the request object.*/
+        if (StringUtils.isNotBlank(getParam(Constants.REQUEST))) {
+            byte[] requestObject;
+            try {
+                requestObject = Base64.getDecoder().decode(getParam(Constants.REQUEST).split("\\.")[1]);
+            } catch (IllegalArgumentException e) {
+                // Decode if the requestObject is base64-url encoded.
+                requestObject = Base64.getUrlDecoder().decode(getParam(Constants.REQUEST).split("\\.")[1]);
+            }
+            JSONObject requestObjectJson = new JSONObject(new String(requestObject, StandardCharsets.UTF_8));
+            return requestObjectJson.has(OAuth.OAUTH_STATE) ? requestObjectJson.getString(OAuth.OAUTH_STATE) : null;
+        } else {
+            return super.getState();
+        }
     }
 }
