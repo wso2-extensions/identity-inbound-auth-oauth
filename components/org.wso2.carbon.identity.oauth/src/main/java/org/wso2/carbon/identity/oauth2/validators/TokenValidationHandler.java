@@ -276,7 +276,8 @@ public class TokenValidationHandler {
         // Adding the AccessTokenDO as a context property for further use
         AccessTokenDO accessTokenDO;
         try {
-            accessTokenDO = OAuth2Util.findAccessToken(oAuth2Token.getIdentifier(), true);
+            accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
+                    .validateToken(messageContext, validationRequest, true);
             if (accessTokenDO != null) {
                 messageContext.addProperty(OAuthConstants.ACCESS_TOKEN_DO, accessTokenDO);
             }
@@ -499,8 +500,8 @@ public class TokenValidationHandler {
         } else {
             try {
                 String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-                accessTokenDO = OAuth2Util.findAccessToken(validationRequest.getAccessToken().getIdentifier(),
-                        false);
+                accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
+                        .validateToken(messageContext, validationRequest, false);
                 boolean isCrossTenantTokenIntrospectionAllowed
                         = OAuthServerConfiguration.getInstance().isCrossTenantTokenIntrospectionAllowed();
                 if (!isCrossTenantTokenIntrospectionAllowed && accessTokenDO != null &&
