@@ -206,6 +206,42 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
+    public void testInsertAuthorizationCodeWithTenant() throws Exception {
+
+        String consumerKey = UUID.randomUUID().toString();
+        String authzCodeID = UUID.randomUUID().toString();
+        String authzCode = UUID.randomUUID().toString();
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
+
+        createApplication(consumerKey, UUID.randomUUID().toString(), DEFAULT_TENANT_ID);
+        AuthzCodeDO authzCodeDO = new AuthzCodeDO(authenticatedUser, scopes,
+                new Timestamp(System.currentTimeMillis()), 3600000L, CALLBACK, consumerKey, authzCode,
+                authzCodeID, OAuthConstants.AuthorizationCodeState.ACTIVE, null,
+                null);
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
+        when(OAuth2Util.getUserStoreDomain(any())).thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+        when(OAuth2Util.getAuthenticatedIDP(any())).thenReturn("LOCAL");
+        mockStatic(IdentityTenantUtil.class);
+        mockStatic(IdentityCoreServiceDataHolder.class);
+        when(IdentityTenantUtil.getTenantId(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME)).thenReturn(
+                DEFAULT_TENANT_ID);
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(DEFAULT_TENANT_ID);
+        when(IdentityCoreServiceDataHolder.getInstance()).thenReturn(mockedIdentityCoreServiceDataHolder);
+        when(mockedIdentityCoreServiceDataHolder.getRealmService()).thenReturn(mockedRealmService);
+        when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedTenantUserRealm);
+        when(mockedTenantUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+
+        authorizationCodeDAO.insertAuthorizationCode(authzCode, consumerKey,
+                UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME, CALLBACK, authzCodeDO);
+
+        Assert.assertEquals(authorizationCodeDAO.getCodeIdByAuthorizationCode(authzCode),
+                authzCodeDO.getAuthzCodeId());
+        Assert.assertNull(authorizationCodeDAO.getCodeIdByAuthorizationCode(UUID.randomUUID().toString()));
+    }
+
+    @Test
     public void testGetAuthorizationCodesByConsumerKey() throws Exception {
 
         String consumerKey = UUID.randomUUID().toString();
