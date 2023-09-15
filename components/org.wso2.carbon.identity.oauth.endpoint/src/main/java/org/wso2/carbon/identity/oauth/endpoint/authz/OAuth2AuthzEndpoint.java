@@ -2480,8 +2480,9 @@ public class OAuth2AuthzEndpoint {
             requestObjValue = oauthRequest.getParam(REQUEST);
         }
         // Mandate request object for FAPI requests
+        // https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2-1)
         if (isFapiConformant(oAuthMessage.getClientId())) {
-            if (StringUtils.isBlank(oauthRequest.getParam(REQUEST))) {
+            if (requestObjValue == null) {
                 throw new InvalidRequestException("Request Object is mandatory for FAPI Conformant Applications.",
                         OAuth2ErrorCodes.INVALID_REQUEST, "Request object is missing.");
             }
