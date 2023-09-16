@@ -236,6 +236,7 @@ public class ProviderConfigBuilderTest extends PowerMockTestCase {
         when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
         String wrongAlgo = "SHA150withRSA";
         List<String> wrongAlgoInList = Arrays.asList(wrongAlgo);
+        when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn(wrongAlgo);
         when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithms()).thenReturn(wrongAlgoInList);
 
         when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(idTokenSignatureAlgorithm)).thenReturn(JWSAlgorithm.RS256);
