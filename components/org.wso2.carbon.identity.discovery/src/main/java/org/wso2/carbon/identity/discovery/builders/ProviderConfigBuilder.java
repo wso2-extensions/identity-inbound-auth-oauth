@@ -120,6 +120,10 @@ public class ProviderConfigBuilder {
 
         List<String> supportedUserinfoSigningAlgValues = OAuthServerConfiguration.getInstance()
                 .getUserInfoJWTSignatureAlgorithms();
+        String userInfoJWTSignatureAlgorithm =  OAuthServerConfiguration.getInstance().getUserInfoJWTSignatureAlgorithm();
+        if (!supportedUserinfoSigningAlgValues.contains(userInfoJWTSignatureAlgorithm)) {
+            supportedUserinfoSigningAlgValues.add(userInfoJWTSignatureAlgorithm);
+        }
         if (!supportedUserinfoSigningAlgValues.isEmpty()) {
             String[] supportedUserinfoSigningAlgValuesArray = new String[supportedUserinfoSigningAlgValues.size()];
             try {
