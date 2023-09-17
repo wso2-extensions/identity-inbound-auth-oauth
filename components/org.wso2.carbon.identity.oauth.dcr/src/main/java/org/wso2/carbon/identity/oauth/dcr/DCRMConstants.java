@@ -47,6 +47,7 @@ public class DCRMConstants {
         BAD_REQUEST_INSUFFICIENT_DATA("Insufficient data in the request"),
         NOT_FOUND_APPLICATION_WITH_ID("Application not available for given client key: %s"),
         NOT_FOUND_APPLICATION_WITH_NAME("Application not available for given client name: %s"),
+        NOT_FOUND_OAUTH_APPLICATION_WITH_NAME("OAuth application not available for given client name: %s"),
         CONFLICT_EXISTING_CLIENT_ID("Client id %s already exist in the system"),
         BAD_REQUEST_CLIENT_ID_VIOLATES_PATTERN("Provided client id is not adhering to the provided regex %s"),
         FORBIDDEN_UNAUTHORIZED_USER("User does not have access to the application %s"),

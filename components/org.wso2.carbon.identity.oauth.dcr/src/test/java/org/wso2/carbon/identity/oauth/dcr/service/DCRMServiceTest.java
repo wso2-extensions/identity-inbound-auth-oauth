@@ -73,6 +73,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AParams.OAUTH_VERSION;
 
 /**
@@ -379,10 +380,12 @@ public class DCRMServiceTest extends PowerMockTestCase {
     }
 
     @Test
-    public void getApplicationNameTestWithIOCExceptionTest() throws Exception {
+    public void getApplicationNameWithInvalidOAuthClientExceptionTest() throws Exception {
 
         startTenantFlow();
-        doThrow(new IdentityOAuthAdminException("", new InvalidOAuthClientException(""))).when(mockOAuthAdminService)
+        doThrow(new IdentityOAuthAdminException(INVALID_OAUTH_CLIENT.getErrorCode(),
+                "Cannot find a valid OAuth client"))
+                .when(mockOAuthAdminService)
                 .getOAuthApplicationDataByAppName(dummyClientName);
         FieldSetter.setField(dcrmService,
                 dcrmService.getClass().getDeclaredField("oAuthAdminService"), mockOAuthAdminService);
@@ -391,7 +394,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
         try {
             dcrmService.getApplicationByName(dummyClientName);
         } catch (IdentityException ex) {
-            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION.toString());
+            assertEquals(ex.getErrorCode(),
+                    DCRMConstants.ErrorMessages.NOT_FOUND_OAUTH_APPLICATION_WITH_NAME.toString());
             return;
         }
         fail("Expected IdentityException was not thrown by getApplicationByName method");
