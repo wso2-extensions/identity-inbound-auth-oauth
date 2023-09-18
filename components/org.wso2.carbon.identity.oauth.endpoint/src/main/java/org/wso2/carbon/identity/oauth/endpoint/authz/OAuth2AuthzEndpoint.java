@@ -39,6 +39,7 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
@@ -301,7 +302,9 @@ public class OAuth2AuthzEndpoint {
                     OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
                     tenantDomain = oauth2Params.getTenantDomain();
                 }
+                String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
                 FrameworkUtils.startTenantFlow(tenantDomain);
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setOrganizationId(organizationId);
             }
 
             if (isPassthroughToFramework(oAuthMessage)) {
