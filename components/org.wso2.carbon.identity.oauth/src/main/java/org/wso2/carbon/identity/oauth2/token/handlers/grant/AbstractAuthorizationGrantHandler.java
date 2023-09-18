@@ -86,6 +86,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     protected static final String EXISTING_TOKEN_ISSUED = "existingTokenUsed";
     protected static final int SECONDS_TO_MILISECONDS_FACTOR = 1000;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
+    private static final String REFRESH_TOKEN_GRANT_TYPE = "refresh_token";
 
     @Override
     public void init() throws IdentityOAuth2Exception {
@@ -259,7 +260,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         Set<OAuth2ScopeHandler> scopeHandlers = OAuthServerConfiguration.getInstance().getOAuth2ScopeHandlers();
         boolean isValid = true;
 
-        for (OAuth2ScopeHandler scopeHandler: scopeHandlers) {
+        for (OAuth2ScopeHandler scopeHandler : scopeHandlers) {
             if (scopeHandler != null && scopeHandler.canHandle(tokReqMsgCtx)) {
                 isValid = scopeHandler.validateScope(tokReqMsgCtx);
                 if (log.isDebugEnabled()) {
@@ -338,7 +339,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         try {
             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                     .insertAccessToken(newAccessToken, oAuth2AccessTokenReqDTO.getClientId(),
-                    newTokenBean, existingTokenBean, userStoreDomain);
+                            newTokenBean, existingTokenBean, userStoreDomain);
         } catch (IdentityException e) {
             throw new IdentityOAuth2Exception(
                     "Error occurred while storing new access token : " + newAccessToken, e);
@@ -452,8 +453,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private AccessTokenDO createNewTokenBean(OAuthTokenReqMessageContext tokReqMsgCtx, OAuthAppDO oAuthAppBean,
-            AccessTokenDO existingTokenBean, Timestamp timestamp, long validityPeriodInMillis,
-            OauthTokenIssuer oauthTokenIssuer) throws IdentityOAuth2Exception {
+                                             AccessTokenDO existingTokenBean, Timestamp timestamp,
+                                             long validityPeriodInMillis, OauthTokenIssuer oauthTokenIssuer)
+            throws IdentityOAuth2Exception {
         String tenantDomain = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
         OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         validateGrantTypeParam(tokenReq);
@@ -491,8 +493,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private void setRefreshTokenDetails(OAuthTokenReqMessageContext tokReqMsgCtx, OAuthAppDO oAuthAppBean,
-            AccessTokenDO existingTokenBean, Timestamp timestamp, long validityPeriodInMillis,
-            OAuth2AccessTokenReqDTO tokenReq, AccessTokenDO newTokenBean, OauthTokenIssuer oauthTokenIssuer)
+                                        AccessTokenDO existingTokenBean, Timestamp timestamp,
+                                        long validityPeriodInMillis, OAuth2AccessTokenReqDTO tokenReq,
+                                        AccessTokenDO newTokenBean, OauthTokenIssuer oauthTokenIssuer)
             throws IdentityOAuth2Exception {
 
         boolean isExtendedToken = newTokenBean.getAccessTokenExtendedAttributes() != null &&
@@ -944,7 +947,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private void removeFromCache(OAuthCacheKey cacheKey, String consumerKey, AccessTokenDO existingAccessTokenDO) {
-        oauthCache.clearCacheEntry(cacheKey , existingAccessTokenDO.getAuthzUser().getTenantDomain());
+        oauthCache.clearCacheEntry(cacheKey, existingAccessTokenDO.getAuthzUser().getTenantDomain());
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 log.debug("Access token(hashed) " + DigestUtils.sha256Hex(existingAccessTokenDO
@@ -1026,6 +1029,19 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     OAuth2Util.buildScopeString(existingTokenBean.getScope()));
             OAuthUtil.clearOAuthCache(existingTokenBean.getConsumerKey(), existingTokenBean.getAuthzUser());
             OAuthUtil.clearOAuthCache(existingTokenBean);
+            if (REFRESH_TOKEN_GRANT_TYPE.equals(existingTokenBean.getGrantType())) {
+                try {
+                    OauthTokenIssuer tokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(
+                            existingTokenBean.getConsumerKey());
+                    if (tokenIssuer != null) {
+                        String tokenAlias = tokenIssuer.getAccessTokenHash(existingTokenBean.getAccessToken());
+                        OAuthUtil.clearOAuthCache(tokenAlias);
+                    }
+                } catch (IdentityOAuth2Exception | OAuthSystemException | InvalidOAuthClientException e) {
+                    log.debug("Error while clearing cache for the access token : " +
+                            existingTokenBean.getAccessToken(), e);
+                }
+            }
         }
     }
 
