@@ -2399,7 +2399,7 @@ public class OAuth2AuthzEndpoint {
         }
 
         if (isPkceSupportEnabled()) {
-            String pkceChallengeCode = getPkceCodeChallenge(oAuthMessage, params);
+            String pkceChallengeCode = getPkceCodeChallenge(oAuthMessage, params, validationResponse.isPkceMandatory());
             String pkceChallengeMethod = getPkceCodeChallengeMethod(oAuthMessage, params);
 
             String redirectURI = validatePKCEParameters(oAuthMessage, validationResponse, pkceChallengeCode,
@@ -4083,9 +4083,10 @@ public class OAuth2AuthzEndpoint {
      *
      * @param oAuthMessage oAuthMessage
      * @param params       OAuth2 Parameters
+     * @param isPkcemandatory is PKCE mandatory
      * @return PKCE code challenge. Priority will be given to the value inside the OAuth2Parameters.
      */
-    private String getPkceCodeChallenge(OAuthMessage oAuthMessage, OAuth2Parameters params)
+    private String getPkceCodeChallenge(OAuthMessage oAuthMessage, OAuth2Parameters params, boolean isPkcemandatory)
             throws InvalidRequestException {
 
         String pkceChallengeCode = null;
@@ -4094,8 +4095,8 @@ public class OAuth2AuthzEndpoint {
         if (params.getPkceCodeChallenge() != null) {
             // If Oauth2 params contains code_challenge get value from Oauth2 params.
             pkceChallengeCode = params.getPkceCodeChallenge();
-        } else if (!isFapiConformantApp) {
-            // Else retrieve from request query params if application is not FAPI compliant.
+        } else if (!isFapiConformantApp || isPkcemandatory) {
+            // Else retrieve from request query params if application is not FAPI compliant or PKCE is mandatory.
             pkceChallengeCode = oAuthMessage.getOauthPKCECodeChallenge();
         }
 

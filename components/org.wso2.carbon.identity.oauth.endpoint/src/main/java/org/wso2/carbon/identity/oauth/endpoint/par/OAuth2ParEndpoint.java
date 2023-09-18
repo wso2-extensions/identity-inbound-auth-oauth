@@ -255,23 +255,26 @@ public class OAuth2ParEndpoint {
     private void validateRequestObject(OAuthAuthzRequest oAuthAuthzRequest) throws ParCoreException {
 
         try {
-            if (OAuth2Util.isOIDCAuthzRequest(oAuthAuthzRequest.getScopes()) &&
-                    StringUtils.isNotBlank(oAuthAuthzRequest.getParam(REQUEST))) {
+            if (OAuth2Util.isOIDCAuthzRequest(oAuthAuthzRequest.getScopes())) {
+                if (StringUtils.isNotBlank(oAuthAuthzRequest.getParam(REQUEST))) {
 
-                OAuth2Parameters parameters = new OAuth2Parameters();
-                parameters.setClientId(oAuthAuthzRequest.getClientId());
-                parameters.setRedirectURI(oAuthAuthzRequest.getRedirectURI());
-                parameters.setResponseType(oAuthAuthzRequest.getResponseType());
-                parameters.setTenantDomain(getSPTenantDomainFromClientId(oAuthAuthzRequest.getClientId()));
+                    OAuth2Parameters parameters = new OAuth2Parameters();
+                    parameters.setClientId(oAuthAuthzRequest.getClientId());
+                    parameters.setRedirectURI(oAuthAuthzRequest.getRedirectURI());
+                    parameters.setResponseType(oAuthAuthzRequest.getResponseType());
+                    parameters.setTenantDomain(getSPTenantDomainFromClientId(oAuthAuthzRequest.getClientId()));
 
-                RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, parameters);
-                if (requestObject == null) {
-                    throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, ParConstants.INVALID_REQUEST_OBJECT);
+                    RequestObject requestObject =
+                            OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, parameters);
+                    if (requestObject == null) {
+                        throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                                ParConstants.INVALID_REQUEST_OBJECT);
+                    }
+                } else if (isFAPIConformantApp(oAuthAuthzRequest.getClientId())) {
+                    /* Mandate request object for FAPI requests
+                    https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2-1) */
+                    throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, ParConstants.REQUEST_OBJECT_MISSING);
                 }
-            } else if (isFAPIConformantApp(oAuthAuthzRequest.getClientId())) {
-                // Mandate request object for FAPI requests
-                // https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2-1)
-                throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, ParConstants.REQUEST_OBJECT_MISSING);
             }
         } catch (RequestObjectException e) {
             if (OAuth2ErrorCodes.SERVER_ERROR.equals(e.getErrorCode())) {

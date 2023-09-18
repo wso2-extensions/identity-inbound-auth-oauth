@@ -91,6 +91,7 @@ import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
+import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -100,7 +101,11 @@ import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.scopeservice.OAuth2Resource;
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
+import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
+import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
+import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
@@ -1712,7 +1717,18 @@ public class EndpointUtil {
     public static String retrieveStateForErrorURL(HttpServletRequest request, OAuth2Parameters oAuth2Parameters) {
 
         String state = null;
-        if (oAuth2Parameters != null && oAuth2Parameters.getState() != null) {
+
+        if (request.getParameter(OAuthConstants.OAuth20Params.REQUEST) != null) {
+            String stateInsideRequestObj = getStateFromRequestObject(request, oAuth2Parameters);
+            if (StringUtils.isNotBlank(stateInsideRequestObj)) {
+                state = stateInsideRequestObj;
+                if (log.isDebugEnabled()) {
+                    log.debug("Retrieved state value " + state + " from request object.");
+                }
+            }
+        }
+
+        if (StringUtils.isEmpty(state) && oAuth2Parameters != null && oAuth2Parameters.getState() != null) {
             state = oAuth2Parameters.getState();
             if (log.isDebugEnabled()) {
                 log.debug("Retrieved state value " + state + " from OAuth2Parameters.");
@@ -1725,6 +1741,32 @@ public class EndpointUtil {
             }
         }
         return state;
+    }
+
+    private static String getStateFromRequestObject(HttpServletRequest request, OAuth2Parameters oAuth2Parameters) {
+
+        try {
+            RequestObjectValidator requestObjectValidator = OAuthServerConfiguration.getInstance()
+                    .getRequestObjectValidator();
+            RequestObjectBuilder requestObjectBuilder = OAuthServerConfiguration.getInstance()
+                    .getRequestObjectBuilders().get("request_param_value_builder");
+            RequestObject requestObject =
+                    requestObjectBuilder.buildRequestObject(request.getParameter(OAuthConstants.OAuth20Params.REQUEST),
+                            oAuth2Parameters);
+            if (StringUtils.isBlank(oAuth2Parameters.getClientId())) {
+                // Set client id and tenant domain required for signature validation if not already set.
+                String clientId = request.getParameter(PROP_CLIENT_ID);
+                oAuth2Parameters.setClientId(clientId);
+                oAuth2Parameters.setTenantDomain(getSPTenantDomainFromClientId(clientId));
+            }
+            // Validate request object signature to ensure request object is not tampered.
+            OIDCRequestObjectUtil.validateRequestObjectSignature(oAuth2Parameters, requestObject,
+                    requestObjectValidator);
+            return requestObject.getClaimValue(OAuthConstants.OAuth20Params.STATE);
+        } catch (RequestObjectException e) {
+            log.debug("Error while retrieving state from request object.", e);
+        }
+        return null;
     }
 
     /**
