@@ -4745,7 +4745,7 @@ public class OAuth2Util {
      * @throws CertificateException
      */
     public static X509Certificate parseCertificate(String content) throws CertificateException {
-        
+
         byte[] decodedContent = java.util.Base64.getDecoder().decode(StringUtils.trim(content
                 .replaceAll(OAuthConstants.BEGIN_CERT, StringUtils.EMPTY)
                 .replaceAll(OAuthConstants.END_CERT, StringUtils.EMPTY)

@@ -1198,14 +1198,13 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         PowerMockito.mockStatic(OAuth2Util.class);
         PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(true);
 
-        String decodedContent = StringUtils.trim(CERTIFICATE_CONTENT);
-        byte[] decoded = java.util.Base64.getDecoder().decode(StringUtils.trim(decodedContent
+        byte[] decodedContent = java.util.Base64.getDecoder().decode(StringUtils.trim(CERTIFICATE_CONTENT
                 .replaceAll(OAuthConstants.BEGIN_CERT, StringUtils.EMPTY)
                 .replaceAll(OAuthConstants.END_CERT, StringUtils.EMPTY)
         ));
         PowerMockito.when(OAuth2Util.parseCertificate(CERTIFICATE_CONTENT))
                 .thenReturn((X509Certificate) CertificateFactory.getInstance("X.509")
-                        .generateCertificate(new ByteArrayInputStream(decoded)));
+                        .generateCertificate(new ByteArrayInputStream(decodedContent)));
 
         UserRealm userRealm = getUserRealmWithUserClaims(Collections.emptyMap());
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
