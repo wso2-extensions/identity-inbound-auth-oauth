@@ -339,7 +339,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         try {
             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                     .insertAccessToken(newAccessToken, oAuth2AccessTokenReqDTO.getClientId(),
-                            newTokenBean, existingTokenBean, userStoreDomain);
+                    newTokenBean, existingTokenBean, userStoreDomain);
         } catch (IdentityException e) {
             throw new IdentityOAuth2Exception(
                     "Error occurred while storing new access token : " + newAccessToken, e);
@@ -453,8 +453,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private AccessTokenDO createNewTokenBean(OAuthTokenReqMessageContext tokReqMsgCtx, OAuthAppDO oAuthAppBean,
-            AccessTokenDO existingTokenBean, Timestamp timestamp,
-            long validityPeriodInMillis, OauthTokenIssuer oauthTokenIssuer) throws IdentityOAuth2Exception {
+            AccessTokenDO existingTokenBean, Timestamp timestamp, long validityPeriodInMillis,
+            OauthTokenIssuer oauthTokenIssuer) throws IdentityOAuth2Exception {
 
         String tenantDomain = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
         OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
