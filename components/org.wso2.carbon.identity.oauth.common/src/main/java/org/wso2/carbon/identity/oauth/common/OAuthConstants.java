@@ -132,6 +132,21 @@ public final class OAuthConstants {
 
             return subjectType;
         }
+
+        public String getValue() {
+
+            return subjectType;
+        }
+
+        public static SubjectType fromValue(String text) {
+
+            for (SubjectType subType : SubjectType.values()) {
+                if (String.valueOf(subType.subjectType).equals(text)) {
+                    return subType;
+                }
+            }
+            return null;
+        }
     }
     public static final String AUTHZ_CODE = "AuthorizationCode";
 

@@ -333,6 +333,6 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
             throw new UserInfoEndpointException("Error while retrieving OAuth app information for clientId: "
                     + clientId);
         }
-        return oAuthAppDO.getCallbackUrl();
+        return oAuthAppDO != null ? oAuthAppDO.getCallbackUrl() : null;
     }
 }

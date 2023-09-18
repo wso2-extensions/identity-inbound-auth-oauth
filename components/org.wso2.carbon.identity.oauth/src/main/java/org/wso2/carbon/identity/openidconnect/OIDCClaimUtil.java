@@ -293,7 +293,7 @@ public class OIDCClaimUtil {
         try {
             for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
                 if (SUBJECT_TYPE.equals(serviceProviderProperty.getName())) {
-                    return SubjectType.valueOf(serviceProviderProperty.getValue());
+                    return SubjectType.fromValue(serviceProviderProperty.getValue());
                 }
             }
         } catch (IllegalArgumentException e) {
