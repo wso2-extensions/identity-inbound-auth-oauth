@@ -53,6 +53,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
+import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
@@ -86,7 +87,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     protected static final String EXISTING_TOKEN_ISSUED = "existingTokenUsed";
     protected static final int SECONDS_TO_MILISECONDS_FACTOR = 1000;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
-    private static final String REFRESH_TOKEN_GRANT_TYPE = "refresh_token";
+    private OauthTokenIssuer oauthTokenIssuer;
 
     @Override
     public void init() throws IdentityOAuth2Exception {
@@ -139,7 +140,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokReqMsgCtx.getAuthorizedUser());
         String tokenBindingReference = getTokenBindingReference(tokReqMsgCtx);
 
-        OauthTokenIssuer oauthTokenIssuer;
         try {
             oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
         } catch (InvalidOAuthClientException e) {
@@ -453,9 +453,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private AccessTokenDO createNewTokenBean(OAuthTokenReqMessageContext tokReqMsgCtx, OAuthAppDO oAuthAppBean,
-                                             AccessTokenDO existingTokenBean, Timestamp timestamp,
-                                             long validityPeriodInMillis, OauthTokenIssuer oauthTokenIssuer)
-            throws IdentityOAuth2Exception {
+            AccessTokenDO existingTokenBean, Timestamp timestamp,
+            long validityPeriodInMillis, OauthTokenIssuer oauthTokenIssuer) throws IdentityOAuth2Exception {
+
         String tenantDomain = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
         OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         validateGrantTypeParam(tokenReq);
@@ -493,9 +493,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private void setRefreshTokenDetails(OAuthTokenReqMessageContext tokReqMsgCtx, OAuthAppDO oAuthAppBean,
-                                        AccessTokenDO existingTokenBean, Timestamp timestamp,
-                                        long validityPeriodInMillis, OAuth2AccessTokenReqDTO tokenReq,
-                                        AccessTokenDO newTokenBean, OauthTokenIssuer oauthTokenIssuer)
+            AccessTokenDO existingTokenBean, Timestamp timestamp, long validityPeriodInMillis,
+            OAuth2AccessTokenReqDTO tokenReq, AccessTokenDO newTokenBean, OauthTokenIssuer oauthTokenIssuer)
             throws IdentityOAuth2Exception {
 
         boolean isExtendedToken = newTokenBean.getAccessTokenExtendedAttributes() != null &&
@@ -1029,18 +1028,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     OAuth2Util.buildScopeString(existingTokenBean.getScope()));
             OAuthUtil.clearOAuthCache(existingTokenBean.getConsumerKey(), existingTokenBean.getAuthzUser());
             OAuthUtil.clearOAuthCache(existingTokenBean);
-            if (REFRESH_TOKEN_GRANT_TYPE.equals(existingTokenBean.getGrantType())) {
-                try {
-                    OauthTokenIssuer tokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(
-                            existingTokenBean.getConsumerKey());
-                    if (tokenIssuer != null) {
-                        String tokenAlias = tokenIssuer.getAccessTokenHash(existingTokenBean.getAccessToken());
-                        OAuthUtil.clearOAuthCache(tokenAlias);
-                    }
-                } catch (IdentityOAuth2Exception | OAuthSystemException | InvalidOAuthClientException e) {
-                    log.debug("Error while clearing cache for the access token : " +
-                            existingTokenBean.getAccessToken(), e);
+            try {
+                if (oauthTokenIssuer != null && OAuth2TokenUtil.isJWT(existingTokenBean.getAccessToken())) {
+                    String tokenAlias = oauthTokenIssuer.getAccessTokenHash(existingTokenBean.getAccessToken());
+                    OAuthUtil.clearOAuthCache(tokenAlias);
                 }
+            } catch (OAuthSystemException e) {
+                log.error("Error while clearing cache for the access token : " +
+                        existingTokenBean.getAccessToken(), e);
             }
         }
     }

@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -80,7 +81,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
     public boolean validateAccessToken(OAuth2TokenValidationMessageContext validationReqDTO)
             throws IdentityOAuth2Exception {
 
-        if (!isJWT(validationReqDTO.getRequestDTO().getAccessToken().getIdentifier())) {
+        if (!OAuth2TokenUtil.isJWT(validationReqDTO.getRequestDTO().getAccessToken().getIdentifier())) {
             return false;
         }
 
@@ -437,17 +438,6 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             }
             return accessTokenDO.getAuthzUser().getTenantDomain();
         }
-    }
-
-    /**
-     * Return true if the token identifier is JWT.
-     *
-     * @param tokenIdentifier String JWT token identifier.
-     * @return  true for a JWT token.
-     */
-    private boolean isJWT(String tokenIdentifier) {
-        // JWT token contains 3 base64 encoded components separated by periods.
-        return StringUtils.countMatches(tokenIdentifier, DOT_SEPARATOR) == 2;
     }
 
     private void setJWTMessageContext(OAuth2TokenValidationMessageContext validationReqDTO, JWTClaimsSet claimsSet) {

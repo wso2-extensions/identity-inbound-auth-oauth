@@ -47,6 +47,7 @@ import static org.wso2.carbon.identity.openidconnect.OIDCConstants.Event.TOKEN_S
 public class OAuth2TokenUtil {
 
     private static final Log log = LogFactory.getLog(OAuth2TokenUtil.class);
+    private static final String DOT_SEPARATOR = ".";
 
     /**
      * Uses to update access token details in the request object reference table.
@@ -300,5 +301,15 @@ public class OAuth2TokenUtil {
         properties.put(OIDCConstants.Event.IS_REQUEST_OBJECT_FLOW, isRequestObjectFlow);
         triggerEvent(eventName, properties);
     }
-}
 
+    /**
+     * Return true if the token identifier is JWT.
+     *
+     * @param tokenIdentifier String JWT token identifier.
+     * @return  true for a JWT token.
+     */
+    public static boolean isJWT(String tokenIdentifier) {
+
+        return StringUtils.countMatches(tokenIdentifier, DOT_SEPARATOR) == 2;
+    }
+}
