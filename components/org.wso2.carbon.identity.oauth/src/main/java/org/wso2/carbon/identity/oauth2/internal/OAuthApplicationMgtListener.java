@@ -117,7 +117,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                                             String tenantDomain)
             throws IdentityApplicationManagementException {
 
-        addClientSecret(serviceProvider);
+        addClientSecret(serviceProvider, tenantDomain);
         return true;
     }
 
@@ -125,14 +125,14 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                                                       String clientType, String tenantDomain)
             throws IdentityApplicationManagementException {
 
-        addClientSecret(serviceProvider);
+        addClientSecret(serviceProvider, tenantDomain);
         return true;
     }
 
     public boolean doPostCreateApplication(ServiceProvider serviceProvider, String tenantDomain, String userName)
             throws IdentityApplicationManagementException {
 
-        addClientSecret(serviceProvider);
+        addClientSecret(serviceProvider, tenantDomain);
         return true;
     }
 
@@ -140,7 +140,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             throws IdentityApplicationManagementException {
 
         revokeAccessTokensWhenSaaSDisabled(serviceProvider, tenantDomain);
-        addClientSecret(serviceProvider);
+        addClientSecret(serviceProvider, tenantDomain);
         updateAuthApplication(serviceProvider);
 
         if (threadLocalForClaimConfigUpdates.get()) {
@@ -155,7 +155,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                                                              String tenantDomain)
             throws IdentityApplicationManagementException {
 
-        addClientSecret(serviceProvider);
+        addClientSecret(serviceProvider, tenantDomain);
         return true;
     }
 
@@ -376,7 +376,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         }
     }
 
-    private void addClientSecret(ServiceProvider serviceProvider) throws IdentityApplicationManagementException {
+    private void addClientSecret(ServiceProvider serviceProvider, String tenantDomain)
+            throws IdentityApplicationManagementException {
 
         if (serviceProvider == null) {
             return; // if service provider is not present no need to add this information
@@ -396,7 +397,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                             String clientSecret = null;
                             try {
                                 clientSecret = OAuth2Util.getClientSecret(inboundRequestConfig.getInboundAuthKey(),
-                                        serviceProvider.getTenantDomain());
+                                        tenantDomain);
                             } catch (InvalidOAuthClientException e) {
                                 log.warn("The OAuth application data not exists for " +
                                         inboundRequestConfig.getInboundAuthKey());
