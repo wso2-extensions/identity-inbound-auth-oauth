@@ -1017,8 +1017,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         return OAuthServerConfiguration.getInstance().isTokenRenewalPerRequestEnabled();
     }
 
-    private void clearExistingTokenFromCache(OAuthTokenReqMessageContext tokenMsgCtx, AccessTokenDO existingTokenBean)
-            throws IdentityOAuth2Exception {
+    private void clearExistingTokenFromCache(OAuthTokenReqMessageContext tokenMsgCtx, AccessTokenDO existingTokenBean) {
 
         if (cacheEnabled) {
             String tokenBindingReference = getTokenBindingReference(tokenMsgCtx);
@@ -1035,8 +1034,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     OAuthUtil.clearOAuthCache(tokenAlias);
                 }
             } catch (OAuthSystemException e) {
-                throw new IdentityOAuth2Exception("Error while clearing the cache for the access token " +
-                        existingTokenBean.getAccessToken(), e);
+                String errorMessage = "Error while clearing cache for the access token";
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    errorMessage += " : " + existingTokenBean.getAccessToken();
+                }
+                log.error(errorMessage, e);
             }
         }
     }
