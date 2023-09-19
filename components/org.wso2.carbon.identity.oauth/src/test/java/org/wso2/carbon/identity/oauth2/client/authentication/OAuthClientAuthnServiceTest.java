@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import java.io.File;
 import java.nio.file.Paths;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -212,69 +213,24 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
         );
     }
 
-    @DataProvider(name = "testAuthenticateClientDataForFAPI")
-    public Object[][] testAuthenticateClientDataForFAPI() {
+    @Test
+    public void testAuthenticateForFapiApplicationsWithInvalidAuthMethod() throws Exception {
 
         Map<String, String> headersWithCert = new HashMap<>();
         headersWithCert.put(HTTPConstants.HEADER_AUTHORIZATION, ClientAuthUtil
                 .getBase64EncodedBasicAuthHeader(CLIENT_ID, CLIENT_SECRET, null));
         headersWithCert.put("x-wso2-mtls-cert", CERTIFICATE_CONTENT);
-
-        Map<String, String> headersWithoutCert = new HashMap<>();
-        headersWithoutCert.put(HTTPConstants.HEADER_AUTHORIZATION, ClientAuthUtil
-                .getBase64EncodedBasicAuthHeader(CLIENT_ID, CLIENT_SECRET, null));
-
-        return new Object[][]{
-
-                // TLS certificate is passed in the request
-                {headersWithCert, new HashMap<String, List>(), true, true, null, 1, CLIENT_ID, false,
-                        OAuthConstants.PRIVATE_KEY_JWT, true},
-
-                // TLS certificate is not passed in the request
-                {headersWithoutCert, new HashMap<String, List>(), false, true, "invalid_request", 0, null, false,
-                        OAuthConstants.PRIVATE_KEY_JWT, false},
-
-                // Registered client authentication method matching the request client authentication method
-                {headersWithCert, new HashMap<String, List>(), true, true, null, 1, CLIENT_ID, false,
-                        OAuthConstants.PRIVATE_KEY_JWT, true},
-
-                // Registered client authentication method not matching the request client authentication method
-                {headersWithCert, new HashMap<String, List>(), false, true, "invalid_request", 0, null, false,
-                        OAuthConstants.TLS_CLIENT_AUTH, true}
-
-        };
-    }
-
-    @Test(dataProvider = "testAuthenticateClientDataForFAPI")
-    public void testAuthenticateForFapiApplications(Map<String, String> headers, Map<String, List> bodyParams,
-                                                           boolean isAuthenticated, boolean isBasicAuthenticated,
-                                                           String errorCode, int numberOfExecutedAuthenticators,
-                                                           String clientId, boolean disableSampleAuthenticator,
-                                                           String authMethod, boolean isMTLSEnforced) throws Exception {
-
-        if (disableSampleAuthenticator) {
-            sampleClientAuthenticator.enabled = false;
-        }
-        PowerMockito.mockStatic(OAuth2Util.class);
-        PowerMockito.when(OAuth2Util.authenticateClient(Mockito.anyString(), Mockito.anyString())).thenReturn
-                (isBasicAuthenticated);
         X509Certificate x509Certificate = Mockito.mock(X509Certificate.class);
-        if (isMTLSEnforced) {
-            PowerMockito.when(OAuth2Util.parseCertificate(Mockito.anyString())).thenReturn(x509Certificate);
-        } else {
-            PowerMockito.when(OAuth2Util.parseCertificate(Mockito.anyString())).thenReturn(null);
-        }
+        PowerMockito.mockStatic(OAuth2Util.class);
+        PowerMockito.when(OAuth2Util.parseCertificate(Mockito.anyString())).thenReturn(x509Certificate);
         HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
-        when(httpServletRequest.getParameter(OAuth.OAUTH_CLIENT_ID)).thenReturn(clientId);
-        when(httpServletRequest.getParameter(OAuthConstants.OAUTH_JWT_ASSERTION)).thenReturn(CLIENT_ASSERTION);
-        when(httpServletRequest.getParameter(OAuthConstants.OAUTH_JWT_ASSERTION_TYPE))
-                .thenReturn(OAuthConstants.OAUTH_JWT_BEARER_GRANT_TYPE);
-        setHeaders(httpServletRequest, headers);
+        when(httpServletRequest.getParameter(OAuth.OAUTH_CLIENT_ID)).thenReturn(CLIENT_ID);
+        setHeaders(httpServletRequest, headersWithCert);
         when(IdentityUtil.getProperty(OAuthConstants.MTLS_AUTH_HEADER)).thenReturn("x-wso2-mtls-cert");
         ServiceProvider serviceProvider = new ServiceProvider();
         ServiceProviderProperty authMethodSpProperty = new ServiceProviderProperty();
         authMethodSpProperty.setName(OAuthConstants.TOKEN_ENDPOINT_AUTH_METHOD);
-        authMethodSpProperty.setValue(authMethod);
+        authMethodSpProperty.setValue("private_key_jwt");
         ServiceProviderProperty fapiAppSpProperty = new ServiceProviderProperty();
         fapiAppSpProperty.setName(OAuthConstants.IS_FAPI_CONFORMANT_APP);
         fapiAppSpProperty.setValue("true");
@@ -282,10 +238,50 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
         PowerMockito.when(OAuth2Util.getServiceProvider(Mockito.anyString())).thenReturn(serviceProvider);
         PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(true);
         OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService.authenticateClient
-                (httpServletRequest, bodyParams);
-        assertEquals(oAuthClientAuthnContext.isAuthenticated(), isAuthenticated);
-        assertEquals(oAuthClientAuthnContext.getErrorCode(), errorCode);
-        assertEquals(oAuthClientAuthnContext.getExecutedAuthenticators().size(), numberOfExecutedAuthenticators);
-        assertEquals(oAuthClientAuthnContext.getClientId(), clientId);
+                (httpServletRequest, new HashMap<String, List>());
+        assertEquals(oAuthClientAuthnContext.isAuthenticated(), false);
+        assertEquals(oAuthClientAuthnContext.getErrorCode(), "invalid_request");
+        assertEquals(oAuthClientAuthnContext.getExecutedAuthenticators().size(), 0);
+    }
+
+    @Test
+    public void testAuthenticateForFapiApplicationsWithValidAuthMethod() throws Exception {
+
+        Map<String, String> headersWithCert = new HashMap<>();
+        headersWithCert.put(HTTPConstants.HEADER_AUTHORIZATION, ClientAuthUtil
+                .getBase64EncodedBasicAuthHeader(CLIENT_ID, CLIENT_SECRET, null));
+        headersWithCert.put("x-wso2-mtls-cert", CERTIFICATE_CONTENT);
+        PowerMockito.mockStatic(OAuth2Util.class);
+        X509Certificate x509Certificate = Mockito.mock(X509Certificate.class);
+        PowerMockito.when(OAuth2Util.parseCertificate(Mockito.anyString())).thenReturn(x509Certificate);
+        HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
+        when(httpServletRequest.getParameter(OAuth.OAUTH_CLIENT_ID)).thenReturn(CLIENT_ID);
+        setHeaders(httpServletRequest, headersWithCert);
+        when(IdentityUtil.getProperty(OAuthConstants.MTLS_AUTH_HEADER)).thenReturn("x-wso2-mtls-cert");
+        ServiceProvider serviceProvider = new ServiceProvider();
+        ServiceProviderProperty authMethodSpProperty = new ServiceProviderProperty();
+        authMethodSpProperty.setName(OAuthConstants.TOKEN_ENDPOINT_AUTH_METHOD);
+        authMethodSpProperty.setValue("private_key_jwt");
+        ServiceProviderProperty fapiAppSpProperty = new ServiceProviderProperty();
+        fapiAppSpProperty.setName(OAuthConstants.IS_FAPI_CONFORMANT_APP);
+        fapiAppSpProperty.setValue("true");
+        serviceProvider.setSpProperties(new ServiceProviderProperty[]{authMethodSpProperty, fapiAppSpProperty});
+        PowerMockito.when(OAuth2Util.getServiceProvider(Mockito.anyString())).thenReturn(serviceProvider);
+        PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(true);
+        OAuthClientAuthenticator oAuthClientAuthenticator = PowerMockito.mock(OAuthClientAuthenticator.class);
+        PowerMockito.when(oAuthClientAuthenticator.getName()).thenReturn(OAuthConstants.PRIVATE_KEY_JWT_AUTHENTICATOR);
+        PowerMockito.when(oAuthClientAuthenticator.isEnabled()).thenReturn(true);
+        PowerMockito.when(oAuthClientAuthenticator.canAuthenticate(Mockito.any(), Mockito.any(), Mockito.any()))
+                .thenReturn(true);
+        PowerMockito.when(oAuthClientAuthenticator.authenticateClient(Mockito.any(), Mockito.any(), Mockito.any()))
+                .thenReturn(true);
+        OAuthClientAuthnService oAuthClientAuthnService = Mockito.spy(OAuthClientAuthnService.class);
+        PowerMockito.when(oAuthClientAuthnService.getClientAuthenticators()).thenReturn
+                (Arrays.asList(oAuthClientAuthenticator));
+        OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService.authenticateClient
+                (httpServletRequest, new HashMap<String, List>());
+        assertEquals(oAuthClientAuthnContext.isAuthenticated(), true);
+        assertEquals(oAuthClientAuthnContext.getErrorCode(), null);
+        assertEquals(oAuthClientAuthnContext.getExecutedAuthenticators().size(), 1);
     }
 }
