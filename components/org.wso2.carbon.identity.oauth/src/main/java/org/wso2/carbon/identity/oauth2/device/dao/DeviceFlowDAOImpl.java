@@ -202,7 +202,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                         int idpId = UserSessionStore.getInstance().getIdPId(authenticatedIDP, tenantId);
                         subjectIdentifier = UserSessionStore.getInstance().getUserId(userName, tenantId,
                                     userDomain, idpId);
-                        log.info("Added userID as subject identifier as the subject identifier " +
+                        log.info("Defaulting to unique userID as subject identifier as the subject identifier " +
                                 "column value is empty in the table");
                     }
 
