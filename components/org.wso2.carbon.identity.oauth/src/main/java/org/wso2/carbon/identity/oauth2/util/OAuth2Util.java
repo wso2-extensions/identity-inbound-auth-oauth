@@ -4746,16 +4746,12 @@ public class OAuth2Util {
      */
     public static X509Certificate parseCertificate(String content) throws CertificateException {
 
-        // Trim extra spaces.
-        String decodedContent = StringUtils.trim(content);
-
-        // Remove Certificate Headers.
-        byte[] decoded = java.util.Base64.getDecoder().decode(StringUtils.trim(decodedContent
+        byte[] decodedContent = java.util.Base64.getDecoder().decode(StringUtils.trim(content
                 .replaceAll(OAuthConstants.BEGIN_CERT, StringUtils.EMPTY)
                 .replaceAll(OAuthConstants.END_CERT, StringUtils.EMPTY)
         ));
 
         return (java.security.cert.X509Certificate) CertificateFactory.getInstance(Constants.X509)
-                .generateCertificate(new ByteArrayInputStream(decoded));
+                .generateCertificate(new ByteArrayInputStream(decodedContent));
     }
 }

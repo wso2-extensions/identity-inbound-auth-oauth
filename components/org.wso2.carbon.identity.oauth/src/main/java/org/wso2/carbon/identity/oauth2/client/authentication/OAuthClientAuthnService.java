@@ -336,6 +336,8 @@ public class OAuthClientAuthnService {
             throw new OAuthClientAuthnException("Token signing algorithm not registered",
                     OAuth2ErrorCodes.INVALID_REQUEST);
         }
+        // Below code needs to be changed to getSupportedTokenEndpointAuthMethods() once the
+        // https://github.com/wso2-extensions/identity-inbound-auth-oauth/pull/2162 is merged.
         return OAuthServerConfiguration.getInstance().getSupportedIdTokenEncryptionMethods();
     }
 
