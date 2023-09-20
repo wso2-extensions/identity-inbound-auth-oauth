@@ -115,6 +115,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
+
         if (tokReqMsgCtx.getOauth2AccessTokenReqDTO() != null) {
             return true;
         } else {
@@ -128,12 +129,17 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
         String consumerKey = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
-        String authorizedUserId;
-        try {
-            authorizedUserId = tokReqMsgCtx.getAuthorizedUser().getUserId();
-        } catch (UserIdNotFoundException e) {
-            throw new IdentityOAuth2Exception(
-                    "User id is not available for user: " + tokReqMsgCtx.getAuthorizedUser().getLoggableUserId(), e);
+        String authorizedUserId = null;
+        boolean isInternalApplicationRolesEnabled =
+                OAuth2ServiceComponentHolder.getInstance().isInternalApplicationRolesEnabled();
+        if (!isInternalApplicationRolesEnabled || isOfTypeApplicationUser()) {
+            try {
+                authorizedUserId = tokReqMsgCtx.getAuthorizedUser().getUserId();
+            } catch (UserIdNotFoundException e) {
+                throw new IdentityOAuth2Exception(
+                        "User id is not available for user: " + tokReqMsgCtx.getAuthorizedUser().getLoggableUserId(),
+                        e);
+            }
         }
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokReqMsgCtx.getAuthorizedUser());
         String tokenBindingReference = getTokenBindingReference(tokReqMsgCtx);
@@ -146,44 +152,61 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
 
-        synchronized ((consumerKey + ":" + authorizedUserId + ":" + scope + ":" + tokenBindingReference).intern()) {
-            AccessTokenDO existingTokenBean = null;
-            if (isHashDisabled) {
-                existingTokenBean = getExistingToken(tokReqMsgCtx,
-                        getOAuthCacheKey(scope, consumerKey, authorizedUserId, authenticatedIDP,
-                                tokenBindingReference));
+        if (isInternalApplicationRolesEnabled && !isOfTypeApplicationUser()) {
+            synchronized ((consumerKey + ":" + scope + ":" + tokenBindingReference).intern()) {
+                return issueToken(tokReqMsgCtx, scope, consumerKey, null, authenticatedIDP,
+                        tokenBindingReference, oauthTokenIssuer);
             }
-
-            if (existingTokenBean != null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Latest access token is found in the OAuthCache for the app: " + consumerKey);
-                }
-                if (accessTokenRenewedPerRequest(oauthTokenIssuer, tokReqMsgCtx)) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("TokenRenewalPerRequest is enabled. " +
-                                "Proceeding to revoke any existing active tokens and issue new token for client Id: " +
-                                consumerKey + ", user: " + authorizedUserId + " and scope: " + scope + ".");
-                    }
-                    return renewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean, oauthTokenIssuer);
-                }
-
-                long expireTime = getAccessTokenExpiryTimeMillis(existingTokenBean);
-                if (isExistingTokenValid(existingTokenBean, expireTime)) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Existing token is active for client Id: " + consumerKey + ", user: " +
-                                authorizedUserId + " and scope: " + scope + ". Therefore issuing the same token.");
-                    }
-                    return issueExistingAccessToken(tokReqMsgCtx, scope, expireTime, existingTokenBean);
-                }
+        } else {
+            synchronized ((consumerKey + ":" + authorizedUserId + ":" + scope + ":" + tokenBindingReference).intern()) {
+                return issueToken(tokReqMsgCtx, scope, consumerKey, authorizedUserId, authenticatedIDP,
+                        tokenBindingReference, oauthTokenIssuer);
             }
-
-            if (log.isDebugEnabled()) {
-                log.debug("No active access token found for client Id: " + consumerKey + ", user: " +
-                        authorizedUserId + " and scope: " + scope + ". Therefore issuing new token.");
-            }
-            return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean, true,
-                    oauthTokenIssuer);
         }
+    }
+
+    private OAuth2AccessTokenRespDTO issueToken(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
+                                                String consumerKey, String authorizedUserId,
+                                                String authenticatedIDP, String tokenBindingReference,
+                                                OauthTokenIssuer oauthTokenIssuer)
+            throws IdentityOAuth2Exception {
+
+        AccessTokenDO existingTokenBean = null;
+        if (isHashDisabled) {
+            existingTokenBean = getExistingToken(tokReqMsgCtx,
+                    getOAuthCacheKey(scope, consumerKey, authorizedUserId, authenticatedIDP,
+                            tokenBindingReference));
+        }
+
+        if (existingTokenBean != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Latest access token is found in the OAuthCache for the app: " + consumerKey);
+            }
+            if (accessTokenRenewedPerRequest(oauthTokenIssuer, tokReqMsgCtx)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("TokenRenewalPerRequest is enabled. " +
+                            "Proceeding to revoke any existing active tokens and issue new token for client Id: " +
+                            consumerKey + ", user: " + authorizedUserId + " and scope: " + scope + ".");
+                }
+                return renewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean, oauthTokenIssuer);
+            }
+
+            long expireTime = getAccessTokenExpiryTimeMillis(existingTokenBean);
+            if (isExistingTokenValid(existingTokenBean, expireTime)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Existing token is active for client Id: " + consumerKey + ", user: " +
+                            authorizedUserId + " and scope: " + scope + ". Therefore issuing the same token.");
+                }
+                return issueExistingAccessToken(tokReqMsgCtx, scope, expireTime, existingTokenBean);
+            }
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("No active access token found for client Id: " + consumerKey + ", user: " +
+                    authorizedUserId + " and scope: " + scope + ". Therefore issuing new token.");
+        }
+        return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean, true,
+                oauthTokenIssuer);
     }
 
     private void setDetailsToMessageContext(OAuthTokenReqMessageContext tokReqMsgCtx, AccessTokenDO existingToken) {
@@ -560,12 +583,16 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 }
             }
 
-            String userId;
-            try {
-                userId = tokenToCache.getAuthzUser().getUserId();
-            } catch (UserIdNotFoundException e) {
-                throw new IdentityOAuth2Exception(
-                        "User id is not available for user: " + tokenToCache.getAuthzUser().getLoggableUserId(), e);
+            String userId = null;
+            boolean isInternalApplicationRolesEnabled =
+                    OAuth2ServiceComponentHolder.getInstance().isInternalApplicationRolesEnabled();
+            if (!isInternalApplicationRolesEnabled || isOfTypeApplicationUser()) {
+                try {
+                    userId = tokenToCache.getAuthzUser().getUserId();
+                } catch (UserIdNotFoundException e) {
+                    throw new IdentityOAuth2Exception(
+                            "User id is not available for user: " + tokenToCache.getAuthzUser().getLoggableUserId(), e);
+                }
             }
 
             String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokenToCache.getAuthzUser());
@@ -729,8 +756,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     private OAuthCacheKey getOAuthCacheKey(String scope, String consumerKey, String authorizedUserId,
                                            String authenticatedIDP, String tokenBindingType) {
 
-        String cacheKeyString = OAuth2Util.buildCacheKeyStringForTokenWithUserId(consumerKey, scope, authorizedUserId,
-                authenticatedIDP, tokenBindingType);
+        String cacheKeyString;
+        if (StringUtils.isNotBlank(authorizedUserId)) {
+            cacheKeyString = OAuth2Util.buildCacheKeyStringForTokenWithUserId(consumerKey, scope, authorizedUserId,
+                    authenticatedIDP, tokenBindingType);
+        } else {
+            cacheKeyString = OAuth2Util.buildCacheKeyStringForTokenWithoutUser(consumerKey, scope, authenticatedIDP,
+                    tokenBindingType);
+        }
         return new OAuthCacheKey(cacheKeyString);
     }
 
@@ -872,8 +905,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         String tokenBindingReference = getTokenBindingReference(tokenMsgCtx);
 
         if (cacheEnabled) {
-            existingToken = getExistingTokenFromCache(cacheKey, tokenReq.getClientId(),
-                    tokenMsgCtx.getAuthorizedUser().getLoggableUserId(), scope, tokenBindingReference,
+            existingToken = getExistingTokenFromCache(cacheKey, tokenReq.getClientId(), scope, tokenBindingReference,
                     tokenMsgCtx.getAuthorizedUser().getTenantDomain());
         }
 
@@ -913,7 +945,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         return existingToken;
     }
 
-    private AccessTokenDO getExistingTokenFromCache(OAuthCacheKey cacheKey, String consumerKey, String loggableUserId,
+    private AccessTokenDO getExistingTokenFromCache(OAuthCacheKey cacheKey, String consumerKey,
                                                     String scope, String tokenBindingReference, String tenantDomain)
             throws IdentityOAuth2Exception {
 
@@ -924,7 +956,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 log.debug("Retrieved active access token(hashed): " + DigestUtils
                         .sha256Hex(existingToken.getAccessToken()) + " in the state: " + existingToken.getTokenState()
-                        + " for client Id: " + consumerKey + ", user: " + loggableUserId + " ,scope: " + scope
+                        + " for client Id: " + consumerKey + " ,scope: " + scope
                         + " and token binding reference: " + tokenBindingReference + " from cache");
             }
             if (getAccessTokenExpiryTimeMillis(existingToken) == 0) {
