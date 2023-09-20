@@ -381,6 +381,7 @@ public class OAuthClientAuthnService {
      * @throws ParseException An exception is thrown when the signed JWT cannot be processed.
      */
     private String getClientIdFromJWT(String signedObject) throws ParseException {
+
         SignedJWT signedJWT = SignedJWT.parse(signedObject);
         return signedJWT.getJWTClaimsSet().getIssuer();
     }
