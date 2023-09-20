@@ -122,28 +122,26 @@ public class ProviderConfigBuilder {
                 .getUserInfoJWTSignatureAlgorithms();
         String userInfoJWTSignatureAlgorithm =  OAuthServerConfiguration.getInstance()
                 .getUserInfoJWTSignatureAlgorithm();
+        // As there was an existing configuration for userInfoJWTSignatureAlgorithm which accepts a single value,
+        // the below condition is used to merge the values from both the existing and newly added configurations.
         if (!supportedUserinfoSigningAlgValues.contains(userInfoJWTSignatureAlgorithm)) {
             supportedUserinfoSigningAlgValues.add(userInfoJWTSignatureAlgorithm);
         }
-        if (!supportedUserinfoSigningAlgValues.isEmpty()) {
-            String[] supportedUserinfoSigningAlgValuesArray = new String[supportedUserinfoSigningAlgValues.size()];
-            try {
-                for (int count = 0; count < supportedUserinfoSigningAlgValues.size(); count++) {
-                    supportedUserinfoSigningAlgValuesArray[count] =  String.valueOf(OAuth2Util
-                            .mapSignatureAlgorithmForJWSAlgorithm(supportedUserinfoSigningAlgValues.get(count)));
-                }
-            } catch (IdentityOAuth2Exception e) {
-                throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
+        String[] supportedUserinfoSigningAlgValuesArray = new String[supportedUserinfoSigningAlgValues.size()];
+        try {
+            for (int count = 0; count < supportedUserinfoSigningAlgValues.size(); count++) {
+                supportedUserinfoSigningAlgValuesArray[count] =  String.valueOf(OAuth2Util
+                        .mapSignatureAlgorithmForJWSAlgorithm(supportedUserinfoSigningAlgValues.get(count)));
             }
-            providerConfig.setUserinfoSigningAlgValuesSupported(supportedUserinfoSigningAlgValuesArray);
+        } catch (IdentityOAuth2Exception e) {
+            throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
         }
+        providerConfig.setUserinfoSigningAlgValuesSupported(supportedUserinfoSigningAlgValuesArray);
 
         List<String> supportedTokenEndpointAuthMethods = OAuthServerConfiguration.getInstance()
                 .getSupportedTokenEndpointAuthMethods();
-        if (!supportedTokenEndpointAuthMethods.isEmpty()) {
-            providerConfig.setTokenEndpointAuthMethodsSupported(supportedTokenEndpointAuthMethods.toArray(new
-                    String[supportedUserinfoSigningAlgValues.size()]));
-        }
+        providerConfig.setTokenEndpointAuthMethodsSupported(supportedTokenEndpointAuthMethods.toArray(new
+                String[supportedUserinfoSigningAlgValues.size()]));
 
         providerConfig.setGrantTypesSupported(OAuth2Util.getSupportedGrantTypes().stream().toArray(String[]::new));
         providerConfig.setRequestParameterSupported(Boolean.valueOf(OAuth2Util.isRequestParameterSupported()));
@@ -160,19 +158,17 @@ public class ProviderConfigBuilder {
 
         List<String> supportedTokenEndpointSigningAlgorithms = OAuthServerConfiguration.getInstance()
                 .getSupportedTokenEndpointSigningAlgorithms();
-        if (!supportedTokenEndpointSigningAlgorithms.isEmpty()) {
-            String[] supportedTokenEndpointSigningAlgorithmsArray = new String[
-                supportedTokenEndpointSigningAlgorithms.size()];
-            try {
-                for (int count = 0; count < supportedTokenEndpointSigningAlgorithms.size(); count++) {
-                    supportedTokenEndpointSigningAlgorithmsArray[count] =  String.valueOf(OAuth2Util
-                            .mapSignatureAlgorithmForJWSAlgorithm(supportedTokenEndpointSigningAlgorithms.get(count)));
-                }
-            } catch (IdentityOAuth2Exception e) {
-                throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
+        String[] supportedTokenEndpointSigningAlgorithmsArray = new String[supportedTokenEndpointSigningAlgorithms
+                .size()];
+        try {
+            for (int count = 0; count < supportedTokenEndpointSigningAlgorithms.size(); count++) {
+                supportedTokenEndpointSigningAlgorithmsArray[count] =  String.valueOf(OAuth2Util
+                        .mapSignatureAlgorithmForJWSAlgorithm(supportedTokenEndpointSigningAlgorithms.get(count)));
             }
-            providerConfig.setTokenEndpointAuthSigningAlgValuesSupported(supportedTokenEndpointSigningAlgorithmsArray);
+        } catch (IdentityOAuth2Exception e) {
+            throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
         }
+        providerConfig.setTokenEndpointAuthSigningAlgValuesSupported(supportedTokenEndpointSigningAlgorithmsArray);
 
         providerConfig.setTlsClientCertificateBoundAccessTokens(OAuthServerConfiguration.getInstance()
                 .isTlsClientCertificateBoundAccessTokens());

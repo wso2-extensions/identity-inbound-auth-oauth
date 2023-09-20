@@ -78,7 +78,7 @@ public class OIDProviderConfigResponse {
     private Boolean backchannelLogoutSessionSupported;
     private String[] codeChallengeMethodsSupported;
     private String deviceAuthorizationEndpoint;
-    private Boolean tlsClientCertificateBoundAccessTokens;
+    private boolean tlsClientCertificateBoundAccessTokens;
 
     public String getIssuer() {
         return issuer;
