@@ -50,6 +50,7 @@
     </bean>
     <bean id="authzEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint">
         <property name="openIDConnectClaimFilter" ref="openIDConnectClaimFilterFactoryBean"/>
+        <property name="deviceAuthService" ref="deviceAuthServiceFactoryBean"/>
         <property name="scopeMetadataService" ref="scopeServiceFactoryBean"/>
     </bean>
     <bean id="tokenEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.token.OAuth2TokenEndpoint"/>
