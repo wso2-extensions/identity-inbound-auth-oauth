@@ -22,7 +22,9 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
@@ -196,6 +198,14 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                     authenticatedIDP = resultSet.getString(9);
                     scopes = getScopesForCodeId(resultSet.getString(10), connection);
 
+                    if (StringUtils.isBlank(subjectIdentifier)) {
+                        int idpId = UserSessionStore.getInstance().getIdPId(authenticatedIDP, tenantId);
+                        subjectIdentifier = UserSessionStore.getInstance().getUserId(userName, tenantId,
+                                    userDomain, idpId);
+                        log.info("Added userID as subject identifier as the subject identifier " +
+                                "column value is empty in the table");
+                    }
+
                     if (StringUtils.isNotBlank(userName) && tenantId != 0 && StringUtils.isNotBlank(userDomain)) {
                         String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
                         user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain, authenticatedIDP);
@@ -216,6 +226,9 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                     deviceFlowDO.setStatus(Constants.NOT_EXIST);
                 }
                 return deviceFlowDO;
+            } catch (UserSessionException e) {
+                    throw new IdentityOAuth2Exception("Error occurred while retrieving subject identifier for " +
+                            "user: " + userName + " in tenant: " + tenantId, e);
             }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when getting authentication status for device_code: " +
