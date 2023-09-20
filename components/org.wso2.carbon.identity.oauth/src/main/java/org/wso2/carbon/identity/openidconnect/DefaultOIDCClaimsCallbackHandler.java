@@ -866,6 +866,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
      */
     private void addCnfClaimToOIDCDialect(OAuthTokenReqMessageContext tokenReqMessageContext,
                                        Map<String, Object> userClaimsInOIDCDialect) throws IdentityOAuth2Exception {
+        
         Base64URL certThumbprint;
         X509Certificate certificate;
         String headerName = Optional.ofNullable(IdentityUtil.getProperty(OAuthConstants.MTLS_AUTH_HEADER))

@@ -2389,12 +2389,14 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
   
     @Test
     public void testParseCertificateWithValidCert() throws Exception {
+
         X509Certificate x509Certificate = OAuth2Util.parseCertificate(VALID_CERTIFICATE_CONTENT);
         assertNotNull(x509Certificate);
     }
 
     @Test(expectedExceptions = CertificateException.class)
     public void testParseCertificateWithInvalidCert() throws Exception {
+
         X509Certificate x509Certificate = OAuth2Util.parseCertificate(INVALID_CERTIFICATE_CONTENT);
         assertNull(x509Certificate);
     }
