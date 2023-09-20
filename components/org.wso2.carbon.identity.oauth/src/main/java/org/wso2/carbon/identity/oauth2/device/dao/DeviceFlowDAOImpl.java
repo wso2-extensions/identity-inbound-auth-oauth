@@ -227,8 +227,8 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                 }
                 return deviceFlowDO;
             } catch (UserSessionException e) {
-                    throw new IdentityOAuth2Exception("Error occurred while retrieving subject identifier for " +
-                            "user: " + userName + " in tenant: " + tenantId, e);
+                throw new IdentityOAuth2Exception("Error occurred while retrieving subject identifier for device " +
+                            "code: " + deviceCode, e);
             }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when getting authentication status for device_code: " +
