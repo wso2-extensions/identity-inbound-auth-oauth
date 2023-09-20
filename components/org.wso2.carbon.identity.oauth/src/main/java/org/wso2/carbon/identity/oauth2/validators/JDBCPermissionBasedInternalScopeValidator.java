@@ -64,6 +64,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -119,7 +120,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
             }
         } catch (IdentityOAuth2Exception e) {
             log.warn("Error while retrieving scopes for the user: " + tokReqMsgCtx.getAuthorizedUser(), e);
-            allowedScopes = new HashSet<>();
+            allowedScopes = Collections.EMPTY_SET;
         }
 
         return getScopeNames(allowedScopes);
@@ -270,11 +271,11 @@ public class JDBCPermissionBasedInternalScopeValidator {
         Set<Scope> userAllowedScopes = new HashSet<>();
 
         try {
+            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+            startTenantFlow(tenantDomain, tenantId);
             if (requestedScopes == null) {
                 return new HashSet<>();
             }
-            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-
             Set<Scope> allScopes = getScopesOfPermissionType(tenantId);
             if (ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
                 requestedScopes = getScopeNames(allScopes);
@@ -284,7 +285,6 @@ public class JDBCPermissionBasedInternalScopeValidator {
             }
             Set<String> requestedScopesSet = new HashSet<>(Arrays.asList(requestedScopes));
 
-            startTenantFlow(tenantDomain, tenantId);
             AuthorizationManager authorizationManager = OAuthComponentServiceHolder.getInstance().getRealmService()
                     .getTenantUserRealm(tenantId).getAuthorizationManager();
             String[] allowedResourcesForApplication;

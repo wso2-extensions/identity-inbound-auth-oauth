@@ -279,7 +279,7 @@ public class RoleBasedInternalScopeValidator {
         return requestedScopes.toArray(new String[0]);
     }
 
-    private ArrayList<String> getApplicationRoles(String clientId) throws IdentityOAuth2Exception {
+    private List<String> getApplicationRoles(String clientId) throws IdentityOAuth2Exception {
 
         ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
         String[] roles = serviceProvider.getApplicationRoles();
