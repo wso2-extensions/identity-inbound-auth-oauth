@@ -3597,6 +3597,13 @@ public class OAuthServerConfiguration {
                 }
             }
         }
+        // As there was an existing configuration for userInfoJWTSignatureAlgorithm which accepts a single value,
+        // the below condition is used to merge the values from both the existing and newly added configurations.
+        String userInfoJWTSignatureAlgorithm =  OAuthServerConfiguration.getInstance()
+                .getUserInfoJWTSignatureAlgorithm();
+        if (!userInfoJWTSignatureAlgorithms.contains(userInfoJWTSignatureAlgorithm)) {
+            userInfoJWTSignatureAlgorithms.add(userInfoJWTSignatureAlgorithm);
+        }
     }
 
     /**
