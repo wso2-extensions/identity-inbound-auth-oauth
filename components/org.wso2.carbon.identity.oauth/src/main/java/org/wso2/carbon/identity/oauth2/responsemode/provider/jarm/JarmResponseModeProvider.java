@@ -53,7 +53,6 @@ public abstract class JarmResponseModeProvider extends AbstractResponseModeProvi
     private static final String EXPIRES_IN = "expires_in";
     private static final String ID_TOKEN = "id_token";
     private static final String STATE = "state";
-    private static final String SCOPE = "scope";
     private static final String SESSION_STATE = "session_state";
     private static final String AUTHENTICATED_IDPS = "AuthenticatedIdPs";
     private static final int TO_MILLISECONDS = 1000;
@@ -69,7 +68,6 @@ public abstract class JarmResponseModeProvider extends AbstractResponseModeProvi
         String authenticatedIdPs = authorizationResponseDTO.getAuthenticatedIDPs();
         String sessionState = authorizationResponseDTO.getSessionState();
         String state = authorizationResponseDTO.getState();
-        String scope = authorizationResponseDTO.getSuccessResponseDTO().getScope();
 
         JWTClaimsSet.Builder jwtClaimsSet = new JWTClaimsSet.Builder();
         jwtClaimsSet.claim(ISSUER, getIssuer(authorizationResponseDTO));
@@ -109,10 +107,6 @@ public abstract class JarmResponseModeProvider extends AbstractResponseModeProvi
 
         if (authenticatedIdPs != null && !authenticatedIdPs.isEmpty()) {
             jwtClaimsSet.claim(AUTHENTICATED_IDPS, authenticatedIdPs);
-        }
-
-        if (scope != null) {
-            jwtClaimsSet.claim(SCOPE, scope);
         }
 
         return jwtClaimsSet.build();
