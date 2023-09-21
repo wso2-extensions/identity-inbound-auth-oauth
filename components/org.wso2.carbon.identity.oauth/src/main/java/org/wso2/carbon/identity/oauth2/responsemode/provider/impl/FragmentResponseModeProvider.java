@@ -54,41 +54,41 @@ public class FragmentResponseModeProvider extends AbstractResponseModeProvider {
             long validityPeriod = authorizationResponseDTO.getSuccessResponseDTO().getValidityPeriod();
             String scope = authorizationResponseDTO.getSuccessResponseDTO().getScope();
             String authenticatedIdPs = authorizationResponseDTO.getAuthenticatedIDPs();
-            List<String> queryParams = new ArrayList<>();
+            List<String> params = new ArrayList<>();
             if (accessToken != null) {
-                queryParams.add(OAuthConstants.ACCESS_TOKEN_RESPONSE_PARAM + "=" + accessToken);
-                queryParams.add(OAuthConstants.EXPIRES_IN + "=" + validityPeriod);
+                params.add(OAuthConstants.ACCESS_TOKEN_RESPONSE_PARAM + "=" + accessToken);
+                params.add(OAuthConstants.EXPIRES_IN + "=" + validityPeriod);
             }
 
             if (tokenType != null) {
-                queryParams.add(OAuthConstants.TOKEN_TYPE + "=" + tokenType);
+                params.add(OAuthConstants.TOKEN_TYPE + "=" + tokenType);
             }
 
             if (idToken != null) {
-                queryParams.add(OAuthConstants.ID_TOKEN + "=" + idToken);
+                params.add(OAuthConstants.ID_TOKEN + "=" + idToken);
             }
 
             if (code != null) {
-                queryParams.add(OAuthConstants.CODE + "=" + code);
+                params.add(OAuthConstants.CODE + "=" + code);
             }
 
             if (authenticatedIdPs != null && !authenticatedIdPs.isEmpty()) {
-                queryParams.add(OAuthConstants.AUTHENTICATED_IDPS + "=" + authenticatedIdPs);
+                params.add(OAuthConstants.AUTHENTICATED_IDPS + "=" + authenticatedIdPs);
             }
 
             if (sessionState != null) {
-                queryParams.add(OAuthConstants.SESSION_STATE + "=" + sessionState);
+                params.add(OAuthConstants.SESSION_STATE + "=" + sessionState);
             }
 
             if (state != null) {
-                queryParams.add(OAuthConstants.STATE + "=" + state);
+                params.add(OAuthConstants.STATE + "=" + state);
             }
 
             if (scope != null) {
-                queryParams.add(OAuthConstants.SCOPE + "=" + scope);
+                params.add(OAuthConstants.SCOPE + "=" + scope);
             }
 
-            redirectUrl += "#" + String.join("&", queryParams);
+            redirectUrl += "#" + String.join("&", params);
 
         } else {
             redirectUrl += "#" +
