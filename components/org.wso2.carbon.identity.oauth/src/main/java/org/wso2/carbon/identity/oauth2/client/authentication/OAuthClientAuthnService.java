@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -424,8 +425,13 @@ public class OAuthClientAuthnService {
         String mtlsAuthHeader = Optional.ofNullable(IdentityUtil.getProperty(OAuthConstants.MTLS_AUTH_HEADER))
                 .orElse("CONFIG_NOT_FOUND");
         String x509Certificate = request.getHeader(mtlsAuthHeader);
+        Object certObject = request.getAttribute(OAuthConstants.JAVAX_SERVLET_REQUEST_CERTIFICATE);
         try {
-            if (StringUtils.isEmpty(x509Certificate) || OAuth2Util.parseCertificate(x509Certificate) == null) {
+            if (StringUtils.isNotBlank(x509Certificate) && OAuth2Util.parseCertificate(x509Certificate) != null) {
+                return true;
+            } else if (certObject instanceof X509Certificate[] || certObject instanceof X509Certificate) {
+                return true;
+            } else {
                 log.debug("Transport certificate not passed through the request or the certificate is not valid");
                 return false;
             }
@@ -433,7 +439,6 @@ public class OAuthClientAuthnService {
             log.debug("Invalid transport certificate.", e);
             return false;
         }
-        return true;
     }
 
     /**

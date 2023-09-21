@@ -201,6 +201,7 @@ public final class OAuthConstants {
     public static final String INVALID_AUTH_METHOD = "INVALID_AUTH";
     public static final String NOT_APPLICABLE = "N/A";
     public static final String TOKEN_ENDPOINT_AUTH_METHOD = "token_endpoint_auth_method";
+    public static final String JAVAX_SERVLET_REQUEST_CERTIFICATE = "javax.servlet.request.X509Certificate";
 
     private OAuthConstants() {
 
