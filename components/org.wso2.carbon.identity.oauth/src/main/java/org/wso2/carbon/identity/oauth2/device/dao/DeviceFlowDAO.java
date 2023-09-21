@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 
 import java.sql.Timestamp;
+import java.util.Optional;
 
 /**
  * New set of DAO classes  for each purpose  and factory class to get instance of each DAO classes were introduced
@@ -183,6 +184,18 @@ public interface DeviceFlowDAO {
      * @throws IdentityOAuth2Exception Error while setting device code as expired.
      */
     void setDeviceCodeExpired(String deviceCode, String status) throws IdentityOAuth2Exception;
+
+    /**
+     * Return device code for given user code.
+     *
+     * @param userCode Code that is used to correlate user and device.
+     * @return Device code.
+     * @throws IdentityOAuth2Exception Error while getting device code for user code.
+     */
+    default Optional<String> getDeviceCodeForUserCode(String userCode) throws IdentityOAuth2Exception {
+
+        return Optional.empty();
+    }
 
     /**
      * Set callback uri of the service provider.
