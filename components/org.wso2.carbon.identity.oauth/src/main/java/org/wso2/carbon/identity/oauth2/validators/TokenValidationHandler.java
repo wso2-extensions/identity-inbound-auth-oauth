@@ -179,7 +179,7 @@ public class TokenValidationHandler {
 
         try {
             accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
-                    .validateToken(messageContext, requestDTO, false);
+                    .validateToken(requestDTO.getAccessToken().getIdentifier(), false);
         } catch (IllegalArgumentException e) {
             // Access token not found in the system.
             return buildClientAppErrorResponse(e.getMessage());
@@ -277,7 +277,7 @@ public class TokenValidationHandler {
         AccessTokenDO accessTokenDO;
         try {
             accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
-                    .validateToken(messageContext, validationRequest, true);
+                    .validateToken(oAuth2Token.getIdentifier(), true);
             if (accessTokenDO != null) {
                 messageContext.addProperty(OAuthConstants.ACCESS_TOKEN_DO, accessTokenDO);
             }
@@ -501,7 +501,7 @@ public class TokenValidationHandler {
             try {
                 String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
                 accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
-                        .validateToken(messageContext, validationRequest, false);
+                        .validateToken(validationRequest.getAccessToken().getIdentifier(), false);
                 boolean isCrossTenantTokenIntrospectionAllowed
                         = OAuthServerConfiguration.getInstance().isCrossTenantTokenIntrospectionAllowed();
                 if (!isCrossTenantTokenIntrospectionAllowed && accessTokenDO != null &&

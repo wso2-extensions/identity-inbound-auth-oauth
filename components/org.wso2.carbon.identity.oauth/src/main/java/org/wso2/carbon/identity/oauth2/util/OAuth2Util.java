@@ -4015,10 +4015,10 @@ public class OAuth2Util {
             throws UserInfoEndpointException {
 
         if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
-            AccessTokenDO accessTokenDO = null;
+            AccessTokenDO accessTokenDO;
             try {
-                accessTokenDO = OAuth2Util.findAccessToken(
-                        tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+                accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
+                        .validateToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
             } catch (IdentityOAuth2Exception e) {
                 throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
             }

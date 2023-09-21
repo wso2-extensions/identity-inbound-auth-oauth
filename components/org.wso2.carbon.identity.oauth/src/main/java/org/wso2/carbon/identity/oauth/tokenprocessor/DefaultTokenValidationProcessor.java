@@ -19,10 +19,8 @@
 package org.wso2.carbon.identity.oauth.tokenprocessor;
 
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
 
 /**
  * Default token validation processor with token persistence.
@@ -30,9 +28,14 @@ import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageCo
 public class DefaultTokenValidationProcessor implements TokenValidationProcessor {
 
     @Override
-    public AccessTokenDO validateToken(OAuth2TokenValidationMessageContext messageContext,
-                                       OAuth2TokenValidationRequestDTO validationRequestDTO, boolean includeExpired)
-            throws IdentityOAuth2Exception {
-        return OAuth2Util.findAccessToken(validationRequestDTO.getAccessToken().getIdentifier(), includeExpired);
+    public AccessTokenDO validateToken(String accessToken, boolean includeExpired) throws IdentityOAuth2Exception {
+
+        return OAuth2Util.findAccessToken(accessToken, includeExpired);
+    }
+
+    @Override
+    public String getClientIdForAccessToken(String accessToken) throws IdentityOAuth2Exception {
+
+        return OAuth2Util.getClientIdForAccessToken(accessToken);
     }
 }

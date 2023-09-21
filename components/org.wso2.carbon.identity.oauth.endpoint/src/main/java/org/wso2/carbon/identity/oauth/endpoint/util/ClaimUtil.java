@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.oauth.user.UserInfoClaimRetriever;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
@@ -114,8 +115,8 @@ public class ClaimUtil {
             String subjectClaimValue = null;
 
             try {
-                AccessTokenDO accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(
-                        OAuth2Util.getAccessTokenIdentifier(tokenResponse));
+                AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
+                                .validateToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
                 userId = accessTokenDO.getAuthzUser().getUserId();
                 userTenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
 

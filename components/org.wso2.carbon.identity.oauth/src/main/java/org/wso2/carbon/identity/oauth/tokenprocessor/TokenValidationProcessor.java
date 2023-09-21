@@ -19,9 +19,7 @@
 package org.wso2.carbon.identity.oauth.tokenprocessor;
 
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
 
 /**
  * Token validation Processor.
@@ -31,13 +29,19 @@ public interface TokenValidationProcessor {
     /**
      * Validate token.
      *
-     * @param validationRequestDTO
-     * @param includeExpired
-     * @return
-     * @throws IdentityOAuth2Exception
+     * @param accessToken    access token
+     * @param includeExpired include expired tokens
+     * @return AccessTokenDO
+     * @throws IdentityOAuth2Exception if an error occurred while validating the token
      */
-    AccessTokenDO validateToken(OAuth2TokenValidationMessageContext messageContext,
-                                OAuth2TokenValidationRequestDTO validationRequestDTO, boolean includeExpired)
-            throws IdentityOAuth2Exception;
+    AccessTokenDO validateToken(String accessToken, boolean includeExpired) throws IdentityOAuth2Exception;
 
+    /**
+     * Get client id for access token.
+     *
+     * @param accessToken access token
+     * @return client id
+     * @throws IdentityOAuth2Exception if an error occurred while getting the client id
+     */
+    String getClientIdForAccessToken(String accessToken) throws IdentityOAuth2Exception;
 }
