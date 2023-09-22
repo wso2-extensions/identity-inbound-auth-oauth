@@ -490,10 +490,13 @@ public class OIDProviderConfigResponse {
     }
 
     public boolean isTlsClientCertificateBoundAccessTokensEnabled() {
+
         return isTlsClientCertificateBoundAccessTokensEnabled;
     }
 
-    public void setTlsClientCertificateBoundAccessTokensEnabled(boolean isTlsClientCertificateBoundAccessTokensEnabled) {
+    public void setTlsClientCertificateBoundAccessTokensEnabled(
+            boolean isTlsClientCertificateBoundAccessTokensEnabled) {
+
         this.isTlsClientCertificateBoundAccessTokensEnabled = isTlsClientCertificateBoundAccessTokensEnabled;
     }
 
