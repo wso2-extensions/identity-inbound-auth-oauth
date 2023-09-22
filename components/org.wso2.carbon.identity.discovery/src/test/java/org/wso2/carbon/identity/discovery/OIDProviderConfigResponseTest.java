@@ -464,4 +464,14 @@ public class OIDProviderConfigResponseTest {
         oidProviderConfigResponse.setCodeChallengeMethodsSupported(codeChallengeMethodsSupported);
         assertEquals(oidProviderConfigResponse.getCodeChallengeMethodsSupported(), codeChallengeMethodsSupported);
     }
+
+    @Test
+    public void testGetandTlsClientCertificateBoundAccessTokensEnabled() {
+
+        boolean isTlsClientCertificateBoundAccessTokensEnabled = true;
+        oidProviderConfigResponse.setTlsClientCertificateBoundAccessTokensEnabled(true);
+        boolean tlsClientCertificateBoundAccessTokensEnabledValue = oidProviderConfigResponse
+                .isTlsClientCertificateBoundAccessTokensEnabled();
+        assertEquals(isTlsClientCertificateBoundAccessTokensEnabled, tlsClientCertificateBoundAccessTokensEnabledValue);
+    }
 }

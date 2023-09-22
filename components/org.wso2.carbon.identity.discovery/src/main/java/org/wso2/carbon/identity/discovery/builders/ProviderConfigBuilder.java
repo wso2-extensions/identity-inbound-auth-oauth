@@ -163,8 +163,8 @@ public class ProviderConfigBuilder {
         }
         providerConfig.setTokenEndpointAuthSigningAlgValuesSupported(supportedTokenEndpointSigningAlgorithmsArray);
 
-        providerConfig.setTlsClientCertificateBoundAccessTokens(OAuthServerConfiguration.getInstance()
-                .isTlsClientCertificateBoundAccessTokens());
+        providerConfig.setTlsClientCertificateBoundAccessTokensEnabled(OAuthServerConfiguration.getInstance()
+                .isTlsClientCertificateBoundAccessTokensEnabled());
         return providerConfig;
     }
 }

@@ -78,7 +78,7 @@ public class OIDProviderConfigResponse {
     private Boolean backchannelLogoutSessionSupported;
     private String[] codeChallengeMethodsSupported;
     private String deviceAuthorizationEndpoint;
-    private boolean tlsClientCertificateBoundAccessTokens;
+    private boolean isTlsClientCertificateBoundAccessTokensEnabled;
 
     public String getIssuer() {
         return issuer;
@@ -489,8 +489,12 @@ public class OIDProviderConfigResponse {
         this.deviceAuthorizationEndpoint = deviceAuthorizationEndpoint;
     }
 
-    public void setTlsClientCertificateBoundAccessTokens(Boolean tlsClientCertificateBoundAccessTokens) {
-        this.tlsClientCertificateBoundAccessTokens = tlsClientCertificateBoundAccessTokens;
+    public boolean isTlsClientCertificateBoundAccessTokensEnabled() {
+        return isTlsClientCertificateBoundAccessTokensEnabled;
+    }
+
+    public void setTlsClientCertificateBoundAccessTokensEnabled(boolean isTlsClientCertificateBoundAccessTokensEnabled) {
+        this.isTlsClientCertificateBoundAccessTokensEnabled = isTlsClientCertificateBoundAccessTokensEnabled;
     }
 
     public Map<String, Object> getConfigMap() {
@@ -557,7 +561,7 @@ public class OIDProviderConfigResponse {
         configMap.put(DiscoveryConstants.CODE_CHALLENGE_METHODS_SUPPORTED, this.codeChallengeMethodsSupported);
         configMap.put(DiscoveryConstants.DEVICE_AUTHORIZATION_ENDPOINT, this.deviceAuthorizationEndpoint);
         configMap.put(DiscoveryConstants.TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN,
-                this.tlsClientCertificateBoundAccessTokens);
+                this.isTlsClientCertificateBoundAccessTokensEnabled);
         configMap.put(DiscoveryConstants.ID_TOKEN_SIGNING_ALG, this.idTokenSigningAlgValuesSupported);
 
         return configMap;
