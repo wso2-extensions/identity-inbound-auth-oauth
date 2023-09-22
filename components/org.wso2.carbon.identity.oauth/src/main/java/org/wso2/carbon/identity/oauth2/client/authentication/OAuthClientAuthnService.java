@@ -53,6 +53,7 @@ import javax.servlet.http.HttpServletRequest;
 public class OAuthClientAuthnService {
 
     private static final Log log = LogFactory.getLog(OAuthClientAuthnService.class);
+    private static final String CONFIG_NOT_FOUND = "CONFIG_NOT_FOUND";
 
     /**
      * Retrieve OAuth2 client authenticators which are reigstered dynamically.
@@ -168,7 +169,7 @@ public class OAuthClientAuthnService {
                 if (OAuth2Util.isFapiConformantApp(clientId)) {
                     if (!isMTLSEnforced(request)) {
                         setErrorToContext(OAuth2ErrorCodes.INVALID_REQUEST, "Transport certificate not " +
-                                "passed through the request or the certificate is not valid", oAuthClientAuthnContext);
+                                "passed through the request or the certificate is not valid.", oAuthClientAuthnContext);
                         return;
                     } else {
                         List<OAuthClientAuthenticator> clientAuthenticators = this.getClientAuthenticators();
@@ -181,7 +182,7 @@ public class OAuthClientAuthnService {
                         }
                         if (updatedAuthenticatorList.isEmpty()) {
                             setErrorToContext(OAuth2ErrorCodes.INVALID_REQUEST, "No valid authenticators found for " +
-                                    "the application", oAuthClientAuthnContext);
+                                    "the application.", oAuthClientAuthnContext);
                         } else {
                             updatedAuthenticatorList.forEach(oAuthClientAuthenticator -> {
                                 executeAuthenticator(oAuthClientAuthenticator, oAuthClientAuthnContext, request,
@@ -192,15 +193,15 @@ public class OAuthClientAuthnService {
                     }
                 }
             } else {
-                setErrorToContext(OAuth2ErrorCodes.INVALID_CLIENT, "Client ID not found in the request",
+                setErrorToContext(OAuth2ErrorCodes.INVALID_CLIENT, "Client ID not found in the request.",
                         oAuthClientAuthnContext);
             }
         } catch (IdentityOAuth2Exception e) {
             if (log.isDebugEnabled()) {
-                log.debug("Error occurred while processing the request to validate the client authentication method");
+                log.debug("Error occurred while processing the request to validate the client authentication method.");
             }
             setErrorToContext(OAuth2ErrorCodes.INVALID_CLIENT, "Error occurred while validating the " +
-                    "request auth method with the registered token endpoint auth method", oAuthClientAuthnContext);
+                    "request auth method with the registered token endpoint auth method.", oAuthClientAuthnContext);
         }
         this.getClientAuthenticators().forEach(oAuthClientAuthenticator -> {
             executeAuthenticator(oAuthClientAuthenticator, oAuthClientAuthnContext, request, bodyContentMap);
@@ -334,8 +335,8 @@ public class OAuthClientAuthnService {
                 }
             }
         } catch (IdentityOAuth2Exception e) {
-            throw new OAuthClientAuthnException("Token signing algorithm not registered",
-                    OAuth2ErrorCodes.INVALID_REQUEST);
+            throw new OAuthClientAuthnException("Error occurred while retrieving the service provider.",
+                    OAuth2ErrorCodes.INVALID_REQUEST, e);
         }
         // Below code needs to be changed to getSupportedTokenEndpointAuthMethods() once the
         // https://github.com/wso2-extensions/identity-inbound-auth-oauth/pull/2162 is merged.
@@ -367,11 +368,11 @@ public class OAuthClientAuthnService {
             } else if (request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ) != null) {
                 return getClientIdFromBasicAuth(request);
             } else {
-                throw new OAuthClientAuthnException("Unable to find client id in the request",
+                throw new OAuthClientAuthnException("Unable to find client id in the request.",
                         OAuth2ErrorCodes.INVALID_CLIENT);
             }
         } catch (ParseException e) {
-            throw new OAuthClientAuthnException("Error occurred while parsing the signed assertion",
+            throw new OAuthClientAuthnException("Error occurred while parsing the signed assertion.",
                     OAuth2ErrorCodes.INVALID_REQUEST, e);
         }
     }
@@ -423,7 +424,7 @@ public class OAuthClientAuthnService {
     private boolean isMTLSEnforced(HttpServletRequest request) throws OAuthClientAuthnException {
 
         String mtlsAuthHeader = Optional.ofNullable(IdentityUtil.getProperty(OAuthConstants.MTLS_AUTH_HEADER))
-                .orElse("CONFIG_NOT_FOUND");
+                .orElse(CONFIG_NOT_FOUND);
         String x509Certificate = request.getHeader(mtlsAuthHeader);
         Object certObject = request.getAttribute(OAuthConstants.JAVAX_SERVLET_REQUEST_CERTIFICATE);
         try {
@@ -432,7 +433,7 @@ public class OAuthClientAuthnService {
             } else if (certObject instanceof X509Certificate[] || certObject instanceof X509Certificate) {
                 return true;
             } else {
-                log.debug("Transport certificate not passed through the request or the certificate is not valid");
+                log.debug("Transport certificate not passed through the request or the certificate is not valid.");
                 return false;
             }
         } catch (CertificateException e) {
