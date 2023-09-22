@@ -94,6 +94,9 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     private static final Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandler.class);
     private static final String OAUTH2 = "oauth2";
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
+    private static final String CNF_CLAIM = "cnf";
+    private static final String CONFIG_NOT_FOUND = "CONFIG_NOT_FOUND";
+    public static final String JAVAX_SERVLET_REQUEST_CERTIFICATE = "javax.servlet.request.X509Certificate";
 
     @Override
     public JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder, OAuthTokenReqMessageContext
@@ -103,7 +106,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             tokenReqMessageContext.addProperty(ID_TOKEN_USER_CLAIMS_PROP_KEY, userClaimsInOIDCDialect.keySet());
             if (OAuth2Util.isFapiConformantApp(tokenReqMessageContext.getOauth2AccessTokenReqDTO()
                     .getClientId())) {
-                addCnfClaimToOIDCDialect(tokenReqMessageContext, userClaimsInOIDCDialect);
+                addCnfClaimToOIDCDialect(tokenReqMessageContext);
             }
             return setClaimsToJwtClaimSet(jwtClaimsSetBuilder, userClaimsInOIDCDialect);
         } catch (OAuthSystemException e) {
@@ -861,16 +864,15 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
      * Add the CNF claim to the OIDC dialect when a TLS certificate is passed in the request.
      *
      * @param tokenReqMessageContext       Token request message context.
-     * @param userClaimsInOIDCDialect      Map of the user claims in the OIDC dialect.
      * @throws IdentityOAuth2Exception     An exception is thrown if the cert could not be obtained from the request.
      */
-    private void addCnfClaimToOIDCDialect(OAuthTokenReqMessageContext tokenReqMessageContext,
-                                       Map<String, Object> userClaimsInOIDCDialect) throws IdentityOAuth2Exception {
+    private void addCnfClaimToOIDCDialect(OAuthTokenReqMessageContext tokenReqMessageContext)
+            throws IdentityOAuth2Exception {
         
         Base64URL certThumbprint;
         X509Certificate certificate;
         String headerName = Optional.ofNullable(IdentityUtil.getProperty(OAuthConstants.MTLS_AUTH_HEADER))
-                .orElse("CONFIG_NOT_FOUND");
+                .orElse(CONFIG_NOT_FOUND);
 
         HttpRequestHeader[] requestHeaders = tokenReqMessageContext.getOauth2AccessTokenReqDTO()
                 .getHttpRequestHeaders();
@@ -880,13 +882,15 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             if (certHeader.isPresent()) {
                 try {
                     certificate = OAuth2Util.parseCertificate(certHeader.get().getValue()[0]);
-                    certThumbprint = X509CertUtils.computeSHA256Thumbprint(certificate);
-                    tokenReqMessageContext.addProperty("cnf", Collections.singletonMap("x5t#S256",
-                            certThumbprint));
                 } catch (CertificateException e) {
                     throw new IdentityOAuth2Exception("Error occurred while extracting the certificate", e);
                 }
+            } else {
+                certificate = (X509Certificate) tokenReqMessageContext.getOauth2AccessTokenReqDTO()
+                        .getHttpServletRequestWrapper().getAttribute(JAVAX_SERVLET_REQUEST_CERTIFICATE);
             }
+            certThumbprint = X509CertUtils.computeSHA256Thumbprint(certificate);
+            tokenReqMessageContext.addProperty(CNF_CLAIM, Collections.singletonMap("x5t#S256", certThumbprint));
         }
     }
 }
