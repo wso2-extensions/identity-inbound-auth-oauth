@@ -34,9 +34,9 @@ import java.util.Set;
 public interface AuthorizationCodeDAO {
 
     /**
-     * Insert an authorization code. Internally this method uses the tenant present
-     * in the carbon context to retrieve the oauth application.
-     * This method is deprecated. Use {@link #insertAuthorizationCode(String, String, String, String, AuthzCodeDO)}.
+     * Insert an authorization code.
+     * This method is deprecated as it uses the tenant present in thread local to retrieve the consumer app.
+     * Use {@link #insertAuthorizationCode(String, String, String, String, AuthzCodeDO)}.
      *
      * @param authzCode     Authorization code.
      * @param consumerKey   Consumer key.

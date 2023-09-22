@@ -69,68 +69,8 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     public void insertAuthorizationCode(String authzCode, String consumerKey, String callbackUrl,
                                         AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception {
 
-        if (!isPersistenceEnabled()) {
-            return;
-        }
-
-        if (log.isDebugEnabled()) {
-            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)) {
-                log.debug("Persisting authorization code (hashed): " + DigestUtils.sha256Hex(authzCode) + " for " +
-                        "client: " + consumerKey + " user: " + authzCodeDO.getAuthorizedUser().getLoggableUserId());
-            } else {
-                log.debug("Persisting authorization code for client: " + consumerKey + " user: " + authzCodeDO
-                        .getAuthorizedUser().getLoggableUserId());
-            }
-        }
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
-        PreparedStatement prepStmt = null;
-        String userDomain = OAuth2Util.getUserStoreDomain(authzCodeDO.getAuthorizedUser());
-        String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authzCodeDO.getAuthorizedUser());
-        try {
-            String sql;
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                sql = SQLQueries.STORE_AUTHORIZATION_CODE_WITH_PKCE_IDP_NAME;
-            } else {
-                sql = SQLQueries.STORE_AUTHORIZATION_CODE_WITH_PKCE;
-            }
-            prepStmt = connection.prepareStatement(sql);
-
-            prepStmt.setString(1, authzCodeDO.getAuthzCodeId());
-            prepStmt.setString(2, getPersistenceProcessor().getProcessedAuthzCode(authzCode));
-            prepStmt.setString(3, callbackUrl);
-            prepStmt.setString(4, "");
-            prepStmt.setString(5, authzCodeDO.getAuthorizedUser().getUserName());
-            prepStmt.setString(6, userDomain);
-            int tenantId = OAuth2Util.getTenantId(authzCodeDO.getAuthorizedUser().getTenantDomain());
-            prepStmt.setInt(7, tenantId);
-            prepStmt.setTimestamp(8, authzCodeDO.getIssuedTime(),
-                    Calendar.getInstance(TimeZone.getTimeZone(UTC)));
-            prepStmt.setLong(9, authzCodeDO.getValidityPeriod());
-            prepStmt.setString(10, authzCodeDO.getAuthorizedUser().getAuthenticatedSubjectIdentifier());
-            prepStmt.setString(11, authzCodeDO.getPkceCodeChallenge());
-            prepStmt.setString(12, authzCodeDO.getPkceCodeChallengeMethod());
-            //insert the hash value of the authorization code
-            prepStmt.setString(13, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCode));
-            prepStmt.setString(14, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                prepStmt.setString(15, authenticatedIDP);
-                prepStmt.setInt(16, tenantId);
-                prepStmt.setInt(17, IdentityTenantUtil.getLoginTenantId());
-            } else {
-                prepStmt.setInt(15, IdentityTenantUtil.getLoginTenantId());
-            }
-
-            prepStmt.execute();
-
-            addAuthorizationCodeScopes(authzCodeDO, connection, tenantId);
-            IdentityDatabaseUtil.commitTransaction(connection);
-        } catch (SQLException e) {
-            IdentityDatabaseUtil.rollbackTransaction(connection);
-            throw new IdentityOAuth2Exception("Error when storing the authorization code for consumer key : " +
-                    consumerKey, e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
-        }
+        insertAuthorizationCode(authzCode, consumerKey,
+                IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()), callbackUrl, authzCodeDO);
     }
 
     @Override

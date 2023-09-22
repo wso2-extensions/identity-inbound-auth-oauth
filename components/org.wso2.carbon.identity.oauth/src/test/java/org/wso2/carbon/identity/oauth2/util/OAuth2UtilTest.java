@@ -2241,7 +2241,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         when(oAuthAppDAO.getAppsForConsumerKey(clientId)).thenReturn(appDOs);
         PowerMockito.whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
 
-        OAuthAppDO[] result = OAuth2Util.getAllAppInformationByClientId(clientId);
+        OAuthAppDO[] result = OAuth2Util.getAppsForClientId(clientId);
         assertEquals(result.length, appDOs.length);
         assertNotNull(result[0]);
         assertNotNull(result[1]);

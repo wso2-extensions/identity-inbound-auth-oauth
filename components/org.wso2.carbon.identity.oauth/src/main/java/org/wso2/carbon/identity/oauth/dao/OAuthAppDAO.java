@@ -91,7 +91,7 @@ public class OAuthAppDAO {
     private static final String APP_STATE = "APP_STATE";
     private static final String USERNAME = "USERNAME";
     private static final String LOWER_USERNAME = "LOWER(USERNAME)";
-    private static final String CONSUMER_KEY_CONSTRAINT = "UK_TENANT_CONSUMER_KEY";
+    private static final String CONSUMER_KEY_CONSTRAINT = "CONSUMER_KEY_CONSTRAINT";
 
     private TokenPersistenceProcessor persistenceProcessor;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
@@ -321,7 +321,8 @@ public class OAuthAppDAO {
     /**
      * Get the OAuth consumer application for the given consumer key. Internally it uses the
      * tenant present in the carbon context.
-     * This method is deprecated. Use {@link #getAppInformation(String, int)} instead.
+     * This method is deprecated as it uses the tenant present in the thread local to retrieve the consumer app.
+     * Use {@link #getAppInformation(String, int)} instead.
      *
      * @param consumerKey Consumer key of the OAuth application.
      * @return OAuthAppDO object.

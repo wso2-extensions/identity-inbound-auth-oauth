@@ -60,6 +60,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.oltu.oauth2.common.exception.OAuthRuntimeException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -375,7 +376,6 @@ public class OAuth2Util {
     private static final String EXTERNAL_CONSENT_PAGE_URL = "external_consent_page_url";
 
     private static final String BASIC_AUTHORIZATION_PREFIX = "Basic";
-    private static final String BASIC_AUTHORIZATION_CREDENTIAL_SEPARATOR = ":";
 
     private OAuth2Util() {
 
@@ -504,13 +504,16 @@ public class OAuth2Util {
     }
 
     /**
-     * Authenticate the OAuth Consumer
+     * Authenticate the OAuth Consumer.
+     * This method is deprecated as it uses the tenant present in thread local to retrieve the consumer app.
+     * Use {@link #authenticateClient(String, String, String)} instead.
      *
      * @param clientId             Consumer Key/Id
      * @param clientSecretProvided Consumer Secret issued during the time of registration
      * @return true, if the authentication is successful, false otherwise.
      * @throws IdentityOAuthAdminException Error when looking up the credentials from the database
      */
+    @Deprecated
     public static boolean authenticateClient(String clientId, String clientSecretProvided)
             throws IdentityOAuthAdminException, IdentityOAuth2Exception, InvalidOAuthClientException {
 
@@ -587,7 +590,6 @@ public class OAuth2Util {
         }
 
         if (appTenant != null && !isTenantActive(appTenant)) {
-            log.error("Cannot retrieve application inside deactivated tenant: " + appTenant);
             throw new InvalidOAuthClientException("Cannot retrieve application inside deactivated tenant: "
                     + appTenant);
         }
@@ -2221,6 +2223,8 @@ public class OAuth2Util {
 
     /**
      * Get Oauth application information. Internally it uses the tenant present in the carbon context.
+     * This method is deprecated as it uses the tenant present in thread local to retrieve the client.
+     * Use {@link #getAppInformationByClientId(String, String)} instead.
      *
      * @param clientId Client id of the application.
      * @return Oauth app information.
@@ -2235,7 +2239,7 @@ public class OAuth2Util {
         if (oAuthAppDO != null) {
             return oAuthAppDO;
         } else {
-            oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId);
+            oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, IdentityTenantUtil.getLoginTenantId());
             if (oAuthAppDO != null) {
                 AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
             }
@@ -2355,7 +2359,7 @@ public class OAuth2Util {
      * @throws IdentityOAuth2Exception      If an error occurred while retrieving the applications.
      * @throws InvalidOAuthClientException  If an application not found for the given client ID.
      */
-    public static OAuthAppDO[] getAllAppInformationByClientId(String clientId)
+    public static OAuthAppDO[] getAppsForClientId(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
         return new OAuthAppDAO().getAppsForConsumerKey(clientId);
@@ -2363,12 +2367,15 @@ public class OAuth2Util {
 
     /**
      * Get the client secret of the application.
+     * This method is deprecated as it uses the tenant present in thread local to retrieve the client.
+     * Use {@link #getClientSecret(String, String)} instead.
      *
      * @param consumerKey Consumer Key provided by the user.
      * @return Consumer Secret.
      * @throws IdentityOAuth2Exception Error when loading the application.
      * @throws InvalidOAuthClientException Error when loading the application.
      */
+    @Deprecated
     public static String getClientSecret(String consumerKey) throws IdentityOAuth2Exception,
             InvalidOAuthClientException {
 
@@ -4911,14 +4918,12 @@ public class OAuth2Util {
     }
 
     /**
-     * Get the oauth credentials from the oauth header.
+     * Check whether basic authorization header exists in a request.
      *
      * @param request Http servlet request.
-     * @return An array of string credentials.
-     * @throws OAuthClientAuthnException If an error occurs.
+     * @return True if basic authorization header exists.
      */
-    public static String[] extractCredentialsFromAuthzHeader(HttpServletRequest request)
-            throws OAuthClientAuthnException {
+    public static boolean isBasicAuthorizationHeaderExists(HttpServletRequest request) {
 
         String authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION);
         if (StringUtils.isEmpty(authorizationHeader)) {
@@ -4929,24 +4934,26 @@ public class OAuth2Util {
             "The 'Basic' HTTP Authentication Scheme" spec (https://tools.ietf.org/html/rfc7617#page-3),
             "Note that both scheme and parameter names are matched case-insensitively."
          */
-        boolean isBasicAuthorizationHeaderExist = StringUtils.isNotEmpty(authorizationHeader) &&
-                authorizationHeader.toUpperCase().startsWith(BASIC_AUTHORIZATION_PREFIX.toUpperCase());
+        return StringUtils.isNotEmpty(authorizationHeader)
+                && authorizationHeader.toUpperCase().startsWith(BASIC_AUTHORIZATION_PREFIX.toUpperCase());
+    }
 
-        if (!isBasicAuthorizationHeaderExist) {
+    /**
+     * Get the oauth credentials from the oauth header.
+     *
+     * @param request Http servlet request.
+     * @return An array of string credentials.
+     * @throws OAuthClientAuthnException If an error occurs.
+     */
+    public static String[] extractCredentialsFromAuthzHeader(HttpServletRequest request)
+            throws OAuthClientAuthnException {
+
+        if (!isBasicAuthorizationHeaderExists(request)) {
             String errMsg = "Basic authorization header is not available in the request.";
             throw new OAuthClientAuthnException(errMsg, OAuth2ErrorCodes.INVALID_REQUEST);
         }
 
-        String[] splitValues = authorizationHeader.trim().split(" ");
-        if (splitValues.length == 2) {
-            byte[] decodedBytes = Base64Utils.decode(splitValues[1].trim());
-            String usernamePassword = new String(decodedBytes, Charsets.UTF_8);
-            String[] credentials = usernamePassword.split(BASIC_AUTHORIZATION_CREDENTIAL_SEPARATOR);
-            if (credentials.length == 2) {
-                return credentials;
-            }
-        }
-        throw new OAuthClientAuthnException("Error decoding authorization header. Space " +
-                "delimited \"<authMethod> <base64Hash>\" format violated.", OAuth2ErrorCodes.INVALID_CLIENT);
+        String authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION);
+        return OAuthUtils.decodeClientAuthenticationHeader(authorizationHeader);
     }
 }
