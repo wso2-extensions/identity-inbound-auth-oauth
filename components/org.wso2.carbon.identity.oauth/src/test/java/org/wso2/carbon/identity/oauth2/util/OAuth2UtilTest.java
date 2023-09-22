@@ -26,6 +26,7 @@ import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.engine.AxisConfiguration;
 import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -138,7 +139,7 @@ import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreF
         PrivilegedCarbonContext.class, IdentityTenantUtil.class, CarbonUtils.class,
         IdentityCoreServiceComponent.class, NetworkUtils.class, IdentityApplicationManagementUtil.class,
         IdentityProviderManager.class, FederatedAuthenticatorConfig.class, FrameworkUtils.class, LoggerUtils.class,
-        OAuth2ServiceComponentHolder.class, OAuthAdminServiceImpl.class, Base64Utils.class})
+        OAuth2ServiceComponentHolder.class, OAuthAdminServiceImpl.class, Base64Utils.class, OAuthUtils.class})
 public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
@@ -269,6 +270,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         mockStatic(LoggerUtils.class);
         when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+        when(IdentityTenantUtil.getTenantDomain(-1234)).thenReturn("carbon.super");
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(-1234);
         wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon",
                 System.getProperty(CarbonBaseConstants.CARBON_HOME));
     }
@@ -429,7 +432,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
         // Mock the DB result
         OAuthAppDAO oAuthAppDAO = mock(OAuthAppDAO.class);
-        when(oAuthAppDAO.getAppInformation(clientId)).thenReturn(appDO);
+        when(oAuthAppDAO.getAppInformation(clientId, -1234)).thenReturn(appDO);
         PowerMockito.whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
 
         when(oauthServerConfigurationMock.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
@@ -454,7 +457,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
         // Mock the DB result
         OAuthAppDAO oAuthAppDAO = mock(OAuthAppDAO.class);
-        when(oAuthAppDAO.getAppInformation(clientId)).thenReturn(appDO);
+        when(oAuthAppDAO.getAppInformation(clientId, -1234)).thenReturn(appDO);
         PowerMockito.whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
 
         TokenPersistenceProcessor hashingProcessor = mock(HashingPersistenceProcessor.class);
@@ -565,7 +568,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
         // Mock the DB result
         OAuthAppDAO oAuthAppDAO = mock(OAuthAppDAO.class);
-        when(oAuthAppDAO.getAppInformation(clientId)).thenReturn(appDO);
+        when(oAuthAppDAO.getAppInformation(clientId, -1234)).thenReturn(appDO);
         PowerMockito.whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
 
         when(oauthServerConfigurationMock.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
@@ -2526,23 +2529,26 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     public Object[][] extractCredentialDataProvider() {
 
         return new Object[][]{
-                // AuthzHeader, headerValue, expectedException.
-                {HTTPConstants.HEADER_AUTHORIZATION,  "Basic " + base64EncodedClientIdSecret, null},
-                {HTTPConstants.HEADER_AUTHORIZATION.toLowerCase(),  "Basic " + base64EncodedClientIdSecret, null},
+                // AuthzHeader, headerValue, expectedException, expectedResult.
+                {HTTPConstants.HEADER_AUTHORIZATION,  "Basic " + base64EncodedClientIdSecret, null,
+                        new String[]{clientId, clientSecret}},
+                {HTTPConstants.HEADER_AUTHORIZATION.toLowerCase(),  "Basic " + base64EncodedClientIdSecret, null,
+                        new String[]{clientId, clientSecret}},
                 {HTTPConstants.HEADER_AUTHORIZATION,  null,
-                        "Basic authorization header is not available in the request."},
+                        "Basic authorization header is not available in the request.", null},
                 {HTTPConstants.HEADER_AUTHORIZATION,  "Bearer 12345",
-                        "Basic authorization header is not available in the request."},
-                {HTTPConstants.HEADER_AUTHORIZATION,  "Basic1234", "Error decoding authorization header. Space " +
-                        "delimited \"<authMethod> <base64Hash>\" format violated."},
-                {HTTPConstants.HEADER_AUTHORIZATION,  "Basic " + base64EncodedClientIdInvalid, "Error decoding " +
-                        "authorization header. Space delimited \"<authMethod> <base64Hash>\" format violated."}
+                        "Basic authorization header is not available in the request.", null},
+                {HTTPConstants.HEADER_AUTHORIZATION,  "Basic1234", null, null},
+                {HTTPConstants.HEADER_AUTHORIZATION,  "Basic " + base64EncodedClientIdInvalid, null, null}
         };
     }
 
     @Test(dataProvider = "extractCredentialDataProvider")
     public void testExtractCredentialsFromAuthzHeader(String headerKey, String headerValue,
-                                                      String expectedException) {
+                                                      String expectedException, String[] expectedResult) {
+
+        mockStatic(OAuthUtils.class);
+        when(OAuthUtils.decodeClientAuthenticationHeader(headerValue)).thenReturn(expectedResult);
 
         HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
         when(httpServletRequest.getHeader(headerKey)).thenReturn(headerValue);
@@ -2557,10 +2563,12 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
             if (expectedException != null) {
                 fail("Expected exception: " + expectedException.getClass() + " was not thrown.");
-            } else {
+            } else if (expectedResult != null) {
                 assertEquals(credentials.length, 2);
                 assertEquals(credentials[0], clientId);
                 assertEquals(credentials[1], clientSecret);
+            } else {
+                assertNull(credentials);
             }
         } catch (OAuthClientAuthnException e) {
             if (expectedException == null) {

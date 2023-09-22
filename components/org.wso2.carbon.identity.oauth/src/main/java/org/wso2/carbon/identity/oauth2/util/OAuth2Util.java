@@ -4954,6 +4954,10 @@ public class OAuth2Util {
         }
 
         String authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION);
+        if (StringUtils.isEmpty(authorizationHeader)) {
+            authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION.toLowerCase());
+        }
+
         return OAuthUtils.decodeClientAuthenticationHeader(authorizationHeader);
     }
 }

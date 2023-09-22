@@ -109,6 +109,7 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
     private String[] scopes;
     AuthenticatedUser authenticatedUser = new AuthenticatedUser();
     private static final int DEFAULT_TENANT_ID = 1234;
+    private static final String DEFAULT_TENANT_DOMAIN = "test.tenant";
     private static final String APP_NAME = "myApp";
     private static final String USER_NAME = "user1";
     private static final String CALLBACK = "http://localhost:8080/redirect";
@@ -169,6 +170,7 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         mockStatic(IdentityTenantUtil.class);
         mockStatic(IdentityCoreServiceDataHolder.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
+        when(IdentityTenantUtil.getTenantDomain(DEFAULT_TENANT_ID)).thenReturn(DEFAULT_TENANT_DOMAIN);
         when(IdentityTenantUtil.getLoginTenantId()).thenReturn(DEFAULT_TENANT_ID);
         when(IdentityCoreServiceDataHolder.getInstance()).thenReturn(mockedIdentityCoreServiceDataHolder);
         when(mockedIdentityCoreServiceDataHolder.getRealmService()).thenReturn(mockedRealmService);
@@ -225,16 +227,16 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.getAuthenticatedIDP(any())).thenReturn("LOCAL");
         mockStatic(IdentityTenantUtil.class);
         mockStatic(IdentityCoreServiceDataHolder.class);
-        when(IdentityTenantUtil.getTenantId(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME)).thenReturn(
-                DEFAULT_TENANT_ID);
+        when(IdentityTenantUtil.getTenantId(DEFAULT_TENANT_DOMAIN)).thenReturn(DEFAULT_TENANT_ID);
+        when(IdentityTenantUtil.getTenantDomain(DEFAULT_TENANT_ID)).thenReturn(DEFAULT_TENANT_DOMAIN);
         when(IdentityTenantUtil.getLoginTenantId()).thenReturn(DEFAULT_TENANT_ID);
         when(IdentityCoreServiceDataHolder.getInstance()).thenReturn(mockedIdentityCoreServiceDataHolder);
         when(mockedIdentityCoreServiceDataHolder.getRealmService()).thenReturn(mockedRealmService);
         when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedTenantUserRealm);
         when(mockedTenantUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
 
-        authorizationCodeDAO.insertAuthorizationCode(authzCode, consumerKey,
-                UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME, CALLBACK, authzCodeDO);
+        authorizationCodeDAO.insertAuthorizationCode(authzCode, consumerKey, DEFAULT_TENANT_DOMAIN,
+                CALLBACK, authzCodeDO);
 
         Assert.assertEquals(authorizationCodeDAO.getCodeIdByAuthorizationCode(authzCode),
                 authzCodeDO.getAuthzCodeId());
