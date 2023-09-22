@@ -22,6 +22,8 @@ import org.apache.commons.lang.NotImplementedException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 
+import java.util.Optional;
+
 /**
  * Device authentication service.
  */
@@ -79,6 +81,18 @@ public interface DeviceAuthService {
      * @throws IdentityOAuth2Exception Error while storing scopes.
      */
     void setAuthenticationStatus(String userCode) throws IdentityOAuth2Exception;
+
+    /**
+     * Get device code for user code.
+     *
+     * @param userCode Code that is used to correlate two devices.
+     * @return Device code.
+     * @throws IdentityOAuth2Exception Error while getting device for user code.
+     */
+    default Optional<String> getDeviceCode(String userCode) throws IdentityOAuth2Exception {
+
+        return Optional.empty();
+    }
 
     /**
      * Insert redirect uri to the database.

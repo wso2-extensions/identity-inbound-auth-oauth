@@ -23,6 +23,8 @@ import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 
+import java.util.Optional;
+
 /**
  * Service layer to talk with DAO.
  */
@@ -72,6 +74,12 @@ public class DeviceAuthServiceImpl implements DeviceAuthService {
     public String[] getScope(String userCode) throws IdentityOAuth2Exception {
 
         return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getScopesForUserCode(userCode);
+    }
+
+    @Override
+    public Optional<String> getDeviceCode(String userCode) throws IdentityOAuth2Exception {
+
+        return DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().getDeviceCodeForUserCode(userCode);
     }
 
     @Override

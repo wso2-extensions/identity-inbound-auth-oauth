@@ -214,6 +214,9 @@ public class OAuth2ParEndpoint {
         OAuth2ClientValidationResponseDTO validationResponse = getOAuth2Service().validateClientInfo(request);
 
         if (!validationResponse.isValidClient()) {
+            if (OAuth2ErrorCodes.INVALID_CLIENT.equals(validationResponse.getErrorCode())) {
+                throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, validationResponse.getErrorMsg());
+            }
             throw new ParClientException(validationResponse.getErrorCode(), validationResponse.getErrorMsg());
         }
         if (isRequestUriProvided(params)) {

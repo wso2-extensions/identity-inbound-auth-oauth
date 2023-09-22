@@ -150,7 +150,7 @@ public class ParAuthServiceTest extends PowerMockTestCase {
                 // Expired request uri
                 {System.currentTimeMillis() - 5, CLIENT_ID_VALUE, OAuth2ErrorCodes.INVALID_REQUEST},
                 // Mismatching client ids
-                {System.currentTimeMillis() + 60, "ga39a580f545777860e44e75b605d920", OAuth2ErrorCodes.INVALID_CLIENT}
+                {System.currentTimeMillis() + 60, "ga39a580f545777860e44e75b605d920", OAuth2ErrorCodes.INVALID_REQUEST}
         };
     }
 
