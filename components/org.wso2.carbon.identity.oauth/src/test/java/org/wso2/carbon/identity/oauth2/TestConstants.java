@@ -38,6 +38,7 @@ public class TestConstants {
     public static final String ERROR = "Error";
     public static final int TENANT_ID = 1234;
     public static final String TENANT_DOMAIN = "TestCase.com";
+    public static final String USER_ORGANIZATION = "123456789";
     public static final String CARBON_PROTOCOL = "carbon.protocol";
     public static final String CARBON_HOST = "carbon.host";
     public static final String CARBON_MANAGEMENT_PORT = "carbon.management.port";

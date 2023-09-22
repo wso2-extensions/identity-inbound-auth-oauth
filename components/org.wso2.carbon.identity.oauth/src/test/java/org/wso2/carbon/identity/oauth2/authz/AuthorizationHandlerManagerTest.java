@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
+import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.SUPER_ORG_ID;
 
 @WithCarbonHome
 @WithH2Database(files = {"dbScripts/h2_with_application_and_token.sql"})
@@ -105,6 +106,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setUserName(TestConstants.USER_NAME);
         user.setUserId("4b4414e1-916b-4475-aaee-6b0751c29ff6");
         user.setTenantDomain(TestConstants.TENANT_DOMAIN);
+        user.setUserOrganization(SUPER_ORG_ID);
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
@@ -125,6 +127,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setUserName(TestConstants.USER_NAME);
         user.setUserId("4b4414e1-916b-4475-aaee-6b0751c29ff6");
         user.setTenantDomain(TestConstants.TENANT_DOMAIN);
+        user.setUserOrganization(TestConstants.USER_ORGANIZATION);
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);
@@ -194,6 +197,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         user.setUserName(TestConstants.USER_NAME);
         user.setUserId("4b4414e1-916b-4475-aaee-6b0751c29ff6");
         user.setTenantDomain(TestConstants.TENANT_DOMAIN);
+        user.setUserOrganization(TestConstants.USER_ORGANIZATION);
         user.setUserStoreDomain(TestConstants.USER_DOMAIN_PRIMARY);
         user.setFederatedIdPName(TestConstants.LOCAL_IDP);
         authzReqDTO.setUser(user);

@@ -559,6 +559,13 @@ public final class OAuthConstants {
     }
 
     /**
+     * Define federated user organization default value.
+     */
+    public static class FederatedUserOrganizations {
+
+        public static final String NONE = "NONE";
+    }
+    /**
      * Define logging constants.
      */
     public static class LogConstants {

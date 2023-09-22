@@ -197,16 +197,20 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     validationDataDO.setAccessTokenIssuedTime(
                             resultSet.getTimestamp(13, Calendar.getInstance(TimeZone.getTimeZone(UTC))));
                     validationDataDO.setAccessTokenValidityInMillis(resultSet.getLong(14));
+                    String userOrganization = resultSet.getString(15);
                     String authenticatedIDP = null;
                     if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                        authenticatedIDP = resultSet.getString(15);
+                        authenticatedIDP = resultSet.getString(16);
                     }
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain,
                             authenticatedIDP);
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
-                    if (isAccessTokenExtendedTableExist() && resultSet.getString(16) != null &&
-                            resultSet.getString(17) != null) {
-                        extendedParams.put(resultSet.getString(16), resultSet.getString(17));
+                    if (!"NONE".equals(userOrganization)) {
+                        user.setUserOrganization(userOrganization);
+                    }
+                    if (isAccessTokenExtendedTableExist() && resultSet.getString(17) != null &&
+                            resultSet.getString(18) != null) {
+                        extendedParams.put(resultSet.getString(17), resultSet.getString(18));
                     }
                     validationDataDO.setAuthorizedUser(user);
 
@@ -215,9 +219,9 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                             !validationDataDO.getScope()[0].equals(resultSet.getString(5))) {
                         scopes.add(resultSet.getString(5));
                     }
-                    if (isAccessTokenExtendedTableExist() && resultSet.getString(16) != null &&
-                            resultSet.getString(17) != null) {
-                        extendedParams.put(resultSet.getString(16), resultSet.getString(17));
+                    if (isAccessTokenExtendedTableExist() && resultSet.getString(17) != null &&
+                            resultSet.getString(18) != null) {
+                        extendedParams.put(resultSet.getString(17), resultSet.getString(18));
                     }
                 }
 

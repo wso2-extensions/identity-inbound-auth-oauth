@@ -86,6 +86,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     private static final int DEFAULT_TOKEN_PERSIST_RETRY_COUNT = 5;
     private static final String IDN_OAUTH2_ACCESS_TOKEN = "IDN_OAUTH2_ACCESS_TOKEN";
     private static final String CONSENTED_TOKEN_COLUMN_NAME = "CONSENTED_TOKEN";
+    public static final String USER_ORGANIZATION_COLUMN_NAME = "USER_ORGANIZATION";
     private boolean isTokenCleanupFeatureEnabled = OAuthServerConfiguration.getInstance().isTokenCleanupEnabled();
     private static final String DEFAULT_TOKEN_TO_SESSION_MAPPING = "DEFAULT";
 
@@ -238,23 +239,29 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             } else {
                 insertTokenPrepStmt.setString(18, NONE);
             }
+            String userOrganization = accessTokenDO.getAuthzUser().getUserOrganization();
+            if (userOrganization == null) {
+                userOrganization = OAuthConstants.FederatedUserOrganizations.NONE;
+            }
+            insertTokenPrepStmt.setString(19, userOrganization);
+
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                 if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-                    insertTokenPrepStmt.setString(19, Boolean.toString(accessTokenDO.isConsentedToken()));
+                    insertTokenPrepStmt.setString(20, Boolean.toString(accessTokenDO.isConsentedToken()));
+                    insertTokenPrepStmt.setString(21, authenticatedIDP);
+                    insertTokenPrepStmt.setInt(22, tenantId);
+                    insertTokenPrepStmt.setString(23, getPersistenceProcessor().getProcessedClientId(consumerKey));
+                } else {
                     insertTokenPrepStmt.setString(20, authenticatedIDP);
                     insertTokenPrepStmt.setInt(21, tenantId);
                     insertTokenPrepStmt.setString(22, getPersistenceProcessor().getProcessedClientId(consumerKey));
-                } else {
-                    insertTokenPrepStmt.setString(19, authenticatedIDP);
-                    insertTokenPrepStmt.setInt(20, tenantId);
-                    insertTokenPrepStmt.setString(21, getPersistenceProcessor().getProcessedClientId(consumerKey));
                 }
             } else {
                 if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-                    insertTokenPrepStmt.setString(19, Boolean.toString(accessTokenDO.isConsentedToken()));
-                    insertTokenPrepStmt.setString(20, getPersistenceProcessor().getProcessedClientId(consumerKey));
+                    insertTokenPrepStmt.setString(20, Boolean.toString(accessTokenDO.isConsentedToken()));
+                    insertTokenPrepStmt.setString(21, getPersistenceProcessor().getProcessedClientId(consumerKey));
                 } else {
-                    insertTokenPrepStmt.setString(19, getPersistenceProcessor().getProcessedClientId(consumerKey));
+                    insertTokenPrepStmt.setString(20, getPersistenceProcessor().getProcessedClientId(consumerKey));
                 }
             }
             insertTokenPrepStmt.executeUpdate();
@@ -445,6 +452,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     + authzUser.getLoggableUserId() + " scope: " + scope);
         }
         String tenantDomain = authzUser.getTenantDomain();
+        String userOrganization = authzUser.getUserOrganization();
+        if (userOrganization == null) {
+            userOrganization = OAuthConstants.FederatedUserOrganizations.NONE;
+        }
         int tenantId = OAuth2Util.getTenantId(tenantDomain);
         boolean isUsernameCaseSensitive
                 = IdentityUtil.isUserStoreCaseSensitive(authzUser.getUserStoreDomain(), tenantId);
@@ -490,8 +501,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt.setString(6, tokenBindingReference);
 
+            prepStmt.setString(7, userOrganization);
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                prepStmt.setString(7, authenticatedIDP);
+                prepStmt.setString(8, authenticatedIDP);
             }
 
             resultSet = prepStmt.executeQuery();
@@ -544,6 +556,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     accessTokenDO.setTokenState(tokenState);
                     accessTokenDO.setTokenId(tokenId);
                     accessTokenDO.setGrantType(grantType);
+                    if (!OAuthConstants.FederatedUserOrganizations.NONE.equals(userOrganization)) {
+                        accessTokenDO.getAuthzUser().setUserOrganization(userOrganization);
+                    }
                     if (StringUtils.isNotEmpty(isConsentedToken)) {
                         accessTokenDO.setIsConsentedToken(Boolean.parseBoolean(isConsentedToken));
                     }
@@ -1060,6 +1075,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         isConsentedToken = resultSet.getBoolean(consentedTokenColumnIndex);
                     }
 
+                    int userOrganizationColumnIndex = resultSet.findColumn(USER_ORGANIZATION_COLUMN_NAME);
+                    String userOrganization = resultSet.getString(userOrganizationColumnIndex);
+
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authorizedUser,
                             userDomain, tenantDomain, authenticatedIDP);
                     ServiceProvider serviceProvider;
@@ -1081,6 +1099,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     dataDO.setGrantType(grantType);
                     dataDO.setTenantID(tenantId);
                     dataDO.setIsConsentedToken(isConsentedToken);
+
+                    if (!OAuthConstants.FederatedUserOrganizations.NONE.equals(userOrganization)) {
+                        dataDO.getAuthzUser().setUserOrganization(userOrganization);
+                    }
 
                     if (StringUtils.isNotBlank(tokenBindingReference) && !NONE.equals(tokenBindingReference)) {
                         setTokenBindingToAccessTokenDO(dataDO, connection, tokenId);

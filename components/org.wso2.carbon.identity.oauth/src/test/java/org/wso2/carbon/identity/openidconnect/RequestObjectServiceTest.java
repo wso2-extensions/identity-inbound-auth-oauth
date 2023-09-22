@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAOImpl;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -150,7 +151,8 @@ public class RequestObjectServiceTest extends PowerMockTestCase {
             prepStmt.setString(16, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(token));
             prepStmt.setString(17, "refreshToken");
             prepStmt.setString(18, null);
-            prepStmt.setString(19, consumerKey);
+            prepStmt.setString(19, OrganizationManagementConstants.SUPER_ORG_ID);
+            prepStmt.setString(20, consumerKey);
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {

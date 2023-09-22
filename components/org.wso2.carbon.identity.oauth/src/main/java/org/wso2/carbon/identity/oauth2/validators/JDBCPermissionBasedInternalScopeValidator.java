@@ -178,6 +178,11 @@ public class JDBCPermissionBasedInternalScopeValidator {
             AuthorizationManager authorizationManager = OAuthComponentServiceHolder.getInstance().getRealmService()
                     .getTenantUserRealm(tenantId).getAuthorizationManager();
             String[] allowedResourcesForUser;
+
+            if (authenticatedUser.getUserOrganization() != null) {
+                allowedResourcesForUser = retrieveUserOrganizationPermission(authenticatedUser,
+                        authenticatedUser.getUserOrganization());
+            }
             /*
             Here we handle scope validation for federated user and local user separately.
             For local users - user store is used to get user roles.
@@ -186,7 +191,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
             mapped local subject identifier' flag will be set as true. So authenticated user will be associated
             local user not federated user.
              */
-            if (authenticatedUser.isFederatedUser()) {
+            else if (authenticatedUser.isFederatedUser()) {
                 /*
                 If the role-based authorization feature is enabled & particular applications in the listed under the
                 required application list then retrieve permissions from the FIdp user roles.
@@ -426,6 +431,9 @@ public class JDBCPermissionBasedInternalScopeValidator {
                         authenticatedUserId = resolvedUser.get().getUserID();
                         authenticatedUser.setUserId(authenticatedUserId);
                     }
+                }
+                if (authenticatedUser.isFederatedUser()) {
+                    authenticatedUserId = authenticatedUser.getUserName();
                 }
                 if (StringUtils.isNotBlank(authenticatedUserId)) {
                     organizationPermissions = OAuth2ServiceComponentHolder.getRoleManager()
