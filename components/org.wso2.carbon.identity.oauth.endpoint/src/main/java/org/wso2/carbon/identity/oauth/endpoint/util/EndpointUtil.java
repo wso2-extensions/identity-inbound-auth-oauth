@@ -1728,7 +1728,7 @@ public class EndpointUtil {
             }
         }
 
-        if (StringUtils.isEmpty(state) && oAuth2Parameters != null && oAuth2Parameters.getState() != null) {
+        if (StringUtils.isBlank(state) && oAuth2Parameters != null && oAuth2Parameters.getState() != null) {
             state = oAuth2Parameters.getState();
             if (log.isDebugEnabled()) {
                 log.debug("Retrieved state value " + state + " from OAuth2Parameters.");
@@ -1749,7 +1749,7 @@ public class EndpointUtil {
             RequestObjectValidator requestObjectValidator = OAuthServerConfiguration.getInstance()
                     .getRequestObjectValidator();
             RequestObjectBuilder requestObjectBuilder = OAuthServerConfiguration.getInstance()
-                    .getRequestObjectBuilders().get("request_param_value_builder");
+                    .getRequestObjectBuilders().get(OIDCRequestObjectUtil.REQUEST_PARAM_VALUE_BUILDER);
             RequestObject requestObject =
                     requestObjectBuilder.buildRequestObject(request.getParameter(OAuthConstants.OAuth20Params.REQUEST),
                             oAuth2Parameters);
@@ -1764,6 +1764,9 @@ public class EndpointUtil {
                     requestObjectValidator);
             return requestObject.getClaimValue(OAuthConstants.OAuth20Params.STATE);
         } catch (RequestObjectException e) {
+            /* If request object signature validation fails, logs and return null from this method and the state value
+            will be overridden from oauth2 parameters or request parameters if present inside the
+            retrieveStateForErrorURL method. */
             log.debug("Error while retrieving state from request object.", e);
         }
         return null;
