@@ -881,7 +881,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                 try {
                     certificate = OAuth2Util.parseCertificate(certHeader.get().getValue()[0]);
                     certThumbprint = X509CertUtils.computeSHA256Thumbprint(certificate);
-                    userClaimsInOIDCDialect.put("cnf", Collections.singletonMap("x5t#S256", certThumbprint));
+                    tokenReqMessageContext.addProperty("cnf", Collections.singletonMap("x5t#S256",
+                            certThumbprint));
                 } catch (CertificateException e) {
                     throw new IdentityOAuth2Exception("Error occurred while extracting the certificate", e);
                 }
