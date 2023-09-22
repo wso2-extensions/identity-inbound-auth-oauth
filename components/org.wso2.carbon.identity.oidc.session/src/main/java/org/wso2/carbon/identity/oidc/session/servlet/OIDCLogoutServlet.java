@@ -334,22 +334,8 @@ public class OIDCLogoutServlet extends HttpServlet {
 
         String appTenantDomain;
         try {
-            if (StringUtils.isEmpty(clientId)) {
-                if (OIDCSessionManagementUtil.isIDTokenEncrypted(idTokenHint)) {
-                    appTenantDomain = request.getParameter(OIDCSessionConstants.OIDC_TENANT_DOMAIN_PARAM);
-                    JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(appTenantDomain, idTokenHint);
-                    clientId = OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(decryptedIDToken);
-                } else {
-                    if (!validateIdToken(idTokenHint)) {
-                        String msg = "ID token signature validation failed.";
-                        if (log.isDebugEnabled()) {
-                            log.debug(msg);
-                        }
-                        redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
-                        return redirectURL;
-                    }
-                    clientId = extractClientFromIdToken(idTokenHint);
-                }
+            if (StringUtils.isBlank(clientId)) {
+                clientId = getClientIdFromIdToken(request, idTokenHint);
             }
             appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
             validateRequestTenantDomain(appTenantDomain);
@@ -370,7 +356,12 @@ public class OIDCLogoutServlet extends HttpServlet {
             redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
             return getRedirectURL(redirectURL, request);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            String msg = "Error occurred while getting application information. Client id not found.";
+            String msg;
+            if (e.getErrorCode().equals(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_ID_TOKEN)) {
+                msg = e.getMessage();
+            } else {
+                msg = "Error occurred while getting application information. Client id not found.";
+            }
             if (log.isDebugEnabled()) {
                 log.debug(msg, e);
             }
@@ -382,7 +373,7 @@ public class OIDCLogoutServlet extends HttpServlet {
         paramMap.put(OIDCSessionConstants.OIDC_CACHE_CLIENT_ID_PARAM, clientId);
         paramMap.put(OIDCSessionConstants.OIDC_CACHE_TENANT_DOMAIN_PARAM, appTenantDomain);
         OIDCSessionDataCacheEntry cacheEntry = new OIDCSessionDataCacheEntry();
-        if (StringUtils.isNotEmpty(idTokenHint)) {
+        if (StringUtils.isNotBlank(idTokenHint)) {
             cacheEntry.setIdToken(idTokenHint);
         }
         cacheEntry.setPostLogoutRedirectUri(postLogoutRedirectUri);
@@ -855,17 +846,8 @@ public class OIDCLogoutServlet extends HttpServlet {
             }
             return true;
         }
-        if (StringUtils.isEmpty(clientId) && StringUtils.isNotBlank(idTokenHint)) {
-            if (OIDCSessionManagementUtil.isIDTokenEncrypted(idTokenHint)) {
-                String tenantDomain = request.getParameter(OIDCSessionConstants.OIDC_TENANT_DOMAIN_PARAM);
-                JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(tenantDomain, idTokenHint);
-                clientId = OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(decryptedIDToken);
-            } else {
-                if (!validateIdToken(idTokenHint)) {
-                    throw new IdentityOAuth2Exception("ID token signature validation failed.");
-                }
-                clientId = extractClientFromIdToken(idTokenHint);
-            }
+        if (StringUtils.isBlank(clientId) && StringUtils.isNotBlank(idTokenHint)) {
+            clientId = getClientIdFromIdToken(request, idTokenHint);
         }
         if (StringUtils.isNotBlank(clientId)) {
             ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
@@ -922,20 +904,14 @@ public class OIDCLogoutServlet extends HttpServlet {
         String idTokenHint = request.getParameter(OIDCSessionConstants.OIDC_ID_TOKEN_HINT_PARAM);
         String clientId = request.getParameter(OIDCSessionConstants.OIDC_CLIENT_ID_PARAM);
         String postLogoutRedirectUri = request.getParameter(OIDCSessionConstants.OIDC_POST_LOGOUT_REDIRECT_URI_PARAM);
-        if ((StringUtils.isEmpty(clientId) && StringUtils.isEmpty(idTokenHint)) ||
-                StringUtils.isEmpty(postLogoutRedirectUri)) {
+        if ((StringUtils.isBlank(clientId) && StringUtils.isBlank(idTokenHint)) ||
+                StringUtils.isBlank(postLogoutRedirectUri)) {
             response.sendRedirect(getRedirectURL(redirectURL, request));
             return;
         }
-        if (StringUtils.isEmpty(clientId)) {
+        if (StringUtils.isBlank(clientId)) {
             try {
-                if (OIDCSessionManagementUtil.isIDTokenEncrypted(idTokenHint)) {
-                    String tenantDomain = request.getParameter(OIDCSessionConstants.OIDC_TENANT_DOMAIN_PARAM);
-                    JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(tenantDomain, idTokenHint);
-                    clientId = OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(decryptedIDToken);
-                } else {
-                    clientId = extractClientFromIdToken(idTokenHint);
-                }
+                clientId = getClientIdFromIdToken(request, idTokenHint);
             } catch (ParseException e) {
                 String msg = "Error occurred while extracting data from id token.";
                 if (log.isDebugEnabled()) {
@@ -1026,5 +1002,21 @@ public class OIDCLogoutServlet extends HttpServlet {
             return getRedirectURL(redirectURL, request);
         }
         return redirectURL;
+    }
+
+    private String getClientIdFromIdToken(HttpServletRequest request, String idToken)
+            throws IdentityOAuth2Exception, ParseException {
+
+        if (OIDCSessionManagementUtil.isIDTokenEncrypted(idToken)) {
+            String appTenantDomain = request.getParameter(OIDCSessionConstants.OIDC_TENANT_DOMAIN_PARAM);
+            JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(appTenantDomain, idToken);
+            return OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(decryptedIDToken);
+        } else {
+            if (!validateIdToken(idToken)) {
+                throw new IdentityOAuth2Exception(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_ID_TOKEN,
+                        "ID token signature validation failed.");
+            }
+            return extractClientFromIdToken(idToken);
+        }
     }
 }
