@@ -810,7 +810,7 @@ public class AccessTokenIssuer {
                 subject = getFormattedSubjectClaim(serviceProvider, subject, userStoreDomain, userTenantDomain);
             } catch (UserIdNotFoundException e) {
                 throw new IdentityOAuth2Exception("User id not found for user: "
-                        + authenticatedUser.getLoggableUserId(), e);
+                        + authenticatedUser.getLoggableMaskedUserId(), e);
             }
             if (log.isDebugEnabled()) {
                 log.debug("No subject claim defined for service provider: " + serviceProvider.getApplicationName()
