@@ -214,7 +214,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 userId = validationBean.getAuthorizedUser().getUserId();
             } catch (UserIdNotFoundException e) {
                 throw new IdentityOAuth2Exception("User id not found for user:"
-                        + validationBean.getAuthorizedUser().getLoggableUserId(), e);
+                        + validationBean.getAuthorizedUser().getLoggableMaskedUserId(), e);
             }
             clearCache(tokenReq.getClientId(), userId,
                     validationBean.getScope(), validationBean.getAccessToken(),
