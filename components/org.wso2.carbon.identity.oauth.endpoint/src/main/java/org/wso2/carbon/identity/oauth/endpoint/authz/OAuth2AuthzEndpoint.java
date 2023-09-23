@@ -2014,13 +2014,8 @@ public class OAuth2AuthzEndpoint {
             validateNonceParameter(params.getNonce());
         }
 
-        try {
-            if (OAuth2Util.isFapiConformantApp(params.getClientId())) {
-                EndpointUtil.validateFAPIResponseMode(params.getResponseType(), params.getResponseMode());
-            }
-        } catch (IdentityOAuth2Exception e) {
-            throw new OAuthSystemException("Error while obtaining the service provider for client_id: " +
-                    params.getClientId(), e);
+        if (isFapiConformant(params.getClientId())) {
+            EndpointUtil.validateFAPIResponseMode(params.getResponseType(), params.getResponseMode());
         }
 
         addDataToSessionCache(oAuthMessage, params, sessionDataKey);
@@ -4191,5 +4186,13 @@ public class OAuth2AuthzEndpoint {
         DeviceAuthorizationGrantCacheEntry cacheEntry =
                 new DeviceAuthorizationGrantCacheEntry(sessionDataCacheEntry.getLoggedInUser().getUserAttributes());
         DeviceAuthorizationGrantCache.getInstance().addToCache(cacheKey, cacheEntry);
+    }
+
+    private boolean isFapiConformant(String clientId) throws InvalidRequestException {
+        try {
+            return OAuth2Util.isFapiConformantApp(clientId);
+        } catch (IdentityOAuth2Exception e) {
+            throw new InvalidRequestException(e.getMessage(), e.getErrorCode());
+        }
     }
 }
