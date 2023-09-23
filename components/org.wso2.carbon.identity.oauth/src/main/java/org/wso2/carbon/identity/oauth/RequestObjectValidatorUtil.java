@@ -266,7 +266,7 @@ public class RequestObjectValidatorUtil {
             // At this point 'x509Certificate' will never be null.
             PublicKey publicKey = x509Certificate.getPublicKey();
             if (publicKey instanceof RSAPublicKey) {
-                verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
+                verifier = getVerifier(publicKey);
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Public key is not an RSA public key.");
@@ -288,6 +288,12 @@ public class RequestObjectValidatorUtil {
             }
             return false;
         }
+    }
+
+    public static JWSVerifier getVerifier(PublicKey publicKey) {
+
+        return new RSASSAVerifier((RSAPublicKey) publicKey);
+
     }
 
     public static boolean isFapiConformant(String clientId) throws RequestObjectException {

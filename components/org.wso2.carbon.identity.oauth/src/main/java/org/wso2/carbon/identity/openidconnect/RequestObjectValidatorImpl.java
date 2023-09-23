@@ -147,7 +147,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
 
     private void checkMandatoryParams(RequestObject requestObject) throws RequestObjectException {
 
-        String[] mandatoryParams = {Constants.SCOPES, Constants.NONCE, Constants.REDIRECT_URI};
+        String[] mandatoryParams = {Constants.SCOPE, Constants.NONCE, Constants.REDIRECT_URI};
         for (String param : mandatoryParams) {
             if (!isParamPresent(requestObject, param)) {
                 throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST,
