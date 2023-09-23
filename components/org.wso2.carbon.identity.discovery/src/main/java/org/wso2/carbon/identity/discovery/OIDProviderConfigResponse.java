@@ -79,6 +79,7 @@ public class OIDProviderConfigResponse {
     private String[] codeChallengeMethodsSupported;
     private String deviceAuthorizationEndpoint;
     private boolean isTlsClientCertificateBoundAccessTokensEnabled;
+    private String[] idTokenSigningAlgorithms;
 
     public String getIssuer() {
         return issuer;
@@ -500,6 +501,16 @@ public class OIDProviderConfigResponse {
         this.isTlsClientCertificateBoundAccessTokensEnabled = isTlsClientCertificateBoundAccessTokensEnabled;
     }
 
+    public String[] getIdTokenSigningAlgorithms() {
+
+        return idTokenSigningAlgorithms;
+    }
+
+    public void setIdTokenSigningAlgorithms(String[] idTokenSigningAlgorithms) {
+
+        this.idTokenSigningAlgorithms = idTokenSigningAlgorithms;
+    }
+
     public Map<String, Object> getConfigMap() {
         Map<String, Object> configMap = new HashMap<String, Object>();
         configMap.put(DiscoveryConstants.ISSUER.toLowerCase(), this.issuer);
@@ -565,7 +576,7 @@ public class OIDProviderConfigResponse {
         configMap.put(DiscoveryConstants.DEVICE_AUTHORIZATION_ENDPOINT, this.deviceAuthorizationEndpoint);
         configMap.put(DiscoveryConstants.TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN,
                 this.isTlsClientCertificateBoundAccessTokensEnabled);
-        configMap.put(DiscoveryConstants.ID_TOKEN_SIGNING_ALG, this.idTokenSigningAlgValuesSupported);
+        configMap.put(DiscoveryConstants.ID_TOKEN_SIGNING_ALG, this.idTokenSigningAlgorithms);
 
         return configMap;
     }

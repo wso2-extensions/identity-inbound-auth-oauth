@@ -300,6 +300,9 @@
                 <UserInfoJWTSignatureAlgorithm>PS256</UserInfoJWTSignatureAlgorithm>
                 <UserInfoJWTSignatureAlgorithm>ES256</UserInfoJWTSignatureAlgorithm>
             </UserInfoJWTSignatureAlgorithms>
+            <IDTokenSigningAlgorithms>
+                <IDTokenSigningAlgorithm>PS256</IDTokenSigningAlgorithm>
+            </IDTokenSigningAlgorithms>
         </OpenIDConnect>
 
         <DeviceCodeGrant>

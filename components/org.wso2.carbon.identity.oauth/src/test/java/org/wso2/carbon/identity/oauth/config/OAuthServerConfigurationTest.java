@@ -438,7 +438,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
-    public void testGetUserInfoJWTSignatureAlgorithms() throws Exception {
+    public void testGetUserInfoJWTSignatureAlgorithms() {
 
         List<String> userInfoJWTSignatureAlgorithms = OAuthServerConfiguration.getInstance()
                 .getUserInfoJWTSignatureAlgorithms();
@@ -447,7 +447,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
-    public void testGetSupportedTokenEndpointAuthMethods() throws Exception {
+    public void testGetSupportedTokenEndpointAuthMethods() {
 
         List<String> supportedTokenEndpointAuthMethods = OAuthServerConfiguration.getInstance()
                 .getSupportedTokenEndpointAuthMethods();
@@ -456,12 +456,20 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
-    public void testGetSupportedTokenEndpointSigningAlgorithms() throws Exception {
+    public void testGetSupportedTokenEndpointSigningAlgorithms() {
 
         List<String> supportedTokenEndpointSigningAlgorithms = OAuthServerConfiguration.getInstance()
                 .getSupportedTokenEndpointSigningAlgorithms();
         Assert.assertTrue(supportedTokenEndpointSigningAlgorithms.contains("PS256"));
         Assert.assertTrue(supportedTokenEndpointSigningAlgorithms.size() == 2);
+    }
+
+    @Test
+    public void testGetIdTokenSigningAlgorithms() {
+
+        List<String> idTokenSigningAlgorithms = OAuthServerConfiguration.getInstance().getIdTokenSigningAlgorithms();
+        Assert.assertTrue(idTokenSigningAlgorithms.contains("PS256"));
+        Assert.assertTrue(idTokenSigningAlgorithms.size() == 1);
     }
 
     private String fillURLPlaceholdersForTest(String url) {

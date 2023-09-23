@@ -315,6 +315,7 @@ public class OAuthServerConfiguration {
     private List<String> userInfoJWTSignatureAlgorithms = new ArrayList<>();
     private List<String> supportedTokenEndpointAuthMethods = new ArrayList<>();
     private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
+    private List<String> idTokenSigningAlgorithms = new ArrayList<>();
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -3256,6 +3257,12 @@ public class OAuthServerConfiguration {
                         getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS)));
             }
 
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.ID_TOKEN_SIGNING_ALGS)) != null) {
+                parseIdTokenSigningAlgorithms(openIDConnectConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.ID_TOKEN_SIGNING_ALGS)));
+            }
+
             OMElement oAuthAuthzRequest = openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
                     (ConfigElements.OAUTH_AUTHZ_REQUEST_CLASS));
             oAuthAuthzRequestClassName = (oAuthAuthzRequest != null) ? oAuthAuthzRequest.getText().trim() :
@@ -3561,19 +3568,28 @@ public class OAuthServerConfiguration {
     }
 
     public boolean isTlsClientCertificateBoundAccessTokensEnabled() {
+
         return tlsClientCertificateBoundAccessTokensEnabled;
     }
 
     public List<String> getUserInfoJWTSignatureAlgorithms() {
+
         return userInfoJWTSignatureAlgorithms;
     }
 
     public List<String> getSupportedTokenEndpointAuthMethods() {
+
         return supportedTokenEndpointAuthMethods;
     }
 
     public List<String> getSupportedTokenEndpointSigningAlgorithms() {
+
         return supportedTokenEndpointSigningAlgorithms;
+    }
+
+    public List<String> getIdTokenSigningAlgorithms() {
+
+        return idTokenSigningAlgorithms;
     }
 
     /**
@@ -3647,6 +3663,34 @@ public class OAuthServerConfiguration {
                     supportedTokenEndpointSigningAlgorithms.add(algorithm.getText());
                 }
             }
+        }
+    }
+
+    /**
+     * Parse ID token signing algorithms and add them to the idTokenSigningAlgorithms list.
+     *
+     * @param algorithms OMElement of supported algorithms.
+     */
+    private void parseIdTokenSigningAlgorithms(OMElement algorithms) {
+
+        if (algorithms == null) {
+            return;
+        }
+
+        Iterator iterator = algorithms.getChildrenWithLocalName(
+                ConfigElements.ID_TOKEN_SIGNING_ALG);
+        if (iterator != null) {
+            for (; iterator.hasNext(); ) {
+                OMElement algorithm = (OMElement) iterator.next();
+                if (algorithm != null) {
+                    idTokenSigningAlgorithms.add(algorithm.getText());
+                }
+            }
+        }
+        // As there was an existing configuration for SignatureAlgorithm which accepts a single value,
+        // the below condition is used to merge the values from both the existing and newly added configurations.
+        if (!idTokenSigningAlgorithms.contains(signatureAlgorithm)) {
+            idTokenSigningAlgorithms.add(signatureAlgorithm);
         }
     }
 
@@ -3910,6 +3954,8 @@ public class OAuthServerConfiguration {
         private static final String SUPPORTED_TOKEN_ENDPOINT_AUTH_METHOD = "SupportedTokenEndpointAuthMethod";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS = "SupportedTokenEndpointSigningAlgorithms";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG = "SupportedTokenEndpointSigningAlgorithm";
+        private static final String ID_TOKEN_SIGNING_ALGS = "IDTokenSigningAlgorithms";
+        private static final String ID_TOKEN_SIGNING_ALG = "IDTokenSigningAlgorithm";
     }
 
 }
