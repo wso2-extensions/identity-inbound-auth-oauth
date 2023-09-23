@@ -469,7 +469,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
         List<String> idTokenSigningAlgorithms = OAuthServerConfiguration.getInstance().getIdTokenSigningAlgorithms();
         Assert.assertTrue(idTokenSigningAlgorithms.contains("PS256"));
-        Assert.assertTrue(idTokenSigningAlgorithms.size() == 1);
+        Assert.assertTrue(idTokenSigningAlgorithms.size() == 2);
     }
 
     private String fillURLPlaceholdersForTest(String url) {
