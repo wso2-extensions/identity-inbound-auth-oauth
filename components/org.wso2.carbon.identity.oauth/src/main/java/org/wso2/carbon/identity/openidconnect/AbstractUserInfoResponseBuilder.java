@@ -331,7 +331,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             throw new UserInfoEndpointException("Error while retrieving OAuth app information for clientId: "
-                    + clientId);
+                    + clientId, e);
         }
         return oAuthAppDO != null ? oAuthAppDO.getCallbackUrl() : null;
     }

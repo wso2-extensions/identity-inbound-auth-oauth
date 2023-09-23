@@ -298,10 +298,12 @@ public class OIDCClaimUtil {
             }
         } catch (IllegalArgumentException e) {
             // return default subject type if an incorrect value is configured.
-            return SubjectType.PUBLIC;
+            return StringUtils.isNotBlank(OAuthServerConfiguration.getInstance().getDefaultSubjectType()) ? SubjectType
+                    .fromValue(OAuthServerConfiguration.getInstance().getDefaultSubjectType()) : SubjectType.PUBLIC;
         }
         // return default subject type if the property is not configured.
-        return SubjectType.PUBLIC;
+        return StringUtils.isNotBlank(OAuthServerConfiguration.getInstance().getDefaultSubjectType()) ? SubjectType
+                .fromValue(OAuthServerConfiguration.getInstance().getDefaultSubjectType()) : SubjectType.PUBLIC;
     }
 
     /**
