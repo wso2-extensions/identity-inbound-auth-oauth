@@ -2405,13 +2405,11 @@ public class OAuthServerConfiguration {
                 if (publicClientAllowedElement != null) {
                     publicClientAllowed = publicClientAllowedElement.getText();
                 }
-                if (StringUtils.isNotEmpty(publicClientAllowed)) {
-                    if (Boolean.parseBoolean(publicClientAllowed)) {
-                        publicClientSupportedGrantTypes.add(grantTypeName);
-                        continue;
-                    }
+                if (Boolean.parseBoolean(publicClientAllowed)) {
+                    publicClientSupportedGrantTypes.add(grantTypeName);
+                } else {
+                    publicClientNotSupportedGrantTypes.add(grantTypeName);
                 }
-                publicClientNotSupportedGrantTypes.add(grantTypeName);
             }
         } else {
             // if this element is not present, assume the default case.
