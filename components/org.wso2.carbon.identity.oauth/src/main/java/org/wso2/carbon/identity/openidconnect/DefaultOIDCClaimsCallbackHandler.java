@@ -870,12 +870,15 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             throws IdentityOAuth2Exception {
         
         Base64URL certThumbprint;
-        X509Certificate certificate;
+        X509Certificate certificate = null;
         String headerName = Optional.ofNullable(IdentityUtil.getProperty(OAuthConstants.MTLS_AUTH_HEADER))
                 .orElse(CONFIG_NOT_FOUND);
 
         HttpRequestHeader[] requestHeaders = tokenReqMessageContext.getOauth2AccessTokenReqDTO()
                 .getHttpRequestHeaders();
+        Object certObject = tokenReqMessageContext.getOauth2AccessTokenReqDTO()
+                .getHttpServletRequestWrapper().getAttribute(JAVAX_SERVLET_REQUEST_CERTIFICATE);
+
         if (requestHeaders != null && requestHeaders.length != 0) {
             Optional<HttpRequestHeader> certHeader =
                     Arrays.stream(requestHeaders).filter(h -> headerName.equals(h.getName())).findFirst();
@@ -885,10 +888,11 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                 } catch (CertificateException e) {
                     throw new IdentityOAuth2Exception("Error occurred while extracting the certificate", e);
                 }
-            } else {
-                certificate = (X509Certificate) tokenReqMessageContext.getOauth2AccessTokenReqDTO()
-                        .getHttpServletRequestWrapper().getAttribute(JAVAX_SERVLET_REQUEST_CERTIFICATE);
             }
+        } else if (certObject instanceof X509Certificate) {
+            certificate = (X509Certificate) certObject;
+        }
+        if (certificate != null) {
             certThumbprint = X509CertUtils.computeSHA256Thumbprint(certificate);
             tokenReqMessageContext.addProperty(CNF_CLAIM, Collections.singletonMap("x5t#S256", certThumbprint));
         }
