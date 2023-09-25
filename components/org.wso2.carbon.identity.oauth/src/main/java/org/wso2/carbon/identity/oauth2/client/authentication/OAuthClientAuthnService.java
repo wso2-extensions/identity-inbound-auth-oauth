@@ -409,12 +409,16 @@ public class OAuthClientAuthnService {
      */
     private List<String> mapAuthenticatorForClientAuthMethod(List<String> authMethods) {
 
+        /* This mapping cannot be avoided as we need to reference the authenticator based on the auth method configured.
+        Therefore if a new authenticator is added for FAPI, the relevant mapping should also be updated accordingly. */
         List<String> authenticatorList = new ArrayList<>();
         for (String authMethod : authMethods) {
             if (authMethod.equals(OAuthConstants.PRIVATE_KEY_JWT)) {
                 authenticatorList.add(OAuthConstants.PRIVATE_KEY_JWT_AUTHENTICATOR);
             } else if (authMethod.equals(OAuthConstants.TLS_CLIENT_AUTH)) {
                 authenticatorList.add(OAuthConstants.TLS_CLIENT_AUTHENTICATOR);
+            } else {
+                authenticatorList.add(authMethod);
             }
         }
         return authenticatorList;
