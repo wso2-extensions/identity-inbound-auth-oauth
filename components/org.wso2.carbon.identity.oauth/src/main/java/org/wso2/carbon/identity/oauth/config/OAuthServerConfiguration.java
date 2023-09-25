@@ -2405,10 +2405,12 @@ public class OAuthServerConfiguration {
                 if (publicClientAllowedElement != null) {
                     publicClientAllowed = publicClientAllowedElement.getText();
                 }
-                if (Boolean.parseBoolean(publicClientAllowed)) {
-                    publicClientSupportedGrantTypes.add(grantTypeName);
-                } else {
-                    publicClientNotSupportedGrantTypes.add(grantTypeName);
+                if (StringUtils.isNotEmpty(publicClientAllowed)) {
+                    if (Boolean.parseBoolean(publicClientAllowed)) {
+                        publicClientSupportedGrantTypes.add(grantTypeName);
+                    } else {
+                        publicClientNotSupportedGrantTypes.add(grantTypeName);
+                    }
                 }
             }
         } else {
