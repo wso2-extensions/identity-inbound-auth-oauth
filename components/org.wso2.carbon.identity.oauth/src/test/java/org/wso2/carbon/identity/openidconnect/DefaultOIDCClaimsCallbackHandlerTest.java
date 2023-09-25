@@ -102,6 +102,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import javax.servlet.http.HttpServletRequestWrapper;
 import javax.sql.DataSource;
 
 import static org.mockito.Matchers.any;
@@ -1188,7 +1189,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         HttpRequestHeader[] httpRequestHeaders = new HttpRequestHeader[1];
         httpRequestHeaders[0] = httpRequestHeader;
 
+        HttpServletRequestWrapper httpServletRequestWrapper = PowerMockito.mock(HttpServletRequestWrapper.class);
         OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+        accessTokenReqDTO.setHttpServletRequestWrapper(httpServletRequestWrapper);
         accessTokenReqDTO.setHttpRequestHeaders(httpRequestHeaders);
         accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
 

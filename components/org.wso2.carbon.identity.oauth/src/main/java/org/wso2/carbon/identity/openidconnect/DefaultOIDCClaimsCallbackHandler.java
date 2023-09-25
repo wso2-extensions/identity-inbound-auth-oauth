@@ -876,8 +876,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
         HttpRequestHeader[] requestHeaders = tokenReqMessageContext.getOauth2AccessTokenReqDTO()
                 .getHttpRequestHeaders();
-        Object certObject = tokenReqMessageContext.getOauth2AccessTokenReqDTO()
-                .getHttpServletRequestWrapper().getAttribute(JAVAX_SERVLET_REQUEST_CERTIFICATE);
+        Object certObject = Optional.ofNullable(tokenReqMessageContext.getOauth2AccessTokenReqDTO()
+                .getHttpServletRequestWrapper().getAttribute(JAVAX_SERVLET_REQUEST_CERTIFICATE)).orElse(null);
 
         if (requestHeaders != null && requestHeaders.length != 0) {
             Optional<HttpRequestHeader> certHeader =
