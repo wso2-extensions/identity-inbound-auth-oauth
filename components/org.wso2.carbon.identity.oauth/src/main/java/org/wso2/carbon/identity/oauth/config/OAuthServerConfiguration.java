@@ -2398,14 +2398,15 @@ public class OAuthServerConfiguration {
                     }
                 }
 
-                // Read the public client allowed grant types for all grant types.
-                // Grant types added with PublicClientAllowed property and value set to true will be added to
-                // publicClientSupportedGrantTypes list and value set to false will be added to
-                // publicClientNotSupportedGrantTypes. All default grant types will have the property set to either the
-                // value.
-                // If the property is not mentioned in the custom grant type configuration, the grant type will not be
-                // added to either lists. So, if the custom grant type is added to the array configuration of allowed,
-                // grant types, it will get added to the publicClientSupportedGrantTypes list.
+                /* Read the public client allowed grant types for all grant types.
+                 * Grant types added with PublicClientAllowed property and value set to true will be added to
+                 * publicClientSupportedGrantTypes list and value set to false will be added to
+                 * publicClientNotSupportedGrantTypes. All default grant types will have the property set to either the
+                 * value.
+                 * If the property is not mentioned in the custom grant type configuration, the grant type will not be
+                 * added to either lists. So, if the custom grant type is added to the array configuration of allowed,
+                 * grant types, it will get added to the publicClientSupportedGrantTypes list.
+                 */
                 OMElement publicClientAllowedElement = supportedGrantTypeElement
                         .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.PUBLIC_CLIENT_ALLOWED));
                 String publicClientAllowed = null;
