@@ -338,9 +338,9 @@ public class OAuthClientAuthnService {
             throw new OAuthClientAuthnException("Error occurred while retrieving the service provider.",
                     OAuth2ErrorCodes.INVALID_REQUEST, e);
         }
-        // Below code needs to be changed to getSupportedTokenEndpointAuthMethods() once the
-        // https://github.com/wso2-extensions/identity-inbound-auth-oauth/pull/2162 is merged.
-        return OAuthServerConfiguration.getInstance().getSupportedIdTokenEncryptionMethods();
+        // Below code needs to be changed to OAuthServerConfiguration.getInstance().getSupportedTokenEndpointAuthMethods() 
+        // once the PR https://github.com/wso2-extensions/identity-inbound-auth-oauth/pull/2162 is merged.
+        return new ArrayList<>();
     }
 
     /**
