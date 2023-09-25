@@ -2408,10 +2408,10 @@ public class OAuthServerConfiguration {
                 if (StringUtils.isNotEmpty(publicClientAllowed)) {
                     if (Boolean.parseBoolean(publicClientAllowed)) {
                         publicClientSupportedGrantTypes.add(grantTypeName);
-                    } else {
-                        publicClientNotSupportedGrantTypes.add(grantTypeName);
+                        continue;
                     }
                 }
+                publicClientNotSupportedGrantTypes.add(grantTypeName);
             }
         } else {
             // if this element is not present, assume the default case.
