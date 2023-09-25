@@ -96,7 +96,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
     private static final String CNF_CLAIM = "cnf";
     private static final String CONFIG_NOT_FOUND = "CONFIG_NOT_FOUND";
-    public static final String JAVAX_SERVLET_REQUEST_CERTIFICATE = "javax.servlet.request.X509Certificate";
+    private static final String JAVAX_SERVLET_REQUEST_CERTIFICATE = "javax.servlet.request.X509Certificate";
 
     @Override
     public JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder, OAuthTokenReqMessageContext
