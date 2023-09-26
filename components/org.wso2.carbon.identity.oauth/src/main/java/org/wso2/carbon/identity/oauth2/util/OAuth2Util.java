@@ -375,7 +375,7 @@ public class OAuth2Util {
     private static final String EXTERNAL_CONSENT_PAGE = "external_consent_page";
     private static final String EXTERNAL_CONSENT_PAGE_URL = "external_consent_page_url";
 
-    private static final String BASIC_AUTHORIZATION_PREFIX = "Basic";
+    private static final String BASIC_AUTHORIZATION_PREFIX = "Basic ";
 
     private OAuth2Util() {
 

@@ -2538,7 +2538,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                         "Basic authorization header is not available in the request.", null},
                 {HTTPConstants.HEADER_AUTHORIZATION,  "Bearer 12345",
                         "Basic authorization header is not available in the request.", null},
-                {HTTPConstants.HEADER_AUTHORIZATION,  "Basic1234", null, null},
+                {HTTPConstants.HEADER_AUTHORIZATION,  "Basic1234",
+                        "Basic authorization header is not available in the request.", null},
                 {HTTPConstants.HEADER_AUTHORIZATION,  "Basic " + base64EncodedClientIdInvalid, null, null}
         };
     }

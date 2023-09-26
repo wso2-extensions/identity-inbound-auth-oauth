@@ -1401,6 +1401,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         PreparedStatement ps = null;
         if (tokens.length > 1) {
             try {
+                List<String> oldTokens = new ArrayList<>();
                 String sqlQuery = SQLQueries.REVOKE_ACCESS_TOKEN.replace(IDN_OAUTH2_ACCESS_TOKEN,
                         accessTokenStoreTable);
                 ps = connection.prepareStatement(sqlQuery);
@@ -1412,32 +1413,16 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     } else {
                         ps.setString(3, getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(token));
                     }
-                    ps.setInt(4, IdentityTenantUtil.getLoginTenantId());
                     ps.addBatch();
+                    oldTokens.add(getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(token));
                 }
-                int[] countArray = ps.executeBatch();
+                ps.executeBatch();
                 IdentityDatabaseUtil.commitTransaction(connection);
-
-                List<String> oldTokens = new ArrayList<>();
-                List<String> oldTokenHashes = new ArrayList<>();
-                for (int i = 0; i < tokens.length; i++) {
-                    if (countArray[i] > 0) {
-                        oldTokens.add(tokens[i]);
-                        if (isHashedToken) {
-                            oldTokenHashes.add(tokens[i]);
-                        } else {
-                            oldTokenHashes.add(getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(
-                                    tokens[i]));
-                        }
-                    }
-                }
-
-                if (!oldTokens.isEmpty()) {
-                    // To revoke request objects which have persisted against the access token.
-                    OAuth2TokenUtil.postUpdateAccessTokens(oldTokens, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
-                    if (isTokenCleanupFeatureEnabled) {
-                        oldTokenCleanupObject.cleanupTokensInBatch(oldTokenHashes, connection);
-                    }
+                // To revoke request objects which have persisted against the access token.
+                OAuth2TokenUtil.postUpdateAccessTokens(Arrays.asList(tokens), OAuthConstants.TokenStates.
+                        TOKEN_STATE_REVOKED);
+                if (isTokenCleanupFeatureEnabled) {
+                    oldTokenCleanupObject.cleanupTokensInBatch(oldTokens, connection);
                 }
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
@@ -1460,21 +1445,14 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 } else {
                     ps.setString(3, getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(tokens[0]));
                 }
-                ps.setInt(4, IdentityTenantUtil.getLoginTenantId());
-                int count = ps.executeUpdate();
+                ps.executeUpdate();
 
-                if (count > 0) {
-                    // To revoke request objects which have persisted against the access token.
-                    OAuth2TokenUtil.postUpdateAccessTokens(Arrays.asList(tokens), OAuthConstants.TokenStates.
-                            TOKEN_STATE_REVOKED);
-                    if (isTokenCleanupFeatureEnabled) {
-                        oldTokenCleanupObject.cleanupTokenByTokenValue(getHashingPersistenceProcessor()
-                                .getProcessedAccessTokenIdentifier(tokens[0]), connection);
-                    }
-                } else {
-                    if (log.isDebugEnabled()) {
-                        log.debug("No records updated while revoking the access token.");
-                    }
+                // To revoke request objects which have persisted against the access token.
+                OAuth2TokenUtil.postUpdateAccessTokens(Arrays.asList(tokens), OAuthConstants.TokenStates.
+                        TOKEN_STATE_REVOKED);
+                if (isTokenCleanupFeatureEnabled) {
+                    oldTokenCleanupObject.cleanupTokenByTokenValue(
+                            getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(tokens[0]), connection);
                 }
             } catch (SQLException e) {
                 // IdentityDatabaseUtil.rollbackTransaction(connection);
@@ -1508,6 +1486,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     @Override
     public void revokeAccessTokensIndividually(String[] tokens, boolean isHashedToken) throws IdentityOAuth2Exception {
 
+        List<String> accessTokenId = new ArrayList<>();
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 StringBuilder stringBuilder = new StringBuilder();
@@ -1520,8 +1499,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
         }
 
-        List<String> accessTokenIdList = new ArrayList<>();
-        List<String> oldTokens = new ArrayList<>();
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement ps = null;
         try {
@@ -1535,26 +1512,22 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 } else {
                     ps.setString(3, getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(token));
                 }
-                ps.setInt(4, IdentityTenantUtil.getLoginTenantId());
                 int count = ps.executeUpdate();
                 if (log.isDebugEnabled()) {
                     log.debug("Number of rows being updated : " + count);
                 }
-                if (count > 0) {
-                    oldTokens.add(token);
-                    accessTokenIdList.add(getTokenIdByAccessToken(token));
-                }
+                accessTokenId.add(getTokenIdByAccessToken(token));
             }
             // To revoke request objects which have persisted against the access token.
-            if (!oldTokens.isEmpty()) {
-                OAuth2TokenUtil.postUpdateAccessTokens(accessTokenIdList, OAuthConstants.TokenStates.
+            if (accessTokenId.size() > 0) {
+                OAuth2TokenUtil.postUpdateAccessTokens(accessTokenId, OAuthConstants.TokenStates.
                         TOKEN_STATE_REVOKED);
+            }
 
-                if (isTokenCleanupFeatureEnabled) {
-                    for (String token : oldTokens) {
-                        oldTokenCleanupObject.cleanupTokenByTokenValue(
-                                getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(token), connection);
-                    }
+            if (isTokenCleanupFeatureEnabled) {
+                for (String token : tokens) {
+                    oldTokenCleanupObject.cleanupTokenByTokenValue(
+                            getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(token), connection);
                 }
             }
             IdentityDatabaseUtil.commitTransaction(connection);
