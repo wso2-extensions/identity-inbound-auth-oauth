@@ -474,13 +474,4 @@ public class OIDProviderConfigResponseTest {
                 .isTlsClientCertificateBoundAccessTokensEnabled();
         assertEquals(isTlsClientCertificateBoundAccessTokensEnabled, tlsClientCertificateBoundAccessTokensEnabledValue);
     }
-
-   @Test
-    public void testGetandSetIdTokenSigningAlgorithms() {
-
-        String[] idTokenSigningAlgorithms = { "value1", "value2" };
-        oidProviderConfigResponse.setIdTokenSigningAlgorithms(idTokenSigningAlgorithms);
-        String[] idTokenSigningAlgorithmValues = oidProviderConfigResponse.getIdTokenSigningAlgorithms();
-        assertEquals(idTokenSigningAlgorithms, idTokenSigningAlgorithmValues);
-    }
 }

@@ -312,10 +312,8 @@ public class OAuthServerConfiguration {
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     private String deviceAuthzEPUrl = null;
     private boolean tlsClientCertificateBoundAccessTokensEnabled = false;
-    private List<String> userInfoJWTSignatureAlgorithms = new ArrayList<>();
     private List<String> supportedTokenEndpointAuthMethods = new ArrayList<>();
     private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
-    private List<String> idTokenSigningAlgorithms = new ArrayList<>();
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -3240,12 +3238,6 @@ public class OAuthServerConfiguration {
             }
 
             if (openIDConnectConfigElem.getFirstChildWithName(
-                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHMS)) != null) {
-                parseSupportedUserInfoJWTSignatureAlgorithm(openIDConnectConfigElem.getFirstChildWithName(
-                        getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHMS)));
-            }
-
-            if (openIDConnectConfigElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_AUTH_METHODS)) != null) {
                 parseSupportedTokenEndpointAuthMethods(openIDConnectConfigElem.getFirstChildWithName(
                         getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_AUTH_METHODS)));
@@ -3255,12 +3247,6 @@ public class OAuthServerConfiguration {
                     getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS)) != null) {
                 parseSupportedTokenEndpointSigningAlgorithms(openIDConnectConfigElem.getFirstChildWithName(
                         getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS)));
-            }
-
-            if (openIDConnectConfigElem.getFirstChildWithName(
-                    getQNameWithIdentityNS(ConfigElements.ID_TOKEN_SIGNING_ALGS)) != null) {
-                parseIdTokenSigningAlgorithms(openIDConnectConfigElem.getFirstChildWithName(
-                        getQNameWithIdentityNS(ConfigElements.ID_TOKEN_SIGNING_ALGS)));
             }
 
             OMElement oAuthAuthzRequest = openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
@@ -3572,11 +3558,6 @@ public class OAuthServerConfiguration {
         return tlsClientCertificateBoundAccessTokensEnabled;
     }
 
-    public List<String> getUserInfoJWTSignatureAlgorithms() {
-
-        return userInfoJWTSignatureAlgorithms;
-    }
-
     public List<String> getSupportedTokenEndpointAuthMethods() {
 
         return supportedTokenEndpointAuthMethods;
@@ -3585,39 +3566,6 @@ public class OAuthServerConfiguration {
     public List<String> getSupportedTokenEndpointSigningAlgorithms() {
 
         return supportedTokenEndpointSigningAlgorithms;
-    }
-
-    public List<String> getIdTokenSigningAlgorithms() {
-
-        return idTokenSigningAlgorithms;
-    }
-
-    /**
-     * Parse supported signing algorithms and add them to the userInfoJWTSignatureAlgorithms list.
-     *
-     * @param algorithms OMElement of supported algorithms.
-     */
-    private void parseSupportedUserInfoJWTSignatureAlgorithm(OMElement algorithms) {
-
-        if (algorithms == null) {
-            return;
-        }
-
-        Iterator iterator = algorithms.getChildrenWithLocalName(
-                ConfigElements.OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM);
-        if (iterator != null) {
-            for (; iterator.hasNext(); ) {
-                OMElement algorithm = (OMElement) iterator.next();
-                if (algorithm != null) {
-                    userInfoJWTSignatureAlgorithms.add((algorithm.getText()));
-                }
-            }
-        }
-        // As there was an existing configuration for userInfoJWTSignatureAlgorithm which accepts a single value,
-        // the below condition is used to merge the values from both the existing and newly added configurations.
-        if (!userInfoJWTSignatureAlgorithms.contains(userInfoJWTSignatureAlgorithm)) {
-            userInfoJWTSignatureAlgorithms.add(userInfoJWTSignatureAlgorithm);
-        }
     }
 
     /**
@@ -3663,34 +3611,6 @@ public class OAuthServerConfiguration {
                     supportedTokenEndpointSigningAlgorithms.add(algorithm.getText());
                 }
             }
-        }
-    }
-
-    /**
-     * Parse ID token signing algorithms and add them to the idTokenSigningAlgorithms list.
-     *
-     * @param algorithms OMElement of supported algorithms.
-     */
-    private void parseIdTokenSigningAlgorithms(OMElement algorithms) {
-
-        if (algorithms == null) {
-            return;
-        }
-
-        Iterator iterator = algorithms.getChildrenWithLocalName(
-                ConfigElements.ID_TOKEN_SIGNING_ALG);
-        if (iterator != null) {
-            for (; iterator.hasNext(); ) {
-                OMElement algorithm = (OMElement) iterator.next();
-                if (algorithm != null) {
-                    idTokenSigningAlgorithms.add(algorithm.getText());
-                }
-            }
-        }
-        // As there was an existing configuration for SignatureAlgorithm which accepts a single value,
-        // the below condition is used to merge the values from both the existing and newly added configurations.
-        if (!idTokenSigningAlgorithms.contains(signatureAlgorithm)) {
-            idTokenSigningAlgorithms.add(signatureAlgorithm);
         }
     }
 
@@ -3756,7 +3676,6 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_USERINFO_ENDPOINT_RESPONSE_BUILDER =
                 "UserInfoEndpointResponseBuilder";
         public static final String OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM = "UserInfoJWTSignatureAlgorithm";
-        public static final String OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHMS = "UserInfoJWTSignatureAlgorithms";
         public static final String OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY = "SignJWTWithSPKey";
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER =
                 "IDTokenCustomClaimsCallBackHandler";
@@ -3954,8 +3873,6 @@ public class OAuthServerConfiguration {
         private static final String SUPPORTED_TOKEN_ENDPOINT_AUTH_METHOD = "SupportedTokenEndpointAuthMethod";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS = "SupportedTokenEndpointSigningAlgorithms";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG = "SupportedTokenEndpointSigningAlgorithm";
-        private static final String ID_TOKEN_SIGNING_ALGS = "IDTokenSigningAlgorithms";
-        private static final String ID_TOKEN_SIGNING_ALG = "IDTokenSigningAlgorithm";
     }
 
 }

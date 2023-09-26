@@ -360,10 +360,4 @@ public class DiscoveryConstants {
      */
     public static final String TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN = "tls_client_certificate_bound_access_tokens";
 
-    /**
-     * id_token_signing_alg
-     * OPTIONAL. JSON array containing a list of the JWS signing algorithms that could be used to sign the ID Token.
-     */
-    public static final String ID_TOKEN_SIGNING_ALG = "id_token_signing_alg";
-
 }
