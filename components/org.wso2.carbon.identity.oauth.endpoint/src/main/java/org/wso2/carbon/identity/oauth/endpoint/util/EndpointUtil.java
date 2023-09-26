@@ -1226,7 +1226,7 @@ public class EndpointUtil {
         try {
             return user.getUserId();
         } catch (UserIdNotFoundException e) {
-            throw new OAuthSystemException("User id not found for user: " + user.getLoggableUserId(), e);
+            throw new OAuthSystemException("User id not found for user: " + user.getLoggableMaskedUserId(), e);
         }
     }
 
