@@ -332,6 +332,28 @@ definitions:
         type: boolean
       ext_public_client:
         type: boolean
+      token_endpoint_auth_method:
+        type: string
+      token_endpoint_auth_signing_alg:
+        type: string
+      sector_identifier_uri:
+        type: string
+      id_token_signed_response_alg:
+        type: string
+      id_token_encrypted_response_alg:
+        type: string
+      id_token_encrypted_response_enc:
+        type: string
+      authorization_encrypted_response_alg:
+        type: string
+      authorization_signed_response_alg:
+        type: string
+      authorization_encrypted_response_enc:
+        type: string
+      request_object_signing_alg:
+        type: string
+      tls_client_auth_subject_dn:
+        type: string
 #-----------------------------------------------------
 # The Application Update Request Object
 #-----------------------------------------------------
@@ -380,6 +402,28 @@ definitions:
         type: boolean
       ext_public_client:
         type: boolean
+      token_endpoint_auth_method:
+        type: string
+      token_endpoint_auth_signing_alg:
+        type: string
+      sector_identifier_uri:
+        type: string
+      id_token_signed_response_alg:
+        type: string
+      id_token_encrypted_response_alg:
+        type: string
+      id_token_encrypted_response_enc:
+        type: string
+      authorization_encrypted_response_alg:
+        type: string
+      authorization_signed_response_alg:
+        type: string
+      authorization_encrypted_response_enc:
+        type: string
+      request_object_signing_alg:
+        type: string
+      tls_client_auth_subject_dn:
+          type: string
 #-----------------------------------------------------
 # The OAuth2 Application Object
 #-----------------------------------------------------

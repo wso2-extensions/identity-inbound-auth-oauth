@@ -477,6 +477,59 @@ public class DCRMService {
         if (registrationRequest.getExtIdTokenLifetime() != null) {
             oAuthConsumerApp.setIdTokenExpiryTime(registrationRequest.getExtIdTokenLifetime());
         }
+        if (registrationRequest.getTokenEndpointAuthMethod() != null) {
+            oAuthConsumerApp.setTokenEndpointAuthMethod(registrationRequest.getTokenEndpointAuthMethod());
+        }
+        if (registrationRequest.getTokenEndpointAuthSignatureAlgorithm() != null) {
+            oAuthConsumerApp.setTokenEndpointAuthSignatureAlgorithm
+                    (registrationRequest.getTokenEndpointAuthSignatureAlgorithm());
+        }
+        if (registrationRequest.getSectorIdentifierURI() != null) {
+            oAuthConsumerApp.setSectorIdentifierURI(registrationRequest.getSectorIdentifierURI());
+        }
+        if (registrationRequest.getIdTokenSignatureAlgorithm() != null) {
+            oAuthConsumerApp.setIdTokenSignatureAlgorithm(registrationRequest.getIdTokenSignatureAlgorithm());
+        }
+        if (registrationRequest.getIdTokenEncryptionAlgorithm() != null) {
+            oAuthConsumerApp.setIdTokenEncryptionAlgorithm(registrationRequest.getIdTokenEncryptionAlgorithm());
+        }
+        if (registrationRequest.getIdTokenEncryptionMethod() != null) {
+            oAuthConsumerApp.setIdTokenEncryptionMethod(registrationRequest.getIdTokenEncryptionMethod());
+        }
+        if (registrationRequest.getAuthorizationResponseSignatureAlgorithm() != null) {
+            oAuthConsumerApp.setAuthorizationResponseSignatureAlgorithm
+                    (registrationRequest.getAuthorizationResponseSignatureAlgorithm());
+        }
+        if (registrationRequest.getAuthorizationResponseEncryptionAlgorithm() != null) {
+            oAuthConsumerApp.setAuthorizationResponseEncryptionAlgorithm
+                    (registrationRequest.getAuthorizationResponseEncryptionAlgorithm());
+        }
+        if (registrationRequest.getAuthorizationResponseEncryptionMethod() != null) {
+            oAuthConsumerApp.setAuthorizationResponseEncryptionMethod
+                    (registrationRequest.getRequestObjectEncryptionMethod());
+        }
+        if (registrationRequest.getRequestObjectSignatureAlgorithm() != null) {
+            oAuthConsumerApp.setRequestObjectSignatureValidationEnabled
+                    (registrationRequest.isRequireSignedRequestObject());
+        }
+        if (registrationRequest.getTlsClientAuthSubjectDN() != null) {
+            oAuthConsumerApp.setTlsClientAuthSubjectDN(registrationRequest.getTlsClientAuthSubjectDN());
+        }
+        if (registrationRequest.getSubjectType() != null) {
+            oAuthConsumerApp.setSubjectType(registrationRequest.getSubjectType());
+        }
+        if (registrationRequest.getRequestObjectEncryptionAlgorithm() != null) {
+            oAuthConsumerApp.setRequestObjectEncryptionAlgorithm
+                    (registrationRequest.getRequestObjectEncryptionAlgorithm());
+        }
+        if (registrationRequest.getRequestObjectEncryptionMethod() != null) {
+            oAuthConsumerApp.setRequestObjectEncryptionMethod(registrationRequest.getRequestObjectEncryptionMethod());
+        }
+        oAuthConsumerApp.setRequestObjectSignatureValidationEnabled(registrationRequest.isRequireSignedRequestObject());
+        oAuthConsumerApp.setRequirePushedAuthorizationRequests
+                (registrationRequest.isRequirePushedAuthorizationRequests());
+        oAuthConsumerApp.setTlsClientCertificateBoundAccessTokens
+                (registrationRequest.isTlsClientCertificateBoundAccessTokens());
         oAuthConsumerApp.setPkceMandatory(registrationRequest.isExtPkceMandatory());
         oAuthConsumerApp.setPkceSupportPlain(registrationRequest.isExtPkceSupportPlain());
         oAuthConsumerApp.setBypassClientCredentials(registrationRequest.isExtPublicClient());

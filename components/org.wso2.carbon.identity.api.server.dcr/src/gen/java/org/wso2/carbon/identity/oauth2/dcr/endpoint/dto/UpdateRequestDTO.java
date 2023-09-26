@@ -1,14 +1,15 @@
 package org.wso2.carbon.identity.oauth2.dcr.endpoint.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
-
 import java.util.ArrayList;
 import java.util.List;
 
+import io.swagger.annotations.*;
+import com.fasterxml.jackson.annotation.*;
 
-@ApiModel
+import javax.validation.constraints.NotNull;
+
+
+@ApiModel(description = "")
 public class UpdateRequestDTO {
 
     private List<String> redirectUris = new ArrayList<>();
@@ -28,8 +29,19 @@ public class UpdateRequestDTO {
     private boolean extPkceMandatory;
     private boolean extPkceSupportPlain;
     private boolean extPublicClient;
+    private String tokenEndpointAuthMethod = null;
+    private String tokenEndpointAuthSigningAlg = null;
+    private String sectorIdentifierUri = null;
+    private String idTokenSignedResponseAlg = null;
+    private String idTokenEncryptedResponseAlg = null;
+    private String idTokenEncryptedResponseEnc = null;
+    private String authorizationEncryptedResponseAlg = null;
+    private String authorizationSignedResponseAlg = null;
+    private String authorizationEncryptedResponseEnc = null;
+    private String requestObjectSigningAlg = null;
+    private String tlsClientAuthSubjectDn = null;
 
-    @ApiModelProperty
+    @ApiModelProperty(value = "")
     @JsonProperty("redirect_uris")
     public List<String> getRedirectUris() {
         return redirectUris;
@@ -198,28 +210,139 @@ public class UpdateRequestDTO {
         this.extPublicClient = extPublicClient;
     }
 
+    @ApiModelProperty(value = "")
+    @JsonProperty("token_endpoint_auth_method")
+    public String getTokenEndpointAuthMethod() {
+        return tokenEndpointAuthMethod;
+    }
+    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("token_endpoint_auth_signing_alg")
+    public String getTokenEndpointAuthSigningAlg() {
+        return tokenEndpointAuthSigningAlg;
+    }
+    public void setTokenEndpointAuthSigningAlg(String tokenEndpointAuthSigningAlg) {
+        this.tokenEndpointAuthSigningAlg = tokenEndpointAuthSigningAlg;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("sector_identifier_uri")
+    public String getSectorIdentifierUri() {
+        return sectorIdentifierUri;
+    }
+    public void setSectorIdentifierUri(String sectorIdentifierUri) {
+        this.sectorIdentifierUri = sectorIdentifierUri;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("id_token_signed_response_alg")
+    public String getIdTokenSignedResponseAlg() {
+        return idTokenSignedResponseAlg;
+    }
+    public void setIdTokenSignedResponseAlg(String idTokenSignedResponseAlg) {
+        this.idTokenSignedResponseAlg = idTokenSignedResponseAlg;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("id_token_encrypted_response_alg")
+    public String getIdTokenEncryptedResponseAlg() {
+        return idTokenEncryptedResponseAlg;
+    }
+    public void setIdTokenEncryptedResponseAlg(String idTokenEncryptedResponseAlg) {
+        this.idTokenEncryptedResponseAlg = idTokenEncryptedResponseAlg;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("id_token_encrypted_response_enc")
+    public String getIdTokenEncryptedResponseEnc() {
+        return idTokenEncryptedResponseEnc;
+    }
+    public void setIdTokenEncryptedResponseEnc(String idTokenEncryptedResponseEnc) {
+        this.idTokenEncryptedResponseEnc = idTokenEncryptedResponseEnc;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("authorization_encrypted_response_alg")
+    public String getAuthorizationEncryptedResponseAlg() {
+        return authorizationEncryptedResponseAlg;
+    }
+    public void setAuthorizationEncryptedResponseAlg(String authorizationEncryptedResponseAlg) {
+        this.authorizationEncryptedResponseAlg = authorizationEncryptedResponseAlg;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("authorization_signed_response_alg")
+    public String getAuthorizationSignedResponseAlg() {
+        return authorizationSignedResponseAlg;
+    }
+    public void setAuthorizationSignedResponseAlg(String authorizationSignedResponseAlg) {
+        this.authorizationSignedResponseAlg = authorizationSignedResponseAlg;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("authorization_encrypted_response_enc")
+    public String getAuthorizationEncryptedResponseEnc() {
+        return authorizationEncryptedResponseEnc;
+    }
+    public void setAuthorizationEncryptedResponseEnc(String authorizationEncryptedResponseEnc) {
+        this.authorizationEncryptedResponseEnc = authorizationEncryptedResponseEnc;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("request_object_signing_alg")
+    public String getRequestObjectSigningAlg() {
+        return requestObjectSigningAlg;
+    }
+    public void setRequestObjectSigningAlg(String requestObjectSigningAlg) {
+        this.requestObjectSigningAlg = requestObjectSigningAlg;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("tls_client_auth_subject_dn")
+    public String getTlsClientAuthSubjectDn() {
+        return tlsClientAuthSubjectDn;
+    }
+    public void setTlsClientAuthSubjectDn(String tlsClientAuthSubjectDn) {
+        this.tlsClientAuthSubjectDn = tlsClientAuthSubjectDn;
+    }
+
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("class UpdateRequestDTO {\n");
 
-        sb.append("  redirect_uris: ").append(redirectUris).append("\n");
-        sb.append("  client_name: ").append(clientName).append("\n");
-        sb.append("  grant_types: ").append(grantTypes).append("\n");
-        sb.append("  token_type_extension: ").append(tokenType).append("\n");
-        sb.append("  client_id: ").append(clientId).append("\n");
-        sb.append("  client_secret: ").append(clientSecret).append("\n");
-        sb.append("  backchannel_logout_uri: ").append(backchannelLogoutUri).append("\n");
-        sb.append("  backchannel_logout_session_required: ").append(backchannelLogoutSessionRequired).append("\n");
-        sb.append("  ext_application_display_name: ").append(extApplicationDisplayName).append("\n");
-        sb.append("  ext_application_owner: ").append(extApplicationOwner).append("\n");
-        sb.append("  ext_application_token_lifetime: ").append(extApplicationTokenLifetime).append("\n");
-        sb.append("  ext_user_token_lifetime: ").append(extUserTokenLifetime).append("\n");
-        sb.append("  ext_refresh_token_lifetime: ").append(extRefreshTokenLifetime).append("\n");
-        sb.append("  ext_id_token_lifetime: ").append(extIdTokenLifetime).append("\n");
-        sb.append("  ext_pkce_mandatory: ").append(extPkceMandatory).append("\n");
-        sb.append("  ext_pkce_support_plain: ").append(extPkceSupportPlain).append("\n");
-        sb.append("  ext_public_client: ").append(extPublicClient).append("\n");
+        sb.append("  redirectUris: ").append(redirectUris).append("\n");
+        sb.append("  clientName: ").append(clientName).append("\n");
+        sb.append("  clientId: ").append(clientId).append("\n");
+        sb.append("  clientSecret: ").append(clientSecret).append("\n");
+        sb.append("  grantTypes: ").append(grantTypes).append("\n");
+        sb.append("  backchannelLogoutUri: ").append(backchannelLogoutUri).append("\n");
+        sb.append("  backchannelLogoutSessionRequired: ").append(backchannelLogoutSessionRequired).append("\n");
+        sb.append("  extApplicationDisplayName: ").append(extApplicationDisplayName).append("\n");
+        sb.append("  tokenTypeExtension: ").append(tokenType).append("\n");
+        sb.append("  extApplicationOwner: ").append(extApplicationOwner).append("\n");
+        sb.append("  extApplicationTokenLifetime: ").append(extApplicationTokenLifetime).append("\n");
+        sb.append("  extUserTokenLifetime: ").append(extUserTokenLifetime).append("\n");
+        sb.append("  extRefreshTokenLifetime: ").append(extRefreshTokenLifetime).append("\n");
+        sb.append("  extIdTokenLifetime: ").append(extIdTokenLifetime).append("\n");
+        sb.append("  extPkceMandatory: ").append(extPkceMandatory).append("\n");
+        sb.append("  extPkceSupportPlain: ").append(extPkceSupportPlain).append("\n");
+        sb.append("  extPublicClient: ").append(extPublicClient).append("\n");
+        sb.append("  tokenEndpointAuthMethod: ").append(tokenEndpointAuthMethod).append("\n");
+        sb.append("  tokenEndpointAuthSigningAlg: ").append(tokenEndpointAuthSigningAlg).append("\n");
+        sb.append("  sectorIdentifierUri: ").append(sectorIdentifierUri).append("\n");
+        sb.append("  idTokenSignedResponseAlg: ").append(idTokenSignedResponseAlg).append("\n");
+        sb.append("  idTokenEncryptedResponseAlg: ").append(idTokenEncryptedResponseAlg).append("\n");
+        sb.append("  idTokenEncryptedResponseEnc: ").append(idTokenEncryptedResponseEnc).append("\n");
+        sb.append("  authorizationEncryptedResponseAlg: ").append(authorizationEncryptedResponseAlg).append("\n");
+        sb.append("  authorizationSignedResponseAlg: ").append(authorizationSignedResponseAlg).append("\n");
+        sb.append("  authorizationEncryptedResponseEnc: ").append(authorizationEncryptedResponseEnc).append("\n");
+        sb.append("  requestObjectSigningAlg: ").append(requestObjectSigningAlg).append("\n");
+        sb.append("  tlsClientAuthSubjectDn: ").append(tlsClientAuthSubjectDn).append("\n");
         sb.append("}\n");
         return sb.toString();
     }

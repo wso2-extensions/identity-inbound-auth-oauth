@@ -78,6 +78,32 @@ public class DCRMUtils {
         appRegistrationRequest.setExtPkceMandatory(registrationRequestDTO.getExtPkceMandatory());
         appRegistrationRequest.setExtPkceSupportPlain(registrationRequestDTO.getExtPkceSupportPlain());
         appRegistrationRequest.setExtPublicClient(registrationRequestDTO.getExtPublicClient());
+        appRegistrationRequest.setTokenEndpointAuthMethod(registrationRequestDTO.getTokenEndpointAuthMethod());
+        appRegistrationRequest.setTokenEndpointAuthSignatureAlgorithm
+                (registrationRequestDTO.getTokenEndpointAuthSigningAlg());
+        appRegistrationRequest.setSectorIdentifierURI(registrationRequestDTO.getSectorIdentifierUri());
+        appRegistrationRequest.setIdTokenSignatureAlgorithm(registrationRequestDTO.getIdTokenSignedResponseAlg());
+        appRegistrationRequest.setIdTokenEncryptionAlgorithm(registrationRequestDTO.getIdTokenEncryptedResponseAlg());
+        appRegistrationRequest.setIdTokenEncryptionMethod(registrationRequestDTO.getIdTokenEncryptedResponseEnc());
+        appRegistrationRequest.setAuthorizationResponseEncryptionAlgorithm
+                (registrationRequestDTO.getAuthorizationEncryptedResponseAlg());
+        appRegistrationRequest.setAuthorizationResponseEncryptionMethod
+                (registrationRequestDTO.getAuthorizationEncryptedResponseEnc());
+        appRegistrationRequest.setAuthorizationResponseSignatureAlgorithm
+                (registrationRequestDTO.getAuthorizationSignedResponseAlg());
+        appRegistrationRequest.setRequestObjectSignatureAlgorithm(registrationRequestDTO.getRequestObjectSigningAlg());
+        appRegistrationRequest.setRequestObjectEncryptionAlgorithm
+                (registrationRequestDTO.getRequestObjectEncryptionAlgorithm());
+        appRegistrationRequest.setRequestObjectEncryptionMethod
+                (registrationRequestDTO.getRequestObjectEncryptionMethod());
+        appRegistrationRequest.setTlsClientAuthSubjectDN(registrationRequestDTO.getTlsClientAuthSubjectDn());
+        appRegistrationRequest.setRequirePushedAuthorizationRequests
+                (registrationRequestDTO.isRequireSignedRequestObject());
+        appRegistrationRequest.setRequireSignedRequestObject(registrationRequestDTO.isRequireSignedRequestObject());
+        appRegistrationRequest.setTlsClientCertificateBoundAccessTokens
+                (registrationRequestDTO.isTlsClientCertificateBoundAccessToken());
+        appRegistrationRequest.setSubjectType(registrationRequestDTO.getSubjectType());
+        appRegistrationRequest.setSoftwareStatement(registrationRequestDTO.getSoftwareStatement());
         return appRegistrationRequest;
 
     }
