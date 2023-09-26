@@ -54,10 +54,10 @@ public class RegistrationRequestDTO  {
   private boolean requirePushAuthorizationRequest;
   private boolean requireSignedRequestObject;
   private boolean tlsClientCertificateBoundAccessToken;
-  private String subjectType;
-  private String requestObjectEncryptionAlgorithm;
-  private String requestObjectEncryptionMethod;
-  private String softwareStatement;
+  private String subjectType = null;
+  private String requestObjectEncryptionAlgorithm = null;
+  private String requestObjectEncryptionMethod = null;
+  private String softwareStatement = null;
 
   @ApiModelProperty(required = true)
   @JsonProperty("redirect_uris")

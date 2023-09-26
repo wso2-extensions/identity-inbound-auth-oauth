@@ -40,6 +40,13 @@ public class UpdateRequestDTO {
     private String authorizationEncryptedResponseEnc = null;
     private String requestObjectSigningAlg = null;
     private String tlsClientAuthSubjectDn = null;
+    private boolean requirePushAuthorizationRequest;
+    private boolean requireSignedRequestObject;
+    private boolean tlsClientCertificateBoundAccessToken;
+    private String subjectType = null;
+    private String requestObjectEncryptionAlgorithm = null;
+    private String requestObjectEncryptionMethod = null;
+    private String softwareStatement = null;
 
     @ApiModelProperty(value = "")
     @JsonProperty("redirect_uris")
@@ -215,6 +222,7 @@ public class UpdateRequestDTO {
     public String getTokenEndpointAuthMethod() {
         return tokenEndpointAuthMethod;
     }
+
     public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
         this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
     }
@@ -224,6 +232,7 @@ public class UpdateRequestDTO {
     public String getTokenEndpointAuthSigningAlg() {
         return tokenEndpointAuthSigningAlg;
     }
+
     public void setTokenEndpointAuthSigningAlg(String tokenEndpointAuthSigningAlg) {
         this.tokenEndpointAuthSigningAlg = tokenEndpointAuthSigningAlg;
     }
@@ -233,6 +242,7 @@ public class UpdateRequestDTO {
     public String getSectorIdentifierUri() {
         return sectorIdentifierUri;
     }
+
     public void setSectorIdentifierUri(String sectorIdentifierUri) {
         this.sectorIdentifierUri = sectorIdentifierUri;
     }
@@ -242,6 +252,7 @@ public class UpdateRequestDTO {
     public String getIdTokenSignedResponseAlg() {
         return idTokenSignedResponseAlg;
     }
+
     public void setIdTokenSignedResponseAlg(String idTokenSignedResponseAlg) {
         this.idTokenSignedResponseAlg = idTokenSignedResponseAlg;
     }
@@ -251,6 +262,7 @@ public class UpdateRequestDTO {
     public String getIdTokenEncryptedResponseAlg() {
         return idTokenEncryptedResponseAlg;
     }
+
     public void setIdTokenEncryptedResponseAlg(String idTokenEncryptedResponseAlg) {
         this.idTokenEncryptedResponseAlg = idTokenEncryptedResponseAlg;
     }
@@ -260,6 +272,7 @@ public class UpdateRequestDTO {
     public String getIdTokenEncryptedResponseEnc() {
         return idTokenEncryptedResponseEnc;
     }
+
     public void setIdTokenEncryptedResponseEnc(String idTokenEncryptedResponseEnc) {
         this.idTokenEncryptedResponseEnc = idTokenEncryptedResponseEnc;
     }
@@ -269,6 +282,7 @@ public class UpdateRequestDTO {
     public String getAuthorizationEncryptedResponseAlg() {
         return authorizationEncryptedResponseAlg;
     }
+
     public void setAuthorizationEncryptedResponseAlg(String authorizationEncryptedResponseAlg) {
         this.authorizationEncryptedResponseAlg = authorizationEncryptedResponseAlg;
     }
@@ -278,6 +292,7 @@ public class UpdateRequestDTO {
     public String getAuthorizationSignedResponseAlg() {
         return authorizationSignedResponseAlg;
     }
+
     public void setAuthorizationSignedResponseAlg(String authorizationSignedResponseAlg) {
         this.authorizationSignedResponseAlg = authorizationSignedResponseAlg;
     }
@@ -287,6 +302,7 @@ public class UpdateRequestDTO {
     public String getAuthorizationEncryptedResponseEnc() {
         return authorizationEncryptedResponseEnc;
     }
+
     public void setAuthorizationEncryptedResponseEnc(String authorizationEncryptedResponseEnc) {
         this.authorizationEncryptedResponseEnc = authorizationEncryptedResponseEnc;
     }
@@ -296,6 +312,7 @@ public class UpdateRequestDTO {
     public String getRequestObjectSigningAlg() {
         return requestObjectSigningAlg;
     }
+
     public void setRequestObjectSigningAlg(String requestObjectSigningAlg) {
         this.requestObjectSigningAlg = requestObjectSigningAlg;
     }
@@ -305,8 +322,78 @@ public class UpdateRequestDTO {
     public String getTlsClientAuthSubjectDn() {
         return tlsClientAuthSubjectDn;
     }
+
     public void setTlsClientAuthSubjectDn(String tlsClientAuthSubjectDn) {
         this.tlsClientAuthSubjectDn = tlsClientAuthSubjectDn;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("require_pushed_authorization_requests")
+    public boolean isRequirePushAuthorizationRequest() {
+        return requirePushAuthorizationRequest;
+    }
+
+    public void setRequirePushAuthorizationRequest(boolean requirePushAuthorizationRequest) {
+        this.requirePushAuthorizationRequest = requirePushAuthorizationRequest;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("require_signed_request_object")
+    public boolean isRequireSignedRequestObject() {
+        return requireSignedRequestObject;
+    }
+
+    public void setRequireSignedRequestObject(boolean requireSignedRequestObject) {
+        this.requireSignedRequestObject = requireSignedRequestObject;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("tls_client_certificate_bound_access_tokens")
+    public boolean isTlsClientCertificateBoundAccessToken() {
+        return tlsClientCertificateBoundAccessToken;
+    }
+
+    public void setTlsClientCertificateBoundAccessToken(boolean tlsClientCertificateBoundAccessToken) {
+        this.tlsClientCertificateBoundAccessToken = tlsClientCertificateBoundAccessToken;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("subject_type")
+    public String getSubjectType() {
+        return subjectType;
+    }
+
+    public void setSubjectType(String subjectType) {
+        this.subjectType = subjectType;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("request_object_encryption_alg")
+    public String getRequestObjectEncryptionAlgorithm() {
+        return requestObjectEncryptionAlgorithm;
+    }
+
+    public void setRequestObjectEncryptionAlgorithm(String requestObjectEncryptionAlgorithm) {
+        this.requestObjectEncryptionAlgorithm = requestObjectEncryptionAlgorithm;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("request_object_encryption_enc")
+    public String getRequestObjectEncryptionMethod() {
+        return requestObjectEncryptionMethod;
+    }
+
+    public void setRequestObjectEncryptionMethod(String requestObjectEncryptionMethod) {
+        this.requestObjectEncryptionMethod = requestObjectEncryptionMethod;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("software_statement")
+    public String getSoftwareStatement() {
+        return softwareStatement;
+    }
+    public void setSoftwareStatement(String softwareStatement) {
+        this.softwareStatement = softwareStatement;
     }
 
 
