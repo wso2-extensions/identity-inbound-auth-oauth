@@ -68,12 +68,17 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         Map<String, Object> filteredUserClaims = filterOIDCClaims(tokenResponse, clientId, spTenantDomain, userClaims);
 
         // Handle subject claim.
-        String subjectClaim;
-        AuthenticatedUser authenticatedUser = getAuthenticatedUser(OAuth2Util.getAccessTokenIdentifier(tokenResponse));
-        String userId = authenticatedUser.getAuthenticatedSubjectIdentifier();
-        String callbackUri = getCallbackUrl(clientId);
+        String subjectClaim = getSubjectClaim(userClaims, clientId, spTenantDomain, tokenResponse);
+        String callbackUri;
         try {
-            subjectClaim = OIDCClaimUtil.getSubjectClaim(clientId, userId, callbackUri);
+            callbackUri = OIDCClaimUtil.getCallbackUrl(clientId);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new UserInfoEndpointException("Error while getting the registered callback URI for client_id: " +
+                    clientId, e);
+        }
+        try {
+            // Get subject identifier according to the configured subject type.
+            subjectClaim = OIDCClaimUtil.getSubjectClaim(clientId, subjectClaim, callbackUri);
         } catch (IdentityOAuth2Exception e) {
             throw new UserInfoEndpointException("Error while getting subject claim for client_id: " + clientId +
                     " of tenantDomain: " + spTenantDomain, e);
@@ -325,14 +330,4 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         return new ArrayList<>();
     }
 
-    private String getCallbackUrl(String clientId) throws UserInfoEndpointException {
-        OAuthAppDO oAuthAppDO;
-        try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new UserInfoEndpointException("Error while retrieving OAuth app information for clientId: "
-                    + clientId, e);
-        }
-        return oAuthAppDO != null ? oAuthAppDO.getCallbackUrl() : null;
-    }
 }

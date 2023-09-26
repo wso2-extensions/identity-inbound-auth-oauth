@@ -29,8 +29,11 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants.SubjectType;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -64,6 +67,7 @@ public class OIDCClaimUtil {
     private static final Log log = LogFactory.getLog(OIDCClaimUtil.class);
     private static final String OPENID_IDP_ENTITY_ID = "IdPEntityId";
     private static final String SEND_ONLY_SP_MAPPED_ROLES = "SPRoleManagement.ReturnOnlyMappedLocalRoles";
+    private static final String DEFAULT_SUBJECT_TYPE = "OAuth.OpenIDConnect.DefaultSubjectType";
 
     private OIDCClaimUtil() {
     }
@@ -297,13 +301,17 @@ public class OIDCClaimUtil {
                 }
             }
         } catch (IllegalArgumentException e) {
-            // return default subject type if an incorrect value is configured.
-            return StringUtils.isNotBlank(OAuthServerConfiguration.getInstance().getDefaultSubjectType()) ? SubjectType
-                    .fromValue(OAuthServerConfiguration.getInstance().getDefaultSubjectType()) : SubjectType.PUBLIC;
+            throw new IdentityOAuth2Exception("Invalid subject type configured for the service provider: " + clientId,
+                    e);
         }
         // return default subject type if the property is not configured.
-        return StringUtils.isNotBlank(OAuthServerConfiguration.getInstance().getDefaultSubjectType()) ? SubjectType
-                .fromValue(OAuthServerConfiguration.getInstance().getDefaultSubjectType()) : SubjectType.PUBLIC;
+        return getDefaultSubjectType();
+    }
+
+    private static SubjectType getDefaultSubjectType() {
+
+        return StringUtils.isNotBlank(IdentityUtil.getProperty(DEFAULT_SUBJECT_TYPE)) ?
+                SubjectType.fromValue(IdentityUtil.getProperty(DEFAULT_SUBJECT_TYPE)) : SubjectType.PUBLIC;
     }
 
     /**
@@ -358,7 +366,7 @@ public class OIDCClaimUtil {
             throws IdentityOAuth2Exception {
 
         URI uri = StringUtils.isNotBlank(sectorIdentifierUri) ? URI.create(sectorIdentifierUri) :
-                StringUtils.isNotBlank(callBackURI) ? URI.create(callBackURI) : null;
+                StringUtils.isNotBlank(callBackURI) && isValidCallBackURI(callBackURI) ? URI.create(callBackURI) : null;
         String hostname;
         if (uri != null) {
             hostname = uri.getHost();
@@ -372,5 +380,16 @@ public class OIDCClaimUtil {
 
         String seed = hostname.concat(userId);
         return UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8)).toString();
+    }
+
+    private static boolean isValidCallBackURI(String callBackURI) {
+
+        return !callBackURI.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX);
+    }
+
+    public static String getCallbackUrl(String clientId) throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        return oAuthAppDO != null ? oAuthAppDO.getCallbackUrl() : null;
     }
 }

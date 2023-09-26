@@ -415,7 +415,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
             defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
         } catch (IdentityOAuth2Exception e) {
             Assert.assertEquals(e.getMessage(),
-                    "Could not find an existing app for clientId: " + invalidClientId);
+                    "Error while getting the registered callback URI for client_id: " + invalidClientId);
         }
     }
 

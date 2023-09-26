@@ -98,6 +98,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final Log log = LogFactory.getLog(JWTTokenIssuer.class);
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private Algorithm signatureAlgorithm = null;
+    private static final String ENABLE_PPID_FOR_ACCESS_TOKENS = "OAuth.OpenIDConnect.EnablePairwiseSubForAccessToken";
 
     public JWTTokenIssuer() throws IdentityOAuth2Exception {
 
@@ -476,14 +477,10 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
-        String userId = authenticatedUser.getAuthenticatedSubjectIdentifier();
-
-        String sub;
+        String sub = getSubjectClaim(consumerKey, spTenantDomain, authenticatedUser);
         if (checkPairwiseSubEnabledForAccessTokens()) {
             // pairwise sub claim is returned only if pairwise subject identifier for access tokens is enabled.
-            sub = OIDCClaimUtil.getSubjectClaim(consumerKey, userId, oAuthAppDO.getCallbackUrl());
-        } else {
-            sub = getSubjectClaim(consumerKey, spTenantDomain, authenticatedUser);
+            sub = OIDCClaimUtil.getSubjectClaim(consumerKey, sub, oAuthAppDO.getCallbackUrl());
         }
 
         // Set the default claims.
@@ -859,6 +856,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      */
     public static boolean checkPairwiseSubEnabledForAccessTokens() {
 
-        return OAuthServerConfiguration.getInstance().isPairwiseSubForAccessTokensEnabled();
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_PPID_FOR_ACCESS_TOKENS));
     }
 }
