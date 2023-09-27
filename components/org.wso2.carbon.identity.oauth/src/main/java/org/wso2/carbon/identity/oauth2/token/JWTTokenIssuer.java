@@ -854,7 +854,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      *
      * @return true if pairwise subject identifier is enabled for access token response.
      */
-    public static boolean checkPairwiseSubEnabledForAccessTokens() {
+    private boolean checkPairwiseSubEnabledForAccessTokens() {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_PPID_FOR_ACCESS_TOKENS));
     }

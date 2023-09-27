@@ -50,8 +50,11 @@ import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaim
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
+import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.security.interfaces.RSAPrivateKey;
@@ -62,6 +65,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
@@ -87,6 +91,7 @@ import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreF
                 OAuth2Util.class,
                 JWTTokenIssuer.class,
                 IdentityTenantUtil.class,
+                OIDCClaimUtil.class
         }
 )
 public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
@@ -109,6 +114,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     private static final String USER_ACCESS_TOKEN_GRANT_TYPE = "userAccessTokenGrantType";
     private static final String APPLICATION_ACCESS_TOKEN_GRANT_TYPE = "applicationAccessTokenGrantType";
     private static final String DUMMY_CLIENT_ID = "dummyClientID";
+    private static final String DUMMY_SECTOR_IDENTIFIER = "https://mockhost.com/file_of_redirect_uris.json";
     private static final String DUMMY_CONSUMER_KEY = "DUMMY_CONSUMER_KEY";
     private static final String ID_TOKEN_ISSUER = "idTokenIssuer";
     private static final String EXPIRY_TIME_JWT = "EXPIRY_TIME_JWT";
@@ -284,13 +290,29 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
                         authzReqMessageContext,
                         null,
                         authenticatedSubjectIdentifier,
-                        DEFAULT_USER_ACCESS_TOKEN_EXPIRY_TIME * 1000
+                        DEFAULT_USER_ACCESS_TOKEN_EXPIRY_TIME * 1000,
+                        false
                 },
                 {
                         null,
                         tokenReqMessageContext,
                         authenticatedSubjectIdentifier,
-                        DEFAULT_APPLICATION_ACCESS_TOKEN_EXPIRY_TIME * 1000
+                        DEFAULT_APPLICATION_ACCESS_TOKEN_EXPIRY_TIME * 1000,
+                        false
+                },
+                {
+                        authzReqMessageContext,
+                        null,
+                        authenticatedSubjectIdentifier,
+                        DEFAULT_USER_ACCESS_TOKEN_EXPIRY_TIME * 1000,
+                        true
+                },
+                {
+                        null,
+                        tokenReqMessageContext,
+                        authenticatedSubjectIdentifier,
+                        DEFAULT_APPLICATION_ACCESS_TOKEN_EXPIRY_TIME * 1000,
+                        true
                 }
         };
     }
@@ -299,7 +321,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     public void testCreateJWTClaimSet(Object authzReqMessageContext,
                                       Object tokenReqMessageContext,
                                       String sub,
-                                      long expectedExpiry) throws Exception {
+                                      long expectedExpiry, boolean ppidEnabled) throws Exception {
 
         OAuthAppDO appDO = spy(new OAuthAppDO());
         mockGrantHandlers();
@@ -319,6 +341,12 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
 
         JWTTokenIssuer jwtTokenIssuer = PowerMockito.spy(new JWTTokenIssuer());
         PowerMockito.doReturn(sub).when(jwtTokenIssuer, "getSubjectClaim", anyString(), anyString(), any());
+        PowerMockito.doReturn(ppidEnabled).when(jwtTokenIssuer, "checkPairwiseSubEnabledForAccessTokens");
+        PowerMockito.spy(OIDCClaimUtil.class);
+        OAuthConstants.SubjectType subjectType = ppidEnabled ? OAuthConstants.SubjectType.PAIRWISE : OAuthConstants
+                .SubjectType.PUBLIC;
+        PowerMockito.doReturn(subjectType).when(OIDCClaimUtil.class, "getSubjectType", anyString());
+        PowerMockito.doReturn(DUMMY_SECTOR_IDENTIFIER).when(OIDCClaimUtil.class, "getSectorIdentifierUri", anyString());
         JWTClaimsSet jwtClaimSet = jwtTokenIssuer.createJWTClaimSet(
                 (OAuthAuthzReqMessageContext) authzReqMessageContext,
                 (OAuthTokenReqMessageContext) tokenReqMessageContext,
@@ -327,7 +355,9 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
 
         assertNotNull(jwtClaimSet);
         assertEquals(jwtClaimSet.getIssuer(), ID_TOKEN_ISSUER);
-        assertEquals(jwtClaimSet.getSubject(), sub);
+        String ppidSub = UUID.nameUUIDFromBytes(URI.create(DUMMY_SECTOR_IDENTIFIER).getHost().concat(sub)
+                .getBytes(StandardCharsets.UTF_8)).toString();
+        assertEquals(jwtClaimSet.getSubject(), ppidEnabled ? ppidSub : sub);
         assertEquals(jwtClaimSet.getClaim("azp"), DUMMY_CLIENT_ID);
         assertEquals(jwtClaimSet.getClaim(CLAIM_CLIENT_ID), DUMMY_CLIENT_ID);
 
