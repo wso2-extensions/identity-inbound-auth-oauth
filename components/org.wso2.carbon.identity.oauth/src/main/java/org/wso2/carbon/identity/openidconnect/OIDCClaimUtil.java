@@ -355,6 +355,7 @@ public class OIDCClaimUtil {
 
     /**
      * Calculate pairwise subject identifier.
+     * <a href="https://openid.net/specs/openid-connect-core-1_0.html#PairwiseAlg">...</a>
      *
      * @param sectorIdentifierUri sector identifier URI
      * @param userId              user id

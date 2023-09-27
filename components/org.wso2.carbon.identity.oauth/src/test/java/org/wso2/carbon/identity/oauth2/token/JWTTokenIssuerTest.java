@@ -386,7 +386,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     public void testSignJWTWithRSA(Object authzReqMessageContext,
                                    Object tokenReqMessageContext,
                                    String sub,
-                                   long expectedExpiry) throws Exception {
+                                   long expectedExpiry, boolean ppidEnabled) throws Exception {
 
             OAuthAppDO appDO = spy(new OAuthAppDO());
             mockGrantHandlers();
