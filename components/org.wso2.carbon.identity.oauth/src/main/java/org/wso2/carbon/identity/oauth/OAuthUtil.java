@@ -73,6 +73,7 @@ import javax.crypto.spec.SecretKeySpec;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_TOKEN_IDENTIFIER;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.Config.PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.*;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 
 /**
@@ -496,6 +497,20 @@ public final class OAuthUtil {
         dto.setTokenRevocationWithIDPSessionTerminationEnabled(appDO
                 .isTokenRevocationWithIDPSessionTerminationEnabled());
         dto.setTokenBindingValidationEnabled(appDO.isTokenBindingValidationEnabled());
+        dto.setTokenEndpointAuthMethod(appDO.getTokenEndpointAuthMethod());
+        dto.setTokenEndpointAuthSignatureAlgorithm(appDO.getTokenEndpointAuthSignatureAlgorithm());
+        dto.setSectorIdentifierURI(appDO.getSectorIdentifierURI());
+        dto.setIdTokenSignatureAlgorithm(appDO.getIdTokenSignatureAlgorithm());
+        dto.setAuthorizationResponseSignatureAlgorithm(appDO.getAuthorizationResponseSignatureAlgorithm());
+        dto.setAuthorizationResponseEncryptionAlgorithm(appDO.getAuthorizationResponseEncryptionAlgorithm());
+        dto.setAuthorizationResponseEncryptionMethod(appDO.getAuthorizationResponseEncryptionMethod());
+        dto.setRequestObjectSignatureAlgorithm(appDO.getRequestObjectSignatureAlgorithm());
+        dto.setTlsClientAuthSubjectDN(appDO.getTlsClientAuthSubjectDN());
+        dto.setSubjectType(appDO.getSubjectType());
+        dto.setRequestObjectEncryptionAlgorithm(appDO.getAuthorizationResponseEncryptionAlgorithm());
+        dto.setRequestObjectEncryptionMethod(appDO.getRequestObjectEncryptionMethod());
+        dto.setRequirePushedAuthorizationRequests(appDO.isRequirePushedAuthorizationRequests());
+        dto.setTlsClientCertificateBoundAccessTokens(appDO.isTlsClientCertificateBoundAccessTokens());
         return dto;
     }
 

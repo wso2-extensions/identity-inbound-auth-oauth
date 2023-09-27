@@ -517,6 +517,20 @@ public final class OAuthConstants {
                 "tokenRevocationWithIDPSessionTermination";
         public static final String TOKEN_BINDING_VALIDATION = "tokenBindingValidation";
         public static final String TOKEN_BINDING_TYPE_NONE = "None";
+        public static final String TOKEN_AUTH_METHOD =  "tokenEndpointAuthMethod";
+        public static final String TOKEN_AUTH_SIGNATURE_ALGORITHM = "tokenEndpointAuthSigningAlg";
+        public static final String SECTOR_IDENTIFIER_URI = "sectorIdentifierUri";
+        public static final String ID_TOKEN_SIGNATURE_ALGORITHM = "idTokenSignedResponseAlg";
+        public static final String AUTH_RESPONSE_ENCRYPTION_ALGORITHM = "authorizationEncryptedResponseAlg";
+        public static final String AUTH_RESPONSE_SIGNATURE_ALGORITHM = "authorizationSignedResponseAlg";
+        public static final String AUTH_RESPONSE_ENCRYPTION_METHOD = "authorizationEncryptedResponseEnc";
+        public static final String REQUEST_OBJECT_SIGNATURE_ALGORITHM = "requestObjectSigningAlg";
+        public static final String TLS_SUBJECT_DN = "tlsClientAuthSubjectDn";
+        public static final String IS_PUSH_AUTH = "requirePushAuthorizationRequest";
+        public static final String IS_CERTIFICATE_BOUND_ACCESS_TOKEN = "tlsClientCertificateBoundAccessToken";
+        public static final String SUBJECT_TYPE = "subjectType";
+        public static final String REQUEST_OBJECT_ENCRYPTION_ALGORITHM = "requestObjectEncryptionAlgorithm";
+        public static final String REQUEST_OBJECT_ENCRYPTION_METHOD = "requestObjectEncryptionMethod";
 
         private OIDCConfigProperties() {
 
