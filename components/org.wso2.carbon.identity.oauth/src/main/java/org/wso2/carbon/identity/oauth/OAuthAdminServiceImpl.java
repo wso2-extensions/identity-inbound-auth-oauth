@@ -642,6 +642,25 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setTokenRevocationWithIDPSessionTerminationEnabled(consumerAppDTO
                     .isTokenRevocationWithIDPSessionTerminationEnabled());
             oauthappdo.setTokenBindingValidationEnabled(consumerAppDTO.isTokenBindingValidationEnabled());
+            oauthappdo.setTokenEndpointAuthMethod(consumerAppDTO.getTokenEndpointAuthMethod());
+            oauthappdo.setTokenEndpointAuthSignatureAlgorithm(
+                    consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm());
+            oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
+            oauthappdo.setIdTokenSignatureAlgorithm(consumerAppDTO.getIdTokenSignatureAlgorithm());
+            oauthappdo.setAuthorizationResponseSignatureAlgorithm(
+                    consumerAppDTO.getAuthorizationResponseSignatureAlgorithm());
+            oauthappdo.setAuthorizationResponseEncryptionAlgorithm(
+                    consumerAppDTO.getAuthorizationResponseEncryptionAlgorithm());
+            oauthappdo.setAuthorizationResponseEncryptionMethod(
+                    consumerAppDTO.getAuthorizationResponseEncryptionMethod());
+            oauthappdo.setRequestObjectSignatureAlgorithm(consumerAppDTO.getRequestObjectSignatureAlgorithm());
+            oauthappdo.setTlsClientAuthSubjectDN(consumerAppDTO.getTlsClientAuthSubjectDN());
+            oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
+            oauthappdo.setRequestObjectEncryptionAlgorithm(consumerAppDTO.getRequestObjectEncryptionAlgorithm());
+            oauthappdo.setRequestObjectEncryptionMethod(consumerAppDTO.getRequestObjectEncryptionMethod());
+            oauthappdo.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
+            oauthappdo.setTlsClientCertificateBoundAccessTokens(
+                    consumerAppDTO.getTlsClientCertificateBoundAccessTokens());
         }
         dao.updateConsumerApplication(oauthappdo);
         AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);
