@@ -684,72 +684,59 @@ public class OAuthAppDAO {
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                TOKEN_AUTH_METHOD, String.valueOf(oauthAppDO.getTokenEndpointAuthMethod()),
+                TOKEN_AUTH_METHOD, oauthAppDO.getTokenEndpointAuthMethod(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                TOKEN_AUTH_SIGNATURE_ALGORITHM,
-                String.valueOf(oauthAppDO.getTokenEndpointAuthSignatureAlgorithm()),
+                TOKEN_AUTH_SIGNATURE_ALGORITHM, oauthAppDO.getTokenEndpointAuthSignatureAlgorithm(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                SECTOR_IDENTIFIER_URI,
-                String.valueOf(oauthAppDO.getSectorIdentifierURI()),
+                SECTOR_IDENTIFIER_URI, oauthAppDO.getSectorIdentifierURI(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                ID_TOKEN_SIGNATURE_ALGORITHM,
-                String.valueOf(oauthAppDO.getIdTokenSignatureAlgorithm()),
+                ID_TOKEN_SIGNATURE_ALGORITHM, oauthAppDO.getIdTokenSignatureAlgorithm(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                AUTH_RESPONSE_ENCRYPTION_ALGORITHM,
-                String.valueOf(oauthAppDO.getAuthorizationResponseEncryptionAlgorithm()),
+                AUTH_RESPONSE_ENCRYPTION_ALGORITHM, oauthAppDO.getAuthorizationResponseEncryptionAlgorithm(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                AUTH_RESPONSE_ENCRYPTION_METHOD,
-                String.valueOf(oauthAppDO.getAuthorizationResponseEncryptionMethod()),
+                AUTH_RESPONSE_ENCRYPTION_METHOD, oauthAppDO.getAuthorizationResponseEncryptionMethod(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                AUTH_RESPONSE_SIGNATURE_ALGORITHM,
-                String.valueOf(oauthAppDO.getAuthorizationResponseSignatureAlgorithm()),
+                AUTH_RESPONSE_SIGNATURE_ALGORITHM, oauthAppDO.getAuthorizationResponseSignatureAlgorithm(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                REQUEST_OBJECT_SIGNATURE_ALGORITHM,
-                String.valueOf(oauthAppDO.getRequestObjectSignatureAlgorithm()),
+                REQUEST_OBJECT_SIGNATURE_ALGORITHM, oauthAppDO.getRequestObjectSignatureAlgorithm(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                REQUEST_OBJECT_ENCRYPTION_ALGORITHM,
-                String.valueOf(oauthAppDO.getRequestObjectEncryptionAlgorithm()),
+                REQUEST_OBJECT_ENCRYPTION_ALGORITHM, oauthAppDO.getRequestObjectEncryptionAlgorithm(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                REQUEST_OBJECT_ENCRYPTION_METHOD,
-                String.valueOf(oauthAppDO.getAuthorizationResponseEncryptionMethod()),
+                REQUEST_OBJECT_ENCRYPTION_METHOD, oauthAppDO.getAuthorizationResponseEncryptionMethod(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                TLS_SUBJECT_DN,
-                String.valueOf(oauthAppDO.getTlsClientAuthSubjectDN()),
+                TLS_SUBJECT_DN, oauthAppDO.getTlsClientAuthSubjectDN(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                IS_PUSH_AUTH,
-                String.valueOf(oauthAppDO.isRequirePushedAuthorizationRequests()),
+                IS_PUSH_AUTH, String.valueOf(oauthAppDO.isRequirePushedAuthorizationRequests()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                IS_CERTIFICATE_BOUND_ACCESS_TOKEN,
-                String.valueOf(oauthAppDO.isTlsClientCertificateBoundAccessTokens()),
+                IS_CERTIFICATE_BOUND_ACCESS_TOKEN, String.valueOf(oauthAppDO.isTlsClientCertificateBoundAccessTokens()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                SUBJECT_TYPE,
-                String.valueOf(oauthAppDO.getSubjectType()),
+                SUBJECT_TYPE, oauthAppDO.getSubjectType(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         // Execute batched add/update/delete.
