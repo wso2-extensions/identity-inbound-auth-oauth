@@ -395,6 +395,9 @@ public class OAuthServerConfiguration {
         // if enabled access token and refresh token will be renewed for each token endpoint call.
         parseTokenRenewalPerRequestConfiguration(oauthElem);
 
+        // Read map federated users to local config.
+        parseMapFederatedUsersToLocalConfiguration(oauthElem);
+
         // read refresh token renewal config
         parseRefreshTokenRenewalConfiguration(oauthElem);
 
@@ -3394,6 +3397,23 @@ public class OAuthServerConfiguration {
         }
         if (log.isDebugEnabled()) {
             log.debug("RenewTokenPerRequest was set to : " + isTokenRenewalPerRequestEnabled);
+        }
+    }
+
+    /**
+     * Parses the map federated users to local configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseMapFederatedUsersToLocalConfiguration(OMElement oauthConfigElem) {
+
+        OMElement mapFederatedUsersToLocalConfigElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.MAP_FED_USERS_TO_LOCAL));
+        if (mapFederatedUsersToLocalConfigElem != null) {
+            mapFederatedUsersToLocal = Boolean.parseBoolean(mapFederatedUsersToLocalConfigElem.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("MapFederatedUsersToLocal was set to : " + mapFederatedUsersToLocal);
         }
     }
 
