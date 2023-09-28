@@ -1317,47 +1317,37 @@ public class OAuthAppDAO {
                     String.valueOf(consumerAppDO.isTokenBindingValidationEnabled()));
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    TOKEN_AUTH_METHOD,
-                    String.valueOf(consumerAppDO.getTokenEndpointAuthMethod()));
+                    TOKEN_AUTH_METHOD, consumerAppDO.getTokenEndpointAuthMethod());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    TOKEN_AUTH_SIGNATURE_ALGORITHM,
-                    String.valueOf(consumerAppDO.getTokenEndpointAuthSignatureAlgorithm()));
+                    TOKEN_AUTH_SIGNATURE_ALGORITHM, consumerAppDO.getTokenEndpointAuthSignatureAlgorithm());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty, SECTOR_IDENTIFIER_URI,
-                    String.valueOf(consumerAppDO.getSectorIdentifierURI()));
+                    consumerAppDO.getSectorIdentifierURI());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    ID_TOKEN_SIGNATURE_ALGORITHM,
-                    String.valueOf(consumerAppDO.getIdTokenSignatureAlgorithm()));
+                    ID_TOKEN_SIGNATURE_ALGORITHM, consumerAppDO.getIdTokenSignatureAlgorithm());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    AUTH_RESPONSE_ENCRYPTION_ALGORITHM,
-                    String.valueOf(consumerAppDO.getAuthorizationResponseEncryptionAlgorithm()));
+                    AUTH_RESPONSE_ENCRYPTION_ALGORITHM, consumerAppDO.getAuthorizationResponseEncryptionAlgorithm());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    AUTH_RESPONSE_ENCRYPTION_METHOD,
-                    String.valueOf(consumerAppDO.getAuthorizationResponseEncryptionMethod()));
+                    AUTH_RESPONSE_ENCRYPTION_METHOD, consumerAppDO.getAuthorizationResponseEncryptionMethod());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    AUTH_RESPONSE_SIGNATURE_ALGORITHM,
-                    String.valueOf(consumerAppDO.getAuthorizationResponseSignatureAlgorithm()));
+                    AUTH_RESPONSE_SIGNATURE_ALGORITHM, consumerAppDO.getAuthorizationResponseSignatureAlgorithm());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    REQUEST_OBJECT_SIGNATURE_ALGORITHM,
-                    String.valueOf(consumerAppDO.getRequestObjectSignatureAlgorithm()));
+                    REQUEST_OBJECT_SIGNATURE_ALGORITHM, consumerAppDO.getRequestObjectSignatureAlgorithm());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    REQUEST_OBJECT_ENCRYPTION_ALGORITHM,
-                    String.valueOf(consumerAppDO.getRequestObjectEncryptionAlgorithm()));
+                    REQUEST_OBJECT_ENCRYPTION_ALGORITHM, consumerAppDO.getRequestObjectEncryptionAlgorithm());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    REQUEST_OBJECT_ENCRYPTION_METHOD,
-                    String.valueOf(consumerAppDO.getAuthorizationResponseEncryptionMethod()));
+                    REQUEST_OBJECT_ENCRYPTION_METHOD, consumerAppDO.getAuthorizationResponseEncryptionMethod());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    TLS_SUBJECT_DN,
-                    String.valueOf(consumerAppDO.getTlsClientAuthSubjectDN()));
+                    TLS_SUBJECT_DN, consumerAppDO.getTlsClientAuthSubjectDN());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     IS_PUSH_AUTH,
@@ -1368,8 +1358,7 @@ public class OAuthAppDAO {
                     String.valueOf(consumerAppDO.isTlsClientCertificateBoundAccessTokens()));
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    SUBJECT_TYPE,
-                    String.valueOf(consumerAppDO.getSubjectType()));
+                    SUBJECT_TYPE, consumerAppDO.getSubjectType());
 
             prepStmtAddOIDCProperty.executeBatch();
         }
