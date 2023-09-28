@@ -259,6 +259,58 @@ public class DCRMService {
             if (updateRequest.getExtIdTokenLifetime() != null) {
                 appDTO.setIdTokenExpiryTime(updateRequest.getExtIdTokenLifetime());
             }
+            if (updateRequest.getTokenEndpointAuthMethod() != null) {
+                appDTO.setTokenEndpointAuthMethod(updateRequest.getTokenEndpointAuthMethod());
+            }
+            if (updateRequest.getTokenEndpointAuthSignatureAlgorithm() != null) {
+                appDTO.setTokenEndpointAuthSignatureAlgorithm
+                        (updateRequest.getTokenEndpointAuthSignatureAlgorithm());
+            }
+            if (updateRequest.getSectorIdentifierURI() != null) {
+                appDTO.setSectorIdentifierURI(updateRequest.getSectorIdentifierURI());
+            }
+            if (updateRequest.getIdTokenSignatureAlgorithm() != null) {
+                appDTO.setIdTokenSignatureAlgorithm(updateRequest.getIdTokenSignatureAlgorithm());
+            }
+            if (updateRequest.getIdTokenEncryptionAlgorithm() != null) {
+                appDTO.setIdTokenEncryptionAlgorithm(updateRequest.getIdTokenEncryptionAlgorithm());
+            }
+            if (updateRequest.getIdTokenEncryptionMethod() != null) {
+                appDTO.setIdTokenEncryptionMethod(updateRequest.getIdTokenEncryptionMethod());
+            }
+            if (updateRequest.getAuthorizationResponseSignatureAlgorithm() != null) {
+                appDTO.setAuthorizationResponseSignatureAlgorithm(
+                        updateRequest.getAuthorizationResponseSignatureAlgorithm());
+            }
+            if (updateRequest.getAuthorizationResponseEncryptionAlgorithm() != null) {
+                appDTO.setAuthorizationResponseEncryptionAlgorithm
+                        (updateRequest.getAuthorizationResponseEncryptionAlgorithm());
+            }
+            if (updateRequest.getAuthorizationResponseEncryptionMethod() != null) {
+                appDTO.setAuthorizationResponseEncryptionMethod
+                        (updateRequest.getRequestObjectEncryptionMethod());
+            }
+            if (updateRequest.getRequestObjectSignatureAlgorithm() != null) {
+                appDTO.setRequestObjectSignatureValidationEnabled
+                        (updateRequest.isRequireSignedRequestObject());
+            }
+            if (updateRequest.getTlsClientAuthSubjectDN() != null) {
+                appDTO.setTlsClientAuthSubjectDN(updateRequest.getTlsClientAuthSubjectDN());
+            }
+            if (updateRequest.getSubjectType() != null) {
+                appDTO.setSubjectType(updateRequest.getSubjectType());
+            }
+            if (updateRequest.getRequestObjectEncryptionAlgorithm() != null) {
+                appDTO.setRequestObjectEncryptionAlgorithm
+                        (updateRequest.getRequestObjectEncryptionAlgorithm());
+            }
+            if (updateRequest.getRequestObjectEncryptionMethod() != null) {
+                appDTO.setRequestObjectEncryptionMethod(updateRequest.getRequestObjectEncryptionMethod());
+            }
+            updateRequest.setRequireSignedRequestObject(updateRequest.isRequireSignedRequestObject());
+            updateRequest.setRequirePushedAuthorizationRequests(updateRequest.isRequirePushedAuthorizationRequests());
+            updateRequest.setTlsClientCertificateBoundAccessTokens(
+                    updateRequest.isTlsClientCertificateBoundAccessTokens());
             appDTO.setPkceMandatory(updateRequest.isExtPkceMandatory());
             appDTO.setPkceSupportPlain(updateRequest.isExtPkceSupportPlain());
             appDTO.setBypassClientCredentials(updateRequest.isExtPublicClient());
@@ -406,8 +458,24 @@ public class DCRMService {
         if (StringUtils.isNotEmpty(createdApp.getGrantTypes())) {
             grantTypesList = Arrays.asList(createdApp.getGrantTypes().split(" "));
         }
-        application.setGrantTypes(grantTypesList);
-
+        application.setTokenEndpointAuthMethod(createdApp.getTokenEndpointAuthMethod());
+        application.setTokenEndpointAuthSignatureAlgorithm(createdApp.getTokenEndpointAuthSignatureAlgorithm());
+        application.setSectorIdentifierURI(createdApp.getSectorIdentifierURI());
+        application.setIdTokenSignatureAlgorithm(createdApp.getIdTokenSignatureAlgorithm());
+        application.setIdTokenEncryptionAlgorithm(createdApp.getIdTokenEncryptionAlgorithm());
+        application.setIdTokenEncryptionMethod(createdApp.getIdTokenEncryptionMethod());
+        application.setAuthorizationResponseSignatureAlgorithm(createdApp.getAuthorizationResponseSignatureAlgorithm());
+        application.setAuthorizationResponseEncryptionAlgorithm(
+                createdApp.getAuthorizationResponseEncryptionAlgorithm());
+        application.setAuthorizationResponseEncryptionMethod(createdApp.getRequestObjectEncryptionMethod());
+        application.setRequestObjectSignatureValidationEnabled(createdApp.isRequestObjectSignatureValidationEnabled());
+        application.setRequestObjectSignatureAlgorithm(createdApp.getRequestObjectSignatureAlgorithm());
+        application.setTlsClientAuthSubjectDN(createdApp.getTlsClientAuthSubjectDN());
+        application.setSubjectType(createdApp.getSubjectType());
+        application.setRequestObjectEncryptionAlgorithm(createdApp.getRequestObjectEncryptionAlgorithm());
+        application.setRequestObjectEncryptionMethod(createdApp.getRequestObjectEncryptionMethod());
+        application.setRequirePushedAuthorizationRequests(createdApp.getRequirePushedAuthorizationRequests());
+        application.setTlsClientCertificateBoundAccessTokens(createdApp.getTlsClientCertificateBoundAccessTokens());
         return application;
     }
 

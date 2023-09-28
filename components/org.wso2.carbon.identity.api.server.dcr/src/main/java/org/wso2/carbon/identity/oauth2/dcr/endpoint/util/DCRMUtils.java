@@ -200,7 +200,25 @@ public class DCRMUtils {
         specification we have to set the expiration time to 0.
         https://openid.net/specs/openid-connect-registration-1_0.html */
         applicationDTO.setClientSecretExpiresAt(0L);
-
+        application.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
+        application.setTokenEndpointAuthSignatureAlgorithm(application.getTokenEndpointAuthSignatureAlgorithm());
+        application.setSectorIdentifierURI(application.getSectorIdentifierURI());
+        application.setIdTokenSignatureAlgorithm(application.getIdTokenSignatureAlgorithm());
+        application.setIdTokenEncryptionAlgorithm(application.getIdTokenEncryptionAlgorithm());
+        application.setIdTokenEncryptionMethod(application.getIdTokenEncryptionMethod());
+        application.setAuthorizationResponseSignatureAlgorithm(
+                application.getAuthorizationResponseSignatureAlgorithm());
+        application.setAuthorizationResponseEncryptionAlgorithm(
+                application.getAuthorizationResponseEncryptionAlgorithm());
+        application.setAuthorizationResponseEncryptionMethod(application.getRequestObjectEncryptionMethod());
+        application.setRequestObjectSignatureValidationEnabled(application.isRequestObjectSignatureValidationEnabled());
+        application.setRequestObjectSignatureAlgorithm(application.getRequestObjectSignatureAlgorithm());
+        application.setTlsClientAuthSubjectDN(application.getTlsClientAuthSubjectDN());
+        application.setSubjectType(application.getSubjectType());
+        application.setRequestObjectEncryptionAlgorithm(application.getRequestObjectEncryptionAlgorithm());
+        application.setRequestObjectEncryptionMethod(application.getRequestObjectEncryptionMethod());
+        application.setRequirePushedAuthorizationRequests(application.isRequirePushedAuthorizationRequests());
+        application.setTlsClientCertificateBoundAccessTokens(application.isTlsClientCertificateBoundAccessTokens());
         return applicationDTO;
     }
 
