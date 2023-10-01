@@ -589,7 +589,7 @@ public class OAuth2Util {
             return false;
         }
 
-        if (appTenant != null && !isTenantActive(appTenant)) {
+        if (StringUtils.isNotEmpty(appTenant) && !isTenantActive(appTenant)) {
             throw new InvalidOAuthClientException("Cannot retrieve application inside deactivated tenant: "
                     + appTenant);
         }

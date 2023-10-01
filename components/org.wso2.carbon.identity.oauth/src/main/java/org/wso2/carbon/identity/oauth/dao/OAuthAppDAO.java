@@ -449,32 +449,33 @@ public class OAuthAppDAO {
                     while (rSet.next()) {
                         // There is at least one application associated with a given key.
                         appExists = true;
-                        if (StringUtils.isNotBlank(rSet.getString(4))) {
+                        if (StringUtils.isNotBlank(rSet.getString("OAUTH_VERSION"))) {
                             oauthApp = new OAuthAppDO();
                             oauthApp.setOauthConsumerKey(consumerKey);
                             if (isHashDisabled) {
                                 oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
-                                        .getString(1)));
+                                        .getString("CONSUMER_SECRET")));
                             } else {
-                                oauthApp.setOauthConsumerSecret(rSet.getString(1));
+                                oauthApp.setOauthConsumerSecret(rSet.getString("CONSUMER_SECRET"));
                             }
                             AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-                            authenticatedUser.setUserName(rSet.getString(2));
-                            oauthApp.setApplicationName(rSet.getString(3));
-                            oauthApp.setOauthVersion(rSet.getString(4));
-                            oauthApp.setCallbackUrl(rSet.getString(5));
-                            authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(rSet.getInt(6)));
-                            authenticatedUser.setUserStoreDomain(rSet.getString(7));
+                            authenticatedUser.setUserName(rSet.getString("USERNAME"));
+                            oauthApp.setApplicationName(rSet.getString("APP_NAME"));
+                            oauthApp.setOauthVersion(rSet.getString("OAUTH_VERSION"));
+                            oauthApp.setCallbackUrl(rSet.getString("CALLBACK_URL"));
+                            authenticatedUser.setTenantDomain(
+                                    IdentityTenantUtil.getTenantDomain(rSet.getInt("TENANT_ID")));
+                            authenticatedUser.setUserStoreDomain(rSet.getString("USER_DOMAIN"));
                             oauthApp.setAppOwner(authenticatedUser);
-                            oauthApp.setGrantTypes(rSet.getString(8));
-                            oauthApp.setId(rSet.getInt(9));
-                            oauthApp.setPkceMandatory(!"0".equals(rSet.getString(10)));
-                            oauthApp.setPkceSupportPlain(!"0".equals(rSet.getString(11)));
-                            oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(12));
-                            oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(13));
-                            oauthApp.setRefreshTokenExpiryTime(rSet.getLong(14));
-                            oauthApp.setIdTokenExpiryTime(rSet.getLong(15));
-                            oauthApp.setState(rSet.getString(16));
+                            oauthApp.setGrantTypes(rSet.getString("GRANT_TYPES"));
+                            oauthApp.setId(rSet.getInt("ID"));
+                            oauthApp.setPkceMandatory(!"0".equals(rSet.getString("PKCE_MANDATORY")));
+                            oauthApp.setPkceSupportPlain(!"0".equals(rSet.getString("PKCE_SUPPORT_PLAIN")));
+                            oauthApp.setUserAccessTokenExpiryTime(rSet.getLong("USER_ACCESS_TOKEN_EXPIRE_TIME"));
+                            oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong("APP_ACCESS_TOKEN_EXPIRE_TIME"));
+                            oauthApp.setRefreshTokenExpiryTime(rSet.getLong("REFRESH_TOKEN_EXPIRE_TIME"));
+                            oauthApp.setIdTokenExpiryTime(rSet.getLong("ID_TOKEN_EXPIRE_TIME"));
+                            oauthApp.setState(rSet.getString("APP_STATE"));
 
                             String spTenantDomain = authenticatedUser.getTenantDomain();
                             handleSpOIDCProperties(connection, persistenceProcessor.getProcessedClientId(consumerKey),
@@ -516,32 +517,33 @@ public class OAuthAppDAO {
 
                 try (ResultSet rSet = prepStmt.executeQuery()) {
                     while (rSet.next()) {
-                        if (StringUtils.isNotBlank(rSet.getString(4))) {
+                        if (StringUtils.isNotBlank(rSet.getString("OAUTH_VERSION"))) {
                             OAuthAppDO oauthApp = new OAuthAppDO();
                             oauthApp.setOauthConsumerKey(consumerKey);
                             if (isHashDisabled) {
-                                oauthApp.setOauthConsumerSecret(
-                                        persistenceProcessor.getPreprocessedClientSecret(rSet.getString(1)));
+                                oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(
+                                        rSet.getString("CONSUMER_SECRET")));
                             } else {
-                                oauthApp.setOauthConsumerSecret(rSet.getString(1));
+                                oauthApp.setOauthConsumerSecret(rSet.getString("CONSUMER_SECRET"));
                             }
                             AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-                            authenticatedUser.setUserName(rSet.getString(2));
-                            oauthApp.setApplicationName(rSet.getString(3));
-                            oauthApp.setOauthVersion(rSet.getString(4));
-                            oauthApp.setCallbackUrl(rSet.getString(5));
-                            authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(rSet.getInt(6)));
-                            authenticatedUser.setUserStoreDomain(rSet.getString(7));
+                            authenticatedUser.setUserName(rSet.getString("USERNAME"));
+                            oauthApp.setApplicationName(rSet.getString("APP_NAME"));
+                            oauthApp.setOauthVersion(rSet.getString("OAUTH_VERSION"));
+                            oauthApp.setCallbackUrl(rSet.getString("CALLBACK_URL"));
+                            authenticatedUser.setTenantDomain(
+                                    IdentityTenantUtil.getTenantDomain(rSet.getInt("TENANT_ID")));
+                            authenticatedUser.setUserStoreDomain(rSet.getString("USER_DOMAIN"));
                             oauthApp.setAppOwner(authenticatedUser);
-                            oauthApp.setGrantTypes(rSet.getString(8));
-                            oauthApp.setId(rSet.getInt(9));
-                            oauthApp.setPkceMandatory(!"0".equals(rSet.getString(10)));
-                            oauthApp.setPkceSupportPlain(!"0".equals(rSet.getString(11)));
-                            oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(12));
-                            oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(13));
-                            oauthApp.setRefreshTokenExpiryTime(rSet.getLong(14));
-                            oauthApp.setIdTokenExpiryTime(rSet.getLong(15));
-                            oauthApp.setState(rSet.getString(16));
+                            oauthApp.setGrantTypes(rSet.getString("GRANT_TYPES"));
+                            oauthApp.setId(rSet.getInt("ID"));
+                            oauthApp.setPkceMandatory(!"0".equals(rSet.getString("PKCE_MANDATORY")));
+                            oauthApp.setPkceSupportPlain(!"0".equals(rSet.getString("PKCE_SUPPORT_PLAIN")));
+                            oauthApp.setUserAccessTokenExpiryTime(rSet.getLong("USER_ACCESS_TOKEN_EXPIRE_TIME"));
+                            oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong("APP_ACCESS_TOKEN_EXPIRE_TIME"));
+                            oauthApp.setRefreshTokenExpiryTime(rSet.getLong("REFRESH_TOKEN_EXPIRE_TIME"));
+                            oauthApp.setIdTokenExpiryTime(rSet.getLong("ID_TOKEN_EXPIRE_TIME"));
+                            oauthApp.setState(rSet.getString("APP_STATE"));
 
                             String spTenantDomain = authenticatedUser.getTenantDomain();
                             handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
