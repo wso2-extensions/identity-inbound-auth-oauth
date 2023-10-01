@@ -43,7 +43,7 @@ public class ApplicationUpdateRequest implements Serializable {
     private boolean extPkceMandatory = false;
     private boolean extPkceSupportPlain = false;
     private boolean extPublicClient = false;
-
+    private String jwksURI = null;
     private String softwareStatement;
     private String tokenEndpointAuthMethod;
     private String tokenEndpointAuthSignatureAlgorithm;
@@ -417,6 +417,14 @@ public class ApplicationUpdateRequest implements Serializable {
 
     public void setSoftwareStatement(String softwareStatement) {
         this.softwareStatement = softwareStatement;
+    }
+
+    public String getJwksURI() {
+        return jwksURI;
+    }
+
+    public void setJwksURI(String jwksURI) {
+        this.jwksURI = jwksURI;
     }
 
 }

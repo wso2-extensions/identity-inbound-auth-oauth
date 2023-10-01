@@ -78,6 +78,7 @@ public class DCRMUtils {
         appRegistrationRequest.setExtPkceMandatory(registrationRequestDTO.getExtPkceMandatory());
         appRegistrationRequest.setExtPkceSupportPlain(registrationRequestDTO.getExtPkceSupportPlain());
         appRegistrationRequest.setExtPublicClient(registrationRequestDTO.getExtPublicClient());
+        appRegistrationRequest.setJwksURI(registrationRequestDTO.getJwksUri());
         appRegistrationRequest.setTokenEndpointAuthMethod(registrationRequestDTO.getTokenEndpointAuthMethod());
         appRegistrationRequest.setTokenEndpointAuthSignatureAlgorithm
                 (registrationRequestDTO.getTokenEndpointAuthSigningAlg());
@@ -125,8 +126,33 @@ public class DCRMUtils {
         applicationUpdateRequest.setExtPkceMandatory(updateRequestDTO.getExtPkceMandatory());
         applicationUpdateRequest.setExtPkceSupportPlain(updateRequestDTO.getExtPkceSupportPlain());
         applicationUpdateRequest.setExtPublicClient(updateRequestDTO.getExtPublicClient());
+        applicationUpdateRequest.setJwksURI(updateRequestDTO.getJwksUri());
+        applicationUpdateRequest.setTokenEndpointAuthMethod(updateRequestDTO.getTokenEndpointAuthMethod());
+        applicationUpdateRequest.setTokenEndpointAuthSignatureAlgorithm
+                (updateRequestDTO.getTokenEndpointAuthSigningAlg());
+        applicationUpdateRequest.setSectorIdentifierURI(updateRequestDTO.getSectorIdentifierUri());
+        applicationUpdateRequest.setIdTokenSignatureAlgorithm(updateRequestDTO.getIdTokenSignedResponseAlg());
+        applicationUpdateRequest.setIdTokenEncryptionAlgorithm(updateRequestDTO.getIdTokenEncryptedResponseAlg());
+        applicationUpdateRequest.setIdTokenEncryptionMethod(updateRequestDTO.getIdTokenEncryptedResponseEnc());
+        applicationUpdateRequest.setAuthorizationResponseEncryptionAlgorithm(
+                updateRequestDTO.getAuthorizationEncryptedResponseAlg());
+        applicationUpdateRequest.setAuthorizationResponseEncryptionMethod(
+                updateRequestDTO.getAuthorizationEncryptedResponseEnc());
+        applicationUpdateRequest.setAuthorizationResponseSignatureAlgorithm(
+                updateRequestDTO.getAuthorizationSignedResponseAlg());
+        applicationUpdateRequest.setRequestObjectSignatureAlgorithm(
+                updateRequestDTO.getRequestObjectSigningAlg());
+        applicationUpdateRequest.setRequestObjectEncryptionAlgorithm(
+                updateRequestDTO.getRequestObjectEncryptionAlgorithm());
+        applicationUpdateRequest.setRequestObjectEncryptionMethod(updateRequestDTO.getRequestObjectEncryptionMethod());
+        applicationUpdateRequest.setTlsClientAuthSubjectDN(updateRequestDTO.getTlsClientAuthSubjectDn());
+        applicationUpdateRequest.setRequirePushedAuthorizationRequests(updateRequestDTO.isRequireSignedRequestObject());
+        applicationUpdateRequest.setRequireSignedRequestObject(updateRequestDTO.isRequireSignedRequestObject());
+        applicationUpdateRequest.setTlsClientCertificateBoundAccessTokens
+                (updateRequestDTO.isTlsClientCertificateBoundAccessToken());
+        applicationUpdateRequest.setSubjectType(updateRequestDTO.getSubjectType());
+        applicationUpdateRequest.setSoftwareStatement(updateRequestDTO.getSoftwareStatement());
         return applicationUpdateRequest;
-
     }
 
     public static void handleErrorResponse(DCRMException dcrmException, Log log) throws DCRMEndpointException {
@@ -200,25 +226,24 @@ public class DCRMUtils {
         specification we have to set the expiration time to 0.
         https://openid.net/specs/openid-connect-registration-1_0.html */
         applicationDTO.setClientSecretExpiresAt(0L);
-        application.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
-        application.setTokenEndpointAuthSignatureAlgorithm(application.getTokenEndpointAuthSignatureAlgorithm());
-        application.setSectorIdentifierURI(application.getSectorIdentifierURI());
-        application.setIdTokenSignatureAlgorithm(application.getIdTokenSignatureAlgorithm());
-        application.setIdTokenEncryptionAlgorithm(application.getIdTokenEncryptionAlgorithm());
-        application.setIdTokenEncryptionMethod(application.getIdTokenEncryptionMethod());
-        application.setAuthorizationResponseSignatureAlgorithm(
-                application.getAuthorizationResponseSignatureAlgorithm());
-        application.setAuthorizationResponseEncryptionAlgorithm(
-                application.getAuthorizationResponseEncryptionAlgorithm());
-        application.setAuthorizationResponseEncryptionMethod(application.getRequestObjectEncryptionMethod());
-        application.setRequestObjectSignatureValidationEnabled(application.isRequestObjectSignatureValidationEnabled());
-        application.setRequestObjectSignatureAlgorithm(application.getRequestObjectSignatureAlgorithm());
-        application.setTlsClientAuthSubjectDN(application.getTlsClientAuthSubjectDN());
-        application.setSubjectType(application.getSubjectType());
-        application.setRequestObjectEncryptionAlgorithm(application.getRequestObjectEncryptionAlgorithm());
-        application.setRequestObjectEncryptionMethod(application.getRequestObjectEncryptionMethod());
-        application.setRequirePushedAuthorizationRequests(application.isRequirePushedAuthorizationRequests());
-        application.setTlsClientCertificateBoundAccessTokens(application.isTlsClientCertificateBoundAccessTokens());
+        applicationDTO.setJwksUri(application.getJwksURI());
+        applicationDTO.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
+        applicationDTO.setTokenEndpointAuthSigningAlg(application.getTokenEndpointAuthSignatureAlgorithm());
+        applicationDTO.setSectorIdentifierUri(application.getSectorIdentifierURI());
+        applicationDTO.setIdTokenSignedResponseAlg(application.getIdTokenSignatureAlgorithm());
+        applicationDTO.setIdTokenEncryptedResponseAlg(application.getIdTokenEncryptionAlgorithm());
+        applicationDTO.setIdTokenEncryptedResponseEnc(application.getIdTokenEncryptionMethod());
+        applicationDTO.setAuthorizationSignedResponseAlg(application.getAuthorizationResponseSignatureAlgorithm());
+        applicationDTO.setAuthorizationEncryptedResponseAlg(application.getAuthorizationResponseEncryptionAlgorithm());
+        applicationDTO.setAuthorizationEncryptedResponseEnc(application.getRequestObjectEncryptionMethod());
+        applicationDTO.setRequireSignedRequestObject(application.isRequestObjectSignatureValidationEnabled());
+        applicationDTO.setRequestObjectSigningAlg(application.getRequestObjectSignatureAlgorithm());
+        applicationDTO.setTlsClientAuthSubjectDn(application.getTlsClientAuthSubjectDN());
+        applicationDTO.setSubjectType(application.getSubjectType());
+        applicationDTO.setRequestObjectEncryptionAlgorithm(application.getRequestObjectEncryptionAlgorithm());
+        applicationDTO.setRequestObjectEncryptionMethod(application.getRequestObjectEncryptionMethod());
+        applicationDTO.setRequirePushAuthorizationRequest(application.isRequirePushedAuthorizationRequests());
+        applicationDTO.setTlsClientCertificateBoundAccessToken(application.isTlsClientCertificateBoundAccessTokens());
         return applicationDTO;
     }
 

@@ -33,6 +33,24 @@ public class ApplicationDTO  {
   
   
   private String clientName = null;
+  private String jwksUri = null;
+  private String tokenEndpointAuthMethod = null;
+  private String tokenEndpointAuthSigningAlg = null;
+  private String sectorIdentifierUri = null;
+  private String idTokenSignedResponseAlg = null;
+  private String idTokenEncryptedResponseAlg = null;
+  private String idTokenEncryptedResponseEnc = null;
+  private String authorizationEncryptedResponseAlg = null;
+  private String authorizationSignedResponseAlg = null;
+  private String authorizationEncryptedResponseEnc = null;
+  private String requestObjectSigningAlg = null;
+  private String tlsClientAuthSubjectDn = null;
+  private boolean requirePushAuthorizationRequest;
+  private boolean requireSignedRequestObject;
+  private boolean tlsClientCertificateBoundAccessToken;
+  private String subjectType = null;
+  private String requestObjectEncryptionAlgorithm = null;
+  private String requestObjectEncryptionMethod = null;
 
   
   /**
@@ -106,7 +124,175 @@ public class ApplicationDTO  {
     this.clientName = clientName;
   }
 
-  
+  @ApiModelProperty
+  @JsonProperty("jwks_uri")
+  public String getJwksUri() {
+    return jwksUri;
+  }
+
+  public void setJwksUri(String jwksUri) {
+    this.jwksUri = jwksUri;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("token_endpoint_auth_method")
+  public String getTokenEndpointAuthMethod() {
+    return tokenEndpointAuthMethod;
+  }
+  public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+    this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+  }
+
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("token_endpoint_auth_signing_alg")
+  public String getTokenEndpointAuthSigningAlg() {
+    return tokenEndpointAuthSigningAlg;
+  }
+  public void setTokenEndpointAuthSigningAlg(String tokenEndpointAuthSigningAlg) {
+    this.tokenEndpointAuthSigningAlg = tokenEndpointAuthSigningAlg;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("sector_identifier_uri")
+  public String getSectorIdentifierUri() {
+    return sectorIdentifierUri;
+  }
+  public void setSectorIdentifierUri(String sectorIdentifierUri) {
+    this.sectorIdentifierUri = sectorIdentifierUri;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("id_token_signed_response_alg")
+  public String getIdTokenSignedResponseAlg() {
+    return idTokenSignedResponseAlg;
+  }
+  public void setIdTokenSignedResponseAlg(String idTokenSignedResponseAlg) {
+    this.idTokenSignedResponseAlg = idTokenSignedResponseAlg;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("id_token_encrypted_response_alg")
+  public String getIdTokenEncryptedResponseAlg() {
+    return idTokenEncryptedResponseAlg;
+  }
+  public void setIdTokenEncryptedResponseAlg(String idTokenEncryptedResponseAlg) {
+    this.idTokenEncryptedResponseAlg = idTokenEncryptedResponseAlg;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("id_token_encrypted_response_enc")
+  public String getIdTokenEncryptedResponseEnc() {
+    return idTokenEncryptedResponseEnc;
+  }
+  public void setIdTokenEncryptedResponseEnc(String idTokenEncryptedResponseEnc) {
+    this.idTokenEncryptedResponseEnc = idTokenEncryptedResponseEnc;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("authorization_encrypted_response_alg")
+  public String getAuthorizationEncryptedResponseAlg() {
+    return authorizationEncryptedResponseAlg;
+  }
+  public void setAuthorizationEncryptedResponseAlg(String authorizationEncryptedResponseAlg) {
+    this.authorizationEncryptedResponseAlg = authorizationEncryptedResponseAlg;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("authorization_signed_response_alg")
+  public String getAuthorizationSignedResponseAlg() {
+    return authorizationSignedResponseAlg;
+  }
+  public void setAuthorizationSignedResponseAlg(String authorizationSignedResponseAlg) {
+    this.authorizationSignedResponseAlg = authorizationSignedResponseAlg;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("authorization_encrypted_response_enc")
+  public String getAuthorizationEncryptedResponseEnc() {
+    return authorizationEncryptedResponseEnc;
+  }
+  public void setAuthorizationEncryptedResponseEnc(String authorizationEncryptedResponseEnc) {
+    this.authorizationEncryptedResponseEnc = authorizationEncryptedResponseEnc;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("request_object_signing_alg")
+  public String getRequestObjectSigningAlg() {
+    return requestObjectSigningAlg;
+  }
+  public void setRequestObjectSigningAlg(String requestObjectSigningAlg) {
+    this.requestObjectSigningAlg = requestObjectSigningAlg;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("tls_client_auth_subject_dn")
+  public String getTlsClientAuthSubjectDn() {
+    return tlsClientAuthSubjectDn;
+  }
+  public void setTlsClientAuthSubjectDn(String tlsClientAuthSubjectDn) {
+    this.tlsClientAuthSubjectDn = tlsClientAuthSubjectDn;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("require_pushed_authorization_requests")
+  public boolean isRequirePushAuthorizationRequest() {
+    return requirePushAuthorizationRequest;
+  }
+
+  public void setRequirePushAuthorizationRequest(boolean requirePushAuthorizationRequest) {
+    this.requirePushAuthorizationRequest = requirePushAuthorizationRequest;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("require_signed_request_object")
+  public boolean isRequireSignedRequestObject() {
+    return requireSignedRequestObject;
+  }
+
+  public void setRequireSignedRequestObject(boolean requireSignedRequestObject) {
+    this.requireSignedRequestObject = requireSignedRequestObject;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("tls_client_certificate_bound_access_tokens")
+  public boolean isTlsClientCertificateBoundAccessToken() {
+    return tlsClientCertificateBoundAccessToken;
+  }
+
+  public void setTlsClientCertificateBoundAccessToken(boolean tlsClientCertificateBoundAccessToken) {
+    this.tlsClientCertificateBoundAccessToken = tlsClientCertificateBoundAccessToken;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("subject_type")
+  public String getSubjectType() {
+    return subjectType;
+  }
+
+  public void setSubjectType(String subjectType) {
+    this.subjectType = subjectType;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("request_object_encryption_alg")
+  public String getRequestObjectEncryptionAlgorithm() {
+    return requestObjectEncryptionAlgorithm;
+  }
+
+  public void setRequestObjectEncryptionAlgorithm(String requestObjectEncryptionAlgorithm) {
+    this.requestObjectEncryptionAlgorithm = requestObjectEncryptionAlgorithm;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("request_object_encryption_enc")
+  public String getRequestObjectEncryptionMethod() {
+    return requestObjectEncryptionMethod;
+  }
+
+  public void setRequestObjectEncryptionMethod(String requestObjectEncryptionMethod) {
+    this.requestObjectEncryptionMethod = requestObjectEncryptionMethod;
+  }
 
   @Override
   public String toString()  {

@@ -53,6 +53,7 @@ import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.model.Constants;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -213,7 +214,12 @@ public class DCRMService {
             }
             // Update the service provider properties list with the display name property.
             updateServiceProviderPropertyList(sp, updateRequest.getExtApplicationDisplayName());
-
+            //update jwksURI
+            if (StringUtils.isNotEmpty(updateRequest.getJwksURI())) {
+                sp.setJwksUri(updateRequest.getJwksURI());
+                //setting the jwksURI to be sent in the response
+                appDTO.setJwksURi(updateRequest.getJwksURI());
+            }
             // Need to create a deep clone, since modifying the fields of the original object,
             // will modify the cached SP object.
             ServiceProvider clonedSP = cloneServiceProvider(sp);
@@ -307,10 +313,9 @@ public class DCRMService {
             if (updateRequest.getRequestObjectEncryptionMethod() != null) {
                 appDTO.setRequestObjectEncryptionMethod(updateRequest.getRequestObjectEncryptionMethod());
             }
-            updateRequest.setRequireSignedRequestObject(updateRequest.isRequireSignedRequestObject());
-            updateRequest.setRequirePushedAuthorizationRequests(updateRequest.isRequirePushedAuthorizationRequests());
-            updateRequest.setTlsClientCertificateBoundAccessTokens(
-                    updateRequest.isTlsClientCertificateBoundAccessTokens());
+            appDTO.setRequestObjectSignatureValidationEnabled(updateRequest.isRequireSignedRequestObject());
+            appDTO.setRequirePushedAuthorizationRequests(updateRequest.isRequirePushedAuthorizationRequests());
+            appDTO.setTlsClientCertificateBoundAccessTokens(updateRequest.isTlsClientCertificateBoundAccessTokens());
             appDTO.setPkceMandatory(updateRequest.isExtPkceMandatory());
             appDTO.setPkceSupportPlain(updateRequest.isExtPkceSupportPlain());
             appDTO.setBypassClientCredentials(updateRequest.isExtPublicClient());
@@ -432,9 +437,15 @@ public class DCRMService {
 
         // Update the service provider properties list with the display name property.
         updateServiceProviderPropertyList(serviceProvider, registrationRequest.getExtApplicationDisplayName());
+        //store jwksURI
+        if (StringUtils.isNotEmpty(registrationRequest.getJwksURI())) {
+            serviceProvider.setJwksUri(registrationRequest.getJwksURI());
+        }
 
         try {
             updateServiceProviderWithOAuthAppDetails(serviceProvider, createdApp, applicationOwner, tenantDomain);
+            //setting the jwksURI to be sent in the response
+            createdApp.setJwksURi(registrationRequest.getJwksURI());
         } catch (DCRMException ex) {
             // Delete the OAuth app created. This will also remove the registered SP for the OAuth app.
             deleteApplication(createdApp.getOauthConsumerKey());
@@ -458,6 +469,8 @@ public class DCRMService {
         if (StringUtils.isNotEmpty(createdApp.getGrantTypes())) {
             grantTypesList = Arrays.asList(createdApp.getGrantTypes().split(" "));
         }
+        application.setGrantTypes(grantTypesList);
+        application.setJwksURI(createdApp.getJwksURi());
         application.setTokenEndpointAuthMethod(createdApp.getTokenEndpointAuthMethod());
         application.setTokenEndpointAuthSignatureAlgorithm(createdApp.getTokenEndpointAuthSignatureAlgorithm());
         application.setSectorIdentifierURI(createdApp.getSectorIdentifierURI());
@@ -577,8 +590,8 @@ public class DCRMService {
                     (registrationRequest.getRequestObjectEncryptionMethod());
         }
         if (registrationRequest.getRequestObjectSignatureAlgorithm() != null) {
-            oAuthConsumerApp.setRequestObjectSignatureValidationEnabled
-                    (registrationRequest.isRequireSignedRequestObject());
+            oAuthConsumerApp.setRequestObjectSignatureAlgorithm(
+                    (registrationRequest.getRequestObjectSignatureAlgorithm()));
         }
         if (registrationRequest.getTlsClientAuthSubjectDN() != null) {
             oAuthConsumerApp.setTlsClientAuthSubjectDN(registrationRequest.getTlsClientAuthSubjectDN());
@@ -594,10 +607,10 @@ public class DCRMService {
             oAuthConsumerApp.setRequestObjectEncryptionMethod(registrationRequest.getRequestObjectEncryptionMethod());
         }
         oAuthConsumerApp.setRequestObjectSignatureValidationEnabled(registrationRequest.isRequireSignedRequestObject());
-        oAuthConsumerApp.setRequirePushedAuthorizationRequests
-                (registrationRequest.isRequirePushedAuthorizationRequests());
-        oAuthConsumerApp.setTlsClientCertificateBoundAccessTokens
-                (registrationRequest.isTlsClientCertificateBoundAccessTokens());
+        oAuthConsumerApp.setRequirePushedAuthorizationRequests(
+                registrationRequest.isRequirePushedAuthorizationRequests());
+        oAuthConsumerApp.setTlsClientCertificateBoundAccessTokens(
+                registrationRequest.isTlsClientCertificateBoundAccessTokens());
         oAuthConsumerApp.setPkceMandatory(registrationRequest.isExtPkceMandatory());
         oAuthConsumerApp.setPkceSupportPlain(registrationRequest.isExtPkceSupportPlain());
         oAuthConsumerApp.setBypassClientCredentials(registrationRequest.isExtPublicClient());

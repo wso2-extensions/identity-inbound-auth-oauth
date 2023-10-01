@@ -33,6 +33,7 @@ public class Application implements Serializable {
     private String clientSecret = null;
     private List<String> redirectUris = null;
     private List<String> grantTypes = null;
+    private String jwksURI = null;
     private String tokenEndpointAuthMethod = null;
     private String tokenEndpointAuthSignatureAlgorithm = null;
     private String sectorIdentifierURI = null;
@@ -98,6 +99,13 @@ public class Application implements Serializable {
     public void setGrantTypes(List<String> grantTypes) {
 
         this.grantTypes = grantTypes;
+    }
+    public String getJwksURI() {
+        return jwksURI;
+    }
+
+    public void setJwksURI(String jwksURI) {
+        this.jwksURI = jwksURI;
     }
 
     public String getTokenEndpointAuthMethod() {

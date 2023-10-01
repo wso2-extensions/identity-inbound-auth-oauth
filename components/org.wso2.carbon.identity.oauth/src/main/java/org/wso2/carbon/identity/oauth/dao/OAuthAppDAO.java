@@ -1344,7 +1344,7 @@ public class OAuthAppDAO {
                     REQUEST_OBJECT_ENCRYPTION_ALGORITHM, consumerAppDO.getRequestObjectEncryptionAlgorithm());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    REQUEST_OBJECT_ENCRYPTION_METHOD, consumerAppDO.getAuthorizationResponseEncryptionMethod());
+                    REQUEST_OBJECT_ENCRYPTION_METHOD, consumerAppDO.getRequestObjectEncryptionMethod());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     TLS_SUBJECT_DN, consumerAppDO.getTlsClientAuthSubjectDN());
@@ -1518,12 +1518,15 @@ public class OAuthAppDAO {
         if (requestObjectEncryptionMethod != null) {
             oauthApp.setRequestObjectEncryptionMethod(requestObjectEncryptionMethod);
         }
-        boolean isRequirePAR = Boolean.parseBoolean(getFirstPropertyValue(spOIDCProperties, IS_PUSH_AUTH));
-        oauthApp.setRequirePushedAuthorizationRequests(isRequirePAR);
-        boolean isCertificateBoundAccessToken = Boolean.parseBoolean(getFirstPropertyValue(
-                spOIDCProperties, IS_CERTIFICATE_BOUND_ACCESS_TOKEN));
-        oauthApp.setTlsClientCertificateBoundAccessTokens(isCertificateBoundAccessToken);
-
+        String isPAR = getFirstPropertyValue(spOIDCProperties, IS_PUSH_AUTH);
+        if (isPAR != null) {
+            oauthApp.setRequirePushedAuthorizationRequests(Boolean.parseBoolean(isPAR));
+        }
+        String isCertificateBoundAccessToken = getFirstPropertyValue(
+                spOIDCProperties, IS_CERTIFICATE_BOUND_ACCESS_TOKEN);
+        if (isCertificateBoundAccessToken != null) {
+            oauthApp.setTlsClientCertificateBoundAccessTokens(Boolean.parseBoolean(isCertificateBoundAccessToken));
+        }
     }
 
     private String getFirstPropertyValue(Map<String, List<String>> propertyMap, String key) {

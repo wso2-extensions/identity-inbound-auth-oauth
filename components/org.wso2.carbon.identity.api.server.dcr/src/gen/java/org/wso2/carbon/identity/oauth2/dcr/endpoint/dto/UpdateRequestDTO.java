@@ -15,6 +15,7 @@ public class UpdateRequestDTO {
     private List<String> redirectUris = new ArrayList<>();
     private String clientName = null;
     private List<String> grantTypes = new ArrayList<>();
+    private String jwksUri = null;
     private String tokenType = null;
     private String clientId = null;
     private String clientSecret = null;
@@ -394,6 +395,16 @@ public class UpdateRequestDTO {
     }
     public void setSoftwareStatement(String softwareStatement) {
         this.softwareStatement = softwareStatement;
+    }
+
+    @ApiModelProperty
+    @JsonProperty("jwks_uri")
+    public String getJwksUri() {
+        return jwksUri;
+    }
+
+    public void setJwksUri(String jwksUri) {
+        this.jwksUri = jwksUri;
     }
 
 

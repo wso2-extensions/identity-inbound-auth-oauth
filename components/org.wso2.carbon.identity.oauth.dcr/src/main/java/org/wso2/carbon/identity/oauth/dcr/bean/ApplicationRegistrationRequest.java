@@ -47,6 +47,7 @@ public class ApplicationRegistrationRequest implements Serializable {
     private boolean extPkceMandatory = false;
     private boolean extPkceSupportPlain = false;
     private boolean extPublicClient = false;
+    private String jwksURI;
     private String softwareStatement;
     private String tokenEndpointAuthMethod;
     private String tokenEndpointAuthSignatureAlgorithm;
@@ -65,6 +66,14 @@ public class ApplicationRegistrationRequest implements Serializable {
     private String subjectType;
     private String requestObjectEncryptionAlgorithm;
     private String requestObjectEncryptionMethod;
+
+    public String getJwksURI() {
+        return jwksURI;
+    }
+
+    public void setJwksURI(String jwksURI) {
+        this.jwksURI = jwksURI;
+    }
 
     public List<String> getRedirectUris() {
 

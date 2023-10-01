@@ -506,7 +506,7 @@ public final class OAuthUtil {
         dto.setRequestObjectSignatureAlgorithm(appDO.getRequestObjectSignatureAlgorithm());
         dto.setTlsClientAuthSubjectDN(appDO.getTlsClientAuthSubjectDN());
         dto.setSubjectType(appDO.getSubjectType());
-        dto.setRequestObjectEncryptionAlgorithm(appDO.getAuthorizationResponseEncryptionAlgorithm());
+        dto.setRequestObjectEncryptionAlgorithm(appDO.getRequestObjectEncryptionAlgorithm());
         dto.setRequestObjectEncryptionMethod(appDO.getRequestObjectEncryptionMethod());
         dto.setRequirePushedAuthorizationRequests(appDO.isRequirePushedAuthorizationRequests());
         dto.setTlsClientCertificateBoundAccessTokens(appDO.isTlsClientCertificateBoundAccessTokens());
