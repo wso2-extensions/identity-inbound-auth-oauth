@@ -28,8 +28,12 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.internal.IdentityCoreServiceDataHolder;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.TestConstants;
+import org.wso2.carbon.identity.oauth2.TestUtil;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAOImpl;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 
@@ -46,6 +50,8 @@ import java.util.List;
 @WithCarbonHome
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
         files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})
+@WithRealmService(tenantId = TestConstants.TENANT_ID, tenantDomain = TestConstants.TENANT_DOMAIN,
+        initUserStoreManager = true, injectToSingletons = {IdentityCoreServiceDataHolder.class})
 public class RequestObjectDAOImplTest extends PowerMockTestCase {
 
     private static final Log log = LogFactory.getLog(AuthorizationCodeDAOImpl.class);
@@ -77,6 +83,8 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
         requestedClaim.setValues(values);
         lstRequestedClaims.add(requestedClaim);
         requestedEssentialClaims.add(lstRequestedClaims);
+
+        TestUtil.mockRealmInIdentityTenantUtil(TestConstants.TENANT_ID, TestConstants.TENANT_DOMAIN);
     }
 
     @Test
@@ -85,9 +93,9 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
         requestObjectDAO.insertRequestObjectData(consumerKey, sessionDataKey,
                     requestedEssentialClaims);
         Result result = getData(sessionDataKey);
-        Assert.assertEquals(result.consumerId, consumerId);
-        Assert.assertEquals(requestObjectDAO.getRequestedClaimsbySessionDataKey(sessionDataKey,
-                    true).get(0).getName(), "email");
+        Assert.assertEquals(consumerId, result.consumerId);
+        Assert.assertEquals("email", requestObjectDAO.getRequestedClaimsbySessionDataKey(sessionDataKey,
+                    true).get(0).getName());
     }
 
     @Test (dependsOnMethods = {"testInsertRequestObject"})
@@ -96,7 +104,7 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
         requestObjectDAO.insertRequestObjectData(consumerKey, sessionDataKey,
                 requestedEssentialClaims);
         requestObjectDAO.updateRequestObjectReferencebyTokenId(sessionDataKey, tokenId);
-        Assert.assertEquals(getData(sessionDataKey).tokenId, tokenId);
+        Assert.assertEquals(tokenId, getData(sessionDataKey).tokenId);
     }
 
     @Test (dependsOnMethods = {"testUpdateRequestObjectReferenceByToken"})
@@ -106,7 +114,7 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
                 requestedEssentialClaims);
         requestObjectDAO.updateRequestObjectReferencebyTokenId(sessionDataKey, tokenId);
         requestObjectDAO.refreshRequestObjectReference(tokenId, newToken);
-        Assert.assertEquals(getData(sessionDataKey).tokenId, newToken);
+        Assert.assertEquals(newToken, getData(sessionDataKey).tokenId);
     }
 
     @Test (dependsOnMethods = {"testRefreshRequestObjectReference"})
@@ -122,7 +130,7 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
             if (resultSet.next()) {
                 resultSize = resultSet.getRow();
             }
-            Assert.assertEquals(resultSize, 0);
+            Assert.assertEquals(0, resultSize);
         }
     }
 
@@ -133,7 +141,7 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
                 requestedEssentialClaims);
         insertCodeId(codeId, 1);
         requestObjectDAO.updateRequestObjectReferencebyCodeId(sessionDataKey, codeId);
-        Assert.assertEquals(getData(sessionDataKey).codeId, codeId);
+        Assert.assertEquals(codeId, getData(sessionDataKey).codeId);
     }
 
     @Test (dependsOnMethods = {"testUpdateRequestObjectReferenceByCodeId"})
@@ -149,7 +157,7 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
             if (resultSet.next()) {
                 resultSize = resultSet.getRow();
             }
-            Assert.assertEquals(resultSize, 0);
+            Assert.assertEquals(0, resultSize);
         }
     }
 
@@ -171,7 +179,7 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
             if (resultSet.next()) {
                 resultSize = resultSet.getRow();
             }
-            Assert.assertEquals(resultSize, 1);
+            Assert.assertEquals(1, resultSize);
         }
     }
 
