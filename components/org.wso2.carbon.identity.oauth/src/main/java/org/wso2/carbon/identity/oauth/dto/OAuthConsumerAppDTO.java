@@ -41,7 +41,7 @@ public class OAuthConsumerAppDTO {
     private boolean bypassClientCredentials;
     private String renewRefreshTokenEnabled;
     // OIDC related properties
-    private String jwksURi;
+    private String jwksURI;
     private boolean isRequestObjectSignatureValidationEnabled;
     private boolean isIdTokenEncryptionEnabled;
     private String idTokenEncryptionAlgorithm;
@@ -68,11 +68,11 @@ public class OAuthConsumerAppDTO {
     private String requestObjectEncryptionAlgorithm;
     private String requestObjectEncryptionMethod;
 
-    public String getJwksURi() {
-        return jwksURi;
+    public String getJwksURI() {
+        return jwksURI;
     }
-    public void setJwksURi(String jwksURi) {
-        this.jwksURi = jwksURi;
+    public void setJwksURI(String jwksURi) {
+        this.jwksURI = jwksURi;
     }
     public long getUserAccessTokenExpiryTime() {
         return userAccessTokenExpiryTime;

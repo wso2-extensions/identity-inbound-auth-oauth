@@ -53,7 +53,6 @@ import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.openidconnect.model.Constants;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -86,7 +85,17 @@ public class DCRMService {
     public Application getApplication(String clientId) throws DCRMException {
 
         validateRequestTenantDomain(clientId);
-        return buildResponse(getApplicationById(clientId, DCRMUtils.isApplicationRolePermissionRequired()));
+        OAuthConsumerAppDTO consumerAppDTO = getApplicationById(
+                clientId, DCRMUtils.isApplicationRolePermissionRequired());
+        //get the jwksURI from the service provider
+        String applicationName = consumerAppDTO.getApplicationName();
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        ServiceProvider serviceProvider = getServiceProvider(applicationName, tenantDomain);
+        String jwksURI = serviceProvider.getJwksUri();
+        if (StringUtils.isNotEmpty(jwksURI)) {
+            consumerAppDTO.setJwksURI(jwksURI);
+        }
+        return buildResponse(consumerAppDTO);
     }
 
     /**
@@ -217,8 +226,6 @@ public class DCRMService {
             //update jwksURI
             if (StringUtils.isNotEmpty(updateRequest.getJwksURI())) {
                 sp.setJwksUri(updateRequest.getJwksURI());
-                //setting the jwksURI to be sent in the response
-                appDTO.setJwksURi(updateRequest.getJwksURI());
             }
             // Need to create a deep clone, since modifying the fields of the original object,
             // will modify the cached SP object.
@@ -324,8 +331,10 @@ public class DCRMService {
             throw DCRMUtils.generateServerException(
                     DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_APPLICATION, clientId, e);
         }
-
-        return buildResponse(getApplicationById(clientId));
+        OAuthConsumerAppDTO oAuthConsumerAppDTO = getApplicationById(clientId);
+        //setting the jwksURI to be sent in the response
+        oAuthConsumerAppDTO.setJwksURI(updateRequest.getJwksURI());
+        return buildResponse(oAuthConsumerAppDTO);
     }
 
     /**
@@ -445,7 +454,7 @@ public class DCRMService {
         try {
             updateServiceProviderWithOAuthAppDetails(serviceProvider, createdApp, applicationOwner, tenantDomain);
             //setting the jwksURI to be sent in the response
-            createdApp.setJwksURi(registrationRequest.getJwksURI());
+            createdApp.setJwksURI(registrationRequest.getJwksURI());
         } catch (DCRMException ex) {
             // Delete the OAuth app created. This will also remove the registered SP for the OAuth app.
             deleteApplication(createdApp.getOauthConsumerKey());
@@ -470,7 +479,7 @@ public class DCRMService {
             grantTypesList = Arrays.asList(createdApp.getGrantTypes().split(" "));
         }
         application.setGrantTypes(grantTypesList);
-        application.setJwksURI(createdApp.getJwksURi());
+        application.setJwksURI(createdApp.getJwksURI());
         application.setTokenEndpointAuthMethod(createdApp.getTokenEndpointAuthMethod());
         application.setTokenEndpointAuthSignatureAlgorithm(createdApp.getTokenEndpointAuthSignatureAlgorithm());
         application.setSectorIdentifierURI(createdApp.getSectorIdentifierURI());
