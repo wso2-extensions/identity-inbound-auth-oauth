@@ -378,9 +378,6 @@ public class OAuthServerConfiguration {
         // read supported grant types
         parseSupportedGrantTypesConfig(oauthElem);
 
-        // Read public client supported grant type names in <PublicClientSupportedGrantTypes>.
-        parsePublicClientSupportedGrantTypesConfig(oauthElem);
-
         // Read <UserConsentEnabledGrantTypes> under <OAuth> tag and populate data.
         parseUserConsentEnabledGrantTypesConfig(oauthElem);
 
@@ -2299,25 +2296,6 @@ public class OAuthServerConfiguration {
                 String grantTypeName = entry.getKey().toString();
                 String authzGrantHandlerImplClass = entry.getValue().toString();
                 log.debug(grantTypeName + "supported by" + authzGrantHandlerImplClass);
-            }
-        }
-    }
-
-    private void parsePublicClientSupportedGrantTypesConfig(OMElement oauthConfigElem) {
-
-        OMElement publicClientGrantTypesElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
-                ConfigElements.PUBLIC_CLIENT_SUPPORTED_GRANT_TYPES));
-        if (publicClientGrantTypesElem != null) {
-            Iterator iterator = publicClientGrantTypesElem
-                    .getChildrenWithName(getQNameWithIdentityNS(ConfigElements.PUBLIC_CLIENT_ENABLED_GRANT_TYPE_NAME));
-            while (iterator.hasNext()) {
-                OMElement publicClientSupportedGrantName = (OMElement) iterator.next();
-                if (publicClientSupportedGrantName != null) {
-                    String grantTypeName = publicClientSupportedGrantName.getText();
-                    if (!publicClientNotSupportedGrantTypes.contains(grantTypeName)) {
-                        publicClientSupportedGrantTypes.add(grantTypeName);
-                    }
-                }
             }
         }
     }
