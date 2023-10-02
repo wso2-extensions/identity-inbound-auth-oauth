@@ -236,7 +236,7 @@ public class OAuth2AuthzEndpoint {
     private static final String PARAMETERS = "params";
     private static final String FORM_POST_REDIRECT_URI = "redirectURI";
     private static final String SERVICE_PROVIDER = "s";
-    private static final String TENANT_DOMAIN = "t";
+    private static final String TENANT_DOMAIN = "tenantDomain";
     private static final String USER_TENANT_DOMAIN = "ut";
     private static final String AUTHENTICATION_ENDPOINT = "/authenticationendpoint";
     private static final String OAUTH_RESPONSE_JSP_PAGE = "/oauth_response.jsp";
@@ -648,7 +648,7 @@ public class OAuth2AuthzEndpoint {
             handleUserConsent(oAuthMessage, consent, sessionState, oauth2Params, authorizationResponseDTO);
 
             if (isFormPostWithoutErrors(oAuthMessage, authorizationResponseDTO)) {
-                handleFormPostResponseMode(oAuthMessage, sessionState, authorizationResponseDTO);
+                handleFormPostResponseMode(oAuthMessage, sessionState, authorizationResponseDTO, null);
                 if (authorizationResponseDTO.getIsForwardToOAuthResponseJSP()) {
                     return Response.ok().build();
                 }
@@ -941,34 +941,6 @@ public class OAuth2AuthzEndpoint {
 
     private void handleFormPostResponseMode(OAuthMessage oAuthMessage,
                                             OIDCSessionState sessionState,
-                                            AuthorizationResponseDTO authorizationResponseDTO) {
-
-        String authenticatedIdPs = oAuthMessage.getSessionDataCacheEntry().getAuthenticatedIdPs();
-        OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
-        boolean isOIDCRequest = OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes());
-
-        String sessionStateValue = null;
-        if (isOIDCRequest) {
-            sessionState.setAddSessionState(true);
-            sessionStateValue = manageOIDCSessionState(oAuthMessage,
-                    sessionState, oauth2Params, getLoggedInUser(oAuthMessage).getAuthenticatedSubjectIdentifier(),
-                    oAuthMessage.getSessionDataCacheEntry(), authorizationResponseDTO);
-            authorizationResponseDTO.setSessionState(sessionStateValue);
-        }
-
-        if (OAuthServerConfiguration.getInstance().isOAuthResponseJspPageAvailable()) {
-            String params = buildParams(authorizationResponseDTO.getSuccessResponseDTO().getFormPostBody(),
-                    authenticatedIdPs, sessionStateValue);
-            String redirectURI = oauth2Params.getRedirectURI();
-            forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
-            authorizationResponseDTO.setIsForwardToOAuthResponseJSP(true);
-        } else {
-            authorizationResponseDTO.setAuthenticatedIDPs(authenticatedIdPs);
-        }
-    }
-
-    private void handleFormPostResponseMode(OAuthMessage oAuthMessage,
-                                            OIDCSessionState sessionState,
                                             AuthorizationResponseDTO authorizationResponseDTO,
                                             AuthenticatedUser authenticatedUser) {
 
@@ -989,7 +961,12 @@ public class OAuth2AuthzEndpoint {
             String params = buildParams(authorizationResponseDTO.getSuccessResponseDTO().getFormPostBody(),
                     authenticatedIdPs, sessionStateValue);
             String redirectURI = oauth2Params.getRedirectURI();
-            forwardToOauthResponseJSP(oAuthMessage, params, redirectURI, authorizationResponseDTO, authenticatedUser);
+            if (authenticatedUser != null) {
+                forwardToOauthResponseJSP(oAuthMessage, params, redirectURI, authorizationResponseDTO,
+                        authenticatedUser);
+            } else {
+                forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
+            }
             authorizationResponseDTO.setIsForwardToOAuthResponseJSP(true);
         } else {
             authorizationResponseDTO.setAuthenticatedIDPs(authenticatedIdPs);
@@ -4160,21 +4137,16 @@ public class OAuth2AuthzEndpoint {
     private Response forwardToOauthResponseJSP(OAuthMessage oAuthMessage, String params, String redirectURI,
                                                AuthorizationResponseDTO authorizationResponseDTO,
                                                AuthenticatedUser authenticatedUser) {
-
         try {
             HttpServletRequest request = oAuthMessage.getRequest();
-            HttpServletResponse response = oAuthMessage.getResponse();
-            request.setAttribute(PARAMETERS, params);
-            request.setAttribute(FORM_POST_REDIRECT_URI, redirectURI);
-            request.setAttribute(SERVICE_PROVIDER, getServiceProvider(authorizationResponseDTO.getClientId()));
-            request.setAttribute(TENANT_DOMAIN, authorizationResponseDTO.getSigningTenantDomain());
             request.setAttribute(USER_TENANT_DOMAIN, authenticatedUser.getTenantDomain());
-            ServletContext authEndpoint = request.getServletContext().getContext(AUTHENTICATION_ENDPOINT);
-            RequestDispatcher requestDispatcher = authEndpoint.getRequestDispatcher(OAUTH_RESPONSE_JSP_PAGE);
-            requestDispatcher.forward(request, response);
+            request.setAttribute(TENANT_DOMAIN, authorizationResponseDTO.getSigningTenantDomain());
+            request.setAttribute(SERVICE_PROVIDER, getServiceProvider(authorizationResponseDTO.getClientId()));
+            forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
             return Response.ok().build();
-        } catch (ServletException | OAuthSystemException | IOException exception) {
-            log.error("Error occurred while forwarding the request to oauth_response.jsp page.", exception);
+        } catch (OAuthSystemException exception) {
+            log.error("Error occurred while setting service provider in the request to oauth_response.jsp page.",
+                    exception);
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
     }
