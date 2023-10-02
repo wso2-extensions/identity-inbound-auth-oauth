@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.application.authentication.framework.store.UserS
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -299,6 +300,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                          connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.CHECK_CLIENT_ID_EXISTS)) {
                 ResultSet resultSet;
                 prepStmt.setString(1, clientId);
+                prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
                 resultSet = prepStmt.executeQuery();
                 while (resultSet.next()) {
                     String status = resultSet.getString(1);
@@ -430,6 +432,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                          connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.SET_CALLBACK_URL)) {
                 prepStmt.setString(1, callbackUri);
                 prepStmt.setString(2, clientId);
+                prepStmt.setInt(3, IdentityTenantUtil.getLoginTenantId());
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e) {
@@ -564,6 +567,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                 prepStmt.setString(8, Constants.PENDING);
                 prepStmt.setLong(9, quantifier);
                 prepStmt.setString(10, consumerKey);
+                prepStmt.setInt(11, IdentityTenantUtil.getLoginTenantId());
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e) {

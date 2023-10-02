@@ -547,6 +547,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(TENANT_ID);
 
         mockStatic(IdentityConfigParser.class);
         when(IdentityConfigParser.getInstance()).thenReturn(identityConfigParser);
