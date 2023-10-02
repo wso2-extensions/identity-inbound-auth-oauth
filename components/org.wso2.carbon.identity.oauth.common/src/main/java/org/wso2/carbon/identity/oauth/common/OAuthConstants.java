@@ -187,6 +187,9 @@ public final class OAuthConstants {
     public static final String REQUEST_BINDING_TYPE = "request";
     public static final String ORG_ID = "org_id";
     public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
+    public static final String PRIVATE_KEY_JWT = "private_key_jwt";
+    public static final String TLS_CLIENT_AUTH = "tls_client_auth";
+    public static final String RESTRICTED_ENCRYPTION_ALGORITHM = "RSA1_5";
 
     private OAuthConstants() {
 
@@ -544,6 +547,8 @@ public final class OAuthConstants {
         public static final String SHA1 = "SHA-1";
         public static final String KID_HASHING_ALGORITHM = SHA256;
         public static final String PREVIOUS_KID_HASHING_ALGORITHM = SHA1;
+        public static final String PS256 = "PS256";
+        public static final String ES256 = "ES256";
 
         private SignatureAlgorithms() {
 

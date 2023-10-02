@@ -116,6 +116,11 @@ public class OAuthAdminServiceImpl {
     protected static final Log LOG = LogFactory.getLog(OAuthAdminServiceImpl.class);
     private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
     private static final int MAX_RETRY_ATTEMPTS = 3;
+    private static final String IS_FAPI_VALIDATION_ENABLED = "OAuth.DCRM.EnableFAPIValidation";
+    private static final String FAPI_CLIENT_AUTH_METHOD_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
+            "SupportedClientAuthenticationMethods.SupportedClientAuthenticationMethod";
+    private static final String FAPI_SIGNATURE_ALGORITHM_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
+            "SupportedSignatureAlgorithms.SupportedSignatureAlgorithm";
 
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single
@@ -345,6 +350,51 @@ public class OAuthAdminServiceImpl {
                         app.setTokenBindingValidationEnabled(application.isTokenBindingValidationEnabled());
                         app.setTokenRevocationWithIDPSessionTerminationEnabled(
                                 application.isTokenRevocationWithIDPSessionTerminationEnabled());
+                        if (application.getTokenEndpointAuthMethod() != null) {
+                            app.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
+                        }
+                        if (application.getTokenEndpointAuthSignatureAlgorithm() != null) {
+                            app.setTokenEndpointAuthSignatureAlgorithm
+                                    (application.getTokenEndpointAuthSignatureAlgorithm());
+                        }
+                        if (application.getSectorIdentifierURI() != null) {
+                            app.setSectorIdentifierURI(application.getSectorIdentifierURI());
+                        }
+                        if (application.getIdTokenSignatureAlgorithm() != null) {
+                            app.setIdTokenSignatureAlgorithm(application.getIdTokenSignatureAlgorithm());
+                        }
+                        if (application.getAuthorizationResponseSignatureAlgorithm() != null) {
+                            app.setAuthorizationResponseSignatureAlgorithm
+                                    (application.getAuthorizationResponseSignatureAlgorithm());
+                        }
+                        if (application.getAuthorizationResponseEncryptionAlgorithm() != null) {
+                            app.setAuthorizationResponseEncryptionAlgorithm
+                                    (application.getAuthorizationResponseEncryptionAlgorithm());
+                        }
+                        if (application.getAuthorizationResponseEncryptionMethod() != null) {
+                            app.setAuthorizationResponseEncryptionMethod
+                                    (application.getAuthorizationResponseEncryptionMethod());
+                        }
+                        if (application.getRequestObjectSignatureAlgorithm() != null) {
+                            app.setRequestObjectSignatureAlgorithm(application.getRequestObjectSignatureAlgorithm());
+                        }
+                        if (application.getTlsClientAuthSubjectDN() != null) {
+                            app.setTlsClientAuthSubjectDN(application.getTlsClientAuthSubjectDN());
+                        }
+                        if (application.getSubjectType() != null) {
+                            app.setSubjectType(application.getSubjectType());
+                        }
+                        if (application.getRequestObjectEncryptionAlgorithm() != null) {
+                            app.setRequestObjectEncryptionAlgorithm(application.getRequestObjectEncryptionAlgorithm());
+                        }
+                        if (application.getRequestObjectEncryptionMethod() != null) {
+                            app.setRequestObjectEncryptionMethod(application.getRequestObjectEncryptionMethod());
+                        }
+                        app.setRequestObjectSignatureValidationEnabled
+                                (application.isRequestObjectSignatureValidationEnabled());
+                        app.setRequirePushedAuthorizationRequests(application.getRequirePushedAuthorizationRequests());
+                        app.setTlsClientCertificateBoundAccessTokens
+                                (application.getTlsClientCertificateBoundAccessTokens());
                     }
                     dao.addOAuthApplication(app);
                     AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
@@ -1222,7 +1272,7 @@ public class OAuthAdminServiceImpl {
                     try {
                         scopedToken = OAuthTokenPersistenceFactory.getInstance().
                                 getAccessTokenDAO().getLatestAccessToken(clientId, loggedInUser, userStoreDomain,
-                                scopeString, true);
+                                        scopeString, true);
                         if (scopedToken != null && !distinctClientUserScopeCombo.contains(clientId + ":" + username)) {
                             OAuthAppDO appDO = getOAuthAppDO(scopedToken.getConsumerKey());
                             if (LOG.isDebugEnabled()) {
@@ -2064,7 +2114,7 @@ public class OAuthAdminServiceImpl {
 
         try {
             int tenantId = getTenantId(tenantDomain);
-            return  OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().getScopeNames(tenantId);
+            return OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().getScopeNames(tenantId);
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error while loading OIDC scopes of tenant: " + tenantDomain, e);
         }
@@ -2080,4 +2130,65 @@ public class OAuthAdminServiceImpl {
             }
         }
     }
+
+    /**
+     * retrieve configuration for FAPI related validations during application registration
+     *
+     * @return isFAPIValidationEnabled
+     */
+    private boolean isFAPIValidationEnabled() {
+
+        String isFAPIEnabled = IdentityUtil.getProperty(IS_FAPI_VALIDATION_ENABLED);
+        if (isFAPIEnabled != null) {
+            return Boolean.parseBoolean(isFAPIEnabled);
+        }
+        return false;
+    }
+
+
+    private void validateFAPIApplication(OAuthConsumerAppDTO oAuthConsumerAppDTO) throws IdentityOAuthClientException {
+
+        validateTokenAuthentication(oAuthConsumerAppDTO.getTokenEndpointAuthMethod());
+        validateSignatureAlgorithm(oAuthConsumerAppDTO.getTokenEndpointAuthSignatureAlgorithm());
+        validateSignatureAlgorithm(oAuthConsumerAppDTO.getIdTokenSignatureAlgorithm());
+        validateSignatureAlgorithm(oAuthConsumerAppDTO.getRequestObjectSignatureAlgorithm());
+        validateSignatureAlgorithm(oAuthConsumerAppDTO.getAuthorizationResponseSignatureAlgorithm());
+        validateEncryptionAlgorithm(oAuthConsumerAppDTO.getIdTokenEncryptionAlgorithm());
+        validateEncryptionAlgorithm(oAuthConsumerAppDTO.getRequestObjectEncryptionAlgorithm());
+        validateEncryptionAlgorithm(oAuthConsumerAppDTO.getAuthorizationResponseEncryptionAlgorithm());
+
+    }
+
+    private void validateTokenAuthentication(String authenticationMethod) throws IdentityOAuthClientException {
+
+        List<String> FAPIAllowedAuthMethods = IdentityUtil.getPropertyAsList(FAPI_CLIENT_AUTH_METHOD_CONFIGURATION);
+        if (FAPIAllowedAuthMethods.isEmpty()) {
+            FAPIAllowedAuthMethods.add(OAuthConstants.PRIVATE_KEY_JWT);
+            FAPIAllowedAuthMethods.add(OAuthConstants.TLS_CLIENT_AUTH);
+        }
+        if (authenticationMethod != null && !FAPIAllowedAuthMethods.contains(authenticationMethod)) {
+            throw handleClientError(INVALID_REQUEST, "Invalid token endpoint authentication method requested");
+        }
+    }
+
+    private void validateSignatureAlgorithm(String signatureAlgorithm) throws IdentityOAuthClientException {
+
+        List<String> FAPIAllowedSignatureAlgorithms = IdentityUtil
+                .getPropertyAsList(FAPI_SIGNATURE_ALGORITHM_CONFIGURATION);
+        if (FAPIAllowedSignatureAlgorithms.isEmpty()) {
+            FAPIAllowedSignatureAlgorithms.add(OAuthConstants.SignatureAlgorithms.ES256);
+            FAPIAllowedSignatureAlgorithms.add(OAuthConstants.SignatureAlgorithms.PS256);
+        }
+        if (signatureAlgorithm != null && !FAPIAllowedSignatureAlgorithms.contains(signatureAlgorithm)) {
+            throw handleClientError(INVALID_REQUEST, "Invalid signature algorithm requested");
+        }
+    }
+
+    private void validateEncryptionAlgorithm(String encryptionAlgorithm) throws IdentityOAuthClientException {
+
+        if (encryptionAlgorithm.equals(OAuthConstants.RESTRICTED_ENCRYPTION_ALGORITHM)) {
+            throw handleClientError(INVALID_REQUEST, "Invalid encryption algorithm requested");
+        }
+    }
+
 }
