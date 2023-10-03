@@ -217,7 +217,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
             long nbfTimeInMillis = nbfTime.getTime();
             long expirationTimeInMillis = expirationTime.getTime();
             long currentTimeInMillis = System.currentTimeMillis();
-            // nbf should be older than current time
+            // nbf should be older than current time.
             if ((currentTimeInMillis + timeStampSkewMillis) < nbfTimeInMillis) {
                 errorMsg = "Request Object is not valid yet.";
                 errorLog = "Request Object is not valid yet." +
