@@ -61,7 +61,8 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException, OAuthSystemException {
 
-        String clientId = getClientId(OAuth2Util.getAccessTokenIdentifier(tokenResponse));
+        AccessTokenDO accessTokenDO = OAuth2Util.getAccessTokenDO(tokenResponse);
+        String clientId = accessTokenDO.getConsumerKey();
         String spTenantDomain = getServiceProviderTenantDomain(tokenResponse);
         // Retrieve user claims.
         Map<String, Object> userClaims = retrieveUserClaims(tokenResponse);
@@ -264,23 +265,14 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         String clientId = null;
         OAuthAppDO oAuthAppDO;
         try {
-            clientId = getClientId(OAuth2Util.getAccessTokenIdentifier(tokenResponse));
+            AccessTokenDO accessTokenDO = OAuth2Util.getAccessTokenDO(tokenResponse);
+            clientId = accessTokenDO.getConsumerKey();
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             throw new UserInfoEndpointException(
                     "Error while retrieving OAuth app information for clientId: " + clientId);
         }
         return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-    }
-
-    private String getClientId(String accessToken) throws UserInfoEndpointException {
-
-        try {
-            return OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
-                    .getClientIdForAccessToken(accessToken);
-        } catch (IdentityOAuth2Exception e) {
-            throw new UserInfoEndpointException("Error while obtaining the client_id from accessToken.", e);
-        }
     }
 
     private ServiceProvider getServiceProvider(String tenantDomain, String clientId) throws UserInfoEndpointException {

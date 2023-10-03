@@ -35,13 +35,4 @@ public interface TokenValidationProcessor {
      * @throws IdentityOAuth2Exception if an error occurred while validating the token
      */
     AccessTokenDO validateToken(String accessToken, boolean includeExpired) throws IdentityOAuth2Exception;
-
-    /**
-     * Get client id for access token.
-     *
-     * @param accessToken access token
-     * @return client id
-     * @throws IdentityOAuth2Exception if an error occurred while getting the client id
-     */
-    String getClientIdForAccessToken(String accessToken) throws IdentityOAuth2Exception;
 }

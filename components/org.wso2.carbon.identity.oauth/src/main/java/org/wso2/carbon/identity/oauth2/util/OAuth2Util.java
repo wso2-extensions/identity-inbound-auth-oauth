@@ -4031,6 +4031,29 @@ public class OAuth2Util {
     }
 
     /**
+     * Return access token DO from OAuth2TokenValidationResponseDTO. This method validated the token against DB or
+     * in-memory.
+     *
+     * @param tokenResponse OAuth2TokenValidationResponseDTO object.
+     * @return extracted access token DO.
+     * @throws UserInfoEndpointException if  error occurred while obtaining access token.
+     */
+    public static AccessTokenDO getAccessTokenDO(OAuth2TokenValidationResponseDTO tokenResponse)
+            throws UserInfoEndpointException {
+
+        AccessTokenDO accessTokenDO = null;
+        if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
+            try {
+                accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
+                        .validateToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+            } catch (IdentityOAuth2Exception e) {
+                throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
+            }
+        }
+        return accessTokenDO;
+    }
+
+    /**
      * There are cases where we store an 'alias' of the token returned to the client as the token inside IS.
      * For example, in the case of JWT access tokens we store the 'jti' claim in the database instead of the
      * actual JWT. Therefore we need to cache an AccessTokenDO with the stored token identifier.
