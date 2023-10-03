@@ -76,6 +76,7 @@ public interface OAuth2RevocationProcessor {
      *
      * @param revokeRequestDTO Metadata containing revoke token request.
      * @return boolean whether it is a refresh token request or not
+     * @throws IdentityOAuth2Exception If an error occurs while checking the token type.
      */
-    boolean isRefreshTokenType(OAuthRevocationRequestDTO revokeRequestDTO);
+    boolean isRefreshTokenType(OAuthRevocationRequestDTO revokeRequestDTO) throws IdentityOAuth2Exception;
 }
