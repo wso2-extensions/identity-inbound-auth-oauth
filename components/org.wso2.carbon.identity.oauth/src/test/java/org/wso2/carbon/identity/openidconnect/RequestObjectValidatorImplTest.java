@@ -298,7 +298,7 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
                 {new Date(currentTimeMillis + TimeUnit.MINUTES.toMillis(10)), timeInNextHour, false,
                         "Request Object is not valid yet."},
                 {null, timeInNextHour, false, "Request Object does not contain Not Before Time."},
-                { timeInLastHour, new Date(timeInLastHour.getTime() + TimeUnit.MINUTES.toMillis(50)), true,
+                {timeInLastHour, new Date(timeInLastHour.getTime() + TimeUnit.MINUTES.toMillis(50)), true,
                         null},
                 { timeInLastHour, new Date(timeInLastHour.getTime() + TimeUnit.MINUTES.toMillis(65)), false,
                         "Request Object expiry time is too far in the future than not before time."},
