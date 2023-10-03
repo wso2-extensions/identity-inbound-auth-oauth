@@ -232,7 +232,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                         ", TimeStamp Skew : " + timeStampSkewMillis +
                         ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
             } else if (expirationTimeInMillis > nbfTimeInMillis + 3600000) {
-                // exp time should not be older than 1 hour from nbf time
+                // exp time should not be older than 1 hour from nbf time.
                 errorMsg = "Request Object expiry time is too far in the future than not before time.";
                 errorLog = "Request Object expiry time is too far in the future than not before time." +
                         ", Expiration Time(ms) : " + expirationTimeInMillis +
