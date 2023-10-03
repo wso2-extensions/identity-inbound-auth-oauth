@@ -235,9 +235,9 @@ public class OAuth2AuthzEndpoint {
 
     private static final String PARAMETERS = "params";
     private static final String FORM_POST_REDIRECT_URI = "redirectURI";
-    private static final String SERVICE_PROVIDER = "s";
+    private static final String SERVICE_PROVIDER = "serviceProvider";
     private static final String TENANT_DOMAIN = "tenantDomain";
-    private static final String USER_TENANT_DOMAIN = "ut";
+    private static final String USER_TENANT_DOMAIN = "userTenantDomain";
     private static final String AUTHENTICATION_ENDPOINT = "/authenticationendpoint";
     private static final String OAUTH_RESPONSE_JSP_PAGE = "/oauth_response.jsp";
 
