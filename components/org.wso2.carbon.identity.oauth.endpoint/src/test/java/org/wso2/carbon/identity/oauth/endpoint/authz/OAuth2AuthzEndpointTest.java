@@ -2197,7 +2197,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 {true, SerializationUtils.clone(oAuth2Parameters), claims1,
                         "Test override claims from request object."},
                 {true, SerializationUtils.clone(oAuth2Parameters), defaultClaims,
-                        "Test ignore claims outside request object."}, // no overridable claims sent in the req obj
+                        "Test ignore claims outside request object."}, // No overridable claims sent in the req obj.
                 {false, SerializationUtils.clone(oAuth2Parameters), defaultClaims,
                         "Test request without request object."}
         };
