@@ -18,6 +18,10 @@
 
 package org.wso2.carbon.identity.oauth.dcr.service;
 
+import com.nimbusds.jose.jwk.source.RemoteJWKSet;
+import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
 import org.mockito.internal.util.reflection.FieldSetter;
@@ -35,6 +39,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -51,6 +56,8 @@ import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidator;
+import org.wso2.carbon.identity.oauth2.validators.jwt.JWKSourceDataProvider;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -63,11 +70,8 @@ import java.util.List;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.doThrow;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.powermock.api.mockito.PowerMockito.*;
+import static org.powermock.reflect.Whitebox.invokeMethod;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -80,7 +84,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AParam
  * Unit test covering DCRMService
  */
 @PrepareForTest({DCRMService.class, ServiceProvider.class, IdentityProviderManager.class,
-        OAuth2Util.class, OAuthServerConfiguration.class})
+        OAuth2Util.class, OAuthServerConfiguration.class, IdentityUtil.class, JWKSourceDataProvider.class})
 public class DCRMServiceTest extends PowerMockTestCase {
 
     private final String dummyConsumerKey = "dummyConsumerKey";
@@ -95,8 +99,22 @@ public class DCRMServiceTest extends PowerMockTestCase {
     private final String dummyTemplateName = "dummyTemplateName";
     private final String dummyBackchannelLogoutUri = "http://backchannel.com/";
 
+    private String jwtString =
+            "eyJ4NXQiOiJObUptT0dVeE16WmxZak0yWkRSaE5UWmxZVEExWXpkaFpUUmlPV0UwTldJMk0ySm1PVGMxWkEiLCJhbGciOiJSUzI1NiJ9" +
+                    ".eyJhdF9oYXNoIjoiR2ptOGFsN21FSkRVYjZuN3V1Mi1qUSIsInN1YiI6ImFkbWluQGNhcmJvbi5zdXBlciIsImF1ZCI6WyJ" +
+                    "hVmdieWhBMVY3TWV0ZW1PNEtrUjlFYnBzOW9hIiwiaHR0cHM6XC9cL2xvY2FsaG9zdDo5NDQzXC9vYXV0aDJcL3Rva2VuIl0" +
+                    "sImF6cCI6ImFWZ2J5aEExVjdNZXRlbU80S2tSOUVicHM5b2EiLCJhdXRoX3RpbWUiOjE1MjUyMzYzMzcsImlzcyI6Imh0dHB" +
+                    "zOlwvXC8xMC4xMDAuOC4yOjk0NDNcL29hdXRoMlwvdG9rZW4iLCJleHAiOjE1MjUyMzk5MzcsImlhdCI6MTUyNTIzNjMzN30" +
+                    ".DOPv7UHymV3zJJpxxWqbGcrvjY-OOzmdJVUxwHorDlOGABP_X_Krd584rLIbcYFmd8q5wSUuX21wXCLCOXFli1CUC-ZfP0S" +
+                    "0fJqUZv_ynNo6NTFY9d3-sv0b7QYT-8mnxSmjqqsmDrOcxlD7gcYkkr1pLLQe9ZK2B_lR5KZlMW0";
     @Mock
     private OAuthConsumerAppDTO dto;
+    @Mock
+    private DefaultJWTProcessor<SecurityContext> jwtProcessor;
+    @Mock
+    private JWKSourceDataProvider dataProvider;
+    @Mock
+    private RemoteJWKSet<SecurityContext> jwkSet;
 
     private DCRMService dcrmService;
     private OAuthAdminService mockOAuthAdminService;

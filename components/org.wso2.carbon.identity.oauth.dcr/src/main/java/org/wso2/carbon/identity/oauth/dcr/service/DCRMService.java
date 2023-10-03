@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth.dcr.service;
 
 import com.google.gson.Gson;
+import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -34,6 +35,7 @@ import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -52,8 +54,10 @@ import org.wso2.carbon.identity.oauth.dcr.util.DCRMUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -74,6 +78,8 @@ public class DCRMService {
     private static final String GRANT_TYPE_SEPARATOR = " ";
     private static final String APP_DISPLAY_NAME = "DisplayName";
     private static Pattern clientIdRegexPattern = null;
+    private static final String SSA_VALIDATION_JWKS = "OAuth.DCRM.SoftwareStatementJWKS";
+
 
     /**
      * Get OAuth2/OIDC application information with client_id.
@@ -359,6 +365,18 @@ public class DCRMService {
                 registrationRequest.getConsumerKey())) {
             throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.CONFLICT_EXISTING_CLIENT_ID,
                     registrationRequest.getConsumerKey());
+        }
+        //validate SSA
+        if (StringUtils.isNotEmpty(registrationRequest.getSoftwareStatement())) {
+            try {
+                if(validateSSASignature(registrationRequest.getSoftwareStatement())) {
+                    throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
+                            DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage());
+                }
+            } catch (IdentityOAuth2Exception e) {
+                throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
+                        DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage());
+            }
         }
 
         // Create a service provider.
@@ -808,5 +826,24 @@ public class DCRMService {
         Gson gson = new Gson();
         ServiceProvider clonedServiceProvider = gson.fromJson(gson.toJson(serviceProvider), ServiceProvider.class);
         return clonedServiceProvider;
+    }
+
+    /**
+     * Validate SSA signature using jwks_uri.
+     * @param softwareStatement Software Statement
+     * @throws DCRMClientException
+     * @throws IdentityOAuth2Exception
+     */
+    private boolean validateSSASignature(String softwareStatement) throws DCRMClientException, IdentityOAuth2Exception {
+
+        SignedJWT signedJWT = null;
+        try {
+            signedJWT = SignedJWT.parse(softwareStatement);
+        } catch (ParseException e) {
+            throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
+                    DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage());
+        }
+        String jwksURL = IdentityUtil.getProperty(SSA_VALIDATION_JWKS);
+        return JWTSignatureValidationUtils.validateUsingJWKSUri(signedJWT, jwksURL);
     }
 }
