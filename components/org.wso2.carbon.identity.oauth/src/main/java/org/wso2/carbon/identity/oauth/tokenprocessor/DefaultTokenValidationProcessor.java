@@ -32,10 +32,4 @@ public class DefaultTokenValidationProcessor implements TokenValidationProcessor
 
         return OAuth2Util.findAccessToken(accessToken, includeExpired);
     }
-
-    @Override
-    public String getClientIdForAccessToken(String accessToken) throws IdentityOAuth2Exception {
-
-        return OAuth2Util.getClientIdForAccessToken(accessToken);
-    }
 }
