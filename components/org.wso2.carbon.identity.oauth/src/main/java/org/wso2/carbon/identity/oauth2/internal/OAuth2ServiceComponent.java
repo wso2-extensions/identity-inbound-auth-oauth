@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.handler.IndirectTokenRevocationHandler;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
@@ -834,7 +835,35 @@ public class OAuth2ServiceComponent {
         if (log.isDebugEnabled()) {
             log.debug("Unset Oauth2 revocation processor.");
         }
-        OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(null);
+        OAuth2ServiceComponentHolder.getInstance().setRevocationProcessor(null);
+    }
+
+    @Reference(
+            name = "oauth2.token.persistence.handler",
+            service = IndirectTokenRevocationHandler.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIndirectTokenRevocationHandler"
+    )
+    protected void setIndirectTokenRevocationHandler(IndirectTokenRevocationHandler indirectTokenRevocationHandler) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting Indirect Token Revocation Handler.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setIndirectTokenRevocationHandler(indirectTokenRevocationHandler);
+    }
+
+    /**
+     * Unsets the Indirect Token Revocation Handler.
+     *
+     * @param indirectTokenRevocationHandler IndirectTokenRevocationHandler
+     */
+    protected void unsetIndirectTokenRevocationHandler(IndirectTokenRevocationHandler indirectTokenRevocationHandler) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unset Indirect Token Revocation Handler.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setIndirectTokenRevocationHandler(null);
     }
 
     @Reference(

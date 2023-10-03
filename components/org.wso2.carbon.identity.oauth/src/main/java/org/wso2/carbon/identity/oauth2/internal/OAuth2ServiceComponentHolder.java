@@ -28,6 +28,8 @@ import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.handler.DefaultIndirectTokenRevocationHandlerImpl;
+import org.wso2.carbon.identity.oauth.handler.IndirectTokenRevocationHandler;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
@@ -101,6 +103,7 @@ public class OAuth2ServiceComponentHolder {
     private boolean isOrganizationManagementEnabled = false;
     private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
     private OAuth2RevocationProcessor revocationProcessor;
+    private IndirectTokenRevocationHandler indirectTokenRevocationHandler;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -527,6 +530,25 @@ public class OAuth2ServiceComponentHolder {
     public void setRevocationProcessor(OAuth2RevocationProcessor revocationProcessor) {
 
         this.revocationProcessor = revocationProcessor;
+    }
+
+    /**
+     * Get Indirect Token Revocation Handler.
+     *
+     * @return Indirect Token Revocation Handler
+     */
+    public IndirectTokenRevocationHandler getIndirectTokenRevocationHandler() {
+        if (indirectTokenRevocationHandler == null) {
+            indirectTokenRevocationHandler = new DefaultIndirectTokenRevocationHandlerImpl();
+        }
+        return indirectTokenRevocationHandler;
+    }
+
+    /**
+     * Set Indirect Token Revocation Handler.
+     */
+    public void setIndirectTokenRevocationHandler(IndirectTokenRevocationHandler indirectTokenRevocationHandler) {
+        this.indirectTokenRevocationHandler = indirectTokenRevocationHandler;
     }
 
     public static boolean isRestrictUnassignedScopes() {
