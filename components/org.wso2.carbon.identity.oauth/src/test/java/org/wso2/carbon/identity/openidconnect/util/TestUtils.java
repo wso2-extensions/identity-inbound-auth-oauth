@@ -414,7 +414,7 @@ public class TestUtils {
                 {"", null, false, false, false, "Invalid Request Object, signed not encrypted.", false},
                 {jsonWebEncryption1, claims1, false, true, true, "Valid Request Object, signed and encrypted.", false},
                 {jsonWebEncryption2, claims1, true, true, true, "Valid Request Object, signed and encrypted.", false},
-                // FAPI tests
+                // FAPI tests.
                 {jsonWebEncryption3, claims5, true, true, true, "FAPI Request Object with a permitted signing " +
                         "algorithm PS256, signed and encrypted.", true},
                 {jsonWebEncryption4, claims5, true, true, false, "FAPI Request Object with an unpermitted signing " +
