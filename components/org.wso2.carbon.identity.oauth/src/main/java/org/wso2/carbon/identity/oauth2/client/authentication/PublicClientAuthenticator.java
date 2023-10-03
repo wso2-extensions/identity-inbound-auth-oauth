@@ -86,7 +86,12 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
                 getPublicClientSupportedGrantTypesList();
         List grantTypes = bodyParams.get(GRANT_TYPE);
 
-        if (!publicClientSupportedGrantTypes.isEmpty() && grantTypes != null) {
+        if (publicClientSupportedGrantTypes.isEmpty()) {
+            log.warn("No grant types are specified for public clients.");
+            return false;
+        }
+
+        if (grantTypes != null) {
             for (Object grantType : grantTypes) {
                 if (!publicClientSupportedGrantTypes.contains(grantType.toString())) {
                     log.warn("The request contained grant type : '" + grantType + "' which is not " +
