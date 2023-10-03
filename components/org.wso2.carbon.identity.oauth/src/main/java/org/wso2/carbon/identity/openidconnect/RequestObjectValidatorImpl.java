@@ -225,7 +225,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                         ", TimeStamp Skew : " + timeStampSkewMillis +
                         ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
             } else if ((currentTimeInMillis + timeStampSkewMillis) - 3600000 > nbfTimeInMillis) {
-                // nbf should not be older than 1 hour from current time
+                // nbf should not be older than 1 hour from current time.
                 errorMsg = "Request Object nbf claim is too old.";
                 errorLog = "Request Object nbf claim is too old." +
                         ", Not Before Time(ms) : " + nbfTimeInMillis +
