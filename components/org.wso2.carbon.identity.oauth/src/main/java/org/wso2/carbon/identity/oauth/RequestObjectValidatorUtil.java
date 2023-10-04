@@ -22,6 +22,7 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -266,7 +267,8 @@ public class RequestObjectValidatorUtil {
             // At this point 'x509Certificate' will never be null.
             PublicKey publicKey = x509Certificate.getPublicKey();
             if (publicKey instanceof RSAPublicKey) {
-                verifier = new RSASSAVerifier((RSAPublicKey) publicKey);;
+                verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
+                verifier.getJCAContext().setProvider(BouncyCastleProviderSingleton.getInstance());
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Public key is not an RSA public key.");

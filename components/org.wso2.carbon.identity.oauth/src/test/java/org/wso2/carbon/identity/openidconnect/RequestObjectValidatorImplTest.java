@@ -19,9 +19,6 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
-import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.mockito.Mock;
 import org.powermock.api.mockito.PowerMockito;
@@ -61,9 +58,7 @@ import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.PublicKey;
-import java.security.cert.Certificate;
 import java.security.interfaces.RSAPrivateKey;
-import java.security.interfaces.RSAPublicKey;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
@@ -239,15 +234,6 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         property.setValue(SOME_SERVER_URL);
         when(IdentityApplicationManagementUtil.getProperty(config.getProperties(), "IdPEntityId"))
                 .thenReturn(property);
-
-        Certificate certificate =
-                RequestObjectValidatorUtil.getX509CertOfOAuthApp(oAuth2Parameters.getClientId(),
-                        oAuth2Parameters.getTenantDomain());
-        JWSVerifier verifier = new RSASSAVerifier((RSAPublicKey) certificate.getPublicKey());
-        verifier.getJCAContext().setProvider(BouncyCastleProviderSingleton.getInstance());
-        PowerMockito.spy(RequestObjectValidatorUtil.class);
-        doReturn(verifier).when(RequestObjectValidatorUtil.class, "getVerifier", any(PublicKey.class));
-
         RequestObject requestObject = requestParamRequestObjectBuilder.buildRequestObject(jwt, oAuth2Parameters);
 
         Assert.assertEquals(requestParamRequestObjectBuilder.isEncrypted(jwt), isEncrypted,
