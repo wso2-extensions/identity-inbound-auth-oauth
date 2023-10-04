@@ -2489,8 +2489,8 @@ public class OAuth2AuthzEndpoint {
         } else if (isRequestParameter(oauthRequest)) {
             requestObjValue = oauthRequest.getParam(REQUEST);
         }
-        // Mandate request object for FAPI requests
-        // https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2-1)
+        /* Mandate request object for FAPI requests.
+           https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2-1)  */
         if (isFapiConformant(oAuthMessage.getClientId())) {
             if (requestObjValue == null) {
                 throw new InvalidRequestException("Request Object is mandatory for FAPI Conformant Applications.",
@@ -4198,8 +4198,8 @@ public class OAuth2AuthzEndpoint {
         DeviceAuthorizationGrantCache.getInstance().addToCache(cacheKey, cacheEntry);
     }
 
-
     private boolean isFapiConformant(String clientId) throws InvalidRequestException {
+
         try {
             return OAuth2Util.isFapiConformantApp(clientId);
         } catch (IdentityOAuth2Exception e) {

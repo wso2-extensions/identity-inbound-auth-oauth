@@ -329,6 +329,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     private static final String SP_NAME = "Name";
     private static final String STATE = "JEZGpTb8IF";
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
+    private static final int MILLISECONDS_PER_SECOND = 1000;
+    private static final int TIME_MARGIN_IN_SECONDS = 3000;
 
     private OAuth2AuthzEndpoint oAuth2AuthzEndpoint;
     private Object authzEndpointObject;
@@ -2184,8 +2186,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         Map<String, Object> defaultClaims = new HashMap<>();
         defaultClaims.put(OAuthConstants.OAuth20Params.REDIRECT_URI, TestConstants.CALLBACK);
-        defaultClaims.put(NBF, System.currentTimeMillis() / 1000);
-        defaultClaims.put(EXP, System.currentTimeMillis() / 1000 + 3000);
+        defaultClaims.put(NBF, System.currentTimeMillis() / MILLISECONDS_PER_SECOND);
+        defaultClaims.put(EXP, System.currentTimeMillis() / MILLISECONDS_PER_SECOND + TIME_MARGIN_IN_SECONDS);
         defaultClaims.put(OAuthConstants.OAuth20Params.SCOPE, TestConstants.SCOPE_STRING);
 
         Map<String, Object> claims1 = new HashMap<>(defaultClaims);

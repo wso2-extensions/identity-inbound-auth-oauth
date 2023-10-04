@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -270,7 +271,7 @@ public class OAuth2ParEndpoint {
                         throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
                                 ParConstants.INVALID_REQUEST_OBJECT);
                     }
-                } else if (isFAPIConformantApp(oAuthAuthzRequest.getClientId())) {
+                } else if (isFapiConformant(oAuthAuthzRequest.getClientId())) {
                     /* Mandate request object for FAPI requests
                     https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2-1) */
                     throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, ParConstants.REQUEST_OBJECT_MISSING);
@@ -281,6 +282,15 @@ public class OAuth2ParEndpoint {
                 throw new ParCoreException(e.getErrorCode(), e.getMessage(), e);
             }
             throw new ParClientException(e.getErrorCode(), e.getMessage(), e);
+        }
+    }
+
+    private boolean isFapiConformant(String clientId) throws ParClientException {
+
+        try {
+            return OAuth2Util.isFapiConformantApp(clientId);
+        } catch (IdentityOAuth2Exception e) {
+            throw new ParClientException(e.getMessage(), e.getErrorCode());
         }
     }
 }
