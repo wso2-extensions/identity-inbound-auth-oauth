@@ -1911,7 +1911,7 @@ public class EndpointUtil {
      * @param responseMode response type
      * @throws OAuthProblemException when response mode is not valid
      */
-    public static void validateFAPIResponseMode(String responseType, String responseMode)
+    public static void validateFAPIAllowedResponseMode(String responseType, String responseMode)
             throws OAuthProblemException {
 
         if (CODE.equals(responseType) && !JWT.equals(responseMode)) {

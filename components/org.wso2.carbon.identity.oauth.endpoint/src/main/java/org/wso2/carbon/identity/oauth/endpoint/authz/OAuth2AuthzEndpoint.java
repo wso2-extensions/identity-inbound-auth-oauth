@@ -2015,7 +2015,7 @@ public class OAuth2AuthzEndpoint {
         }
 
         if (isFapiConformant(params.getClientId())) {
-            EndpointUtil.validateFAPIResponseMode(params.getResponseType(), params.getResponseMode());
+            EndpointUtil.validateFAPIAllowedResponseMode(params.getResponseType(), params.getResponseMode());
         }
 
         addDataToSessionCache(oAuthMessage, params, sessionDataKey);
@@ -4189,6 +4189,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private boolean isFapiConformant(String clientId) throws InvalidRequestException {
+
         try {
             return OAuth2Util.isFapiConformantApp(clientId);
         } catch (IdentityOAuth2Exception e) {

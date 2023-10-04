@@ -241,7 +241,8 @@ public class OAuth2ParEndpoint {
             RequestObject requestObject = validateRequestObject(oAuthAuthzRequest);
             Map<String, String> oauthParams = overrideRequestObjectParams(request, requestObject);
             if (isFAPIConformantApp(oAuthAuthzRequest.getClientId())) {
-                EndpointUtil.validateFAPIResponseMode(oauthParams.get(RESPONSE_TYPE), oauthParams.get(RESPONSE_MODE));
+                EndpointUtil.validateFAPIAllowedResponseMode(oauthParams.get(RESPONSE_TYPE),
+                        oauthParams.get(RESPONSE_MODE));
             }
         } catch (OAuthProblemException e) {
             throw new ParClientException(e.getError(), e.getDescription(), e);

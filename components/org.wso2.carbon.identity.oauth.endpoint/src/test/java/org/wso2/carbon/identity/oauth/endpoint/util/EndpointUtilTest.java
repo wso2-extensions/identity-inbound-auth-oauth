@@ -935,4 +935,10 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         newArray[originalArray.length] = value;
         return newArray;
     }
+
+    @Test(expectedExceptions = OAuthProblemException.class)
+    public void testValidateFAPIAllowedResponseMode() throws Exception {
+
+        EndpointUtil.validateFAPIAllowedResponseMode("code", "form_post");
+    }
 }
